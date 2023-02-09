@@ -22,7 +22,6 @@ package org.apache.druid.storage.azure;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.ByteSource;
 import com.microsoft.azure.storage.StorageException;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
@@ -39,6 +38,7 @@ import org.junit.Test;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -191,10 +191,10 @@ public class AzureTaskLogsTest extends EasyMockSupport
 
     replayAll();
 
-    final Optional<ByteSource> byteSource = azureTaskLogs.streamTaskLog(TASK_ID, 0);
+    final Optional<InputStream> stream = azureTaskLogs.streamTaskLog(TASK_ID, 0);
 
     final StringWriter writer = new StringWriter();
-    IOUtils.copy(byteSource.get().openStream(), writer, "UTF-8");
+    IOUtils.copy(stream.get(), writer, "UTF-8");
     Assert.assertEquals(writer.toString(), testLog);
 
     verifyAll();
@@ -214,10 +214,10 @@ public class AzureTaskLogsTest extends EasyMockSupport
 
     replayAll();
 
-    final Optional<ByteSource> byteSource = azureTaskLogs.streamTaskLog(TASK_ID, 5);
+    final Optional<InputStream> stream = azureTaskLogs.streamTaskLog(TASK_ID, 5);
 
     final StringWriter writer = new StringWriter();
-    IOUtils.copy(byteSource.get().openStream(), writer, "UTF-8");
+    IOUtils.copy(stream.get(), writer, "UTF-8");
     Assert.assertEquals(writer.toString(), testLog.substring(5));
 
     verifyAll();
@@ -237,10 +237,10 @@ public class AzureTaskLogsTest extends EasyMockSupport
 
     replayAll();
 
-    final Optional<ByteSource> byteSource = azureTaskLogs.streamTaskLog(TASK_ID, -3);
+    final Optional<InputStream> stream = azureTaskLogs.streamTaskLog(TASK_ID, -3);
 
     final StringWriter writer = new StringWriter();
-    IOUtils.copy(byteSource.get().openStream(), writer, "UTF-8");
+    IOUtils.copy(stream.get(), writer, "UTF-8");
     Assert.assertEquals(writer.toString(), testLog.substring(testLog.length() - 3));
 
     verifyAll();
@@ -260,10 +260,10 @@ public class AzureTaskLogsTest extends EasyMockSupport
 
     replayAll();
 
-    final Optional<ByteSource> byteSource = azureTaskLogs.streamTaskReports(TASK_ID);
+    final Optional<InputStream> stream = azureTaskLogs.streamTaskReports(TASK_ID);
 
     final StringWriter writer = new StringWriter();
-    IOUtils.copy(byteSource.get().openStream(), writer, "UTF-8");
+    IOUtils.copy(stream.get(), writer, "UTF-8");
     Assert.assertEquals(writer.toString(), testLog);
 
     verifyAll();
@@ -279,10 +279,10 @@ public class AzureTaskLogsTest extends EasyMockSupport
 
     replayAll();
 
-    final Optional<ByteSource> byteSource = azureTaskLogs.streamTaskReports(TASK_ID_NOT_FOUND);
+    final Optional<InputStream> stream = azureTaskLogs.streamTaskReports(TASK_ID_NOT_FOUND);
 
 
-    Assert.assertFalse(byteSource.isPresent());
+    Assert.assertFalse(stream.isPresent());
 
     verifyAll();
   }
@@ -301,10 +301,10 @@ public class AzureTaskLogsTest extends EasyMockSupport
 
     replayAll();
 
-    final Optional<ByteSource> byteSource = azureTaskLogs.streamTaskReports(TASK_ID);
+    final Optional<InputStream> stream = azureTaskLogs.streamTaskReports(TASK_ID);
 
     final StringWriter writer = new StringWriter();
-    IOUtils.copy(byteSource.get().openStream(), writer, "UTF-8");
+    IOUtils.copy(stream.get(), writer, "UTF-8");
     verifyAll();
   }
 

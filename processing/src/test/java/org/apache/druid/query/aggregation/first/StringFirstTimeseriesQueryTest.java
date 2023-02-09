@@ -30,7 +30,7 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
-import org.apache.druid.query.aggregation.SerializablePairLongStringSerde;
+import org.apache.druid.query.aggregation.SerializablePairLongStringComplexMetricSerde;
 import org.apache.druid.query.timeseries.DefaultTimeseriesQueryMetrics;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
@@ -68,7 +68,7 @@ public class StringFirstTimeseriesQueryTest extends InitializedNullHandlingTest
   @Before
   public void setUp() throws IndexSizeExceededException
   {
-    final SerializablePairLongStringSerde serde = new SerializablePairLongStringSerde();
+    final SerializablePairLongStringComplexMetricSerde serde = new SerializablePairLongStringComplexMetricSerde();
     ComplexMetrics.registerSerde(serde.getTypeName(), serde);
 
     incrementalIndex = new OnheapIncrementalIndex.Builder()

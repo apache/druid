@@ -348,6 +348,20 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new ApproximateHistogramAggregatorFactory(
+        newName,
+        getFieldName(),
+        getResolution(),
+        getNumBuckets(),
+        getLowerLimit(),
+        getUpperLimit(),
+        finalizeAsBase64Binary
+    );
+  }
+
+  @Override
   public String toString()
   {
     return "ApproximateHistogramAggregatorFactory{" +

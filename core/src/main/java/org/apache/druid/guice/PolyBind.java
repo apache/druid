@@ -40,12 +40,13 @@ import java.util.Map;
 import java.util.Properties;
 
 /**
- * Provides the ability to create "polymorphic" bindings.  Where the polymorphism is actually just making a decision
- * based on a value in a Properties.
- *
- * The workflow is that you first create a choice by calling createChoice().  Then you create options using the binder
- * returned by the optionBinder() method.  Multiple different modules can call optionBinder and all options will be
- * reflected at injection time as long as equivalent interface Key objects are passed into the various methods.
+ * Provides the ability to create "polymorphic" bindings where the polymorphism is actually just making a decision
+ * based on a value in Properties.
+ * <p>
+ * The workflow is that you first create a choice by calling {@code createChoice()}. Then you create options using
+ * the binder returned by the {@code optionBinder()} method. Multiple different modules can call
+ * {@code optionBinder()} and all options will be reflected at injection time as long as equivalent interface
+ * {@code Key} objects are passed into the various methods.
  */
 @PublicApi
 public class PolyBind
@@ -110,10 +111,10 @@ public class PolyBind
   }
 
   /**
-   * Binds an option for a specific choice.  The choice must already be registered on the injector for this to work.
+   * Binds an option for a specific choice. The choice must already be registered on the injector for this to work.
    *
    * @param binder the binder for the injector that is being configured
-   * @param interfaceKey the interface that will have an option added to it.  This must equal the
+   * @param interfaceKey the interface that will have an option added to it. This must equal the
    *                     Key provided to createChoice
    * @param <T> interface type
    * @return A MapBinder that can be used to create the actual option bindings.
@@ -195,7 +196,7 @@ public class PolyBind
 
       if (provider == null) {
         throw new ProvisionException(
-            StringUtils.format("Unknown provider[%s] of %s, known options[%s]", implName, key, implsMap.keySet())
+            StringUtils.format("Unknown provider [%s] of %s, known options [%s]", implName, key, implsMap.keySet())
         );
       }
 

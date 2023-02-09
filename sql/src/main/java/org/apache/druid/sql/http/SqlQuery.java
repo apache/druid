@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.QueryContext;
 
 import java.util.List;
 import java.util.Map;
@@ -81,6 +82,19 @@ public class SqlQuery
     }
   }
 
+  public SqlQuery withOverridenContext(Map<String, Object> overridenContext)
+  {
+    return new SqlQuery(
+        getQuery(),
+        getResultFormat(),
+        includeHeader(),
+        includeTypesHeader(),
+        includeSqlTypesHeader(),
+        overridenContext,
+        getParameters()
+    );
+  }
+
   @JsonProperty
   public String getQuery()
   {
@@ -118,6 +132,11 @@ public class SqlQuery
   public Map<String, Object> getContext()
   {
     return context;
+  }
+
+  public QueryContext queryContext()
+  {
+    return QueryContext.of(context);
   }
 
   @JsonProperty

@@ -63,6 +63,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.timeline.SegmentId;
@@ -79,6 +80,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -100,6 +102,13 @@ public class QueryRunnerTestHelper
             .collect(Collectors.toList())
   );
 
+  public static final DataSource UNNEST_DATA_SOURCE = UnnestDataSource.create(
+      new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+      QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
+      QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+      null
+  );
+
   public static final Granularity DAY_GRAN = Granularities.DAY;
   public static final Granularity ALL_GRAN = Granularities.ALL;
   public static final Granularity MONTH_GRAN = Granularities.MONTH;
@@ -109,6 +118,7 @@ public class QueryRunnerTestHelper
   public static final String PLACEMENT_DIMENSION = "placement";
   public static final String PLACEMENTISH_DIMENSION = "placementish";
   public static final String PARTIAL_NULL_DIMENSION = "partial_null_column";
+  public static final String PLACEMENTISH_DIMENSION_UNNEST = "placementish_unnest";
 
   public static final List<String> DIMENSIONS = Lists.newArrayList(
       MARKET_DIMENSION,
@@ -353,6 +363,7 @@ public class QueryRunnerTestHelper
     return !("rtIndex".equals(runnerName) || "noRollupRtIndex".equals(runnerName));
   }
 
+
   public static <T, QueryType extends Query<T>> List<QueryRunner<T>> makeQueryRunners(
       QueryRunnerFactory<T, QueryType> factory
   )
@@ -362,6 +373,7 @@ public class QueryRunnerTestHelper
     final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();
     final QueryableIndex noRollupMMappedTestIndex = TestIndex.getNoRollupMMappedTestIndex();
     final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
+    final QueryableIndex frontCodedMappedTestIndex = TestIndex.getFrontCodedMMappedTestIndex();
     return ImmutableList.of(
         makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex, SEGMENT_ID), ("rtIndex")),
         makeQueryRunner(factory, new IncrementalIndexSegment(noRollupRtIndex, SEGMENT_ID), "noRollupRtIndex"),
@@ -371,7 +383,8 @@ public class QueryRunnerTestHelper
             new QueryableIndexSegment(noRollupMMappedTestIndex, SEGMENT_ID),
             "noRollupMMappedTestIndex"
         ),
-        makeQueryRunner(factory, new QueryableIndexSegment(mergedRealtimeIndex, SEGMENT_ID), "mergedRealtimeIndex")
+        makeQueryRunner(factory, new QueryableIndexSegment(mergedRealtimeIndex, SEGMENT_ID), "mergedRealtimeIndex"),
+        makeQueryRunner(factory, new QueryableIndexSegment(frontCodedMappedTestIndex, SEGMENT_ID), "frontCodedMMappedTestIndex")
     );
   }
 
@@ -392,6 +405,7 @@ public class QueryRunnerTestHelper
         )
     );
   }
+
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
@@ -463,6 +477,22 @@ public class QueryRunnerTestHelper
         return runnerName;
       }
     };
+  }
+
+
+  public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunnerWithSegmentMapFn(
+      QueryRunnerFactory<T, QueryType> factory,
+      Segment adapter,
+      Query<T> query,
+      final String runnerName
+  )
+  {
+    final DataSource base = query.getDataSource();
+
+    final SegmentReference segmentReference = base.createSegmentMapFunction(query, new AtomicLong())
+                                                        .apply(ReferenceCountingSegment.wrapRootGenerationSegment(
+                                                            adapter));
+    return makeQueryRunner(factory, segmentReference, runnerName);
   }
 
   public static <T> QueryRunner<T> makeFilteringQueryRunner(

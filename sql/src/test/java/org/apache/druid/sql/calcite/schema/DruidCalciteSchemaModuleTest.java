@@ -37,6 +37,7 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -97,8 +98,6 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   @Before
   public void setUp()
   {
-    EasyMock.expect(plannerConfig.isMetadataSegmentCacheEnable()).andStubReturn(false);
-    EasyMock.expect(plannerConfig.getMetadataSegmentPollPeriod()).andStubReturn(6000L);
     EasyMock.replay(plannerConfig);
     target = new DruidCalciteSchemaModule();
     injector = Guice.createInjector(
@@ -123,6 +122,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
           binder.bind(ObjectMapper.class).annotatedWith(Json.class).toInstance(objectMapper);
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
           binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupReferencesManager);
+          binder.bind(ServiceEmitter.class).toInstance(new ServiceEmitter("", "", null));
         },
         new LifecycleModule(),
         target);

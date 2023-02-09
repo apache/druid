@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -56,6 +57,7 @@ import java.util.stream.Stream;
 public class LocalInputSource extends AbstractInputSource implements SplittableInputSource<List<File>>
 {
   private static final Logger log = new Logger(LocalInputSource.class);
+  public static final String TYPE_KEY = "local";
 
   @Nullable
   private final File baseDir;
@@ -85,23 +87,51 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   }
 
   @Nullable
-  @JsonProperty
   public File getBaseDir()
   {
     return baseDir;
   }
 
+  /**
+   * Returns the base directory for serialization. This is better than returning {@link File} directly, because
+   * Jackson serializes {@link File} using {@link File#getAbsolutePath()}, and we'd prefer to not force relative
+   * path resolution as part of serialization.
+   */
+  @Nullable
+  @JsonProperty("baseDir")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  private String getBaseDirForSerialization()
+  {
+    if (baseDir == null) {
+      return null;
+    } else {
+      return baseDir.getPath();
+    }
+  }
+
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getFilter()
   {
     return filter;
   }
 
-  @JsonProperty
   public List<File> getFiles()
   {
     return files;
+  }
+
+  /**
+   * Returns the list of file paths for serialization. This is better than returning {@link File} directly, because
+   * Jackson serializes {@link File} using {@link File#getAbsolutePath()}, and we'd prefer to not force relative
+   * path resolution as part of serialization.
+   */
+  @JsonProperty("files")
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
+  private List<String> getFilesForSerialization()
+  {
+    return getFiles().stream().map(File::getPath).collect(Collectors.toList());
   }
 
   @Override
@@ -222,5 +252,15 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   public int hashCode()
   {
     return Objects.hash(baseDir, filter, files);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "LocalInputSource{" +
+           "baseDir=\"" + baseDir +
+           "\", filter=" + filter +
+           ", files=" + files +
+           "}";
   }
 }

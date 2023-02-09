@@ -19,15 +19,20 @@
 
 package org.apache.druid.server;
 
+import com.google.common.collect.ImmutableMap;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.router.RendezvousHasher;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -245,5 +250,36 @@ public class RendezvousHasherTest
     log.info("Expected diff ratio: %s, Actual diff ratio: %s", expectedDiffRatio, actualDiffRatio);
 
     Assert.assertTrue(actualDiffRatio <= expectedDiffRatio);
+  }
+
+  @Test
+  public void testDistribution() throws IOException
+  {
+    String[] uuids = IOUtils.toString(
+        Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream("random_uuid_100")),
+        StandardCharsets.UTF_8
+    ).split("\n");
+    RendezvousHasher hasher = new RendezvousHasher();
+    Set<String> nodes = new HashSet<>();
+    for (int i = 0; i < 5; i++) {
+      nodes.add("localhost:" + i);
+    }
+
+    Map<String, Integer> brokerToConnectionCount = new HashMap<>();
+    for (String uuid : uuids) {
+      brokerToConnectionCount.merge(
+          hasher.chooseNode(nodes, uuid.getBytes(StandardCharsets.UTF_8)),
+          1,
+          Integer::sum
+      );
+    }
+    Map<String, Integer> expectedDistribution = ImmutableMap.<String, Integer>builder()
+                                                            .put("localhost:0", 14)
+                                                            .put("localhost:1", 22)
+                                                            .put("localhost:2", 24)
+                                                            .put("localhost:3", 25)
+                                                            .put("localhost:4", 15)
+                                                            .build();
+    Assert.assertEquals(expectedDistribution, brokerToConnectionCount);
   }
 }

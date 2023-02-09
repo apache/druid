@@ -43,7 +43,8 @@ The grammar for a SELECTOR filter is as follows:
 "filter": { "type": "selector", "dimension": <dimension_string>, "value": <dimension_value_string> }
 ```
 
-This is the equivalent of `WHERE <dimension_string> = '<dimension_value_string>'`.
+This is the equivalent of `WHERE <dimension_string> = '<dimension_value_string>'` or `WHERE <dimension_string> IS NULL`
+(if the `value` is `null`).
 
 The selector filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
 
@@ -226,7 +227,7 @@ In filter can be used to express the following SQL query:
  SELECT COUNT(*) AS 'Count' FROM `table` WHERE `outlaw` IN ('Good', 'Bad', 'Ugly')
 ```
 
-The grammar for a IN filter is as follows:
+The grammar for a "in" filter is as follows:
 
 ```json
 {
@@ -236,11 +237,15 @@ The grammar for a IN filter is as follows:
 }
 ```
 
-The IN filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
+The "in" filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
 
-If an empty `values` array is passed to the IN filter, it will simply return an empty result.
-If the `dimension` is a multi-valued dimension, the IN filter will return true if one of the dimension values is
+If an empty `values` array is passed to the "in" filter, it will simply return an empty result.
+
+If the `dimension` is a multi-valued dimension, the "in" filter will return true if one of the dimension values is
 in the `values` array.
+
+If the `values` array contains `null`, the "in" filter matches null values. This differs from the SQL IN filter, which
+does not match NULL values.
 
 ## Like filter
 

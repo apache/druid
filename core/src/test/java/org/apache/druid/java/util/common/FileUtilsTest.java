@@ -60,6 +60,38 @@ public class FileUtilsTest
   }
 
   @Test
+  public void testMapFileTooLarge() throws IOException
+  {
+    File dataFile = temporaryFolder.newFile("data");
+    try (RandomAccessFile raf = new RandomAccessFile(dataFile, "rw")) {
+      raf.write(42);
+      raf.setLength(1 << 20); // 1 MiB
+    }
+    final IllegalArgumentException e = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> FileUtils.map(dataFile, 0, (long) Integer.MAX_VALUE + 1)
+    );
+    MatcherAssert.assertThat(e.getMessage(), CoreMatchers.containsString("Cannot map region larger than"));
+  }
+
+  @Test
+  public void testMapRandomAccessFileTooLarge() throws IOException
+  {
+    File dataFile = temporaryFolder.newFile("data");
+    try (RandomAccessFile raf = new RandomAccessFile(dataFile, "rw")) {
+      raf.write(42);
+      raf.setLength(1 << 20); // 1 MiB
+    }
+    try (RandomAccessFile raf = new RandomAccessFile(dataFile, "r")) {
+      final IllegalArgumentException e = Assert.assertThrows(
+          IllegalArgumentException.class,
+          () -> FileUtils.map(raf, 0, (long) Integer.MAX_VALUE + 1)
+      );
+      MatcherAssert.assertThat(e.getMessage(), CoreMatchers.containsString("Cannot map region larger than"));
+    }
+  }
+
+  @Test
   public void testWriteAtomically() throws IOException
   {
     final File tmpDir = temporaryFolder.newFolder();
@@ -211,5 +243,46 @@ public class FileUtilsTest
 
     Assert.assertEquals(data.length(), result);
     Assert.assertEquals(data, StringUtils.fromUtf8(Files.readAllBytes(dstFile.toPath())));
+  }
+
+  @Test
+  public void testLinkOrCopy1() throws IOException
+  {
+    // Will be a LINK.
+
+    final File fromFile = temporaryFolder.newFile();
+    final File toDir = temporaryFolder.newFolder();
+    final File toFile = new File(toDir, "toFile");
+
+    Files.write(fromFile.toPath(), StringUtils.toUtf8("foo"));
+    final FileUtils.LinkOrCopyResult linkOrCopyResult = FileUtils.linkOrCopy(fromFile, toFile);
+
+    // Verify the new link.
+    Assert.assertEquals(FileUtils.LinkOrCopyResult.LINK, linkOrCopyResult);
+    Assert.assertEquals("foo", StringUtils.fromUtf8(Files.readAllBytes(toFile.toPath())));
+
+    // Verify they are actually the same file.
+    Files.write(fromFile.toPath(), StringUtils.toUtf8("bar"));
+    Assert.assertEquals("bar", StringUtils.fromUtf8(Files.readAllBytes(toFile.toPath())));
+  }
+
+  @Test
+  public void testLinkOrCopy2() throws IOException
+  {
+    // Will be a COPY, because the destination file already exists and therefore Files.createLink fails.
+
+    final File fromFile = temporaryFolder.newFile();
+    final File toFile = temporaryFolder.newFile();
+
+    Files.write(fromFile.toPath(), StringUtils.toUtf8("foo"));
+    final FileUtils.LinkOrCopyResult linkOrCopyResult = FileUtils.linkOrCopy(fromFile, toFile);
+
+    // Verify the new link.
+    Assert.assertEquals(FileUtils.LinkOrCopyResult.COPY, linkOrCopyResult);
+    Assert.assertEquals("foo", StringUtils.fromUtf8(Files.readAllBytes(toFile.toPath())));
+
+    // Verify they are not the same file.
+    Files.write(fromFile.toPath(), StringUtils.toUtf8("bar"));
+    Assert.assertEquals("foo", StringUtils.fromUtf8(Files.readAllBytes(toFile.toPath())));
   }
 }

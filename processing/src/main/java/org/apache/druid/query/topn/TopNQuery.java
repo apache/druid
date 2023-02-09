@@ -20,6 +20,7 @@
 package org.apache.druid.query.topn;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -38,6 +39,7 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -118,6 +120,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
 
   @JsonProperty
   @Override
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = VirtualColumns.JsonIncludeFilter.class)
   public VirtualColumns getVirtualColumns()
   {
     return virtualColumns;
@@ -141,7 +144,9 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     return threshold;
   }
 
+  @Nullable
   @JsonProperty("filter")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public DimFilter getDimensionsFilter()
   {
     return dimFilter;
@@ -154,6 +159,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   }
 
   @JsonProperty("postAggregations")
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public List<PostAggregator> getPostAggregatorSpecs()
   {
     return postAggregatorSpecs;

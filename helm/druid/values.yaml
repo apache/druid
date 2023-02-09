@@ -17,7 +17,7 @@
 
 image:
   repository: apache/druid
-  tag: 0.23.0
+  tag: 24.0.0
   pullPolicy: IfNotPresent
   pullSecrets: []
 
@@ -233,6 +233,9 @@ historical:
     #   cpu: 500m
     #   memory: 512Mi
 
+  livenessProbeInitialDelaySeconds: 60
+  readinessProbeInitialDelaySeconds: 60
+
   ## (dict) If specified, apply these annotations to each master Pod
   podAnnotations: {}
 
@@ -373,6 +376,7 @@ router:
 # Zookeeper:
 # ------------------------------------------------------------------------------
 
+# If using a zookeeper installed outside of this chart you must uncomment and set this line
 # zkHosts: druid-zookeeper-headless:2181
 
 zookeeper:

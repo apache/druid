@@ -20,39 +20,28 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.google.inject.Binder;
-import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.PolyBind;
-import org.apache.druid.sql.calcite.run.NativeQueryMakerFactory;
-import org.apache.druid.sql.calcite.run.QueryMakerFactory;
+import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 
 /**
  * The module responsible for provide bindings for the Calcite Planner.
  */
 public class CalcitePlannerModule implements Module
 {
-  public static final String PROPERTY_SQL_EXECUTOR_TYPE = "druid.sql.executor.type";
-
   @Override
   public void configure(Binder binder)
   {
+    // PlannerConfig previously held the segment metadata cache config,
+    // so both configs are bound to the same property prefix.
+    // It turns out that the order of the arguments above is misleading.
+    // We're actually binding the class to the config prefix, not the other way around.
     JsonConfigProvider.bind(binder, "druid.sql.planner", PlannerConfig.class);
-
-    PolyBind.optionBinder(binder, Key.get(QueryMakerFactory.class))
-            .addBinding(NativeQueryMakerFactory.TYPE)
-            .to(NativeQueryMakerFactory.class)
-            .in(LazySingleton.class);
-
-    PolyBind.createChoiceWithDefault(
-        binder,
-        PROPERTY_SQL_EXECUTOR_TYPE,
-        Key.get(QueryMakerFactory.class),
-        NativeQueryMakerFactory.TYPE
-    );
-
+    JsonConfigProvider.bind(binder, "druid.sql.planner", SegmentMetadataCacheConfig.class);
     binder.bind(PlannerFactory.class).in(LazySingleton.class);
     binder.bind(DruidOperatorTable.class).in(LazySingleton.class);
+    Multibinder.newSetBinder(binder, ExtensionCalciteRuleProvider.class);
   }
 }

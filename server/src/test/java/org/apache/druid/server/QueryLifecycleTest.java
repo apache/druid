@@ -21,6 +21,7 @@ package org.apache.druid.server;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -28,6 +29,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
+import org.apache.druid.query.QueryContextTest;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -54,6 +56,9 @@ import org.junit.rules.ExpectedException;
 
 import javax.servlet.http.HttpServletRequest;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class QueryLifecycleTest
 {
   private static final String DATASOURCE = "some_datasource";
@@ -72,9 +77,6 @@ public class QueryLifecycleTest
   RequestLogger requestLogger;
   AuthorizerMapper authzMapper;
   DefaultQueryConfig queryConfig;
-  AuthConfig authConfig;
-
-  QueryLifecycle lifecycle;
 
   QueryToolChest toolChest;
   QueryRunner runner;
@@ -96,11 +98,18 @@ public class QueryLifecycleTest
     authorizer = EasyMock.createMock(Authorizer.class);
     authzMapper = new AuthorizerMapper(ImmutableMap.of(AUTHORIZER, authorizer));
     queryConfig = EasyMock.createMock(DefaultQueryConfig.class);
-    authConfig = EasyMock.createMock(AuthConfig.class);
 
+    toolChest = EasyMock.createMock(QueryToolChest.class);
+    runner = EasyMock.createMock(QueryRunner.class);
+    metrics = EasyMock.createNiceMock(QueryMetrics.class);
+    authenticationResult = EasyMock.createMock(AuthenticationResult.class);
+  }
+
+  private QueryLifecycle createLifecycle(AuthConfig authConfig)
+  {
     long nanos = System.nanoTime();
     long millis = System.currentTimeMillis();
-    lifecycle = new QueryLifecycle(
+    return new QueryLifecycle(
         toolChestWarehouse,
         texasRanger,
         metricsFactory,
@@ -112,11 +121,6 @@ public class QueryLifecycleTest
         millis,
         nanos
     );
-
-    toolChest = EasyMock.createMock(QueryToolChest.class);
-    runner = EasyMock.createMock(QueryRunner.class);
-    metrics = EasyMock.createNiceMock(QueryMetrics.class);
-    authenticationResult = EasyMock.createMock(AuthenticationResult.class);
   }
 
   @After
@@ -150,9 +154,9 @@ public class QueryLifecycleTest
             .once();
     EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Sequences.empty()).once();
 
-
     replayAll();
 
+    QueryLifecycle lifecycle = createLifecycle(new AuthConfig());
     lifecycle.runSimple(query, authenticationResult, Access.OK);
   }
 
@@ -160,7 +164,7 @@ public class QueryLifecycleTest
   public void testRunSimpleUnauthorized()
   {
     expectedException.expect(ISE.class);
-    expectedException.expectMessage("Unauthorized");
+    expectedException.expectMessage(Access.DEFAULT_ERROR_MESSAGE);
 
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
@@ -173,6 +177,7 @@ public class QueryLifecycleTest
 
     replayAll();
 
+    QueryLifecycle lifecycle = createLifecycle(new AuthConfig());
     lifecycle.runSimple(query, authenticationResult, new Access(false));
   }
 
@@ -180,7 +185,6 @@ public class QueryLifecycleTest
   public void testAuthorizeQueryContext_authorized()
   {
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
-    EasyMock.expect(authConfig.authorizeQueryContextParams()).andReturn(true).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(authorizer.authorize(authenticationResult, new Resource(DATASOURCE, ResourceType.DATASOURCE), Action.READ))
@@ -196,21 +200,27 @@ public class QueryLifecycleTest
 
     replayAll();
 
+    final Map<String, Object> userContext = ImmutableMap.of("foo", "bar", "baz", "qux");
     final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                         .dataSource(DATASOURCE)
                                         .intervals(ImmutableList.of(Intervals.ETERNITY))
                                         .aggregators(new CountAggregatorFactory("chocula"))
-                                        .context(ImmutableMap.of("foo", "bar", "baz", "qux"))
+                                        .context(userContext)
                                         .build();
 
+    AuthConfig authConfig = AuthConfig.newBuilder()
+        .setAuthorizeQueryContextParams(true)
+        .build();
+    QueryLifecycle lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
 
-    Assert.assertEquals(
-        ImmutableMap.of("foo", "bar", "baz", "qux"),
-        lifecycle.getQuery().getQueryContext().getUserParams()
-    );
-    Assert.assertTrue(lifecycle.getQuery().getQueryContext().getMergedParams().containsKey("queryId"));
+    final Map<String, Object> revisedContext = new HashMap<>(lifecycle.getQuery().getContext());
     Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("queryId"));
+    revisedContext.remove("queryId");
+    Assert.assertEquals(
+        userContext,
+        revisedContext
+    );
 
     Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
   }
@@ -219,13 +229,12 @@ public class QueryLifecycleTest
   public void testAuthorizeQueryContext_notAuthorized()
   {
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
-    EasyMock.expect(authConfig.authorizeQueryContextParams()).andReturn(true).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(authorizer.authorize(authenticationResult, new Resource(DATASOURCE, ResourceType.DATASOURCE), Action.READ))
             .andReturn(Access.OK);
     EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("foo", ResourceType.QUERY_CONTEXT), Action.WRITE))
-            .andReturn(new Access(false));
+            .andReturn(Access.DENIED);
 
     EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest)
@@ -240,8 +249,165 @@ public class QueryLifecycleTest
                                         .context(ImmutableMap.of("foo", "bar"))
                                         .build();
 
+    AuthConfig authConfig = AuthConfig.newBuilder()
+        .setAuthorizeQueryContextParams(true)
+        .build();
+    QueryLifecycle lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
     Assert.assertFalse(lifecycle.authorize(mockRequest()).isAllowed());
+  }
+
+  @Test
+  public void testAuthorizeQueryContext_unsecuredKeys()
+  {
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource(DATASOURCE, ResourceType.DATASOURCE), Action.READ))
+            .andReturn(Access.OK);
+
+    EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
+            .andReturn(toolChest)
+            .once();
+
+    replayAll();
+
+    final Map<String, Object> userContext = ImmutableMap.of("foo", "bar", "baz", "qux");
+    final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                        .dataSource(DATASOURCE)
+                                        .intervals(ImmutableList.of(Intervals.ETERNITY))
+                                        .aggregators(new CountAggregatorFactory("chocula"))
+                                        .context(userContext)
+                                        .build();
+
+    AuthConfig authConfig = AuthConfig.newBuilder()
+        .setAuthorizeQueryContextParams(true)
+        .setUnsecuredContextKeys(ImmutableSet.of("foo", "baz"))
+        .build();
+    QueryLifecycle lifecycle = createLifecycle(authConfig);
+    lifecycle.initialize(query);
+
+    final Map<String, Object> revisedContext = new HashMap<>(lifecycle.getQuery().getContext());
+    Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("queryId"));
+    revisedContext.remove("queryId");
+    Assert.assertEquals(
+        userContext,
+        revisedContext
+    );
+
+    Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
+  }
+
+  @Test
+  public void testAuthorizeQueryContext_securedKeys()
+  {
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource(DATASOURCE, ResourceType.DATASOURCE), Action.READ))
+            .andReturn(Access.OK);
+
+    EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
+            .andReturn(toolChest)
+            .once();
+
+    replayAll();
+
+    final Map<String, Object> userContext = ImmutableMap.of("foo", "bar", "baz", "qux");
+    final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                        .dataSource(DATASOURCE)
+                                        .intervals(ImmutableList.of(Intervals.ETERNITY))
+                                        .aggregators(new CountAggregatorFactory("chocula"))
+                                        .context(userContext)
+                                        .build();
+
+    AuthConfig authConfig = AuthConfig.newBuilder()
+        .setAuthorizeQueryContextParams(true)
+        // We have secured keys, just not what the user gave.
+        .setSecuredContextKeys(ImmutableSet.of("foo2", "baz2"))
+        .build();
+    QueryLifecycle lifecycle = createLifecycle(authConfig);
+    lifecycle.initialize(query);
+
+    final Map<String, Object> revisedContext = new HashMap<>(lifecycle.getQuery().getContext());
+    Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("queryId"));
+    revisedContext.remove("queryId");
+    Assert.assertEquals(
+        userContext,
+        revisedContext
+    );
+
+    Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
+  }
+
+  @Test
+  public void testAuthorizeQueryContext_securedKeysNotAuthorized()
+  {
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource(DATASOURCE, ResourceType.DATASOURCE), Action.READ))
+            .andReturn(Access.OK);
+    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("foo", ResourceType.QUERY_CONTEXT), Action.WRITE))
+            .andReturn(Access.DENIED);
+
+    EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
+            .andReturn(toolChest)
+            .once();
+
+    replayAll();
+
+    final Map<String, Object> userContext = ImmutableMap.of("foo", "bar", "baz", "qux");
+    final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                        .dataSource(DATASOURCE)
+                                        .intervals(ImmutableList.of(Intervals.ETERNITY))
+                                        .aggregators(new CountAggregatorFactory("chocula"))
+                                        .context(userContext)
+                                        .build();
+
+    AuthConfig authConfig = AuthConfig.newBuilder()
+        .setAuthorizeQueryContextParams(true)
+         // We have secured keys. User used one of them.
+        .setSecuredContextKeys(ImmutableSet.of("foo", "baz2"))
+        .build();
+    QueryLifecycle lifecycle = createLifecycle(authConfig);
+    lifecycle.initialize(query);
+    Assert.assertFalse(lifecycle.authorize(mockRequest()).isAllowed());
+  }
+
+  @Test
+  public void testAuthorizeLegacyQueryContext_authorized()
+  {
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("fake", ResourceType.DATASOURCE), Action.READ))
+            .andReturn(Access.OK);
+    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("foo", ResourceType.QUERY_CONTEXT), Action.WRITE))
+            .andReturn(Access.OK);
+    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("baz", ResourceType.QUERY_CONTEXT), Action.WRITE)).andReturn(Access.OK);
+
+    EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
+            .andReturn(toolChest)
+            .once();
+
+    replayAll();
+
+    final QueryContextTest.LegacyContextQuery query = new QueryContextTest.LegacyContextQuery(ImmutableMap.of("foo", "bar", "baz", "qux"));
+
+    AuthConfig authConfig = AuthConfig.newBuilder()
+        .setAuthorizeQueryContextParams(true)
+        .build();
+    QueryLifecycle lifecycle = createLifecycle(authConfig);
+    lifecycle.initialize(query);
+
+    final Map<String, Object> revisedContext = lifecycle.getQuery().getContext();
+    Assert.assertNotNull(revisedContext);
+    Assert.assertTrue(revisedContext.containsKey("foo"));
+    Assert.assertTrue(revisedContext.containsKey("baz"));
+    Assert.assertTrue(revisedContext.containsKey("queryId"));
+
+    Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
   }
 
   private HttpServletRequest mockRequest()
@@ -266,7 +432,6 @@ public class QueryLifecycleTest
         emitter,
         requestLogger,
         queryConfig,
-        authConfig,
         toolChest,
         runner,
         metrics,

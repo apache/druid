@@ -20,6 +20,7 @@
 package org.apache.druid.query.timeboundary;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.java.util.common.DateTimes;
@@ -79,6 +80,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
 
   @JsonProperty("filter")
   @Override
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public DimFilter getFilter()
   {
     return dimFilter;

@@ -87,7 +87,7 @@ public final class CachingClusteredClientTestUtils
   public static ObjectMapper createObjectMapper()
   {
     final SmileFactory factory = new SmileFactory();
-    final ObjectMapper objectMapper = new DefaultObjectMapper(factory);
+    final ObjectMapper objectMapper = new DefaultObjectMapper(factory, "broker");
     factory.setCodec(objectMapper);
     return objectMapper;
   }

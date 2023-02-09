@@ -326,6 +326,12 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new FloatLastAggregatorFactory(newName, getFieldName(), getTimeColumn());
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

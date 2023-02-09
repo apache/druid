@@ -89,7 +89,7 @@ public class RunRules implements CoordinatorDuty
     // eventually will be unloaded from Historical servers. Segments overshadowed by *served* used segments are marked
     // as unused in MarkAsUnusedOvershadowedSegments, and then eventually Coordinator sends commands to Historical nodes
     // to unload such segments in UnloadUnusedSegments.
-    Set<SegmentId> overshadowed = params.getDataSourcesSnapshot().getOvershadowedSegments();
+    Set<DataSegment> overshadowed = params.getDataSourcesSnapshot().getOvershadowedSegments();
 
     for (String tier : cluster.getTierNames()) {
       replicatorThrottler.updateReplicationState(tier);
@@ -122,7 +122,7 @@ public class RunRules implements CoordinatorDuty
     }
 
     for (DataSegment segment : params.getUsedSegments()) {
-      if (overshadowed.contains(segment.getId())) {
+      if (overshadowed.contains(segment)) {
         // Skipping overshadowed segments
         continue;
       }

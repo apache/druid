@@ -72,6 +72,7 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
     final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
 
+    JettyServerInitUtils.addQosFilters(root, injector);
     AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
 
     // perform no-op authorization/authentication for these resources
@@ -107,6 +108,7 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
             new DefaultHandler()
         }
     );
+    JettyServerInitUtils.maybeAddHSTSRewriteHandler(serverConfig, handlerList);
     server.setHandler(handlerList);
   }
 }

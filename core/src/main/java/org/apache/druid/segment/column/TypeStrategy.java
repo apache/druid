@@ -55,8 +55,15 @@ import java.util.Comparator;
  * Implementations of this interface should be thread safe, but may not use {@link ByteBuffer} in a thread safe manner,
  * potentially modifying positions and limits, either temporarily or permanently depending on which set of methods is
  * called.
+ *
+ * This interface extends {@code Comparator<Object>} instead of {@code Comparator<T>} because trying to specialize the
+ * type of the comparison method can run into issues for comparators of objects that can sometimes be of a different
+ * java class type.  For example, {@code Comparator<Long>} cannot accept Integer objects in its comparison method
+ * and there is no easy way for this interface definition to allow {@code TypeStrategy<Long>} to actually be a
+ * {@code Comparator<Number>}.  So, we fall back to effectively erasing the generic type and having them all be
+ * {@code Comparator<Object>}.
  */
-public interface TypeStrategy<T> extends Comparator<T>
+public interface TypeStrategy<T> extends Comparator<Object>
 {
   /**
    * Estimate the size in bytes that writing this value to memory would require. This method is not required to be
@@ -67,7 +74,6 @@ public interface TypeStrategy<T> extends Comparator<T>
    * might need allocated to then {@link #write} a value
    */
   int estimateSizeBytes(T value);
-
 
   /**
    * Read a non-null value from the {@link ByteBuffer} at the current {@link ByteBuffer#position()}. This will move
@@ -149,5 +155,19 @@ public interface TypeStrategy<T> extends Comparator<T>
     finally {
       buffer.position(oldPosition);
     }
+  }
+
+  /**
+   * Translate raw byte array into a value. This is primarily useful for transforming self contained values that are
+   * serialized into byte arrays, such as happens with 'COMPLEX' types which serialize to base64 strings in JSON
+   * responses.
+   *
+   * 'COMPLEX' types should implement this method to participate in the expression systems built-in function
+   * to deserialize base64 encoded values,
+   * {@link org.apache.druid.math.expr.BuiltInExprMacros.ComplexDecodeBase64ExprMacro}.
+   */
+  default T fromBytes(byte[] value)
+  {
+    throw new IllegalStateException("Not supported");
   }
 }

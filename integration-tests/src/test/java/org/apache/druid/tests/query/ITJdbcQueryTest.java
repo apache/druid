@@ -108,6 +108,8 @@ public class ITJdbcQueryTest
     };
     // ensure that wikipedia segments are loaded completely
     dataLoaderHelper.waitUntilDatasourceIsReady(WIKIPEDIA_DATA_SOURCE);
+    dataLoaderHelper.waitUntilDatasourceIsReady("wikipedia");
+    dataLoaderHelper.waitUntilDatasourceIsReady("twitterstream");
   }
 
   @Test
@@ -211,7 +213,7 @@ public class ITJdbcQueryTest
     }
   }
 
-  @Test(expectedExceptions = AvaticaSqlException.class, expectedExceptionsMessageRegExp = ".* Parameter at position\\[0] is not bound")
+  @Test(expectedExceptions = AvaticaSqlException.class, expectedExceptionsMessageRegExp = ".* Parameter at position \\[0] is not bound")
   public void testJdbcPrepareStatementQueryMissingParameters() throws SQLException
   {
     for (String url : connections) {

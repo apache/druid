@@ -20,10 +20,10 @@
 package org.apache.druid.server.metrics;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.Module;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.junit.Assert;
@@ -143,24 +143,18 @@ public class WorkerTaskCountStatsMonitorTest
 
     injectorForMiddleManager = Guice.createInjector(
         ImmutableList.of(
-            (Module) binder -> {
-              binder.bind(WorkerTaskCountStatsProvider.class).toInstance(statsProvider);
-            }
+            binder -> binder.bind(WorkerTaskCountStatsProvider.class).toInstance(statsProvider)
         )
     );
 
     injectorForMiddleManagerNullStats = Guice.createInjector(
         ImmutableList.of(
-            (Module) binder -> {
-              binder.bind(WorkerTaskCountStatsProvider.class).toInstance(nullStatsProvider);
-            }
+            binder -> binder.bind(WorkerTaskCountStatsProvider.class).toInstance(nullStatsProvider)
         )
     );
 
     injectorForPeon = Guice.createInjector(
-        ImmutableList.of(
-            (Module) binder -> {}
-        )
+        ImmutableList.of(binder -> {})
     );
   }
 
@@ -172,26 +166,31 @@ public class WorkerTaskCountStatsMonitorTest
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
     Assert.assertEquals(5, emitter.getEvents().size());
-    Assert.assertEquals("worker/task/failed/count", emitter.getEvents().get(0).toMap().get("metric"));
-    Assert.assertEquals("workerCategory", emitter.getEvents().get(0).toMap().get("category"));
-    Assert.assertEquals("workerVersion", emitter.getEvents().get(0).toMap().get("version"));
-    Assert.assertEquals(4L, emitter.getEvents().get(0).toMap().get("value"));
-    Assert.assertEquals("worker/task/success/count", emitter.getEvents().get(1).toMap().get("metric"));
-    Assert.assertEquals("workerCategory", emitter.getEvents().get(1).toMap().get("category"));
-    Assert.assertEquals("workerVersion", emitter.getEvents().get(1).toMap().get("version"));
-    Assert.assertEquals(2L, emitter.getEvents().get(1).toMap().get("value"));
-    Assert.assertEquals("worker/taskSlot/idle/count", emitter.getEvents().get(2).toMap().get("metric"));
-    Assert.assertEquals("workerCategory", emitter.getEvents().get(2).toMap().get("category"));
-    Assert.assertEquals("workerVersion", emitter.getEvents().get(2).toMap().get("version"));
-    Assert.assertEquals(3L, emitter.getEvents().get(2).toMap().get("value"));
-    Assert.assertEquals("worker/taskSlot/total/count", emitter.getEvents().get(3).toMap().get("metric"));
-    Assert.assertEquals("workerCategory", emitter.getEvents().get(3).toMap().get("category"));
-    Assert.assertEquals("workerVersion", emitter.getEvents().get(3).toMap().get("version"));
-    Assert.assertEquals(5L, emitter.getEvents().get(3).toMap().get("value"));
-    Assert.assertEquals("worker/taskSlot/used/count", emitter.getEvents().get(4).toMap().get("metric"));
-    Assert.assertEquals("workerCategory", emitter.getEvents().get(4).toMap().get("category"));
-    Assert.assertEquals("workerVersion", emitter.getEvents().get(4).toMap().get("version"));
-    Assert.assertEquals(1L, emitter.getEvents().get(4).toMap().get("value"));
+    emitter.verifyValue(
+        "worker/task/failed/count",
+        ImmutableMap.of("category", "workerCategory", "workerVersion", "workerVersion"),
+        4L
+    );
+    emitter.verifyValue(
+        "worker/task/success/count",
+        ImmutableMap.of("category", "workerCategory", "workerVersion", "workerVersion"),
+        2L
+    );
+    emitter.verifyValue(
+        "worker/taskSlot/idle/count",
+        ImmutableMap.of("category", "workerCategory", "workerVersion", "workerVersion"),
+        3L
+    );
+    emitter.verifyValue(
+        "worker/taskSlot/total/count",
+        ImmutableMap.of("category", "workerCategory", "workerVersion", "workerVersion"),
+        5L
+    );
+    emitter.verifyValue(
+        "worker/taskSlot/used/count",
+        ImmutableMap.of("category", "workerCategory", "workerVersion", "workerVersion"),
+        1L
+    );
   }
 
   @Test

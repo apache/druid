@@ -21,13 +21,18 @@ package org.apache.druid.java.util.metrics;
 
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-public class StubServiceEmitter extends ServiceEmitter
+public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifier
 {
-  private List<Event> events = new ArrayList<>();
+  private final List<Event> events = new ArrayList<>();
+  private final Map<String, List<ServiceMetricEvent>> metricEvents = new HashMap<>();
 
   public StubServiceEmitter(String service, String host)
   {
@@ -37,12 +42,45 @@ public class StubServiceEmitter extends ServiceEmitter
   @Override
   public void emit(Event event)
   {
+    if (event instanceof ServiceMetricEvent) {
+      ServiceMetricEvent metricEvent = (ServiceMetricEvent) event;
+      metricEvents.computeIfAbsent(metricEvent.getMetric(), name -> new ArrayList<>())
+                  .add(metricEvent);
+    }
     events.add(event);
   }
 
+  /**
+   * Gets all the events emitted since the previous {@link #flush()}.
+   */
   public List<Event> getEvents()
   {
     return events;
+  }
+
+  @Override
+  public List<Number> getMetricValues(
+      String metricName,
+      Map<String, Object> dimensionFilters
+  )
+  {
+    final List<Number> values = new ArrayList<>();
+    final List<ServiceMetricEvent> events =
+        metricEvents.getOrDefault(metricName, Collections.emptyList());
+    final Map<String, Object> filters =
+        dimensionFilters == null ? Collections.emptyMap() : dimensionFilters;
+    for (ServiceMetricEvent event : events) {
+      final Map<String, Object> userDims = event.getUserDims();
+      boolean match = filters.keySet().stream()
+                             .map(d -> filters.get(d).equals(userDims.get(d)))
+                             .reduce((a, b) -> a && b)
+                             .orElse(true);
+      if (match) {
+        values.add(event.getValue());
+      }
+    }
+
+    return values;
   }
 
   @Override
@@ -53,6 +91,8 @@ public class StubServiceEmitter extends ServiceEmitter
   @Override
   public void flush()
   {
+    events.clear();
+    metricEvents.clear();
   }
 
   @Override

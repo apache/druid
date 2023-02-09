@@ -38,8 +38,8 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.GroupByTestColumnSelectorFactory;
 import org.apache.druid.query.groupby.epinephelinae.GrouperTestUtil;
-import org.apache.druid.query.groupby.epinephelinae.TestColumnSelectorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
@@ -228,7 +228,7 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
   @Test
   public void testRelocation()
   {
-    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     SketchHolder sketchHolder = SketchHolder.of(Sketches.updateSketchBuilder().setNominalEntries(16).build());
     UpdateSketch updateSketch = (UpdateSketch) sketchHolder.getSketch();
     updateSketch.update(1);
@@ -240,6 +240,23 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
         SketchHolder.class
     );
     Assert.assertEquals(holders[0].getEstimate(), holders[1].getEstimate(), 0);
+  }
+
+  @Test
+  public void testWithNameMerge()
+  {
+    OldSketchMergeAggregatorFactory factory = new OldSketchMergeAggregatorFactory("name", "fieldName", 16, null);
+    Assert.assertEquals(factory, factory.withName("name"));
+    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+  }
+
+
+  @Test
+  public void testWithNameBuild()
+  {
+    OldSketchBuildAggregatorFactory factory = new OldSketchBuildAggregatorFactory("name", "fieldName", 16);
+    Assert.assertEquals(factory, factory.withName("name"));
+    Assert.assertEquals("newTest", factory.withName("newTest").getName());
   }
 
   private void assertPostAggregatorSerde(PostAggregator agg) throws Exception

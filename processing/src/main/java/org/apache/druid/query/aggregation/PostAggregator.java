@@ -19,6 +19,8 @@
 
 package org.apache.druid.query.aggregation;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.segment.ColumnInspector;
@@ -45,6 +47,7 @@ public interface PostAggregator extends Cacheable
   Object compute(Map<String, Object> combinedAggregators);
 
   @Nullable
+  @JsonInclude(Include.NON_NULL)
   String getName();
 
   /**

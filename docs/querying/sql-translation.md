@@ -24,7 +24,7 @@ sidebar_label: "SQL query translation"
   -->
 
 > Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
-> This document describes the SQL language.
+> This document describes the Druid SQL language.
 
 Druid uses [Apache Calcite](https://calcite.apache.org/) to parse and plan SQL queries.
 Druid translates SQL statements into its [native JSON-based query language](querying.md).
@@ -34,8 +34,8 @@ This topic includes best practices and tools to help you achieve good performanc
 
 ## Best practices
 
-Consider this (non-exhaustive) list of things to look out for when looking into the performance implications of
-how your SQL queries are translated to native queries.
+Consider the following non-exhaustive list of best practices when looking into performance implications of
+translating Druid SQL queries to native queries.
 
 1. If you wrote a filter on the primary time column `__time`, make sure it is being correctly translated to an
 `"intervals"` filter, as described in the [Time filters](#time-filters) section below. If not, you may need to change
@@ -63,37 +63,139 @@ appreciated.
 ## Interpreting EXPLAIN PLAN output
 
 The [EXPLAIN PLAN](sql.md#explain-plan) functionality can help you understand how a given SQL query will
-be translated to native. For simple queries that do not involve subqueries or joins, the output of EXPLAIN PLAN
-is easy to interpret. The native query that will run is embedded as JSON inside a "DruidQueryRel" line:
+be translated to native.
+EXPLAIN PLAN statements return a `RESOURCES` column that describes the resource being queried as well as a `PLAN` column that contains a JSON array of native queries that Druid will run.
+For example, consider the following query:
 
-```
-> EXPLAIN PLAN FOR SELECT COUNT(*) FROM wikipedia
-
-DruidQueryRel(query=[{"queryType":"timeseries","dataSource":"wikipedia","intervals":"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z","granularity":"all","aggregations":[{"type":"count","name":"a0"}]}], signature=[{a0:LONG}])
-```
-
-For more complex queries that do involve subqueries or joins, EXPLAIN PLAN is somewhat more difficult to interpret.
-For example, consider this query:
-
-```
-> EXPLAIN PLAN FOR
-> SELECT
->     channel,
->     COUNT(*)
-> FROM wikipedia
-> WHERE channel IN (SELECT page FROM wikipedia GROUP BY page ORDER BY COUNT(*) DESC LIMIT 10)
-> GROUP BY channel
-
-DruidJoinQueryRel(condition=[=($1, $3)], joinType=[inner], query=[{"queryType":"groupBy","dataSource":{"type":"table","name":"__join__"},"intervals":{"type":"intervals","intervals":["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"]},"granularity":"all","dimensions":["channel"],"aggregations":[{"type":"count","name":"a0"}]}], signature=[{d0:STRING, a0:LONG}])
-  DruidQueryRel(query=[{"queryType":"scan","dataSource":{"type":"table","name":"wikipedia"},"intervals":{"type":"intervals","intervals":["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"]},"resultFormat":"compactedList","columns":["__time","channel","page"],"granularity":"all"}], signature=[{__time:LONG, channel:STRING, page:STRING}])
-  DruidQueryRel(query=[{"queryType":"topN","dataSource":{"type":"table","name":"wikipedia"},"dimension":"page","metric":{"type":"numeric","metric":"a0"},"threshold":10,"intervals":{"type":"intervals","intervals":["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"]},"granularity":"all","aggregations":[{"type":"count","name":"a0"}]}], signature=[{d0:STRING}])
+```sql
+EXPLAIN PLAN FOR
+SELECT
+  channel,
+  COUNT(*)
+FROM wikipedia
+WHERE channel IN (SELECT page FROM wikipedia GROUP BY page ORDER BY COUNT(*) DESC LIMIT 10)
+GROUP BY channel
 ```
 
-Here, there is a join with two inputs. The way to read this is to consider each line of the EXPLAIN PLAN output as
-something that might become a query, or might just become a simple datasource. The `query` field they all have is
-called a "partial query" and represents what query would be run on the datasource represented by that line, if that
-line ran by itself. In some cases — like the "scan" query in the second line of this example — the query does not
-actually run, and it ends up being translated to a simple table datasource. See the [Join translation](#joins) section
+The EXPLAIN PLAN statement returns the following plan:
+
+```json
+[
+  {
+    "query": {
+      "queryType": "topN",
+      "dataSource": {
+        "type": "join",
+        "left": {
+          "type": "table",
+          "name": "wikipedia"
+        },
+        "right": {
+          "type": "query",
+          "query": {
+            "queryType": "groupBy",
+            "dataSource": {
+              "type": "table",
+              "name": "wikipedia"
+            },
+            "intervals": {
+              "type": "intervals",
+              "intervals": [
+                "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+              ]
+            },
+            "granularity": {
+              "type": "all"
+            },
+            "dimensions": [
+              {
+                "type": "default",
+                "dimension": "page",
+                "outputName": "d0",
+                "outputType": "STRING"
+              }
+            ],
+            "aggregations": [
+              {
+                "type": "count",
+                "name": "a0"
+              }
+            ],
+            "limitSpec": {
+              "type": "default",
+              "columns": [
+                {
+                  "dimension": "a0",
+                  "direction": "descending",
+                  "dimensionOrder": {
+                    "type": "numeric"
+                  }
+                }
+              ],
+              "limit": 10
+            },
+            "context": {
+              "sqlOuterLimit": 101,
+              "sqlQueryId": "ee616a36-c30c-4eae-af00-245127956e42",
+              "useApproximateCountDistinct": false,
+              "useApproximateTopN": false
+            }
+          }
+        },
+        "rightPrefix": "j0.",
+        "condition": "(\"channel\" == \"j0.d0\")",
+        "joinType": "INNER"
+      },
+      "dimension": {
+        "type": "default",
+        "dimension": "channel",
+        "outputName": "d0",
+        "outputType": "STRING"
+      },
+      "metric": {
+        "type": "dimension",
+        "ordering": {
+          "type": "lexicographic"
+        }
+      },
+      "threshold": 101,
+      "intervals": {
+        "type": "intervals",
+        "intervals": [
+          "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+        ]
+      },
+      "granularity": {
+        "type": "all"
+      },
+      "aggregations": [
+        {
+          "type": "count",
+          "name": "a0"
+        }
+      ],
+      "context": {
+        "sqlOuterLimit": 101,
+        "sqlQueryId": "ee616a36-c30c-4eae-af00-245127956e42",
+        "useApproximateCountDistinct": false,
+        "useApproximateTopN": false
+      }
+    },
+    "signature": [
+      {
+        "name": "d0",
+        "type": "STRING"
+      },
+      {
+        "name": "a0",
+        "type": "LONG"
+      }
+    ]
+  }
+]
+```
+
+In this case the JOIN operator gets translated to a `join` datasource. See the [Join translation](#joins) section
 for more details about how this works.
 
 We can see this for ourselves using Druid's [request logging](../configuration/index.md#request-logging) feature. After
@@ -139,10 +241,9 @@ enabling logging and running this query, we can see that it actually runs as the
 
 Druid SQL uses four different native query types.
 
-- [Scan](scan-query.md) is used for queries that do not aggregate (no GROUP BY, no DISTINCT).
+- [Scan](scan-query.md) is used for queries that do not aggregate&mdash;no GROUP BY, no DISTINCT.
 
-- [Timeseries](timeseriesquery.md) is used for queries that GROUP BY `FLOOR(__time TO unit)` or `TIME_FLOOR(__time,
-period)`, have no other grouping expressions, no HAVING or LIMIT clauses, no nesting, and either no ORDER BY, or an
+- [Timeseries](timeseriesquery.md) is used for queries that GROUP BY `FLOOR(__time TO unit)` or `TIME_FLOOR(__time, period)`, have no other grouping expressions, no HAVING clause, no nesting, and either no ORDER BY, or an
 ORDER BY that orders by same expression as present in GROUP BY. It also uses Timeseries for "grand total" queries that
 have aggregation functions but no GROUP BY. This query type takes advantage of the fact that Druid segments are sorted
 by time.

@@ -22,21 +22,18 @@ package org.apache.druid.indexing.overlord;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteSink;
-import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
+import com.google.common.math.IntMath;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -45,6 +42,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.tasklogs.ConsoleLoggingEnforcementConfigurationFactory;
@@ -58,6 +56,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.DruidMetrics;
@@ -67,6 +66,7 @@ import org.apache.druid.server.metrics.MonitorsConfig;
 import org.apache.druid.server.metrics.WorkerTaskCountStatsProvider;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogStreamer;
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -75,14 +75,16 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.RoundingMode;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -105,6 +107,7 @@ public class ForkingTaskRunner
   private final StartupLoggingConfig startupLoggingConfig;
   private final WorkerConfig workerConfig;
 
+  private volatile int numProcessorsPerTask = -1;
   private volatile boolean stopping = false;
 
   private static final AtomicLong LAST_REPORTED_FAILED_TASK_COUNT = new AtomicLong();
@@ -121,10 +124,11 @@ public class ForkingTaskRunner
       TaskLogPusher taskLogPusher,
       ObjectMapper jsonMapper,
       @Self DruidNode node,
-      StartupLoggingConfig startupLoggingConfig
+      StartupLoggingConfig startupLoggingConfig,
+      TaskStorageDirTracker dirTracker
   )
   {
-    super(jsonMapper, taskConfig);
+    super(jsonMapper, taskConfig, dirTracker);
     this.config = config;
     this.props = props;
     this.taskLogPusher = taskLogPusher;
@@ -150,9 +154,11 @@ public class ForkingTaskRunner
                 @Override
                 public TaskStatus call()
                 {
-                  final String attemptUUID = UUID.randomUUID().toString();
-                  final File taskDir = taskConfig.getTaskDir(task.getId());
-                  final File attemptDir = new File(taskDir, attemptUUID);
+
+                  final String attemptId = String.valueOf(getNextAttemptID(dirTracker, task.getId()));
+                  final String baseTaskDir = dirTracker.getBaseTaskDir(task.getId()).getAbsolutePath();
+                  final File taskDir = dirTracker.getTaskDir(task.getId());
+                  final File attemptDir = Paths.get(taskDir.getAbsolutePath(), "attempt", attemptId).toFile();
 
                   final ProcessHolder processHolder;
                   final String childHost = node.getHost();
@@ -172,8 +178,6 @@ public class ForkingTaskRunner
                   try {
                     final Closer closer = Closer.create();
                     try {
-                      FileUtils.mkdirp(attemptDir);
-
                       final File taskFile = new File(taskDir, "task.json");
                       final File statusFile = new File(attemptDir, "status.json");
                       final File logFile = new File(taskDir, "log");
@@ -213,6 +217,13 @@ public class ForkingTaskRunner
                         command.add(config.getJavaCommand());
                         command.add("-cp");
                         command.add(taskClasspath);
+
+                        if (numProcessorsPerTask < 1) {
+                          // numProcessorsPerTask is set by start()
+                          throw new ISE("Not started");
+                        }
+
+                        command.add(StringUtils.format("-XX:ActiveProcessorCount=%d", numProcessorsPerTask));
 
                         Iterables.addAll(command, new QuotableWhiteSpaceSplitter(config.getJavaOpts()));
                         Iterables.addAll(command, config.getJavaOptsArray());
@@ -293,6 +304,15 @@ public class ForkingTaskRunner
                           }
                         }
 
+                        // add the attemptId as a system property
+                        command.add(
+                            StringUtils.format(
+                                "-D%s=%s",
+                                "attemptId",
+                                "1"
+                            )
+                        );
+
                         // Add dataSource, taskId and taskType for metrics or logging
                         command.add(
                             StringUtils.format(
@@ -352,9 +372,9 @@ public class ForkingTaskRunner
                         command.add("org.apache.druid.cli.Main");
                         command.add("internal");
                         command.add("peon");
-                        command.add(taskFile.toString());
-                        command.add(statusFile.toString());
-                        command.add(reportsFile.toString());
+                        command.add(baseTaskDir);
+                        command.add(task.getId());
+                        command.add(attemptId);
                         String nodeType = task.getNodeType();
                         if (nodeType != null) {
                           command.add("--nodeType");
@@ -501,7 +521,7 @@ public class ForkingTaskRunner
     }
     finally {
       Thread.currentThread().setName(priorThreadName);
-      // Upload task logs
+        // Upload task logs
       taskLogPusher.pushTaskLog(task.getId(), logFile);
       if (reportsFile.exists()) {
         taskLogPusher.pushTaskReports(task.getId(), reportsFile);
@@ -558,6 +578,7 @@ public class ForkingTaskRunner
     } else {
       LOGGER.warn("Ran out of time, not waiting for executor to finish!");
     }
+    super.stop();
   }
 
   @Override
@@ -633,13 +654,14 @@ public class ForkingTaskRunner
   }
 
   @Override
+  @LifecycleStart
   public void start()
   {
-    // No state setup required
+    setNumProcessorsPerTask();
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(final String taskid, final long offset)
+  public Optional<InputStream> streamTaskLog(final String taskid, final long offset) throws IOException
   {
     final ProcessHolder processHolder;
 
@@ -651,17 +673,7 @@ public class ForkingTaskRunner
         return Optional.absent();
       }
     }
-
-    return Optional.of(
-        new ByteSource()
-        {
-          @Override
-          public InputStream openStream() throws IOException
-          {
-            return LogUtils.streamFile(processHolder.logFile, offset);
-          }
-        }
-    );
+    return Optional.of(LogUtils.streamFile(processHolder.logFile, offset));
   }
 
   /**
@@ -683,7 +695,7 @@ public class ForkingTaskRunner
     }
   }
 
-  String getMaskedCommand(List<String> maskedProperties, List<String> command)
+  public static String getMaskedCommand(List<String> maskedProperties, List<String> command)
   {
     final Set<String> maskedPropertiesSet = Sets.newHashSet(maskedProperties);
     final Iterator<String> maskedIterator = command.stream().map(element -> {
@@ -788,6 +800,20 @@ public class ForkingTaskRunner
     return successfulTaskCount - lastReportedSuccessfulTaskCount;
   }
 
+  @VisibleForTesting
+  void setNumProcessorsPerTask()
+  {
+    // Divide number of available processors by the number of tasks.
+    // This prevents various automatically-sized thread pools from being unreasonably large (we don't want each
+    // task to size its pools as if it is the only thing on the entire machine).
+
+    final int availableProcessors = JvmUtils.getRuntimeInfo().getAvailableProcessors();
+    numProcessorsPerTask = Math.max(
+        1,
+        IntMath.divide(availableProcessors, workerConfig.getCapacity(), RoundingMode.CEILING)
+    );
+  }
+
   protected static class ForkingTaskRunnerWorkItem extends TaskRunnerWorkItem
   {
     private final Task task;
@@ -863,40 +889,31 @@ public class ForkingTaskRunner
       process.destroy();
     }
   }
-}
 
-/**
- * Make an iterable of space delimited strings... unless there are quotes, which it preserves
- */
-class QuotableWhiteSpaceSplitter implements Iterable<String>
-{
-  private final String string;
-
-  public QuotableWhiteSpaceSplitter(String string)
+  @VisibleForTesting
+  static int getNextAttemptID(TaskStorageDirTracker dirTracker, String taskId)
   {
-    this.string = Preconditions.checkNotNull(string);
-  }
-
-  @Override
-  public Iterator<String> iterator()
-  {
-    return Splitter.on(
-        new CharMatcher()
-        {
-          private boolean inQuotes = false;
-
-          @Override
-          public boolean matches(char c)
-          {
-            if ('"' == c) {
-              inQuotes = !inQuotes;
-            }
-            if (inQuotes) {
-              return false;
-            }
-            return CharMatcher.BREAKING_WHITESPACE.matches(c);
-          }
-        }
-    ).omitEmptyStrings().split(string).iterator();
+    File taskDir = dirTracker.getTaskDir(taskId);
+    File attemptDir = new File(taskDir, "attempt");
+    try {
+      FileUtils.mkdirp(attemptDir);
+    }
+    catch (IOException e) {
+      throw new ISE("Error creating directory", e);
+    }
+    int maxAttempt =
+        Arrays.stream(attemptDir.listFiles(File::isDirectory))
+              .mapToInt(x -> Integer.parseInt(x.getName()))
+              .max().orElse(0);
+    // now make the directory
+    File attempt = new File(attemptDir, String.valueOf(maxAttempt + 1));
+    try {
+      FileUtils.mkdirp(attempt);
+    }
+    catch (IOException e) {
+      throw new ISE("Error creating directory", e);
+    }
+    return maxAttempt + 1;
   }
 }
+

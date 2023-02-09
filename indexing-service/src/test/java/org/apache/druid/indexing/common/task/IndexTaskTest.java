@@ -123,13 +123,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
 public class IndexTaskTest extends IngestionTestBase
@@ -262,7 +260,7 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertFalse(indexTask.supportsQueries());
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
     Assert.assertEquals(1, segments.size());
     Assert.assertEquals(ImmutableList.of("ts", "dim", "valDim"), segments.get(0).getDimensions());
     Assert.assertEquals(ImmutableList.of("valMet"), segments.get(0).getMetrics());
@@ -317,7 +315,7 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertFalse(indexTask.supportsQueries());
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
     Assert.assertEquals(1, segments.size());
     // only empty string dimensions are ignored currently
     Assert.assertEquals(ImmutableList.of("ts", "valDim"), segments.get(0).getDimensions());
@@ -354,7 +352,7 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertFalse(indexTask.supportsQueries());
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(2, segments.size());
 
@@ -458,7 +456,7 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertEquals(indexTask.getId(), indexTask.getGroupId());
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
     DataSegment segment = segments.get(0);
@@ -549,7 +547,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
   }
@@ -585,7 +583,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
   }
@@ -617,7 +615,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
 
@@ -660,7 +658,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
 
@@ -701,7 +699,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(2, segments.size());
 
@@ -776,7 +774,7 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertEquals("index_append_test", indexTask.getGroupId());
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(2, taskRunner.getTaskActionClient().getActionCount(SegmentAllocateAction.class));
     Assert.assertEquals(2, segments.size());
@@ -823,7 +821,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(3, segments.size());
 
@@ -858,7 +856,7 @@ public class IndexTaskTest extends IngestionTestBase
     // Expect exception if reingest with dropExisting and null intervals is attempted
     expectedException.expect(IAE.class);
     expectedException.expectMessage(
-        "GranularitySpec's intervals cannot be empty when setting dropExisting to true."
+        "GranularitySpec's intervals cannot be empty for replace."
     );
     IndexTask indexTask = new IndexTask(
         null,
@@ -929,7 +927,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
 
@@ -987,7 +985,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
 
@@ -1033,7 +1031,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(6, segments.size());
 
@@ -1077,7 +1075,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(3, segments.size());
 
@@ -1120,7 +1118,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(5, segments.size());
 
@@ -1447,7 +1445,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(Collections.singletonList("d"), segments.get(0).getDimensions());
     Assert.assertEquals(Collections.singletonList("val"), segments.get(0).getMetrics());
@@ -1521,22 +1519,12 @@ public class IndexTaskTest extends IngestionTestBase
 
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
-    List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
-        .getUnparseableEvents()
-        .get(RowIngestionMeters.BUILD_SEGMENTS);
+    ParseExceptionReport parseExceptionReport =
+        ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
+    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
-    List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
-      return ((List<String>) r.get("details")).get(0);
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedMessages, actualMessages);
-
-    List<String> expectedInputs = ImmutableList.of(
-        "{time=unparseable, d=a, val=1}"
-    );
-    List<String> actualInputs = parseExceptionReports.stream().map((r) -> {
-      return (String) r.get("input");
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedInputs, actualInputs);
+    List<String> expectedInputs = ImmutableList.of("{time=unparseable, d=a, val=1}");
+    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
   }
 
   @Test
@@ -1604,7 +1592,7 @@ public class IndexTaskTest extends IngestionTestBase
           tmpDir,
           timestampSpec,
           dimensionsSpec,
-          new JsonInputFormat(null, null, null),
+          new JsonInputFormat(null, null, null, null, null),
           null,
           null,
           tuningConfig,
@@ -1633,32 +1621,33 @@ public class IndexTaskTest extends IngestionTestBase
 
     TaskStatus status = runTask(indexTask).lhs;
     Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
-    Assert.assertEquals(null, status.getErrorMsg());
+    Assert.assertNull(status.getErrorMsg());
 
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
+    final int processedBytes = useInputFormatApi ? 657 : 0;
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.DETERMINE_PARTITIONS,
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.PROCESSED, 4,
+            RowIngestionMeters.PROCESSED_BYTES, processedBytes,
             RowIngestionMeters.UNPARSEABLE, 4,
             RowIngestionMeters.THROWN_AWAY, 1
         ),
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
-
             RowIngestionMeters.PROCESSED_WITH_ERROR, 3,
             RowIngestionMeters.PROCESSED, 1,
+            RowIngestionMeters.PROCESSED_BYTES, processedBytes,
             RowIngestionMeters.UNPARSEABLE, 4,
             RowIngestionMeters.THROWN_AWAY, 1
         )
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
-    List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
-        .getUnparseableEvents()
-        .get(RowIngestionMeters.BUILD_SEGMENTS);
+    ParseExceptionReport parseExceptionReport =
+        ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
 
     List<String> expectedMessages;
     if (useInputFormatApi) {
@@ -1692,10 +1681,7 @@ public class IndexTaskTest extends IngestionTestBase
       );
     }
 
-    List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
-      return ((List<String>) r.get("details")).get(0);
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedMessages, actualMessages);
+    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     List<String> expectedInputs = Arrays.asList(
         "this is not JSON",
@@ -1706,14 +1692,10 @@ public class IndexTaskTest extends IngestionTestBase
         "{time=2014-01-01T00:00:10Z, dim=b, dimLong=notnumber, dimFloat=3.0, val=1}",
         "{time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
     );
-    List<String> actualInputs = parseExceptionReports.stream().map((r) -> {
-      return (String) r.get("input");
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedInputs, actualInputs);
+    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
 
-    parseExceptionReports = (List<LinkedHashMap>) reportData
-        .getUnparseableEvents()
-        .get(RowIngestionMeters.DETERMINE_PARTITIONS);
+    parseExceptionReport =
+        ParseExceptionReport.forPhase(reportData, RowIngestionMeters.DETERMINE_PARTITIONS);
 
     if (useInputFormatApi) {
       expectedMessages = Arrays.asList(
@@ -1740,10 +1722,7 @@ public class IndexTaskTest extends IngestionTestBase
       );
     }
 
-    actualMessages = parseExceptionReports.stream().map((r) -> {
-      return ((List<String>) r.get("details")).get(0);
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedMessages, actualMessages);
+    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     expectedInputs = Arrays.asList(
         "this is not JSON",
@@ -1751,11 +1730,7 @@ public class IndexTaskTest extends IngestionTestBase
         "{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}",
         "{time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
     );
-    actualInputs = parseExceptionReports.stream().map((r) -> {
-      return (String) r.get("input");
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedInputs, actualInputs);
-
+    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
   }
 
   @Test
@@ -1877,6 +1852,7 @@ public class IndexTaskTest extends IngestionTestBase
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.PROCESSED, 0,
+            RowIngestionMeters.PROCESSED_BYTES, 0,
             RowIngestionMeters.UNPARSEABLE, 0,
             RowIngestionMeters.THROWN_AWAY, 0
         ),
@@ -1884,6 +1860,7 @@ public class IndexTaskTest extends IngestionTestBase
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.PROCESSED, 1,
+            RowIngestionMeters.PROCESSED_BYTES, useInputFormatApi ? 182 : 0,
             RowIngestionMeters.UNPARSEABLE, 3,
             RowIngestionMeters.THROWN_AWAY, useInputFormatApi ? 1 : 2
         )
@@ -1891,24 +1868,16 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
-    List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
-        .getUnparseableEvents()
-        .get(RowIngestionMeters.BUILD_SEGMENTS);
-
-    List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
-      return ((List<String>) r.get("details")).get(0);
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedMessages, actualMessages);
+    ParseExceptionReport parseExceptionReport =
+        ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
+    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     List<String> expectedInputs = Arrays.asList(
         "{time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
         "{time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
         "{time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
     );
-    List<String> actualInputs = parseExceptionReports.stream().map((r) -> {
-      return (String) r.get("input");
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedInputs, actualInputs);
+    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
   }
 
   @Test
@@ -2021,6 +1990,7 @@ public class IndexTaskTest extends IngestionTestBase
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.PROCESSED, 1,
+            RowIngestionMeters.PROCESSED_BYTES, useInputFormatApi ? 182 : 0,
             RowIngestionMeters.UNPARSEABLE, 3,
             RowIngestionMeters.THROWN_AWAY, useInputFormatApi ? 1 : 2
         ),
@@ -2028,6 +1998,7 @@ public class IndexTaskTest extends IngestionTestBase
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.PROCESSED, 0,
+            RowIngestionMeters.PROCESSED_BYTES, 0,
             RowIngestionMeters.UNPARSEABLE, 0,
             RowIngestionMeters.THROWN_AWAY, 0
         )
@@ -2035,24 +2006,16 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
-    List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
-        .getUnparseableEvents()
-        .get(RowIngestionMeters.DETERMINE_PARTITIONS);
-
-    List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
-      return ((List<String>) r.get("details")).get(0);
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedMessages, actualMessages);
+    ParseExceptionReport parseExceptionReport =
+        ParseExceptionReport.forPhase(reportData, RowIngestionMeters.DETERMINE_PARTITIONS);
+    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     List<String> expectedInputs = Arrays.asList(
         "{time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
         "{time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
         "{time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
     );
-    List<String> actualInputs = parseExceptionReports.stream().map((r) -> {
-      return (String) r.get("input");
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedInputs, actualInputs);
+    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
   }
 
   @Test
@@ -2117,7 +2080,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
     // the order of result segments can be changed because hash shardSpec is used.
     // the below loop is to make this test deterministic.
     Assert.assertEquals(2, segments.size());
@@ -2208,22 +2171,14 @@ public class IndexTaskTest extends IngestionTestBase
 
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
-    List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
-        .getUnparseableEvents()
-        .get(RowIngestionMeters.BUILD_SEGMENTS);
-
-    List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
-      return ((List<String>) r.get("details")).get(0);
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedMessages, actualMessages);
+    ParseExceptionReport parseExceptionReport =
+        ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
+    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     List<String> expectedInputs = ImmutableList.of(
         "{column_1=2014-01-01T00:00:10Z, column_2=a, column_3=1}"
     );
-    List<String> actualInputs = parseExceptionReports.stream().map((r) -> {
-      return (String) r.get("input");
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedInputs, actualInputs);
+    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
   }
 
   @Test
@@ -2255,7 +2210,7 @@ public class IndexTaskTest extends IngestionTestBase
           null
       );
 
-      final List<DataSegment> segments = runTask(indexTask).rhs;
+      final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
       Assert.assertEquals(5, segments.size());
 
@@ -2320,7 +2275,7 @@ public class IndexTaskTest extends IngestionTestBase
           null
       );
 
-      final List<DataSegment> segments = runTask(indexTask).rhs;
+      final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
       Assert.assertEquals(5, segments.size());
 
@@ -2395,7 +2350,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with YEAR segment granularity
-    List<DataSegment> segments = runTask(indexTask).rhs;
+    List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
     Set<DataSegment> usedSegmentsBeforeOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
@@ -2424,7 +2379,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with overwrite and MINUTE segment granularity
-    segments = runTask(indexTask).rhs;
+    segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(3, segments.size());
     Set<DataSegment> usedSegmentsBeforeAfterOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
@@ -2479,7 +2434,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with DAY segment granularity
-    List<DataSegment> segments = runTask(indexTask).rhs;
+    List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
     Set<DataSegment> usedSegmentsBeforeOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
@@ -2508,7 +2463,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with overwrite and HOUR segment granularity
-    segments = runTask(indexTask).rhs;
+    segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
     Set<DataSegment> usedSegmentsBeforeAfterOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
@@ -2571,7 +2526,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with DAY segment granularity
-    List<DataSegment> segments = runTask(indexTask).rhs;
+    List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
     Set<DataSegment> usedSegmentsBeforeOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
@@ -2600,7 +2555,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with overwrite and HOUR segment granularity
-    segments = runTask(indexTask).rhs;
+    segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(24, segments.size());
     Set<DataSegment> usedSegmentsBeforeAfterOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
@@ -2649,7 +2604,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with DAY segment granularity
-    List<DataSegment> segments = runTask(indexTask).rhs;
+    List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
     Set<DataSegment> usedSegmentsBeforeOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
@@ -2688,7 +2643,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with overwrite and same segment granularity
-    segments = runTask(indexTask).rhs;
+    segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size()); // one tombstone
     Assert.assertTrue(segments.get(0).isTombstone());
@@ -2700,7 +2655,7 @@ public class IndexTaskTest extends IngestionTestBase
   {
     expectedException.expect(IAE.class);
     expectedException.expectMessage(
-        "Cannot both drop existing segments and append to existing segments. Either dropExisting or appendToExisting should be set to false"
+        "Cannot simultaneously replace and append to existing segments. Either dropExisting or appendToExisting should be set to false"
     );
     new IndexTask(
         null,
@@ -2729,6 +2684,13 @@ public class IndexTaskTest extends IngestionTestBase
         status.getErrorMsg(),
         CoreMatchers.containsString("Max parse exceptions")
     );
+  }
+
+  private List<DataSegment> runSuccessfulTask(IndexTask task) throws Exception
+  {
+    Pair<TaskStatus, List<DataSegment>> pair = runTask(task);
+    Assert.assertEquals(pair.lhs.toString(), TaskState.SUCCESS, pair.lhs.getStatusCode());
+    return pair.rhs;
   }
 
   private Pair<TaskStatus, List<DataSegment>> runTask(IndexTask task) throws Exception

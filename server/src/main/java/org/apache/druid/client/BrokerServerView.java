@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChestWarehouse;
@@ -181,10 +182,15 @@ public class BrokerServerView implements TimelineServerView
   public void start() throws InterruptedException
   {
     if (segmentWatcherConfig.isAwaitInitializationOnStart()) {
-      final long startNanos = System.nanoTime();
-      log.debug("%s waiting for initialization.", getClass().getSimpleName());
+      final long startMillis = System.currentTimeMillis();
+      log.info("%s waiting for initialization.", getClass().getSimpleName());
       awaitInitialization();
-      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), (System.nanoTime() - startNanos) / 1000000);
+      final long endMillis = System.currentTimeMillis();
+      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), endMillis - startMillis);
+      emitter.emit(ServiceMetricEvent.builder().build(
+          "init/serverview/time",
+          endMillis - startMillis
+      ));
     }
   }
 
@@ -353,7 +359,7 @@ public class BrokerServerView implements TimelineServerView
   {
     final TableDataSource table =
         analysis.getBaseTableDataSource()
-                .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
+                .orElseThrow(() -> new ISE("Cannot handle base datasource: %s", analysis.getBaseDataSource()));
 
     synchronized (lock) {
       return Optional.ofNullable(timelines.get(table.getName()));

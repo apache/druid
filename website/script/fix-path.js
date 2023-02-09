@@ -27,6 +27,13 @@ var urlVersion = process.argv[2];
 var druidVersion = process.argv[3];
 
 try {
+  // Change any explict "/docs/latest" links to "/docs/" to be picked up by the next replace
+  replace.sync({
+    files: './build/ApacheDruid/docs/**/*.html',
+    from: /"\/docs\/latest"/g,
+    to: `"/docs/"`,
+  });
+
   // Fix doc paths
   replace.sync({
     files: './build/ApacheDruid/docs/**/*.html',

@@ -34,6 +34,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -283,9 +284,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public long getMaxOnDiskStorage()
+      public HumanReadableBytes getMaxOnDiskStorage()
       {
-        return 10L * 1024 * 1024;
+        return HumanReadableBytes.valueOf(10L * 1024 * 1024);
       }
 
       @Override
@@ -303,21 +304,21 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public long getMaxSelectorDictionarySize()
+      public long getConfiguredMaxSelectorDictionarySize()
       {
         return 20;
       }
 
       @Override
-      public long getMaxMergingDictionarySize()
+      public long getConfiguredMaxMergingDictionarySize()
       {
         return 400;
       }
 
       @Override
-      public long getMaxOnDiskStorage()
+      public HumanReadableBytes getMaxOnDiskStorage()
       {
-        return 10L * 1024 * 1024;
+        return HumanReadableBytes.valueOf(10L * 1024 * 1024);
       }
 
       @Override
@@ -411,6 +412,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             configSupplier,
             bufferPools.getProcessingPool(),
             bufferPools.getMergePool(),
+            TestHelper.makeJsonMapper(),
             mapper,
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
         )
@@ -755,8 +757,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         query,
         serviceEmitter
     );
-    Assert.assertEquals(1, serviceEmitter.getEvents().size());
-    Assert.assertEquals(vectorize, serviceEmitter.getEvents().get(0).toMap().getOrDefault("vectorized", null));
+    serviceEmitter.verifyEmitted("query/wait/time", ImmutableMap.of("vectorized", vectorize), 1);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
   }
 
@@ -2056,6 +2057,141 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
 
     List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(78L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(97L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(109L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(110L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(112L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(113L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(114L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(118L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(119L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(120L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(121L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(126L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(135L)), "rows", 2L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(144L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(147L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(158L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(166L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1049L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1144L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1193L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1234L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1314L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1321L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1447L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1522L)), "rows", 1L)
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outer);
+    TestHelper.assertExpectedObjects(expectedResults, results, "long-groupby-arrays");
+  }
+
+  @Test
+  public void testGroupByWithLongArraysDesc()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING");
+    }
+    cannotVectorize();
+    GroupByQuery outer = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn(
+            "v0",
+            "array(index)",
+            ColumnType.LONG_ARRAY,
+            ExprMacroTable.nil()
+        ))
+        .setDimensions(
+            new DefaultDimensionSpec("v0", "alias_outer", ColumnType.LONG_ARRAY)
+        )
+        .setLimitSpec(new DefaultLimitSpec(
+            ImmutableList.of(new OrderByColumnSpec(
+                "alias_outer",
+                OrderByColumnSpec.Direction.DESCENDING,
+                StringComparators.NUMERIC
+            )),
+            Integer.MAX_VALUE - 1
+        ))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.ROWS_COUNT
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(78L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(97L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(109L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(110L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(112L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(113L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(114L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(118L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(119L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(120L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(121L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(126L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(135L)), "rows", 2L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(144L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(147L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(158L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(166L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1049L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1144L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1193L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1234L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1314L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1321L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1447L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1522L)), "rows", 1L)
+    );
+    // reversing list
+    Collections.reverse(expectedResults);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outer);
+    TestHelper.assertExpectedObjects(expectedResults, results, "long-groupby-arrays");
+  }
+
+  @Test
+  public void testGroupByWithDoubleArrays()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING");
+    }
+    cannotVectorize();
+    GroupByQuery outer = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn(
+            "v0",
+            "array(index)",
+            ColumnType.DOUBLE_ARRAY,
+            ExprMacroTable.nil()
+        ))
+        .setDimensions(
+            new DefaultDimensionSpec("v0", "alias_outer", ColumnType.DOUBLE_ARRAY)
+        )
+        .setLimitSpec(new DefaultLimitSpec(
+            ImmutableList.of(new OrderByColumnSpec(
+                "alias_outer",
+                OrderByColumnSpec.Direction.ASCENDING,
+                StringComparators.NUMERIC
+            )),
+            Integer.MAX_VALUE - 1
+        ))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.ROWS_COUNT
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+
+    List<ResultRow> expectedResults = Arrays.asList(
         makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(78.622547)), "rows", 1L),
         makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(97.387433)), "rows", 1L),
         makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(109.705815)), "rows", 1L),
@@ -2083,13 +2219,13 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1447.34116)), "rows", 1L),
         makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1522.043733)), "rows", 1L)
     );
-
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outer);
     TestHelper.assertExpectedObjects(expectedResults, results, "long-groupby-arrays");
   }
 
+
   @Test
-  public void testGroupByWithLongArraysDesc()
+  public void testGroupByWithDoubleArraysDesc()
   {
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UnsupportedOperationException.class);
@@ -2102,11 +2238,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setVirtualColumns(new ExpressionVirtualColumn(
             "v0",
             "array(index)",
-            ColumnType.LONG_ARRAY,
+            ColumnType.DOUBLE_ARRAY,
             ExprMacroTable.nil()
         ))
         .setDimensions(
-            new DefaultDimensionSpec("v0", "alias_outer", ColumnType.LONG_ARRAY)
+            new DefaultDimensionSpec("v0", "alias_outer", ColumnType.DOUBLE_ARRAY)
         )
         .setLimitSpec(new DefaultLimitSpec(
             ImmutableList.of(new OrderByColumnSpec(
@@ -2821,7 +2957,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     List<ResultRow> expectedResults = null;
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       expectedException.expect(ResourceLimitExceededException.class);
-      expectedException.expectMessage("Not enough aggregation buffer space to execute this query");
+      expectedException.expectMessage("Not enough merge buffer memory to execute this query");
     } else {
       expectedResults = Arrays.asList(
           makeRow(query, "2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
@@ -2869,68 +3005,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testNotEnoughDictionarySpaceThroughContextOverride()
-  {
-    GroupByQuery query = makeQueryBuilder()
-        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
-        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
-        .overrideContext(ImmutableMap.of("maxOnDiskStorage", 0, "maxMergingDictionarySize", 1))
-        .build();
-
-    List<ResultRow> expectedResults = null;
-    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
-      expectedException.expect(ResourceLimitExceededException.class);
-      expectedException.expectMessage("Not enough dictionary space to execute this query");
-    } else {
-      expectedResults = Arrays.asList(
-          makeRow(query, "2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
-          makeRow(query, "2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
-          makeRow(
-              query,
-              "2011-04-01",
-              "alias",
-              "entertainment",
-              "rows",
-              1L,
-              "idx",
-              158L
-          ),
-          makeRow(query, "2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
-          makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
-          makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
-          makeRow(query, "2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
-          makeRow(query, "2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
-          makeRow(query, "2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
-
-          makeRow(query, "2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
-          makeRow(query, "2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
-          makeRow(
-              query,
-              "2011-04-02",
-              "alias",
-              "entertainment",
-              "rows",
-              1L,
-              "idx",
-              166L
-          ),
-          makeRow(query, "2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
-          makeRow(query, "2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
-          makeRow(query, "2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
-          makeRow(query, "2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
-          makeRow(query, "2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
-          makeRow(query, "2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
-      );
-    }
-
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "dictionary-space");
-  }
-
-  @Test
   public void testNotEnoughDiskSpaceThroughContextOverride()
   {
     GroupByQuery query = makeQueryBuilder()
@@ -2939,17 +3013,17 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
-        .overrideContext(ImmutableMap.of("maxOnDiskStorage", 1, "maxMergingDictionarySize", 1))
+        .overrideContext(ImmutableMap.of("maxOnDiskStorage", 1, GroupByQueryConfig.CTX_KEY_BUFFER_GROUPER_MAX_SIZE, 1))
         .build();
 
     List<ResultRow> expectedResults = null;
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       expectedException.expect(ResourceLimitExceededException.class);
-      if (config.getMaxOnDiskStorage() > 0) {
+      if (config.getMaxOnDiskStorage().getBytes() > 0) {
         // The error message always mentions disk if you have spilling enabled (maxOnDiskStorage > 0)
         expectedException.expectMessage("Not enough disk space to execute this query");
       } else {
-        expectedException.expectMessage("Not enough dictionary space to execute this query");
+        expectedException.expectMessage("Not enough merge buffer memory to execute this query");
       }
     } else {
       expectedResults = Arrays.asList(
@@ -3038,7 +3112,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     } else {
       expectedException.expect(ResourceLimitExceededException.class);
-      expectedException.expectMessage("Not enough aggregation buffer space to execute this query");
+      expectedException.expectMessage("Not enough merge buffer memory to execute this query");
       GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     }
   }
@@ -7389,7 +7463,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             new LongLastAggregatorFactory("innerlast", "index", null)
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
-        .overrideContext(ImmutableMap.of("finalize", true))
+        .overrideContext(ImmutableMap.of(QueryContexts.FINALIZE_KEY, true))
         .build();
 
     GroupByQuery query = makeQueryBuilder()

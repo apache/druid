@@ -50,6 +50,8 @@ import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
 import org.apache.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
 import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.query.operator.WindowOperatorQuery;
+import org.apache.druid.query.operator.WindowOperatorQueryQueryRunnerFactory;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
@@ -70,6 +72,7 @@ import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.LookupJoinableFactory;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -159,25 +162,24 @@ public class QueryStackTests
 
   public static TestClusterQuerySegmentWalker createClusterQuerySegmentWalker(
       Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
-      JoinableFactory joinableFactory,
       QueryRunnerFactoryConglomerate conglomerate,
       @Nullable QueryScheduler scheduler
   )
   {
-    return new TestClusterQuerySegmentWalker(timelines, joinableFactory, conglomerate, scheduler);
+    return new TestClusterQuerySegmentWalker(timelines, conglomerate, scheduler);
   }
 
   public static LocalQuerySegmentWalker createLocalQuerySegmentWalker(
       final QueryRunnerFactoryConglomerate conglomerate,
       final SegmentWrangler segmentWrangler,
-      final JoinableFactory joinableFactory,
+      final JoinableFactoryWrapper joinableFactoryWrapper,
       final QueryScheduler scheduler
   )
   {
     return new LocalQuerySegmentWalker(
         conglomerate,
         segmentWrangler,
-        joinableFactory,
+        joinableFactoryWrapper,
         scheduler,
         EMITTER
     );
@@ -347,6 +349,7 @@ public class QueryStackTests
             )
             .put(GroupByQuery.class, groupByQueryRunnerFactory)
             .put(TimeBoundaryQuery.class, new TimeBoundaryQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER))
+            .put(WindowOperatorQuery.class, new WindowOperatorQueryQueryRunnerFactory())
             .build()
     );
 

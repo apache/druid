@@ -34,7 +34,6 @@ import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Objects;
 
 public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Float>
@@ -46,10 +45,6 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   @Override
   public EncodedKeyComponent<Float> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
-    if (dimValues instanceof List) {
-      throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
-    }
-
     Float f = DimensionHandlerUtils.convertObjectToFloat(dimValues, reportParseExceptions);
     if (f == null) {
       hasNulls = NullHandling.sqlCompatible();

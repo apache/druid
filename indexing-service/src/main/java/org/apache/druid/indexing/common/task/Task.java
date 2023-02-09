@@ -22,6 +22,8 @@ package org.apache.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.indexer.TaskIdentifier;
+import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -176,7 +178,7 @@ public interface Task
   boolean isReady(TaskActionClient taskActionClient) throws Exception;
 
   /**
-   * Returns whether or not this task can restore its progress from its on-disk working directory. Restorable tasks
+   * Returns whether this task can restore its progress from its on-disk working directory. Restorable tasks
    * may be started with a non-empty working directory. Tasks that exit uncleanly may still have a chance to attempt
    * restores, meaning that restorable tasks should be able to deal with potentially partially written on-disk state.
    */
@@ -240,5 +242,21 @@ public interface Task
   {
     final ContextValueType value = getContextValue(key);
     return value == null ? defaultValue : value;
+  }
+
+  default TaskIdentifier getMetadata()
+  {
+    return new TaskIdentifier(this.getId(), this.getGroupId(), this.getType());
+  }
+
+  static TaskInfo<TaskIdentifier, TaskStatus> toTaskIdentifierInfo(TaskInfo<Task, TaskStatus> taskInfo)
+  {
+    return new TaskInfo<>(
+        taskInfo.getId(),
+        taskInfo.getCreatedTime(),
+        taskInfo.getStatus(),
+        taskInfo.getDataSource(),
+        taskInfo.getTask().getMetadata()
+    );
   }
 }

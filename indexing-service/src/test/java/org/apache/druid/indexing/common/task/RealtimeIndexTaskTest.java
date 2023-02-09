@@ -30,7 +30,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -43,6 +43,7 @@ import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestFirehose;
@@ -899,6 +900,8 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         false,
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null,
+        false,
         null
     );
     final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, mdc);
@@ -914,7 +917,8 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         taskStorage,
         mdc,
         EMITTER,
-        EasyMock.createMock(SupervisorManager.class)
+        EasyMock.createMock(SupervisorManager.class),
+        new DefaultObjectMapper()
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,
@@ -1006,10 +1010,13 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         new NoopChatHandlerProvider(),
         testUtils.getRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
-        new NoopIndexingServiceClient(),
+        new NoopOverlordClient(),
         null,
         null,
-        null
+        null,
+        null,
+        "1",
+        new TaskStorageDirTracker(taskConfig)
     );
 
     return toolboxFactory.build(task);

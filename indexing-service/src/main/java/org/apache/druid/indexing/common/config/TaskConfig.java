@@ -28,6 +28,7 @@ import org.apache.commons.lang3.EnumUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -82,9 +83,6 @@ public class TaskConfig
   private final String baseDir;
 
   @JsonProperty
-  private final File baseTaskDir;
-
-  @JsonProperty
   private final String hadoopWorkingPath;
 
   @JsonProperty
@@ -117,10 +115,20 @@ public class TaskConfig
   @JsonProperty
   private final boolean storeEmptyColumns;
 
+  @JsonProperty
+  private final boolean encapsulatedTask;
+
+  @JsonProperty("baseTaskDir")
+  private final String baseTaskDirPath;
+
+  // Use multiple base files for tasks instead of a single one
+  @JsonProperty
+  private final List<String> baseTaskDirPaths;
+
   @JsonCreator
   public TaskConfig(
       @JsonProperty("baseDir") String baseDir,
-      @JsonProperty("baseTaskDir") String baseTaskDir,
+      @Deprecated @JsonProperty("baseTaskDir") String baseTaskDirPath,
       @JsonProperty("hadoopWorkingPath") String hadoopWorkingPath,
       @JsonProperty("defaultRowFlushBoundary") Integer defaultRowFlushBoundary,
       @JsonProperty("defaultHadoopCoordinates") List<String> defaultHadoopCoordinates,
@@ -131,11 +139,12 @@ public class TaskConfig
       @JsonProperty("ignoreTimestampSpecForDruidInputSource") boolean ignoreTimestampSpecForDruidInputSource,
       @JsonProperty("batchMemoryMappedIndex") boolean batchMemoryMappedIndex, // deprecated, only set to true to fall back to older behavior
       @JsonProperty("batchProcessingMode") String batchProcessingMode,
-      @JsonProperty("storeEmptyColumns") @Nullable Boolean storeEmptyColumns
+      @JsonProperty("storeEmptyColumns") @Nullable Boolean storeEmptyColumns,
+      @JsonProperty("encapsulatedTask") boolean enableTaskLevelLogPush,
+      @JsonProperty("baseTaskDirPaths") @Nullable List<String> baseTaskDirPaths
   )
   {
     this.baseDir = baseDir == null ? System.getProperty("java.io.tmpdir") : baseDir;
-    this.baseTaskDir = new File(defaultDir(baseTaskDir, "persistent/task"));
     // This is usually on HDFS or similar, so we can't use java.io.tmpdir
     this.hadoopWorkingPath = hadoopWorkingPath == null ? "/tmp/druid-indexing" : hadoopWorkingPath;
     this.defaultRowFlushBoundary = defaultRowFlushBoundary == null ? 75000 : defaultRowFlushBoundary;
@@ -159,6 +168,8 @@ public class TaskConfig
     this.ignoreTimestampSpecForDruidInputSource = ignoreTimestampSpecForDruidInputSource;
 
     this.batchMemoryMappedIndex = batchMemoryMappedIndex;
+
+    this.encapsulatedTask = enableTaskLevelLogPush;
     // Conflict resolution. Assume that if batchMemoryMappedIndex is set (since false is the default) that
     // the user changed it intentionally to use legacy, in this case oveeride batchProcessingMode and also
     // set it to legacy else just use batchProcessingMode and don't pay attention to batchMemoryMappedIndexMode:
@@ -175,6 +186,13 @@ public class TaskConfig
     }
     log.debug("Batch processing mode:[%s]", this.batchProcessingMode);
     this.storeEmptyColumns = storeEmptyColumns == null ? DEFAULT_STORE_EMPTY_COLUMNS : storeEmptyColumns;
+
+    this.baseTaskDirPath = baseTaskDirPath;
+    if (CollectionUtils.isNullOrEmpty(baseTaskDirPaths)) {
+      String baseTaskFile = defaultDir(baseTaskDirPath, "persistent/task");
+      baseTaskDirPaths = Collections.singletonList(baseTaskFile);
+    }
+    this.baseTaskDirPaths = ImmutableList.copyOf(baseTaskDirPaths);
   }
 
   @JsonProperty
@@ -183,30 +201,16 @@ public class TaskConfig
     return baseDir;
   }
 
+  @JsonProperty("baseTaskDir")
+  public String getBaseTaskDirPath()
+  {
+    return baseTaskDirPath;
+  }
+
   @JsonProperty
-  public File getBaseTaskDir()
+  public List<String> getBaseTaskDirPaths()
   {
-    return baseTaskDir;
-  }
-
-  public File getTaskDir(String taskId)
-  {
-    return new File(baseTaskDir, taskId);
-  }
-
-  public File getTaskWorkDir(String taskId)
-  {
-    return new File(getTaskDir(taskId), "work");
-  }
-
-  public File getTaskTempDir(String taskId)
-  {
-    return new File(getTaskDir(taskId), "temp");
-  }
-
-  public File getTaskLockFile(String taskId)
-  {
-    return new File(getTaskDir(taskId), "lock");
+    return baseTaskDirPaths;
   }
 
   @JsonProperty
@@ -279,6 +283,12 @@ public class TaskConfig
     return storeEmptyColumns;
   }
 
+  @JsonProperty
+  public boolean isEncapsulatedTask()
+  {
+    return encapsulatedTask;
+  }
+
   private String defaultDir(@Nullable String configParameter, final String defaultVal)
   {
     if (configParameter == null) {
@@ -287,4 +297,5 @@ public class TaskConfig
 
     return configParameter;
   }
+
 }

@@ -33,6 +33,7 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -72,6 +73,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
@@ -272,9 +274,9 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public long getMaxOnDiskStorage()
+      public HumanReadableBytes getMaxOnDiskStorage()
       {
-        return 1_000_000_000L;
+        return HumanReadableBytes.valueOf(1_000_000_000L);
       }
     };
     config.setSingleThreaded(false);
@@ -310,6 +312,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
             configSupplier,
             bufferPool,
             mergePool,
+            TestHelper.makeJsonMapper(),
             new ObjectMapper(new SmileFactory()),
             NOOP_QUERYWATCHER
         )
@@ -327,6 +330,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
             configSupplier,
             bufferPool,
             mergePool2,
+            TestHelper.makeJsonMapper(),
             new ObjectMapper(new SmileFactory()),
             NOOP_QUERYWATCHER
         )

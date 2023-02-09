@@ -51,7 +51,7 @@ public class DiscoveryDruidNode
 
   /**
    * Map of service name -> DruidServices.
-   * This map has only the DruidServices that is understandable.
+   * This map has only the DruidServices that are understandable.
    * It means, if there is some DruidService not understandable found while converting rawServices to services,
    * that DruidService will be ignored and not stored in this map.
    *

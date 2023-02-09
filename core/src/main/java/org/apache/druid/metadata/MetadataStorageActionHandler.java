@@ -20,6 +20,7 @@
 package org.apache.druid.metadata;
 
 import com.google.common.base.Optional;
+import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.joda.time.DateTime;
@@ -41,6 +42,8 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param entry object representing this entry
    * @param active active or inactive flag
    * @param status status object associated wit this object, can be null
+   * @param type entry type
+   * @param groupId entry group id
    * @throws EntryExistsException
    */
   void insert(
@@ -49,9 +52,10 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
       @NotNull String dataSource,
       @NotNull EntryType entry,
       boolean active,
-      @Nullable StatusType status
+      @Nullable StatusType status,
+      @NotNull String type,
+      @NotNull String groupId
   ) throws EntryExistsException;
-
 
   /**
    * Sets or updates the status for any active entry with the given id.
@@ -95,6 +99,22 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param datasource  datasource filter
    */
   List<TaskInfo<EntryType, StatusType>> getTaskInfos(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String datasource
+  );
+
+  /**
+   * Returns the statuses of the specified tasks.
+   *
+   * If {@code taskLookups} includes {@link TaskLookupType#ACTIVE}, it returns all active tasks in the metadata store.
+   * If {@code taskLookups} includes {@link TaskLookupType#COMPLETE}, it returns all complete tasks in the metadata
+   * store. For complete tasks, additional filters in {@code CompleteTaskLookup} can be applied.
+   * All lookups should be processed atomically if more than one lookup is given.
+   *
+   * @param taskLookups task lookup type and filters.
+   * @param datasource  datasource filter
+   */
+  List<TaskInfo<TaskIdentifier, StatusType>> getTaskStatusList(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String datasource
   );
@@ -173,4 +193,10 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    */
   @Nullable
   Long getLockId(String entryId, LockType lock);
+
+  /**
+   * Utility to migrate existing tasks to the new schema by populating type and groupId asynchronously
+   */
+  void populateTaskTypeAndGroupIdAsync();
+
 }

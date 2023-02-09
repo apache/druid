@@ -155,4 +155,20 @@ public class ApproximateHistogramAggregatorTest extends InitializedNullHandlingT
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
   }
+
+  @Test
+  public void testWithName()
+  {
+    ApproximateHistogramAggregatorFactory factory = new ApproximateHistogramAggregatorFactory(
+        "approxHisto",
+        "col",
+        null,
+        null,
+        null,
+        null,
+        false
+    );
+    Assert.assertEquals(factory, factory.withName("approxHisto"));
+    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+  }
 }

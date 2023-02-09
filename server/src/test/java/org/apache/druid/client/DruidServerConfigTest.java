@@ -61,7 +61,6 @@ public class DruidServerConfigTest
   {
     testSegmentCacheDir1 = tmpFolder.newFolder("segment_cache_folder1");
     testSegmentCacheDir2 = tmpFolder.newFolder("segment_cache_folder2");
-
   }
 
   @Test
@@ -74,7 +73,6 @@ public class DruidServerConfigTest
 
     Assert.assertNotNull(druidServerConfig);
     Assert.assertEquals(DruidServerConfig.class, druidServerConfig.getClass());
-
   }
 
   @Test

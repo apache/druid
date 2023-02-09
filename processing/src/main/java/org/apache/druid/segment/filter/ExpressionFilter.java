@@ -141,26 +141,26 @@ public class ExpressionFilter implements Filter
         if (eval.type().isArray()) {
           switch (eval.elementType().getType()) {
             case LONG:
-              final Long[] lResult = eval.asLongArray();
+              final Object[] lResult = eval.asArray();
               if (lResult == null) {
                 return false;
               }
 
-              return Arrays.stream(lResult).filter(Objects::nonNull).anyMatch(Evals::asBoolean);
+              return Arrays.stream(lResult).filter(Objects::nonNull).anyMatch(o -> Evals.asBoolean((long) o));
             case STRING:
-              final String[] sResult = eval.asStringArray();
+              final Object[] sResult = eval.asArray();
               if (sResult == null) {
                 return false;
               }
 
-              return Arrays.stream(sResult).anyMatch(Evals::asBoolean);
+              return Arrays.stream(sResult).anyMatch(o -> Evals.asBoolean((String) o));
             case DOUBLE:
-              final Double[] dResult = eval.asDoubleArray();
+              final Object[] dResult = eval.asArray();
               if (dResult == null) {
                 return false;
               }
 
-              return Arrays.stream(dResult).filter(Objects::nonNull).anyMatch(Evals::asBoolean);
+              return Arrays.stream(dResult).filter(Objects::nonNull).anyMatch(o -> Evals.asBoolean((double) o));
           }
         }
         return eval.asBoolean();

@@ -27,7 +27,7 @@ SERVICE_DRUID_JAVA_OPTS=-server -Xmx64m -Xms64m -XX:+UseG1GC -agentlib:jdwp=tran
 druid_host=druid-middlemanager
 druid_server_http_numThreads=100
 druid_storage_storageDirectory=/shared/storage
-druid_indexer_runner_javaOptsArray=["-server", "-Xmx256m", "-Xms256m", "-XX:NewSize=128m", "-XX:MaxNewSize=128m", "-XX:+UseG1GC", "-Duser.timezone=UTC", "-Dfile.encoding=UTF-8", "-Dlog4j.configurationFile=/shared/docker/lib/log4j2.xml"]
+druid_indexer_runner_javaOptsArray=["-server", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0", "-Xmx256m", "-Xms256m", "-XX:NewSize=128m", "-XX:MaxNewSize=128m", "-XX:+UseG1GC", "-Duser.timezone=UTC", "-Dfile.encoding=UTF-8", "-Dlog4j.configurationFile=/shared/docker/lib/log4j2.xml"]
 
 druid_indexer_fork_property_druid_processing_buffer_sizeBytes=25000000
 druid_indexer_fork_property_druid_processing_numThreads=1
@@ -38,3 +38,4 @@ druid_auth_basic_common_cacheDirectory=/tmp/authCache/middleManager
 druid_startup_logging_logProperties=true
 druid_server_https_crlPath=/tls/revocations.crl
 druid_worker_capacity=10
+druid_worker_intermediaryPartitionTimeout=PT60M

@@ -70,21 +70,22 @@ public class StupidPoolTest
   }
 
   @Test(timeout = 60_000L)
-  public void testResourceHandlerClearedByJVM() throws InterruptedException
+  public void testResourceHandlerClearedByJVM()
   {
-    String leakedString = createDanglingObjectHandler();
-    // Wait until dangling object string is returned to the pool
-    for (int i = 0; i < 6000 && poolOfString.leakedObjectsCount() == 0; i++) {
-      System.gc();
-      @SuppressWarnings("unused")
-      byte[] garbage = new byte[10_000_000];
-      Thread.sleep(10);
-    }
-    Assert.assertEquals(leakedString, 1, poolOfString.leakedObjectsCount());
-  }
+    StupidPool<String> poolOfString = new StupidPool<>("poolOfString", () -> "billybob");
 
-  private String createDanglingObjectHandler()
-  {
-    return poolOfString.take().get();
+    final StupidPool.ObjectResourceHolder take = (StupidPool.ObjectResourceHolder) poolOfString.take();
+    take.forceClean();
+
+    Assert.assertEquals("Expected there to be one leak", 1, poolOfString.leakedObjectsCount());
+
+    boolean exceptionThrown = false;
+    try {
+      poolOfString.take();
+    }
+    catch (Exception e) {
+      exceptionThrown = true;
+    }
+    Assert.assertTrue("Expect the pool to throw an exception as it should be poisoned", exceptionThrown);
   }
 }

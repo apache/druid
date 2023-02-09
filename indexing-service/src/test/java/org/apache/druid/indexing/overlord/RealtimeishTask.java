@@ -67,7 +67,7 @@ public class RealtimeishTask extends AbstractTask
   }
 
   @Override
-  public TaskStatus run(TaskToolbox toolbox) throws Exception
+  public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
     final Interval interval1 = Intervals.of("2010-01-01T00/PT1H");
     final Interval interval2 = Intervals.of("2010-01-01T01/PT1H");

@@ -273,13 +273,13 @@ public class SystemSchema extends AbstractSchema
     {
       //get available segments from druidSchema
       final Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadata =
-          druidSchema.getSegmentMetadataSnapshot();
+          druidSchema.cache().getSegmentMetadataSnapshot();
       final Iterator<Entry<SegmentId, AvailableSegmentMetadata>> availableSegmentEntries =
           availableSegmentMetadata.entrySet().iterator();
 
       // in memory map to store segment data from available segments
       final Map<SegmentId, PartialSegmentData> partialSegmentDataMap =
-          Maps.newHashMapWithExpectedSize(druidSchema.getTotalSegments());
+          Maps.newHashMapWithExpectedSize(druidSchema.cache().getTotalSegments());
       for (AvailableSegmentMetadata h : availableSegmentMetadata.values()) {
         PartialSegmentData partialSegmentData =
             new PartialSegmentData(IS_AVAILABLE_TRUE, h.isRealtime(), h.getNumReplicas(), h.getNumRows());
@@ -290,7 +290,7 @@ public class SystemSchema extends AbstractSchema
       // Coordinator.
       final Iterator<SegmentWithOvershadowedStatus> metadataStoreSegments = metadataView.getPublishedSegments();
 
-      final Set<SegmentId> segmentsAlreadySeen = Sets.newHashSetWithExpectedSize(druidSchema.getTotalSegments());
+      final Set<SegmentId> segmentsAlreadySeen = Sets.newHashSetWithExpectedSize(druidSchema.cache().getTotalSegments());
 
       final FluentIterable<Object[]> publishedSegments = FluentIterable
           .from(() -> getAuthorizedPublishedSegments(metadataStoreSegments, root))
@@ -1074,7 +1074,7 @@ public class SystemSchema extends AbstractSchema
 
       if (responseHolder.getStatus().getCode() != HttpServletResponse.SC_OK) {
         throw new RE(
-            "Failed to talk to leader node at [%s]. Error code[%d], description[%s].",
+            "Failed to talk to leader node at [%s]. Error code [%d], description [%s].",
             query,
             responseHolder.getStatus().getCode(),
             responseHolder.getStatus().getReasonPhrase()
@@ -1153,7 +1153,7 @@ public class SystemSchema extends AbstractSchema
         authorizerMapper
     );
     if (!stateAccess.isAllowed()) {
-      throw new ForbiddenException("Insufficient permission to view servers : " + stateAccess);
+      throw new ForbiddenException("Insufficient permission to view servers: " + stateAccess.toMessage());
     }
   }
 }

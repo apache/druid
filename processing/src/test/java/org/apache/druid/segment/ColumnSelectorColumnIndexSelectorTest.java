@@ -79,7 +79,6 @@ public class ColumnSelectorColumnIndexSelectorTest
     EasyMock.expect(indexSupplier.as(DictionaryEncodedStringValueIndex.class)).andReturn(valueIndex).anyTimes();
     BitmapColumnIndex columnIndex = EasyMock.createMock(BitmapColumnIndex.class);
     ImmutableBitmap someBitmap = EasyMock.createMock(ImmutableBitmap.class);
-    EasyMock.expect(valueIndex.getIndex("foo")).andReturn(0).anyTimes();
     EasyMock.expect(valueIndex.getBitmap(0)).andReturn(someBitmap).anyTimes();
 
     EasyMock.expect(someIndex.forValue("foo")).andReturn(columnIndex).anyTimes();

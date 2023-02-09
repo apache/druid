@@ -63,7 +63,7 @@ public class FileTaskLogsTest
 
       final Map<Long, String> expected = ImmutableMap.of(0L, "blah", 1L, "lah", -2L, "ah", -5L, "blah");
       for (Map.Entry<Long, String> entry : expected.entrySet()) {
-        final byte[] bytes = ByteStreams.toByteArray(taskLogs.streamTaskLog("foo", entry.getKey()).get().openStream());
+        final byte[] bytes = ByteStreams.toByteArray(taskLogs.streamTaskLog("foo", entry.getKey()).get());
         final String string = StringUtils.fromUtf8(bytes);
         Assert.assertEquals(StringUtils.format("Read with offset %,d", entry.getKey()), string, entry.getValue());
       }
@@ -91,7 +91,7 @@ public class FileTaskLogsTest
 
     Assert.assertEquals(
         testReportString,
-        StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskReports("foo").get().openStream()))
+        StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskReports("foo").get()))
     );
   }
 
@@ -147,7 +147,7 @@ public class FileTaskLogsTest
 
   private String readLog(TaskLogs taskLogs, String logFile, long offset) throws IOException
   {
-    return StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskLog(logFile, offset).get().openStream()));
+    return StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskLog(logFile, offset).get()));
   }
 
   private static class TestTaskReport implements TaskReport

@@ -38,6 +38,9 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.segment.FrameSegment;
+import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -78,6 +81,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.IndexedInts;
@@ -334,8 +338,20 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                 "rowBasedWithTypeSignature",
                 input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().asStorageAdapter(), () -> {})
             )
+            .put("frame (row-based)", input -> {
+              final FrameSegment segment = input.buildFrameSegment(FrameType.ROW_BASED);
+              return Pair.of(segment.asStorageAdapter(), segment);
+            })
+            .put("frame (columnar)", input -> {
+              final FrameSegment segment = input.buildFrameSegment(FrameType.COLUMNAR);
+              return Pair.of(segment.asStorageAdapter(), segment);
+            })
             .build();
 
+    StringEncodingStrategy[] stringEncoding = new StringEncodingStrategy[]{
+        new StringEncodingStrategy.Utf8(),
+        new StringEncodingStrategy.FrontCoded(4)
+    };
     for (Map.Entry<String, BitmapSerdeFactory> bitmapSerdeFactoryEntry : bitmapSerdeFactories.entrySet()) {
       for (Map.Entry<String, SegmentWriteOutMediumFactory> segmentWriteOutMediumFactoryEntry :
           segmentWriteOutMediumFactories.entrySet()) {
@@ -343,20 +359,33 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
             finishers.entrySet()) {
           for (boolean cnf : ImmutableList.of(false, true)) {
             for (boolean optimize : ImmutableList.of(false, true)) {
-              final String testName = StringUtils.format(
-                  "bitmaps[%s], indexMerger[%s], finisher[%s], cnf[%s], optimize[%s]",
-                  bitmapSerdeFactoryEntry.getKey(),
-                  segmentWriteOutMediumFactoryEntry.getKey(),
-                  finisherEntry.getKey(),
-                  cnf,
-                  optimize
-              );
-              final IndexBuilder indexBuilder = IndexBuilder
-                  .create()
-                  .schema(DEFAULT_INDEX_SCHEMA)
-                  .indexSpec(new IndexSpec(bitmapSerdeFactoryEntry.getValue(), null, null, null))
-                  .segmentWriteOutMediumFactory(segmentWriteOutMediumFactoryEntry.getValue());
-              constructors.add(new Object[]{testName, indexBuilder, finisherEntry.getValue(), cnf, optimize});
+              for (StringEncodingStrategy encodingStrategy : stringEncoding) {
+                final String testName = StringUtils.format(
+                    "bitmaps[%s], indexMerger[%s], finisher[%s], cnf[%s], optimize[%s], stringDictionaryEncoding[%s]",
+                    bitmapSerdeFactoryEntry.getKey(),
+                    segmentWriteOutMediumFactoryEntry.getKey(),
+                    finisherEntry.getKey(),
+                    cnf,
+                    optimize,
+                    encodingStrategy.getType()
+                );
+                final IndexBuilder indexBuilder = IndexBuilder
+                    .create()
+                    .schema(DEFAULT_INDEX_SCHEMA)
+                    .indexSpec(
+                        new IndexSpec(
+                            bitmapSerdeFactoryEntry.getValue(),
+                            null,
+                            encodingStrategy,
+                            null,
+                            null,
+                            null,
+                            null
+                        )
+                    )
+                    .segmentWriteOutMediumFactory(segmentWriteOutMediumFactoryEntry.getValue());
+                constructors.add(new Object[]{testName, indexBuilder, finisherEntry.getValue(), cnf, optimize});
+              }
             }
           }
         }
@@ -745,6 +774,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                 RowAdapters.standardRow(),
                 rowSupplier::get,
                 rowSignatureBuilder.build(),
+                false,
                 false
             )
         )
@@ -764,9 +794,14 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       final List<String> expectedRows
   )
   {
-    // IncrementalIndex and RowBasedSegment cannot ever vectorize.
+    // IncrementalIndex, RowBasedSegment cannot vectorize.
+    // Columnar FrameStorageAdapter *can* vectorize, but the tests won't pass, because the vectorizable cases
+    // differ from QueryableIndexStorageAdapter due to frames not having indexes. So, skip these too.
     final boolean testVectorized =
-        !(adapter instanceof IncrementalIndexStorageAdapter) && !(adapter instanceof RowBasedStorageAdapter);
+        !(adapter instanceof IncrementalIndexStorageAdapter)
+        && !(adapter instanceof RowBasedStorageAdapter)
+        && !(adapter instanceof FrameStorageAdapter);
+
     assertFilterMatches(filter, expectedRows, testVectorized);
   }
 

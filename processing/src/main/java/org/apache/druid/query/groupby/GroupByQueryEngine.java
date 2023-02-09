@@ -96,7 +96,7 @@ public class GroupByQueryEngine
           "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
       );
     }
-    if (!query.getContextValue(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, true)) {
+    if (!query.context().getBoolean(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, true)) {
       throw new UOE(
           "GroupBy v1 does not support %s as false. Set %s to true or use groupBy v2",
           GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,

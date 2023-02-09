@@ -39,6 +39,8 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
 
 public class JsonReaderTest
 {
@@ -57,12 +59,18 @@ public class JsonReaderTest
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg", "$.o.mg"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg2", "$.o.mg2"),
                 new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg", ".o.mg"),
-                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2"),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_baz", null, Collections.singletonList("baz")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_baz2", null, Collections.singletonList("baz2")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_omg", null, Arrays.asList("o", "mg")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_omg2", null, Arrays.asList("o", "mg2"))
             )
         ),
         null,
         null,
-        false //make sure JsonReader is used
+        false, //make sure JsonReader is used
+        false,
+        false
     );
 
     final ByteEntity source = new ByteEntity(
@@ -93,12 +101,16 @@ public class JsonReaderTest
         Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("tree_baz")));
         Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("path_omg")));
         Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("tree_omg")));
 
         Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
+        Assert.assertTrue(row.getDimension("tree_baz2").isEmpty());
         Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
         Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+        Assert.assertTrue(row.getDimension("tree_omg2").isEmpty());
       }
 
       Assert.assertEquals(numExpectedIterations, numActualIterations);
@@ -117,12 +129,18 @@ public class JsonReaderTest
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg", "$.o.mg"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg2", "$.o.mg2"),
                 new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg", ".o.mg"),
-                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2"),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_baz", null, Collections.singletonList("baz")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_baz2", null, Collections.singletonList("baz2")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_omg", null, Arrays.asList("o", "mg")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_omg2", null, Arrays.asList("o", "mg2"))
             )
         ),
         null,
         null,
-        false //make sure JsonReader is used
+        false, //make sure JsonReader is used
+        false,
+        false
     );
 
     final ByteEntity source = new ByteEntity(
@@ -158,12 +176,16 @@ public class JsonReaderTest
         Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("tree_baz")));
         Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
         Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("tree_omg")));
 
         Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
+        Assert.assertTrue(row.getDimension("tree_baz2").isEmpty());
         Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
         Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+        Assert.assertTrue(row.getDimension("tree_omg2").isEmpty());
 
         numActualIterations++;
       }
@@ -184,12 +206,18 @@ public class JsonReaderTest
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg", "$.o.mg"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg2", "$.o.mg2"),
                 new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg", ".o.mg"),
-                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2"),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_baz", null, Collections.singletonList("baz")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_baz2", null, Collections.singletonList("baz2")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_omg", null, Arrays.asList("o", "mg")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_omg2", null, Arrays.asList("o", "mg2"))
             )
         ),
         null,
         null,
-        false //make sure JsonReader is used
+        false, //make sure JsonReader is used
+        false,
+        false
     );
 
     final ByteEntity source = new ByteEntity(
@@ -238,12 +266,18 @@ public class JsonReaderTest
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg", "$.o.mg"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg2", "$.o.mg2"),
                 new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg", ".o.mg"),
-                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2"),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_baz", null, Collections.singletonList("baz")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_baz2", null, Collections.singletonList("baz2")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_omg", null, Arrays.asList("o", "mg")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_omg2", null, Arrays.asList("o", "mg2"))
             )
         ),
         null,
         null,
-        false //make sure JsonReader is used
+        false, //make sure JsonReader is used
+        false,
+        false
     );
 
     final ByteEntity source = new ByteEntity(
@@ -279,12 +313,16 @@ public class JsonReaderTest
           Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
           Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
           Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+          Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("tree_baz")));
           Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("path_omg")));
           Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("jq_omg")));
+          Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("tree_omg")));
 
           Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
+          Assert.assertTrue(row.getDimension("tree_baz2").isEmpty());
           Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
           Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+          Assert.assertTrue(row.getDimension("tree_omg2").isEmpty());
         }
       }
     }
@@ -304,12 +342,18 @@ public class JsonReaderTest
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg", "$.o.mg"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg2", "$.o.mg2"),
                 new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg", ".o.mg"),
-                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2"),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_baz", null, Collections.singletonList("baz")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_baz2", null, Collections.singletonList("baz2")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_omg", null, Arrays.asList("o", "mg")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_omg2", null, Arrays.asList("o", "mg2"))
             )
         ),
         null,
         null,
-        false //make sure JsonReader is used
+        false, //make sure JsonReader is used
+        false,
+        false
     );
 
     //2nd row is ill-formed
@@ -360,12 +404,18 @@ public class JsonReaderTest
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg", "$.o.mg"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg2", "$.o.mg2"),
                 new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg", ".o.mg"),
-                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2"),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_baz", null, Collections.singletonList("baz")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_baz2", null, Collections.singletonList("baz2")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_omg", null, Arrays.asList("o", "mg")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_omg2", null, Arrays.asList("o", "mg2"))
             )
         ),
         null,
         null,
-        false //make sure JsonReader is used
+        false, //make sure JsonReader is used
+        false,
+        false
     );
 
     //input is empty
@@ -416,12 +466,18 @@ public class JsonReaderTest
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg", "$.o.mg"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg2", "$.o.mg2"),
                 new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg", ".o.mg"),
-                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2"),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_baz", null, Collections.singletonList("baz")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_baz2", null, Collections.singletonList("baz2")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_omg", null, Arrays.asList("o", "mg")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_omg2", null, Arrays.asList("o", "mg2"))
             )
         ),
         null,
         null,
-        false //make sure JsonReader is used
+        false, //make sure JsonReader is used
+        false,
+        false
     );
 
     //input is empty

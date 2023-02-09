@@ -52,10 +52,11 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
       @JsonProperty("fieldName") final String fieldName,
       @JsonProperty("lgK") @Nullable final Integer lgK,
       @JsonProperty("tgtHllType") @Nullable final String tgtHllType,
+      @JsonProperty("shouldFinalize") final Boolean shouldFinalize,
       @JsonProperty("round") final boolean round
   )
   {
-    super(name, fieldName, lgK, tgtHllType, round);
+    super(name, fieldName, lgK, tgtHllType, shouldFinalize, round);
   }
 
   @Override
@@ -64,16 +65,19 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
     if (other.getName().equals(this.getName()) && other instanceof HllSketchMergeAggregatorFactory) {
       HllSketchMergeAggregatorFactory castedOther = (HllSketchMergeAggregatorFactory) other;
 
-      return new HllSketchMergeAggregatorFactory(
-          getName(),
-          getName(),
-          Math.max(getLgK(), castedOther.getLgK()),
-          getTgtHllType().compareTo(castedOther.getTgtHllType()) < 0 ? castedOther.getTgtHllType() : getTgtHllType(),
-          isRound() || castedOther.isRound()
-      );
-    } else {
-      throw new AggregatorFactoryNotMergeableException(this, other);
+      if (castedOther.isShouldFinalize() == isShouldFinalize()) {
+        return new HllSketchMergeAggregatorFactory(
+            getName(),
+            getName(),
+            Math.max(getLgK(), castedOther.getLgK()),
+            getTgtHllType().compareTo(castedOther.getTgtHllType()) < 0 ? castedOther.getTgtHllType() : getTgtHllType(),
+            isShouldFinalize(),
+            isRound() || castedOther.isRound()
+        );
+      }
     }
+
+    throw new AggregatorFactoryNotMergeableException(this, other);
   }
 
   @Override
@@ -88,17 +92,19 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
     return AggregatorUtil.HLL_SKETCH_MERGE_CACHE_TYPE_ID;
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public Aggregator factorize(final ColumnSelectorFactory columnSelectorFactory)
   {
-    final ColumnValueSelector<HllSketch> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
+    final ColumnValueSelector<HllSketchHolder> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
     return new HllSketchMergeAggregator(selector, getLgK(), TgtHllType.valueOf(getTgtHllType()));
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory columnSelectorFactory)
   {
-    final ColumnValueSelector<HllSketch> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
+    final ColumnValueSelector<HllSketchHolder> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
     return new HllSketchMergeBufferAggregator(
         selector,
         getLgK(),
@@ -129,6 +135,19 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
   public int getMaxIntermediateSize()
   {
     return Union.getMaxSerializationBytes(getLgK());
+  }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new HllSketchMergeAggregatorFactory(
+        newName,
+        getFieldName(),
+        getLgK(),
+        getTgtHllType(),
+        isShouldFinalize(),
+        isRound()
+    );
   }
 
 }

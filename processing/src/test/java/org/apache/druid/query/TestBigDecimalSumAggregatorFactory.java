@@ -19,6 +19,7 @@
 
 package org.apache.druid.query;
 
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 
 import javax.annotation.Nullable;
@@ -43,6 +44,12 @@ public class TestBigDecimalSumAggregatorFactory extends DoubleSumAggregatorFacto
     } else {
       return object;
     }
+  }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new TestBigDecimalSumAggregatorFactory(newName, getFieldName());
   }
 
   @Override

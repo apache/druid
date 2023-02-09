@@ -27,7 +27,8 @@ public enum JSONPathFieldType
 {
   ROOT,
   PATH,
-  JQ;
+  JQ,
+  TREE;
 
   @JsonValue
   @Override

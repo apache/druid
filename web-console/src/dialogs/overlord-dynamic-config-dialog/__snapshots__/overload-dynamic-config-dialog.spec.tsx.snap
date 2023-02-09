@@ -7,31 +7,6 @@ exports[`OverlordDynamicConfigDialog matches snapshot 1`] = `
   onSave={[Function]}
   title="Overlord dynamic config"
 >
-  <p>
-    Edit the overlord dynamic configuration on the fly. For more information please refer to the
-     
-    <Memo(ExternalLink)
-      href="https://druid.apache.org/docs/0.20.0/configuration/index.html#overlord-dynamic-configuration"
-    >
-      documentation
-    </Memo(ExternalLink)>
-    .
-  </p>
-  <AutoForm
-    fields={
-      Array [
-        Object {
-          "name": "selectStrategy",
-          "type": "json",
-        },
-        Object {
-          "name": "autoScaler",
-          "type": "json",
-        },
-      ]
-    }
-    model={Object {}}
-    onChange={[Function]}
-  />
+  <Memo(Loader) />
 </SnitchDialog>
 `;

@@ -27,25 +27,25 @@ import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.RemoteChatHandler;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClient;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
@@ -61,6 +61,7 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.tasklogs.TaskLogPusher;
 
 import java.io.File;
 
@@ -100,13 +101,16 @@ public class TaskToolboxFactory
   private final ChatHandlerProvider chatHandlerProvider;
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
   private final AppenderatorsManager appenderatorsManager;
-  private final IndexingServiceClient indexingServiceClient;
+  private final OverlordClient overlordClient;
   private final CoordinatorClient coordinatorClient;
 
   // Used by only native parallel tasks
   private final IntermediaryDataManager intermediaryDataManager;
-  private final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> supervisorTaskClientFactory;
+  private final ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider;
   private final ShuffleClient shuffleClient;
+  private final TaskLogPusher taskLogPusher;
+  private final String attemptId;
+  private final TaskStorageDirTracker dirTracker;
 
   @Inject
   public TaskToolboxFactory(
@@ -142,10 +146,13 @@ public class TaskToolboxFactory
       ChatHandlerProvider chatHandlerProvider,
       RowIngestionMetersFactory rowIngestionMetersFactory,
       AppenderatorsManager appenderatorsManager,
-      IndexingServiceClient indexingServiceClient,
+      OverlordClient overlordClient,
       CoordinatorClient coordinatorClient,
-      IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> supervisorTaskClientFactory,
-      ShuffleClient shuffleClient
+      ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider,
+      ShuffleClient shuffleClient,
+      TaskLogPusher taskLogPusher,
+      @AttemptId String attemptId,
+      TaskStorageDirTracker dirTracker
   )
   {
     this.config = config;
@@ -180,15 +187,18 @@ public class TaskToolboxFactory
     this.chatHandlerProvider = chatHandlerProvider;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
     this.appenderatorsManager = appenderatorsManager;
-    this.indexingServiceClient = indexingServiceClient;
+    this.overlordClient = overlordClient;
     this.coordinatorClient = coordinatorClient;
-    this.supervisorTaskClientFactory = supervisorTaskClientFactory;
+    this.supervisorTaskClientProvider = supervisorTaskClientProvider;
     this.shuffleClient = shuffleClient;
+    this.taskLogPusher = taskLogPusher;
+    this.attemptId = attemptId;
+    this.dirTracker = dirTracker;
   }
 
   public TaskToolbox build(Task task)
   {
-    final File taskWorkDir = config.getTaskWorkDir(task.getId());
+    final File taskWorkDir = dirTracker.getTaskWorkDir(task.getId());
     return new TaskToolbox.Builder()
         .config(config)
         .taskExecutorNode(taskExecutorNode)
@@ -227,10 +237,13 @@ public class TaskToolboxFactory
         .chatHandlerProvider(chatHandlerProvider)
         .rowIngestionMetersFactory(rowIngestionMetersFactory)
         .appenderatorsManager(appenderatorsManager)
-        .indexingServiceClient(indexingServiceClient)
+        .overlordClient(overlordClient)
         .coordinatorClient(coordinatorClient)
-        .supervisorTaskClientFactory(supervisorTaskClientFactory)
+        .supervisorTaskClientProvider(supervisorTaskClientProvider)
         .shuffleClient(shuffleClient)
+        .taskLogPusher(taskLogPusher)
+        .attemptId(attemptId)
+        .dirTracker(dirTracker)
         .build();
   }
 }

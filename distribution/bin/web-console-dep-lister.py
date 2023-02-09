@@ -18,7 +18,7 @@
 import re
 import sys
 
-# Helper program for listing the deps in the compiled web-console-<VERSION>.js file in druid-console.jar
+# Helper program for listing the deps in the compiled web-console-<VERSION>.js file in web-console.jar
 
 if len(sys.argv) != 2:
   sys.stderr.write('usage: program <web-console js path>\n')

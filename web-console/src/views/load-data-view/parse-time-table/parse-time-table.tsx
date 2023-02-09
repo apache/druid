@@ -18,16 +18,15 @@
 
 import classNames from 'classnames';
 import React from 'react';
+import type { RowRenderProps } from 'react-table';
 import ReactTable from 'react-table';
 
-import { TableCell } from '../../../components';
-import { TableCellUnparseable } from '../../../components/table-cell-unparseable/table-cell-unparseable';
+import { TableCell, TableCellUnparseable } from '../../../components';
+import type { IngestionSpec, TimestampSpec } from '../../../druid-models';
 import {
   getTimestampDetailFromSpec,
   getTimestampSpecColumnFromSpec,
-  IngestionSpec,
   possibleDruidFormatForValues,
-  TimestampSpec,
 } from '../../../druid-models';
 import {
   DEFAULT_TABLE_CLASS_NAME,
@@ -35,7 +34,7 @@ import {
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../../react-table';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
-import { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
+import type { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
 
 import './parse-time-table.scss';
 
@@ -124,7 +123,7 @@ export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTim
             className: columnClassName,
             id: String(i),
             accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-            Cell: function ParseTimeTableCell(row) {
+            Cell: function ParseTimeTableCell(row: RowRenderProps) {
               if (columnName === '__error__') {
                 return <TableCell value={row.original.error} />;
               }

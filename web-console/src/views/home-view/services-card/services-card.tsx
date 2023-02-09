@@ -19,10 +19,11 @@
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
-import { PluralPairIfNeeded } from '../../../components/plural-pair-if-needed/plural-pair-if-needed';
+import { PluralPairIfNeeded } from '../../../components';
+import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
-import { Capabilities, lookupBy, queryDruidSql } from '../../../utils';
+import { lookupBy, queryDruidSql } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface ServiceCounts {

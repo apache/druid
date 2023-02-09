@@ -21,14 +21,15 @@ import React, { useState } from 'react';
 import { ShowJson, ShowLog } from '../../components';
 import { Api } from '../../singletons';
 import { deepGet } from '../../utils';
-import { BasicAction } from '../../utils/basic-action';
-import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
+import type { BasicAction } from '../../utils/basic-action';
+import type { SideButtonMetaData } from '../table-action-dialog/table-action-dialog';
+import { TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
 interface TaskTableActionDialogProps {
   taskId: string;
   actions: BasicAction[];
   onClose: () => void;
-  status?: string;
+  status: string;
 }
 
 export const TaskTableActionDialog = React.memo(function TaskTableActionDialog(
@@ -75,27 +76,27 @@ export const TaskTableActionDialog = React.memo(function TaskTableActionDialog(
       {activeTab === 'status' && (
         <ShowJson
           endpoint={`${taskEndpointBase}/status`}
-          transform={x => deepGet(x, 'status')}
+          transform={x => deepGet(x, 'status') || x}
           downloadFilename={`task-status-${taskId}.json`}
         />
       )}
       {activeTab === 'payload' && (
         <ShowJson
           endpoint={taskEndpointBase}
-          transform={x => deepGet(x, 'payload')}
+          transform={x => deepGet(x, 'payload') || x}
           downloadFilename={`task-payload-${taskId}.json`}
         />
       )}
       {activeTab === 'reports' && (
         <ShowJson
           endpoint={`${taskEndpointBase}/reports`}
-          transform={x => deepGet(x, 'ingestionStatsAndErrors.payload')}
+          transform={x => deepGet(x, 'ingestionStatsAndErrors.payload') || x}
           downloadFilename={`task-reports-${taskId}.json`}
         />
       )}
       {activeTab === 'log' && (
         <ShowLog
-          status={status}
+          tail={status === 'RUNNING'}
           endpoint={`${taskEndpointBase}/log`}
           downloadFilename={`task-log-${taskId}.log`}
           tailOffset={16000}

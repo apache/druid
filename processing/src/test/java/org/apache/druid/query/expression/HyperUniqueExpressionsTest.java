@@ -199,7 +199,7 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
   public void testCreateWrongArgsCount()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[hyper_unique] must have no arguments");
+    expectedException.expectMessage("Function[hyper_unique] does not accept arguments");
     Parser.parse("hyper_unique(100)", MACRO_TABLE);
   }
 
@@ -207,7 +207,7 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
   public void testAddWrongArgsCount()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[hyper_unique_add] must have 2 arguments");
+    expectedException.expectMessage("Function[hyper_unique_add] requires 2 arguments");
     Parser.parse("hyper_unique_add(100, hyper_unique(), 100)", MACRO_TABLE);
   }
 
@@ -215,7 +215,7 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
   public void testAddWrongArgType()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[hyper_unique_add] must take a hyper-log-log collector as the second argument");
+    expectedException.expectMessage("Function[hyper_unique_add] requires a hyper-log-log collector as the second argument");
     Expr expr = Parser.parse("hyper_unique_add(long, string)", MACRO_TABLE);
     expr.eval(inputBindings);
   }
@@ -224,7 +224,7 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
   public void testEstimateWrongArgsCount()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[hyper_unique_estimate] must have 1 argument");
+    expectedException.expectMessage("Function[hyper_unique_estimate] requires 1 argument");
     Parser.parse("hyper_unique_estimate(hyper_unique(), 100)", MACRO_TABLE);
   }
 
@@ -232,7 +232,7 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
   public void testEstimateWrongArgTypes()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[hyper_unique_estimate] must take a hyper-log-log collector as input");
+    expectedException.expectMessage("Function[hyper_unique_estimate] requires a hyper-log-log collector as input");
     Expr expr = Parser.parse("hyper_unique_estimate(100)", MACRO_TABLE);
     expr.eval(inputBindings);
   }
@@ -241,7 +241,7 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
   public void testRoundEstimateWrongArgsCount()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[hyper_unique_round_estimate] must have 1 argument");
+    expectedException.expectMessage("Function[hyper_unique_round_estimate] requires 1 argument");
     Parser.parse("hyper_unique_round_estimate(hyper_unique(), 100)", MACRO_TABLE);
   }
 
@@ -249,7 +249,7 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
   public void testRoundEstimateWrongArgTypes()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[hyper_unique_round_estimate] must take a hyper-log-log collector as input");
+    expectedException.expectMessage("Function[hyper_unique_round_estimate] requires a hyper-log-log collector as input");
     Expr expr = Parser.parse("hyper_unique_round_estimate(string)", MACRO_TABLE);
     expr.eval(inputBindings);
   }

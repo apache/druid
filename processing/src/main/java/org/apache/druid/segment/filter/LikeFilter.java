@@ -94,7 +94,12 @@ public class LikeFilter implements Filter
       if (rangeIndex != null) {
         final String lower = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix());
         final String upper = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix()) + Character.MAX_VALUE;
-        return rangeIndex.forRange(lower, false, upper, false, likeMatcher::matchesSuffixOnly);
+
+        if (likeMatcher.getSuffixMatch() == LikeDimFilter.LikeMatcher.SuffixMatch.MATCH_ANY) {
+          return rangeIndex.forRange(lower, false, upper, false);
+        } else {
+          return rangeIndex.forRange(lower, false, upper, false, likeMatcher::matchesSuffixOnly);
+        }
       }
     }
 

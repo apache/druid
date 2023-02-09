@@ -27,7 +27,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.24.0-SNAPSHOT</version>
+    <version>26.0.0-SNAPSHOT</version>
   </parent>
 
   <dependencies>
@@ -281,12 +281,6 @@
         </plugin>
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
-          <configuration>
-            <argLine>
-              @{jacocoArgLine}
-              ${jdk.surefire.argLine}
-            </argLine>
-          </configuration>
         </plugin>
       </plugins>
     </pluginManagement>

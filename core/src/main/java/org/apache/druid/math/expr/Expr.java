@@ -406,7 +406,7 @@ public interface Expr extends Cacheable
       final List<Expr> newExprs = new ArrayList<>();
 
       for (final Expr arg : exprs) {
-        newExprs.add(visit(arg));
+        newExprs.add(arg.visit(this));
       }
 
       return newExprs;

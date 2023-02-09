@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.TopNSequence;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -156,7 +157,7 @@ public class DefaultLimitSpec implements LimitSpec
 
   /**
    * Limit for this query; behaves like SQL "LIMIT". Will always be positive. {@link Integer#MAX_VALUE} is used in
-   * situations where the user wants an effectively unlimited resultset.
+   * situations where the user wants an effectively unlimited result set.
    */
   @JsonProperty
   @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = LimitJsonIncludeFilter.class)
@@ -232,9 +233,11 @@ public class DefaultLimitSpec implements LimitSpec
     }
 
     if (!sortingNeeded) {
-      String timestampField = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD);
+      final QueryContext queryContext = query.context();
+      String timestampField = queryContext.getString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD);
       if (timestampField != null && !timestampField.isEmpty()) {
-        int timestampResultFieldIndex = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
+        // Will NPE if the key is not set
+        int timestampResultFieldIndex = queryContext.getInt(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
         sortingNeeded = query.getContextSortByDimsFirst()
                         ? timestampResultFieldIndex != query.getDimensions().size() - 1
                         : timestampResultFieldIndex != 0;
@@ -440,11 +443,12 @@ public class DefaultLimitSpec implements LimitSpec
   {
     Comparator arrayComparator = null;
     if (columnType.isArray()) {
+      final ValueType elementType = columnType.getElementType().getType();
       if (columnType.getElementType().isNumeric()) {
         arrayComparator = (Comparator<Object>) (o1, o2) -> ComparableList.compareWithComparator(
             comparator,
-            DimensionHandlerUtils.convertToList(o1),
-            DimensionHandlerUtils.convertToList(o2)
+            DimensionHandlerUtils.convertToList(o1, elementType),
+            DimensionHandlerUtils.convertToList(o2, elementType)
         );
       } else if (columnType.getElementType().equals(ColumnType.STRING)) {
         arrayComparator = (Comparator<Object>) (o1, o2) -> ComparableStringArray.compareWithComparator(
@@ -579,24 +583,16 @@ public class DefaultLimitSpec implements LimitSpec
   /**
    * {@link JsonInclude} filter for {@link #getLimit()}.
    *
-   * This API works by "creative" use of equals. It requires warnings to be suppressed and also requires spotbugs
-   * exclusions (see spotbugs-exclude.xml).
+   * This API works by "creative" use of equals. It requires warnings to be suppressed
+   * and also requires spotbugs exclusions (see spotbugs-exclude.xml).
    */
   @SuppressWarnings({"EqualsAndHashcode", "EqualsHashCode"})
-  static class LimitJsonIncludeFilter // lgtm [java/inconsistent-equals-and-hashcode]
+  public static class LimitJsonIncludeFilter // lgtm [java/inconsistent-equals-and-hashcode]
   {
     @Override
     public boolean equals(Object obj)
     {
-      if (obj == null) {
-        return false;
-      }
-
-      if (obj.getClass() == this.getClass()) {
-        return true;
-      }
-
-      return obj instanceof Long && (long) obj == Long.MAX_VALUE;
+      return obj instanceof Integer && (Integer) obj == Integer.MAX_VALUE;
     }
   }
 }

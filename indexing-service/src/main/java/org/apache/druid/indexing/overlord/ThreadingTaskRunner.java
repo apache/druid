@@ -24,7 +24,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -36,6 +35,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.MultipleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskReportFileWriter;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -61,6 +61,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -109,10 +110,11 @@ public class ThreadingTaskRunner
       ObjectMapper jsonMapper,
       AppenderatorsManager appenderatorsManager,
       TaskReportFileWriter taskReportFileWriter,
-      @Self DruidNode node
+      @Self DruidNode node,
+      TaskStorageDirTracker dirTracker
   )
   {
-    super(jsonMapper, taskConfig);
+    super(jsonMapper, taskConfig, dirTracker);
     this.toolboxFactory = toolboxFactory;
     this.taskLogPusher = taskLogPusher;
     this.node = node;
@@ -128,7 +130,7 @@ public class ThreadingTaskRunner
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(String taskid, long offset)
+  public Optional<InputStream> streamTaskLog(String taskid, long offset)
   {
     // task logs will appear in the main indexer log, streaming individual task logs is not supported
     return Optional.absent();
@@ -154,7 +156,7 @@ public class ThreadingTaskRunner
                         public TaskStatus call()
                         {
                           final String attemptUUID = UUID.randomUUID().toString();
-                          final File taskDir = taskConfig.getTaskDir(task.getId());
+                          final File taskDir = dirTracker.getTaskDir(task.getId());
                           final File attemptDir = new File(taskDir, attemptUUID);
 
                           final TaskLocation taskLocation = TaskLocation.create(
@@ -412,6 +414,7 @@ public class ThreadingTaskRunner
     }
 
     appenderatorsManager.shutdown();
+    super.stop();
   }
 
   @Override

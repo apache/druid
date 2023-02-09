@@ -22,7 +22,7 @@ package org.apache.druid.segment.column;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 
 import javax.annotation.Nullable;
-import java.util.Set;
+import java.util.SortedSet;
 
 /**
  * Index on individual values, and provides bitmaps for the rows which contain these values
@@ -36,7 +36,8 @@ public interface StringValueSetIndex
 
   /**
    * Get an {@link Iterable} of {@link ImmutableBitmap} corresponding to the specified set of values (if they are
-   * contained in the underlying column)
+   * contained in the underlying column). The set must be sorted using
+   * {@link org.apache.druid.java.util.common.guava.Comparators#naturalNullsFirst()}.
    */
-  BitmapColumnIndex forValues(Set<String> values);
+  BitmapColumnIndex forSortedValues(SortedSet<String> values);
 }

@@ -25,6 +25,18 @@
 .ace-solarized-dark {
   background-color: rgba($dark-gray1, 0.5);
 
+  // START: Custom code styles
+  .ace_variable.ace_column {
+    color: #2ceefb;
+  }
+
+  .ace_comment.ace_issue {
+    color: #cb3116;
+    text-decoration: underline;
+    text-decoration-style: wavy;
+  }
+  // END: Custom code styles
+
   &.no-background {
     background-color: transparent;
   }

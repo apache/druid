@@ -33,7 +33,6 @@ import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
-import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
@@ -179,10 +178,8 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     fetchStopwatch.stop();
     LOG.info("Fetch took [%s] seconds", fetchTime);
 
-    final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientFactory().build(
-        new ClientBasedTaskInfoProvider(toolbox.getIndexingServiceClient()),
-        getId(),
-        1, // always use a single http thread
+    final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientProvider().build(
+        supervisorTaskId,
         getTuningConfig().getChatHandlerTimeout(),
         getTuningConfig().getChatHandlerNumRetries()
     );
@@ -200,10 +197,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         intervalToUnzippedFiles
     );
 
-    taskClient.report(
-        supervisorTaskId,
-        new PushedSegmentsReport(getId(), Collections.emptySet(), pushedSegments, ImmutableMap.of())
-    );
+    taskClient.report(new PushedSegmentsReport(getId(), Collections.emptySet(), pushedSegments, ImmutableMap.of()));
 
     return TaskStatus.success(getId());
   }

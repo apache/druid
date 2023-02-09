@@ -108,11 +108,13 @@ class StreamChunkParser<RecordType extends ByteEntity>
     }
   }
 
-  private List<InputRow> parseWithParser(InputRowParser<ByteBuffer> parser, List<? extends ByteEntity> valueBytess)
+  private List<InputRow> parseWithParser(InputRowParser<ByteBuffer> parser, List<? extends ByteEntity> valueBytes)
   {
     final FluentIterable<InputRow> iterable = FluentIterable
-        .from(valueBytess)
-        .transformAndConcat(bytes -> parser.parseBatch(bytes.getBuffer()));
+        .from(valueBytes)
+        .transform(ByteEntity::getBuffer)
+        .transform(this::incrementProcessedBytes)
+        .transformAndConcat(parser::parseBatch);
 
     final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
         CloseableIterators.withEmptyBaggage(iterable.iterator()),
@@ -123,6 +125,16 @@ class StreamChunkParser<RecordType extends ByteEntity>
     return Lists.newArrayList(rowIterator);
   }
 
+  /**
+   * Increments the processed bytes with the number of bytes remaining in the
+   * given buffer. This method must be called before reading the buffer.
+   */
+  private ByteBuffer incrementProcessedBytes(final ByteBuffer recordByteBuffer)
+  {
+    rowIngestionMeters.incrementProcessedBytes(recordByteBuffer.remaining());
+    return recordByteBuffer;
+  }
+
   private List<InputRow> parseWithInputFormat(
       SettableByteEntityReader byteEntityReader,
       List<? extends ByteEntity> valueBytess
@@ -130,6 +142,7 @@ class StreamChunkParser<RecordType extends ByteEntity>
   {
     final List<InputRow> rows = new ArrayList<>();
     for (ByteEntity valueBytes : valueBytess) {
+      rowIngestionMeters.incrementProcessedBytes(valueBytes.getBuffer().remaining());
       byteEntityReader.setEntity(valueBytes);
       try (FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
           byteEntityReader.read(),

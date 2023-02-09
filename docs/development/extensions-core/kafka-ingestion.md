@@ -134,8 +134,6 @@ If you want to ingest data from other fields in addition to the Kafka message co
 - the Kafka event timestamp
 - the Kafka event value that stores the payload.
 
-> The Kafka inputFormat is currently designated as experimental.
-
 For example, consider the following structure for a message that represents a fictitious wiki edit in a development environment:
 - **Event headers**: {"environment": "development"}
 - **Event key**: {"key: "wiki-edit"}
@@ -256,7 +254,7 @@ development               wiki-edit	 1636399229823
 For more information, see [`kafka` data format](../../ingestion/data-formats.md#kafka).
 ## Submit a supervisor spec
 
-Druid starts a supervisor for a dataSource when you submit a supervisor spec. You can use the data loader in the Druid console or you can submit a supervisor spec to the following endpoint:
+Druid starts a supervisor for a dataSource when you submit a supervisor spec. You can use the data loader in the web console or you can submit a supervisor spec to the following endpoint:
 
 `http://<OVERLORD_IP>:<OVERLORD_PORT>/druid/indexer/v1/supervisor`
 

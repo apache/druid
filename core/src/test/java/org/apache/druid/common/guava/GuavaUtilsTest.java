@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -31,7 +32,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -71,7 +71,7 @@ public class GuavaUtilsTest
   public void testCancelAll()
   {
     int tasks = 3;
-    ExecutorService service = Executors.newFixedThreadPool(tasks);
+    ExecutorService service = Execs.multiThreaded(tasks, "GuavaUtilsTest-%d");
     ListeningExecutorService exc = MoreExecutors.listeningDecorator(service);
     AtomicInteger index = new AtomicInteger(0);
     //a flag what time to throw exception.

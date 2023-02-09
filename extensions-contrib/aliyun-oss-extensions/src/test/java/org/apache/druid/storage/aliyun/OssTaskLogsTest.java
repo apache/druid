@@ -23,11 +23,15 @@ import com.aliyun.oss.ClientException;
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.model.AccessControlList;
 import com.aliyun.oss.model.DeleteObjectsRequest;
+import com.aliyun.oss.model.GetObjectRequest;
 import com.aliyun.oss.model.Grant;
+import com.aliyun.oss.model.OSSObject;
 import com.aliyun.oss.model.OSSObjectSummary;
+import com.aliyun.oss.model.ObjectMetadata;
 import com.aliyun.oss.model.Owner;
 import com.aliyun.oss.model.PutObjectRequest;
 import com.aliyun.oss.model.PutObjectResult;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
@@ -42,12 +46,19 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 
+import javax.annotation.Nonnull;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RunWith(EasyMockRunner.class)
 public class OssTaskLogsTest extends EasyMockSupport
@@ -65,6 +76,9 @@ public class OssTaskLogsTest extends EasyMockSupport
   private static final int MAX_KEYS = 1;
   private static final Exception RECOVERABLE_EXCEPTION = new ClientException(new IOException());
   private static final Exception NON_RECOVERABLE_EXCEPTION = new ClientException(new NullPointerException());
+  private static final String LOG_CONTENTS = "log_contents";
+  private static final String REPORT_CONTENTS = "report_contents";
+
 
   @Mock
   private CurrentTimeMillisSupplier timeSupplier;
@@ -113,12 +127,7 @@ public class OssTaskLogsTest extends EasyMockSupport
 
     EasyMock.replay(ossClient, timeSupplier);
 
-    OssTaskLogsConfig config = new OssTaskLogsConfig();
-    config.setBucket(TEST_BUCKET);
-    config.setPrefix(TEST_PREFIX);
-    OssInputDataConfig inputDataConfig = new OssInputDataConfig();
-    inputDataConfig.setMaxListingLength(MAX_KEYS);
-    OssTaskLogs taskLogs = new OssTaskLogs(ossClient, config, inputDataConfig, timeSupplier);
+    OssTaskLogs taskLogs = getOssTaskLogs();
     taskLogs.killAll();
 
     EasyMock.verify(ossClient, timeSupplier);
@@ -147,12 +156,7 @@ public class OssTaskLogsTest extends EasyMockSupport
 
     EasyMock.replay(ossClient, timeSupplier);
 
-    OssTaskLogsConfig config = new OssTaskLogsConfig();
-    config.setBucket(TEST_BUCKET);
-    config.setPrefix(TEST_PREFIX);
-    OssInputDataConfig inputDataConfig = new OssInputDataConfig();
-    inputDataConfig.setMaxListingLength(MAX_KEYS);
-    OssTaskLogs taskLogs = new OssTaskLogs(ossClient, config, inputDataConfig, timeSupplier);
+    OssTaskLogs taskLogs = getOssTaskLogs();
     taskLogs.killAll();
 
     EasyMock.verify(ossClient, timeSupplier);
@@ -181,12 +185,7 @@ public class OssTaskLogsTest extends EasyMockSupport
 
       EasyMock.replay(ossClient, timeSupplier);
 
-      OssTaskLogsConfig config = new OssTaskLogsConfig();
-      config.setBucket(TEST_BUCKET);
-      config.setPrefix(TEST_PREFIX);
-      OssInputDataConfig inputDataConfig = new OssInputDataConfig();
-      inputDataConfig.setMaxListingLength(MAX_KEYS);
-      OssTaskLogs taskLogs = new OssTaskLogs(ossClient, config, inputDataConfig, timeSupplier);
+      OssTaskLogs taskLogs = getOssTaskLogs();
       taskLogs.killAll();
     }
     catch (IOException e) {
@@ -217,12 +216,7 @@ public class OssTaskLogsTest extends EasyMockSupport
 
     EasyMock.replay(ossClient, timeSupplier);
 
-    OssTaskLogsConfig config = new OssTaskLogsConfig();
-    config.setBucket(TEST_BUCKET);
-    config.setPrefix(TEST_PREFIX);
-    OssInputDataConfig inputDataConfig = new OssInputDataConfig();
-    inputDataConfig.setMaxListingLength(MAX_KEYS);
-    OssTaskLogs taskLogs = new OssTaskLogs(ossClient, config, inputDataConfig, timeSupplier);
+    OssTaskLogs taskLogs = getOssTaskLogs();
     taskLogs.killOlderThan(TIME_NOW);
 
     EasyMock.verify(ossClient, timeSupplier);
@@ -250,12 +244,7 @@ public class OssTaskLogsTest extends EasyMockSupport
 
     EasyMock.replay(ossClient, timeSupplier);
 
-    OssTaskLogsConfig config = new OssTaskLogsConfig();
-    config.setBucket(TEST_BUCKET);
-    config.setPrefix(TEST_PREFIX);
-    OssInputDataConfig inputDataConfig = new OssInputDataConfig();
-    inputDataConfig.setMaxListingLength(MAX_KEYS);
-    OssTaskLogs taskLogs = new OssTaskLogs(ossClient, config, inputDataConfig, timeSupplier);
+    OssTaskLogs taskLogs = getOssTaskLogs();
     taskLogs.killOlderThan(TIME_NOW);
 
     EasyMock.verify(ossClient, timeSupplier);
@@ -283,12 +272,7 @@ public class OssTaskLogsTest extends EasyMockSupport
 
       EasyMock.replay(ossClient, timeSupplier);
 
-      OssTaskLogsConfig config = new OssTaskLogsConfig();
-      config.setBucket(TEST_BUCKET);
-      config.setPrefix(TEST_PREFIX);
-      OssInputDataConfig inputDataConfig = new OssInputDataConfig();
-      inputDataConfig.setMaxListingLength(MAX_KEYS);
-      OssTaskLogs taskLogs = new OssTaskLogs(ossClient, config, inputDataConfig, timeSupplier);
+      OssTaskLogs taskLogs = getOssTaskLogs();
       taskLogs.killOlderThan(TIME_NOW);
     }
     catch (IOException e) {
@@ -298,6 +282,115 @@ public class OssTaskLogsTest extends EasyMockSupport
     Assert.assertTrue(ioExceptionThrown);
 
     EasyMock.verify(ossClient, timeSupplier);
+  }
+
+  @Test
+  public void test_taskLog_fetch() throws IOException
+  {
+    EasyMock.reset(ossClient);
+    String logPath = TEST_PREFIX + "/" + KEY_1 + "/log";
+    ObjectMetadata objectMetadata = new ObjectMetadata();
+    objectMetadata.setContentLength(LOG_CONTENTS.length());
+    EasyMock.expect(ossClient.getObjectMetadata(TEST_BUCKET, logPath)).andReturn(objectMetadata);
+
+    OSSObject ossObject = new OSSObject();
+    ossObject.setObjectContent(new ByteArrayInputStream(LOG_CONTENTS.getBytes(StandardCharsets.UTF_8)));
+    EasyMock.expect(ossClient.getObject(EasyMock.isA(GetObjectRequest.class))).andReturn(ossObject);
+    EasyMock.replay(ossClient);
+
+    OssTaskLogs ossTaskLogs = getOssTaskLogs();
+    Optional<InputStream> inputStreamOptional = ossTaskLogs.streamTaskLog(KEY_1, 0);
+    String taskLogs = new BufferedReader(
+        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))
+        .lines()
+        .collect(Collectors.joining("\n"));
+
+    Assert.assertEquals(LOG_CONTENTS, taskLogs);
+  }
+
+  @Test
+  public void test_taskLog_fetch_withRange() throws IOException
+  {
+    EasyMock.reset(ossClient);
+    String logPath = TEST_PREFIX + "/" + KEY_1 + "/log";
+    ObjectMetadata objectMetadata = new ObjectMetadata();
+    objectMetadata.setContentLength(LOG_CONTENTS.length());
+    EasyMock.expect(ossClient.getObjectMetadata(TEST_BUCKET, logPath)).andReturn(objectMetadata);
+
+    OSSObject ossObject = new OSSObject();
+    ossObject.setObjectContent(new ByteArrayInputStream(LOG_CONTENTS.substring(1).getBytes(StandardCharsets.UTF_8)));
+    EasyMock.expect(ossClient.getObject(EasyMock.isA(GetObjectRequest.class))).andReturn(ossObject);
+    EasyMock.replay(ossClient);
+
+    OssTaskLogs ossTaskLogs = getOssTaskLogs();
+    Optional<InputStream> inputStreamOptional = ossTaskLogs.streamTaskLog(KEY_1, 1);
+    String taskLogs = new BufferedReader(
+        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))
+        .lines()
+        .collect(Collectors.joining("\n"));
+
+    Assert.assertEquals(LOG_CONTENTS.substring(1), taskLogs);
+  }
+
+  @Test
+  public void test_taskLog_fetch_withNegativeRange() throws IOException
+  {
+    EasyMock.reset(ossClient);
+    String logPath = TEST_PREFIX + "/" + KEY_1 + "/log";
+    ObjectMetadata objectMetadata = new ObjectMetadata();
+    objectMetadata.setContentLength(LOG_CONTENTS.length());
+    EasyMock.expect(ossClient.getObjectMetadata(TEST_BUCKET, logPath)).andReturn(objectMetadata);
+
+    OSSObject ossObject = new OSSObject();
+    ossObject.setObjectContent(new ByteArrayInputStream(LOG_CONTENTS.substring(1).getBytes(StandardCharsets.UTF_8)));
+    EasyMock.expect(ossClient.getObject(EasyMock.isA(GetObjectRequest.class))).andReturn(ossObject);
+    EasyMock.replay(ossClient);
+
+    OssTaskLogs ossTaskLogs = getOssTaskLogs();
+    Optional<InputStream> inputStreamOptional = ossTaskLogs.streamTaskLog(KEY_1, -1 * (LOG_CONTENTS.length() - 1));
+    String taskLogs = new BufferedReader(
+        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))
+        .lines()
+        .collect(Collectors.joining("\n"));
+
+    Assert.assertEquals(LOG_CONTENTS.substring(1), taskLogs);
+  }
+
+
+  @Test
+  public void test_taskReport_fetch() throws IOException
+  {
+    EasyMock.reset(ossClient);
+    String logPath = TEST_PREFIX + "/" + KEY_1 + "/report.json";
+    ObjectMetadata objectMetadata = new ObjectMetadata();
+    objectMetadata.setContentLength(REPORT_CONTENTS.length());
+    EasyMock.expect(ossClient.getObjectMetadata(TEST_BUCKET, logPath)).andReturn(objectMetadata);
+
+    OSSObject ossObject = new OSSObject();
+    ossObject.setObjectContent(new ByteArrayInputStream(REPORT_CONTENTS.getBytes(StandardCharsets.UTF_8)));
+    EasyMock.expect(ossClient.getObject(EasyMock.isA(GetObjectRequest.class))).andReturn(ossObject);
+    EasyMock.replay(ossClient);
+
+    OssTaskLogs ossTaskLogs = getOssTaskLogs();
+    Optional<InputStream> inputStreamOptional = ossTaskLogs.streamTaskReports(KEY_1);
+    String report = new BufferedReader(
+        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))
+        .lines()
+        .collect(Collectors.joining("\n"));
+
+    Assert.assertEquals(REPORT_CONTENTS, report);
+  }
+
+  @Nonnull
+  private OssTaskLogs getOssTaskLogs()
+  {
+    OssTaskLogsConfig config = new OssTaskLogsConfig();
+    config.setBucket(TEST_BUCKET);
+    config.setPrefix(TEST_PREFIX);
+    OssInputDataConfig inputDataConfig = new OssInputDataConfig();
+    inputDataConfig.setMaxListingLength(MAX_KEYS);
+    OssTaskLogs taskLogs = new OssTaskLogs(ossClient, config, inputDataConfig, timeSupplier);
+    return taskLogs;
   }
 
   private List<Grant> testPushInternal(boolean disableAcl, String ownerId, String ownerDisplayName) throws Exception

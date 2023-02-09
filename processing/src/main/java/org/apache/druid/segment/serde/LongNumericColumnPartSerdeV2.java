@@ -162,7 +162,8 @@ public class LongNumericColumnPartSerdeV2 implements ColumnPartSerde
       builder.setType(ValueType.LONG)
              .setHasMultipleValues(false)
              .setHasNulls(hasNulls)
-             .setNumericColumnSupplier(new LongNumericColumnSupplier(column, bitmap));
+             .setNumericColumnSupplier(new LongNumericColumnSupplier(column, bitmap))
+             .setNullValueIndexSupplier(bitmap);
     };
   }
 }

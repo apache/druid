@@ -55,6 +55,12 @@ public class TimestampMinAggregatorFactory extends TimestampAggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new TimestampMinAggregatorFactory(newName, getFieldName(), getTimeFormat());
+  }
+
+  @Override
   public String toString()
   {
     return "TimestampMinAggregatorFactory{" +

@@ -37,7 +37,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
 {
   // __time for foo is [2000-01-01, 2000-01-02, 2000-01-03, 2001-01-01, 2001-01-02, 2001-01-03]
   @Test
-  public void testMaxTimeQuery() throws Exception
+  public void testMaxTimeQuery()
   {
     HashMap<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     queryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
@@ -58,7 +58,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMinTimeQuery() throws Exception
+  public void testMinTimeQuery()
   {
     HashMap<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     queryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
@@ -79,7 +79,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMinTimeQueryWithFilters() throws Exception
+  public void testMinTimeQueryWithFilters()
   {
     HashMap<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     queryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
@@ -107,7 +107,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   // Currently, if both min(__time) and max(__time) are present, we don't convert it
   // to a timeBoundary query. (ref : https://github.com/apache/druid/issues/12479)
   @Test
-  public void testMinMaxTimeQuery() throws Exception
+  public void testMinMaxTimeQuery()
   {
     HashMap<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);

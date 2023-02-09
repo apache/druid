@@ -96,8 +96,9 @@ public class EitherTest
     MatcherAssert.assertThat(either.error(), CoreMatchers.instanceOf(AssertionError.class));
     MatcherAssert.assertThat(either.error().getMessage(), CoreMatchers.equalTo("oh no"));
 
-    final AssertionError e = Assert.assertThrows(AssertionError.class, either::valueOrThrow);
-    MatcherAssert.assertThat(e.getMessage(), CoreMatchers.equalTo("oh no"));
+    final RuntimeException e = Assert.assertThrows(RuntimeException.class, either::valueOrThrow);
+    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(AssertionError.class));
+    MatcherAssert.assertThat(e.getCause().getMessage(), CoreMatchers.equalTo("oh no"));
 
     // Test toString.
     Assert.assertEquals("Error[java.lang.AssertionError: oh no]", either.toString());

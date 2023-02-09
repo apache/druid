@@ -20,14 +20,12 @@
 package org.apache.druid.query.aggregation.datasketches.hll;
 
 import org.apache.datasketches.hll.HllSketch;
-import org.apache.datasketches.memory.Memory;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ObjectStrategy;
+import org.apache.druid.segment.data.SafeWritableMemory;
 import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -35,7 +33,6 @@ import org.apache.druid.segment.serde.LargeColumnSupportedComplexColumnSerialize
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
 public class HllSketchMergeComplexMetricSerde extends ComplexMetricSerde
 {
@@ -49,7 +46,7 @@ public class HllSketchMergeComplexMetricSerde extends ComplexMetricSerde
   @Override
   public ObjectStrategy getObjectStrategy()
   {
-    return HllSketchObjectStrategy.STRATEGY;
+    return HllSketchHolderObjectStrategy.STRATEGY;
   }
 
   @Override
@@ -64,13 +61,16 @@ public class HllSketchMergeComplexMetricSerde extends ComplexMetricSerde
       }
 
       @Override
-      public HllSketch extractValue(final InputRow inputRow, final String metricName)
+      public HllSketchHolder extractValue(final InputRow inputRow, final String metricName)
       {
-        final Object object = inputRow.getRaw(metricName);
+        Object object = inputRow.getRaw(metricName);
         if (object == null) {
           return null;
         }
-        return deserializeSketch(object);
+        if (object instanceof byte[]) {
+          object = SafeWritableMemory.wrap((byte[]) object);
+        }
+        return HllSketchHolder.fromObj(object);
       }
     };
   }
@@ -81,24 +81,11 @@ public class HllSketchMergeComplexMetricSerde extends ComplexMetricSerde
     columnBuilder.setComplexColumnSupplier(
         new ComplexColumnPartSupplier(
             getTypeName(),
-            GenericIndexed.read(buf, HllSketchObjectStrategy.STRATEGY, columnBuilder.getFileMapper())
+            GenericIndexed.read(buf, HllSketchHolderObjectStrategy.STRATEGY, columnBuilder.getFileMapper())
         )
     );
   }
 
-  static HllSketch deserializeSketch(final Object object)
-  {
-    if (object instanceof String) {
-      return HllSketch.wrap(Memory.wrap(StringUtils.decodeBase64(((String) object).getBytes(StandardCharsets.UTF_8))));
-    } else if (object instanceof byte[]) {
-      return HllSketch.wrap(Memory.wrap((byte[]) object));
-    } else if (object instanceof HllSketch) {
-      return (HllSketch) object;
-    }
-    throw new IAE("Object is not of a type that can be deserialized to an HllSketch:" + object.getClass().getName());
-  }
-
-  // support large columns
   @Override
   public GenericColumnSerializer getSerializer(final SegmentWriteOutMedium segmentWriteOutMedium, final String column)
   {

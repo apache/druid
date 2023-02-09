@@ -90,7 +90,6 @@ public class EmitterTest
     return builder;
   }
 
-
   MockHttpClient httpClient;
   HttpPostEmitter emitter;
 

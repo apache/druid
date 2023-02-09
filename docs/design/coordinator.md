@@ -27,6 +27,8 @@ title: "Coordinator Process"
 
 For Apache Druid Coordinator Process Configuration, see [Coordinator Configuration](../configuration/index.md#coordinator).
 
+For basic tuning guidance for the Coordinator process, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#coordinator).
+
 ### HTTP endpoints
 
 For a list of API endpoints supported by the Coordinator, see [Coordinator API](../operations/api-reference.md#coordinator).
@@ -81,7 +83,7 @@ To ensure an even distribution of segments across Historical processes in the cl
 
 ### Automatic compaction
 
-The Druid Coordinator manages the automatic compaction system.
+The Druid Coordinator manages the [automatic compaction system](../data-management/automatic-compaction.md).
 Each run, the Coordinator compacts segments by merging small segments or splitting a large one. This is useful when the size of your segments is not optimized which may degrade query performance.
 See [Segment size optimization](../operations/segment-optimization.md) for details.
 
@@ -113,7 +115,7 @@ need compaction.
 A set of segments needs compaction if all conditions below are satisfied:
 
 1) Total size of segments in the time chunk is smaller than or equal to the configured `inputSegmentSizeBytes`.
-2) Segments have never been compacted yet or compaction spec has been updated since the last compaction, especially `maxRowsPerSegment`, `maxTotalRows`, and `indexSpec`.
+2) Segments have never been compacted yet or compaction spec has been updated since the last compaction: `maxTotalRows` or `indexSpec`.
 
 Here are some details with an example. Suppose we have two dataSources (`foo`, `bar`) as seen below:
 
@@ -133,18 +135,15 @@ If the Coordinator has enough task slots for compaction, this policy will contin
 `bar_2017-10-01T00:00:00.000Z_2017-11-01T00:00:00.000Z_VERSION` and `bar_2017-10-01T00:00:00.000Z_2017-11-01T00:00:00.000Z_VERSION_1`.
 Finally, `foo_2017-09-01T00:00:00.000Z_2017-10-01T00:00:00.000Z_VERSION` will be picked up even though there is only one segment in the time chunk of `2017-09-01T00:00:00.000Z/2017-10-01T00:00:00.000Z`.
 
-The search start point can be changed by setting [`skipOffsetFromLatest`](../configuration/index.md#automatic-compaction-dynamic-configuration).
+The search start point can be changed by setting `skipOffsetFromLatest`.
 If this is set, this policy will ignore the segments falling into the time chunk of (the end time of the most recent segment - `skipOffsetFromLatest`).
 This is to avoid conflicts between compaction tasks and realtime tasks.
 Note that realtime tasks have a higher priority than compaction tasks by default. Realtime tasks will revoke the locks of compaction tasks if their intervals overlap, resulting in the termination of the compaction task.
+For more information, see [Avoid conflicts with ingestion](../data-management/automatic-compaction.md#avoid-conflicts-with-ingestion).
 
 > This policy currently cannot handle the situation when there are a lot of small segments which have the same interval,
 > and their total size exceeds [`inputSegmentSizeBytes`](../configuration/index.md#automatic-compaction-dynamic-configuration).
 > If it finds such segments, it simply skips them.
-
-### The Coordinator console
-
-The Druid Coordinator exposes a web GUI for displaying cluster information and rule configuration. For more details, see [Coordinator console](../operations/management-uis.md#coordinator-consoles).
 
 ### FAQ
 

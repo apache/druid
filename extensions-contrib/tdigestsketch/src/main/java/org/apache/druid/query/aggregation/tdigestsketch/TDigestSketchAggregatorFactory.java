@@ -234,6 +234,12 @@ public class TDigestSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new TDigestSketchAggregatorFactory(newName, getFieldName(), getCompression(), cacheTypeId);
+  }
+
+  @Override
   public AggregateCombiner makeAggregateCombiner()
   {
     return new ObjectAggregateCombiner<MergingDigest>()

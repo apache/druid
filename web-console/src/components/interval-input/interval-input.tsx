@@ -16,8 +16,10 @@
  * limitations under the License.
  */
 
-import { Button, InputGroup, Intent, Position } from '@blueprintjs/core';
-import { DateRange, DateRangePicker, TimePrecision } from '@blueprintjs/datetime';
+import type { Intent } from '@blueprintjs/core';
+import { Button, InputGroup, Position } from '@blueprintjs/core';
+import type { DateRange } from '@blueprintjs/datetime';
+import { DateRangePicker, TimePrecision } from '@blueprintjs/datetime';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import React from 'react';
@@ -60,7 +62,7 @@ export const IntervalInput = React.memo(function IntervalInput(props: IntervalIn
         </div>
       }
       onChange={(e: any) => {
-        const value = e.target.value.replace(/[^\-0-9T:/]/g, '').substring(0, 39);
+        const value = e.target.value.replace(/[^\-\dT:/]/g, '').substring(0, 39);
         onValueChange(value);
       }}
       intent={intent}

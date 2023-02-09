@@ -64,4 +64,15 @@ public class SQLServerConnectorTest
     Assert.assertFalse(connector.isTransientException(new Throwable("Throwable with reason only")));
   }
 
+  @Test
+  public void testLimitClause()
+  {
+    SQLServerConnector connector = new SQLServerConnector(
+        Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
+        Suppliers.ofInstance(
+            new MetadataStorageTablesConfig(null, null, null, null, null, null, null, null, null, null, null)
+        )
+    );
+    Assert.assertEquals("FETCH NEXT 100 ROWS ONLY", connector.limitClause(100));
+  }
 }

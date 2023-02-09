@@ -22,9 +22,6 @@ title: "Globally Cached Lookups"
   ~ under the License.
   -->
 
-
-> Lookups are an [experimental](../experimental.md) feature.
-
 To use this Apache Druid extension, [include](../extensions.md#loading-extensions) `druid-lookups-cached-global` in the extensions load list.
 
 ## Configuration

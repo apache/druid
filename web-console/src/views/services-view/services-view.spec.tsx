@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 
-import { shallow } from 'enzyme';
 import React from 'react';
 
-import { Capabilities, QueryState } from '../../utils';
+import { Capabilities } from '../../helpers';
+import { QueryState } from '../../utils';
+import { shallow } from '../../utils/shallow-renderer';
 
 import { ServicesView } from './services-view';
 
@@ -81,9 +82,7 @@ jest.mock('../../utils', () => {
 
 describe('ServicesView', () => {
   it('renders data', () => {
-    const comp = (
-      <ServicesView goToQuery={() => {}} goToTask={() => {}} capabilities={Capabilities.FULL} />
-    );
+    const comp = <ServicesView goToQuery={() => {}} capabilities={Capabilities.FULL} />;
 
     const servicesView = shallow(comp);
     expect(servicesView).toMatchSnapshot();

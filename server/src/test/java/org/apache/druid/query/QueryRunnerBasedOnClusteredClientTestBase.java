@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.DruidServer;
@@ -50,7 +49,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
-import org.apache.druid.segment.join.MapJoinableFactory;
+import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
@@ -149,7 +148,7 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
         ),
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
+        JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
         new NoopServiceEmitter()
     );
     servers = new ArrayList<>();

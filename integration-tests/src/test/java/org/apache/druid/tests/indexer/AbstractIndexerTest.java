@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -165,6 +166,9 @@ public abstract class AbstractIndexerTest
   public static String getResourceAsString(String file) throws IOException
   {
     try (final InputStream inputStream = getResourceAsStream(file)) {
+      if (inputStream == null) {
+        throw new ISE("Failed to load resource: [%s]", file);
+      }
       return IOUtils.toString(inputStream, StandardCharsets.UTF_8);
     }
   }

@@ -20,7 +20,6 @@
 package org.apache.druid.query;
 
 import com.google.common.collect.Iterables;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
@@ -31,25 +30,28 @@ import org.apache.druid.utils.CloseableUtils;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 /**
  * A buffer pool that throws away buffers when they are "returned" to the pool. Useful for tests that need to make
  * many pools and use them one at a time.
- *
+ * <p>
  * This pool implements {@link BlockingPool}, but never blocks. It returns immediately if resources are available;
  * otherwise it returns an empty list immediately. This is also useful for tests, because it allows "timeouts" to
  * happen immediately and therefore speeds up tests.
  */
 public class TestBufferPool implements NonBlockingPool<ByteBuffer>, BlockingPool<ByteBuffer>
 {
+  private final AtomicLong takeCount = new AtomicLong(0);
+  private final ConcurrentHashMap<Long, RuntimeException> takenFromMap = new ConcurrentHashMap<>();
+
   private final Supplier<ResourceHolder<ByteBuffer>> generator;
   private final int maxCount;
-
-  @GuardedBy("this")
-  private long numOutstanding;
 
   private TestBufferPool(final Supplier<ResourceHolder<ByteBuffer>> generator, final int maxCount)
   {
@@ -60,7 +62,8 @@ public class TestBufferPool implements NonBlockingPool<ByteBuffer>, BlockingPool
   public static TestBufferPool onHeap(final int bufferSize, final int maxCount)
   {
     return new TestBufferPool(
-        () -> new ReferenceCountingResourceHolder<>(ByteBuffer.allocate(bufferSize), () -> {}),
+        () -> new ReferenceCountingResourceHolder<>(ByteBuffer.allocate(bufferSize), () -> {
+        }),
         maxCount
     );
   }
@@ -102,20 +105,20 @@ public class TestBufferPool implements NonBlockingPool<ByteBuffer>, BlockingPool
   public List<ReferenceCountingResourceHolder<ByteBuffer>> takeBatch(int elementNum)
   {
     synchronized (this) {
-      if (numOutstanding + elementNum <= maxCount) {
+      if (takenFromMap.size() + elementNum <= maxCount) {
         final List<ReferenceCountingResourceHolder<ByteBuffer>> retVal = new ArrayList<>();
 
         try {
           for (int i = 0; i < elementNum; i++) {
             final ResourceHolder<ByteBuffer> holder = generator.get();
             final ByteBuffer o = holder.get();
+            final long ticker = takeCount.getAndIncrement();
+            takenFromMap.put(ticker, new RuntimeException());
+
             retVal.add(new ReferenceCountingResourceHolder<>(o, () -> {
-              synchronized (this) {
-                numOutstanding--;
-                holder.close();
-              }
+              takenFromMap.remove(ticker);
+              holder.close();
             }));
-            numOutstanding++;
           }
         }
         catch (Throwable e) {
@@ -131,8 +134,11 @@ public class TestBufferPool implements NonBlockingPool<ByteBuffer>, BlockingPool
 
   public long getOutstandingObjectCount()
   {
-    synchronized (this) {
-      return numOutstanding;
-    }
+    return takenFromMap.size();
+  }
+
+  public Collection<RuntimeException> getOutstandingExceptionsCreated()
+  {
+    return takenFromMap.values();
   }
 }

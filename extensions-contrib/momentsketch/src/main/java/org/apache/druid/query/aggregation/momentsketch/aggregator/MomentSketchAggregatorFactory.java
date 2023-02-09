@@ -265,6 +265,12 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new MomentSketchAggregatorFactory(newName, getFieldName(), getK(), getCompress(), cacheTypeId);
+  }
+
+  @Override
   public boolean equals(final Object o)
   {
     if (this == o) {

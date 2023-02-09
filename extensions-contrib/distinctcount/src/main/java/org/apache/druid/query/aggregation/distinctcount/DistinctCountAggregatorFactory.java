@@ -89,6 +89,12 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
     }
   }
 
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new DistinctCountAggregatorFactory(newName, getFieldName(), getBitMapFactory());
+  }
+
   private DimensionSelector makeDimensionSelector(final ColumnSelectorFactory columnFactory)
   {
     return columnFactory.makeDimensionSelector(new DefaultDimensionSpec(fieldName, fieldName));

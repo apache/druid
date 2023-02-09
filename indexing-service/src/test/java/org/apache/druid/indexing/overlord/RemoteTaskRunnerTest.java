@@ -115,9 +115,6 @@ public class RemoteTaskRunnerTest
     }
   };
 
-
-
-
   @Rule
   public final TestRule timeout = new DeadlockDetectingTimeout(60, TimeUnit.SECONDS);
 
@@ -571,6 +568,7 @@ public class RemoteTaskRunnerTest
   public void testRunPendingTaskFailToAssignTask() throws Exception
   {
     doSetup();
+    Thread.sleep(100);
     RemoteTaskRunnerWorkItem originalItem = remoteTaskRunner.addPendingTask(task);
     // modify taskId to make task assignment failed
     RemoteTaskRunnerWorkItem wankyItem = Mockito.mock(RemoteTaskRunnerWorkItem.class);
@@ -1119,7 +1117,7 @@ public class RemoteTaskRunnerTest
     );
 
     // Stream task reports from a running task.
-    final InputStream in = remoteTaskRunner.streamTaskReports(task.getId()).get().openStream();
+    final InputStream in = remoteTaskRunner.streamTaskReports(task.getId()).get();
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     ByteStreams.copy(in, baos);
     Assert.assertEquals(reportString, StringUtils.fromUtf8(baos.toByteArray()));

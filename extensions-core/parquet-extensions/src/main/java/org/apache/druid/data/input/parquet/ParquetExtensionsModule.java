@@ -30,9 +30,7 @@ import org.apache.druid.data.input.parquet.simple.ParquetHadoopInputRowParser;
 import org.apache.druid.data.input.parquet.simple.ParquetParseSpec;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
@@ -76,20 +74,6 @@ public class ParquetExtensionsModule implements DruidModule
 
     // Set explicit CL. Otherwise it'll try to use thread context CL, which may not have all of our dependencies.
     conf.setClassLoader(getClass().getClassLoader());
-
-    // Ensure that FileSystem class level initialization happens with correct CL
-    // See https://github.com/apache/druid/issues/1714
-    ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
-    try {
-      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-      FileSystem.get(conf);
-    }
-    catch (IOException ex) {
-      throw new RuntimeException(ex);
-    }
-    finally {
-      Thread.currentThread().setContextClassLoader(currCtxCl);
-    }
 
     if (props != null) {
       for (String propName : props.stringPropertyNames()) {

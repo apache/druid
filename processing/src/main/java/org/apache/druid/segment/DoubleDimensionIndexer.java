@@ -34,7 +34,6 @@ import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Objects;
 
 public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, Double>
@@ -46,9 +45,6 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   @Override
   public EncodedKeyComponent<Double> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
-    if (dimValues instanceof List) {
-      throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
-    }
     Double d = DimensionHandlerUtils.convertObjectToDouble(dimValues, reportParseExceptions);
     if (d == null) {
       hasNulls = NullHandling.sqlCompatible();

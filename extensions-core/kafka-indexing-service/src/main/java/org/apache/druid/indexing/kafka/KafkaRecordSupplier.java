@@ -26,9 +26,11 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
+import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.DynamicConfigProvider;
@@ -47,6 +49,7 @@ import java.lang.reflect.Type;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -61,10 +64,11 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaR
 
   public KafkaRecordSupplier(
       Map<String, Object> consumerProperties,
-      ObjectMapper sortingMapper
+      ObjectMapper sortingMapper,
+      KafkaConfigOverrides configOverrides
   )
   {
-    this(getKafkaConsumer(sortingMapper, consumerProperties));
+    this(getKafkaConsumer(sortingMapper, consumerProperties, configOverrides));
   }
 
   @VisibleForTesting
@@ -158,6 +162,14 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaR
   }
 
   @Override
+  public boolean isOffsetAvailable(StreamPartition<Integer> partition, OrderedSequenceNumber<Long> offset)
+  {
+    final Long earliestOffset = getEarliestSequenceNumber(partition);
+    return earliestOffset != null
+           && offset.isAvailableWithEarliest(KafkaSequenceNumber.of(earliestOffset));
+  }
+
+  @Override
   public Long getPosition(StreamPartition<Integer> partition)
   {
     return wrapExceptions(() -> consumer.position(new TopicPartition(
@@ -218,14 +230,13 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaR
     if (dynamicConfigProviderJson != null) {
       DynamicConfigProvider dynamicConfigProvider = configMapper.convertValue(dynamicConfigProviderJson, DynamicConfigProvider.class);
       Map<String, String> dynamicConfig = dynamicConfigProvider.getConfig();
-
       for (Map.Entry<String, String> e : dynamicConfig.entrySet()) {
         properties.setProperty(e.getKey(), e.getValue());
       }
     }
   }
 
-  private static Deserializer getKafkaDeserializer(Properties properties, String kafkaConfigKey)
+  private static Deserializer getKafkaDeserializer(Properties properties, String kafkaConfigKey, boolean isKey)
   {
     Deserializer deserializerObject;
     try {
@@ -248,14 +259,35 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaR
     catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
       throw new StreamException(e);
     }
+
+    Map<String, Object> configs = new HashMap<>();
+    for (String key : properties.stringPropertyNames()) {
+      configs.put(key, properties.get(key));
+    }
+
+    deserializerObject.configure(configs, isKey);
     return deserializerObject;
   }
 
-  private static KafkaConsumer<byte[], byte[]> getKafkaConsumer(ObjectMapper sortingMapper, Map<String, Object> consumerProperties)
+  public static KafkaConsumer<byte[], byte[]> getKafkaConsumer(
+      ObjectMapper sortingMapper,
+      Map<String, Object> consumerProperties,
+      KafkaConfigOverrides configOverrides
+  )
   {
     final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
     final Properties props = new Properties();
-    addConsumerPropertiesFromConfig(props, sortingMapper, consumerProperties);
+    Map<String, Object> effectiveConsumerProperties;
+    if (configOverrides != null) {
+      effectiveConsumerProperties = configOverrides.overrideConfigs(consumerProperties);
+    } else {
+      effectiveConsumerProperties = consumerProperties;
+    }
+    addConsumerPropertiesFromConfig(
+        props,
+        sortingMapper,
+        effectiveConsumerProperties
+    );
     props.putIfAbsent("isolation.level", "read_committed");
     props.putIfAbsent("group.id", StringUtils.format("kafka-supervisor-%s", IdUtils.getRandomId()));
     props.putAll(consumerConfigs);
@@ -263,8 +295,8 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaR
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(KafkaRecordSupplier.class.getClassLoader());
-      Deserializer keyDeserializerObject = getKafkaDeserializer(props, "key.deserializer");
-      Deserializer valueDeserializerObject = getKafkaDeserializer(props, "value.deserializer");
+      Deserializer keyDeserializerObject = getKafkaDeserializer(props, "key.deserializer", true);
+      Deserializer valueDeserializerObject = getKafkaDeserializer(props, "value.deserializer", false);
 
       return new KafkaConsumer<>(props, keyDeserializerObject, valueDeserializerObject);
     }

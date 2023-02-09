@@ -246,12 +246,12 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
               break;
             }
             default: {
-              log.warn("Ignored event type[%s] for node watcher of role[%s].", event.getType(), nodeRole.getJsonName());
+              log.warn("Ignored event type [%s] for node watcher of role [%s].", event.getType(), nodeRole.getJsonName());
             }
           }
         }
         catch (Exception ex) {
-          log.error(ex, "Unknown error in node watcher of role[%s].", nodeRole.getJsonName());
+          log.error(ex, "Unknown error in node watcher of role [%s].", nodeRole.getJsonName());
         }
       }
     }

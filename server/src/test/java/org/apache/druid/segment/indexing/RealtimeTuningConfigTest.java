@@ -36,14 +36,6 @@ import java.util.UUID;
 public class RealtimeTuningConfigTest
 {
   @Test
-  public void testDefaultBasePersistDirectory()
-  {
-    final RealtimeTuningConfig tuningConfig1 = RealtimeTuningConfig.makeDefaultTuningConfig(null);
-    final RealtimeTuningConfig tuningConfig2 = RealtimeTuningConfig.makeDefaultTuningConfig(null);
-    Assert.assertNotEquals(tuningConfig1.getBasePersistDirectory(), tuningConfig2.getBasePersistDirectory());
-  }
-
-  @Test
   public void testErrorMessageIsMeaningfulWhenUnableToCreateTemporaryDirectory()
   {
     String propertyName = "java.io.tmpdir";
@@ -89,7 +81,6 @@ public class RealtimeTuningConfigTest
         TuningConfig.class
     );
 
-    Assert.assertNotNull(config.getBasePersistDirectory());
     Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
     Assert.assertEquals(0, config.getHandoffConditionTimeout());
     Assert.assertEquals(0, config.getAlertTimeout());
@@ -102,7 +93,7 @@ public class RealtimeTuningConfigTest
     Assert.assertEquals(0, config.getMergeThreadPriority());
     Assert.assertEquals(0, config.getPersistThreadPriority());
     Assert.assertEquals(new Period("PT10M"), config.getWindowPeriod());
-    Assert.assertEquals(false, config.isReportParseExceptions());
+    Assert.assertFalse(config.isReportParseExceptions());
   }
 
   @Test
@@ -113,7 +104,6 @@ public class RealtimeTuningConfigTest
                      + "  \"maxRowsInMemory\": 100,\n"
                      + "  \"intermediatePersistPeriod\": \"PT1H\",\n"
                      + "  \"windowPeriod\": \"PT1H\",\n"
-                     + "  \"basePersistDirectory\": \"/tmp/xxx\",\n"
                      + "  \"maxPendingPersists\": 100,\n"
                      + "  \"persistThreadPriority\": 100,\n"
                      + "  \"mergeThreadPriority\": 100,\n"
@@ -136,7 +126,6 @@ public class RealtimeTuningConfigTest
         TuningConfig.class
     );
 
-    Assert.assertEquals("/tmp/xxx", config.getBasePersistDirectory().toString());
     Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
     Assert.assertEquals(70, config.getAlertTimeout());

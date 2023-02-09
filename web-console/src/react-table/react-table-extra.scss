@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-@import 'src/variables';
+@import '../variables';
 
 .ReactTable {
   .rt-tr {
@@ -44,5 +44,9 @@
         visibility: hidden;
       }
     }
+  }
+
+  .default-aggregated {
+    padding: 10px 5px;
   }
 }

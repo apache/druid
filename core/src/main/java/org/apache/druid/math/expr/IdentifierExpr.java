@@ -21,14 +21,10 @@ package org.apache.druid.math.expr;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.math.expr.vector.ExprEvalDoubleVector;
-import org.apache.druid.math.expr.vector.ExprEvalLongVector;
-import org.apache.druid.math.expr.vector.ExprEvalStringVector;
-import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.VectorProcessors;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -153,54 +149,7 @@ class IdentifierExpr implements Expr
   @Override
   public ExprVectorProcessor<?> buildVectorized(VectorInputBindingInspector inspector)
   {
-    ExpressionType inputType = inspector.getType(binding);
-
-    if (inputType == null) {
-      // nil column, we can be anything, so be a string because it's the most flexible
-      // (numbers will be populated with default values in default mode and non-null)
-      return new IdentifierVectorProcessor<String[]>(ExpressionType.STRING)
-      {
-        @Override
-        public ExprEvalVector<String[]> evalVector(VectorInputBinding bindings)
-        {
-          // need to cast to string[] because null columns come out as object[]
-          return new ExprEvalStringVector(
-              Arrays.stream(bindings.getObjectVector(binding)).map(x -> (String) x).toArray(String[]::new)
-          );
-        }
-      };
-    }
-    switch (inputType.getType()) {
-      case LONG:
-        return new IdentifierVectorProcessor<long[]>(inputType)
-        {
-          @Override
-          public ExprEvalVector<long[]> evalVector(VectorInputBinding bindings)
-          {
-            return new ExprEvalLongVector(bindings.getLongVector(binding), bindings.getNullVector(binding));
-          }
-        };
-      case DOUBLE:
-        return new IdentifierVectorProcessor<double[]>(inputType)
-        {
-          @Override
-          public ExprEvalVector<double[]> evalVector(VectorInputBinding bindings)
-          {
-            return new ExprEvalDoubleVector(bindings.getDoubleVector(binding), bindings.getNullVector(binding));
-          }
-        };
-      case STRING:
-        return new IdentifierVectorProcessor<String[]>(inputType)
-        {
-          @Override
-          public ExprEvalVector<String[]> evalVector(VectorInputBinding bindings)
-          {
-            return new ExprEvalStringVector(bindings.getObjectVector(binding));
-          }
-        };
-      default:
-        throw Exprs.cannotVectorize(this);
-    }
+    return VectorProcessors.identifier(inspector, binding);
   }
 
   @Override
@@ -222,20 +171,3 @@ class IdentifierExpr implements Expr
     return Objects.hash(identifier);
   }
 }
-
-abstract class IdentifierVectorProcessor<T> implements ExprVectorProcessor<T>
-{
-  private final ExpressionType outputType;
-
-  public IdentifierVectorProcessor(ExpressionType outputType)
-  {
-    this.outputType = outputType;
-  }
-
-  @Override
-  public ExpressionType getOutputType()
-  {
-    return outputType;
-  }
-}
-

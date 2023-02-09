@@ -106,7 +106,7 @@ public class StreamChunkParserTest
   @Test
   public void testWithNullParserAndInputformatParseProperly() throws IOException
   {
-    final JsonInputFormat inputFormat = new JsonInputFormat(JSONPathSpec.DEFAULT, Collections.emptyMap(), null);
+    final JsonInputFormat inputFormat = new JsonInputFormat(JSONPathSpec.DEFAULT, Collections.emptyMap(), null, null, null);
     final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         null,
         inputFormat,
@@ -237,7 +237,7 @@ public class StreamChunkParserTest
     private TrackingJsonInputFormat(@Nullable JSONPathSpec flattenSpec,
                                     @Nullable Map<String, Boolean> featureSpec)
     {
-      super(flattenSpec, featureSpec, null);
+      super(flattenSpec, featureSpec, null, null, null);
       props = new Props();
     }
 
@@ -246,7 +246,7 @@ public class StreamChunkParserTest
                                     boolean lineSplittable,
                                     Props props)
     {
-      super(flattenSpec, featureSpec, null, lineSplittable);
+      super(flattenSpec, featureSpec, null, lineSplittable, null, null);
       this.props = props;
     }
 

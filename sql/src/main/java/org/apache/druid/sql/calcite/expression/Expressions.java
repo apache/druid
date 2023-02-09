@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
@@ -34,6 +35,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -58,6 +60,7 @@ import org.apache.druid.sql.calcite.filtration.Bounds;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.joda.time.Interval;
@@ -93,7 +96,12 @@ public class Expressions
   )
   {
     if (project == null) {
-      // I don't think the factory impl matters here.
+      // Gian doesn't think the factory impl matters here, he's likely correct.  But, upon reading what this is doing,
+      // we are re-building the list of things in the RelDataType for every single call to `fromFieldAccess`.
+      // `fromFieldAccess` is called pretty regularly in pretty low-level areas of the code, so it would make sense
+      // that we are perhaps re-creating the exact same object over and over and over and over again and wasting CPU
+      // cycles.  It would likely be good to refactor the code such that we ensure we only ever compute the thing
+      // once and then reuse it.
       return RexInputRef.of(fieldNumber, RowSignatures.toRelDataType(rowSignature, new JavaTypeFactoryImpl()));
     } else {
       return project.getChildExps().get(fieldNumber);
@@ -209,10 +217,49 @@ public class Expressions
       return rexCallToDruidExpression(plannerContext, rowSignature, rexNode, postAggregatorVisitor);
     } else if (kind == SqlKind.LITERAL) {
       return literalToDruidExpression(plannerContext, rexNode);
+    } else if (kind == SqlKind.FIELD_ACCESS) {
+      return fieldAccessToDruidExpression(rowSignature, rexNode);
     } else {
       // Can't translate.
       return null;
     }
+  }
+
+  private static DruidExpression fieldAccessToDruidExpression(
+      final RowSignature rowSignature,
+      final RexNode rexNode
+  )
+  {
+    // Translate field references.
+    final RexFieldAccess ref = (RexFieldAccess) rexNode;
+    if (ref.getField().getIndex() > rowSignature.size()) {
+      // This case arises in the case of a correlation where the rexNode points to a table from the left subtree
+      // while the underlying datasource is the scan stub created from LogicalValuesRule
+      // In such a case we throw a CannotBuildQueryException so that Calcite does not go ahead with this path
+      // This exception is caught while returning false from isValidDruidQuery() method
+      throw new CannotBuildQueryException(StringUtils.format(
+          "Cannot build query as column name [%s] does not exist in row [%s]", ref.getField().getName(), rowSignature)
+      );
+    }
+
+    final String columnName = ref.getField().getName();
+    final int index = rowSignature.indexOf(columnName);
+
+    // This case arises when the rexNode has a name which is not in the underlying stub created using DruidUnnestDataSourceRule
+    // The column name has name ZERO with rowtype as LONG
+    // causes the index to be -1. In such a case we cannot build the query
+    // and throw an exception while returning false from isValidDruidQuery() method
+    if (index < 0) {
+      throw new CannotBuildQueryException(StringUtils.format(
+          "Expression referred to nonexistent index[%d] in row[%s]",
+          index,
+          rowSignature
+      ));
+    }
+    
+    final Optional<ColumnType> columnType = rowSignature.getColumnType(index);
+
+    return DruidExpression.ofColumn(columnType.get(), columnName);
   }
 
   private static DruidExpression inputRefToDruidExpression(
@@ -275,7 +322,7 @@ public class Expressions
   }
 
   @Nullable
-  private static DruidExpression literalToDruidExpression(
+  static DruidExpression literalToDruidExpression(
       final PlannerContext plannerContext,
       final RexNode rexNode
   )
@@ -286,16 +333,27 @@ public class Expressions
     final ColumnType columnType = Calcites.getColumnTypeForRelDataType(rexNode.getType());
     if (RexLiteral.isNullLiteral(rexNode)) {
       return DruidExpression.ofLiteral(columnType, DruidExpression.nullLiteral());
+    } else if (SqlTypeName.INT_TYPES.contains(sqlTypeName)) {
+      final Number number = (Number) RexLiteral.value(rexNode);
+      return DruidExpression.ofLiteral(
+          columnType,
+          number == null ? DruidExpression.nullLiteral() : DruidExpression.longLiteral(number.longValue())
+      );
     } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
-      return DruidExpression.ofLiteral(columnType, DruidExpression.numberLiteral((Number) RexLiteral.value(rexNode)));
+      // Numeric, non-INT, means we represent it as a double.
+      final Number number = (Number) RexLiteral.value(rexNode);
+      return DruidExpression.ofLiteral(
+          columnType,
+          number == null ? DruidExpression.nullLiteral() : DruidExpression.doubleLiteral(number.doubleValue())
+      );
     } else if (SqlTypeFamily.INTERVAL_DAY_TIME == sqlTypeName.getFamily()) {
       // Calcite represents DAY-TIME intervals in milliseconds.
       final long milliseconds = ((Number) RexLiteral.value(rexNode)).longValue();
-      return DruidExpression.ofLiteral(columnType, DruidExpression.numberLiteral(milliseconds));
+      return DruidExpression.ofLiteral(columnType, DruidExpression.longLiteral(milliseconds));
     } else if (SqlTypeFamily.INTERVAL_YEAR_MONTH == sqlTypeName.getFamily()) {
       // Calcite represents YEAR-MONTH intervals in months.
       final long months = ((Number) RexLiteral.value(rexNode)).longValue();
-      return DruidExpression.ofLiteral(columnType, DruidExpression.numberLiteral(months));
+      return DruidExpression.ofLiteral(columnType, DruidExpression.longLiteral(months));
     } else if (SqlTypeName.STRING_TYPES.contains(sqlTypeName)) {
       return DruidExpression.ofStringLiteral(RexLiteral.stringValue(rexNode));
     } else if (SqlTypeName.TIMESTAMP == sqlTypeName || SqlTypeName.DATE == sqlTypeName) {
@@ -304,13 +362,16 @@ public class Expressions
       } else {
         return DruidExpression.ofLiteral(
             columnType,
-            DruidExpression.numberLiteral(
+            DruidExpression.longLiteral(
                 Calcites.calciteDateTimeLiteralToJoda(rexNode, plannerContext.getTimeZone()).getMillis()
             )
         );
       }
     } else if (SqlTypeName.BOOLEAN == sqlTypeName) {
-      return DruidExpression.ofLiteral(columnType, DruidExpression.numberLiteral(RexLiteral.booleanValue(rexNode) ? 1 : 0));
+      return DruidExpression.ofLiteral(
+          columnType,
+          DruidExpression.longLiteral(RexLiteral.booleanValue(rexNode) ? 1 : 0)
+      );
     } else {
       // Can't translate other literals.
       return null;

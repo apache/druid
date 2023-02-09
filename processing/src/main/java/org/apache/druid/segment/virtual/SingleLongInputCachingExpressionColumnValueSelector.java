@@ -27,6 +27,7 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.RowIdSupplier;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nonnull;
@@ -36,7 +37,7 @@ import javax.annotation.Nullable;
  * Like {@link ExpressionColumnValueSelector}, but caches the most recently computed value and re-uses it in the case
  * of runs in the underlying column. This is especially useful for the __time column, where we expect runs.
  */
-public class SingleLongInputCachingExpressionColumnValueSelector implements ColumnValueSelector<ExprEval>
+public class SingleLongInputCachingExpressionColumnValueSelector extends BaseExpressionColumnValueSelector
 {
   private static final int CACHE_SIZE = 1000;
 
@@ -61,9 +62,12 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
   public SingleLongInputCachingExpressionColumnValueSelector(
       final ColumnValueSelector selector,
       final Expr expression,
-      final boolean useLruCache
+      final boolean useLruCache,
+      @Nullable RowIdSupplier rowIdSupplier
   )
   {
+    super(rowIdSupplier);
+
     // Verify expression has just one binding.
     if (expression.analyzeInputs().getRequiredBindings().size() != 1) {
       throw new ISE("Expected expression with just one binding");
@@ -77,31 +81,14 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
   @Override
   public void inspectRuntimeShape(final RuntimeShapeInspector inspector)
   {
+    super.inspectRuntimeShape(inspector);
     inspector.visit("selector", selector);
     inspector.visit("expression", expression);
   }
 
-  @Override
-  public double getDouble()
-  {
-    return getObject().asDouble();
-  }
-
-  @Override
-  public float getFloat()
-  {
-    return (float) getObject().asDouble();
-  }
-
-  @Override
-  public long getLong()
-  {
-    return getObject().asLong();
-  }
-
   @Nonnull
   @Override
-  public ExprEval getObject()
+  protected ExprEval<?> eval()
   {
     // things can still call this even when underlying selector is null (e.g. ExpressionColumnValueSelector#isNull)
     if (selector.isNull()) {
@@ -127,21 +114,6 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
     }
 
     return lastOutput;
-  }
-
-  @Override
-  public Class<ExprEval> classOfObject()
-  {
-    return ExprEval.class;
-  }
-
-  @Override
-  public boolean isNull()
-  {
-    // It is possible for an expression to have a non-null String value but it can return null when parsed
-    // as a primitive long/float/double.
-    // ExprEval.isNumericNull checks whether the parsed primitive value is null or not.
-    return getObject().isNumericNull();
   }
 
   public class LruEvalCache

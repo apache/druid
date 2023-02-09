@@ -67,7 +67,8 @@ public class CompactionUtil
             null,
             null,
             null,
-            1
+            1,
+            null
         ),
         null,
         null,

@@ -22,10 +22,11 @@ package org.apache.druid.query.search;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorColumnIndexSelector;
+import org.apache.druid.segment.DeprecatedQueryableIndexColumnSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
@@ -54,10 +55,11 @@ public class AutoStrategy extends SearchStrategy
     final QueryableIndex index = segment.asQueryableIndex();
 
     if (index != null) {
+      final ColumnSelector columnSelector = new DeprecatedQueryableIndexColumnSelector(index);
       final ColumnIndexSelector selector = new ColumnSelectorColumnIndexSelector(
           index.getBitmapFactoryForDimensions(),
-          VirtualColumns.EMPTY,
-          index
+          query.getVirtualColumns(),
+          columnSelector
       );
 
       // Index-only plan is used only when any filter is not specified or the filter supports bitmap indexes.
@@ -65,7 +67,7 @@ public class AutoStrategy extends SearchStrategy
       // Note: if some filters support bitmap indexes but others are not, the current implementation always employs
       // the cursor-based plan. This can be more optimized. One possible optimization is generating a bitmap index
       // from the non-bitmap-support filters, and then use it to compute the filtered result by intersecting bitmaps.
-      if (filter == null || filter.supportsSelectivityEstimation(index, selector)) {
+      if (filter == null || filter.supportsSelectivityEstimation(columnSelector, selector)) {
         final List<DimensionSpec> dimsToSearch = getDimsToSearch(
             index.getAvailableDimensions(),
             query.getDimensions()

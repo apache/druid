@@ -193,20 +193,19 @@ public class CompressedLongsSerdeTest
     Assert.assertEquals(baos.size(), serializer.getSerializedSize());
     CompressedColumnarLongsSupplier supplier = CompressedColumnarLongsSupplier
         .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order);
-    ColumnarLongs longs = supplier.get();
+    try (ColumnarLongs longs = supplier.get()) {
 
-    assertIndexMatchesVals(longs, values);
-    for (int i = 0; i < 10; i++) {
-      int a = (int) (ThreadLocalRandom.current().nextDouble() * values.length);
-      int b = (int) (ThreadLocalRandom.current().nextDouble() * values.length);
-      int start = a < b ? a : b;
-      int end = a < b ? b : a;
-      tryFill(longs, values, start, end - start);
+      assertIndexMatchesVals(longs, values);
+      for (int i = 0; i < 10; i++) {
+        int a = (int) (ThreadLocalRandom.current().nextDouble() * values.length);
+        int b = (int) (ThreadLocalRandom.current().nextDouble() * values.length);
+        int start = a < b ? a : b;
+        int end = a < b ? b : a;
+        tryFill(longs, values, start, end - start);
+      }
+      testSupplierSerde(supplier, values);
+      testConcurrentThreadReads(supplier, longs, values);
     }
-    testSupplierSerde(supplier, values);
-    testConcurrentThreadReads(supplier, longs, values);
-
-    longs.close();
   }
 
   private void tryFill(ColumnarLongs indexed, long[] vals, final int startIndex, final int size)
@@ -256,8 +255,9 @@ public class CompressedLongsSerdeTest
         ByteBuffer.wrap(bytes),
         order
     );
-    ColumnarLongs indexed = anotherSupplier.get();
-    assertIndexMatchesVals(indexed, vals);
+    try (ColumnarLongs indexed = anotherSupplier.get()) {
+      assertIndexMatchesVals(indexed, vals);
+    }
   }
 
   // This test attempts to cause a race condition with the DirectByteBuffers, it's non-deterministic in causing it,

@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.StringUtils;
 
@@ -42,18 +43,18 @@ import java.util.stream.Collectors;
  */
 public class ExprMacroTable
 {
+  private static final List<ExprMacro> BUILT_IN = ImmutableList.of(
+      new BuiltInExprMacros.ComplexDecodeBase64ExprMacro()
+  );
   private static final ExprMacroTable NIL = new ExprMacroTable(Collections.emptyList());
 
   private final Map<String, ExprMacro> macroMap;
 
   public ExprMacroTable(final List<ExprMacro> macros)
   {
-    this.macroMap = macros.stream().collect(
-        Collectors.toMap(
-            m -> StringUtils.toLowerCase(m.name()),
-            m -> m
-        )
-    );
+    this.macroMap = Maps.newHashMapWithExpectedSize(BUILT_IN.size() + macros.size());
+    macroMap.putAll(BUILT_IN.stream().collect(Collectors.toMap(m -> StringUtils.toLowerCase(m.name()), m -> m)));
+    macroMap.putAll(macros.stream().collect(Collectors.toMap(m -> StringUtils.toLowerCase(m.name()), m -> m)));
   }
 
   public static ExprMacroTable nil()
@@ -86,10 +87,8 @@ public class ExprMacroTable
     return exprMacro.apply(args);
   }
 
-  public interface ExprMacro
+  public interface ExprMacro extends NamedFunction
   {
-    String name();
-
     Expr apply(List<Expr> args);
   }
 

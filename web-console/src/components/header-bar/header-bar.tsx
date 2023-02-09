@@ -28,6 +28,7 @@ import {
   NavbarDivider,
   NavbarGroup,
   Position,
+  Tag,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
@@ -39,13 +40,14 @@ import {
   DoctorDialog,
   OverlordDynamicConfigDialog,
 } from '../../dialogs';
+import { Capabilities } from '../../helpers';
 import { getLink } from '../../links';
 import {
-  Capabilities,
   localStorageGetJson,
   LocalStorageKeys,
   localStorageRemove,
   localStorageSetJson,
+  oneOf,
 } from '../../utils';
 import { ExternalLink } from '../external-link/external-link';
 import { PopoverText } from '../popover-text/popover-text';
@@ -56,12 +58,15 @@ const capabilitiesOverride = localStorageGetJson(LocalStorageKeys.CAPABILITIES_O
 
 export type HeaderActiveTab =
   | null
-  | 'load-data'
+  | 'data-loader'
+  | 'streaming-data-loader'
+  | 'classic-batch-data-loader'
   | 'ingestion'
   | 'datasources'
   | 'segments'
   | 'services'
-  | 'query'
+  | 'workbench'
+  | 'sql-data-loader'
   | 'lookups';
 
 const DruidLogo = React.memo(function DruidLogo() {
@@ -185,8 +190,8 @@ const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeP
           {message}
           <p>
             For more info check out the{' '}
-            <ExternalLink href={`${getLink('DOCS')}/operations/management-uis.html#druid-console`}>
-              console documentation
+            <ExternalLink href={`${getLink('DOCS')}/operations/web-console.html`}>
+              web console documentation
             </ExternalLink>
             .
           </p>
@@ -233,7 +238,52 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
   const [coordinatorDynamicConfigDialogOpen, setCoordinatorDynamicConfigDialogOpen] =
     useState(false);
   const [overlordDynamicConfigDialogOpen, setOverlordDynamicConfigDialogOpen] = useState(false);
-  const loadDataPrimary = false;
+
+  const showSplitDataLoaderMenu = capabilities.hasMultiStageQuery();
+
+  const loadDataViewsMenuActive = oneOf(
+    active,
+    'data-loader',
+    'streaming-data-loader',
+    'classic-batch-data-loader',
+    'sql-data-loader',
+  );
+  const loadDataViewsMenu = (
+    <Menu>
+      <MenuItem
+        icon={IconNames.FEED}
+        text="Streaming"
+        href="#streaming-data-loader"
+        selected={active === 'streaming-data-loader'}
+      />
+      <MenuItem
+        icon={IconNames.CLEAN}
+        text="Batch - SQL"
+        href="#sql-data-loader"
+        labelElement={<Tag minimal>multi-stage-query</Tag>}
+        selected={active === 'sql-data-loader'}
+      />
+      <MenuItem
+        icon={IconNames.LIST}
+        text="Batch - classic"
+        href="#classic-batch-data-loader"
+        selected={active === 'classic-batch-data-loader'}
+      />
+    </Menu>
+  );
+
+  const moreViewsMenuActive = oneOf(active, 'lookups');
+  const moreViewsMenu = (
+    <Menu>
+      <MenuItem
+        icon={IconNames.PROPERTIES}
+        text="Lookups"
+        href="#lookups"
+        disabled={!capabilities.hasCoordinatorAccess()}
+        selected={active === 'lookups'}
+      />
+    </Menu>
+  );
 
   const helpMenu = (
     <Menu>
@@ -290,13 +340,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         onClick={() => setOverlordDynamicConfigDialogOpen(true)}
         disabled={!capabilities.hasOverlordAccess()}
       />
-      <MenuItem
-        icon={IconNames.PROPERTIES}
-        active={active === 'lookups'}
-        text="Lookups"
-        href="#lookups"
-        disabled={!capabilities.hasCoordinatorAccess()}
-      />
+
       <MenuDivider />
       <MenuItem icon={IconNames.COG} text="Console options">
         {capabilitiesOverride ? (
@@ -339,28 +383,45 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         <a href="#">
           <DruidLogo />
         </a>
-
         <NavbarDivider />
         <AnchorButton
-          icon={IconNames.CLOUD_UPLOAD}
-          text="Load data"
-          active={active === 'load-data'}
-          href="#load-data"
-          minimal={!loadDataPrimary}
-          intent={loadDataPrimary ? Intent.PRIMARY : Intent.NONE}
-          disabled={!capabilities.hasEverything()}
-        />
-
-        <NavbarDivider />
-        <AnchorButton
+          className="header-entry"
           minimal
-          active={active === 'ingestion'}
-          icon={IconNames.GANTT_CHART}
-          text="Ingestion"
-          href="#ingestion"
-          disabled={!capabilities.hasSqlOrOverlordAccess()}
+          active={active === 'workbench'}
+          icon={IconNames.APPLICATION}
+          text="Query"
+          href="#workbench"
+          disabled={!capabilities.hasQuerying()}
         />
+        {showSplitDataLoaderMenu ? (
+          <Popover2
+            content={loadDataViewsMenu}
+            disabled={!capabilities.hasEverything()}
+            position={Position.BOTTOM_LEFT}
+          >
+            <Button
+              className="header-entry"
+              icon={IconNames.CLOUD_UPLOAD}
+              text="Load data"
+              minimal
+              active={loadDataViewsMenuActive}
+              disabled={!capabilities.hasEverything()}
+            />
+          </Popover2>
+        ) : (
+          <AnchorButton
+            className="header-entry"
+            icon={IconNames.CLOUD_UPLOAD}
+            text="Load data"
+            href="#data-loader"
+            minimal
+            active={loadDataViewsMenuActive}
+            disabled={!capabilities.hasEverything()}
+          />
+        )}
+        <NavbarDivider />
         <AnchorButton
+          className="header-entry"
           minimal
           active={active === 'datasources'}
           icon={IconNames.MULTI_SELECT}
@@ -369,6 +430,16 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           disabled={!capabilities.hasSqlOrCoordinatorAccess()}
         />
         <AnchorButton
+          className="header-entry"
+          minimal
+          active={active === 'ingestion'}
+          icon={IconNames.GANTT_CHART}
+          text="Ingestion"
+          href="#ingestion"
+          disabled={!capabilities.hasSqlOrOverlordAccess()}
+        />
+        <AnchorButton
+          className="header-entry"
           minimal
           active={active === 'segments'}
           icon={IconNames.STACKED_CHART}
@@ -377,6 +448,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           disabled={!capabilities.hasSqlOrCoordinatorAccess()}
         />
         <AnchorButton
+          className="header-entry"
           minimal
           active={active === 'services'}
           icon={IconNames.DATABASE}
@@ -384,24 +456,22 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           href="#services"
           disabled={!capabilities.hasSqlOrCoordinatorAccess()}
         />
-
-        <NavbarDivider />
-        <AnchorButton
-          minimal
-          active={active === 'query'}
-          icon={IconNames.APPLICATION}
-          text="Query"
-          href="#query"
-          disabled={!capabilities.hasQuerying()}
-        />
+        <Popover2 content={moreViewsMenu} position={Position.BOTTOM_LEFT}>
+          <Button
+            className="header-entry"
+            minimal
+            icon={IconNames.MORE}
+            active={moreViewsMenuActive}
+          />
+        </Popover2>
       </NavbarGroup>
       <NavbarGroup align={Alignment.RIGHT}>
         <RestrictedMode capabilities={capabilities} onUnrestrict={onUnrestrict} />
         <Popover2 content={configMenu} position={Position.BOTTOM_RIGHT}>
-          <Button minimal icon={IconNames.COG} />
+          <Button className="header-entry" minimal icon={IconNames.COG} />
         </Popover2>
         <Popover2 content={helpMenu} position={Position.BOTTOM_RIGHT}>
-          <Button minimal icon={IconNames.HELP} />
+          <Button className="header-entry" minimal icon={IconNames.HELP} />
         </Popover2>
       </NavbarGroup>
       {aboutDialogOpen && <AboutDialog onClose={() => setAboutDialogOpen(false)} />}
