@@ -23,7 +23,7 @@ public class Limits
 {
   /**
    * Maximum number of columns that can appear in a frame signature.
-   *
+   * <p>
    * Somewhat less than {@link WorkerMemoryParameters#STANDARD_FRAME_SIZE} divided by typical minimum column size:
    * {@link org.apache.druid.frame.allocation.AppendableMemory#DEFAULT_INITIAL_ALLOCATION_SIZE}.
    */
@@ -62,10 +62,26 @@ public class Limits
   /**
    * Maximum number of input bytes per worker in case number of tasks is determined automatically.
    */
-  public static final long MAX_INPUT_BYTES_PER_WORKER = 10 * 1024 * 1024 * 1024L;
+  public static final long DEFAULT_MAX_INPUT_BYTES_PER_WORKER = 10 * 1024 * 1024 * 1024L;
 
   /**
    * Maximum size of the kernel manipulation queue in {@link org.apache.druid.msq.indexing.MSQControllerTask}.
    */
   public static final int MAX_KERNEL_MANIPULATION_QUEUE_SIZE = 100_000;
+
+  /**
+   * Maximum relaunches across all workers.
+   */
+  public static final int TOTAL_RELAUNCH_LIMIT = 100;
+
+  /**
+   * Maximum relaunches per worker. Initial run is not a relaunch. The worker will be spawned 1 + workerRelaunchLimit times before erroring out.
+   */
+  public static final int PER_WORKER_RELAUNCH_LIMIT = 2;
+
+  /**
+   * Max number of workers for {@link ClusterStatisticsMergeMode#PARALLEL}. If the number of workers is more than this,
+   * {@link ClusterStatisticsMergeMode#SEQUENTIAL} mode is chosen.
+   */
+  public static final long MAX_WORKERS_FOR_PARALLEL_MERGE = 100;
 }

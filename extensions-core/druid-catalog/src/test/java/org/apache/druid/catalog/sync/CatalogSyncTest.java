@@ -30,15 +30,15 @@ import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
+import org.apache.druid.catalog.model.table.BaseExternTableTest;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
-import org.apache.druid.catalog.model.table.DatasourceDefn.DatasourceColumnDefn;
 import org.apache.druid.catalog.model.table.ExternalTableDefn;
-import org.apache.druid.catalog.model.table.InlineTableDefn;
-import org.apache.druid.catalog.model.table.InputFormats;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.catalog.storage.CatalogStorage;
 import org.apache.druid.catalog.storage.CatalogTests;
+import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.junit.After;
 import org.junit.Before;
@@ -93,9 +93,9 @@ public class CatalogSyncTest
   {
     // Valid definition
     {
-      TableMetadata table = TableBuilder.external(InlineTableDefn.TABLE_TYPE, "externTable")
-          .format(InputFormats.CSV_FORMAT_TYPE)
-          .data("a", "c")
+      TableMetadata table = TableBuilder.external("externTable")
+          .inputSource(toMap(new InlineInputSource("a\nc")))
+          .inputFormat(BaseExternTableTest.CSV_FORMAT)
           .column("a", Columns.VARCHAR)
           .build();
       storage.validate(table);
@@ -103,20 +103,30 @@ public class CatalogSyncTest
 
     // No columns
     {
-      TableMetadata table = TableBuilder.external(InlineTableDefn.TABLE_TYPE, "externTable")
-          .format(InputFormats.CSV_FORMAT_TYPE)
-          .data("a", "c")
+      TableMetadata table = TableBuilder.external("externTable")
+          .inputSource(toMap(new InlineInputSource("a\nc")))
+          .inputFormat(BaseExternTableTest.CSV_FORMAT)
           .build();
       assertThrows(IAE.class, () -> storage.validate(table));
     }
 
     // No format
     {
-      TableMetadata table = TableBuilder.external(InlineTableDefn.TABLE_TYPE, "externTable")
-          .data("a", "c")
-          .column("a", Columns.VARCHAR)
+      TableMetadata table = TableBuilder.external("externTable")
+          .inputSource(toMap(new InlineInputSource("a\nc")))
+           .column("a", Columns.VARCHAR)
           .build();
       assertThrows(IAE.class, () -> storage.validate(table));
+    }
+  }
+
+  private Map<String, Object> toMap(Object obj)
+  {
+    try {
+      return jsonMapper.convertValue(obj, ExternalTableDefn.MAP_TYPE_REF);
+    }
+    catch (Exception e) {
+      throw new ISE(e, "bad conversion");
     }
   }
 
@@ -198,9 +208,9 @@ public class CatalogSyncTest
     storage.validate(table2);
     storage.tables().create(table2);
 
-    TableMetadata table3 = TableBuilder.external(InlineTableDefn.TABLE_TYPE, "table3")
-        .format(InputFormats.CSV_FORMAT_TYPE)
-        .data("a", "c")
+    TableMetadata table3 = TableBuilder.external("table3")
+        .inputFormat(BaseExternTableTest.CSV_FORMAT)
+        .inputSource(toMap(new InlineInputSource("a\nc")))
         .column("a", Columns.VARCHAR)
         .build();
     storage.validate(table3);
@@ -221,10 +231,8 @@ public class CatalogSyncTest
       assertEquals(2, cols.size());
       assertEquals(Columns.TIME_COLUMN, cols.get(0).name());
       assertEquals(Columns.TIMESTAMP, cols.get(0).sqlType());
-      assertEquals(DatasourceColumnDefn.COLUMN_TYPE, cols.get(0).type());
       assertEquals("a", cols.get(1).name());
       assertEquals(Columns.VARCHAR, cols.get(1).sqlType());
-      assertEquals(DatasourceColumnDefn.COLUMN_TYPE, cols.get(0).type());
 
       DatasourceFacade ds = new DatasourceFacade(catalog.resolveTable(id));
       assertEquals("P1D", ds.segmentGranularityString());
@@ -244,10 +252,8 @@ public class CatalogSyncTest
       assertEquals(Columns.TIMESTAMP, cols.get(0).sqlType());
       assertEquals("dim", cols.get(1).name());
       assertEquals(Columns.VARCHAR, cols.get(1).sqlType());
-      assertEquals(DatasourceColumnDefn.COLUMN_TYPE, cols.get(1).type());
       assertEquals("measure", cols.get(2).name());
       assertEquals("BIGINT", cols.get(2).sqlType());
-      assertEquals(DatasourceColumnDefn.COLUMN_TYPE, cols.get(2).type());
 
       DatasourceFacade ds = new DatasourceFacade(catalog.resolveTable(id));
       assertEquals("P1D", ds.segmentGranularityString());
@@ -263,12 +269,11 @@ public class CatalogSyncTest
       assertTrue(table.updateTime() > 0);
 
       TableSpec inputSpec = table.spec();
-      assertEquals(InlineTableDefn.TABLE_TYPE, inputSpec.type());
+      assertEquals(ExternalTableDefn.TABLE_TYPE, inputSpec.type());
       List<ColumnSpec> cols = inputSpec.columns();
       assertEquals(1, cols.size());
       assertEquals("a", cols.get(0).name());
       assertEquals(Columns.VARCHAR, cols.get(0).sqlType());
-      assertEquals(ExternalTableDefn.EXTERNAL_COLUMN_TYPE, cols.get(0).type());
 
       assertNotNull(inputSpec.properties());
     }
@@ -316,7 +321,6 @@ public class CatalogSyncTest
       assertEquals("a", cols.get(1).name());
       assertEquals("b", cols.get(2).name());
       assertEquals(Columns.DOUBLE, cols.get(2).sqlType());
-      assertEquals(DatasourceColumnDefn.COLUMN_TYPE, cols.get(2).type());
     }
     {
       TableId id = TableId.datasource("table3");
@@ -352,7 +356,7 @@ public class CatalogSyncTest
     storage.tables().updateColumns(id, t -> {
       TableSpec target = t.spec();
       List<ColumnSpec> updated = new ArrayList<>(target.columns());
-      ColumnSpec colC = new ColumnSpec(DatasourceColumnDefn.COLUMN_TYPE, "c", Columns.DOUBLE, null);
+      ColumnSpec colC = new ColumnSpec("c", Columns.DOUBLE, null);
       updated.add(colC);
       return target.withColumns(updated);
     });

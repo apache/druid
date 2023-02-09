@@ -21,6 +21,7 @@ package org.apache.druid.query.operator;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.query.operator.window.WindowOperatorFactory;
 
 /**
  * A factory for Operators.  This class exists to encapsulate the user-definition of an Operator. I.e. which operator,
@@ -30,6 +31,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "naivePartition", value = NaivePartitioningOperatorFactory.class),
+    @JsonSubTypes.Type(name = "naiveSort", value = NaiveSortOperatorFactory.class),
     @JsonSubTypes.Type(name = "window", value = WindowOperatorFactory.class),
 })
 public interface OperatorFactory

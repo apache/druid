@@ -20,16 +20,16 @@ import { Button, ButtonGroup, InputGroup, Menu, MenuItem } from '@blueprintjs/co
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import axios from 'axios';
-import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
-import React, { useEffect, useRef, useState } from 'react';
+import type { QueryResult } from 'druid-query-toolkit';
+import { QueryRunner, SqlQuery } from 'druid-query-toolkit';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useStore } from 'zustand';
 
 import { Loader, QueryErrorPane } from '../../../components';
+import type { DruidEngine, LastExecution, QueryContext } from '../../../druid-models';
 import {
-  DruidEngine,
   Execution,
   fitExternalConfigPattern,
-  LastExecution,
-  QueryContext,
   summarizeExternalConfig,
   WorkbenchQuery,
 } from '../../../druid-models';
@@ -43,13 +43,12 @@ import { usePermanentCallback, useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
 import { ExecutionStateCache } from '../../../singletons/execution-state-cache';
 import { WorkbenchHistory } from '../../../singletons/workbench-history';
-import {
-  WorkbenchRunningPromise,
-  WorkbenchRunningPromises,
-} from '../../../singletons/workbench-running-promises';
-import { ColumnMetadata, DruidError, QueryAction, QueryManager, RowColumn } from '../../../utils';
+import type { WorkbenchRunningPromise } from '../../../singletons/workbench-running-promises';
+import { WorkbenchRunningPromises } from '../../../singletons/workbench-running-promises';
+import type { ColumnMetadata, QueryAction, RowColumn } from '../../../utils';
+import { DruidError, QueryManager } from '../../../utils';
 import { CapacityAlert } from '../capacity-alert/capacity-alert';
-import { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
+import type { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
 import { ExecutionErrorPane } from '../execution-error-pane/execution-error-pane';
 import { ExecutionProgressPane } from '../execution-progress-pane/execution-progress-pane';
 import { ExecutionStagesPane } from '../execution-stages-pane/execution-stages-pane';
@@ -57,10 +56,10 @@ import { ExecutionSummaryPanel } from '../execution-summary-panel/execution-summ
 import { ExecutionTimerPanel } from '../execution-timer-panel/execution-timer-panel';
 import { FlexibleQueryInput } from '../flexible-query-input/flexible-query-input';
 import { IngestSuccessPane } from '../ingest-success-pane/ingest-success-pane';
-import { useMetadataStateStore } from '../metadata-state-store';
+import { metadataStateStore } from '../metadata-state-store';
 import { ResultTablePane } from '../result-table-pane/result-table-pane';
 import { RunPanel } from '../run-panel/run-panel';
-import { useWorkStateStore } from '../work-state-store';
+import { workStateStore } from '../work-state-store';
 
 import './helper-query.scss';
 
@@ -77,6 +76,7 @@ export interface HelperQueryProps {
   onDelete(): void;
   onDetails(id: string, initTab?: ExecutionDetailsTab): void;
   queryEngines: DruidEngine[];
+  clusterCapacity: number | undefined;
   goToIngestion(taskId: string): void;
 }
 
@@ -90,6 +90,7 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
     onDelete,
     onDetails,
     queryEngines,
+    clusterCapacity,
     goToIngestion,
   } = props;
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
@@ -221,7 +222,10 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [executionState.data, executionState.error]);
 
-  const incrementWorkVersion = useWorkStateStore(state => state.increment);
+  const incrementWorkVersion = useStore(
+    workStateStore,
+    useCallback(state => state.increment, []),
+  );
   useEffect(() => {
     incrementWorkVersion();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -229,7 +233,10 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
 
   const execution = executionState.data;
 
-  const incrementMetadataVersion = useMetadataStateStore(state => state.increment);
+  const incrementMetadataVersion = useStore(
+    metadataStateStore,
+    useCallback(state => state.increment, []),
+  );
   useEffect(() => {
     if (execution?.isSuccessfulInsert()) {
       incrementMetadataVersion();
@@ -252,15 +259,14 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
       return;
     }
 
-    const effectiveQuery = preview ? query.makePreview() : query;
+    const effectiveQuery = preview
+      ? query.makePreview()
+      : query.setMaxNumTasksIfUnset(clusterCapacity);
 
     const capacityInfo = await maybeGetClusterCapacity();
 
     const effectiveMaxNumTasks = effectiveQuery.queryContext.maxNumTasks ?? 2;
-    if (
-      capacityInfo &&
-      capacityInfo.totalTaskSlots - capacityInfo.usedTaskSlots < effectiveMaxNumTasks
-    ) {
+    if (capacityInfo && capacityInfo.availableTaskSlots < effectiveMaxNumTasks) {
       setAlertElement(
         <CapacityAlert
           maxNumTasks={effectiveMaxNumTasks}
@@ -367,6 +373,7 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
               loading={executionState.loading}
               small
               queryEngines={queryEngines}
+              clusterCapacity={clusterCapacity}
             />
             {executionState.isLoading() && (
               <ExecutionTimerPanel

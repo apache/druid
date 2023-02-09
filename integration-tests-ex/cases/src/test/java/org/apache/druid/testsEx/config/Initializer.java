@@ -283,6 +283,7 @@ public class Initializer
       propertyEnvVarBinding(base + "cloudPath", "DRUID_CLOUD_PATH");
       propertyEnvVarBinding(base + "s3AccessKey", "AWS_ACCESS_KEY_ID");
       propertyEnvVarBinding(base + "s3SecretKey", "AWS_SECRET_ACCESS_KEY");
+      propertyEnvVarBinding(base + "s3Region", "AWS_REGION");
       propertyEnvVarBinding(base + "azureContainer", "AZURE_CONTAINER");
       propertyEnvVarBinding(base + "azureAccount", "AZURE_ACCOUNT");
       propertyEnvVarBinding(base + "azureKey", "AZURE_KEY");
@@ -399,7 +400,6 @@ public class Initializer
   private final ResolvedConfig clusterConfig;
   private final Injector injector;
   private final Lifecycle lifecycle;
-  private MetastoreClient metastoreClient;
   private DruidClusterClient clusterClient;
 
   private Initializer(Builder builder)

@@ -81,7 +81,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
   private final StructuredDataProcessor fieldProcessor = new StructuredDataProcessor()
   {
     @Override
-    public int processLiteralField(ArrayList<NestedPathPart> fieldPath, Object fieldValue)
+    public StructuredDataProcessor.ProcessedLiteral<?> processLiteralField(ArrayList<NestedPathPart> fieldPath, Object fieldValue)
     {
       final GlobalDictionaryEncodedFieldColumnWriter<?> writer = fieldWriters.get(
           NestedPathFinder.toNormalizedJsonPath(fieldPath)
@@ -89,15 +89,20 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
       if (writer != null) {
         try {
           ExprEval<?> eval = ExprEval.bestEffortOf(fieldValue);
-          writer.addValue(rowCount, eval.value());
+          if (eval.type().isPrimitive() || (eval.type().isArray() && eval.type().getElementType().isPrimitive())) {
+            writer.addValue(rowCount, eval.value());
+          } else {
+            // behave consistently with nested column indexer, which defaults to string
+            writer.addValue(rowCount, eval.asString());
+          }
           // serializer doesn't use size estimate
-          return 0;
+          return StructuredDataProcessor.ProcessedLiteral.NULL_LITERAL;
         }
         catch (IOException e) {
           throw new RuntimeException(":(");
         }
       }
-      return 0;
+      return StructuredDataProcessor.ProcessedLiteral.NULL_LITERAL;
     }
   };
 
@@ -238,11 +243,12 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     dictionaryWriter.write(null);
     globalDictionaryIdLookup.addString(null);
     for (String value : dictionaryValues) {
-      if (NullHandling.emptyToNullIfNeeded(value) == null) {
+      value = NullHandling.emptyToNullIfNeeded(value);
+      if (value == null) {
         continue;
       }
+
       dictionaryWriter.write(value);
-      value = NullHandling.emptyToNullIfNeeded(value);
       globalDictionaryIdLookup.addString(value);
     }
   }
@@ -272,7 +278,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
   @Override
   public void serialize(ColumnValueSelector<? extends StructuredData> selector) throws IOException
   {
-    StructuredData data = selector.getObject();
+    StructuredData data = StructuredData.wrap(selector.getObject());
     if (data == null) {
       nullRowsBitmap.add(rowCount);
     }

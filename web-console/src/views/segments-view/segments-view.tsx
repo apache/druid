@@ -22,7 +22,8 @@ import classNames from 'classnames';
 import { C, L, SqlComparison, SqlExpression } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
-import ReactTable, { Filter } from 'react-table';
+import type { Filter } from 'react-table';
+import ReactTable from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
@@ -41,7 +42,8 @@ import {
 import { AsyncActionDialog } from '../../dialogs';
 import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
-import { QueryWithContext } from '../../druid-models';
+import type { QueryWithContext } from '../../druid-models';
+import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
   booleanCustomTableFilter,
   BooleanFilterInput,
@@ -51,9 +53,8 @@ import {
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../react-table';
 import { Api } from '../../singletons';
+import type { NumberLike } from '../../utils';
 import {
-  Capabilities,
-  CapabilitiesMode,
   compact,
   deepGet,
   filterMap,
@@ -63,13 +64,12 @@ import {
   isNumberLikeNaN,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
-  NumberLike,
   queryDruidSql,
   QueryManager,
   QueryState,
   twoLines,
 } from '../../utils';
-import { BasicAction } from '../../utils/basic-action';
+import type { BasicAction } from '../../utils/basic-action';
 
 import './segments-view.scss';
 
@@ -88,9 +88,10 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Num rows',
     'Avg. row size',
     'Replicas',
-    'Is published',
-    'Is realtime',
     'Is available',
+    'Is active',
+    'Is realtime',
+    'Is published',
     'Is overshadowed',
     ACTION_COLUMN_LABEL,
   ],
@@ -117,9 +118,10 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Num rows',
     'Avg. row size',
     'Replicas',
-    'Is published',
-    'Is realtime',
     'Is available',
+    'Is active',
+    'Is realtime',
+    'Is published',
     'Is overshadowed',
   ],
 };
@@ -168,8 +170,9 @@ interface SegmentQueryResultRow {
   avg_row_size: NumberLike;
   num_replicas: number;
   is_available: number;
-  is_published: number;
+  is_active: number;
   is_realtime: number;
+  is_published: number;
   is_overshadowed: number;
 }
 
@@ -212,9 +215,10 @@ END AS "time_span"`,
       visibleColumns.shown('Avg. row size') &&
         `CASE WHEN "num_rows" <> 0 THEN ("size" / "num_rows") ELSE 0 END AS "avg_row_size"`,
       visibleColumns.shown('Replicas') && `"num_replicas"`,
-      visibleColumns.shown('Is published') && `"is_published"`,
       visibleColumns.shown('Is available') && `"is_available"`,
+      visibleColumns.shown('Is active') && `"is_active"`,
       visibleColumns.shown('Is realtime') && `"is_realtime"`,
+      visibleColumns.shown('Is published') && `"is_published"`,
       visibleColumns.shown('Is overshadowed') && `"is_overshadowed"`,
     ]);
 
@@ -262,7 +266,7 @@ END AS "time_span"`,
       segmentFilter,
       visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION,
-        ['Time span'],
+        ['Time span', 'Is published', 'Is overshadowed'],
       ),
       groupByInterval: false,
       showSegmentTimeline: false,
@@ -416,8 +420,9 @@ END AS "time_span"`,
                 avg_row_size: -1,
                 num_replicas: -1,
                 is_available: -1,
-                is_published: -1,
+                is_active: -1,
                 is_realtime: -1,
+                is_published: -1,
                 is_overshadowed: -1,
               };
             });
@@ -662,11 +667,9 @@ END AS "time_span"`,
 
               switch (v?.type) {
                 case 'range': {
-                  const dimensions = v.dimensions || [];
+                  const dimensions: string[] = v.dimensions || [];
                   const formatEdge = (values: string[]) =>
-                    values
-                      .map((x, i) => formatRangeDimensionValue(dimensions[i] || `d${i}`, x))
-                      .join('; ');
+                    dimensions.map((d, i) => formatRangeDimensionValue(d, values[i])).join('; ');
 
                   return (
                     <TableClickableCell
@@ -813,10 +816,19 @@ END AS "time_span"`,
             className: 'padded',
           },
           {
-            Header: 'Is published',
-            show: hasSql && visibleColumns.shown('Is published'),
-            id: 'is_published',
-            accessor: row => String(Boolean(row.is_published)),
+            Header: 'Is available',
+            show: hasSql && visibleColumns.shown('Is available'),
+            id: 'is_available',
+            accessor: row => String(Boolean(row.is_available)),
+            Filter: BooleanFilterInput,
+            className: 'padded',
+            width: 100,
+          },
+          {
+            Header: 'Is active',
+            show: hasSql && visibleColumns.shown('Is active'),
+            id: 'is_active',
+            accessor: row => String(Boolean(row.is_active)),
             Filter: BooleanFilterInput,
             className: 'padded',
             width: 100,
@@ -831,10 +843,10 @@ END AS "time_span"`,
             width: 100,
           },
           {
-            Header: 'Is available',
-            show: hasSql && visibleColumns.shown('Is available'),
-            id: 'is_available',
-            accessor: row => String(Boolean(row.is_available)),
+            Header: 'Is published',
+            show: hasSql && visibleColumns.shown('Is published'),
+            id: 'is_published',
+            accessor: row => String(Boolean(row.is_published)),
             Filter: BooleanFilterInput,
             className: 'padded',
             width: 100,

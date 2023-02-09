@@ -77,9 +77,7 @@ public class JdbcExtractionNamespaceTest
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
   private static final Logger log = new Logger(JdbcExtractionNamespaceTest.class);
-  private static final String TABLE_NAME = "abstractDbRenameTest";
-  private static final String KEY_NAME = "keyName";
-  private static final String VAL_NAME = "valName";
+
   private static final String TS_COLUMN = "tsColumn";
   private static final String FILTER_COLUMN = "filterColumn";
   private static final Map<String, String[]> RENAMES = ImmutableMap.of(
@@ -90,22 +88,32 @@ public class JdbcExtractionNamespaceTest
   );
 
 
-  @Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "tableName={0}, keyName={1}, valName={2}, tsColumn={3}")
   public static Collection<Object[]> getParameters()
   {
     return ImmutableList.of(
-        new Object[]{"tsColumn"},
-        new Object[]{null}
+        new Object[]{"table", "select", "foo \" column;", "tsColumn"}, // reserved identifiers as table, key and value columns.
+        new Object[]{"abstractDbRenameTest", "keyName", "valName", "tsColumn"},
+        new Object[]{"abstractDbRenameTest", "keyName", "valName", null}
     );
   }
 
   public JdbcExtractionNamespaceTest(
+      String tableName,
+      String keyName,
+      String valName,
       String tsColumn
   )
   {
+    this.tableName = tableName;
+    this.keyName = keyName;
+    this.valName = valName;
     this.tsColumn = tsColumn;
   }
 
+  private final String tableName;
+  private final String keyName;
+  private final String valName;
   private final String tsColumn;
   private CacheScheduler scheduler;
   private Lifecycle lifecycle;
@@ -132,18 +140,20 @@ public class JdbcExtractionNamespaceTest
               handle.createStatement(
                   StringUtils.format(
                       "CREATE TABLE %s (%s TIMESTAMP, %s VARCHAR(64), %s VARCHAR(64), %s VARCHAR(64))",
-                      TABLE_NAME,
-                      TS_COLUMN,
-                      FILTER_COLUMN,
-                      KEY_NAME,
-                      VAL_NAME
+                      JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(tableName),
+                      JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(TS_COLUMN),
+                      JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(FILTER_COLUMN),
+                      JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(keyName),
+                      JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(valName)
                   )
               ).setQueryTimeout(1).execute()
           );
-          handle.createStatement(StringUtils.format("TRUNCATE TABLE %s", TABLE_NAME)).setQueryTimeout(1).execute();
+          handle.createStatement(StringUtils.format("TRUNCATE TABLE %s",
+              JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(tableName))).setQueryTimeout(1).execute();
           handle.commit();
           closer.register(() -> {
-            handle.createStatement("DROP TABLE " + TABLE_NAME).setQueryTimeout(1).execute();
+            handle.createStatement(StringUtils.format("DROP TABLE %s",
+                JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(tableName))).setQueryTimeout(1).execute();
             final ListenableFuture future = setupTeardownService.submit(new Runnable()
             {
               @Override
@@ -292,19 +302,25 @@ public class JdbcExtractionNamespaceTest
     final String statementVal = val != null ? "'%s'" : "%s";
     if (tsColumn == null) {
       handle.createStatement(
-          StringUtils.format("DELETE FROM %s WHERE %s='%s'", TABLE_NAME, KEY_NAME, key)
+          StringUtils.format("DELETE FROM %s WHERE %s='%s'", JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(tableName),
+              JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(keyName), key)
       ).setQueryTimeout(1).execute();
       query = StringUtils.format(
           "INSERT INTO %s (%s, %s, %s) VALUES ('%s', '%s', " + statementVal + ")",
-          TABLE_NAME,
-          FILTER_COLUMN, KEY_NAME, VAL_NAME,
+          JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(tableName),
+          JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(FILTER_COLUMN),
+          JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(keyName),
+          JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(valName),
           filter, key, val
       );
     } else {
       query = StringUtils.format(
           "INSERT INTO %s (%s, %s, %s, %s) VALUES ('%s', '%s', '%s', " + statementVal + ")",
-          TABLE_NAME,
-          tsColumn, FILTER_COLUMN, KEY_NAME, VAL_NAME,
+          JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(tableName),
+          JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(tsColumn),
+          JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(FILTER_COLUMN),
+          JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(keyName),
+          JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(valName),
           updateTs, filter, key, val
       );
     }
@@ -321,9 +337,9 @@ public class JdbcExtractionNamespaceTest
   {
     final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),
-        TABLE_NAME,
-        KEY_NAME,
-        VAL_NAME,
+        tableName,
+        keyName,
+        valName,
         tsColumn,
         null,
         new Period(0),
@@ -354,11 +370,11 @@ public class JdbcExtractionNamespaceTest
   {
     final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),
-        TABLE_NAME,
-        KEY_NAME,
-        VAL_NAME,
+        tableName,
+        keyName,
+        valName,
         tsColumn,
-        FILTER_COLUMN + "='1'",
+        JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(FILTER_COLUMN) + "='1'",
         new Period(0),
         null,
         new JdbcAccessSecurityConfig()
@@ -429,9 +445,9 @@ public class JdbcExtractionNamespaceTest
     final JdbcAccessSecurityConfig securityConfig = new JdbcAccessSecurityConfig();
     final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),
-        TABLE_NAME,
-        KEY_NAME,
-        VAL_NAME,
+        tableName,
+        keyName,
+        valName,
         tsColumn,
         "some filter",
         new Period(10),
@@ -454,9 +470,9 @@ public class JdbcExtractionNamespaceTest
   {
     final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),
-        TABLE_NAME,
-        KEY_NAME,
-        VAL_NAME,
+        tableName,
+        keyName,
+        valName,
         tsColumn,
         null,
         new Period(10),

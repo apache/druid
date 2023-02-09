@@ -20,7 +20,7 @@ import { Button, Callout, FormGroup, HTMLSelect, Intent } from '@blueprintjs/cor
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
-import { ExampleManifest } from '../../../utils/sampler';
+import type { ExampleManifest } from '../../../utils/sampler';
 
 export interface ExamplePickerProps {
   exampleManifests: ExampleManifest[];

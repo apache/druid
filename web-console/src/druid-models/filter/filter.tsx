@@ -18,10 +18,11 @@
 
 import React from 'react';
 
-import { ExternalLink, Field } from '../../components';
+import type { Field } from '../../components';
+import { ExternalLink } from '../../components';
 import { getLink } from '../../links';
 import { deepGet, EMPTY_ARRAY, oneOf, typeIs } from '../../utils';
-import { IngestionSpec } from '../ingestion-spec/ingestion-spec';
+import type { IngestionSpec } from '../ingestion-spec/ingestion-spec';
 
 export interface DruidFilter {
   readonly type: string;

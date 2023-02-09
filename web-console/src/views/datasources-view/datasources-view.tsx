@@ -21,7 +21,8 @@ import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import { SqlQuery, T } from 'druid-query-toolkit';
 import React from 'react';
-import ReactTable, { Filter } from 'react-table';
+import type { Filter } from 'react-table';
+import ReactTable from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
@@ -43,19 +44,18 @@ import {
   RetentionDialog,
 } from '../../dialogs';
 import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
-import {
+import type {
   CompactionConfig,
   CompactionInfo,
   CompactionStatus,
-  formatCompactionInfo,
   QueryWithContext,
-  zeroCompactionStatus,
 } from '../../druid-models';
+import { formatCompactionInfo, zeroCompactionStatus } from '../../druid-models';
+import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
+import type { NumberLike } from '../../utils';
 import {
-  Capabilities,
-  CapabilitiesMode,
   compact,
   countBy,
   deepGet,
@@ -69,15 +69,15 @@ import {
   LocalStorageBackedVisibility,
   LocalStorageKeys,
   lookupBy,
-  NumberLike,
   pluralIfNeeded,
   queryDruidSql,
   QueryManager,
   QueryState,
   twoLines,
 } from '../../utils';
-import { BasicAction } from '../../utils/basic-action';
-import { Rule, RuleUtil } from '../../utils/load-rule';
+import type { BasicAction } from '../../utils/basic-action';
+import type { Rule } from '../../utils/load-rule';
+import { RuleUtil } from '../../utils/load-rule';
 
 import './datasources-view.scss';
 
@@ -289,37 +289,37 @@ export class DatasourcesView extends React.PureComponent<
       [
         visibleColumns.shown('Datasource name') && `datasource`,
         (visibleColumns.shown('Availability') || visibleColumns.shown('Segment granularity')) &&
-          `COUNT(*) FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS num_segments`,
+          `COUNT(*) FILTER (WHERE is_active = 1) AS num_segments`,
         (visibleColumns.shown('Availability') || visibleColumns.shown('Availability detail')) && [
           `COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0) AS num_segments_to_load`,
-          `COUNT(*) FILTER (WHERE is_available = 1 AND NOT ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_segments_to_drop`,
+          `COUNT(*) FILTER (WHERE is_available = 1 AND is_active = 0) AS num_segments_to_drop`,
         ],
         visibleColumns.shown('Total data size') &&
-          `SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS total_data_size`,
+          `SUM("size") FILTER (WHERE is_active = 1) AS total_data_size`,
         visibleColumns.shown('Segment rows') && [
-          `MIN("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS min_segment_rows`,
-          `AVG("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS avg_segment_rows`,
-          `MAX("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS max_segment_rows`,
+          `MIN("num_rows") FILTER (WHERE is_available = 1 AND is_realtime = 0) AS min_segment_rows`,
+          `AVG("num_rows") FILTER (WHERE is_available = 1 AND is_realtime = 0) AS avg_segment_rows`,
+          `MAX("num_rows") FILTER (WHERE is_available = 1 AND is_realtime = 0) AS max_segment_rows`,
         ],
         visibleColumns.shown('Segment size') && [
-          `MIN("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS min_segment_size`,
-          `AVG("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS avg_segment_size`,
-          `MAX("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS max_segment_size`,
+          `MIN("size") FILTER (WHERE is_active = 1 AND is_realtime = 0) AS min_segment_size`,
+          `AVG("size") FILTER (WHERE is_active = 1 AND is_realtime = 0) AS avg_segment_size`,
+          `MAX("size") FILTER (WHERE is_active = 1 AND is_realtime = 0) AS max_segment_size`,
         ],
         visibleColumns.shown('Segment granularity') && [
-          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%:00.000Z' AND "end" LIKE '%:00.000Z') AS minute_aligned_segments`,
-          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%:00:00.000Z' AND "end" LIKE '%:00:00.000Z') AS hour_aligned_segments`,
-          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%T00:00:00.000Z' AND "end" LIKE '%T00:00:00.000Z') AS day_aligned_segments`,
-          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%-01T00:00:00.000Z' AND "end" LIKE '%-01T00:00:00.000Z') AS month_aligned_segments`,
-          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%-01-01T00:00:00.000Z' AND "end" LIKE '%-01-01T00:00:00.000Z') AS year_aligned_segments`,
-          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" = '-146136543-09-08T08:23:32.096Z' AND "end" = '146140482-04-24T15:36:27.903Z') AS all_granularity_segments`,
+          `COUNT(*) FILTER (WHERE is_active = 1 AND "start" LIKE '%:00.000Z' AND "end" LIKE '%:00.000Z') AS minute_aligned_segments`,
+          `COUNT(*) FILTER (WHERE is_active = 1 AND "start" LIKE '%:00:00.000Z' AND "end" LIKE '%:00:00.000Z') AS hour_aligned_segments`,
+          `COUNT(*) FILTER (WHERE is_active = 1 AND "start" LIKE '%T00:00:00.000Z' AND "end" LIKE '%T00:00:00.000Z') AS day_aligned_segments`,
+          `COUNT(*) FILTER (WHERE is_active = 1 AND "start" LIKE '%-01T00:00:00.000Z' AND "end" LIKE '%-01T00:00:00.000Z') AS month_aligned_segments`,
+          `COUNT(*) FILTER (WHERE is_active = 1 AND "start" LIKE '%-01-01T00:00:00.000Z' AND "end" LIKE '%-01-01T00:00:00.000Z') AS year_aligned_segments`,
+          `COUNT(*) FILTER (WHERE is_active = 1 AND "start" = '-146136543-09-08T08:23:32.096Z' AND "end" = '146140482-04-24T15:36:27.903Z') AS all_granularity_segments`,
         ],
         visibleColumns.shown('Total rows') &&
-          `SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS total_rows`,
+          `SUM("num_rows") FILTER (WHERE is_active = 1) AS total_rows`,
         visibleColumns.shown('Avg. row size') &&
-          `CASE WHEN SUM("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) <> 0 THEN (SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) / SUM("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0)) ELSE 0 END AS avg_row_size`,
+          `CASE WHEN SUM("num_rows") FILTER (WHERE is_available = 1) <> 0 THEN (SUM("size") FILTER (WHERE is_available = 1) / SUM("num_rows") FILTER (WHERE is_available = 1)) ELSE 0 END AS avg_row_size`,
         visibleColumns.shown('Replicated size') &&
-          `SUM("size" * "num_replicas") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS replicated_size`,
+          `SUM("size" * "num_replicas") FILTER (WHERE is_active = 1) AS replicated_size`,
       ].flat(),
     );
 
@@ -378,7 +378,7 @@ ORDER BY 1`;
       actions: [],
     };
 
-    this.datasourceQueryManager = new QueryManager({
+    this.datasourceQueryManager = new QueryManager<DatasourceQuery, DatasourcesAndDefaultRules>({
       processQuery: async (
         { capabilities, visibleColumns, showUnused },
         _cancelToken,
@@ -818,6 +818,7 @@ ORDER BY 1`;
       intent: Intent.DANGER,
       action: {
         text: 'Confirm',
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
         onClick: async () => {
           try {
             await Api.instance.delete(
@@ -1080,7 +1081,7 @@ ORDER BY 1`;
             accessor: 'num_segments',
             className: 'padded',
             Cell: ({ value: num_segments, original }) => {
-              const { datasource, unused, num_segments_to_load } = original as Datasource;
+              const { datasource, unused, num_segments_to_load, rules } = original as Datasource;
               if (unused) {
                 return (
                   <span>
@@ -1090,6 +1091,7 @@ ORDER BY 1`;
                 );
               }
 
+              const hasCold = RuleUtil.hasColdRule(rules, defaultRules);
               const segmentsEl = (
                 <a onClick={() => goToSegments(datasource)}>
                   {pluralIfNeeded(num_segments, 'segment')}
@@ -1104,13 +1106,17 @@ ORDER BY 1`;
                     Empty
                   </span>
                 );
-              } else if (num_segments_to_load === 0) {
+              } else if (num_segments_to_load === 0 || hasCold) {
+                const numAvailableSegments = num_segments - num_segments_to_load;
+                const percentHot = (
+                  Math.floor((numAvailableSegments / num_segments) * 1000) / 10
+                ).toFixed(1);
                 return (
                   <span>
                     <span style={{ color: DatasourcesView.FULLY_AVAILABLE_COLOR }}>
                       &#x25cf;&nbsp;
                     </span>
-                    Fully available ({segmentsEl})
+                    Fully available{hasCold ? `, ${percentHot}% hot` : ''} ({segmentsEl})
                   </span>
                 );
               } else {
@@ -1142,7 +1148,10 @@ ORDER BY 1`;
             width: 180,
             className: 'padded',
             Cell: ({ original }) => {
-              const { num_segments_to_load, num_segments_to_drop } = original as Datasource;
+              const { num_segments_to_load, num_segments_to_drop, rules } = original as Datasource;
+              if (RuleUtil.hasColdRule(rules, defaultRules)) {
+                return pluralIfNeeded(num_segments_to_load, 'cold segment');
+              }
               return formatLoadDrop(num_segments_to_load, num_segments_to_drop);
             },
           },

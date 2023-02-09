@@ -31,7 +31,8 @@ import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
 import { durationSanitizer } from '../../utils';
-import { Rule, RuleUtil } from '../../utils/load-rule';
+import type { Rule } from '../../utils/load-rule';
+import { RuleUtil } from '../../utils/load-rule';
 import { SuggestibleInput } from '../suggestible-input/suggestible-input';
 
 import './rule-editor.scss';
@@ -91,7 +92,7 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
               if (isNaN(v)) return;
               onChange(RuleUtil.addTieredReplicant(rule, tier, v));
             }}
-            min={1}
+            min={0}
             max={256}
           />
           <Button minimal style={{ pointerEvents: 'none' }}>

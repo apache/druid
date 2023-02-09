@@ -16,22 +16,24 @@
  * limitations under the License.
  */
 
-import { Card, Icon, IconName, Intent } from '@blueprintjs/core';
+import type { IconName } from '@blueprintjs/core';
+import { Card, Icon, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { SqlQuery } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
+import type { ExternalConfig, QueryContext, QueryWithContext } from '../../druid-models';
 import {
   Execution,
-  ExternalConfig,
   externalConfigToIngestQueryPattern,
   ingestQueryPatternToQuery,
-  QueryWithContext,
 } from '../../druid-models';
-import { submitTaskQuery } from '../../helpers';
+import type { Capabilities } from '../../helpers';
+import { maybeGetClusterCapacity, submitTaskQuery } from '../../helpers';
 import { useLocalStorageState } from '../../hooks';
 import { AppToaster } from '../../singletons';
 import { deepDelete, LocalStorageKeys } from '../../utils';
+import { CapacityAlert } from '../workbench-view/capacity-alert/capacity-alert';
 import { InputFormatStep } from '../workbench-view/input-format-step/input-format-step';
 import { InputSourceStep } from '../workbench-view/input-source-step/input-source-step';
 import { MaxTasksButton } from '../workbench-view/max-tasks-button/max-tasks-button';
@@ -47,6 +49,7 @@ interface LoaderContent extends QueryWithContext {
 }
 
 export interface SqlDataLoaderViewProps {
+  capabilities: Capabilities;
   goToQuery(queryWithContext: QueryWithContext): void;
   goToIngestion(taskId: string): void;
 }
@@ -54,7 +57,8 @@ export interface SqlDataLoaderViewProps {
 export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
   props: SqlDataLoaderViewProps,
 ) {
-  const { goToQuery, goToIngestion } = props;
+  const { capabilities, goToQuery, goToIngestion } = props;
+  const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
   const [externalConfigStep, setExternalConfigStep] = useState<Partial<ExternalConfig>>({});
   const [content, setContent] = useLocalStorageState<LoaderContent | undefined>(
     LocalStorageKeys.SQL_DATA_LOADER_CONTENT,
@@ -73,6 +77,26 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
         </div>
       </Card>
     );
+  }
+
+  async function submitTask(query: string, context: QueryContext) {
+    if (!content) return;
+
+    try {
+      const execution = await submitTaskQuery({
+        query,
+        context,
+      });
+
+      const taskId = execution instanceof Execution ? execution.id : execution.state.id;
+
+      setContent({ ...content, id: taskId });
+    } catch (e) {
+      AppToaster.show({
+        message: `Error submitting task: ${e.message}`,
+        intent: Intent.DANGER,
+      });
+    }
   }
 
   return (
@@ -105,33 +129,47 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
           goToQuery={() => goToQuery(content)}
           onBack={() => setContent(undefined)}
           onDone={async () => {
-            const ingestDatasource = SqlQuery.parse(content.queryString)
-              .getIngestTable()
-              ?.getName();
+            const { queryString, queryContext } = content;
+            const ingestDatasource = SqlQuery.parse(queryString).getIngestTable()?.getName();
 
             if (!ingestDatasource) {
               AppToaster.show({ message: `Must have an ingest datasource`, intent: Intent.DANGER });
               return;
             }
 
-            try {
-              const execution = await submitTaskQuery({
-                query: content.queryString,
-                context: content.queryContext,
-              });
+            const clusterCapacity = capabilities.getClusterCapacity();
+            let effectiveContext = queryContext || {};
+            if (
+              typeof effectiveContext.maxNumTasks === 'undefined' &&
+              typeof clusterCapacity === 'number'
+            ) {
+              effectiveContext = { ...effectiveContext, maxNumTasks: clusterCapacity };
+            }
 
-              const taskId = execution instanceof Execution ? execution.id : execution.state.id;
+            const capacityInfo = await maybeGetClusterCapacity();
 
-              setContent({ ...content, id: taskId });
-            } catch (e) {
-              AppToaster.show({
-                message: `Error submitting task: ${e.message}`,
-                intent: Intent.DANGER,
-              });
+            const effectiveMaxNumTasks = effectiveContext.maxNumTasks ?? 2;
+
+            if (capacityInfo && capacityInfo.availableTaskSlots < effectiveMaxNumTasks) {
+              setAlertElement(
+                <CapacityAlert
+                  maxNumTasks={effectiveMaxNumTasks}
+                  capacityInfo={capacityInfo}
+                  onRun={() => {
+                    void submitTask(queryString, effectiveContext);
+                  }}
+                  onClose={() => {
+                    setAlertElement(undefined);
+                  }}
+                />,
+              );
+            } else {
+              await submitTask(queryString, effectiveContext);
             }
           }}
           extraCallout={
             <MaxTasksButton
+              clusterCapacity={capabilities.getClusterCapacity()}
               queryContext={content.queryContext || {}}
               changeQueryContext={queryContext => setContent({ ...content, queryContext })}
               minimal
@@ -198,6 +236,7 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
           onClose={() => setContent(deepDelete(content, 'id'))}
         />
       )}
+      {alertElement}
     </div>
   );
 });

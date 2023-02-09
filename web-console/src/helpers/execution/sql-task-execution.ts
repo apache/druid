@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 
-import { AxiosResponse, CancelToken } from 'axios';
+import type { AxiosResponse, CancelToken } from 'axios';
 import { L } from 'druid-query-toolkit';
 
-import { Execution, QueryContext } from '../../druid-models';
+import type { QueryContext } from '../../druid-models';
+import { Execution } from '../../druid-models';
 import { Api } from '../../singletons';
 import {
   deepGet,

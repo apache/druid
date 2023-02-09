@@ -30,6 +30,7 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class WindowRankProcessorTest
@@ -42,9 +43,10 @@ public class WindowRankProcessorTest
 
     MapOfColumnsRowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(map);
 
+    final List<String> orderingCols = Collections.singletonList("vals");
     Processor processor = new ComposingProcessor(
-        new WindowRankProcessor(Collections.singletonList("vals"), "rank", false),
-        new WindowRankProcessor(Collections.singletonList("vals"), "rankAsPercent", true)
+        new WindowRankProcessor(orderingCols, "rank", false),
+        new WindowRankProcessor(orderingCols, "rankAsPercent", true)
     );
 
     final RowsAndColumnsHelper expectations = new RowsAndColumnsHelper()
@@ -68,9 +70,10 @@ public class WindowRankProcessorTest
 
     MapOfColumnsRowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(map);
 
+    final List<String> orderingCols = Collections.singletonList("vals");
     Processor processor = new ComposingProcessor(
-        new WindowRankProcessor(Collections.singletonList("vals"), "rank", false),
-        new WindowRankProcessor(Collections.singletonList("vals"), "rankAsPercent", true)
+        new WindowRankProcessor(orderingCols, "rank", false),
+        new WindowRankProcessor(orderingCols, "rankAsPercent", true)
     );
 
     final RowsAndColumnsHelper expectations = new RowsAndColumnsHelper()

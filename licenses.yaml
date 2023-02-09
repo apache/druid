@@ -1269,7 +1269,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.68.Final
+version: 4.1.86.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -1282,6 +1282,7 @@ libraries:
   - io.netty: netty-resolver
   - io.netty: netty-resolver-dns
   - io.netty: netty-transport
+  - io.netty: netty-transport-classes-epoll
   - io.netty: netty-transport-native-epoll
   - io.netty: netty-transport-native-unix-common
 notice: |
@@ -3798,7 +3799,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 3.3.1
+version: 3.3.2
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -4717,7 +4718,7 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 3.3.1
+version: 3.3.2
 libraries:
   - org.apache.kafka: kafka-clients
 notices:
@@ -6536,6 +6537,16 @@ license_file_path: licenses/bin/upper-case.MIT
 
 ---
 
+name: "use-sync-external-store"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Facebook, Inc. and its affiliates.
+version: 1.2.0
+license_file_path: licenses/bin/use-sync-external-store.MIT
+
+---
+
 name: "value-equal"
 license_category: binary
 module: web-console
@@ -6571,6 +6582,6 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Paul Henschel
-version: 3.7.2
+version: 4.3.2
 license_file_path: licenses/bin/zustand.MIT
 # Web console modules end

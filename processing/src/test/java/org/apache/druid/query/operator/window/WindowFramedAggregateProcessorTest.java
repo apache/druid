@@ -20,6 +20,7 @@
 package org.apache.druid.query.operator.window;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
@@ -33,11 +34,13 @@ import org.apache.druid.query.rowsandcols.semantic.FramedOnHeapAggregatable;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.annotation.Nullable;
-
 @SuppressWarnings("unchecked")
 public class WindowFramedAggregateProcessorTest
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   @Test
   public void testIsPassThruWhenRACReturnsSemanticInterface()
   {
@@ -52,9 +55,8 @@ public class WindowFramedAggregateProcessorTest
         "yay", new IntArrayColumn(new int[]{1, 2, 3})
     ));
 
-    final RowsAndColumns processed = proc.process(new AsOnlyTestRowsAndColumns(theFrame, theAggs, rac)
+    final RowsAndColumns processed = proc.process(new AsOnlyTestRowsAndColumns()
     {
-      @Nullable
       @Override
       public <T> T as(Class<T> clazz)
       {

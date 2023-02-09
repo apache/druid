@@ -16,31 +16,35 @@
  * limitations under the License.
  */
 
+import type {
+  SqlClusteredByClause,
+  SqlExpression,
+  SqlPartitionedByClause,
+  SqlQuery,
+} from 'druid-query-toolkit';
 import {
   C,
   F,
-  SqlClusteredByClause,
-  SqlExpression,
   SqlLiteral,
   SqlOrderByClause,
   SqlOrderByExpression,
-  SqlPartitionedByClause,
-  SqlQuery,
   SqlTable,
 } from 'druid-query-toolkit';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 import { v4 as uuidv4 } from 'uuid';
 
-import { ColumnMetadata, deleteKeys, generate8HexId } from '../../utils';
-import { DruidEngine, validDruidEngine } from '../druid-engine/druid-engine';
-import { LastExecution } from '../execution/execution';
-import { ExternalConfig } from '../external-config/external-config';
+import type { ColumnMetadata } from '../../utils';
+import { deleteKeys, generate8HexId } from '../../utils';
+import type { DruidEngine } from '../druid-engine/druid-engine';
+import { validDruidEngine } from '../druid-engine/druid-engine';
+import type { LastExecution } from '../execution/execution';
+import type { ExternalConfig } from '../external-config/external-config';
 import {
   externalConfigToIngestQueryPattern,
   ingestQueryPatternToQuery,
 } from '../ingest-query-pattern/ingest-query-pattern';
-import { QueryContext } from '../query-context/query-context';
+import type { QueryContext } from '../query-context/query-context';
 
 import { WorkbenchQueryPart } from './workbench-query-part';
 
@@ -464,10 +468,10 @@ export class WorkbenchQuery {
       }
     }
 
-    // Adjust the context, remove maxNumTasks and add in ingest mode flags
-    const cleanContext = deleteKeys(this.queryContext, ['maxNumTasks']);
-    ret = ret.changeQueryContext({
-      ...cleanContext,
+    // Explicitly select MSQ, adjust the context, set maxNumTasks to the lowest possible and add in ingest mode flags
+    ret = ret.changeEngine('sql-msq-task').changeQueryContext({
+      ...this.queryContext,
+      maxNumTasks: 2,
       finalizeAggregations: false,
       groupByEnableMultiValueUnnesting: false,
     });
@@ -479,16 +483,17 @@ export class WorkbenchQuery {
           .changeReplaceClause(undefined)
           .changePartitionedByClause(undefined)
           .changeClusteredByClause(undefined)
-          .changeOrderByClause(
-            WorkbenchQuery.makeOrderByClause(
-              parsedQuery.partitionedByClause,
-              parsedQuery.clusteredByClause,
-            ),
-          )
           .toString()
       : WorkbenchQuery.commentOutIngestParts(this.getQueryString());
 
     return ret.changeQueryString(newQueryString);
+  }
+
+  public setMaxNumTasksIfUnset(maxNumTasks: number | undefined): WorkbenchQuery {
+    const { queryContext } = this;
+    if (typeof queryContext.maxNumTasks === 'number' || !maxNumTasks) return this;
+
+    return this.changeQueryContext({ ...queryContext, maxNumTasks: Math.max(maxNumTasks, 2) });
   }
 
   public getApiQuery(makeQueryId: () => string = uuidv4): {

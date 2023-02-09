@@ -25,6 +25,7 @@ import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
+import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.key.SortColumn;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.java.util.common.ByteBufferUtils;
@@ -351,7 +352,8 @@ public class FrameTest
       frame.writeTo(
           Channels.newChannel(baos),
           compressed,
-          ByteBuffer.allocate(Frame.compressionBufferSize((int) frame.numBytes()))
+          ByteBuffer.allocate(Frame.compressionBufferSize((int) frame.numBytes())),
+          ByteTracker.unboundedTracker()
       );
 
       if (!compressed) {
@@ -414,7 +416,8 @@ public class FrameTest
     frame.writeTo(
         Channels.newChannel(baos),
         compressed,
-        ByteBuffer.allocate(Frame.compressionBufferSize((int) frame.numBytes()))
+        ByteBuffer.allocate(Frame.compressionBufferSize((int) frame.numBytes())),
+        ByteTracker.unboundedTracker()
     );
     return baos.toByteArray();
   }

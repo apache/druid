@@ -17,7 +17,8 @@
  */
 
 import { Intent } from '@blueprintjs/core';
-import { IconName, IconNames } from '@blueprintjs/icons';
+import type { IconName } from '@blueprintjs/icons';
+import { IconNames } from '@blueprintjs/icons';
 import copy from 'copy-to-clipboard';
 import hasOwnProp from 'has-own-prop';
 import * as JSONBig from 'json-bigint-native';
@@ -30,13 +31,17 @@ import { AppToaster } from '../singletons';
 export const EMPTY_OBJECT: any = {};
 export const EMPTY_ARRAY: any[] = [];
 
-export type NumberLike = number | BigInt;
+export type NumberLike = number | bigint;
 
 export function isNumberLikeNaN(x: NumberLike): boolean {
   return isNaN(Number(x));
 }
 
-export function nonEmptyArray(a: any): a is unknown[] {
+export function nonEmptyString(s: unknown): s is string {
+  return typeof s === 'string' && s !== '';
+}
+
+export function nonEmptyArray(a: unknown): a is unknown[] {
   return Array.isArray(a) && Boolean(a.length);
 }
 

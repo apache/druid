@@ -35,6 +35,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -149,6 +150,33 @@ public class LocalFileStorageConnectorTest
           storageConnector.listDir(uuid1);
         }
     );
+  }
+
+  @Test
+  public void testReadRange() throws Exception
+  {
+    String uuid = UUID.randomUUID().toString();
+    String data = "Hello";
+    try (OutputStream outputStream = storageConnector.write(uuid)) {
+      outputStream.write(data.getBytes(StandardCharsets.UTF_8));
+    }
+
+    // non empty reads
+    for (int start = 0; start < data.length(); start++) {
+      for (int length = 1; length <= data.length() - start; length++) {
+        InputStream is = storageConnector.readRange(uuid, start, length);
+        byte[] dataBytes = new byte[length];
+        Assert.assertEquals(is.read(dataBytes), length);
+        Assert.assertEquals(is.read(), -1); // reading further produces no data
+        Assert.assertEquals(data.substring(start, start + length), new String(dataBytes, StandardCharsets.UTF_8));
+      }
+    }
+
+    // empty read
+    InputStream is = storageConnector.readRange(uuid, 0, 0);
+    byte[] dataBytes = new byte[0];
+    Assert.assertEquals(is.read(dataBytes), -1);
+    Assert.assertEquals(data.substring(0, 0), new String(dataBytes, StandardCharsets.UTF_8));
   }
 
   private void checkContents(String uuid) throws IOException

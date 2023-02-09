@@ -70,7 +70,13 @@ public class OrcReader extends IntermediateRowParsingReader<OrcStruct>
     this.inputRowSchema = inputRowSchema;
     this.source = source;
     this.temporaryDirectory = temporaryDirectory;
-    this.orcStructFlattener = ObjectFlatteners.create(flattenSpec, new OrcStructFlattenerMaker(binaryAsString));
+    this.orcStructFlattener = ObjectFlatteners.create(
+        flattenSpec,
+        new OrcStructFlattenerMaker(
+            binaryAsString,
+            inputRowSchema.getDimensionsSpec().useNestedColumnIndexerForSchemaDiscovery()
+        )
+    );
   }
 
   @Override

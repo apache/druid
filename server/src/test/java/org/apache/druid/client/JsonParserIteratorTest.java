@@ -75,7 +75,7 @@ public class JsonParserIteratorTest
           JAVA_TYPE,
           Futures.immediateFailedFuture(
               new QueryException(
-                  QueryTimeoutException.ERROR_CODE,
+                  QueryException.QUERY_TIMEOUT_ERROR_CODE,
                   "timeout exception conversion test",
                   null,
                   HOST

@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Injector;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -83,11 +84,12 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
   @Override
   public SqlEngine createEngine(
       QueryLifecycleFactory qlf,
-      ObjectMapper queryJsonMapper
+      ObjectMapper queryJsonMapper,
+      Injector injector
   )
   {
     // Create an engine that says yes to EngineFeature.SCAN_NEEDS_SIGNATURE.
-    return new ScanSignatureTestSqlEngine(super.createEngine(qlf, queryJsonMapper));
+    return new ScanSignatureTestSqlEngine(super.createEngine(qlf, queryJsonMapper, injector));
   }
 
   private static class ScanSignatureTestSqlEngine implements SqlEngine

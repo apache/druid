@@ -20,13 +20,16 @@ import { HotkeysProvider, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import React from 'react';
-import { Redirect, RouteComponentProps } from 'react-router';
+import type { RouteComponentProps } from 'react-router';
+import { Redirect } from 'react-router';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 
-import { HeaderActiveTab, HeaderBar, Loader } from './components';
-import { DruidEngine, QueryWithContext } from './druid-models';
+import type { HeaderActiveTab } from './components';
+import { HeaderBar, Loader } from './components';
+import type { DruidEngine, QueryWithContext } from './druid-models';
+import { Capabilities } from './helpers';
 import { AppToaster } from './singletons';
-import { Capabilities, QueryManager } from './utils';
+import { localStorageGetJson, LocalStorageKeys, QueryManager } from './utils';
 import {
   DatasourcesView,
   HomeView,
@@ -89,9 +92,17 @@ export class ConsoleApplication extends React.PureComponent<
 
     this.capabilitiesQueryManager = new QueryManager({
       processQuery: async () => {
-        const capabilities = await Capabilities.detectCapabilities();
-        if (!capabilities) ConsoleApplication.shownServiceNotification();
-        return capabilities || Capabilities.FULL;
+        const capabilitiesOverride = localStorageGetJson(LocalStorageKeys.CAPABILITIES_OVERRIDE);
+        const capabilities = capabilitiesOverride
+          ? new Capabilities(capabilitiesOverride)
+          : await Capabilities.detectCapabilities();
+
+        if (!capabilities) {
+          ConsoleApplication.shownServiceNotification();
+          return Capabilities.FULL;
+        }
+
+        return await Capabilities.detectCapacity(capabilities);
       },
       onStateChange: ({ data, loading }) => {
         this.setState({
@@ -259,6 +270,7 @@ export class ConsoleApplication extends React.PureComponent<
     return this.wrapInViewContainer(
       'workbench',
       <WorkbenchView
+        capabilities={capabilities}
         tabId={p.match.params.tabId}
         onTabChange={newTabId => {
           location.hash = `#workbench/${newTabId}`;
@@ -275,9 +287,14 @@ export class ConsoleApplication extends React.PureComponent<
   };
 
   private readonly wrappedSqlDataLoaderView = () => {
+    const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'sql-data-loader',
-      <SqlDataLoaderView goToQuery={this.goToQuery} goToIngestion={this.goToIngestionWithTaskId} />,
+      <SqlDataLoaderView
+        capabilities={capabilities}
+        goToQuery={this.goToQuery}
+        goToIngestion={this.goToIngestionWithTaskId}
+      />,
     );
   };
 

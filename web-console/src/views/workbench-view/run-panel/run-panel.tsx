@@ -34,6 +34,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { MenuCheckbox, MenuTristate } from '../../../components';
 import { EditContextDialog, StringInputDialog } from '../../../dialogs';
 import { IndexSpecDialog } from '../../../dialogs/index-spec-dialog/index-spec-dialog';
+import type { DruidEngine, IndexSpec, QueryContext, WorkbenchQuery } from '../../../druid-models';
 import {
   changeDurableShuffleStorage,
   changeFinalizeAggregations,
@@ -43,7 +44,6 @@ import {
   changeUseApproximateCountDistinct,
   changeUseApproximateTopN,
   changeUseCache,
-  DruidEngine,
   getDurableShuffleStorage,
   getFinalizeAggregations,
   getGroupByEnableMultiValueUnnesting,
@@ -52,10 +52,7 @@ import {
   getUseApproximateCountDistinct,
   getUseApproximateTopN,
   getUseCache,
-  IndexSpec,
-  QueryContext,
   summarizeIndexSpec,
-  WorkbenchQuery,
 } from '../../../druid-models';
 import { deepGet, pluralIfNeeded, tickIcon } from '../../../utils';
 import { MaxTasksButton } from '../max-tasks-button/max-tasks-button';
@@ -89,13 +86,15 @@ export interface RunPanelProps {
   onQueryChange(query: WorkbenchQuery): void;
   loading: boolean;
   small?: boolean;
-  onRun(preview: boolean): void;
+  onRun(preview: boolean): void | Promise<void>;
   queryEngines: DruidEngine[];
+  clusterCapacity: number | undefined;
   moreMenu?: JSX.Element;
 }
 
 export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
-  const { query, onQueryChange, onRun, moreMenu, loading, small, queryEngines } = props;
+  const { query, onQueryChange, onRun, moreMenu, loading, small, queryEngines, clusterCapacity } =
+    props;
   const [editContextDialogOpen, setEditContextDialogOpen] = useState(false);
   const [customTimezoneDialogOpen, setCustomTimezoneDialogOpen] = useState(false);
   const [indexSpecDialogSpec, setIndexSpecDialogSpec] = useState<IndexSpec | undefined>();
@@ -117,12 +116,12 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
 
   const handleRun = useCallback(() => {
     if (!onRun) return;
-    onRun(false);
+    void onRun(false);
   }, [onRun]);
 
   const handlePreview = useCallback(() => {
     if (!onRun) return;
-    onRun(true);
+    void onRun(true);
   }, [onRun]);
 
   const hotkeys = useMemo(() => {
@@ -195,7 +194,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
         className={effectiveEngine === 'native' ? 'rune-button' : undefined}
         disabled={loading}
         icon={IconNames.CARET_RIGHT}
-        onClick={() => onRun(false)}
+        onClick={() => void onRun(false)}
         text="Run"
         intent={!emptyQuery && !small ? Intent.PRIMARY : undefined}
         small={small}
@@ -205,7 +204,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
         <Button
           disabled={loading}
           icon={IconNames.EYE_OPEN}
-          onClick={() => onRun(true)}
+          onClick={() => void onRun(true)}
           text="Preview"
           small={small}
           minimal={small}
@@ -375,7 +374,11 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
             />
           </Popover2>
           {effectiveEngine === 'sql-msq-task' && (
-            <MaxTasksButton queryContext={queryContext} changeQueryContext={changeQueryContext} />
+            <MaxTasksButton
+              clusterCapacity={clusterCapacity}
+              queryContext={queryContext}
+              changeQueryContext={changeQueryContext}
+            />
           )}
         </ButtonGroup>
       )}

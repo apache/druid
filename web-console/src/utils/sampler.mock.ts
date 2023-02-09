@@ -17,7 +17,7 @@
  */
 
 // Just to make sure we are in a test context. This line will cause trouble if this file is ever compiled into the main build
-import { SampleHeaderAndRows } from './sampler';
+import type { SampleHeaderAndRows } from './sampler';
 
 expect(1).toEqual(1);
 
