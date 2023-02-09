@@ -94,7 +94,7 @@ public class DruidOperatorTableTest
             inlineOperatorConversion,
             localOperatorConversion
         ),
-        new PlannerOperatorConfig()
+        PlannerOperatorConfig.newInstance(null)
     );
 
     SqlOperatorConversion operatorConversion =
