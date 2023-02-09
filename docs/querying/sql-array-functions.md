@@ -49,7 +49,7 @@ identical to the [array functions](#array-functions), but use `ARRAY` types and 
 |`ARRAY_OVERLAP(arr1, arr2)`|Returns 1 if `arr1` and `arr2` have any elements in common, else 0.|
 |`ARRAY_OFFSET_OF(arr, expr)`|Returns the 0 based index of the first occurrence of `expr` in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array.|
 |`ARRAY_ORDINAL_OF(arr, expr)`|Returns the 1 based index of the first occurrence of `expr` in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array.|
-|`ARRAY_PREPEND(expr, arr)`|Prepends `expr` to `arr` at the beginning, the resulting array type determined by the type of `arr`.|
+|`ARRAY_PREPEND(expr, arr)`|Prepends `expr` to `arr`.  The type of `arr` determines the resulting array type.|
 |`ARRAY_APPEND(arr1, expr)`|Appends `expr` to `arr`, the resulting array type determined by the type of `arr1`.|
 |`ARRAY_CONCAT(arr1, arr2)`|Concatenates two arrays, the resulting array type determined by the type of `arr1`.|
 |`ARRAY_SLICE(arr, start, end)`|Returns the subarray of `arr` from the 0 based index `start` (inclusive) to `end` (exclusive). Returns `null`, if `start` is less than 0, greater than length of `arr`, or less than `end`.|
