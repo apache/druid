@@ -143,4 +143,20 @@ public abstract class FlatTextInputFormat implements InputFormat
   {
     return Objects.hash(listDelimiter, columns, findColumnsFromHeader, skipHeaderRows, delimiter);
   }
+
+  protected String fieldsToString()
+  {
+    StringBuilder buf = new StringBuilder()
+        .append("delimiter=\"" + delimiter +
+                "\", listDelimiter=");
+    if (listDelimiter == null) {
+      buf.append("null");
+    } else {
+      buf.append("\"" + listDelimiter + "\"");
+    }
+    buf.append(", findColumnsFromHeader=" + findColumnsFromHeader +
+        ", skipHeaderRows=" + skipHeaderRows +
+        ", columns=" + columns);
+    return buf.toString();
+  }
 }
