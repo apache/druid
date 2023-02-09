@@ -155,7 +155,7 @@ public class ITMultiStageQuery
             + "   channel VARCHAR, flags VARCHAR, delta BIGINT, isUnpatrolled VARCHAR, isNew VARCHAR, deltaBucket DOUBLE,\n"
             + "   isMinor VARCHAR, isAnonymous VARCHAR, deleted BIGINT, cityName VARCHAR, metroCode BIGINT, namespace VARCHAR,\n"
             + "   comment VARCHAR, page VARCHAR, commentLength BIGINT, countryName VARCHAR, \"user\" VARCHAR, regionIsoCode VARCHAR)\n"
-            + "PARTITIONED BY 'DAY'\n",
+            + "PARTITIONED BY DAY\n",
             datasource
         );
 
