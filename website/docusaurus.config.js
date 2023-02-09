@@ -24,8 +24,8 @@ module.exports={
       "@docusaurus/preset-classic",
       {
         "docs": {
-          "showLastUpdateAuthor": true,
-          "showLastUpdateTime": true,
+          "showLastUpdateAuthor": false,
+          "showLastUpdateTime": false,
           "editUrl": "https://github.com/apache/druid/edit/master/docs/",
           "path": "../docs",
           "sidebarPath": "../website/sidebars.json"
