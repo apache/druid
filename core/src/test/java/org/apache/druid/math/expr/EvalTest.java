@@ -783,13 +783,25 @@ public class EvalTest extends InitializedNullHandlingTest
     Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
     Assert.assertArrayEquals(new Object[] {1L, 2L, 3L}, (Object[]) eval.value());
 
+    eval = ExprEval.ofType(ExpressionType.LONG_ARRAY, new Object[] {"1", "2", "wat", "3"});
+    Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[] {1L, 2L, NullHandling.defaultLongValue(), 3L}, (Object[]) eval.value());
+
     eval = ExprEval.ofType(ExpressionType.LONG_ARRAY, new Object[] {1L, 2L, 3L});
     Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
     Assert.assertArrayEquals(new Object[] {1L, 2L, 3L}, (Object[]) eval.value());
 
+    eval = ExprEval.ofType(ExpressionType.LONG_ARRAY, new Object[] {1L, 2L, null, 3L});
+    Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[] {1L, 2L, NullHandling.defaultLongValue(), 3L}, (Object[]) eval.value());
+
     eval = ExprEval.ofType(ExpressionType.LONG_ARRAY, new Object[] {1.0, 2.0, 3.0});
     Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
     Assert.assertArrayEquals(new Object[] {1L, 2L, 3L}, (Object[]) eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.LONG_ARRAY, new Object[] {1.0, 2.0, null, 3.0});
+    Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[] {1L, 2L, NullHandling.defaultLongValue(), 3L}, (Object[]) eval.value());
 
     eval = ExprEval.ofType(ExpressionType.LONG_ARRAY, new Object[] {1.0, 2L, "3", true, false});
     Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
@@ -800,9 +812,17 @@ public class EvalTest extends InitializedNullHandlingTest
     Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
     Assert.assertArrayEquals(new Object[] {1.0, 2.0, 3.0}, (Object[]) eval.value());
 
+    eval = ExprEval.ofType(ExpressionType.DOUBLE_ARRAY, new Object[] {"1", "2", "wat", "3"});
+    Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[] {1.0, 2.0, NullHandling.defaultDoubleValue(), 3.0}, (Object[]) eval.value());
+
     eval = ExprEval.ofType(ExpressionType.DOUBLE_ARRAY, new Object[] {1L, 2L, 3L});
     Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
     Assert.assertArrayEquals(new Object[] {1.0, 2.0, 3.0}, (Object[]) eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.DOUBLE_ARRAY, new Object[] {1L, 2L, null, 3L});
+    Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[] {1.0, 2.0, NullHandling.defaultDoubleValue(), 3.0}, (Object[]) eval.value());
 
     eval = ExprEval.ofType(ExpressionType.DOUBLE_ARRAY, new Object[] {1.0, 2.0, 3.0});
     Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
@@ -922,7 +942,7 @@ public class EvalTest extends InitializedNullHandlingTest
 
     eval = ExprEval.bestEffortOf(new Object[] {null, 1.0, 2.0, 3.0});
     Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {null, 1.0, 2.0, 3.0}, (Object[]) eval.value());
+    Assert.assertArrayEquals(new Object[] {NullHandling.defaultDoubleValue(), 1.0, 2.0, 3.0}, (Object[]) eval.value());
 
     eval = ExprEval.bestEffortOf(new double[] {1.0, 2.0, 3.0});
     Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
