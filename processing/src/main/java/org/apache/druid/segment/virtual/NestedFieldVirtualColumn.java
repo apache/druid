@@ -61,7 +61,6 @@ import org.apache.druid.segment.nested.NestedPathArrayElement;
 import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.segment.nested.StructuredData;
-import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 import org.apache.druid.segment.vector.BaseDoubleVectorValueSelector;
 import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.NilVectorSelector;
@@ -613,7 +612,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     if (parts.isEmpty()) {
       return holder.getIndexSupplier();
     }
-    return NoIndexesColumnIndexSupplier.getInstance();
+    return null;
   }
 
   @Override
