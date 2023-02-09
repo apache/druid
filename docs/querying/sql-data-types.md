@@ -102,7 +102,7 @@ also be constructed from multiple columns using the array functions.
 ## Multi-value strings behavior
 The behavior of Druid [multi-value string dimensions](multi-value-dimensions.md) varies depending on the context of their usage.
 
-When used with standard `VARCHAR` functions which expect a single input value per row, such as `CONCAT`, Druid will map
+When used with standard `VARCHAR` functions, which expect a single input value per row, Druid maps the function across all values in the row.
 the function across all values in the row. If the row is null or empty, the function will recieve `NULL` as its input,
 otherwise it will be applied to every row value and continue its life as a multi-value `VARCHAR`.
 
