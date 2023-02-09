@@ -54,12 +54,14 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.column.ValueTypes;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.nested.CompressedNestedDataComplexColumn;
 import org.apache.druid.segment.nested.NestedDataComplexColumn;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.NestedPathArrayElement;
 import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.segment.nested.StructuredData;
+import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 import org.apache.druid.segment.vector.BaseDoubleVectorValueSelector;
 import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.NilVectorSelector;
@@ -416,7 +418,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
             this.columnName,
             theColumn.makeVectorValueSelector(offset),
             capabilities.toColumnType(),
-            expectedType
+            expectedType != null ? expectedType : capabilities.toColumnType() // cast to itself in case the underlying column doesn't support object selector...
         );
       }
       return theColumn.makeVectorObjectSelector(offset);
@@ -600,12 +602,18 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       ColumnSelector selector
   )
   {
-    final NestedDataComplexColumn column = NestedDataComplexColumn.fromColumnSelector(selector, this.columnName);
-
-    if (column == null) {
+    ColumnHolder holder = selector.getColumnHolder(this.columnName);
+    if (holder == null) {
       return null;
     }
-    return column.getColumnIndexSupplier(parts);
+    BaseColumn theColumn = holder.getColumn();
+    if (theColumn instanceof CompressedNestedDataComplexColumn) {
+      return ((CompressedNestedDataComplexColumn<?>) theColumn).getColumnIndexSupplier(parts);
+    }
+    if (parts.isEmpty()) {
+      return holder.getIndexSupplier();
+    }
+    return NoIndexesColumnIndexSupplier.getInstance();
   }
 
   @Override
@@ -637,17 +645,22 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     }
     // ColumnInspector isn't really enough... we need the ability to read the complex column itself to examine
     // the nested fields type information to really be accurate here, so we rely on the expectedType to guide us
-    final ColumnCapabilities complexCapabilites = inspector.getColumnCapabilities(this.columnName);
-    if (complexCapabilites != null && complexCapabilites.isDictionaryEncoded().isTrue()) {
-      return ColumnCapabilitiesImpl.createDefault()
-                                   .setType(expectedType != null ? expectedType : ColumnType.STRING)
-                                   .setDictionaryEncoded(true)
-                                   .setDictionaryValuesSorted(true)
-                                   .setDictionaryValuesUnique(true)
-                                   .setHasBitmapIndexes(true)
-                                   .setHasNulls(expectedType == null || (expectedType.isNumeric()
-                                                                         && NullHandling.sqlCompatible()));
+    final ColumnCapabilities capabilities = inspector.getColumnCapabilities(this.columnName);
+
+    if (capabilities != null) {
+      if (!capabilities.isPrimitive() && capabilities.isDictionaryEncoded().isTrue()) {
+        return ColumnCapabilitiesImpl.createDefault()
+                                     .setType(expectedType != null ? expectedType : ColumnType.STRING)
+                                     .setDictionaryEncoded(true)
+                                     .setDictionaryValuesSorted(true)
+                                     .setDictionaryValuesUnique(true)
+                                     .setHasBitmapIndexes(true)
+                                     .setHasNulls(expectedType == null || (expectedType.isNumeric()
+                                                                           && NullHandling.sqlCompatible()));
+      }
+      return capabilities;
     }
+
     return capabilities(columnName);
   }
 
