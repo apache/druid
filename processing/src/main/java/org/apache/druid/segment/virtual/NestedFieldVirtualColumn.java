@@ -411,13 +411,16 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     // not a nested column, but we can still do stuff if the path is the 'root', indicated by an empty path parts
     if (parts.isEmpty()) {
       ColumnCapabilities capabilities = holder.getCapabilities();
+      // expectedType shouldn't possibly be null if we are being asked for an object selector and the underlying column
+      // is numeric, else we would have been asked for a value selector
+      Preconditions.checkArgument(expectedType != null, "Asked for a VectorObjectSelector on a numeric column, 'expectedType' must not be null");
       if (capabilities.isNumeric()) {
         return ExpressionVectorSelectors.castValueSelectorToObject(
             offset,
             this.columnName,
             theColumn.makeVectorValueSelector(offset),
             capabilities.toColumnType(),
-            expectedType != null ? expectedType : capabilities.toColumnType() // cast to itself in case the underlying column doesn't support object selector...
+            expectedType
         );
       }
       return theColumn.makeVectorObjectSelector(offset);
@@ -647,7 +650,10 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     final ColumnCapabilities capabilities = inspector.getColumnCapabilities(this.columnName);
 
     if (capabilities != null) {
-      if (!capabilities.isPrimitive() && capabilities.isDictionaryEncoded().isTrue()) {
+      // if the underlying column is a nested column (and persisted to disk, re: the dictionary encoded check)
+      if (capabilities.is(ValueType.COMPLEX) &&
+          capabilities.getComplexTypeName().equals(NestedDataComplexTypeSerde.TYPE_NAME) &&
+          capabilities.isDictionaryEncoded().isTrue()) {
         return ColumnCapabilitiesImpl.createDefault()
                                      .setType(expectedType != null ? expectedType : ColumnType.STRING)
                                      .setDictionaryEncoded(true)
@@ -657,7 +663,12 @@ public class NestedFieldVirtualColumn implements VirtualColumn
                                      .setHasNulls(expectedType == null || (expectedType.isNumeric()
                                                                            && NullHandling.sqlCompatible()));
       }
-      return capabilities;
+      // column is not nested, use underlying column capabilities, adjusted for expectedType as necessary
+      ColumnCapabilitiesImpl copy = ColumnCapabilitiesImpl.copyOf(capabilities);
+      if (expectedType != null) {
+        copy.setType(expectedType);
+      }
+      return copy;
     }
 
     return capabilities(columnName);
