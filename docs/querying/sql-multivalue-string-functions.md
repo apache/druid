@@ -36,14 +36,15 @@ sidebar_label: "Multi-value string functions"
 
 Druid supports string dimensions containing multiple values.
 This page describes the operations you can perform on multi-value string dimensions using [Druid SQL](./sql.md).
-See [SQL multi-value string](./sql-data-types.md#multi-value-strings) and native [Multi-value dimensions](multi-value-dimensions.md) for more information.
+See [SQL multi-value strings](./sql-data-types.md#multi-value-strings) and native [Multi-value dimensions](multi-value-dimensions.md) for more information.
 
 All "array" references in the multi-value string function documentation can refer to multi-value string columns or
-`ARRAY` types. Multi-value strings can also be converted to `ARRAY` types using `MV_TO_ARRAY` (See [Multi-value string functions](sql-multivalue-string-functions.md) for more details.)
+`ARRAY` types. Multi-value strings can also be converted to `ARRAY` types using `MV_TO_ARRAY`, see
+[Multi-value string functions](sql-multivalue-string-functions.md), [`ARRAY` data type documentation](./sql-data-types.md#arrays),
+and [array functions](./sql-array-functions.md) for additional details.
 
 |Function|Notes|
 |--------|-----|
-|`ARRAY[expr1, expr2, ...]`|Constructs a SQL ARRAY literal from the expression arguments, using the type of the first argument as the output array type.|
 |`MV_FILTER_ONLY(expr, arr)`|Filters multi-value `expr` to include only values contained in array `arr`.|
 |`MV_FILTER_NONE(expr, arr)`|Filters multi-value `expr` to include no values contained in array `arr`.|
 |`MV_LENGTH(arr)`|Returns length of array expression.|
@@ -59,4 +60,4 @@ All "array" references in the multi-value string function documentation can refe
 |`MV_SLICE(arr, start, end)`|Returns the subarray of `arr` from the 0 based index start(inclusive) to end(exclusive), or `null`, if start is less than 0, greater than length of arr or less than end.|
 |`MV_TO_STRING(arr, str)`|Joins all elements of `arr` by the delimiter specified by `str`.|
 |`STRING_TO_MV(str1, str2)`|Splits `str1` into an array on the delimiter specified by `str2`.|
-|`MV_TO_ARRAY(str)`|Converts a multi-value string from being processed as a `VARCHAR` to an `ARRAY` instead.|
+|`MV_TO_ARRAY(str)`|Converts a multi-value string from a `VARCHAR` to an `ARRAY` instead.|
