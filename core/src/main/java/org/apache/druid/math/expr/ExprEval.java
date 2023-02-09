@@ -1219,7 +1219,11 @@ public abstract class ExprEval<T>
           ExpressionType elementType = (ExpressionType) castTo.getElementType();
           Object[] cast = new Object[value.length];
           for (int i = 0; i < value.length; i++) {
-            cast[i] = ExprEval.ofType(elementType(), value[i]).castTo(elementType).value();
+            if (value[i] == null) {
+              cast[i] = null;
+            } else {
+              cast[i] = ExprEval.ofType(elementType(), value[i]).castTo(elementType).value();
+            }
           }
           return ExprEval.ofArray(castTo, cast);
       }
