@@ -29,9 +29,7 @@ import org.apache.druid.segment.column.TypeStrategiesTest;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -53,9 +51,6 @@ public class EvalTest extends InitializedNullHandlingTest
         new TypeStrategiesTest.NullableLongPairTypeStrategy()
     );
   }
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   private long evalLong(String x, Expr.ObjectBinding bindings)
   {
@@ -270,73 +265,91 @@ public class EvalTest extends InitializedNullHandlingTest
   @Test
   public void testStringArrayToScalarStringBadCast()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("invalid type STRING");
-    ExprEval.ofStringArray(new String[]{"foo", "bar"}).castTo(ExpressionType.STRING);
+    Throwable t = Assert.assertThrows(
+        IAE.class,
+        () -> ExprEval.ofStringArray(new String[]{"foo", "bar"}).castTo(ExpressionType.STRING)
+    );
+    Assert.assertEquals("invalid type cannot cast ARRAY<STRING> to STRING", t.getMessage());
   }
 
   @Test
   public void testStringArrayToScalarLongBadCast()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("invalid type LONG");
-    ExprEval.ofStringArray(new String[]{"foo", "bar"}).castTo(ExpressionType.LONG);
+    Throwable t = Assert.assertThrows(
+        IAE.class,
+        () -> ExprEval.ofStringArray(new String[]{"foo", "bar"}).castTo(ExpressionType.LONG)
+    );
+    Assert.assertEquals("invalid type cannot cast ARRAY<STRING> to LONG", t.getMessage());
   }
 
   @Test
   public void testStringArrayToScalarDoubleBadCast()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("invalid type DOUBLE");
-    ExprEval.ofStringArray(new String[]{"foo", "bar"}).castTo(ExpressionType.DOUBLE);
+    Throwable t = Assert.assertThrows(
+        IAE.class,
+        () -> ExprEval.ofStringArray(new String[]{"foo", "bar"}).castTo(ExpressionType.DOUBLE)
+    );
+    Assert.assertEquals("invalid type cannot cast ARRAY<STRING> to DOUBLE", t.getMessage());
   }
 
   @Test
   public void testLongArrayToScalarStringBadCast()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("invalid type STRING");
-    ExprEval.ofLongArray(new Long[]{1L, 2L}).castTo(ExpressionType.STRING);
+    Throwable t = Assert.assertThrows(
+        IAE.class,
+        () -> ExprEval.ofLongArray(new Long[]{1L, 2L}).castTo(ExpressionType.STRING)
+    );
+    Assert.assertEquals("invalid type cannot cast ARRAY<LONG> to STRING", t.getMessage());
   }
 
   @Test
   public void testLongArrayToScalarLongBadCast()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("invalid type LONG");
-    ExprEval.ofLongArray(new Long[]{1L, 2L}).castTo(ExpressionType.LONG);
+    Throwable t = Assert.assertThrows(
+        IAE.class,
+        () -> ExprEval.ofLongArray(new Long[]{1L, 2L}).castTo(ExpressionType.LONG)
+    );
+    Assert.assertEquals("invalid type cannot cast ARRAY<LONG> to LONG", t.getMessage());
   }
 
   @Test
   public void testLongArrayToScalarDoubleBadCast()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("invalid type DOUBLE");
-    ExprEval.ofLongArray(new Long[]{1L, 2L}).castTo(ExpressionType.DOUBLE);
+    Throwable t = Assert.assertThrows(
+        IAE.class,
+        () -> ExprEval.ofLongArray(new Long[]{1L, 2L}).castTo(ExpressionType.DOUBLE)
+    );
+    Assert.assertEquals("invalid type cannot cast ARRAY<LONG> to DOUBLE", t.getMessage());
   }
 
   @Test
   public void testDoubleArrayToScalarStringBadCast()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("invalid type STRING");
-    ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).castTo(ExpressionType.STRING);
+    Throwable t = Assert.assertThrows(
+        IAE.class,
+        () -> ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).castTo(ExpressionType.STRING)
+    );
+    Assert.assertEquals("invalid type cannot cast ARRAY<DOUBLE> to STRING", t.getMessage());
   }
 
   @Test
   public void testDoubleArrayToScalarLongBadCast()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("invalid type LONG");
-    ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).castTo(ExpressionType.LONG);
+    Throwable t = Assert.assertThrows(
+        IAE.class,
+        () -> ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).castTo(ExpressionType.LONG)
+    );
+    Assert.assertEquals("invalid type cannot cast ARRAY<DOUBLE> to LONG", t.getMessage());
   }
 
   @Test
   public void testDoubleArrayToScalarDoubleBadCast()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("invalid type DOUBLE");
-    ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).castTo(ExpressionType.DOUBLE);
+    Throwable t = Assert.assertThrows(
+        IAE.class,
+        () -> ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).castTo(ExpressionType.DOUBLE)
+    );
+    Assert.assertEquals("invalid type cannot cast ARRAY<DOUBLE> to DOUBLE", t.getMessage());
   }
 
   @Test
