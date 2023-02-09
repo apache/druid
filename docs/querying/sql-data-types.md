@@ -92,7 +92,7 @@ the `UNNEST` functionality available in some other SQL dialects. Refer to the do
 > nearly all possible native functionality.
 
 ## Arrays
-Druid also has support for `ARRAY` types constructed at query time, though currently lacks the ability to store them in
+Druid supports `ARRAY` types constructed at query time, though it currently lacks the ability to store them in
 segments. `ARRAY` types behave as standard SQL arrays, where results are grouped by matching entire arrays. This is in
 contrast to the implicit `UNNEST` that occurs when grouping on multi-value dimensions directly or when used with the
 multi-value functions. You can convert multi-value dimensions to standard SQL arrays either by explicitly converting
