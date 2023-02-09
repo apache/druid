@@ -801,7 +801,7 @@ public abstract class ExprEval<T>
               return ExprEval.ofStringArray(value == null ? null : new Object[] {value.toString()});
           }
       }
-      throw new IAE("invalid type cannot cast " + ExpressionType.DOUBLE + " to " + castTo);
+      throw new IAE("invalid type cannot cast " + type() + " to " + castTo);
     }
 
     @Override
@@ -866,7 +866,7 @@ public abstract class ExprEval<T>
               return ExprEval.ofStringArray(value == null ? null : new Object[] {value.toString()});
           }
       }
-      throw new IAE("invalid type " + castTo);
+      throw new IAE("invalid type cannot cast " + type() + " to " + castTo);
     }
 
     @Override
@@ -1035,7 +1035,7 @@ public abstract class ExprEval<T>
               return ExprEval.ofStringArray(value == null ? null : new Object[] {value});
           }
       }
-      throw new IAE("invalid type " + castTo);
+      throw new IAE("invalid type cannot cast " + type() + " to " + castTo);
     }
 
     @Override
@@ -1224,7 +1224,7 @@ public abstract class ExprEval<T>
           return ExprEval.ofArray(castTo, cast);
       }
 
-      throw new IAE("invalid type " + castTo);
+      throw new IAE("invalid type cannot cast " + type() + " to " + castTo);
     }
 
     @Override
