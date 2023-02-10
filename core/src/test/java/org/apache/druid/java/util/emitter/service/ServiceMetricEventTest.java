@@ -27,8 +27,10 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Map;
 
 /**
+ *
  */
 public class ServiceMetricEventTest
 {
@@ -291,4 +293,25 @@ public class ServiceMetricEventTest
     ServiceMetricEvent.builder().build("foo", 0 / 0f);
   }
 
+  @Test
+  public void testSetDimensionIfNotNullSetsNonNullDimension()
+  {
+    Map<String, String> userDimMap = ImmutableMap.of("k1", "v1", "k2", "v2");
+    ServiceMetricEvent target = ServiceMetricEvent.builder()
+                                                  .setDimensionIfNotNull("userDimMap", userDimMap)
+                                                  .build("foo", 1)
+                                                  .build("service", "host");
+    Assert.assertEquals(userDimMap, target.getUserDims().get("userDimMap"));
+  }
+
+  @Test
+  public void testSetDimensionIfNotNullShouldNotSetNullDimension()
+  {
+    ServiceMetricEvent target = ServiceMetricEvent.builder()
+                                                  .setDimensionIfNotNull("userDimMap", null)
+                                                  .build("foo", 1)
+                                                  .build("service", "host");
+    Assert.assertTrue(target.getUserDims().isEmpty());
+    Assert.assertNull(target.getUserDims().get("userDimMap"));
+  }
 }

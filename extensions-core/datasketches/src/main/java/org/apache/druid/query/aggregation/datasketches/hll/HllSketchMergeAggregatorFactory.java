@@ -92,17 +92,19 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
     return AggregatorUtil.HLL_SKETCH_MERGE_CACHE_TYPE_ID;
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public Aggregator factorize(final ColumnSelectorFactory columnSelectorFactory)
   {
-    final ColumnValueSelector<HllSketch> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
+    final ColumnValueSelector<HllSketchHolder> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
     return new HllSketchMergeAggregator(selector, getLgK(), TgtHllType.valueOf(getTgtHllType()));
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory columnSelectorFactory)
   {
-    final ColumnValueSelector<HllSketch> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
+    final ColumnValueSelector<HllSketchHolder> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
     return new HllSketchMergeBufferAggregator(
         selector,
         getLgK(),

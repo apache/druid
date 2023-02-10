@@ -93,7 +93,7 @@ public class HllSketchBuildVectorAggregator implements VectorAggregator
   @Override
   public Object get(final ByteBuffer buf, final int position)
   {
-    return helper.get(buf, position);
+    return HllSketchHolder.of(helper.get(buf, position));
   }
 
   /**
