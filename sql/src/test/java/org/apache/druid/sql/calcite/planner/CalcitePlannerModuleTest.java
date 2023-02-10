@@ -170,16 +170,21 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
   @Test
   public void testExtensionCalciteRule()
   {
-    PlannerContext context = PlannerContext.create(
-        "SELECT 1",
+    PlannerToolbox toolbox = new SimplePlannerToolbox(
         injector.getInstance(DruidOperatorTable.class),
         macroTable,
         new DefaultObjectMapper(),
         injector.getInstance(PlannerConfig.class),
         rootSchema,
+        joinableFactoryWrapper,
+        CatalogResolver.NULL_RESOLVER
+    );
+    PlannerContext context = PlannerContext.create(
+        toolbox,
+        "SELECT 1",
         null,
         Collections.emptyMap(),
-        joinableFactoryWrapper
+        null
     );
     boolean containsCustomRule = injector.getInstance(CalciteRulesManager.class)
                                          .druidConventionRuleSet(context)

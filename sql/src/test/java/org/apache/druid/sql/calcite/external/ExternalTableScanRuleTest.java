@@ -25,8 +25,11 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.PlannerToolbox;
+import org.apache.druid.sql.calcite.planner.SimplePlannerToolbox;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
@@ -49,8 +52,7 @@ public class ExternalTableScanRuleTest
         EasyMock.createMock(QuerySegmentWalker.class),
         EasyMock.createMock(QueryRunnerFactoryConglomerate.class)
     );
-    final PlannerContext plannerContext = PlannerContext.create(
-        "DUMMY", // The actual query isn't important for this test
+    final PlannerToolbox toolbox = new SimplePlannerToolbox(
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
         CalciteTests.getJsonMapper(),
@@ -62,9 +64,15 @@ public class ExternalTableScanRuleTest
                 NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
             )
         ),
+        CalciteTests.createJoinableFactoryWrapper(),
+        CatalogResolver.NULL_RESOLVER
+    );
+    final PlannerContext plannerContext = PlannerContext.create(
+        toolbox,
+        "DUMMY", // The actual query isn't important for this test
         engine,
         Collections.emptyMap(),
-        CalciteTests.createJoinableFactoryWrapper()
+        null
     );
     plannerContext.setQueryMaker(
         engine.buildQueryMakerForSelect(EasyMock.createMock(RelRoot.class), plannerContext)
