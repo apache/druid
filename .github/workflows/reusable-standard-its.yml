@@ -106,6 +106,7 @@ jobs:
             ${{ inputs.test_profile == 'integration-tests' &&
             format('-Djvm.runtime={0} -Dit.indexer={1} -Doverride.config.path={2}', inputs.runtime_jdk, inputs.use_indexer, inputs.override_config_path) ||
             format('-Dpod.name={0} -Dpod.namespace={1} -Dbuild.druid.cluster={2}',  inputs.pod_name, inputs.pod_namespace, inputs.build_druid_cluster) }}
+          CONFIG_FILE: ${{ inputs.config_file }}
         run: |
           # Debug echo
           echo "Mysql driver: ${MYSQL_DRIVER_CLASSNAME}"
