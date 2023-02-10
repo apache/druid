@@ -122,7 +122,7 @@ Segments table provides details on all Druid segments, whether they are publishe
 |segment_id|VARCHAR|Unique segment identifier|
 |datasource|VARCHAR|Name of datasource|
 |start|VARCHAR|Interval start time (in ISO 8601 format)|
-|end|STRVARCHARING|Interval end time (in ISO 8601 format)|
+|end|VARCHAR|Interval end time (in ISO 8601 format)|
 |size|BIGINT|Size of segment in bytes|
 |version|VARCHAR|Version string (generally an ISO8601 timestamp corresponding to when the segment set was first started). Higher version means the more recently created segment. Version comparing is based on string comparison.|
 |partition_num|BIGINT|Partition number (an integer, unique within a datasource+interval+version; may not necessarily be contiguous)|
