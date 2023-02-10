@@ -1,7 +1,7 @@
 # Jupyter Notebook tutorials for Druid
 
 If you are reading this in Jupyter, switch over to the [- START HERE -](- START HERE -.ipynb]
-notebok instead.
+notebook instead.
 
 <!-- This README, the "- START HERE -" notebook, and the tutorial-jupyter-index.md file in
 docs/tutorials share a lot of the same content. If you make a change in one place, update
