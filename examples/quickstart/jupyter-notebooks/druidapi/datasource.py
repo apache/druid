@@ -34,6 +34,37 @@ class DatasourceClient:
     def __init__(self, rest_client):
         self.client = rest_client
 
+    def names(self, include_unused=False, include_disabled=False):
+        """
+        Returns a list of the names of data sources in the metadata store.
+        
+        Parameters
+        ----------
+        include_unused : bool, default = False
+            if False, returns only datasources with at least one used segment
+            in the cluster.
+
+        include_unused : bool, default = False
+            if False, returns only enamed datasources.
+
+        Reference
+        ---------
+        * `GET /druid/coordinator/v1/metadata/datasources`
+        * `GET /druid/coordinator/v1/metadata/datasources?includeUnused`
+        * `GET /druid/coordinator/v1/metadata/datasources?includeDisabled`
+
+        See https://druid.apache.org/docs/latest/operations/api-reference.html#get-4
+
+        Note: this method uses a semi-deprecated API.
+        See `Metadata.user_table_names()` for the preferred solution.
+        """
+        params = {}
+        if include_unused:
+            params['includeUnused'] = ''
+        if include_disabled:
+            params['includeDisabled'] = ''
+        return self.client.get_json(REQ_DATASOURCES, params=params)
+    
     def drop(self, ds_name, ifExists=False):
         """
         Drops a data source.

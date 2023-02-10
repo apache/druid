@@ -30,6 +30,9 @@ class DruidClient:
         self.tasks_client = None
         self.datasource_client = None
 
+    def rest(self):
+        return self.rest_client
+
     def trace(self, enable=True):
         self.rest_client.enable_trace(enable)
     
