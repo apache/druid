@@ -331,8 +331,12 @@ public class WorkerImpl implements Worker
         final StageDefinition stageDefinition = kernel.getStageDefinition();
 
         if (kernel.getPhase() == WorkerStagePhase.NEW) {
-          log.debug("New work order: %s", context.jsonMapper().writeValueAsString(kernel.getWorkOrder()));
 
+          if (log.isDebugEnabled()) {
+            log.debug("Processing work order: %s", context.jsonMapper().writeValueAsString(kernel.getWorkOrder()));
+          } else {
+            log.info("Processing work order for stage[%d]", kernel.getStageDefinition().getStageNumber());
+          }
           // Create separate inputChannelFactory per stage, because the list of tasks can grow between stages, and
           // so we need to avoid the memoization in baseInputChannelFactory.
           final InputChannelFactory inputChannelFactory = makeBaseInputChannelFactory(closer);
@@ -444,6 +448,7 @@ public class WorkerImpl implements Worker
   @Override
   public void stopGracefully()
   {
+    log.info("Stopping gracefully");
     kernelManipulationQueue.add(
         kernel -> {
           // stopGracefully() is called when the containing process is terminated, or when the task is canceled.
@@ -520,6 +525,7 @@ public class WorkerImpl implements Worker
   @Override
   public void postWorkOrder(final WorkOrder workOrder)
   {
+    log.info("Got work order for stage[%d]", workOrder.getStageNumber());
     if (task.getWorkerNumber() != workOrder.getWorkerNumber()) {
       throw new ISE("Worker number mismatch: expected [%d]", task.getWorkerNumber());
     }
@@ -582,12 +588,14 @@ public class WorkerImpl implements Worker
   @Override
   public void postFinish()
   {
+    log.info("Finish received");
     kernelManipulationQueue.add(KernelHolder::setDone);
   }
 
   @Override
   public ClusterByStatisticsSnapshot fetchStatisticsSnapshot(StageId stageId)
   {
+    log.info("Fetching statistics for stage:[%d]", stageId.getStageNumber());
     if (stageKernelMap.get(stageId) == null) {
       throw new ISE("Requested statistics snapshot for non-existent stageId %s.", stageId);
     } else if (stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot() == null) {
@@ -603,6 +611,11 @@ public class WorkerImpl implements Worker
   @Override
   public ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(StageId stageId, long timeChunk)
   {
+    log.debug(
+        "Fetching statistics for stage:[%d] with timechunk:[%d]",
+        stageId.getStageNumber(),
+        timeChunk
+    );
     if (stageKernelMap.get(stageId) == null) {
       throw new ISE("Requested statistics snapshot for non-existent stageId[%s].", stageId);
     } else if (stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot() == null) {
