@@ -100,6 +100,7 @@ jobs:
           fail-on-cache-miss: true
 
       - name: Run IT
+        id: test
         env:
           MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }}
           TEST_ARGS: |
@@ -112,3 +113,11 @@ jobs:
           echo "Mysql driver: ${MYSQL_DRIVER_CLASSNAME}"
           echo "MAVEN_OPTS='-Xmx2048m' ${MVN} verify -pl integration-tests -P ${{ inputs.test_profile }} ${{ inputs.testing_groups }} ${MAVEN_SKIP} ${TEST_ARGS}"
           MAVEN_OPTS='-Xmx2048m' ${MVN} verify -pl integration-tests -P ${{ inputs.test_profile }} ${{ inputs.testing_groups }} ${MAVEN_SKIP} ${TEST_ARGS}
+
+      - name: Debug on failure
+        if: ${{ failure() && inputs.test_profile == 'int-tests-config-file' && steps.test.conclusion == 'failure' }}
+        run: |
+          for v in broker middlemanager router coordinator historical ; do
+          echo "------------------------druid-tiny-cluster-"$v"s-0-------------------------";
+          sudo /usr/local/bin/kubectl logs --tail 1000 druid-tiny-cluster-"$v"s-0;
+          done
