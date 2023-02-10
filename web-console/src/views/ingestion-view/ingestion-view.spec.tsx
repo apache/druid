@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import { shallow } from 'enzyme';
 import React from 'react';
 
 import { Capabilities } from '../../helpers';
+import { shallow } from '../../utils/shallow-renderer';
 
 import { IngestionView } from './ingestion-view';
 

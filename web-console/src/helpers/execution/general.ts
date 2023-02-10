@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import { CancelToken } from 'axios';
-import { QueryResult } from 'druid-query-toolkit';
+import type { CancelToken } from 'axios';
+import type { QueryResult } from 'druid-query-toolkit';
 
-import { Execution } from '../../druid-models';
+import type { Execution } from '../../druid-models';
 import { IntermediateQueryState } from '../../utils';
 
 import {

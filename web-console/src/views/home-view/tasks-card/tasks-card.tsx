@@ -20,8 +20,9 @@ import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
 import { PluralPairIfNeeded } from '../../../components';
-import { CapacityInfo } from '../../../druid-models';
-import { Capabilities, getClusterCapacity } from '../../../helpers';
+import type { CapacityInfo } from '../../../druid-models';
+import type { Capabilities } from '../../../helpers';
+import { getClusterCapacity } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
 import { lookupBy, pluralIfNeeded, queryDruidSql } from '../../../utils';
@@ -76,7 +77,7 @@ export interface TasksCardProps {
 export const TasksCard = React.memo(function TasksCard(props: TasksCardProps) {
   const [cardState] = useQueryManager<Capabilities, TaskCountsAndCapacity>({
     processQuery: async capabilities => {
-      const taskCounts = getTaskCounts(capabilities);
+      const taskCounts = await getTaskCounts(capabilities);
       if (!capabilities.hasOverlordAccess()) return taskCounts;
 
       const capacity = await getClusterCapacity();

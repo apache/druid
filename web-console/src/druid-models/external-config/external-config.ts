@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import type { SqlQuery } from 'druid-query-toolkit';
 import {
   C,
   F,
@@ -24,14 +25,13 @@ import {
   SqlExpression,
   SqlFunction,
   SqlLiteral,
-  SqlQuery,
   SqlStar,
 } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 
 import { nonEmptyArray } from '../../utils';
-import { InputFormat } from '../input-format/input-format';
-import { InputSource } from '../input-source/input-source';
+import type { InputFormat } from '../input-format/input-format';
+import type { InputSource } from '../input-source/input-source';
 
 export const MULTI_STAGE_QUERY_MAX_COLUMNS = 2000;
 const MAX_LINES = 10;

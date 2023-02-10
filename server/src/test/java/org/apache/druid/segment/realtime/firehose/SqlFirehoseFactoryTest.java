@@ -28,16 +28,14 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.input.SqlTestUtils;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.transform.TransformSpec;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
@@ -47,10 +45,11 @@ import java.util.List;
 
 public class SqlFirehoseFactoryTest
 {
-  private static final List<File> FIREHOSE_TMP_DIRS = new ArrayList<>();
-  private static File TEST_DIR;
   private static final String TABLE_NAME_1 = "FOOS_TABLE_1";
   private static final String TABLE_NAME_2 = "FOOS_TABLE_2";
+
+  @Rule
+  public TemporaryFolder test_dir = new TemporaryFolder();
 
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
@@ -68,23 +67,6 @@ public class SqlFirehoseFactoryTest
   );
   private TestDerbyConnector derbyConnector;
 
-  @BeforeClass
-  public static void setup() throws IOException
-  {
-    TEST_DIR = File.createTempFile(SqlFirehoseFactoryTest.class.getSimpleName(), "testDir");
-    org.apache.commons.io.FileUtils.forceDelete(TEST_DIR);
-    FileUtils.mkdirp(TEST_DIR);
-  }
-
-  @AfterClass
-  public static void teardown() throws IOException
-  {
-    org.apache.commons.io.FileUtils.forceDelete(TEST_DIR);
-    for (File dir : FIREHOSE_TMP_DIRS) {
-      org.apache.commons.io.FileUtils.forceDelete(dir);
-    }
-  }
-
   private void assertNumRemainingCacheFiles(File firehoseTmpDir, int expectedNumFiles)
   {
     final String[] files = firehoseTmpDir.list();
@@ -94,14 +76,7 @@ public class SqlFirehoseFactoryTest
 
   private File createFirehoseTmpDir(String dirSuffix) throws IOException
   {
-    final File firehoseTempDir = File.createTempFile(
-        SqlFirehoseFactoryTest.class.getSimpleName(),
-        dirSuffix
-    );
-    org.apache.commons.io.FileUtils.forceDelete(firehoseTempDir);
-    FileUtils.mkdirp(firehoseTempDir);
-    FIREHOSE_TMP_DIRS.add(firehoseTempDir);
-    return firehoseTempDir;
+    return test_dir.newFolder(dirSuffix);
   }
 
   @Test

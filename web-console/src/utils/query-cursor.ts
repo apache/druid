@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-import { L, SqlBase, SqlQuery } from 'druid-query-toolkit';
+import type { SqlBase, SqlQuery } from 'druid-query-toolkit';
+import { L } from 'druid-query-toolkit';
 
 export const EMPTY_LITERAL = L('');
 

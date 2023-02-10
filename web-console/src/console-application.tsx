@@ -20,11 +20,13 @@ import { HotkeysProvider, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import React from 'react';
-import { Redirect, RouteComponentProps } from 'react-router';
+import type { RouteComponentProps } from 'react-router';
+import { Redirect } from 'react-router';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 
-import { HeaderActiveTab, HeaderBar, Loader } from './components';
-import { DruidEngine, QueryWithContext } from './druid-models';
+import type { HeaderActiveTab } from './components';
+import { HeaderBar, Loader } from './components';
+import type { DruidEngine, QueryWithContext } from './druid-models';
 import { Capabilities } from './helpers';
 import { AppToaster } from './singletons';
 import { localStorageGetJson, LocalStorageKeys, QueryManager } from './utils';
