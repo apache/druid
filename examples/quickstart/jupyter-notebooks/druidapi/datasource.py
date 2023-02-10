@@ -64,7 +64,7 @@ class DatasourceClient:
         check_error(r)
 
     def load_status_req(self, ds_name, params=None):
-        return self.client.get_json(REQ_DS_LOAD_STATUS, args=[ds_name], params=params)
+        return self.rest_client.get_json(REQ_DS_LOAD_STATUS, args=[ds_name], params=params)
     
     def load_status(self, ds_name):
         return self.load_status_req(ds_name, {
