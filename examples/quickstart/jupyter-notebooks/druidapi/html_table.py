@@ -74,13 +74,14 @@ def start_tag(tag, align):
 class HtmlTable(BaseTable):
 
     def __init__(self):
+        BaseTable.__init__(self)
         self._headers = None
         self._align = None
         self._col_fmt = None
 
     def widths(self, widths):
         self._widths = widths
-    
+
     def format(self, rows):
         _, width = self.row_width(rows)
         headers = self.pad_headers(width)

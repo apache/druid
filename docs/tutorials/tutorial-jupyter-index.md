@@ -41,7 +41,7 @@ Make sure you meet the following requirements before starting the Jupyter-based 
    ````
 
 - JupyterLab (recommended) or Jupyter Notebook running on a non-default port. By default, Druid
-  and Jupyter both try to use port `8888,` so start Jupyter on a different port.
+  and Jupyter both try to use port `8888`, so start Jupyter on a different port.
 
   - Install JupyterLab or Notebook:
 

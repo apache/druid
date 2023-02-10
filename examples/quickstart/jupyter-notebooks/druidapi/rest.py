@@ -22,7 +22,7 @@ def check_error(response):
     """
     Raises a requests HttpError if the response code is not OK or Accepted.
 
-    If the response inclded a JSON payload, then the message is extracted
+    If the response included a JSON payload, then the message is extracted
     from that payload, else the message is from requests. The JSON
     payload, if any, is returned in the json field of the error.
     """
@@ -33,7 +33,9 @@ def check_error(response):
     json = None
     try:
         json = response.json()
-    except Exception: 
+    except Exception:
+        # If we can't get the JSON, just move on, we'll figure
+        # things out another way.
         pass
     msg = dict_get(json, 'errorMessage')
     if msg is None:
@@ -56,12 +58,12 @@ class DruidRestClient:
     requests Python package. Handles the grunt work of building up
     URLs, working with JSON, etc.
     '''
-    
+
     def __init__(self, endpoint):
         self.endpoint = endpoint
         self.trace = False
         self.session = requests.Session()
-        
+
     def enable_trace(self, flag=True):
         self.trace = flag
 
@@ -131,7 +133,7 @@ class DruidRestClient:
     def post(self, req, body, args=None, headers=None, require_ok=True) -> requests.Request:
         """
         Issues a POST request for the given URL on this
-        node, with the given payload and optional URL query 
+        node, with the given payload and optional URL query
         parameters.
         """
         url = self.build_url(req, args)
@@ -146,7 +148,7 @@ class DruidRestClient:
     def post_json(self, req, body, args=None, headers=None, params=None):
         """
         Issues a POST request for the given URL on this
-        node, with the given payload and optional URL query 
+        node, with the given payload and optional URL query
         parameters. The payload is serialized to JSON.
         """
         r = self.post_only_json(req, body, args, headers, params)
@@ -156,7 +158,7 @@ class DruidRestClient:
     def post_only_json(self, req, body, args=None, headers=None, params=None) -> requests.Request:
         """
         Issues a POST request for the given URL on this
-        node, with the given payload and optional URL query 
+        node, with the given payload and optional URL query
         parameters. The payload is serialized to JSON.
 
         Does not parse error messages: that is up to the caller.

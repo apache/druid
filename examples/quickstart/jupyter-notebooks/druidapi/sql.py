@@ -35,24 +35,24 @@ class SqlRequest:
         self.headers = None
         self.types = None
         self.sqlTypes = None
-    
+
     def with_format(self, result_format):
         self.format = result_format
         return self
-    
+
     def with_headers(self, sqlTypes=False, druidTypes=False):
         self.headers = True
         self.types = druidTypes
         self.sqlTypes = sqlTypes
         return self
-    
+
     def with_context(self, context):
         if self.context is None:
             self.context = context
         else:
             self.context.update(context)
         return self
-    
+
     def with_parameters(self, params):
         '''
         Set the array of parameters. Parameters must each be a map of 'type'/'value' pairs:
@@ -64,7 +64,7 @@ class SqlRequest:
         else:
             self.params.update(params)
         return self
-    
+
     def add_parameter(self, value):
         '''
         Add one parameter value. Infers the type of the parameter from the Python type.
@@ -94,7 +94,7 @@ class SqlRequest:
     def request_headers(self, headers):
         self.headers = headers
         return self
-    
+
     def to_request(self):
         query_obj = {"query": self.sql}
         if self.context is not None and len(self.context) > 0:
@@ -220,7 +220,7 @@ def parse_schema(fmt, context, results):
 def is_response_ok(http_response):
     code = http_response.status_code
     return code == requests.codes.ok or code == requests.codes.accepted
- 
+
 class ColumnSchema:
 
     def __init__(self, name, sql_type, druid_type):
@@ -266,12 +266,6 @@ class SqlQueryResult:
         The query rows and schema are available only if ok() returns True.
         """
         return is_response_ok(self.http_response)
-    
-    def error(self):
-        """
-        If the query fails, returns the error, if any provided by Druid.
-        """
-        return self._error
 
     def error_msg(self):
         err = self.error()
@@ -312,6 +306,9 @@ class SqlQueryResult:
             return self.rows()
 
     def error(self):
+        """
+        If the query fails, returns the error, if any provided by Druid.
+        """
         if self.ok():
             return None
         if self._error is not None:
@@ -328,7 +325,7 @@ class SqlQueryResult:
         if self._json is None:
             self._json = self.http_response.json()
         return self._json
-    
+
     def rows(self):
         """
         Returns the rows of data for the query.
@@ -407,7 +404,7 @@ class QueryTaskResult:
         self.response_obj = response.json()
         self._id = self.response_obj['taskId']
         self._state = self.response_obj['state']
-    
+
     def ok(self):
         """
         Reports if the query succeeded.
@@ -428,14 +425,14 @@ class QueryTaskResult:
         """
         self.check_valid()
         # Example:
-        # {'task': 'talaria-sql-w000-b373b68d-2675-4035-b4d2-7a9228edead6', 
+        # {'task': 'talaria-sql-w000-b373b68d-2675-4035-b4d2-7a9228edead6',
         # 'status': {
-        #   'id': 'talaria-sql-w000-b373b68d-2675-4035-b4d2-7a9228edead6', 
-        #   'groupId': 'talaria-sql-w000-b373b68d-2675-4035-b4d2-7a9228edead6', 
-        #   'type': 'talaria0', 'createdTime': '2022-04-28T23:19:50.331Z', 
-        #   'queueInsertionTime': '1970-01-01T00:00:00.000Z', 
-        #   'statusCode': 'RUNNING', 'status': 'RUNNING', 'runnerStatusCode': 'PENDING', 
-        #   'duration': -1, 'location': {'host': None, 'port': -1, 'tlsPort': -1}, 
+        #   'id': 'talaria-sql-w000-b373b68d-2675-4035-b4d2-7a9228edead6',
+        #   'groupId': 'talaria-sql-w000-b373b68d-2675-4035-b4d2-7a9228edead6',
+        #   'type': 'talaria0', 'createdTime': '2022-04-28T23:19:50.331Z',
+        #   'queueInsertionTime': '1970-01-01T00:00:00.000Z',
+        #   'statusCode': 'RUNNING', 'status': 'RUNNING', 'runnerStatusCode': 'PENDING',
+        #   'duration': -1, 'location': {'host': None, 'port': -1, 'tlsPort': -1},
         #   'dataSource': 'w000', 'errorMsg': None}}
         self._status = self._tasks().task_status(self._id)
         self._state = self._status['status']['status']
@@ -543,14 +540,14 @@ class QueryTaskResult:
         disp.show(data)
 
 class QueryClient:
-    
+
     def __init__(self, druid, rest_client=None):
         self.druid_client = druid
         self._rest_client = druid.rest_client if rest_client is None else rest_client
 
     def rest_client(self):
         return self._rest_client
-        
+
     def _prepare_query(self, request):
         if request is None:
             raise ClientError("No query provided.")
@@ -596,7 +593,7 @@ class QueryClient:
             raise ClientError("No query provided.")
         results = self.sql('EXPLAIN PLAN FOR ' + query)
         return results[0]
-    
+
     def sql_request(self, sql):
         return SqlRequest(self, sql)
 
@@ -628,7 +625,7 @@ class QueryClient:
 
     def tables(self, schema=consts.DRUID_SCHEMA):
         return self._tables_query(schema).rows()
-    
+
     def show_tables(self, schema=consts.DRUID_SCHEMA):
         self._tables_query(schema).show()
 
@@ -650,7 +647,7 @@ class QueryClient:
             schema = part1
             table = part2
         self.show('''
-            SELECT 
+            SELECT
               ORDINAL_POSITION AS "Position",
               COLUMN_NAME AS "Name",
               DATA_TYPE AS "Type"
@@ -659,7 +656,7 @@ class QueryClient:
               AND TABLE_NAME = '{}'
             ORDER BY ORDINAL_POSITION
             '''.format(schema, table))
-    
+
     def describe_function(self,  part1, part2=None):
         if part2 is None:
             schema = consts.EXT_SCHEMA
@@ -678,7 +675,7 @@ class QueryClient:
               AND FUNCTION_NAME = '{}'
             ORDER BY ORDINAL_POSITION
             '''.format(schema, table))
-    
+
     def wait_until_ready(self, ds_name):
         '''
         Wait for a datasource to be loaded in the cluster, and to become available in SQL.
