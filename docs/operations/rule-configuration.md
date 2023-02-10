@@ -36,7 +36,7 @@ You can specify the data to retain or drop in the following ways:
 
 Retention rules are persistent: they remain in effect until you change them. Druid stores retention rules in its [metadata store](../dependencies/metadata-storage.md).
 
-## Set retention rules
+## Set retention rules  
 
 You can use the Druid [web console](./web-console.md) or the [Coordinator API](./api-reference.md#coordinator) to create and manage retention rules.
 
