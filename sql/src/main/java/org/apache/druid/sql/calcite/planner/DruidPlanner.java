@@ -28,6 +28,7 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.ValidationException;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.security.Access;
@@ -304,6 +305,16 @@ public class DruidPlanner implements Closeable
     public PlannerHook hook()
     {
       return hook;
+    }
+
+    @Override
+    public DruidException translateException(Exception e) {
+      if (e instanceof ValidationException) {
+        // TODO: Parse line number
+        return DruidException.user(e.getMessage()).cause(e).build();
+      } else {
+        return DruidException.user(e.getMessage()).cause(e).build();
+      }
     }
   }
 }

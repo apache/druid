@@ -32,6 +32,7 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlTimestampLiteral;
 import org.apache.calcite.tools.ValidationException;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -216,7 +217,7 @@ public class DruidSqlParserUtils
       SqlNode replaceTimeQuery,
       Granularity granularity,
       DateTimeZone dateTimeZone
-  ) throws ValidationException
+  )
   {
     if (replaceTimeQuery instanceof SqlLiteral && ALL.equalsIgnoreCase(((SqlLiteral) replaceTimeQuery).toValue())) {
       return ImmutableList.of(ALL);
@@ -229,18 +230,18 @@ public class DruidSqlParserUtils
     List<Interval> intervals = filtration.getIntervals();
 
     if (filtration.getDimFilter() != null) {
-      throw new ValidationException("Only " + ColumnHolder.TIME_COLUMN_NAME + " column is supported in OVERWRITE WHERE clause");
+      throw DruidException.userError("Only " + ColumnHolder.TIME_COLUMN_NAME + " column is supported in OVERWRITE WHERE clause");
     }
 
     if (intervals.isEmpty()) {
-      throw new ValidationException("Intervals for replace are empty");
+      throw DruidException.userError("Intervals for replace are empty");
     }
 
     for (Interval interval : intervals) {
       DateTime intervalStart = interval.getStart();
       DateTime intervalEnd = interval.getEnd();
       if (!granularity.bucketStart(intervalStart).equals(intervalStart) || !granularity.bucketStart(intervalEnd).equals(intervalEnd)) {
-        throw new ValidationException("OVERWRITE WHERE clause contains an interval " + intervals +
+        throw DruidException.userError("OVERWRITE WHERE clause contains an interval " + intervals +
                                       " which is not aligned with PARTITIONED BY granularity " + granularity);
       }
     }
@@ -294,11 +295,10 @@ public class DruidSqlParserUtils
    * @throws ValidationException if the SqlNode cannot be converted a Dimfilter
    */
   public static DimFilter convertQueryToDimFilter(SqlNode replaceTimeQuery, DateTimeZone dateTimeZone)
-      throws ValidationException
   {
     if (!(replaceTimeQuery instanceof SqlBasicCall)) {
       log.error("Expected SqlBasicCall during parsing, but found " + replaceTimeQuery.getClass().getName());
-      throw new ValidationException("Invalid OVERWRITE WHERE clause");
+      throw DruidException.userError("Invalid OVERWRITE WHERE clause");
     }
     String columnName;
     SqlBasicCall sqlBasicCall = (SqlBasicCall) replaceTimeQuery;
@@ -379,7 +379,7 @@ public class DruidSqlParserUtils
             StringComparators.NUMERIC
         );
       default:
-        throw new ValidationException("Unsupported operation in OVERWRITE WHERE clause: " + sqlBasicCall.getOperator().getName());
+        throw DruidException.userError("Unsupported operation in OVERWRITE WHERE clause: " + sqlBasicCall.getOperator().getName());
     }
   }
 
@@ -390,10 +390,10 @@ public class DruidSqlParserUtils
    * @return string representing the column name
    * @throws ValidationException if the sql node is not an SqlIdentifier
    */
-  public static String parseColumnName(SqlNode sqlNode) throws ValidationException
+  public static String parseColumnName(SqlNode sqlNode)
   {
     if (!(sqlNode instanceof SqlIdentifier)) {
-      throw new ValidationException("Expressions must be of the form __time <operator> TIMESTAMP");
+      throw DruidException.userError("Expressions must be of the form __time <operator> TIMESTAMP");
     }
     return ((SqlIdentifier) sqlNode).getSimple();
   }
@@ -406,10 +406,10 @@ public class DruidSqlParserUtils
    * @return the timestamp string as milliseconds from epoch
    * @throws ValidationException if the sql node is not a SqlTimestampLiteral
    */
-  public static String parseTimeStampWithTimeZone(SqlNode sqlNode, DateTimeZone timeZone) throws ValidationException
+  public static String parseTimeStampWithTimeZone(SqlNode sqlNode, DateTimeZone timeZone)
   {
     if (!(sqlNode instanceof SqlTimestampLiteral)) {
-      throw new ValidationException("Expressions must be of the form __time <operator> TIMESTAMP");
+      throw DruidException.userError("Expressions must be of the form __time <operator> TIMESTAMP");
     }
 
     Timestamp sqlTimestamp = Timestamp.valueOf(((SqlTimestampLiteral) sqlNode).toFormattedString());

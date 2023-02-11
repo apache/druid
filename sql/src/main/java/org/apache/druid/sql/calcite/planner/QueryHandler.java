@@ -54,6 +54,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -106,10 +107,14 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
   }
 
   @Override
-  public void validate() throws ValidationException
+  public void validate()
   {
     CalcitePlanner planner = handlerContext.planner();
-    validatedQueryNode = planner.validate(rewriteParameters());
+    try {
+      validatedQueryNode = planner.validate(rewriteParameters());
+    } catch (ValidationException e) {
+      throw handlerContext.translateException(e);
+    }
 
     final SqlValidator validator = planner.getValidator();
     SqlResourceCollectorShuttle resourceCollectorShuttle = new SqlResourceCollectorShuttle(
@@ -182,7 +187,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
   }
 
   @Override
-  public PlannerResult plan() throws ValidationException
+  public PlannerResult plan()
   {
     prepare();
     final Set<RelOptTable> bindableTables = getBindableTables(rootQueryRel.rel);
@@ -217,7 +222,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       Throwable cannotPlanException = Throwables.getCauseOfType(e, RelOptPlanner.CannotPlanException.class);
       if (null == cannotPlanException) {
         // Not a CannotPlanException, rethrow without logging.
-        throw e;
+        throw handlerContext.translateException(e);
       }
 
       Logger logger = log;
@@ -618,13 +623,13 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     }
 
     @Override
-    public void validate() throws ValidationException
+    public void validate()
     {
       if (!handlerContext.plannerContext().engineHasFeature(EngineFeature.CAN_SELECT)) {
-        throw new ValidationException(StringUtils.format(
+        throw DruidException.userError(
             "Cannot execute SELECT with SQL engine '%s'.",
-            handlerContext.engine().name())
-        );
+            handlerContext.engine().name()
+         );
       }
       super.validate();
     }
