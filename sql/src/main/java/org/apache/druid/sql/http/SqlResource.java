@@ -177,25 +177,21 @@ public class SqlResource
     @Override
     public void incrementSuccess()
     {
-
     }
 
     @Override
     public void incrementFailed()
     {
-
     }
 
     @Override
     public void incrementInterrupted()
     {
-
     }
 
     @Override
     public void incrementTimedOut()
     {
-
     }
   }
 
@@ -254,28 +250,9 @@ public class SqlResource
         @Nullable
         public Response.ResponseBuilder start()
         {
-          try {
-            thePlan = stmt.plan();
-            queryResponse = thePlan.run();
-            return null;
-          }
-          catch (RelOptPlanner.CannotPlanException e) {
-            throw new SqlPlanningException(
-                SqlPlanningException.PlanningError.UNSUPPORTED_SQL_ERROR,
-                e.getMessage()
-            );
-          }
-          // There is a claim that Calcite sometimes throws a java.lang.AssertionError, but we do not have a test that can
-          // reproduce it checked into the code (the best we have is something that uses mocks to throw an Error, which is
-          // dubious at best).  We keep this just in case, but it might be best to remove it and see where the
-          // AssertionErrors are coming from and do something to ensure that they don't actually make it out of Calcite
-          catch (AssertionError e) {
-            log.warn(e, "AssertionError killed query: %s", sqlQuery);
-
-            // We wrap the exception here so that we get the sanitization.  java.lang.AssertionError apparently
-            // doesn't implement org.apache.druid.common.exception.SanitizableException.
-            throw new QueryInterruptedException(e);
-          }
+          thePlan = stmt.plan();
+          queryResponse = thePlan.run();
+          return null;
         }
 
         @Override

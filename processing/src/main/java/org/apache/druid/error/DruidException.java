@@ -8,15 +8,84 @@ import org.apache.druid.java.util.common.logger.Logger;
 
 import com.google.common.collect.ImmutableMap;
 
-@SuppressWarnings("serial")
+/**
+ * Represents an error condition exposed to the user and/or operator of Druid.
+ * Not needed for purely internal exceptions thrown and caught within Druid itself.
+ * There are categories of error that determine the general form of corrective
+ * action, and also determine HTTP (or other API) status codes.
+ * <p>
+ * Druid exceptions can contain context. Use the context for details, such as
+ * file names, query context variables, symbols, etc. This allows the error
+ * message itself to be simple. Context allows consumers to filter out various
+ * bits of information that a site does not wish to expose to the user, while
+ * still logging the full details. Typical usage:
+ * <pre><code>
+ * if (something_is_wrong) {
+ *   throw DruidException.user("File not found")
+ *       .context("File name", theFile.getName())
+ *       .context("Directory", theFile.getParent())
+ *       .build();
+ * }
+ * </code></pre>
+ * <p>
+ * Exceptions are immutable. In many cases, an error is thrown low in the code,
+ * bit context is known at a higher level. In this case, the higher code should
+ * catch the exception, convert back to a builder, add context, and throw the
+ * new exception. The original call stack is maintained. Example:
+ * <pre><code>
+ * catch (DruidExceptin e) {
+ *   throw e.toBuilder().
+ *       .context("File name", theFile.getName())
+ *       .context("Directory", theFile.getParent())
+ *       .build();
+ * }
+ * </code></pre>
+ */
 public class DruidException extends RuntimeException
 {
   public enum ErrorType
   {
+    /**
+     * General case of an error due to something the user asked to do in an REST
+     * request. Translates to an HTTP status 400 (BAD_REQUET) for a REST call
+     * (or the equivalent for other APIs.)
+     */
     USER,
+
+    /**
+     * Special case of a user error where a resource is not found and we wish
+     * to return a 404 (NOT_FOUND) HTTP status (or the equivalent for other
+     * APIs.)
+     */
+    NOT_FOUND,
+
+    /**
+     * Error due to a problem beyond the user's control, such as an assertion
+     * failed, unsupported operation, etc. These indicate problems with the software
+     * where the fix is either a workaround or a bug fix. Such error should only
+     * be raised for "should never occur" type situations.
+     */
     SYSTEM,
+
+    /**
+     * Error for a resource limit: memory, CPU, slots or so on. The workaround is
+     * generally to try later, get more resources, reduce load or otherwise resolve
+     * the resource pressure issue.
+     */
     RESOURCE,
+
+    /**
+     * Error in configuration. Indicates that the administrator made a mistake during
+     * configuration or setup. The solution is for the administrator (not the end user)
+     * to resolve the issue.
+     */
     CONFIG,
+
+    /**
+     * Indicates a network error of some kind: intra-Druid, client-to-Druid,
+     * Druid-to-external system, etc. Generally the end user cannot fix these errors:
+     * it requires a DevOps person to resolve.
+     */
     NETWORK
   };
 
@@ -39,14 +108,17 @@ public class DruidException extends RuntimeException
     {
       this.source = e;
       this.type = e.type;
-      this.msg = e.baseMessage();
+      this.msg = e.message();
       this.e = e.getCause() == null ? e : e.getCause();
       this.context = e.context == null ? null : new HashMap<>(e.context);
     }
 
-    public Builder cause(Exception e)
+    public Builder cause(Throwable e)
     {
       this.e = e;
+      if (!msg.equals(e.getMessage())) {
+        context("Cause", e.getMessage());
+      }
       return this;
     }
 
@@ -147,6 +219,11 @@ public class DruidException extends RuntimeException
     return new Builder(ErrorType.SYSTEM, msg, args);
   }
 
+  public static Builder notFound(String msg, Object...args)
+  {
+    return new Builder(ErrorType.NOT_FOUND, msg, args);
+  }
+
   public static DruidException unexpected(Exception e)
   {
     return system(e.getMessage()).cause(e).build();
@@ -231,7 +308,7 @@ public class DruidException extends RuntimeException
     return buf.toString();
   }
 
-  private String baseMessage()
+  public String message()
   {
     return super.getMessage();
   }

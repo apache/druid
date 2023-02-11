@@ -58,7 +58,6 @@ public interface SqlStatementHandler
     ObjectMapper jsonMapper();
     DateTimeZone timeZone();
     PlannerHook hook();
-    DruidException translateException(Exception e);
   }
 
   abstract class BaseStatementHandler implements SqlStatementHandler

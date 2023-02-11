@@ -23,6 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.CountingOutputStream;
 import org.apache.druid.client.DirectDruidClient;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.StandardRestExceptionEncoder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -148,6 +150,9 @@ public abstract class QueryResultPusher
       counter.incrementSuccess();
       accumulator.close();
       resultsWriter.recordSuccess(accumulator.getNumBytesSent());
+    }
+    catch (DruidException e) {
+      return handleDruidException(resultsWriter, e);
     }
     catch (QueryException e) {
       return handleQueryException(resultsWriter, e);
@@ -275,6 +280,45 @@ public abstract class QueryResultPusher
       }
       return null;
     }
+  }
+
+  private Response handleDruidException(ResultsWriter resultsWriter, DruidException e)
+  {
+    if (accumulator != null && accumulator.isInitialized()) {
+      // We already started sending a response when we got the error message.  In this case we just give up
+      // and hope that the partial stream generates a meaningful failure message for our client.  We could consider
+      // also throwing the exception body into the response to make it easier for the client to choke if it manages
+      // to parse a meaningful object out, but that's potentially an API change so we leave that as an exercise for
+      // the future.
+
+      resultsWriter.recordFailure(e);
+
+      // This case is always a failure because the error happened mid-stream of sending results back.  Therefore,
+      // we do not believe that the response stream was actually useable
+      counter.incrementFailed();
+      return null;
+    }
+
+    switch (e.type()) {
+      case RESOURCE:
+        counter.incrementInterrupted();
+        break;
+      case NETWORK:
+        counter.incrementTimedOut();
+        break;
+      default:
+        counter.incrementFailed();
+        break;
+    }
+
+    resultsWriter.recordFailure(e);
+
+    final Response.ResponseBuilder bob = StandardRestExceptionEncoder.instance().builder(e);
+    bob.header(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId);
+    for (Map.Entry<String, String> entry : extraHeaders.entrySet()) {
+      bob.header(entry.getKey(), entry.getValue());
+    }
+    return bob.build();
   }
 
   public interface ResultsWriter extends Closeable
