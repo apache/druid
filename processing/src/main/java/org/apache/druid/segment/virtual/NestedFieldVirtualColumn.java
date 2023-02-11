@@ -54,6 +54,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.column.ValueTypes;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.nested.CompressedNestedDataComplexColumn;
 import org.apache.druid.segment.nested.NestedDataComplexColumn;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.NestedPathArrayElement;
@@ -410,6 +411,9 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     // not a nested column, but we can still do stuff if the path is the 'root', indicated by an empty path parts
     if (parts.isEmpty()) {
       ColumnCapabilities capabilities = holder.getCapabilities();
+      // expectedType shouldn't possibly be null if we are being asked for an object selector and the underlying column
+      // is numeric, else we would have been asked for a value selector
+      Preconditions.checkArgument(expectedType != null, "Asked for a VectorObjectSelector on a numeric column, 'expectedType' must not be null");
       if (capabilities.isNumeric()) {
         return ExpressionVectorSelectors.castValueSelectorToObject(
             offset,
@@ -600,12 +604,18 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       ColumnSelector selector
   )
   {
-    final NestedDataComplexColumn column = NestedDataComplexColumn.fromColumnSelector(selector, this.columnName);
-
-    if (column == null) {
+    ColumnHolder holder = selector.getColumnHolder(this.columnName);
+    if (holder == null) {
       return null;
     }
-    return column.getColumnIndexSupplier(parts);
+    BaseColumn theColumn = holder.getColumn();
+    if (theColumn instanceof CompressedNestedDataComplexColumn) {
+      return ((CompressedNestedDataComplexColumn<?>) theColumn).getColumnIndexSupplier(parts);
+    }
+    if (parts.isEmpty()) {
+      return holder.getIndexSupplier();
+    }
+    return null;
   }
 
   @Override
@@ -625,6 +635,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
                                  .setHasNulls(expectedType == null || !expectedType.isNumeric() || (expectedType.isNumeric() && NullHandling.sqlCompatible()));
   }
 
+  @Nullable
   @Override
   public ColumnCapabilities capabilities(ColumnInspector inspector, String columnName)
   {
@@ -637,17 +648,38 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     }
     // ColumnInspector isn't really enough... we need the ability to read the complex column itself to examine
     // the nested fields type information to really be accurate here, so we rely on the expectedType to guide us
-    final ColumnCapabilities complexCapabilites = inspector.getColumnCapabilities(this.columnName);
-    if (complexCapabilites != null && complexCapabilites.isDictionaryEncoded().isTrue()) {
-      return ColumnCapabilitiesImpl.createDefault()
-                                   .setType(expectedType != null ? expectedType : ColumnType.STRING)
-                                   .setDictionaryEncoded(true)
-                                   .setDictionaryValuesSorted(true)
-                                   .setDictionaryValuesUnique(true)
-                                   .setHasBitmapIndexes(true)
-                                   .setHasNulls(expectedType == null || (expectedType.isNumeric()
-                                                                         && NullHandling.sqlCompatible()));
+    final ColumnCapabilities capabilities = inspector.getColumnCapabilities(this.columnName);
+
+    if (capabilities != null) {
+      // if the underlying column is a nested column (and persisted to disk, re: the dictionary encoded check)
+      if (capabilities.is(ValueType.COMPLEX) &&
+          capabilities.getComplexTypeName().equals(NestedDataComplexTypeSerde.TYPE_NAME) &&
+          capabilities.isDictionaryEncoded().isTrue()) {
+        return ColumnCapabilitiesImpl.createDefault()
+                                     .setType(expectedType != null ? expectedType : ColumnType.STRING)
+                                     .setDictionaryEncoded(true)
+                                     .setDictionaryValuesSorted(true)
+                                     .setDictionaryValuesUnique(true)
+                                     .setHasBitmapIndexes(true)
+                                     .setHasNulls(expectedType == null || (expectedType.isNumeric()
+                                                                           && NullHandling.sqlCompatible()));
+      }
+      // column is not nested, use underlying column capabilities, adjusted for expectedType as necessary
+      if (parts.isEmpty()) {
+        ColumnCapabilitiesImpl copy = ColumnCapabilitiesImpl.copyOf(capabilities);
+        if (expectedType != null) {
+          copy.setType(expectedType);
+          copy.setHasNulls(
+              copy.hasNulls().or(ColumnCapabilities.Capable.of(expectedType.getType() != capabilities.getType()))
+          );
+        }
+        return copy;
+      } else if (capabilities.isPrimitive()) {
+        // path doesn't exist and column isn't nested, so effectively column doesn't exist
+        return null;
+      }
     }
+
     return capabilities(columnName);
   }
 
