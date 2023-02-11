@@ -54,6 +54,7 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.planner.PlannerOperatorConfig;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
@@ -530,7 +531,7 @@ public class SqlBenchmark
           new ApproxCountDistinctSqlAggregator(new HllSketchApproxCountDistinctSqlAggregator());
       aggregators.add(new CountSqlAggregator(countDistinctSqlAggregator));
       aggregators.add(countDistinctSqlAggregator);
-      return new DruidOperatorTable(aggregators, extractionOperators);
+      return new DruidOperatorTable(aggregators, extractionOperators, PlannerOperatorConfig.newInstance(null));
     }
     catch (Exception e) {
       throw new RuntimeException(e);
