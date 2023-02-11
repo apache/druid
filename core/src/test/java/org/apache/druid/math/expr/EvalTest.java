@@ -833,7 +833,7 @@ public class EvalTest extends InitializedNullHandlingTest
     Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
     Assert.assertArrayEquals(new Object[] {1L, 2L, NullHandling.defaultLongValue(), 3L}, (Object[]) eval.value());
 
-    // arrays fall might back to using 'bestEffortOf', but cast it to the expected output type
+    // arrays might have to fall back to using 'bestEffortOf', but will cast it to the expected output type
     eval = ExprEval.ofType(ExpressionType.LONG_ARRAY, new Object[] {"1", "2", "3"});
     Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
     Assert.assertArrayEquals(new Object[] {1L, 2L, 3L}, (Object[]) eval.value());

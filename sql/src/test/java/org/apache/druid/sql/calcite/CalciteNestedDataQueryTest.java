@@ -881,9 +881,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         )
                         .setAggregatorSpecs(
                             aggregators(
-                                /*
-                                 combineExpressionString='array_concat("__acc", "a0")', compareExpressionString='null', finalizeExpressionString='null', maxSizeBytes=16384}
-                                 */
                                 new ExpressionLambdaAggregatorFactory(
                                     "a0",
                                     ImmutableSet.of("nest"),
