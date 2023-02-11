@@ -112,7 +112,6 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
       @Override
       public void onMatch(RelOptRuleCall call)
       {
-
       }
     };
     injector = Guice.createInjector(
@@ -128,6 +127,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
           binder.bind(Key.get(new TypeLiteral<Set<SqlOperatorConversion>>() {})).toInstance(operatorConversions);
           binder.bind(DruidSchemaCatalog.class).toInstance(rootSchema);
           binder.bind(JoinableFactoryWrapper.class).toInstance(joinableFactoryWrapper);
+          binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
         },
         target,
         binder -> {

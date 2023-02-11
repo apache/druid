@@ -52,7 +52,6 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
-import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -137,8 +136,7 @@ public class QueryFrameworkUtils
       final PlannerConfig plannerConfig,
       @Nullable final ViewManager viewManager,
       final DruidSchemaManager druidSchemaManager,
-      final AuthorizerMapper authorizerMapper,
-      final CatalogResolver catalogResolver
+      final AuthorizerMapper authorizerMapper
   )
   {
     DruidSchema druidSchema = createMockSchema(
@@ -146,8 +144,7 @@ public class QueryFrameworkUtils
         conglomerate,
         walker,
         plannerConfig,
-        druidSchemaManager,
-        catalogResolver
+        druidSchemaManager
     );
     SystemSchema systemSchema =
         CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
@@ -201,8 +198,7 @@ public class QueryFrameworkUtils
         plannerConfig,
         null,
         new NoopDruidSchemaManager(),
-        authorizerMapper,
-        CatalogResolver.NULL_RESOLVER
+        authorizerMapper
     );
   }
 
@@ -211,8 +207,7 @@ public class QueryFrameworkUtils
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
       final PlannerConfig plannerConfig,
-      final DruidSchemaManager druidSchemaManager,
-      final CatalogResolver catalog
+      final DruidSchemaManager druidSchemaManager
   )
   {
     final SegmentMetadataCache cache = new SegmentMetadataCache(
