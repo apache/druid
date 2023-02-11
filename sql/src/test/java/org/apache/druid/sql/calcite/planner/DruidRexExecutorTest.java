@@ -82,7 +82,8 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
   private static final PlannerToolbox PLANNER_TOOLBOX = new SimplePlannerToolbox(
       new DruidOperatorTable(
           Collections.emptySet(),
-          ImmutableSet.of(new DirectOperatorConversion(OPERATOR, "hyper_unique"))
+          ImmutableSet.of(new DirectOperatorConversion(OPERATOR, "hyper_unique")),
+          PlannerOperatorConfig.newInstance(null)
       ),
       CalciteTests.createExprMacroTable(),
       CalciteTests.getJsonMapper(),
