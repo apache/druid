@@ -83,7 +83,6 @@ test as a JUnit test.
 * [Quickstart](docs/quickstart.md)
 * [Create a new test](docs/guide.md)
 * [Maven configuration](docs/maven.md)
-* [Travis integration](docs/travis.md)
 * [Docker image](docs/docker.md)
 * [Druid configuration](docs/druid-config.md)
 * [Docker Compose configuration](docs/compose.md)
