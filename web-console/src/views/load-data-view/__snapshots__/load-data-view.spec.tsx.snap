@@ -12,7 +12,6 @@ exports[`LoadDataView matches snapshot batch 1`] = `
     >
       <div
         className="step-section"
-        key="Connect and parse raw data"
       >
         <div
           className="step-nav-l1"
@@ -27,7 +26,6 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             className="welcome"
             disabled={false}
             icon={false}
-            key="welcome"
             onClick={[Function]}
             text="Start"
           />
@@ -36,7 +34,6 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             className="connect"
             disabled={true}
             icon={false}
-            key="connect"
             onClick={[Function]}
             text="Connect"
           />
@@ -45,7 +42,6 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             className="parser"
             disabled={true}
             icon={false}
-            key="parser"
             onClick={[Function]}
             text="Parse data"
           />
@@ -53,7 +49,6 @@ exports[`LoadDataView matches snapshot batch 1`] = `
       </div>
       <div
         className="step-section"
-        key="Transform data and configure schema"
       >
         <div
           className="step-nav-l1"
@@ -68,7 +63,6 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             className="timestamp"
             disabled={true}
             icon={false}
-            key="timestamp"
             onClick={[Function]}
             text="Parse time"
           />
@@ -77,7 +71,6 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             className="transform"
             disabled={true}
             icon={false}
-            key="transform"
             onClick={[Function]}
             text="Transform"
           />
@@ -86,7 +79,6 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             className="filter"
             disabled={true}
             icon={false}
-            key="filter"
             onClick={[Function]}
             text="Filter"
           />
@@ -95,7 +87,6 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             className="schema"
             disabled={true}
             icon={false}
-            key="schema"
             onClick={[Function]}
             text="Configure schema"
           />
@@ -103,7 +94,6 @@ exports[`LoadDataView matches snapshot batch 1`] = `
       </div>
       <div
         className="step-section"
-        key="Tune parameters"
       >
         <div
           className="step-nav-l1"
@@ -118,7 +108,6 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             className="partition"
             disabled={true}
             icon={false}
-            key="partition"
             onClick={[Function]}
             text="Partition"
           />
@@ -127,7 +116,6 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             className="tuning"
             disabled={true}
             icon={false}
-            key="tuning"
             onClick={[Function]}
             text="Tune"
           />
@@ -136,7 +124,6 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             className="publish"
             disabled={true}
             icon={false}
-            key="publish"
             onClick={[Function]}
             text="Publish"
           />
@@ -144,7 +131,6 @@ exports[`LoadDataView matches snapshot batch 1`] = `
       </div>
       <div
         className="step-section"
-        key="Verify and submit"
       >
         <div
           className="step-nav-l1"
@@ -159,7 +145,6 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             className="spec"
             disabled={false}
             icon="manually-entered-data"
-            key="spec"
             onClick={[Function]}
             text="Edit spec"
           />
@@ -167,24 +152,28 @@ exports[`LoadDataView matches snapshot batch 1`] = `
       </div>
     </div>
   </div>
-  <div
-    className="main"
-  >
+  <React.Fragment>
     <div
-      className="ingestion-cards"
-    />
-  </div>
-  <div
-    className="control"
-  >
-    <Blueprint4.FormGroup>
-      <Blueprint4.Callout>
-        <p>
-          Please specify where your raw data is located.
-        </p>
-      </Blueprint4.Callout>
-    </Blueprint4.FormGroup>
-  </div>
+      className="main"
+    >
+      <div
+        className="ingestion-cards"
+      >
+        <React.Fragment />
+      </div>
+    </div>
+    <div
+      className="control"
+    >
+      <Blueprint4.FormGroup>
+        <Blueprint4.Callout>
+          <p>
+            Please specify where your raw data is located.
+          </p>
+        </Blueprint4.Callout>
+      </Blueprint4.FormGroup>
+    </div>
+  </React.Fragment>
 </div>
 `;
 
@@ -200,7 +189,6 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
     >
       <div
         className="step-section"
-        key="Connect and parse raw data"
       >
         <div
           className="step-nav-l1"
@@ -215,7 +203,6 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             className="welcome"
             disabled={false}
             icon={false}
-            key="welcome"
             onClick={[Function]}
             text="Start"
           />
@@ -224,7 +211,6 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             className="connect"
             disabled={true}
             icon={false}
-            key="connect"
             onClick={[Function]}
             text="Connect"
           />
@@ -233,7 +219,6 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             className="parser"
             disabled={true}
             icon={false}
-            key="parser"
             onClick={[Function]}
             text="Parse data"
           />
@@ -241,7 +226,6 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
       </div>
       <div
         className="step-section"
-        key="Transform data and configure schema"
       >
         <div
           className="step-nav-l1"
@@ -256,7 +240,6 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             className="timestamp"
             disabled={true}
             icon={false}
-            key="timestamp"
             onClick={[Function]}
             text="Parse time"
           />
@@ -265,7 +248,6 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             className="transform"
             disabled={true}
             icon={false}
-            key="transform"
             onClick={[Function]}
             text="Transform"
           />
@@ -274,7 +256,6 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             className="filter"
             disabled={true}
             icon={false}
-            key="filter"
             onClick={[Function]}
             text="Filter"
           />
@@ -283,7 +264,6 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             className="schema"
             disabled={true}
             icon={false}
-            key="schema"
             onClick={[Function]}
             text="Configure schema"
           />
@@ -291,7 +271,6 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
       </div>
       <div
         className="step-section"
-        key="Tune parameters"
       >
         <div
           className="step-nav-l1"
@@ -306,7 +285,6 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             className="partition"
             disabled={true}
             icon={false}
-            key="partition"
             onClick={[Function]}
             text="Partition"
           />
@@ -315,7 +293,6 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             className="tuning"
             disabled={true}
             icon={false}
-            key="tuning"
             onClick={[Function]}
             text="Tune"
           />
@@ -324,7 +301,6 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             className="publish"
             disabled={true}
             icon={false}
-            key="publish"
             onClick={[Function]}
             text="Publish"
           />
@@ -332,7 +308,6 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
       </div>
       <div
         className="step-section"
-        key="Verify and submit"
       >
         <div
           className="step-nav-l1"
@@ -347,7 +322,6 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             className="spec"
             disabled={false}
             icon="manually-entered-data"
-            key="spec"
             onClick={[Function]}
             text="Edit spec"
           />
@@ -355,23 +329,27 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
       </div>
     </div>
   </div>
-  <div
-    className="main"
-  >
+  <React.Fragment>
     <div
-      className="ingestion-cards"
-    />
-  </div>
-  <div
-    className="control"
-  >
-    <Blueprint4.FormGroup>
-      <Blueprint4.Callout>
-        <p>
-          Please specify where your raw data is located.
-        </p>
-      </Blueprint4.Callout>
-    </Blueprint4.FormGroup>
-  </div>
+      className="main"
+    >
+      <div
+        className="ingestion-cards"
+      >
+        <React.Fragment />
+      </div>
+    </div>
+    <div
+      className="control"
+    >
+      <Blueprint4.FormGroup>
+        <Blueprint4.Callout>
+          <p>
+            Please specify where your raw data is located.
+          </p>
+        </Blueprint4.Callout>
+      </Blueprint4.FormGroup>
+    </div>
+  </React.Fragment>
 </div>
 `;

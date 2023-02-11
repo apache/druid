@@ -95,6 +95,49 @@ This returns a summary of the sketch that can be used for debugging. This is the
 }
 ```
 
+
+
+### Constant Theta Sketch 
+
+You can use the constant theta sketch post aggregator to add a Base64-encoded constant theta sketch value for use in other post-aggregators. For example,  `thetaSketchSetOp`.
+
+```json
+{
+  "type"  : "thetaSketchConstant",
+  "name": DESTINATION_COLUMN_NAME,
+  "value"  : CONSTANT_SKETCH_VALUE
+}
+```
+
+### Example using a constant Theta Sketch 
+
+Assume you have a datasource with a variety of a variety of users. Using `filters` and `aggregation`, you generate a theta sketch of all `football fans`.  
+
+A third-party provider has provided a constant theta sketch of all `cricket fans` and you want to `INTERSECT` both cricket fans and football fans in a `post-aggregation` stage to identify users who are interested in both `cricket`. Then you want to use `thetaSketchEstimate` to calculate the number of unique users.
+
+```json
+{
+   "type":"thetaSketchEstimate",
+   "name":"football_cricket_users_count",
+   "field":{
+      "type":"thetaSketchSetOp",
+      "name":"football_cricket_fans_users_theta_sketch",
+      "func":"INTERSECT",
+      "fields":[
+         {
+            "type":"fieldAccess",
+            "fieldName":"football_fans_users_theta_sketch"
+         },
+         {
+            "type":"thetaSketchConstant",
+            "name":"cricket_fans_users_theta_sketch",
+            "value":"AgMDAAAazJMCAAAAAACAPzz9j7pWTMdROWGf15uY1nI="
+         }
+      ]
+   }
+}
+```
+
 ## Examples
 
 Assuming, you have a dataset containing (timestamp, product, user_id). You want to answer questions like

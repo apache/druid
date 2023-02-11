@@ -20,12 +20,9 @@
 
 package org.apache.druid.segment.nested;
 
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
@@ -47,29 +44,6 @@ import java.util.Set;
  */
 public abstract class NestedDataComplexColumn implements ComplexColumn
 {
-  @Nullable
-  public static NestedDataComplexColumn fromColumnSelector(
-      ColumnSelector columnSelector,
-      String columnName
-  )
-  {
-    ColumnHolder holder = columnSelector.getColumnHolder(columnName);
-    if (holder == null) {
-      return null;
-    }
-    BaseColumn theColumn = holder.getColumn();
-    if (theColumn instanceof CompressedNestedDataComplexColumn) {
-      return (CompressedNestedDataComplexColumn) theColumn;
-    }
-    throw new IAE(
-        "Column [%s] is invalid type, found [%s] instead of [%s]",
-        columnName,
-        theColumn.getClass(),
-        NestedDataComplexColumn.class.getSimpleName()
-    );
-  }
-
-
   /**
    * Make a {@link DimensionSelector} for a nested literal field column associated with this nested
    * complex column specified by a sequence of {@link NestedPathPart}.

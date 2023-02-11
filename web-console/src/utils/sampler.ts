@@ -18,23 +18,25 @@
 
 import * as JSONBig from 'json-bigint-native';
 
-import {
+import type {
   DimensionsSpec,
-  getDimensionNamesFromTransforms,
-  getSpecType,
-  getTimestampSchema,
   IngestionSpec,
   IngestionType,
   InputFormat,
   IoConfig,
-  isDruidSource,
   MetricSpec,
-  PLACEHOLDER_TIMESTAMP_SPEC,
-  REINDEX_TIMESTAMP_SPEC,
-  TIME_COLUMN,
   TimestampSpec,
   Transform,
   TransformSpec,
+} from '../druid-models';
+import {
+  getDimensionNamesFromTransforms,
+  getSpecType,
+  getTimestampSchema,
+  isDruidSource,
+  PLACEHOLDER_TIMESTAMP_SPEC,
+  REINDEX_TIMESTAMP_SPEC,
+  TIME_COLUMN,
   upgradeSpec,
 } from '../druid-models';
 import { Api } from '../singletons';

@@ -22,7 +22,8 @@ import classNames from 'classnames';
 import { C, L, SqlComparison, SqlExpression } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
-import ReactTable, { Filter } from 'react-table';
+import type { Filter } from 'react-table';
+import ReactTable from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
@@ -41,8 +42,8 @@ import {
 import { AsyncActionDialog } from '../../dialogs';
 import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
-import { QueryWithContext } from '../../druid-models';
-import { Capabilities, CapabilitiesMode } from '../../helpers';
+import type { QueryWithContext } from '../../druid-models';
+import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
   booleanCustomTableFilter,
   BooleanFilterInput,
@@ -52,6 +53,7 @@ import {
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../react-table';
 import { Api } from '../../singletons';
+import type { NumberLike } from '../../utils';
 import {
   compact,
   deepGet,
@@ -62,13 +64,12 @@ import {
   isNumberLikeNaN,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
-  NumberLike,
   queryDruidSql,
   QueryManager,
   QueryState,
   twoLines,
 } from '../../utils';
-import { BasicAction } from '../../utils/basic-action';
+import type { BasicAction } from '../../utils/basic-action';
 
 import './segments-view.scss';
 

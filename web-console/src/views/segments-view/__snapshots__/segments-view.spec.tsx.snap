@@ -1,7 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`SegmentsView matches snapshot 1`] = `
-<Fragment>
+<React.Fragment>
   <div
     className="segments-view app-view"
   >
@@ -12,9 +12,9 @@ exports[`SegmentsView matches snapshot 1`] = `
         localStorageKey="segments-refresh-rate"
         onRefresh={[Function]}
       />
-      <Component>
+      <Unknown>
         Group by
-      </Component>
+      </Unknown>
       <Blueprint4.ButtonGroup>
         <Blueprint4.Button
           active={true}
@@ -434,5 +434,5 @@ exports[`SegmentsView matches snapshot 1`] = `
       subRowsKey="_subRows"
     />
   </div>
-</Fragment>
+</React.Fragment>
 `;

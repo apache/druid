@@ -35,6 +35,7 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
@@ -89,7 +90,8 @@ public class DruidSchemaInternRowSignatureBenchmark
           joinableFactory,
           SegmentMetadataCacheConfig.create(),
           escalator,
-          brokerInternalQueryConfig
+          brokerInternalQueryConfig,
+          new NoopServiceEmitter()
       );
     }
 

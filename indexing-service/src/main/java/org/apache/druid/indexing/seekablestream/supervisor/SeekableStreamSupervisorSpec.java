@@ -132,6 +132,12 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     return context;
   }
 
+  @Nullable
+  public <ContextValueType> ContextValueType getContextValue(String key)
+  {
+    return context == null ? null : (ContextValueType) context.get(key);
+  }
+
   public ServiceEmitter getEmitter()
   {
     return emitter;
