@@ -46,7 +46,7 @@ public interface SqlEngine
    * Validates a provided query context. Returns quietly if the context is OK; throws {@link ValidationException}
    * if the context has a problem.
    */
-  void validateContext(Map<String, Object> queryContext) throws ValidationException;
+  void validateContext(Map<String, Object> queryContext);
 
   /**
    * SQL row type that would be emitted by the {@link QueryMaker} from {@link #buildQueryMakerForSelect}.

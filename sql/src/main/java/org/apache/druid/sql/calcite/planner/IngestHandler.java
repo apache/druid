@@ -82,7 +82,7 @@ public abstract class IngestHandler extends QueryHandler
     handlerContext.hook().captureInsert(ingestNode);
   }
 
-  protected static SqlNode convertQuery(DruidSqlIngest sqlNode) throws ValidationException
+  protected static SqlNode convertQuery(DruidSqlIngest sqlNode)
   {
     SqlNode query = sqlNode.getSource();
 
@@ -92,11 +92,11 @@ public abstract class IngestHandler extends QueryHandler
       SqlNodeList orderByList = sqlOrderBy.orderList;
       if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
         String opName = sqlNode.getOperator().getName();
-        throw new ValidationException(StringUtils.format(
+        throw DruidException.userError(
             "Cannot have ORDER BY on %s %s statement, use CLUSTERED BY instead.",
             "INSERT".equals(opName) ? "an" : "a",
             opName
-        ));
+        );
       }
     }
     if (sqlNode.getClusteredBy() != null) {
@@ -104,7 +104,7 @@ public abstract class IngestHandler extends QueryHandler
     }
 
     if (!query.isA(SqlKind.QUERY)) {
-      throw new ValidationException(StringUtils.format("Cannot execute [%s].", query.getKind()));
+      throw DruidException.userError("Cannot execute [%s].", query.getKind());
     }
     return query;
   }
@@ -251,7 +251,7 @@ public abstract class IngestHandler extends QueryHandler
         SqlStatementHandler.HandlerContext handlerContext,
         DruidSqlInsert sqlNode,
         SqlExplain explain
-    ) throws ValidationException
+    )
     {
       super(
           handlerContext,
@@ -298,7 +298,7 @@ public abstract class IngestHandler extends QueryHandler
         SqlStatementHandler.HandlerContext handlerContext,
         DruidSqlReplace sqlNode,
         SqlExplain explain
-    ) throws ValidationException
+    )
     {
       super(
           handlerContext,

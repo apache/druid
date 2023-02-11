@@ -30,7 +30,9 @@ import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -44,6 +46,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Druid SQL planner. Wraps the underlying Calcite planner with Druid-specific
@@ -120,7 +124,7 @@ public class DruidPlanner implements Closeable
    * @return set of {@link Resource} corresponding to any Druid datasources
    * or views which are taking part in the query.
    */
-  public void validate() throws SqlParseException, ValidationException
+  public void validate()
   {
     Preconditions.checkState(state == State.START);
 
@@ -130,21 +134,19 @@ public class DruidPlanner implements Closeable
     // Parse the query string.
     String sql = plannerContext.getSql();
     hook.captureSql(sql);
-    SqlNode root = planner.parse(sql);
-    handler = createHandler(root);
-
+    SqlNode root;
     try {
-      handler.validate();
-      plannerContext.setResourceActions(handler.resourceActions());
+      root = planner.parse(sql);
+    } catch (SqlParseException e1) {
+      throw translateException(e1);
     }
-    catch (RuntimeException e) {
-      throw new ValidationException(e);
-    }
-
+    handler = createHandler(root);
+    handler.validate();
+    plannerContext.setResourceActions(handler.resourceActions());
     state = State.VALIDATED;
   }
 
-  private SqlStatementHandler createHandler(final SqlNode node) throws ValidationException
+  private SqlStatementHandler createHandler(final SqlNode node)
   {
     SqlNode query = node;
     SqlExplain explain = null;
@@ -165,7 +167,9 @@ public class DruidPlanner implements Closeable
     if (query.isA(SqlKind.QUERY)) {
       return new QueryHandler.SelectHandler(handlerContext, query, explain);
     }
-    throw new ValidationException(StringUtils.format("Cannot execute [%s].", node.getKind()));
+    throw DruidException.user("Unsupported SQL statement")
+        .context("Statement kind", node.getKind())
+        .build();
   }
 
   /**
@@ -227,7 +231,7 @@ public class DruidPlanner implements Closeable
    * <p>
    * Planning reuses the validation done in {@code validate()} which must be called first.
    */
-  public PlannerResult plan() throws ValidationException
+  public PlannerResult plan()
   {
     Preconditions.checkState(state == State.VALIDATED || state == State.PREPARED);
     Preconditions.checkState(authorized);
@@ -306,15 +310,42 @@ public class DruidPlanner implements Closeable
     {
       return hook;
     }
+  }
 
-    @Override
-    public DruidException translateException(Exception e) {
-      if (e instanceof ValidationException) {
-        // TODO: Parse line number
-        return DruidException.user(e.getMessage()).cause(e).build();
-      } else {
-        return DruidException.user(e.getMessage()).cause(e).build();
+  public static DruidException translateException(Exception e) {
+    try {
+      throw e;
+    }
+    catch (DruidException inner) {
+      return inner;
+    }
+    catch (ValidationException | SqlParseException inner) {
+      // Calcite exception that probably includes a position.
+      String msg = inner.getMessage();
+      Pattern p = Pattern.compile("From line (\\d+), column (\\d+) to line \\d+, column \\d+: (.*)$");
+      Matcher m = p.matcher(msg);
+      if (m.matches()) {
+        return DruidException
+            .user(m.group(3))
+            .cause(e)
+            .context("Line", m.group(1))
+            .context("Column", m.group(2))
+            .build();
       }
     }
+    // There is a claim that Calcite sometimes throws a java.lang.AssertionError, but we do not have a test that can
+    // reproduce it checked into the code (the best we have is something that uses mocks to throw an Error, which is
+    // dubious at best).  We keep this just in case, but it might be best to remove it and see where the
+    // AssertionErrors are coming from and do something to ensure that they don't actually make it out of Calcite
+    catch (AssertionError inner) {
+      return DruidException.resourceError("AssertionError killed query")
+          .cause(inner)
+          .build();
+    }
+    catch (Exception inner) {
+      // Anything else
+      return DruidException.user(e.getMessage()).cause(inner).build();
+    }
+    throw new UOE("Should not get here");
   }
 }

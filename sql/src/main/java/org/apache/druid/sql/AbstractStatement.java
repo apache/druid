@@ -21,6 +21,7 @@ package org.apache.druid.sql;
 
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.ValidationException;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.security.Access;
@@ -136,10 +137,11 @@ public abstract class AbstractStatement implements Closeable
     // We can't collapse catch clauses since SqlPlanningException has
     // type-sensitive constructors.
     catch (SqlParseException e) {
-      throw new SqlPlanningException(e);
+      throw DruidException.user(e.getMessage()).cause(e).build();
     }
     catch (ValidationException e) {
-      throw new SqlPlanningException(e);
+      // Should no longer get here: the planner should have done the translation.
+      throw DruidPlanner.translateException(e);
     }
   }
 

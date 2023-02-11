@@ -72,7 +72,6 @@ import org.apache.druid.sql.calcite.rel.DruidUnionRel;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.table.DruidTable;
-import org.apache.druid.utils.Throwables;
 
 import javax.annotation.Nullable;
 
@@ -113,7 +112,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     try {
       validatedQueryNode = planner.validate(rewriteParameters());
     } catch (ValidationException e) {
-      throw handlerContext.translateException(e);
+      throw DruidPlanner.translateException(e);
     }
 
     final SqlValidator validator = planner.getValidator();
@@ -218,20 +217,15 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
         return planForDruid();
       }
     }
-    catch (Exception e) {
-      Throwable cannotPlanException = Throwables.getCauseOfType(e, RelOptPlanner.CannotPlanException.class);
-      if (null == cannotPlanException) {
-        // Not a CannotPlanException, rethrow without logging.
-        throw handlerContext.translateException(e);
-      }
-
+    catch (RelOptPlanner.CannotPlanException e) {
       Logger logger = log;
       if (!handlerContext.queryContext().isDebug()) {
         logger = log.noStackTrace();
       }
-      String errorMessage = buildSQLPlanningErrorMessage(cannotPlanException);
-      logger.warn(e, errorMessage);
-      throw new UnsupportedSQLQueryException(errorMessage);
+      throw buildSQLPlanningError(e, logger);
+    }
+    catch (Exception e) {
+      throw DruidPlanner.translateException(e);
     }
   }
 
@@ -584,23 +578,23 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
 
   protected abstract QueryMaker buildQueryMaker(RelRoot rootQueryRel) throws ValidationException;
 
-  private String buildSQLPlanningErrorMessage(Throwable exception)
+  private DruidException buildSQLPlanningError(Throwable exception, Logger logger)
   {
+    DruidException.Builder builder = DruidException.system("Unsupported query")
+        .cause(exception)
+        .context("SQL", handlerContext.plannerContext().getSql());
     String errorMessage = handlerContext.plannerContext().getPlanningError();
     if (null == errorMessage && exception instanceof UnsupportedSQLQueryException) {
-      errorMessage = exception.getMessage();
+      builder.context("Specific error", errorMessage);
     }
     if (null == errorMessage) {
-      errorMessage = "Please check Broker logs for additional details.";
+      builder.context("Note", "Please check Broker logs for additional details.");
     } else {
-      // Planning errors are more like hints: it isn't guaranteed that the planning error is actually what went wrong.
-      errorMessage = "Possible error: " + errorMessage;
+      // Planning errors are more like hints: it isn't guaranteed that the
+      // planning error is actually what went wrong.
+      builder.context("Possible error", errorMessage);
     }
-    // Finally, add the query itself to error message that user will get.
-    return StringUtils.format(
-        "Query not supported. %s SQL was: %s", errorMessage,
-        handlerContext.plannerContext().getSql()
-    );
+    return builder.build(logger);
   }
 
   public static class SelectHandler extends QueryHandler

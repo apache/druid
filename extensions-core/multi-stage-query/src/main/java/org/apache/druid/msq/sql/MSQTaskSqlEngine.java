@@ -86,7 +86,7 @@ public class MSQTaskSqlEngine implements SqlEngine
   }
 
   @Override
-  public void validateContext(Map<String, Object> queryContext) throws ValidationException
+  public void validateContext(Map<String, Object> queryContext)
   {
     SqlEngines.validateNoSpecialContextKeys(queryContext, SYSTEM_CONTEXT_PARAMETERS);
   }
