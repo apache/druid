@@ -108,13 +108,13 @@ public class FilteredRequestLoggerTest
     private int sqlCount;
 
     @Override
-    public void logNativeQuery(RequestLogLine requestLogLine) throws IOException
+    public void logNativeQuery(RequestLogLine requestLogLine)
     {
       nativeCount++;
     }
 
     @Override
-    public void logSqlQuery(RequestLogLine requestLogLine) throws IOException
+    public void logSqlQuery(RequestLogLine requestLogLine)
     {
       sqlCount++;
     }

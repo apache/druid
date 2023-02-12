@@ -146,17 +146,13 @@ public abstract class FlatTextInputFormat implements InputFormat
 
   protected String fieldsToString()
   {
-    StringBuilder buf = new StringBuilder()
-        .append("delimiter=\"" + delimiter +
-                "\", listDelimiter=");
-    if (listDelimiter == null) {
-      buf.append("null");
-    } else {
-      buf.append("\"" + listDelimiter + "\"");
-    }
-    buf.append(", findColumnsFromHeader=" + findColumnsFromHeader +
-        ", skipHeaderRows=" + skipHeaderRows +
-        ", columns=" + columns);
-    return buf.toString();
+    return "FlatTextInputFormat{"
+        + "delimiter=\"" + delimiter
+        + "\"listDelimiter="
+        + listDelimiter == null ? "null" : "\"" + listDelimiter + "\""
+        + ", findColumnsFromHeader=" + findColumnsFromHeader
+        + ", skipHeaderRows=" + skipHeaderRows
+        + ", columns=" + columns
+        + "}";
   }
 }
