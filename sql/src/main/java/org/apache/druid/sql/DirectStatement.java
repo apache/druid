@@ -21,7 +21,6 @@ package org.apache.druid.sql;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.calcite.plan.RelOptPlanner;
-import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;

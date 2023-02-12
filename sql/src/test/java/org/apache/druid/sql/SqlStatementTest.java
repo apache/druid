@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
@@ -34,6 +35,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryScheduler;
@@ -47,7 +49,6 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.DirectStatement.ResultSet;
-import org.apache.druid.sql.SqlPlanningException.PlanningError;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
@@ -70,6 +71,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import javax.servlet.http.HttpServletRequest;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -284,9 +286,12 @@ public class SqlStatementTest
       stmt.execute();
       fail();
     }
-    catch (SqlPlanningException e) {
+    catch (DruidException e) {
       // Expected
-      assertEquals(PlanningError.SQL_PARSE_ERROR.getErrorCode(), e.getErrorCode());
+      Assert.assertEquals(
+          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
+          e.context(DruidException.ERROR_CODE)
+      );
     }
   }
 
@@ -301,9 +306,12 @@ public class SqlStatementTest
       stmt.execute();
       fail();
     }
-    catch (SqlPlanningException e) {
+    catch (DruidException e) {
       // Expected
-      assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
+      Assert.assertEquals(
+          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
+          e.context(DruidException.ERROR_CODE)
+      );
     }
   }
 
@@ -363,9 +371,12 @@ public class SqlStatementTest
       stmt.execute();
       fail();
     }
-    catch (SqlPlanningException e) {
+    catch (DruidException e) {
       // Expected
-      assertEquals(PlanningError.SQL_PARSE_ERROR.getErrorCode(), e.getErrorCode());
+      Assert.assertEquals(
+          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
+          e.context(DruidException.ERROR_CODE)
+      );
     }
   }
 
@@ -380,9 +391,12 @@ public class SqlStatementTest
       stmt.execute();
       fail();
     }
-    catch (SqlPlanningException e) {
+    catch (DruidException e) {
       // Expected
-      assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
+      Assert.assertEquals(
+          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
+          e.context(DruidException.ERROR_CODE)
+      );
     }
   }
 
@@ -446,9 +460,12 @@ public class SqlStatementTest
       stmt.prepare();
       fail();
     }
-    catch (SqlPlanningException e) {
+    catch (DruidException e) {
       // Expected
-      assertEquals(PlanningError.SQL_PARSE_ERROR.getErrorCode(), e.getErrorCode());
+      Assert.assertEquals(
+          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
+          e.context(DruidException.ERROR_CODE)
+      );
     }
   }
 
@@ -463,9 +480,12 @@ public class SqlStatementTest
       stmt.prepare();
       fail();
     }
-    catch (SqlPlanningException e) {
+    catch (DruidException e) {
       // Expected
-      assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
+      Assert.assertEquals(
+          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
+          e.context(DruidException.ERROR_CODE)
+      );
     }
   }
 

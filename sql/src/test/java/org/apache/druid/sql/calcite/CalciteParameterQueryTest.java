@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -37,7 +38,6 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQuery.ResultFormat;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.SqlParameter;
@@ -577,7 +577,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMissingParameter()
   {
-    expectedException.expect(SqlPlanningException.class);
+    expectedException.expect(DruidException.class);
     expectedException.expectMessage("Parameter at position [0] is not bound");
     testQuery(
         "SELECT COUNT(*)\n"
@@ -592,7 +592,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   @Test
   public void testPartiallyMissingParameter()
   {
-    expectedException.expect(SqlPlanningException.class);
+    expectedException.expect(DruidException.class);
     expectedException.expectMessage("Parameter at position [1] is not bound");
     testQuery(
         "SELECT COUNT(*)\n"
@@ -610,7 +610,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
     List<SqlParameter> params = new ArrayList<>();
     params.add(null);
     params.add(new SqlParameter(SqlType.INTEGER, 1));
-    expectedException.expect(SqlPlanningException.class);
+    expectedException.expect(DruidException.class);
     expectedException.expectMessage("Parameter at position [0] is not bound");
     testQuery(
         "SELECT 1 + ?, dim1 FROM foo LIMIT ?",

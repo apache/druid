@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.ISE;
@@ -43,7 +44,6 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CompressionUtils;
 import org.hamcrest.CoreMatchers;
@@ -54,6 +54,7 @@ import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -91,7 +92,6 @@ public class MSQInsertTest extends MSQTestBase
 
   @Parameterized.Parameter(1)
   public Map<String, Object> context;
-
 
   @Test
   public void testInsertOnFoo1()
@@ -542,7 +542,7 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setQueryContext(context)
                      .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
+                         CoreMatchers.instanceOf(DruidException.class),
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
                              "Aggregate expression is illegal in GROUP BY clause"))
                      ))
@@ -967,7 +967,7 @@ public class MSQInsertTest extends MSQTestBase
         .setExpectedRowSignature(rowSignature)
         .setQueryContext(context)
         .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(SqlPlanningException.class),
+            CoreMatchers.instanceOf(DruidException.class),
             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
                 "Field \"__time\" must be of type TIMESTAMP"))
         ))
@@ -980,7 +980,7 @@ public class MSQInsertTest extends MSQTestBase
     testIngestQuery().setSql(
                          "insert into foo1 select  __time, dim1 , count(*) as cnt from foo  where dim1 is not null group by 1, 2 clustered by dim1")
                      .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
+                         CoreMatchers.instanceOf(DruidException.class),
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
                              "CLUSTERED BY found before PARTITIONED BY. In Druid, the CLUSTERED BY clause must follow the PARTITIONED BY clause"))
                      ))
@@ -1098,7 +1098,7 @@ public class MSQInsertTest extends MSQTestBase
                              + "LIMIT 50 "
                              + "PARTITIONED BY MONTH")
                      .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
+                         CoreMatchers.instanceOf(DruidException.class),
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
                              "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""))
                      ))
@@ -1116,7 +1116,7 @@ public class MSQInsertTest extends MSQTestBase
                              + "OFFSET 10"
                              + "PARTITIONED BY ALL TIME")
                      .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
+                         CoreMatchers.instanceOf(DruidException.class),
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
                              "INSERT and REPLACE queries cannot have an OFFSET"))
                      ))

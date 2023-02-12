@@ -30,6 +30,7 @@ import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.hll.VersionOneHyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
@@ -114,6 +115,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Arrays;
@@ -633,23 +635,30 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public void assertQueryIsUnplannable(final PlannerConfig plannerConfig, final String sql, String expectedError)
   {
-    Exception e = null;
     try {
       testQuery(plannerConfig, sql, CalciteTests.REGULAR_USER_AUTH_RESULT, ImmutableList.of(), ImmutableList.of());
     }
-    catch (Exception e1) {
-      e = e1;
+    catch (DruidException e) {
+      Assert.assertEquals(
+          sql,
+          "Unsupported query",
+          e.message()
+      );
+      Assert.assertEquals(
+          sql,
+          sql,
+          e.context("SQL")
+      );
+      Assert.assertEquals(
+          sql,
+          expectedError,
+          e.context("Possible error")
+      );
     }
-
-    if (!(e instanceof RelOptPlanner.CannotPlanException)) {
-      log.error(e, "Expected CannotPlanException for query: %s", sql);
+    catch (Exception e) {
+      log.error(e, "Expected DruidException for query: %s", sql);
       Assert.fail(sql);
     }
-    Assert.assertEquals(
-        sql,
-        StringUtils.format("Query not supported. %s SQL was: %s", expectedError, sql),
-        e.getMessage()
-    );
   }
 
   /**
