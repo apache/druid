@@ -124,7 +124,7 @@ jobs:
         - name: Run IT
           env:
             MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
-            MVN: ${{ format('{0}{1}', env.MVN, (steps.maven-restore.outputs.cache-hit && '' || ' -U')) }}
+            MVN: ${{ format('{0}{1}', 'mvn', (steps.maven-restore.outputs.cache-hit && ' --no-snapshot-updates' || ' -U')) }}
           run: |
             # Debug echo
             echo "Mysql driver: ${MYSQL_DRIVER_CLASSNAME}"
