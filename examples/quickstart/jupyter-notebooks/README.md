@@ -38,21 +38,21 @@ Make sure you meet the following requirements before starting the Jupyter-based 
 
 - The `requests` package for Python. For example, you can install it with the following command:
 
-   ```bash
-   pip3 install requests
-   ````
+  ```bash
+  pip3 install requests
+  ```
 
 - JupyterLab (recommended) or Jupyter Notebook running on a non-default port. By default, Druid
   and Jupyter both try to use port `8888`, so start Jupyter on a different port.
 
   - Install JupyterLab or Notebook:
 
-     ```bash
+    ```bash
     # Install JupyterLab
     pip3 install jupyterlab
     # Install Jupyter Notebook
     pip3 install notebook
-     ```
+    ```
   -  Start Jupyter:
       -  JupyterLab
          ```bash
