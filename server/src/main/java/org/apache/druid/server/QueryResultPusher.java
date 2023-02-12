@@ -35,6 +35,7 @@ import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.ForbiddenException;
 
 import javax.annotation.Nullable;
@@ -152,6 +153,11 @@ public abstract class QueryResultPusher
       resultsWriter.recordSuccess(accumulator.getNumBytesSent());
     }
     catch (DruidException e) {
+      // Less than ideal. But, if we return the result as JSON, this is
+      // the only way for the security filter to know that, yes, it is OK
+      // to show the user this error even if we didn't get to the step where
+      // we did a security check.
+      request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
       return handleDruidException(resultsWriter, e);
     }
     catch (QueryException e) {

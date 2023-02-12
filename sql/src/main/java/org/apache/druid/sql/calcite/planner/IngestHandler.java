@@ -35,12 +35,9 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
-import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -51,10 +48,8 @@ import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
-import org.apache.druid.timeline.DataSegment;
 
 import java.util.List;
-import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 public abstract class IngestHandler extends QueryHandler

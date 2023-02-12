@@ -25,7 +25,6 @@ import com.google.inject.Inject;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.groupby.GroupByQuery;

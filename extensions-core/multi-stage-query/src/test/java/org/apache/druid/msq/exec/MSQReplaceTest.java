@@ -21,13 +21,13 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.hamcrest.CoreMatchers;
@@ -37,6 +37,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nonnull;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -311,7 +312,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setQueryContext(context)
                      .setExpectedValidationErrorMatcher(
                          CoreMatchers.allOf(
-                             CoreMatchers.instanceOf(SqlPlanningException.class),
+                             CoreMatchers.instanceOf(DruidException.class),
                              ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
                                  "Missing time chunk information in OVERWRITE clause for REPLACE. Use OVERWRITE WHERE <__time based condition> or OVERWRITE ALL to overwrite the entire table."))
                          )
@@ -546,7 +547,7 @@ public class MSQReplaceTest extends MSQTestBase
                              + "PARTITIONED BY MONTH")
                      .setQueryContext(context)
                      .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
+                         CoreMatchers.instanceOf(DruidException.class),
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
                              "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""))
                      ))
@@ -564,7 +565,7 @@ public class MSQReplaceTest extends MSQTestBase
                              + "OFFSET 10"
                              + "PARTITIONED BY ALL TIME")
                      .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
+                         CoreMatchers.instanceOf(DruidException.class),
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
                              "INSERT and REPLACE queries cannot have an OFFSET"))
                      ))

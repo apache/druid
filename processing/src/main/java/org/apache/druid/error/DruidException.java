@@ -1,12 +1,30 @@
-package org.apache.druid.error;
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
-import java.util.HashMap;
-import java.util.Map;
+package org.apache.druid.error;
 
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
-import com.google.common.collect.ImmutableMap;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Represents an error condition exposed to the user and/or operator of Druid.
@@ -75,6 +93,12 @@ public class DruidException extends RuntimeException
     RESOURCE,
 
     /**
+     * Similar to RESOURCE, except indicates a timeout, perhaps due to load, due
+     * to an external system being unavailable, etc.
+     */
+    TIMEOUT,
+
+    /**
      * Error in configuration. Indicates that the administrator made a mistake during
      * configuration or setup. The solution is for the administrator (not the end user)
      * to resolve the issue.
@@ -88,6 +112,9 @@ public class DruidException extends RuntimeException
      */
     NETWORK
   };
+
+  public static final String ERROR_CODE = "Error Code";
+  public static final String HOST = "Host";
 
   public static class Builder
   {
@@ -125,7 +152,8 @@ public class DruidException extends RuntimeException
     public Builder context(String key, Object value)
     {
       if (context == null) {
-        context = new HashMap<String, String>();
+        // Used linked hash map to preserve order
+        context = new LinkedHashMap<String, String>();
       }
       context.put(key, value == null ? "" : value.toString());
       return this;
@@ -142,7 +170,8 @@ public class DruidException extends RuntimeException
           e,
           msg,
           type,
-          context == null ? null : ImmutableMap.copyOf(context),
+          // Used linked hash map to preserve order
+          context == null ? null : new LinkedHashMap<>(context),
           logged || wasLogged()
       );
     }
@@ -159,19 +188,25 @@ public class DruidException extends RuntimeException
         return e;
       }
       switch (type) {
-      case CONFIG:
-      case SYSTEM:
-        logger.error(e, e.getMessage());
-        break;
-      case NETWORK:
-      case RESOURCE:
-        logger.warn(e, e.getMessage());
-        break;
-      default:
-        logger.info(e, e.getMessage());
-        break;
+        case CONFIG:
+        case SYSTEM:
+          logger.error(e, e.getMessage());
+          break;
+        case NETWORK:
+        case RESOURCE:
+          logger.warn(e, e.getMessage());
+          break;
+        default:
+          logger.info(e, e.getMessage());
+          break;
       }
       return e;
+    }
+
+    @Override
+    public String toString()
+    {
+      return build().getMessage();
     }
   }
 
@@ -239,6 +274,11 @@ public class DruidException extends RuntimeException
     return new Builder(ErrorType.RESOURCE, msg, args);
   }
 
+  public static Builder timeoutError(String msg, Object...args)
+  {
+    return new Builder(ErrorType.TIMEOUT, msg, args);
+  }
+
   /**
    * Build an error that indicates a configuration error which generally means
    * that Druid won't start until the user corrects a configuration file or
@@ -278,23 +318,27 @@ public class DruidException extends RuntimeException
     return context;
   }
 
+  public String context(String key)
+  {
+    return context.get(key);
+  }
+
   @Override
   public String getMessage()
   {
     StringBuilder buf = new StringBuilder();
-    switch (type)
-    {
-    case CONFIG:
-      buf.append("Configuration error: ");
-      break;
-    case RESOURCE:
-      buf.append("Resource error: ");
-      break;
-    case SYSTEM:
-      buf.append("System error: ");
-      break;
-    default:
-      break;
+    switch (type) {
+      case CONFIG:
+        buf.append("Configuration error: ");
+        break;
+      case RESOURCE:
+        buf.append("Resource error: ");
+        break;
+      case SYSTEM:
+        buf.append("System error: ");
+        break;
+      default:
+        break;
     }
     buf.append(super.getMessage());
     if (context != null && context.size() > 0) {

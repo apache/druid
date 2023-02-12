@@ -23,9 +23,9 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
@@ -42,6 +42,7 @@ import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
@@ -107,8 +108,6 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
-import org.apache.druid.sql.SqlPlanningException;
-import org.apache.druid.sql.SqlPlanningException.PlanningError;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -361,8 +360,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCannotInsertWithNativeEngine()
   {
-    final SqlPlanningException e = Assert.assertThrows(
-        SqlPlanningException.class,
+    final DruidException e = Assert.assertThrows(
+        DruidException.class,
         () -> testQuery(
             "INSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL",
             ImmutableList.of(),
@@ -381,8 +380,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCannotReplaceWithNativeEngine()
   {
-    final SqlPlanningException e = Assert.assertThrows(
-        SqlPlanningException.class,
+    final DruidException e = Assert.assertThrows(
+        DruidException.class,
         () -> testQuery(
             "REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL",
             ImmutableList.of(),
@@ -753,7 +752,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testEarliestByInvalidTimestamp()
   {
     msqCompatible();
-    expectedException.expect(SqlPlanningException.class);
+    expectedException.expect(DruidException.class);
     expectedException.expectMessage("Cannot apply 'EARLIEST_BY' to arguments of type 'EARLIEST_BY(<FLOAT>, <BIGINT>)");
 
     testQuery(
@@ -767,7 +766,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testLatestByInvalidTimestamp()
   {
     msqCompatible();
-    expectedException.expect(SqlPlanningException.class);
+    expectedException.expect(DruidException.class);
     expectedException.expectMessage("Cannot apply 'LATEST_BY' to arguments of type 'LATEST_BY(<FLOAT>, <BIGINT>)");
 
     testQuery(
@@ -2848,12 +2847,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       );
       Assert.fail("query execution should fail");
     }
-    catch (SqlPlanningException e) {
+    catch (DruidException e) {
       Assert.assertTrue(
           e.getMessage().contains("Column count mismatch in UNION ALL")
       );
-      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
-      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorClass(), e.getErrorClass());
+      Assert.assertEquals(
+          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
+          e.context(DruidException.ERROR_CODE)
+      );
     }
   }
 
@@ -2916,7 +2917,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM (SELECT dim3, dim2, m1 FROM foo2 UNION ALL SELECT dim3, dim2, m1 FROM foo)\n"
         + "WHERE dim2 = 'a' OR dim2 = 'en'\n"
         + "GROUP BY 1, 2",
-        "Possible error: SQL requires union between inputs that are not simple table scans and involve a " +
+        "SQL requires union between inputs that are not simple table scans and involve a " +
             "filter or aliasing. Or column types of tables being unioned are not of same type.");
   }
 
@@ -2932,7 +2933,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM (SELECT dim1 AS c, m1 FROM foo UNION ALL SELECT dim2 AS c, m1 FROM numfoo)\n"
         + "WHERE c = 'a' OR c = 'def'\n"
         + "GROUP BY 1",
-        "Possible error: SQL requires union between two tables " +
+        "SQL requires union between two tables " +
             "and column names queried for each table are different Left: [dim1], Right: [dim2]."
     );
   }
@@ -2945,7 +2946,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     msqCompatible();
     assertQueryIsUnplannable(
         "SELECT dim2, dim1, m1 FROM foo2 UNION SELECT dim1, dim2, m1 FROM foo",
-        "Possible error: SQL requires 'UNION' but only 'UNION ALL' is supported."
+        "SQL requires 'UNION' but only 'UNION ALL' is supported."
     );
   }
 
@@ -2961,7 +2962,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM (SELECT dim1 AS c, m1 FROM foo UNION ALL SELECT cnt AS c, m1 FROM numfoo)\n"
         + "WHERE c = 'a' OR c = 'def'\n"
         + "GROUP BY 1",
-        "Possible error: SQL requires union between inputs that are not simple table scans and involve " +
+        "SQL requires union between inputs that are not simple table scans and involve " +
             "a filter or aliasing. Or column types of tables being unioned are not of same type."
     );
   }
@@ -3062,7 +3063,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM (SELECT dim1, dim2, m1 FROM foo UNION ALL SELECT dim2, dim1, m1 FROM foo)\n"
         + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
         + "GROUP BY 1, 2",
-        "Possible error: SQL requires union between two tables and column names queried for each table are different Left: [dim1, dim2, m1], Right: [dim2, dim1, m1]."
+        "SQL requires union between two tables and column names queried for each table are different Left: [dim1, dim2, m1], Right: [dim2, dim1, m1]."
     );
   }
 
@@ -3125,12 +3126,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       );
       Assert.fail("query execution should fail");
     }
-    catch (SqlPlanningException e) {
+    catch (DruidException e) {
       Assert.assertTrue(
           e.getMessage().contains("Column count mismatch in UNION ALL")
       );
-      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
-      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorClass(), e.getErrorClass());
+      Assert.assertEquals(
+          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
+          e.context(DruidException.ERROR_CODE)
+      );
     }
   }
 
@@ -3150,12 +3153,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       );
       Assert.fail("query execution should fail");
     }
-    catch (SqlPlanningException e) {
+    catch (DruidException e) {
       Assert.assertTrue(
           e.getMessage().contains("Column count mismatch in UNION ALL")
       );
-      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
-      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorClass(), e.getErrorClass());
+      Assert.assertEquals(
+          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
+          e.context(DruidException.ERROR_CODE)
+      );
     }
   }
 
@@ -3175,12 +3180,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       );
       Assert.fail("query execution should fail");
     }
-    catch (SqlPlanningException e) {
+    catch (DruidException e) {
       Assert.assertTrue(
           e.getMessage().contains("Column count mismatch in UNION ALL")
       );
-      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
-      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorClass(), e.getErrorClass());
+      Assert.assertEquals(
+          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
+          e.context(DruidException.ERROR_CODE)
+      );
     }
   }
 
@@ -5515,17 +5522,17 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     final Map<String, String> queries = ImmutableMap.of(
         // SELECT query with order by non-__time.
         "SELECT dim1 FROM druid.foo ORDER BY dim1",
-        "Possible error: SQL query requires order by non-time column [dim1 ASC] that is not supported.",
+        "SQL query requires order by non-time column [dim1 ASC] that is not supported.",
 
         // JOIN condition with not-equals (<>).
         "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
         + "FROM foo INNER JOIN lookup.lookyloo l ON foo.dim2 <> l.k",
-        "Possible error: SQL requires a join with 'NOT_EQUALS' condition that is not supported.",
+        "SQL requires a join with 'NOT_EQUALS' condition that is not supported.",
 
         // JOIN condition with a function of both sides.
         "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
         + "FROM foo INNER JOIN lookup.lookyloo l ON CHARACTER_LENGTH(foo.dim2 || l.k) > 3\n",
-        "Possible error: SQL requires a join with 'GREATER_THAN' condition that is not supported."
+        "SQL requires a join with 'GREATER_THAN' condition that is not supported."
     );
 
     for (final Map.Entry<String, String> queryErrorPair : queries.entrySet()) {
@@ -5586,7 +5593,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     assertQueryIsUnplannable(
         PLANNER_CONFIG_NO_HLL,
         "SELECT dim2, COUNT(distinct dim1), COUNT(distinct dim2) FROM druid.foo GROUP BY dim2",
-        "Possible error: SQL requires a join with 'IS_NOT_DISTINCT_FROM' condition that is not supported."
+        "SQL requires a join with 'IS_NOT_DISTINCT_FROM' condition that is not supported."
     );
   }
 
@@ -5599,7 +5606,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     assertQueryIsUnplannable(
         PLANNER_CONFIG_NO_HLL,
         "SELECT COUNT(distinct unique_dim1) FROM druid.foo",
-        "Possible error: SQL requires a group-by on a column of type COMPLEX<hyperUnique> that is unsupported."
+        "SQL requires a group-by on a column of type COMPLEX<hyperUnique> that is unsupported."
     );
   }
 
@@ -5611,12 +5618,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       testQuery("SELECT ARRAY_AGG(unique_dim1) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
       Assert.fail("query execution should fail");
     }
-    catch (SqlPlanningException e) {
+    catch (DruidException e) {
       Assert.assertTrue(
           e.getMessage().contains("Cannot use ARRAY_AGG on complex inputs COMPLEX<hyperUnique>")
       );
-      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
-      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorClass(), e.getErrorClass());
+      Assert.assertEquals(
+          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
+          e.context(DruidException.ERROR_CODE)
+      );
     }
   }
 
@@ -5628,12 +5637,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       testQuery("SELECT STRING_AGG(unique_dim1, ',') FROM druid.foo", ImmutableList.of(), ImmutableList.of());
       Assert.fail("query execution should fail");
     }
-    catch (SqlPlanningException e) {
+    catch (DruidException e) {
       Assert.assertTrue(
           e.getMessage().contains("Cannot use STRING_AGG on complex inputs COMPLEX<hyperUnique>")
       );
-      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
-      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorClass(), e.getErrorClass());
+      Assert.assertEquals(
+          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
+          e.context(DruidException.ERROR_CODE)
+      );
     }
   }
 
@@ -5772,7 +5783,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT COUNT(*) FROM druid.foo "
         + "WHERE TIME_IN_INTERVAL(__time, dim1)",
         expected -> {
-          expected.expect(CoreMatchers.instanceOf(SqlPlanningException.class));
+          expected.expect(CoreMatchers.instanceOf(DruidException.class));
           expected.expect(ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
               "From line 1, column 38 to line 1, column 67: "
               + "Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(<TIMESTAMP(3)>, <VARCHAR>)'. "
@@ -5920,11 +5931,27 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     msqCompatible();
     // Strings are implicitly cast to timestamps. Test an invalid string.
     // This error message isn't ideal but it is at least better than silently ignoring the problem.
-    assertQueryIsUnplannable(
-        "SELECT COUNT(*) FROM druid.foo\n"
-            + "WHERE __time >= 'z2000-01-01 00:00:00' AND __time < '2001-01-01 00:00:00'\n",
-        "Possible error: Illegal TIMESTAMP constant: CAST('z2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL"
-    );
+    String sql = "SELECT COUNT(*) FROM druid.foo\n"
+        + "WHERE __time >= 'z2000-01-01 00:00:00' AND __time < '2001-01-01 00:00:00'\n";
+    try {
+      testBuilder().sql(sql).run();
+    }
+    catch (DruidException e) {
+      Assert.assertEquals(
+          sql,
+          "Illegal TIMESTAMP constant",
+          e.message()
+      );
+      Assert.assertEquals(
+          sql,
+          "CAST('z2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL",
+          e.context("Value")
+      );
+    }
+    catch (Exception e) {
+      log.error(e, "Expected DruidException for query: %s", sql);
+      Assert.fail(sql);
+    }
   }
 
   @Test
@@ -11214,12 +11241,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       testQuery("SELECT TIME_EXTRACT(__time) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
       Assert.fail("query execution should fail");
     }
-    catch (SqlPlanningException e) {
+    catch (DruidException e) {
       Assert.assertTrue(
           e.getMessage().contains("Invalid number of arguments to function 'TIME_EXTRACT'. Was expecting 2 arguments")
       );
-      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
-      Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorClass(), e.getErrorClass());
+      Assert.assertEquals(
+          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
+          e.context(DruidException.ERROR_CODE)
+      );
     }
   }
 
@@ -13911,7 +13940,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test(expected = RelOptPlanner.CannotPlanException.class)
+  @Test(expected = DruidException.class)
   public void testStringAggExpressionNonConstantSeparator()
   {
     msqCompatible();
@@ -14064,7 +14093,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testHumanReadableFormatFunctionExceptionWithWrongNumberType()
   {
     msqCompatible();
-    this.expectedException.expect(SqlPlanningException.class);
+    this.expectedException.expect(DruidException.class);
     this.expectedException.expectMessage("Supported form(s): HUMAN_READABLE_BINARY_BYTE_FORMAT(Number, [Precision])");
     testQuery(
         "SELECT HUMAN_READABLE_BINARY_BYTE_FORMAT('45678')",
@@ -14077,7 +14106,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testHumanReadableFormatFunctionWithWrongPrecisionType()
   {
     msqCompatible();
-    this.expectedException.expect(SqlPlanningException.class);
+    this.expectedException.expect(DruidException.class);
     this.expectedException.expectMessage("Supported form(s): HUMAN_READABLE_BINARY_BYTE_FORMAT(Number, [Precision])");
     testQuery(
         "SELECT HUMAN_READABLE_BINARY_BYTE_FORMAT(45678, '2')",
@@ -14090,7 +14119,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testHumanReadableFormatFunctionWithInvalidNumberOfArguments()
   {
     msqCompatible();
-    this.expectedException.expect(SqlPlanningException.class);
+    this.expectedException.expect(DruidException.class);
 
     /*
      * frankly speaking, the exception message thrown here is a little bit confusing

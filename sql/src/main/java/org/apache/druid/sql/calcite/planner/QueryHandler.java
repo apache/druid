@@ -61,6 +61,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -72,6 +73,7 @@ import org.apache.druid.sql.calcite.rel.DruidUnionRel;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.table.DruidTable;
+import org.apache.druid.utils.Throwables;
 
 import javax.annotation.Nullable;
 
@@ -111,7 +113,8 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     CalcitePlanner planner = handlerContext.planner();
     try {
       validatedQueryNode = planner.validate(rewriteParameters());
-    } catch (ValidationException e) {
+    }
+    catch (ValidationException e) {
       throw DruidPlanner.translateException(e);
     }
 
@@ -218,13 +221,24 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       }
     }
     catch (RelOptPlanner.CannotPlanException e) {
-      Logger logger = log;
-      if (!handlerContext.queryContext().isDebug()) {
-        logger = log.noStackTrace();
+      throw buildSQLPlanningError(e);
+    }
+    catch (RuntimeException e) {
+      // Calcite throws a Runtime exception as the result of an IllegalTargetException
+      // as the result of invoking a method dynamically, when that method throws an
+      // exception. Unwrap the exception if this exception is from Calcite.
+      RelOptPlanner.CannotPlanException cpe = Throwables.getCauseOfType(e, RelOptPlanner.CannotPlanException.class);
+      if (cpe != null) {
+        throw buildSQLPlanningError(cpe);
       }
-      throw buildSQLPlanningError(e, logger);
+      DruidException de = Throwables.getCauseOfType(e, DruidException.class);
+      if (de != null) {
+        throw de;
+      }
+      throw DruidPlanner.translateException(e);
     }
     catch (Exception e) {
+      // Not sure what this is. Should it have been translated sooner?
       throw DruidPlanner.translateException(e);
     }
   }
@@ -578,11 +592,16 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
 
   protected abstract QueryMaker buildQueryMaker(RelRoot rootQueryRel) throws ValidationException;
 
-  private DruidException buildSQLPlanningError(Throwable exception, Logger logger)
+  private DruidException buildSQLPlanningError(RelOptPlanner.CannotPlanException exception)
   {
+    Logger logger = log;
+    if (!handlerContext.queryContext().isDebug()) {
+      logger = log.noStackTrace();
+    }
     DruidException.Builder builder = DruidException.system("Unsupported query")
         .cause(exception)
-        .context("SQL", handlerContext.plannerContext().getSql());
+        .context("SQL", handlerContext.plannerContext().getSql())
+        .context(DruidException.ERROR_CODE, QueryException.QUERY_UNSUPPORTED_ERROR_CODE);
     String errorMessage = handlerContext.plannerContext().getPlanningError();
     if (null == errorMessage && exception instanceof UnsupportedSQLQueryException) {
       builder.context("Specific error", errorMessage);

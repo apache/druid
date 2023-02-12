@@ -66,7 +66,6 @@ public class PreResponseAuthorizationCheckFilter implements Filter
   @Override
   public void init(FilterConfig filterConfig)
   {
-
   }
 
   @Override
@@ -90,7 +89,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
       // (e.g. OverlordServletProxy), so this is not implemented for now.
       handleAuthorizationCheckError(
           StringUtils.format(
-              "Request did not have an authorization check performed, original response status[%s].",
+              "Request did not have an authorization check performed, original response status: %s",
               response.getStatus()
           ),
           request,
@@ -100,7 +99,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
 
     if (authInfoChecked != null && !authInfoChecked && response.getStatus() != HttpServletResponse.SC_FORBIDDEN) {
       handleAuthorizationCheckError(
-          "Request's authorization check failed but status code was not 403.",
+          "Request's authorization check failed but status code was not 403",
           request,
           response
       );
@@ -110,7 +109,6 @@ public class PreResponseAuthorizationCheckFilter implements Filter
   @Override
   public void destroy()
   {
-
   }
 
   private void handleUnauthenticatedRequest(

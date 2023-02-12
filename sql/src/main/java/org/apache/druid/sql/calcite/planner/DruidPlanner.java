@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.SqlExplain;
 import org.apache.calcite.sql.SqlKind;
@@ -29,10 +30,8 @@ import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -137,7 +136,8 @@ public class DruidPlanner implements Closeable
     SqlNode root;
     try {
       root = planner.parse(sql);
-    } catch (SqlParseException e1) {
+    }
+    catch (SqlParseException e1) {
       throw translateException(e1);
     }
     handler = createHandler(root);
@@ -169,6 +169,7 @@ public class DruidPlanner implements Closeable
     }
     throw DruidException.user("Unsupported SQL statement")
         .context("Statement kind", node.getKind())
+        .context(DruidException.ERROR_CODE, QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE)
         .build();
   }
 
@@ -312,40 +313,76 @@ public class DruidPlanner implements Closeable
     }
   }
 
-  public static DruidException translateException(Exception e) {
+  public static DruidException translateException(Exception e)
+  {
     try {
       throw e;
     }
     catch (DruidException inner) {
       return inner;
     }
-    catch (ValidationException | SqlParseException inner) {
-      // Calcite exception that probably includes a position.
-      String msg = inner.getMessage();
-      Pattern p = Pattern.compile("From line (\\d+), column (\\d+) to line \\d+, column \\d+: (.*)$");
-      Matcher m = p.matcher(msg);
-      if (m.matches()) {
-        return DruidException
-            .user(m.group(3))
-            .cause(e)
-            .context("Line", m.group(1))
-            .context("Column", m.group(2))
-            .build();
-      }
+    catch (ValidationException inner) {
+      return parseValidationMessage(inner, QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE);
     }
-    // There is a claim that Calcite sometimes throws a java.lang.AssertionError, but we do not have a test that can
-    // reproduce it checked into the code (the best we have is something that uses mocks to throw an Error, which is
-    // dubious at best).  We keep this just in case, but it might be best to remove it and see where the
-    // AssertionErrors are coming from and do something to ensure that they don't actually make it out of Calcite
-    catch (AssertionError inner) {
-      return DruidException.resourceError("AssertionError killed query")
-          .cause(inner)
-          .build();
+    catch (SqlParseException inner) {
+      return parseParserMessage(inner);
+    }
+    catch (RelOptPlanner.CannotPlanException inner) {
+      return parseValidationMessage(inner, QueryException.QUERY_UNSUPPORTED_ERROR_CODE);
     }
     catch (Exception inner) {
-      // Anything else
-      return DruidException.user(e.getMessage()).cause(inner).build();
+      // Anything else. Should not get here. Anything else should already have
+      // been translated to a DruidException unless it is an unexpected exception.
+      return DruidException
+          .system(e.getMessage())
+          .cause(inner)
+          .context(DruidException.ERROR_CODE, QueryException.UNKNOWN_EXCEPTION_ERROR_CODE)
+          .build();
     }
-    throw new UOE("Should not get here");
+  }
+
+  private static DruidException parseValidationMessage(Exception e, String errorCode)
+  {
+    // Calcite exception that probably includes a position.
+    String msg = e.getMessage();
+    Pattern p = Pattern.compile("(?:org\\..*: )From line (\\d+), column (\\d+) to line \\d+, column \\d+: (.*)$");
+    Matcher m = p.matcher(msg);
+    DruidException.Builder builder;
+    if (m.matches()) {
+      builder = DruidException
+          .user(m.group(3))
+          .context("Line", m.group(1))
+          .context("Column", m.group(2));
+    } else {
+      builder = DruidException.user(msg).cause(e);
+    }
+    return builder
+        .context(DruidException.ERROR_CODE, errorCode)
+        .build();
+  }
+
+  private static DruidException parseParserMessage(Exception e)
+  {
+    // Calcite exception that probably includes a position.
+    String msg = e.getMessage();
+    Pattern p = Pattern.compile(
+        "Encountered \"(.*)\" at line (\\d+), column (\\d+).\nWas expecting one of:\n(.*)",
+        Pattern.MULTILINE | Pattern.DOTALL
+    );
+    Matcher m = p.matcher(msg);
+    DruidException.Builder builder;
+    if (m.matches()) {
+      String choices = m.group(4).trim().replaceAll("[ .]*\n\\ s+", ", ");
+      builder = DruidException
+          .user("Parse error: unexpected token " + m.group(1))
+          .context("Line", m.group(2))
+          .context("Column", m.group(3))
+          .context("Expected", choices);
+    } else {
+      builder = DruidException.user(msg).cause(e);
+    }
+    return builder
+        .context(DruidException.ERROR_CODE, QueryException.SQL_PARSE_FAILED_ERROR_CODE)
+        .build();
   }
 }
