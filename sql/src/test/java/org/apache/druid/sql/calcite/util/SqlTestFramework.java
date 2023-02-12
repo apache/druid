@@ -416,8 +416,7 @@ public class SqlTestFramework
           plannerConfig,
           viewManager,
           componentSupplier.createSchemaManager(),
-          framework.authorizerMapper,
-          framework.builder.catalogResolver
+          framework.authorizerMapper
       );
 
       this.plannerFactory = new PlannerFactory(

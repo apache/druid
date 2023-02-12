@@ -487,8 +487,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         new PlannerConfig(),
         viewManager,
         new NoopDruidSchemaManager(),
-        CalciteTests.TEST_AUTHORIZER_MAPPER,
-        catalogResolver
+        CalciteTests.TEST_AUTHORIZER_MAPPER
     );
 
     final SqlEngine engine = new MSQTaskSqlEngine(
