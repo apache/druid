@@ -21,11 +21,12 @@ package org.apache.druid.msq.test;
 
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.QueryCounterSnapshot;
+import org.junit.Assert;
 
 /**
  * Utility class to build instances of {@link QueryCounterSnapshot} used in tests.
  */
-public class CounterSnapshotBuilder
+public class CounterSnapshotMatcher
 {
   private long[] rows;
   private long[] bytes;
@@ -33,43 +34,62 @@ public class CounterSnapshotBuilder
   private long[] files;
   private long[] totalFiles;
 
-  public static CounterSnapshotBuilder with()
+  public static CounterSnapshotMatcher with()
   {
-    return new CounterSnapshotBuilder();
+    return new CounterSnapshotMatcher();
   }
 
-  public CounterSnapshotBuilder rows(long... rows)
+  public CounterSnapshotMatcher rows(long... rows)
   {
     this.rows = rows;
     return this;
   }
 
-  public CounterSnapshotBuilder bytes(long... bytes)
+  public CounterSnapshotMatcher bytes(long... bytes)
   {
     this.bytes = bytes;
     return this;
   }
 
-  public CounterSnapshotBuilder frames(long... frames)
+  public CounterSnapshotMatcher frames(long... frames)
   {
     this.frames = frames;
     return this;
   }
 
-  public CounterSnapshotBuilder files(long... files)
+  public CounterSnapshotMatcher files(long... files)
   {
     this.files = files;
     return this;
   }
 
-  public CounterSnapshotBuilder totalFiles(long... totalFiles)
+  public CounterSnapshotMatcher totalFiles(long... totalFiles)
   {
     this.totalFiles = totalFiles;
     return this;
   }
 
-  public QueryCounterSnapshot buildChannelCounter()
+  /**
+   * Asserts that the matcher matches the queryCounterSnapshot parameter. If a parameter in this class is null, the
+   * match is not checked
+   */
+  public void matchQuerySnapshot(String errorMessageFormat, QueryCounterSnapshot queryCounterSnapshot)
   {
-    return new ChannelCounters.Snapshot(rows, bytes, frames, files, totalFiles);
+    ChannelCounters.Snapshot channelCountersSnapshot = (ChannelCounters.Snapshot) queryCounterSnapshot;
+    if (rows != null) {
+      Assert.assertArrayEquals(errorMessageFormat, rows, channelCountersSnapshot.getRows());
+    }
+    if (bytes != null) {
+      Assert.assertArrayEquals(errorMessageFormat, bytes, channelCountersSnapshot.getBytes());
+    }
+    if (frames != null) {
+      Assert.assertArrayEquals(errorMessageFormat, frames, channelCountersSnapshot.getFrames());
+    }
+    if (files != null) {
+      Assert.assertArrayEquals(errorMessageFormat, files, channelCountersSnapshot.getFiles());
+    }
+    if (totalFiles != null) {
+      Assert.assertArrayEquals(errorMessageFormat, totalFiles, channelCountersSnapshot.getTotalFiles());
+    }
   }
 }

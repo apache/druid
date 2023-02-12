@@ -106,7 +106,6 @@ exports[`ExplainDialog matches snapshot on some data (many queries) 1`] = `
       <Blueprint4.Tab
         disabled={false}
         id={0}
-        key="0"
         panel={
           <div
             className="query-explanation"
@@ -205,7 +204,6 @@ exports[`ExplainDialog matches snapshot on some data (many queries) 1`] = `
       <Blueprint4.Tab
         disabled={false}
         id={1}
-        key="1"
         panel={
           <div
             className="query-explanation"

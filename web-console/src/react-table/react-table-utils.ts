@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 
-import { IconName } from '@blueprintjs/core';
+import type { IconName } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { C, F, SqlExpression } from 'druid-query-toolkit';
-import { Filter } from 'react-table';
+import type { SqlExpression } from 'druid-query-toolkit';
+import { C, F } from 'druid-query-toolkit';
+import type { Filter } from 'react-table';
 
 import { addOrUpdate, caseInsensitiveContains } from '../utils';
 

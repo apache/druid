@@ -19,10 +19,11 @@
 import { Code } from '@blueprintjs/core';
 import React from 'react';
 
-import { AutoForm, ExternalLink, Field } from '../../components';
+import type { Field } from '../../components';
+import { AutoForm, ExternalLink } from '../../components';
 import { getLink } from '../../links';
 import { compact, oneOf, typeIs } from '../../utils';
-import { FlattenSpec } from '../flatten-spec/flatten-spec';
+import type { FlattenSpec } from '../flatten-spec/flatten-spec';
 
 export interface InputFormat {
   readonly type: string;

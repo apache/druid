@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { IngestionSpec } from '../druid-models';
+import type { IngestionSpec } from '../druid-models';
 
 import { applyCache, headerFromSampleResponse } from './sampler';
 

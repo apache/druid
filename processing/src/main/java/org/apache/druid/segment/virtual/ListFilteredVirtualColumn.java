@@ -158,6 +158,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
                                        .setHasBitmapIndexes(true);
   }
 
+  @Nullable
   @Override
   public ColumnCapabilities capabilities(ColumnInspector inspector, String columnName)
   {

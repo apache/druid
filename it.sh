@@ -49,8 +49,6 @@ Usage: $0 cmd [category]
       Start the cluster, run the test for category, and stop the cluster
   tail <category>
       Show the last 20 lines of each container log
-  travis <category>
-      Run one IT in Travis (build dist, image, run test, tail logs)
   gen
       Generate docker-compose.yaml files (done automatically on up)
       run one IT in Travis (build dist, image, run test, tail logs)
@@ -95,7 +93,7 @@ function tail_logs
 #    pass into tests when running locally.
 # 3. A file given by the OVERRIDE_ENV environment variable. That is, OVERRIDE_ENV holds
 #    the path to a file of var=value pairs. Historically, this file was created by a
-#    build environment such as Travis. However, it is actually simpler just to use
+#    build environment such as Github Actions. However, it is actually simpler just to use
 #    option 1: just set the values in the environment and let Linux pass them through to
 #    this script.
 # 4. Environment variables of the form "druid_" used to create the Druid config file.
@@ -245,13 +243,6 @@ case $CMD in
   "tail" )
     prepare_category $1
     tail_logs $CATEGORY
-    ;;
-  "travis" )
-    prepare_category $1
-    $0 dist
-    $0 image
-    $0 test $CATEGORY
-    $0 tail $CATEGORY
     ;;
   "github" )
     prepare_category $1
