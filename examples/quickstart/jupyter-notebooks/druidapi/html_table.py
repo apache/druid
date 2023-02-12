@@ -75,9 +75,6 @@ class HtmlTable(BaseTable):
 
     def __init__(self):
         BaseTable.__init__(self)
-        self._headers = None
-        self._align = None
-        self._col_fmt = None
 
     def widths(self, widths):
         self._widths = widths
