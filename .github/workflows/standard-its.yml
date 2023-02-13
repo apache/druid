@@ -136,8 +136,7 @@ jobs:
         id: test
         run: |
           # Debug echo
-          echo "Mysql driver: ${MYSQL_DRIVER_CLASSNAME}"
-          echo "MAVEN_OPTS='-Xmx2048m' ${MVN} verify -pl integration-tests -P int-tests-config-file ${IT_TEST} ${MAVEN_SKIP} -Dpod.name=${POD_NAME} -Dpod.namespace=${POD_NAMESPACE} -Dbuild.druid.cluster=${BUILD_DRUID_CLUSTER}
+          echo "MAVEN_OPTS='-Xmx2048m' ${MVN} verify -pl integration-tests -P int-tests-config-file ${IT_TEST} ${MAVEN_SKIP} -Dpod.name=${POD_NAME} -Dpod.namespace=${POD_NAMESPACE} -Dbuild.druid.cluster=${BUILD_DRUID_CLUSTER}"
           MAVEN_OPTS='-Xmx2048m' ${MVN} verify -pl integration-tests -P int-tests-config-file ${IT_TEST} ${MAVEN_SKIP} -Dpod.name=${POD_NAME} -Dpod.namespace=${POD_NAMESPACE} -Dbuild.druid.cluster=${BUILD_DRUID_CLUSTER}
 
       - name: Debug on failure
