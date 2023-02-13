@@ -25,4 +25,8 @@ package org.apache.druid.frame.write;
  */
 public class InvalidNullByteException extends RuntimeException
 {
+  public InvalidNullByteException(String message)
+  {
+    super(message);
+  }
 }

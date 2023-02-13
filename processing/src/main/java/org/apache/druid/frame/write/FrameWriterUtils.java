@@ -229,7 +229,11 @@ public class FrameWriterUtils
       final byte b = src.get(p);
 
       if (!allowNullBytes && b == 0) {
-        throw new InvalidNullByteException();
+        throw new InvalidNullByteException(
+            "Added frame contains null bytes. This usually happens when the added data contains the hidden "
+            + "null bytes (0x0000). Consider sanitizing the string columns by deleting the null bytes using SQL replace"
+            + "function like REPLACE(column, U&'\\0000', '')."
+        );
       }
 
       dst.putByte(q, b);
