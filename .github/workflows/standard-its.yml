@@ -104,6 +104,7 @@ jobs:
     name: (Compile=openjdk8, Run=openjdk8, Cluster Build On K8s) ITNestedQueryPushDownTest integration test
     runs-on: ubuntu-22.04
     env:
+      MVN: mvn --no-snapshot-updates
       MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
       CONFIG_FILE: k8s_run_config_file.json
       IT_TEST: -Dit.test=ITNestedQueryPushDownTest
