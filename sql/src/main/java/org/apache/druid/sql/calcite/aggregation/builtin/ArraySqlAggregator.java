@@ -35,10 +35,12 @@ import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.util.Optionality;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -48,11 +50,11 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -168,7 +170,9 @@ public class ArraySqlAggregator implements SqlAggregator
     {
       RelDataType type = sqlOperatorBinding.getOperandType(0);
       if (type instanceof RowSignatures.ComplexSqlType) {
-        throw new UnsupportedSQLQueryException("Cannot use ARRAY_AGG on complex inputs %s", type);
+        throw DruidException.user("Cannot use ARRAY_AGG on complex inputs %s", type)
+          .context(DruidException.ERROR_CODE, QueryException.UNSUPPORTED_OPERATION_ERROR_CODE)
+          .build();
       }
       return sqlOperatorBinding.getTypeFactory().createArrayType(
           type,

@@ -31,6 +31,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -61,7 +62,6 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
@@ -2692,9 +2692,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         + "SUM(cnt) "
         + "FROM druid.nested GROUP BY 1",
         (expected) -> {
-          expected.expect(UnsupportedSQLQueryException.class);
+          expected.expect(DruidException.class);
           expected.expectMessage(
-              "Cannot use [JSON_VALUE_VARCHAR]: [Bad format, '.array.[1]' is not a valid JSONPath path: must start with '$']");
+              "Cannot use JSON_VALUE_VARCHAR\n" +
+              "Error Code: Unsupported operation\n" +
+              "Cause: Bad format, '.array.[1]' is not a valid JSONPath path: must start with '$'"
+          );
         }
     );
   }

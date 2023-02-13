@@ -25,11 +25,12 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rex.RexLiteral;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.DruidQueryRel;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.table.InlineTable;
@@ -129,14 +130,18 @@ public class DruidLogicalValuesRule extends RelOptRule
         return Calcites.calciteDateTimeLiteralToJoda(literal, plannerContext.getTimeZone()).getMillis();
       case NULL:
         if (!literal.isNull()) {
-          throw new UnsupportedSQLQueryException("Query has a non-null constant but is of NULL type.");
+          throw DruidException.user("Query has a non-null constant but is of NULL type.")
+              .context(DruidException.ERROR_CODE, QueryException.UNSUPPORTED_OPERATION_ERROR_CODE)
+              .build();
         }
         return null;
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
       case TIME:
       case TIME_WITH_LOCAL_TIME_ZONE:
       default:
-        throw new UnsupportedSQLQueryException("%s type is not supported", literal.getType().getSqlTypeName());
+        throw DruidException.user("%s type is not supported", literal.getType().getSqlTypeName())
+            .context(DruidException.ERROR_CODE, QueryException.UNSUPPORTED_OPERATION_ERROR_CODE)
+            .build();
     }
   }
 }

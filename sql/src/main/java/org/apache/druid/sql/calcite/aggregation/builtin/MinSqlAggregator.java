@@ -22,7 +22,9 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
@@ -30,7 +32,6 @@ import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 
 public class MinSqlAggregator extends SimpleSqlAggregator
 {
@@ -67,7 +68,9 @@ public class MinSqlAggregator extends SimpleSqlAggregator
       case DOUBLE:
         return new DoubleMinAggregatorFactory(name, fieldName, null, macroTable);
       default:
-        throw new UnsupportedSQLQueryException("MIN aggregator is not supported for '%s' type", aggregationType);
+        throw DruidException.user("MIN aggregator is not supported for '%s' type", aggregationType)
+            .context(DruidException.ERROR_CODE, QueryException.UNSUPPORTED_OPERATION_ERROR_CODE)
+            .build();
     }
   }
 }
