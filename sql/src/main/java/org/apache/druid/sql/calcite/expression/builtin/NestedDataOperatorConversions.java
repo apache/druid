@@ -40,11 +40,13 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeTransforms;
 import org.apache.calcite.sql2rel.SqlRexConvertlet;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.nested.NestedPathFinder;
@@ -56,11 +58,11 @@ import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.planner.convertlet.DruidConvertletFactory;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.List;
 
@@ -200,11 +202,13 @@ public class NestedDataOperatorConversions
         parts = NestedPathFinder.parseJsonPath(path);
       }
       catch (IllegalArgumentException iae) {
-        throw new UnsupportedSQLQueryException(
-            "Cannot use [%s]: [%s]",
-            call.getOperator().getName(),
-            iae.getMessage()
-        );
+        throw DruidException.user(
+                "Cannot use %s",
+                call.getOperator().getName()
+             )
+            .context(DruidException.ERROR_CODE, QueryException.UNSUPPORTED_OPERATION_ERROR_CODE)
+            .cause(iae)
+            .build();
       }
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
       final DruidExpression.ExpressionGenerator builder = (args) ->
@@ -391,11 +395,13 @@ public class NestedDataOperatorConversions
         parts = NestedPathFinder.parseJsonPath(path);
       }
       catch (IllegalArgumentException iae) {
-        throw new UnsupportedSQLQueryException(
-            "Cannot use [%s]: [%s]",
-            call.getOperator().getName(),
-            iae.getMessage()
-        );
+        throw DruidException.user(
+                "Cannot use %s",
+                call.getOperator().getName()
+             )
+            .context(DruidException.ERROR_CODE, QueryException.UNSUPPORTED_OPERATION_ERROR_CODE)
+            .cause(iae)
+            .build();
       }
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
       final DruidExpression.ExpressionGenerator builder = (args) ->
@@ -689,11 +695,13 @@ public class NestedDataOperatorConversions
         parts = NestedPathFinder.parseJsonPath(path);
       }
       catch (IllegalArgumentException iae) {
-        throw new UnsupportedSQLQueryException(
-            "Cannot use [%s]: [%s]",
-            call.getOperator().getName(),
-            iae.getMessage()
-        );
+        throw DruidException.user(
+                "Cannot use %s",
+                call.getOperator().getName()
+             )
+            .context(DruidException.ERROR_CODE, QueryException.UNSUPPORTED_OPERATION_ERROR_CODE)
+            .cause(iae)
+            .build();
       }
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
       final DruidExpression.ExpressionGenerator builder = (args) ->

@@ -31,7 +31,9 @@ import org.apache.calcite.sql.SqlSplittableAggFunction;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.util.Optionality;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
@@ -40,7 +42,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 
 public class SumSqlAggregator extends SimpleSqlAggregator
 {
@@ -88,7 +89,9 @@ public class SumSqlAggregator extends SimpleSqlAggregator
       case DOUBLE:
         return new DoubleSumAggregatorFactory(name, fieldName, null, macroTable);
       default:
-        throw new UnsupportedSQLQueryException("Sum aggregation is not supported for '%s' type", aggregationType);
+        throw DruidException.user("Sum aggregation is not supported for '%s' type", aggregationType)
+            .context(DruidException.ERROR_CODE, QueryException.UNSUPPORTED_OPERATION_ERROR_CODE)
+            .build();
     }
   }
 
