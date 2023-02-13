@@ -40,6 +40,8 @@
 # - DRUID_CONFIG_COMMON -- full path to a file for druid 'common' properties
 # - DRUID_CONFIG_${service} -- full path to a file for druid 'service' properties
 # - DRUID_SINGLE_NODE_CONF -- config to use at runtime. Choose from: {large, medium, micro-quickstart, nano-quickstart, small, xlarge}
+# - DRUID_ADDITIONAL_CONF_DIR -- full path to a directory containing configuration files needed for extentions and will be copied to the common directory. Useful for Kubernetes
+
 
 set -e
 SERVICE="$1"
@@ -195,5 +197,15 @@ if [ -n "${DRUID_DIRS_TO_CREATE}" ]
 then
     mkdir -p ${DRUID_DIRS_TO_CREATE}
 fi
+
+# Check if the other configuration directorie variable is set and if it is, copy the files from there
+if [ -z "$DRUID_ADDITIONAL_CONF_DIR" ]
+then
+    if [  -d "$DRUID_ADDITIONAL_CONF_DIR" ]
+    then
+        cp $DRUID_ADDITIONAL_CONF_DIR/* $COMMON_CONF_DIR
+    fi
+fi
+
 
 exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*: org.apache.druid.cli.Main server $@
