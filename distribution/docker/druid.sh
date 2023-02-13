@@ -199,7 +199,7 @@ then
 fi
 
 # Check if the other configuration directorie variable is set and if it is, copy the files from there
-if [ -z "$DRUID_ADDITIONAL_CONF_DIR" ]
+if [ -n "$DRUID_ADDITIONAL_CONF_DIR" ]
 then
     if [  -d "$DRUID_ADDITIONAL_CONF_DIR" ]
     then
