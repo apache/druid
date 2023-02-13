@@ -92,12 +92,14 @@ The following table lists the configurable parameters of the Druid chart and the
 | `image.tag`                              | container image tag                                     | `0.19.0`                                   |
 | `image.pullPolicy`                       | container pull policy                                   | `IfNotPresent`                             |
 | `image.pullSecrets`                      | image pull secrest for private repositoty               | `[]`                                       |
-| `configMap.enabled`                       | enable druid configuration as configmap                   | `true`                                     |
-| `configVars`                              | druid configuration variables for all components         | ``                                         |
+| `configMap.enabled`                      | enable druid configuration as configmap                 | `true`                                     |
+| `configVars`                             | druid configuration variables for all components        | ``                                         |
+| `env`                                    | global container environment variables to set           | `[]`                                       |
 | `gCloudStorage.enabled`                  | look for secret to set google cloud credentials         | `false`                                    |
 | `gCloudStorage.secretName`               | secretName to be mounted as google cloud credentials    | `false`                                    |
 | `broker.enabled`                         | enable broker                                           | `true`                                     |
 | `broker.name`                            | broker component name                                   | `broker`                                   |
+| `broker.env`                             | broker container environment variables to append        | `[]`                                       |
 | `broker.replicaCount`                    | broker node replicas (deployment)                       | `1`                                        |
 | `broker.port`                            | port of broker component                                | `8082`                                     |
 | `broker.serviceType`                     | service type for service                                | `ClusterIP`                                |
@@ -105,14 +107,15 @@ The following table lists the configurable parameters of the Druid chart and the
 | `broker.podAnnotations`                  | broker deployment annotations                           | `{}`                                       |
 | `broker.nodeSelector`                    | Node labels for broker pod assignment                   | `{}`                                       |
 | `broker.tolerations`                     | broker tolerations                                      | `[]`                                       |
-| `broker.config`                           | broker private config such as `JAVA_OPTS`                |                                            |
-| `broker.affinity`                         | broker affinity policy                                   | `{}`                                       |
+| `broker.config`                          | broker private config such as `JAVA_OPTS`               |                                            |
+| `broker.affinity`                        | broker affinity policy                                  | `{}`                                       |
 | `broker.ingress.enabled`                 | enable ingress                                          | `false`                                    |
 | `broker.ingress.hosts`                   | hosts for the broker api                                | `[ "chart-example.local" ]`                |
 | `broker.ingress.path`                    | path of the broker api                                  | `/`                                        |
 | `broker.ingress.annotations`             | annotations for the broker api ingress                  | `{}`                                       |
-| `broker.ingress.tls`                     | TLS configuration for the ingress                        | `[]`                                       |
+| `broker.ingress.tls`                     | TLS configuration for the ingress                       | `[]`                                       |
 | `coordinator.enabled`                    | enable coordinator                                      | `true`                                     |
+| `coordinator.env`                        | coordinator container environment variables to append   | `[]`                                       |
 | `coordinator.name`                       | coordinator component name                              | `coordinator`                              |
 | `coordinator.replicaCount`               | coordinator node replicas (deployment)                  | `1`                                        |
 | `coordinator.port`                       | port of coordinator component                           | `8081`                                     |
@@ -121,14 +124,15 @@ The following table lists the configurable parameters of the Druid chart and the
 | `coordinator.podAnnotations`             | coordinator Deployment annotations                      | `{}`                                       |
 | `coordinator.nodeSelector`               | node labels for coordinator pod assignment              | `{}`                                       |
 | `coordinator.tolerations`                | coordinator tolerations                                 | `[]`                                       |
-| `coordinator.config`                      | coordinator private config such as `JAVA_OPTS`           |                                            |
-| `coordinator.affinity`                    | coordinator affinity policy                              | `{}`                                       |
+| `coordinator.config`                     | coordinator private config such as `JAVA_OPTS`          |                                            |
+| `coordinator.affinity`                   | coordinator affinity policy                             | `{}`                                       |
 | `coordinator.ingress.enabled`            | enable ingress                                          | `false`                                    |
 | `coordinator.ingress.hosts`              | hosts for the coordinator api                           | `[ "chart-example.local" ]`                |
 | `coordinator.ingress.path`               | path of the coordinator api                             | `/`                                        |
 | `coordinator.ingress.annotations`        | annotations for the coordinator api ingress             | `{}`                                       |
-| `coordinator.ingress.tls`                | TLS configuration for the ingress                        | `[]`                                       |
+| `coordinator.ingress.tls`                | TLS configuration for the ingress                       | `[]`                                       |
 | `overlord.enabled`                       | enable overlord                                         | `false`                                    |
+| `overlord.env`                           | overlord container environment variables to append      | `[]`                                       |
 | `overlord.name`                          | overlord component name                                 | `overlord`                                 |
 | `overlord.replicaCount`                  | overlord node replicas (deployment)                     | `1`                                        |
 | `overlord.port`                          | port of overlord component                              | `8081`                                     |
@@ -137,14 +141,15 @@ The following table lists the configurable parameters of the Druid chart and the
 | `overlord.podAnnotations`                | overlord Deployment annotations                         | `{}`                                       |
 | `overlord.nodeSelector`                  | node labels for overlord pod assignment                 | `{}`                                       |
 | `overlord.tolerations`                   | overlord tolerations                                    | `[]`                                       |
-| `overlord.config`                         | overlord private config such as `JAVA_OPTS`              |                                            |
-| `overlord.affinity`                       | overlord affinity policy                                 | `{}`                                       |
+| `overlord.config`                        | overlord private config such as `JAVA_OPTS`             |                                            |
+| `overlord.affinity`                      | overlord affinity policy                                | `{}`                                       |
 | `overlord.ingress.enabled`               | enable ingress                                          | `false`                                    |
 | `overlord.ingress.hosts`                 | hosts for the overlord api                              | `[ "chart-example.local" ]`                |
 | `overlord.ingress.path`                  | path of the overlord api                                | `/`                                        |
 | `overlord.ingress.annotations`           | annotations for the overlord api ingress                | `{}`                                       |
-| `overlord.ingress.tls`                   | TLS configuration for the ingress                        | `[]`                                       |
+| `overlord.ingress.tls`                   | TLS configuration for the ingress                       | `[]`                                       |
 | `historical.enabled`                     | enable historical                                       | `true`                                     |
+| `historical.env`                         | historical container environment variables to append    | `[]`                                       |
 | `historical.name`                        | historical component name                               | `historical`                               |
 | `historical.replicaCount`                | historical node replicas (statefulset)                  | `1`                                        |
 | `historical.port`                        | port of historical component                            | `8083`                                     |
@@ -156,19 +161,20 @@ The following table lists the configurable parameters of the Druid chart and the
 | `historical.nodeSelector`                | node labels for historical pod assignment               | `{}`                                       |
 | `historical.securityContext`             | custom security context for historical containers       | `{ fsGroup: 1000 }`                        |
 | `historical.tolerations`                 | historical tolerations                                  | `[]`                                       |
-| `historical.config`                       | historical node private config such as `JAVA_OPTS`       |                                            |
+| `historical.config`                      | historical node private config such as `JAVA_OPTS`      |                                            |
 | `historical.persistence.enabled`         | historical persistent enabled/disabled                  | `true`                                     |
 | `historical.persistence.size`            | historical persistent volume size                       | `4Gi`                                      |
 | `historical.persistence.storageClass`    | historical persistent volume Class                      | `nil`                                      |
 | `historical.persistence.accessMode`      | historical persistent Access Mode                       | `ReadWriteOnce`                            |
-| `historical.antiAffinity`                 | historical anti-affinity policy                          | `soft`                                     |
-| `historical.nodeAffinity`                 | historical node affinity policy                          | `{}`                                       |
+| `historical.antiAffinity`                | historical anti-affinity policy                         | `soft`                                     |
+| `historical.nodeAffinity`                | historical node affinity policy                         | `{}`                                       |
 | `historical.ingress.enabled`             | enable ingress                                          | `false`                                    |
 | `historical.ingress.hosts`               | hosts for the historical api                            | `[ "chart-example.local" ]`                |
 | `historical.ingress.path`                | path of the historical api                              | `/`                                        |
 | `historical.ingress.annotations`         | annotations for the historical api ingress              | `{}`                                       |
-| `historical.ingress.tls`                 | TLS configuration for the ingress                        | `[]`                                       |
+| `historical.ingress.tls`                 | TLS configuration for the ingress                       | `[]`                                       |
 | `middleManager.enabled`                  | enable middleManager                                    | `true`                                     |
+| `middleManager.env`                      | middleManager container environment variables to append | `[]`                                       |
 | `middleManager.name`                     | middleManager component name                            | `middleManager`                            |
 | `middleManager.replicaCount`             | middleManager node replicas (statefulset)               | `1`                                        |
 | `middleManager.port`                     | port of middleManager component                         | `8091`                                     |
@@ -178,13 +184,13 @@ The following table lists the configurable parameters of the Druid chart and the
 | `middleManager.nodeSelector`             | Node labels for middleManager pod assignment            | `{}`                                       |
 | `middleManager.securityContext`          | custom security context for middleManager containers    | `{ fsGroup: 1000 }`                        |
 | `middleManager.tolerations`              | middleManager tolerations                               | `[]`                                       |
-| `middleManager.config`                    | middleManager private config such as `JAVA_OPTS`         |                                            |
+| `middleManager.config`                   | middleManager private config such as `JAVA_OPTS`        |                                            |
 | `middleManager.persistence.enabled`      | middleManager persistent enabled/disabled               | `true`                                     |
 | `middleManager.persistence.size`         | middleManager persistent volume size                    | `4Gi`                                      |
 | `middleManager.persistence.storageClass` | middleManager persistent volume Class                   | `nil`                                      |
 | `middleManager.persistence.accessMode`   | middleManager persistent Access Mode                    | `ReadWriteOnce`                            |
-| `middleManager.antiAffinity`              | middleManager anti-affinity policy                       | `soft`                                     |
-| `middleManager.nodeAffinity`              | middleManager node affinity policy                       | `{}`                                       |
+| `middleManager.antiAffinity`             | middleManager anti-affinity policy                      | `soft`                                     |
+| `middleManager.nodeAffinity`             | middleManager node affinity policy                      | `{}`                                       |
 | `middleManager.autoscaling.enabled`      | enable horizontal pod autoscaling                       | `false`                                    |
 | `middleManager.autoscaling.minReplicas`  | middleManager autoscaling min replicas                  | `2`                                        |
 | `middleManager.autoscaling.maxReplicas`  | middleManager autoscaling max replicas                  | `5`                                        |
@@ -193,8 +199,9 @@ The following table lists the configurable parameters of the Druid chart and the
 | `middleManager.ingress.hosts`            | hosts for the middleManager api                         | `[ "chart-example.local" ]`                |
 | `middleManager.ingress.path`             | path of the middleManager api                           | `/`                                        |
 | `middleManager.ingress.annotations`      | annotations for the middleManager api ingress           | `{}`                                       |
-| `middleManager.ingress.tls`              | TLS configuration for the ingress                        | `[]`                                       |
+| `middleManager.ingress.tls`              | TLS configuration for the ingress                       | `[]`                                       |
 | `router.enabled`                         | enable router                                           | `false`                                    |
+| `router.env`                             | router container environment variables to append        | `[]`                                       |
 | `router.name`                            | router component name                                   | `router`                                   |
 | `router.replicaCount`                    | router node replicas (deployment)                       | `1`                                        |
 | `router.port`                            | port of router component                                | `8888`                                     |
@@ -203,12 +210,12 @@ The following table lists the configurable parameters of the Druid chart and the
 | `router.podAnnotations`                  | router Deployment annotations                           | `{}`                                       |
 | `router.nodeSelector`                    | node labels for router pod assignment                   | `{}`                                       |
 | `router.tolerations`                     | router tolerations                                      | `[]`                                       |
-| `router.config`                           | router private config such as `JAVA_OPTS`                |                                            |
-| `router.affinity`                         | router affinity policy                                   | `{}`                                       |
+| `router.config`                          | router private config such as `JAVA_OPTS`               |                                            |
+| `router.affinity`                        | router affinity policy                                  | `{}`                                       |
 | `router.ingress.enabled`                 | enable ingress                                          | `false`                                    |
 | `router.ingress.hosts`                   | hosts for the router api                                | `[ "chart-example.local" ]`                |
 | `router.ingress.path`                    | path of the router api                                  | `/`                                        |
 | `router.ingress.annotations`             | annotations for the router api ingress                  | `{}`                                       |
-| `router.ingress.tls`                     | TLS configuration for the ingress                        | `[]`                                       |
+| `router.ingress.tls`                     | TLS configuration for the ingress                       | `[]`                                       |
 
 Full and up-to-date documentation can be found in the comments of the `values.yaml` file.
