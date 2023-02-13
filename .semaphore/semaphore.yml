@@ -28,7 +28,7 @@ blocks:
       prologue:
         commands:
           - echo $SEMAPHORE_WORKFLOW_ID
-          - sem-version java 11
+          - sem-version java 17
           - checkout
       jobs:
         - name: "Install"
@@ -45,7 +45,7 @@ blocks:
       prologue:
         commands:
           - echo $SEMAPHORE_WORKFLOW_ID
-          - sem-version java 11
+          - sem-version java 17
           - checkout
           - cache restore
       jobs:
