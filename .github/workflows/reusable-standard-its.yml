@@ -74,12 +74,15 @@ jobs:
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-${{ github.sha }}
-          fail-on-cache-miss: true
+
+      - name: Maven build
+        if: steps.maven-restore.outputs.cache-hit != 'true'
+        run: |
+          ./it.sh ci
 
       - name: Run IT
         env:
           MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }}
-          MVN: ${{ format('{0}{1}', env.MVN, (steps.maven-restore.outputs.cache-hit && '' || ' -U')) }}
         run: |
           # Debug echo
           echo "Mysql driver: ${MYSQL_DRIVER_CLASSNAME}"

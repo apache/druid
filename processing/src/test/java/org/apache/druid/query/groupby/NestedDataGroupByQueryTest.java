@@ -37,6 +37,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnType;
@@ -309,6 +310,230 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
         : ImmutableList.of(new Object[]{"foo", 16L}),
         true,
         false
+    );
+  }
+
+  @Test
+  public void testGroupBySomeFieldOnStringColumn()
+  {
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(DefaultDimensionSpec.of("v0"), DefaultDimensionSpec.of("v1"))
+                                          .setVirtualColumns(
+                                              new NestedFieldVirtualColumn("dim", "$", "v0"),
+                                              new NestedFieldVirtualColumn("dim", "$.x", "v1")
+                                          )
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setContext(getContext())
+                                          .build();
+
+
+    runResults(
+        groupQuery,
+        ImmutableList.of(
+            new Object[]{"100", null, 2L},
+            new Object[]{"hello", null, 12L},
+            new Object[]{"world", null, 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupBySomeFieldOnStringColumnWithFilter()
+  {
+    List<String> vals = new ArrayList<>();
+    vals.add("100");
+    vals.add("200");
+    vals.add("300");
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(DefaultDimensionSpec.of("v0"))
+                                          .setVirtualColumns(new NestedFieldVirtualColumn("dim", "$", "v0"))
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setContext(getContext())
+                                          .setDimFilter(new InDimFilter("v0", vals, null))
+                                          .build();
+
+
+    runResults(
+        groupQuery,
+        ImmutableList.of(
+            new Object[]{"100", 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupBySomeFieldOnStringColumnWithFilterExpectedType()
+  {
+    List<String> vals = new ArrayList<>();
+    vals.add("100");
+    vals.add("200");
+    vals.add("300");
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(DefaultDimensionSpec.of("v0", ColumnType.LONG))
+                                          .setVirtualColumns(new NestedFieldVirtualColumn("dim", "$", "v0", ColumnType.LONG))
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setContext(getContext())
+                                          .setDimFilter(new InDimFilter("v0", vals, null))
+                                          .build();
+
+
+    runResults(
+        groupQuery,
+        ImmutableList.of(
+            new Object[]{100L, 2L}
+        ),
+        false,
+        true
+    );
+  }
+
+  @Test
+  public void testGroupBySomeFieldOnStringColumnWithFilterNil()
+  {
+    List<String> vals = new ArrayList<>();
+    vals.add("100");
+    vals.add("200");
+    vals.add("300");
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(DefaultDimensionSpec.of("v0"))
+                                          .setVirtualColumns(new NestedFieldVirtualColumn("dim", "$.x", "v0"))
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setContext(getContext())
+                                          .setDimFilter(new InDimFilter("v0", vals, null))
+                                          .build();
+
+
+    runResults(
+        groupQuery,
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testGroupBySomeFieldOnLongColumn()
+  {
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(
+                                              DefaultDimensionSpec.of("v0", ColumnType.LONG),
+                                              DefaultDimensionSpec.of("v1", ColumnType.LONG)
+                                          )
+                                          .setVirtualColumns(
+                                              new NestedFieldVirtualColumn("__time", "$", "v0"),
+                                              new NestedFieldVirtualColumn("__time", "$.x", "v1")
+                                          )
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setContext(getContext())
+                                          .build();
+
+
+    runResults(
+        groupQuery,
+        ImmutableList.of(
+            new Object[]{1609459200000L, NullHandling.defaultLongValue(), 8L},
+            new Object[]{1609545600000L, NullHandling.defaultLongValue(), 8L}
+        ),
+        false,
+        true
+    );
+  }
+
+  @Test
+  public void testGroupBySomeFieldOnLongColumnFilter()
+  {
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(
+                                              DefaultDimensionSpec.of("v0", ColumnType.LONG)
+                                          )
+                                          .setVirtualColumns(
+                                              new NestedFieldVirtualColumn("__time", "$", "v0")
+                                          )
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setDimFilter(new SelectorDimFilter("v0", "1609459200000", null))
+                                          .setContext(getContext())
+                                          .build();
+
+
+    runResults(
+        groupQuery,
+        ImmutableList.of(
+            new Object[]{1609459200000L, 8L}
+        ),
+        false,
+        true
+    );
+  }
+
+  @Test
+  public void testGroupBySomeFieldOnLongColumnFilterExpectedType()
+  {
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(
+                                              DefaultDimensionSpec.of("v0", ColumnType.STRING)
+                                          )
+                                          .setVirtualColumns(
+                                              new NestedFieldVirtualColumn("__time", "$", "v0", ColumnType.STRING)
+                                          )
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setDimFilter(new SelectorDimFilter("v0", "1609459200000", null))
+                                          .setContext(getContext())
+                                          .build();
+
+
+    runResults(
+        groupQuery,
+        ImmutableList.of(
+            new Object[]{"1609459200000", 8L}
+        ),
+        true,
+        false
+    );
+  }
+
+  @Test
+  public void testGroupBySomeFieldOnLongColumnFilterNil()
+  {
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(
+                                              DefaultDimensionSpec.of("v0", ColumnType.LONG)
+                                          )
+                                          .setVirtualColumns(
+                                              new NestedFieldVirtualColumn("__time", "$.x", "v0")
+                                          )
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setDimFilter(new SelectorDimFilter("v0", "1609459200000", null))
+                                          .setContext(getContext())
+                                          .build();
+
+
+    runResults(
+        groupQuery,
+        ImmutableList.of(),
+        false,
+        true
     );
   }
 
