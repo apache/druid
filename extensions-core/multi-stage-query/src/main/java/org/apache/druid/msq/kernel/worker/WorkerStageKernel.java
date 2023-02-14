@@ -213,7 +213,7 @@ public class WorkerStageKernel
   {
     if (newPhase.canTransitionFrom(phase)) {
       log.info(
-          "Stage [%d] transitioning from old phase: [%s] to new phase: [%s]",
+          "Stage [%d] transitioning from old phase [%s] to new phase [%s]",
           workOrder.getStageNumber(),
           phase,
           newPhase
