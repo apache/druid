@@ -213,11 +213,11 @@ public class FrontCodedIntArrayIndexedWriter implements DictionaryWriter<int[]>
         startOffset = getBucketOffset(bucket - 1);
       }
       long endOffset = getBucketOffset(bucket);
-      int bucketSize = Ints.checkedCast(endOffset - startOffset);
-      if (bucketSize == 0) {
+      int currentBucketSize = Ints.checkedCast(endOffset - startOffset);
+      if (currentBucketSize == 0) {
         return null;
       }
-      final ByteBuffer bucketBuffer = ByteBuffer.allocate(bucketSize).order(byteOrder);
+      final ByteBuffer bucketBuffer = ByteBuffer.allocate(currentBucketSize).order(byteOrder);
       valuesOut.readFully(startOffset, bucketBuffer);
       bucketBuffer.clear();
       return FrontCodedIntArrayIndexed.getFromBucket(bucketBuffer, relativeIndex);

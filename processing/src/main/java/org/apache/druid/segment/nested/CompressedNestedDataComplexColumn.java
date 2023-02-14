@@ -408,6 +408,9 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       final String arrayField = getField(path.subList(0, path.size() - 1));
       if (fields.indexOf(arrayField) >= 0) {
         final int elementNumber = ((NestedPathArrayElement) lastPath).getIndex();
+        if (elementNumber < 0) {
+          throw new IAE("Cannot make array element selector for path [%s], negative array index not supported for this selector", path);
+        }
         DictionaryEncodedColumn<?> col = (DictionaryEncodedColumn<?>) getColumnHolder(arrayField).getColumn();
         ColumnValueSelector<?> arraySelector = col.makeColumnValueSelector(readableOffset);
         return new BaseSingleValueDimensionSelector()
@@ -456,6 +459,9 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       final String arrayField = getField(path.subList(0, path.size() - 1));
       if (fields.indexOf(arrayField) >= 0) {
         final int elementNumber = ((NestedPathArrayElement) lastPath).getIndex();
+        if (elementNumber < 0) {
+          throw new IAE("Cannot make array element selector for path [%s], negative array index not supported for this selector", path);
+        }
         DictionaryEncodedColumn<?> col = (DictionaryEncodedColumn<?>) getColumnHolder(arrayField).getColumn();
         ColumnValueSelector arraySelector = col.makeColumnValueSelector(readableOffset);
         return new ColumnValueSelector<Object>()
@@ -551,6 +557,9 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       final String arrayField = getField(path.subList(0, path.size() - 1));
       if (fields.indexOf(arrayField) >= 0) {
         final int elementNumber = ((NestedPathArrayElement) lastPath).getIndex();
+        if (elementNumber < 0) {
+          throw new IAE("Cannot make array element selector for path [%s], negative array index not supported for this selector", path);
+        }
         DictionaryEncodedColumn<?> col = (DictionaryEncodedColumn<?>) getColumnHolder(arrayField).getColumn();
         VectorObjectSelector arraySelector = col.makeVectorObjectSelector(readableOffset);
 
@@ -614,6 +623,9 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       final String arrayField = getField(path.subList(0, path.size() - 1));
       if (fields.indexOf(arrayField) >= 0) {
         final int elementNumber = ((NestedPathArrayElement) lastPath).getIndex();
+        if (elementNumber < 0) {
+          throw new IAE("Cannot make array element selector for path [%s], negative array index not supported for this selector", path);
+        }
         DictionaryEncodedColumn<?> col = (DictionaryEncodedColumn<?>) getColumnHolder(arrayField).getColumn();
         VectorObjectSelector arraySelector = col.makeVectorObjectSelector(readableOffset);
 

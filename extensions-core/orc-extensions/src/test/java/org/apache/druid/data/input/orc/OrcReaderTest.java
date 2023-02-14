@@ -453,7 +453,6 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         "middle",
         "list",
         "map",
-        "ts",
         "decimal1"
     );
     try (CloseableIterator<InputRow> iterator = reader.read()) {

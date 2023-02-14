@@ -33,6 +33,7 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AbstractDimensionSelector;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.IdLookup;
@@ -319,7 +320,10 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
       @Override
       public boolean isNull()
       {
-        return dictionary.get(getRowValue()) == 0;
+        if (dictionary.get(getRowValue()) == 0) {
+          return true;
+        }
+        return DimensionHandlerUtils.isNumericNull(getObject());
       }
 
       @Override
@@ -646,7 +650,10 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
               nullMark = nullIterator.next();
             }
           }
-          return nullMark == offsetMark;
+          if (nullMark == offsetMark) {
+            return true;
+          }
+          return DimensionHandlerUtils.isNumericNull(getObject());
         }
 
         @Override

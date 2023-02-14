@@ -174,8 +174,7 @@ public class NestedDataTestUtils
         tempFolder,
         SIMPLE_DATA_FILE,
         Granularities.NONE,
-        true,
-        1000
+        true
     );
   }
 
@@ -201,8 +200,7 @@ public class NestedDataTestUtils
         tempFolder,
         fileName,
         Granularities.NONE,
-        true,
-        1000
+        true
     );
   }
 
@@ -210,8 +208,7 @@ public class NestedDataTestUtils
       TemporaryFolder tempFolder,
       String file,
       Granularity granularity,
-      boolean rollup,
-      int maxRowCount
+      boolean rollup
   )
       throws Exception
   {
@@ -224,8 +221,7 @@ public class NestedDataTestUtils
         TransformSpec.NONE,
         COUNT,
         granularity,
-        rollup,
-        maxRowCount
+        rollup
     );
   }
 
@@ -305,8 +301,7 @@ public class NestedDataTestUtils
       TransformSpec transformSpec,
       AggregatorFactory[] aggregators,
       Granularity queryGranularity,
-      boolean rollup,
-      int maxRowCount
+      boolean rollup
   )
       throws Exception
   {

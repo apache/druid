@@ -483,8 +483,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
             TransformSpec.NONE,
             NestedDataTestUtils.COUNT,
             Granularities.DAY,
-            true,
-            1000
+            true
         )
     );
     List<Segment> segs = NestedDataTestUtils.createSegments(
@@ -543,8 +542,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
             TransformSpec.NONE,
             aggs,
             Granularities.NONE,
-            true,
-            1000
+            true
         )
     );
     List<Segment> segs = NestedDataTestUtils.createSegments(

@@ -243,7 +243,6 @@ public class ProtobufInputFormatTest
                      .add("someFloatColumn")
                      .add("id")
                      .add("someBytesColumn")
-                     .add("timestamp")
                      .build(),
         row.getDimensions()
     );
@@ -380,8 +379,7 @@ public class ProtobufInputFormatTest
             "someFloatColumn",
             "eventType",
             "id",
-            "someBytesColumn",
-            "timestamp"
+            "someBytesColumn"
         ),
         row.getDimensions()
     );
