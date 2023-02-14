@@ -25,16 +25,13 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
-import org.apache.druid.segment.filter.AndFilter;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 
@@ -73,20 +70,19 @@ public class UnnestStorageAdapter implements StorageAdapter
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
-    Filter updatedFilter;
-    if (allowSet != null && !allowSet.isEmpty()) {
-      final InDimFilter allowListFilters;
-      allowListFilters = new InDimFilter(dimensionToUnnest, allowSet);
-      if (filter != null) {
-        updatedFilter = new AndFilter(Arrays.asList(filter, allowListFilters));
-      } else {
-        updatedFilter = allowListFilters;
-      }
+    final Filter updatedFilter = filter;
+
+    // the filter on the outer unnested column needs to be recreated on the unnested dimension and sent into
+    // the base cursor
+
+    final Filter forBaseFilter;
+    if (updatedFilter == null) {
+      forBaseFilter = updatedFilter;
     } else {
-      updatedFilter = filter;
+      forBaseFilter = updatedFilter.getRequiredColumns().contains(outputColumnName) ? null : updatedFilter;
     }
     final Sequence<Cursor> baseCursorSequence = baseAdapter.makeCursors(
-        updatedFilter,
+        forBaseFilter,
         interval,
         virtualColumns,
         gran,
@@ -107,7 +103,7 @@ public class UnnestStorageAdapter implements StorageAdapter
                   retVal.getColumnSelectorFactory(),
                   dimensionToUnnest,
                   outputColumnName,
-                  allowSet
+                  updatedFilter
               );
             } else {
               retVal = new UnnestColumnValueSelectorCursor(
@@ -115,7 +111,7 @@ public class UnnestStorageAdapter implements StorageAdapter
                   retVal.getColumnSelectorFactory(),
                   dimensionToUnnest,
                   outputColumnName,
-                  allowSet
+                  updatedFilter
               );
             }
           } else {
@@ -124,7 +120,7 @@ public class UnnestStorageAdapter implements StorageAdapter
                 retVal.getColumnSelectorFactory(),
                 dimensionToUnnest,
                 outputColumnName,
-                allowSet
+                updatedFilter
             );
           }
           return retVal;
