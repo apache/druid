@@ -771,4 +771,18 @@
      <vulnerabilityName>1070209</vulnerabilityName>
      <cve>CVE-2020-7774</cve>
    </suppress>
+  <suppress>
+    <!-- Kafka client is not affected. Fix only affects the kafka connect server. -->
+    <notes><![CDATA[
+   file name: kafka-clients:2.2.2
+   ]]></notes>
+    <cve>CVE-2023-25194</cve>
+  </suppress>
+  <suppress>
+    <!-- Kafka client is not affected. Fix only affects the kafka connect server. -->
+    <notes><![CDATA[
+   file name: kafka-clients:3.3.2
+   ]]></notes>
+    <cve>CVE-2023-25194</cve>
+  </suppress>
 </suppressions>
