@@ -20,26 +20,33 @@
 package org.apache.druid.k8s.overlord.common;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.dsl.LogWatch;
 
-public class TestKubernetesClient implements KubernetesClientApi
+import java.io.IOException;
+import java.io.InputStream;
+
+public class LogWatchInputStream extends InputStream
 {
 
   private final KubernetesClient client;
+  private final LogWatch logWatch;
 
-  public TestKubernetesClient(KubernetesClient client)
+  public LogWatchInputStream(KubernetesClient client, LogWatch logWatch)
   {
     this.client = client;
+    this.logWatch = logWatch;
   }
 
   @Override
-  public <T> T executeRequest(KubernetesExecutor<T> executor) throws KubernetesResourceNotFoundException
+  public int read() throws IOException
   {
-    return executor.executeRequest(client);
+    return logWatch.getOutput().read();
   }
 
   @Override
-  public KubernetesClient getClient()
+  public void close() throws IOException
   {
-    return client;
+    logWatch.close();
+    client.close();
   }
 }

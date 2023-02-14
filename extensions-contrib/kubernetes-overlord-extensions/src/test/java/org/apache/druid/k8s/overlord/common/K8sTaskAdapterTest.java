@@ -26,6 +26,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
+import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSpec;
@@ -205,4 +207,51 @@ class K8sTaskAdapterTest
     });
   }
 
+  @Test
+  void testAddingMonitors() throws IOException
+  {
+    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    PeonCommandContext context = new PeonCommandContext(
+        new ArrayList<>(),
+        new ArrayList<>(),
+        new File("/tmp/")
+    );
+    KubernetesTaskRunnerConfig config = new KubernetesTaskRunnerConfig();
+    config.namespace = "test";
+    K8sTaskAdapter adapter = new SingleContainerTaskAdapter(testClient, config, jsonMapper);
+    Task task = K8sTestUtils.getTask();
+    // no monitor in overlord, no monitor override
+    Container container = new ContainerBuilder()
+        .withName("container").build();
+    adapter.addEnvironmentVariables(container, context, task.toString());
+    assertFalse(container.getEnv().stream().anyMatch(x -> x.getName().equals("druid_monitoring_monitors")));
+
+    // we have an override, but nothing in the overlord
+    config.peonMonitors = jsonMapper.readValue("[\"org.apache.druid.java.util.metrics.JvmMonitor\"]", List.class);
+    adapter = new SingleContainerTaskAdapter(testClient, config, jsonMapper);
+    adapter.addEnvironmentVariables(container, context, task.toString());
+    EnvVar env = container.getEnv()
+                          .stream()
+                          .filter(x -> x.getName().equals("druid_monitoring_monitors"))
+                          .findFirst()
+                          .get();
+    assertEquals(jsonMapper.writeValueAsString(config.peonMonitors), env.getValue());
+
+    // we override what is in the overlord
+    config.peonMonitors = jsonMapper.readValue("[\"org.apache.druid.java.util.metrics.JvmMonitor\"]", List.class);
+    adapter = new SingleContainerTaskAdapter(testClient, config, jsonMapper);
+    container.getEnv().add(new EnvVarBuilder()
+                               .withName("druid_monitoring_monitors")
+                               .withValue(
+                                   "'[\"org.apache.druid.java.util.metrics.JvmMonitor\", "
+                                   + "\"org.apache.druid.server.metrics.TaskCountStatsMonitor\"]'")
+                               .build());
+    adapter.addEnvironmentVariables(container, context, task.toString());
+    env = container.getEnv()
+                   .stream()
+                   .filter(x -> x.getName().equals("druid_monitoring_monitors"))
+                   .findFirst()
+                   .get();
+    assertEquals(jsonMapper.writeValueAsString(config.peonMonitors), env.getValue());
+  }
 }

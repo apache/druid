@@ -19,6 +19,7 @@
 
 package org.apache.druid.k8s.overlord.common;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -96,6 +97,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter<Pod, Job>
   @Override
   public Task toTask(Pod from) throws IOException
   {
+    // all i have to do here is grab the main container...done
     PodSpec podSpec = from.getSpec();
     massageSpec(podSpec, "main");
     List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
@@ -176,8 +178,19 @@ public abstract class K8sTaskAdapter implements TaskAdapter<Pod, Job>
     mainContainer.setPorts(Lists.newArrayList(httpsPort, tcpPort));
   }
 
-  protected void addEnvironmentVariables(Container mainContainer, PeonCommandContext context, String taskContents)
+  @VisibleForTesting
+  void addEnvironmentVariables(Container mainContainer, PeonCommandContext context, String taskContents)
+      throws JsonProcessingException
   {
+    // if the peon monitors are set, override the overlord's monitors (if set) with the peon monitors
+    if (!config.peonMonitors.isEmpty()) {
+      mainContainer.getEnv().removeIf(x -> "druid_monitoring_monitors".equals(x.getName()));
+      mainContainer.getEnv().add(new EnvVarBuilder()
+                                     .withName("druid_monitoring_monitors")
+                                     .withValue(mapper.writeValueAsString(config.peonMonitors))
+                                     .build());
+    }
+
     mainContainer.getEnv().addAll(Lists.newArrayList(
         new EnvVarBuilder()
             .withName(DruidK8sConstants.TASK_DIR_ENV)
@@ -211,7 +224,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter<Pod, Job>
       PeonCommandContext context,
       long containerSize,
       String taskContents
-  )
+  ) throws JsonProcessingException
   {
     // prepend the startup task.json extraction command
     List<String> mainCommand = Lists.newArrayList("sh", "-c");
