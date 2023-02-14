@@ -476,3 +476,10 @@ postgresql:
     port: 5432
 
 # Secrets
+prometheus:
+  enabled: false
+  #pick the any port what you want
+  port: 9090
+  annotation:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"

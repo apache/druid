@@ -42,7 +42,7 @@ public class SingleContainerTaskAdapter extends K8sTaskAdapter
   }
 
   @Override
-  public Job createJobFromPodSpec(PodSpec podSpec, Task task, PeonCommandContext context) throws IOException
+  Job createJobFromPodSpec(PodSpec podSpec, Task task, PeonCommandContext context) throws IOException
   {
     K8sTaskId k8sTaskId = new K8sTaskId(task.getId());
 

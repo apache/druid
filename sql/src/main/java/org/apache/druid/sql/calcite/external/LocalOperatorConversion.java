@@ -23,16 +23,14 @@ import com.google.inject.Inject;
 import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.catalog.model.table.LocalInputSourceDefn;
 
-public class LocalOperatorConversion extends CatalogExternalTableOperatorConversion
+public class LocalOperatorConversion extends DruidUserDefinedTableMacroConversion
 {
   // Cannot use "local" because it is a SQL keyword and the user would
   // be required to quote the name.
   public static final String FUNCTION_NAME = "localfiles";
 
   @Inject
-  public LocalOperatorConversion(
-      final TableDefnRegistry registry
-  )
+  public LocalOperatorConversion(final TableDefnRegistry registry)
   {
     super(FUNCTION_NAME, registry, LocalInputSourceDefn.TYPE_KEY, registry.jsonMapper());
   }

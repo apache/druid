@@ -217,5 +217,9 @@ The following table lists the configurable parameters of the Druid chart and the
 | `router.ingress.path`                    | path of the router api                                  | `/`                                        |
 | `router.ingress.annotations`             | annotations for the router api ingress                  | `{}`                                       |
 | `router.ingress.tls`                     | TLS configuration for the ingress                       | `[]`                                       |
+| `prometheus.enabled`                     | Support scraping from prometheus                        | `false`                                    |
+| `prometheus.port`                        | expose prometheus port                                  | `9090`                                     |
+| `prometheus.annotation`                  | pods annotation to notify prometheus scraping           | `{prometheus.io/scrape: "true", prometheus.io/port: "9090"}`  |
+
 
 Full and up-to-date documentation can be found in the comments of the `values.yaml` file.
