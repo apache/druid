@@ -45,7 +45,7 @@ spec:
       annotations:
         druid.k8s.enablePatching: "true"
         {{- with .Values.middleManager.podAnnotations }}
-          {{- toYaml .Values.middleManager.podAnnotations | nindent 8 }}
+          {{- toYaml . | nindent 8 }}
         {{- end }}
         {{- if .Values.prometheus.enabled }}
           {{- with .Values.prometheus.annotation }}
