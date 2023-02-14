@@ -20,7 +20,10 @@
 {{- if .Values.historical.ingress.enabled -}}
 {{- $fullName := include "druid.historical.fullname" . -}}
 {{- $ingressPath := .Values.historical.ingress.path -}}
-apiVersion: extensions/v1beta1
+{{- $ingressPathType := .Values.historical.ingress.pathType | default "ImplementationSpecific" -}}
+{{- $apiIsStable := eq (include "capabilities.ingress.isStable" .) "true" -}}
+{{- $ingressSupportsPathType := eq (include "capabilities.ingress.supportsPathType" .) "true" -}}
+apiVersion: {{ include "capabilities.ingress.apiVersion" . }}
 kind: Ingress
 metadata:
   name: {{ $fullName }}
@@ -30,29 +33,47 @@ metadata:
     component: {{ .Values.historical.name }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
-{{- with .Values.historical.ingress.annotations }}
+  {{- with .Values.historical.ingress.labels }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.historical.ingress.annotations }}
   annotations:
-{{ toYaml . | indent 4 }}
-{{- end }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
-{{- if .Values.historical.ingress.tls }}
+  {{- if $apiIsStable }}
+    {{- if .Values.historical.ingress.ingressClassName }}
+  ingressClassName: {{ .Values.historical.ingress.ingressClassName }}
+    {{- end }}
+  {{- end }}
+  {{- if .Values.historical.ingress.tls }}
   tls:
-  {{- range .Values.historical.ingress.tls }}
+    {{- range .Values.historical.ingress.tls }}
     - hosts:
       {{- range .hosts }}
         - {{ . | quote }}
       {{- end }}
       secretName: {{ .secretName }}
+    {{- end }}
   {{- end }}
-{{- end }}
   rules:
   {{- range .Values.historical.ingress.hosts }}
     - host: {{ . | quote }}
       http:
         paths:
           - path: {{ $ingressPath }}
+            {{- if and $ingressPathType $ingressSupportsPathType }}
+            pathType: {{ $ingressPathType }}
+            {{- end }}
             backend:
+            {{- if $apiIsStable }}
+              service:
+                name: {{ $fullName }}
+                port:
+                  number: 80
+            {{- else }}
               serviceName: {{ $fullName }}
               servicePort: http
+            {{- end }}
   {{- end }}
 {{- end }}

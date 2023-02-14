@@ -20,7 +20,10 @@
 {{- if .Values.overlord.ingress.enabled -}}
 {{- $fullName := include "druid.overlord.fullname" . -}}
 {{- $ingressPath := .Values.overlord.ingress.path -}}
-apiVersion: extensions/v1beta1
+{{- $ingressPathType := .Values.overlord.ingress.pathType | default "ImplementationSpecific" -}}
+{{- $apiIsStable := eq (include "capabilities.ingress.isStable" .) "true" -}}
+{{- $ingressSupportsPathType := eq (include "capabilities.ingress.supportsPathType" .) "true" -}}
+apiVersion: {{ include "capabilities.ingress.apiVersion" . }}
 kind: Ingress
 metadata:
   name: {{ $fullName }}
@@ -30,29 +33,47 @@ metadata:
     component: {{ .Values.overlord.name }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
-{{- with .Values.overlord.ingress.annotations }}
+  {{- with .Values.overlord.ingress.labels }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.overlord.ingress.annotations }}
   annotations:
-{{ toYaml . | indent 4 }}
-{{- end }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
-{{- if .Values.overlord.ingress.tls }}
+  {{- if $apiIsStable }}
+    {{- if .Values.overlord.ingress.ingressClassName }}
+  ingressClassName: {{ .Values.overlord.ingress.ingressClassName }}
+    {{- end }}
+  {{- end }}
+  {{- if .Values.overlord.ingress.tls }}
   tls:
-  {{- range .Values.overlord.ingress.tls }}
+    {{- range .Values.overlord.ingress.tls }}
     - hosts:
       {{- range .hosts }}
         - {{ . | quote }}
       {{- end }}
       secretName: {{ .secretName }}
+    {{- end }}
   {{- end }}
-{{- end }}
   rules:
   {{- range .Values.overlord.ingress.hosts }}
     - host: {{ . | quote }}
       http:
         paths:
           - path: {{ $ingressPath }}
+            {{- if and $ingressPathType $ingressSupportsPathType }}
+            pathType: {{ $ingressPathType }}
+            {{- end }}
             backend:
+            {{- if $apiIsStable }}
+              service:
+                name: {{ $fullName }}
+                port:
+                  number: 80
+            {{- else }}
               serviceName: {{ $fullName }}
               servicePort: http
+            {{- end }}
   {{- end }}
 {{- end }}

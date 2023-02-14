@@ -28,3 +28,4 @@ integration-tests/gen-scripts/
 /bin/
 *.hprof
 **/.ipynb_checkpoints/
+helm/druid/charts
