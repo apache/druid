@@ -24,7 +24,7 @@ import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryStatus;
-import org.apache.druid.grpc.proto.TestResults;
+import org.apache.druid.grpc.proto.TestResults.QueryResult;
 import org.apache.druid.grpc.server.QueryDriver;
 import org.apache.druid.grpc.server.QueryServer;
 import org.junit.AfterClass;
@@ -104,19 +104,34 @@ public class GrpcQueryTest
    * Do a very basic query that output protobuf.
    */
   @Test
-  public void testGRPCBasics()
+  public void testGrpcBasics()
   {
     QueryRequest request = QueryRequest.newBuilder()
             .setQuery("SELECT dim1, dim2, dim3, cnt, m1, m2, unique_dim1, __time AS \"date\" FROM foo")
-             .setProtobufMessageName(TestResults.QueryResult.class.getName())
+             .setProtobufMessageName(QueryResult.class.getName())
             .setResultFormat(QueryResultFormat.PROTOBUF_INLINE)
             .build();
 
     QueryResponse response = client.client.submitQuery(request);
-    GrpcResponseHandler<TestResults.QueryResult> handler = GrpcResponseHandler.of(TestResults.QueryResult.class);
-    List<TestResults.QueryResult> queryResults = handler.get(response.getData());
-
+    GrpcResponseHandler<QueryResult> handler = GrpcResponseHandler.of(QueryResult.class);
+    List<QueryResult> queryResults = handler.get(response.getData());
     assertEquals(6, queryResults.size());
+    assertEquals(QueryStatus.OK, response.getStatus());
+  }
+
+  @Test
+  public void testGrpcEmptyResponse()
+  {
+    QueryRequest request = QueryRequest.newBuilder()
+            .setQuery("SELECT dim1, dim2, dim3, cnt, m1, m2, unique_dim1, __time AS \"date\" FROM foo where cnt = 100000")
+            .setProtobufMessageName(QueryResult.class.getName())
+            .setResultFormat(QueryResultFormat.PROTOBUF_INLINE)
+            .build();
+
+    QueryResponse response = client.client.submitQuery(request);
+    GrpcResponseHandler<QueryResult> handler = GrpcResponseHandler.of(QueryResult.class);
+    List<QueryResult> queryResults = handler.get(response.getData());
+    assertEquals(0, queryResults.size());
     assertEquals(QueryStatus.OK, response.getStatus());
   }
 }
