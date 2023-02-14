@@ -332,7 +332,7 @@ public class WorkerImpl implements Worker
 
         if (kernel.getPhase() == WorkerStagePhase.NEW) {
 
-          log.info("Processing work order for stage: [%d]" +
+          log.info("Processing work order for stage [%d]" +
                    (log.isDebugEnabled()
                     ? StringUtils.format(
                        " with payload [%s]",
@@ -577,7 +577,7 @@ public class WorkerImpl implements Worker
   @Override
   public void postCleanupStage(final StageId stageId)
   {
-    log.info("Cleanup order for stage: [%s] received", stageId);
+    log.info("Cleanup order for stage [%s] received", stageId);
     kernelManipulationQueue.add(
         holder -> {
           cleanStageOutput(stageId, true);
@@ -597,12 +597,12 @@ public class WorkerImpl implements Worker
   @Override
   public ClusterByStatisticsSnapshot fetchStatisticsSnapshot(StageId stageId)
   {
-    log.info("Fetching statistics for stage: [%d]", stageId.getStageNumber());
+    log.info("Fetching statistics for stage [%d]", stageId.getStageNumber());
     if (stageKernelMap.get(stageId) == null) {
       throw new ISE("Requested statistics snapshot for non-existent stageId %s.", stageId);
     } else if (stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot() == null) {
       throw new ISE(
-          "Requested statistics snapshot is not generated yet for stageId[%s]",
+          "Requested statistics snapshot is not generated yet for stageId [%s]",
           stageId
       );
     } else {
@@ -614,15 +614,15 @@ public class WorkerImpl implements Worker
   public ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(StageId stageId, long timeChunk)
   {
     log.debug(
-        "Fetching statistics for stage: [%d]  with time chunk: [%d] ",
+        "Fetching statistics for stage [%d]  with time chunk [%d] ",
         stageId.getStageNumber(),
         timeChunk
     );
     if (stageKernelMap.get(stageId) == null) {
-      throw new ISE("Requested statistics snapshot for non-existent stageId[%s].", stageId);
+      throw new ISE("Requested statistics snapshot for non-existent stageId [%s].", stageId);
     } else if (stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot() == null) {
       throw new ISE(
-          "Requested statistics snapshot is not generated yet for stageId[%s]",
+          "Requested statistics snapshot is not generated yet for stageId [%s]",
           stageId
       );
     } else {
@@ -1372,7 +1372,7 @@ public class WorkerImpl implements Worker
       if (taskId.equals(id())) {
         final ConcurrentMap<Integer, ReadableFrameChannel> partitionOutputsForStage = stageOutputs.get(stageId);
         if (partitionOutputsForStage == null) {
-          throw new ISE("Unable to find outputs for stage: [%s]", stageId);
+          throw new ISE("Unable to find outputs for stage [%s]", stageId);
         }
 
         final ReadableFrameChannel myChannel = partitionOutputsForStage.get(partitionNumber);
@@ -1384,7 +1384,7 @@ public class WorkerImpl implements Worker
         } else if (myChannel instanceof ReadableNilFrameChannel) {
           return myChannel;
         } else {
-          throw new ISE("Output for stage: [%s] are stored in an instance of %s which is not "
+          throw new ISE("Output for stage [%s] are stored in an instance of %s which is not "
                         + "supported", stageId, myChannel.getClass());
         }
       } else {
