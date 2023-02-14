@@ -61,6 +61,15 @@ public abstract class BaseTableFunction implements TableFunction
     {
       return optional;
     }
+
+    @Override
+    public String toString()
+    {
+      return "Parameter{name=" + name
+          + ", type=" + type
+          + ", optional=" + optional
+          + "}";
+    }
   }
 
   private final List<ParameterDefn> parameters;
@@ -76,11 +85,11 @@ public abstract class BaseTableFunction implements TableFunction
     return parameters;
   }
 
-  protected void requireSchema(String fnName, List<ColumnSpec> columns)
+  protected static void requireSchema(String fnName, List<ColumnSpec> columns)
   {
     if (columns == null) {
       throw new IAE(
-          "The %s table function requires an EXTEND clause with a schema",
+          "Function requires a schema: TABLE(%s(...)) (<col> <type>...)",
           fnName
       );
     }
