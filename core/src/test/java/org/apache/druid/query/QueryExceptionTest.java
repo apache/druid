@@ -113,6 +113,18 @@ public class QueryExceptionTest
     Assert.assertNull(exception.getMessage());
   }
 
+  @Test
+  public void testToStringReturnsUsefulInformation()
+  {
+    QueryException queryException = new QueryException(ERROR_CODE, ERROR_MESSAGE_ORIGINAL, ERROR_CLASS, HOST);
+    String exceptionToString = queryException.toString();
+    Assert.assertTrue(exceptionToString.startsWith(QueryException.class.getSimpleName()));
+    Assert.assertTrue(exceptionToString.contains("msg=" + ERROR_MESSAGE_ORIGINAL));
+    Assert.assertTrue(exceptionToString.contains("code=" + ERROR_CODE));
+    Assert.assertTrue(exceptionToString.contains("class=" + ERROR_CLASS));
+    Assert.assertTrue(exceptionToString.contains("host=" + HOST));
+  }
+
   private void expectFailTypeForCode(FailType expected, String code)
   {
     QueryException exception = new QueryException(new Exception(), code, "java.lang.Exception", "test");
