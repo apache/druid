@@ -102,7 +102,7 @@ The following table lists the configurable parameters of the Druid chart and the
 | `broker.replicaCount`                    | broker node replicas (deployment)                       | `1`                                        |
 | `broker.port`                            | port of broker component                                | `8082`                                     |
 | `broker.serviceAccount.create`           | Create a service account for broker service             | `true`                                     |
-| `broker.serviceAccount.name`             | Service account name                                    | ``                                         |
+| `broker.serviceAccount.name`             | Service account name                                    | Derived from the name of service           |
 | `broker.serviceAccount.annotations`      | Annotations applied to created service account          | `{}`                                       |
 | `broker.serviceAccount.labels`           | Labels applied to created service account               | `{}`                                       |
 | `broker.serviceAccount.automountServiceAccountToken` | Automount API credentials for the Service Account | `true`                               |
@@ -124,7 +124,7 @@ The following table lists the configurable parameters of the Druid chart and the
 | `coordinator.port`                       | port of coordinator component                           | `8081`                                     |
 | `coordinator.serviceType`                | service type for service                                | `ClusterIP`                                |
 | `coordinator.serviceAccount.create`      | Create a service account for coordinator service        | `true`                                     |
-| `coordinator.serviceAccount.name`        | Service account name                                    | ``                                         |
+| `coordinator.serviceAccount.name`        | Service account name                                    | Derived from the name of service           |
 | `coordinator.serviceAccount.annotations` | Annotations applied to created service account          | `{}`                                       |
 | `coordinator.serviceAccount.labels`      | Labels applied to created service account               | `{}`                                       |
 | `coordinator.serviceAccount.automountServiceAccountToken` | Automount API credentials for the Service Account | `true`                          |
@@ -145,7 +145,7 @@ The following table lists the configurable parameters of the Druid chart and the
 | `overlord.port`                          | port of overlord component                              | `8081`                                     |
 | `overlord.serviceType`                   | service type for service                                | `ClusterIP`                                |
 | `overlord.serviceAccount.create`         | Create a service account for overlord service           | `true`                                     |
-| `overlord.serviceAccount.name`           | Service account name                                    | ``                                         |
+| `overlord.serviceAccount.name`           | Service account name                                    | Derived from the name of service           |
 | `overlord.serviceAccount.annotations`    | Annotations applied to created service account          | `{}`                                       |
 | `overlord.serviceAccount.labels`         | Labels applied to created service account               | `{}`                                       |
 | `overlord.serviceAccount.automountServiceAccountToken` | Automount API credentials for the Service Account | `true`                             |
@@ -165,8 +165,8 @@ The following table lists the configurable parameters of the Druid chart and the
 | `historical.replicaCount`                | historical node replicas (statefulset)                  | `1`                                        |
 | `historical.port`                        | port of historical component                            | `8083`                                     |
 | `historical.serviceType`                 | service type for service                                | `ClusterIP`                                |
-| `historical.serviceAccount.create`       | Create a service account for historical service           | `true`                                     |
-| `historical.serviceAccount.name`         | Service account name                                    | ``                                         |
+| `historical.serviceAccount.create`       | Create a service account for historical service         | `true`                                     |
+| `historical.serviceAccount.name`         | Service account name                                    | Derived from the name of service           |
 | `historical.serviceAccount.annotations`  | Annotations applied to created service account          | `{}`                                       |
 | `historical.serviceAccount.labels`       | Labels applied to created service account               | `{}`                                       |
 | `historical.serviceAccount.automountServiceAccountToken` | Automount API credentials for the Service Account | `true`                           |
@@ -226,7 +226,7 @@ The following table lists the configurable parameters of the Druid chart and the
 | `router.port`                            | port of router component                                | `8888`                                     |
 | `router.serviceType`                     | service type for service                                | `ClusterIP`                                |
 | `router.serviceAccount.create`           | Create a service account for router service             | `true`                                     |
-| `router.serviceAccount.name`             | Service account name                                    | ``                                         |
+| `router.serviceAccount.name`             | Service account name                                    | Derived from the name of service           |
 | `router.serviceAccount.annotations`      | Annotations applied to created service account          | `{}`                                       |
 | `router.serviceAccount.labels`           | Labels applied to created service account               | `{}`                                       |
 | `router.serviceAccount.automountServiceAccountToken` | Automount API credentials for the Service Account | `true`                               |
