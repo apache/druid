@@ -709,6 +709,26 @@ public class EvalTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testValueOrDefault()
+  {
+    ExprEval<?> longNull = ExprEval.ofLong(null);
+    ExprEval<?> doubleNull = ExprEval.ofDouble(null);
+    Assert.assertEquals(NullHandling.sqlCompatible(), longNull.isNumericNull());
+    Assert.assertEquals(NullHandling.sqlCompatible(), doubleNull.isNumericNull());
+    Assert.assertEquals(NullHandling.defaultLongValue(), longNull.valueOrDefault());
+    Assert.assertEquals(NullHandling.defaultDoubleValue(), doubleNull.valueOrDefault());
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(0L, longNull.asLong());
+      Assert.assertEquals(0, longNull.asInt());
+      Assert.assertEquals(0.0, longNull.asDouble(), 0.0);
+
+      Assert.assertEquals(0L, doubleNull.asLong());
+      Assert.assertEquals(0, doubleNull.asInt());
+      Assert.assertEquals(0.0, doubleNull.asDouble(), 0.0);
+    }
+  }
+
+  @Test
   public void testEvalOfType()
   {
     // strings
