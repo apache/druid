@@ -32,27 +32,22 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Provides the RootSchema for calcite with
+ * Provides the RootSchema for Calcite with
  * - metadata schema disabled because it's not needed
- * - caching disabled because druid's caching is better.
+ * - caching disabled because Druid's caching is better.
  *
  * All the provided schema are added to the rootSchema.
  */
 public class RootSchemaProvider implements Provider<DruidSchemaCatalog>
 {
   private final Set<NamedSchema> namedSchemas;
+  private final Map<String, NamedSchema> schemasByName;
 
   @Inject
   RootSchemaProvider(Set<NamedSchema> namedSchemas)
   {
     this.namedSchemas = namedSchemas;
-  }
-
-  @Override
-  public DruidSchemaCatalog get()
-  {
-    final SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
-    final Map<String, NamedSchema> schemasByName = Maps.newHashMapWithExpectedSize(namedSchemas.size());
+    schemasByName = Maps.newHashMapWithExpectedSize(namedSchemas.size());
     for (NamedSchema schema : namedSchemas) {
       if (schemasByName.containsKey(schema.getSchemaName())) {
         throw new ISE(
@@ -61,6 +56,14 @@ public class RootSchemaProvider implements Provider<DruidSchemaCatalog>
         );
       }
       schemasByName.put(schema.getSchemaName(), schema);
+    }
+  }
+
+  @Override
+  public DruidSchemaCatalog get()
+  {
+    final SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
+    for (NamedSchema schema : namedSchemas) {
       rootSchema.add(schema.getSchemaName(), schema.getSchema());
     }
     return new DruidSchemaCatalog(rootSchema, ImmutableMap.copyOf(schemasByName));

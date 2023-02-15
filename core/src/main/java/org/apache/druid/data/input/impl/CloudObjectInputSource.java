@@ -238,7 +238,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   private void throwIfIllegalArgs(boolean clause) throws IllegalArgumentException
   {
     if (clause) {
-      throw new IllegalArgumentException("exactly one of either uris or prefixes or objects must be specified");
+      throw new IllegalArgumentException("Exactly one of uris, prefixes or objects must be specified");
     }
   }
 }

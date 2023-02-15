@@ -116,6 +116,7 @@ import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -843,14 +844,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
     public CalciteTestConfig()
     {
-
     }
 
     public CalciteTestConfig(boolean isRunningMSQ)
     {
       this.isRunningMSQ = isRunningMSQ;
     }
-
 
     @Override
     public QueryLogHook queryLogHook()
@@ -1034,12 +1033,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     );
   }
 
-
   /**
    * Override not just the outer query context, but also the contexts of all subqueries.
    * @return
    */
-  public static <T> Query recursivelyClearContext(final Query<T> query, ObjectMapper queryJsonMapper)
+  public static <T> Query<?> recursivelyClearContext(final Query<T> query, ObjectMapper queryJsonMapper)
   {
     try {
       Query<T> newQuery = query.withDataSource(recursivelyClearContext(query.getDataSource(), queryJsonMapper));
@@ -1211,8 +1209,57 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     @Override
     public void verify(String sql, List<Object[]> results)
     {
-      Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResults.size(), results.size());
-      assertResultsEquals(sql, expectedResults, results);
+      try {
+        Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResults.size(), results.size());
+        assertResultsEquals(sql, expectedResults, results);
+      }
+      catch (AssertionError e) {
+        displayResults(results);
+        throw e;
+      }
     }
+  }
+
+  /**
+   * Dump the expected results in the form of the elements of a Java array which
+   * can be used to validate the results. This is a convenient way to create the
+   * expected results: let the test fail with empty results. The actual results
+   * are printed to the console. Copy them into the test.
+   */
+  public static void displayResults(List<Object[]> results)
+  {
+    PrintStream out = System.out;
+    out.println("-- Actual results --");
+    for (int rowIndex = 0; rowIndex < results.size(); rowIndex++) {
+      Object[] row = results.get(rowIndex);
+      out.print("new Object[] {");
+      for (int colIndex = 0; colIndex < row.length; colIndex++) {
+        Object col = row[colIndex];
+        if (colIndex > 0) {
+          out.print(", ");
+        }
+        if (col == null) {
+          out.print("null");
+        } else if (col instanceof String) {
+          out.print("\"");
+          out.print(col);
+          out.print("\"");
+        } else if (col instanceof Long) {
+          out.print(col);
+          out.print("L");
+        } else if (col instanceof Double) {
+          out.print(col);
+          out.print("D");
+        } else {
+          out.print(col);
+        }
+      }
+      out.print("}");
+      if (rowIndex < results.size() - 1) {
+        out.print(",");
+      }
+      out.println();
+    }
+    out.println("----");
   }
 }
