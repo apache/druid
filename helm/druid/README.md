@@ -110,7 +110,6 @@ The following table lists the configurable parameters of the Druid chart and the
 | `broker.ingress.enabled`                 | enable ingress                                          | `false`                                    |
 | `broker.ingress.hosts`                   | hosts for the broker api                                | `[ "chart-example.local" ]`                |
 | `broker.ingress.path`                    | path of the broker api                                  | `/`                                        |
-| `broker.ingress.pathType`                | pathType of the broker api ingress                      | ``                                         |
 | `broker.ingress.annotations`             | annotations for the broker api ingress                  | `{}`                                       |
 | `broker.ingress.labels`                  | labels for the broker api ingress                       | `{}`                                       |
 | `broker.ingress.ingressClassName`        | ingressClassName of the broker api ingress              | ``                                         |
