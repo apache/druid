@@ -79,7 +79,7 @@ public class ExpressionVectorSelectors
     if (plan.isConstant()) {
       return ConstantVectorSelectors.vectorValueSelector(
           factory.getReadableVectorInspector(),
-          (Number) plan.getExpression().eval(InputBindings.nilBindings()).value()
+          (Number) plan.getExpression().eval(InputBindings.nilBindings()).valueOrDefault()
       );
     }
     final Expr.VectorInputBinding bindings = createVectorBindings(plan.getAnalysis(), factory);
@@ -98,7 +98,7 @@ public class ExpressionVectorSelectors
     if (plan.isConstant()) {
       return ConstantVectorSelectors.vectorObjectSelector(
           factory.getReadableVectorInspector(),
-          plan.getExpression().eval(InputBindings.nilBindings()).value()
+          plan.getExpression().eval(InputBindings.nilBindings()).valueOrDefault()
       );
     }
 

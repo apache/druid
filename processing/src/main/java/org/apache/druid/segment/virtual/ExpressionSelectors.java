@@ -29,7 +29,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
@@ -111,14 +110,7 @@ public class ExpressionSelectors
       {
         // No need for null check on getObject() since baseSelector impls will never return null.
         ExprEval eval = baseSelector.getObject();
-        // coerce null values to default numeric values
-        if (NullHandling.replaceWithDefault() && eval.type().isNumeric() && eval.value() == null) {
-          if (eval.type().is(ExprType.LONG)) {
-            return 0L;
-          }
-          return 0.0;
-        }
-        return eval.value();
+        return eval.valueOrDefault();
       }
 
       @Override
@@ -549,6 +541,6 @@ public class ExpressionSelectors
       }
       return Arrays.stream(asArray).collect(Collectors.toList());
     }
-    return eval.value();
+    return eval.valueOrDefault();
   }
 }

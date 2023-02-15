@@ -171,7 +171,7 @@ public class ExpressionPostAggregator implements PostAggregator
         }
     );
 
-    return parsed.get().eval(InputBindings.withMap(finalizedValues)).value();
+    return parsed.get().eval(InputBindings.withMap(finalizedValues)).valueOrDefault();
   }
 
   @Override

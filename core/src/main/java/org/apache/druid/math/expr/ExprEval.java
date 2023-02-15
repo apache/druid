@@ -653,6 +653,12 @@ public abstract class ExprEval<T>
     return value;
   }
 
+  @Nullable
+  public T valueOrDefault()
+  {
+    return value;
+  }
+
   void cacheStringValue(@Nullable String value)
   {
     stringValue = value;
@@ -793,6 +799,15 @@ public abstract class ExprEval<T>
     }
 
     @Override
+    public Number valueOrDefault()
+    {
+      if (value == null) {
+        return NullHandling.defaultDoubleValue();
+      }
+      return value;
+    }
+
+    @Override
     public final boolean asBoolean()
     {
       return Evals.asBoolean(asDouble());
@@ -855,6 +870,15 @@ public abstract class ExprEval<T>
     public final ExpressionType type()
     {
       return ExpressionType.LONG;
+    }
+
+    @Override
+    public Number valueOrDefault()
+    {
+      if (value == null) {
+        return NullHandling.defaultLongValue();
+      }
+      return value;
     }
 
     @Override
