@@ -92,7 +92,7 @@ source_paths:
 ```
 
 
-#### When you add a new library dependency into Druid [test]
+#### When you add a new library dependency into Druid
 
 This requires you to update the [the `licenses.yaml` file](https://github.com/apache/druid/blob/master/licenses.yaml).
 For example, to add `aws-java-sdk-core` as a new depdency, you need to add the following entry.
