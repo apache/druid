@@ -21,37 +21,34 @@ package org.apache.druid.k8s.overlord.common;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
 
-/**
- * This wraps the InputStream for k8s client
- * When you call close on the stream, it will also close the open
- * http connections and the client
- */
-public class LogWatchInputStream extends InputStream
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+class LogWatchInputStreamTest
 {
 
-  private final KubernetesClient client;
-  private final LogWatch logWatch;
-
-  public LogWatchInputStream(KubernetesClient client, LogWatch logWatch)
+  @Test
+  void testFlow() throws IOException
   {
-    this.client = client;
-    this.logWatch = logWatch;
-  }
-
-  @Override
-  public int read() throws IOException
-  {
-    return logWatch.getOutput().read();
-  }
-
-  @Override
-  public void close()
-  {
-    logWatch.close();
-    client.close();
+    LogWatch logWatch = mock(LogWatch.class);
+    InputStream inputStream = mock(InputStream.class);
+    when(inputStream.read()).thenReturn(1);
+    when(logWatch.getOutput()).thenReturn(inputStream);
+    KubernetesClient client = mock(KubernetesClient.class);
+    LogWatchInputStream stream = new LogWatchInputStream(client, logWatch);
+    int result = stream.read();
+    Assertions.assertEquals(1, result);
+    verify(stream, times(1)).read();
+    stream.close();
+    verify(stream, times(1)).close();
+    verify(client, times(1)).close();
   }
 }

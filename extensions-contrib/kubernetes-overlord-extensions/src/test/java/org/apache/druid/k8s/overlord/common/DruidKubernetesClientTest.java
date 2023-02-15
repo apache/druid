@@ -19,39 +19,36 @@
 
 package org.apache.druid.k8s.overlord.common;
 
+import io.fabric8.kubernetes.client.Client;
+import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.dsl.LogWatch;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
-import java.io.IOException;
-import java.io.InputStream;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.when;
 
-/**
- * This wraps the InputStream for k8s client
- * When you call close on the stream, it will also close the open
- * http connections and the client
- */
-public class LogWatchInputStream extends InputStream
+class DruidKubernetesClientTest
 {
 
-  private final KubernetesClient client;
-  private final LogWatch logWatch;
-
-  public LogWatchInputStream(KubernetesClient client, LogWatch logWatch)
+  @Test
+  void makingCodeCoverageHappy()
   {
-    this.client = client;
-    this.logWatch = logWatch;
-  }
+    KubernetesClient client = mock(KubernetesClient.class);
+    when(client.getApiVersion()).thenReturn("foo");
+    DruidKubernetesClient k8sClient = new DruidKubernetesClient(mock(Config.class))
+    {
+      @Override
+      public KubernetesClient getClient()
+      {
+        return client;
+      }
+    };
+    String version = k8sClient.executeRequest(Client::getApiVersion);
+    assertEquals("foo", version);
+    Mockito.verify(client, times(1)).close();
 
-  @Override
-  public int read() throws IOException
-  {
-    return logWatch.getOutput().read();
-  }
-
-  @Override
-  public void close()
-  {
-    logWatch.close();
-    client.close();
   }
 }
