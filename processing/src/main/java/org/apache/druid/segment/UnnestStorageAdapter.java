@@ -70,16 +70,21 @@ public class UnnestStorageAdapter implements StorageAdapter
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
-    final Filter updatedFilter = filter;
-
     // the filter on the outer unnested column needs to be recreated on the unnested dimension and sent into
     // the base cursor
+    // currently testing it  out for in filter and selector filter
+    // TBD: boun
 
     final Filter forBaseFilter;
-    if (updatedFilter == null) {
-      forBaseFilter = updatedFilter;
+    if (filter == null) {
+      forBaseFilter = filter;
     } else {
-      forBaseFilter = updatedFilter.getRequiredColumns().contains(outputColumnName) ? null : updatedFilter;
+      // if the filter has thw unnested column
+      // do not pass it into the base cursor
+      // if there is a filter as d2 > 1 and unnest-d2 < 10
+      // Calcite would push the filter on d2 into the data source
+      // and only the filter on unnest-d2 < 10 will appear here
+      forBaseFilter = filter.getRequiredColumns().contains(outputColumnName) ? null : filter;
     }
     final Sequence<Cursor> baseCursorSequence = baseAdapter.makeCursors(
         forBaseFilter,
@@ -103,7 +108,7 @@ public class UnnestStorageAdapter implements StorageAdapter
                   retVal.getColumnSelectorFactory(),
                   dimensionToUnnest,
                   outputColumnName,
-                  updatedFilter
+                  filter
               );
             } else {
               retVal = new UnnestColumnValueSelectorCursor(
@@ -111,7 +116,7 @@ public class UnnestStorageAdapter implements StorageAdapter
                   retVal.getColumnSelectorFactory(),
                   dimensionToUnnest,
                   outputColumnName,
-                  updatedFilter
+                  filter
               );
             }
           } else {
@@ -120,7 +125,7 @@ public class UnnestStorageAdapter implements StorageAdapter
                 retVal.getColumnSelectorFactory(),
                 dimensionToUnnest,
                 outputColumnName,
-                updatedFilter
+                filter
             );
           }
           return retVal;
