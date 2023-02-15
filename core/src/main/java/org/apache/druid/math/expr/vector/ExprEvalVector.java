@@ -19,7 +19,6 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
@@ -51,7 +50,7 @@ public abstract class ExprEvalVector<T>
   @Nullable
   public Object get(int index)
   {
-    if (nulls == null || NullHandling.replaceWithDefault() || !nulls[index]) {
+    if (nulls == null || !nulls[index]) {
       return Array.get(values, index);
     }
     return null;

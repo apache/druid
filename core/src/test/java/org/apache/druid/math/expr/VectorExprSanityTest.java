@@ -313,9 +313,17 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
       if (outputType != null && !eval.isNumericNull()) {
         Assert.assertEquals(eval.type(), outputType);
       }
+      Object toMatch = eval.value();
+      if (NullHandling.replaceWithDefault() && eval.type().isNumeric() && eval.value() == null) {
+        if (eval.type().is(ExprType.LONG)) {
+          toMatch = 0L;
+        } else {
+          toMatch = 0.0;
+        }
+      }
       Assert.assertEquals(
           StringUtils.format("Values do not match for row %s for expression %s", i, expr),
-          eval.value(),
+          toMatch,
           vectorEval.get(i)
       );
     }

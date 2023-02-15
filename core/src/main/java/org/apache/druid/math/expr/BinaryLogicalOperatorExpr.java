@@ -331,7 +331,7 @@ class BinAndExpr extends BinaryOpExprBase
       return ExprEval.ofLongBoolean(false);
     }
     ExprEval rightVal;
-    if (NullHandling.sqlCompatible() || Types.is(leftVal.type(), ExprType.STRING)) {
+    if (NullHandling.sqlCompatible() || (Types.is(leftVal.type(), ExprType.STRING) && leftVal.value() != null)) {
       // true/null, null/true, null/null -> null
       // false/null, null/false -> false
       if (leftVal.value() == null) {
@@ -405,7 +405,7 @@ class BinOrExpr extends BinaryOpExprBase
     }
 
     final ExprEval rightVal;
-    if (NullHandling.sqlCompatible() || Types.is(leftVal.type(), ExprType.STRING)) {
+    if (NullHandling.sqlCompatible() || (Types.is(leftVal.type(), ExprType.STRING) && leftVal.value() != null)) {
       // true/null, null/true -> true
       // false/null, null/false, null/null -> null
       if (leftVal.value() == null) {

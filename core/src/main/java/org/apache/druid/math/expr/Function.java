@@ -1176,7 +1176,7 @@ public interface Function extends NamedFunction
     {
       if (y == 0) {
         if (x != 0) {
-          return ExprEval.ofLong(NullHandling.defaultLongValue());
+          return ExprEval.ofLong(null);
         }
         return ExprEval.ofLong(0);
       }
@@ -1188,7 +1188,7 @@ public interface Function extends NamedFunction
     {
       if (y == 0 || Double.isNaN(y)) {
         if (x != 0) {
-          return ExprEval.ofDouble(NullHandling.defaultDoubleValue());
+          return ExprEval.ofDouble(null);
         }
         return ExprEval.ofDouble(0);
       }
@@ -2384,7 +2384,7 @@ public interface Function extends NamedFunction
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final String arg = args.get(0).eval(bindings).asString();
-      return arg == null ? ExprEval.ofLong(NullHandling.defaultLongValue()) : ExprEval.of(arg.length());
+      return arg == null ? ExprEval.ofLong(null) : ExprEval.of(arg.length());
     }
 
     @Override

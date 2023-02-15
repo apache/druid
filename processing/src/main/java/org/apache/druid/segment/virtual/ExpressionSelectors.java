@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
@@ -110,6 +111,13 @@ public class ExpressionSelectors
       {
         // No need for null check on getObject() since baseSelector impls will never return null.
         ExprEval eval = baseSelector.getObject();
+        // coerce null values to default numeric values
+        if (NullHandling.replaceWithDefault() && eval.type().isNumeric() && eval.value() == null) {
+          if (eval.type().is(ExprType.LONG)) {
+            return 0L;
+          }
+          return 0.0;
+        }
         return eval.value();
       }
 
@@ -196,14 +204,7 @@ public class ExpressionSelectors
       Expr expression
   )
   {
-    return makeExprEvalSelector(columnSelectorFactory, ExpressionPlanner.plan(columnSelectorFactory, expression));
-  }
-
-  public static ColumnValueSelector<ExprEval> makeExprEvalSelector(
-      ColumnSelectorFactory columnSelectorFactory,
-      ExpressionPlan plan
-  )
-  {
+    ExpressionPlan plan = ExpressionPlanner.plan(columnSelectorFactory, expression);
     final RowIdSupplier rowIdSupplier = columnSelectorFactory.getRowIdSupplier();
 
     if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {
