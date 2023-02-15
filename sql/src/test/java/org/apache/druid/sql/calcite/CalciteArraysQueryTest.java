@@ -2659,8 +2659,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               RowSignature.builder().add("inline", ColumnType.LONG_ARRAY).build()
                           ),
                           "inline",
-                          "EXPR$0",
-                          null
+                          "EXPR$0"
                       )
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
@@ -2696,8 +2695,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .dataSource(UnnestDataSource.create(
                       new TableDataSource(CalciteTests.DATASOURCE3),
                       "dim3",
-                      "EXPR$0",
-                      null
+                      "EXPR$0"
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -2748,8 +2746,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .setDataSource(UnnestDataSource.create(
                             new TableDataSource(CalciteTests.DATASOURCE3),
                             "dim3",
-                            "EXPR$0",
-                            null
+                            "EXPR$0"
                         ))
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -2793,8 +2790,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .setDataSource(UnnestDataSource.create(
                             new TableDataSource(CalciteTests.DATASOURCE3),
                             "dim3",
-                            "EXPR$0",
-                            null
+                            "EXPR$0"
                         ))
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -2849,8 +2845,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .dataSource(UnnestDataSource.create(
                     new TableDataSource(CalciteTests.DATASOURCE3),
                     "dim3",
-                    "EXPR$0",
-                    null
+                    "EXPR$0"
                 ))
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .dimension(new DefaultDimensionSpec("EXPR$0", "_d0", ColumnType.STRING))
@@ -2893,8 +2888,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .dataSource(UnnestDataSource.create(
                       new TableDataSource(CalciteTests.DATASOURCE3),
                       "dim3",
-                      "EXPR$0",
-                      null
+                      "EXPR$0"
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -2930,8 +2924,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .dataSource(UnnestDataSource.create(
                       new TableDataSource(CalciteTests.DATASOURCE3),
                       "dim3",
-                      "EXPR$0",
-                      null
+                      "EXPR$0"
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -3013,8 +3006,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               .build()
                       ),
                       "dim3",
-                      "EXPR$0",
-                      null
+                      "EXPR$0"
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -3079,8 +3071,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               .build()
                       ),
                       "dim3",
-                      "EXPR$0",
-                      null
+                      "EXPR$0"
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -3117,8 +3108,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .dataSource(UnnestDataSource.create(
                       new TableDataSource(CalciteTests.DATASOURCE3),
                       "v0",
-                      "EXPR$0",
-                      null
+                      "EXPR$0"
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .virtualColumns(expressionVirtualColumn("v0", "array(\"dim4\",\"dim5\")", ColumnType.STRING_ARRAY))
@@ -3159,8 +3149,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .setDataSource(UnnestDataSource.create(
                             new TableDataSource(CalciteTests.DATASOURCE3),
                             "v0",
-                            "EXPR$0",
-                            null
+                            "EXPR$0"
                         ))
                         .setVirtualColumns(expressionVirtualColumn(
                             "v0",
@@ -3234,8 +3223,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                           JoinType.INNER
                       ),
                       "dim3",
-                      "EXPR$0",
-                      null
+                      "EXPR$0"
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -3292,8 +3280,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                               RowSignature.builder().add("inline", ColumnType.LONG_ARRAY).build()
                                           ),
                                           "inline",
-                                          "EXPR$0",
-                                          null
+                                          "EXPR$0"
                                       )
                                   )
                                   .intervals(querySegmentSpec(Filtration.eternity()))

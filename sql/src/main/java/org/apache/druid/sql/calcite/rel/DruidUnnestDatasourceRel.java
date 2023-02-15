@@ -122,8 +122,7 @@ public class DruidUnnestDatasourceRel extends DruidRel<DruidUnnestDatasourceRel>
             RowSignature.builder().add("inline", ExpressionType.toColumnType(eval.type())).build()
         ),
         "inline",
-        druidQueryRel.getRowType().getFieldNames().get(0),
-        null
+        druidQueryRel.getRowType().getFieldNames().get(0)
     );
 
     DruidQuery query = druidQueryRel.getPartialDruidQuery().build(

@@ -45,9 +45,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -89,23 +87,6 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
   {
     return Druids.newScanQueryBuilder()
                  .dataSource(QueryRunnerTestHelper.UNNEST_DATA_SOURCE)
-                 .columns(Collections.emptyList())
-                 .eternityInterval()
-                 .limit(3)
-                 .legacy(legacy);
-  }
-
-  private Druids.ScanQueryBuilder newTestUnnestQueryWithAllowSet()
-  {
-    List<String> allowList = Arrays.asList("a", "b", "c");
-    LinkedHashSet allowSet = new LinkedHashSet(allowList);
-    return Druids.newScanQueryBuilder()
-                 .dataSource(UnnestDataSource.create(
-                     new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
-                     QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
-                     QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
-                     allowSet
-                 ))
                  .columns(Collections.emptyList())
                  .eternityInterval()
                  .limit(3)
@@ -179,8 +160,7 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
               .dataSource(UnnestDataSource.create(
                   new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
                   "vc",
-                  QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
-                  null
+                  QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
               ))
               .columns(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
               .eternityInterval()
@@ -253,8 +233,7 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
               .dataSource(UnnestDataSource.create(
                   new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
                   "vc",
-                  QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
-                  null
+                  QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
               ))
               .columns(QueryRunnerTestHelper.MARKET_DIMENSION, QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
               .eternityInterval()

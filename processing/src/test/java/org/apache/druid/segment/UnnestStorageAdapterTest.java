@@ -45,7 +45,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.LinkedHashSet;
 import java.util.List;
 
 public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
@@ -61,7 +60,6 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   private static String COLUMNNAME = "multi-string1";
   private static String OUTPUT_COLUMN_NAME = "unnested-multi-string1";
   private static String OUTPUT_COLUMN_NAME1 = "unnested-multi-string1-again";
-  private static LinkedHashSet<String> IGNORE_SET = new LinkedHashSet<>(Arrays.asList("1", "3", "5"));
 
   @BeforeClass
   public static void setup()
@@ -86,26 +84,22 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     UNNEST_STORAGE_ADAPTER = new UnnestStorageAdapter(
         INCREMENTAL_INDEX_STORAGE_ADAPTER,
         COLUMNNAME,
-        OUTPUT_COLUMN_NAME,
-        null
+        OUTPUT_COLUMN_NAME
     );
     UNNEST_STORAGE_ADAPTER1 = new UnnestStorageAdapter(
         INCREMENTAL_INDEX_STORAGE_ADAPTER,
         COLUMNNAME,
-        OUTPUT_COLUMN_NAME,
-        IGNORE_SET
+        OUTPUT_COLUMN_NAME
     );
     UNNEST_STORAGE_ADAPTER2 = new UnnestStorageAdapter(
         UNNEST_STORAGE_ADAPTER,
         COLUMNNAME,
-        OUTPUT_COLUMN_NAME1,
-        null
+        OUTPUT_COLUMN_NAME1
     );
     UNNEST_STORAGE_ADAPTER3 = new UnnestStorageAdapter(
         UNNEST_STORAGE_ADAPTER1,
         COLUMNNAME,
-        OUTPUT_COLUMN_NAME1,
-        IGNORE_SET
+        OUTPUT_COLUMN_NAME1
     );
     ADAPTERS = ImmutableList.of(
         UNNEST_STORAGE_ADAPTER,

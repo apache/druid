@@ -248,8 +248,7 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(UnnestDataSource.create(
             new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
             QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
-            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
-            null
+            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
         ))
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -467,8 +466,7 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(UnnestDataSource.create(
             new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
             QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
-            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
-            null
+            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
         ))
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
@@ -595,8 +593,7 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
     final DataSource unnestDataSource = UnnestDataSource.create(
         new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
         "vc",
-        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
-        null
+        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
     );
 
     GroupByQuery query = makeQueryBuilder()
@@ -699,8 +696,7 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
     final DataSource unnestDataSource = UnnestDataSource.create(
         new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
         "vc",
-        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
-        null
+        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
     );
 
     GroupByQuery query = makeQueryBuilder()

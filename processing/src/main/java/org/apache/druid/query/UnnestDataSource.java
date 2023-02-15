@@ -28,8 +28,6 @@ import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.UnnestSegmentReference;
 import org.apache.druid.utils.JvmUtils;
 
-import javax.annotation.Nullable;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -38,7 +36,7 @@ import java.util.function.Function;
 
 /**
  * The data source for representing an unnest operation.
- *
+ * <p>
  * An unnest data source has the following:
  * a base data source which is to be unnested
  * the column name of the MVD which will be unnested
@@ -50,30 +48,26 @@ public class UnnestDataSource implements DataSource
   private final DataSource base;
   private final String column;
   private final String outputName;
-  private final LinkedHashSet<String> allowList;
 
   private UnnestDataSource(
       DataSource dataSource,
       String columnName,
-      String outputName,
-      LinkedHashSet<String> allowList
+      String outputName
   )
   {
     this.base = dataSource;
     this.column = columnName;
     this.outputName = outputName;
-    this.allowList = allowList;
   }
 
   @JsonCreator
   public static UnnestDataSource create(
       @JsonProperty("base") DataSource base,
       @JsonProperty("column") String columnName,
-      @JsonProperty("outputName") String outputName,
-      @Nullable @JsonProperty("allowList") LinkedHashSet<String> allowList
+      @JsonProperty("outputName") String outputName
   )
   {
-    return new UnnestDataSource(base, columnName, outputName, allowList);
+    return new UnnestDataSource(base, columnName, outputName);
   }
 
   @JsonProperty("base")
@@ -94,12 +88,6 @@ public class UnnestDataSource implements DataSource
     return outputName;
   }
 
-  @JsonProperty("allowList")
-  public LinkedHashSet<String> getAllowList()
-  {
-    return allowList;
-  }
-
   @Override
   public Set<String> getTableNames()
   {
@@ -118,7 +106,7 @@ public class UnnestDataSource implements DataSource
     if (children.size() != 1) {
       throw new IAE("Expected [1] child, got [%d]", children.size());
     }
-    return new UnnestDataSource(children.get(0), column, outputName, allowList);
+    return new UnnestDataSource(children.get(0), column, outputName);
   }
 
   @Override
@@ -162,8 +150,7 @@ public class UnnestDataSource implements DataSource
                     new UnnestSegmentReference(
                         segmentMapFn.apply(baseSegment),
                         column,
-                        outputName,
-                        allowList
+                        outputName
                     );
           }
         }
@@ -174,7 +161,7 @@ public class UnnestDataSource implements DataSource
   @Override
   public DataSource withUpdatedDataSource(DataSource newSource)
   {
-    return new UnnestDataSource(newSource, column, outputName, allowList);
+    return new UnnestDataSource(newSource, column, outputName);
   }
 
   @Override
@@ -223,7 +210,6 @@ public class UnnestDataSource implements DataSource
            "base=" + base +
            ", column='" + column + '\'' +
            ", outputName='" + outputName + '\'' +
-           ", allowList=" + allowList +
            '}';
   }
 

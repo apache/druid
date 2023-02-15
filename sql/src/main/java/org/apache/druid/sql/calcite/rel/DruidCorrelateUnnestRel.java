@@ -204,8 +204,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
         UnnestDataSource.create(
             leftDataSource,
             dimOrExpToUnnest,
-            unnestDatasourceRel.getUnnestProject().getRowType().getFieldNames().get(0),
-            null
+            unnestDatasourceRel.getUnnestProject().getRowType().getFieldNames().get(0)
         ),
         rowSignature,
         getPlannerContext(),
