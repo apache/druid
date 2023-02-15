@@ -58,13 +58,6 @@ jobs:
   test: # Github job that runs a given standard/old IT for a given testing group
     name: ${{ inputs.group }} integration test (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }}, Indexer=${{ inputs.use_indexer }}, Mysql=${{ inputs.mysql_driver }})
     runs-on: ubuntu-22.04
-    on:
-      push:
-        paths-ignore:
-          - 'docs/**'
-          - 'examples/**'
-          - 'helm/**'
-          - 'web-console/**'
     steps:
       - name: Checkout branch
         uses: actions/checkout@v3

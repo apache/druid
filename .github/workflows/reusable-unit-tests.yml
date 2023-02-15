@@ -47,14 +47,6 @@ jobs:
   unit-tests:
     name: ${{ inputs.module }} modules test
     runs-on: ubuntu-latest
-    on:
-      push:
-        paths-ignore:
-          - 'docs/**'
-          - 'examples/**'
-          - 'helm/**'
-          - 'integration-tests*/**'
-          - 'web-console/**'
     steps:
       - name: checkout branch
         uses: actions/checkout@v3
