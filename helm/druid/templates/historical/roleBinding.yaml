@@ -15,6 +15,6 @@ roleRef:
   name: {{ template "druid.historical.fullname" . }}
 subjects:
   - kind: ServiceAccount
-    name: {{ .Values.historical.serviceAccount.name }}
+    name: {{ include "druid.historical.serviceAccountName" . }}
     namespace: {{ .Release.Namespace }}
 {{- end }}

@@ -15,6 +15,6 @@ roleRef:
   name: {{ template "druid.middleManager.fullname" . }}
 subjects:
   - kind: ServiceAccount
-    name: {{ .Values.middleManager.serviceAccount.name }}
+    name: {{ include "druid.middleManager.serviceAccountName" . }}
     namespace: {{ .Release.Namespace }}
 {{- end }}

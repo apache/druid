@@ -15,6 +15,6 @@ roleRef:
   name: {{ template "druid.broker.fullname" . }}
 subjects:
   - kind: ServiceAccount
-    name: {{ .Values.broker.serviceAccount.name }}
+    name: {{ include "druid.broker.serviceAccountName" . }}
     namespace: {{ .Release.Namespace }}
 {{- end }}

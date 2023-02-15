@@ -15,6 +15,6 @@ roleRef:
   name: {{ template "druid.router.fullname" . }}
 subjects:
   - kind: ServiceAccount
-    name: {{ .Values.router.serviceAccount.name }}
+    name: {{ include "druid.router.serviceAccountName" . }}
     namespace: {{ .Release.Namespace }}
 {{- end }}
