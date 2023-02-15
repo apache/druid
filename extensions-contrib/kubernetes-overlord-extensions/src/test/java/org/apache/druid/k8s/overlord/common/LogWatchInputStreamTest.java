@@ -46,9 +46,9 @@ class LogWatchInputStreamTest
     LogWatchInputStream stream = new LogWatchInputStream(client, logWatch);
     int result = stream.read();
     Assertions.assertEquals(1, result);
-    verify(stream, times(1)).read();
+    verify(inputStream, times(1)).read();
     stream.close();
-    verify(stream, times(1)).close();
+    verify(logWatch, times(1)).close();
     verify(client, times(1)).close();
   }
 }
