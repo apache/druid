@@ -107,4 +107,10 @@ public class DelimitedInputFormat extends FlatTextInputFormat
 
     return Collections.unmodifiableList(result);
   }
+
+  @Override
+  public String toString()
+  {
+    return "DelimitedInputFormat{" + fieldsToString() + "}";
+  }
 }

@@ -98,7 +98,6 @@ public enum ValueType implements TypeDescriptor
    */
   ARRAY;
 
-
   /**
    * Type is a numeric type, not including numeric array types
    */

@@ -42,7 +42,7 @@ public class ITLocalInputSourceAllFormatSchemalessTest extends AbstractLocalInpu
   @Test
   public void testAvroInputFormatIndexDataIngestionSpecWithFileSchemaSchemaless() throws Exception
   {
-    List fieldList = ImmutableList.of(
+    List<Object> fieldList = ImmutableList.of(
         ImmutableMap.of("name", "timestamp", "type", "string"),
         ImmutableMap.of("name", "page", "type", "string"),
         ImmutableMap.of("name", "language", "type", "string"),
@@ -60,7 +60,8 @@ public class ITLocalInputSourceAllFormatSchemalessTest extends AbstractLocalInpu
         ImmutableMap.of("name", "deleted", "type", "int"),
         ImmutableMap.of("name", "delta", "type", "int")
     );
-    Map schema = ImmutableMap.of("namespace", "org.apache.druid.data.input",
+    Map<String, Object> schema = ImmutableMap.of(
+                                 "namespace", "org.apache.druid.data.input",
                                  "type", "record",
                                  "name", "wikipedia",
                                  "fields", fieldList);

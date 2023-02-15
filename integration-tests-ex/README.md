@@ -32,46 +32,30 @@ an explanation.
 
 ### Build Druid
 
-To make the text a bit simpler, define a variable for the standard settings:
-
 ```bash
-export MAVEN_IGNORE=-P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true
-
-```bash
-mvn clean package -P dist $MAVEN_IGNORE -T1.0C
+./it.sh build
 ```
 
 ### Build the Test Image
 
 ```bash
-cd $DRUID_DEV/integration-tests-ex/image
-mvn install -P test-image $MAVEN_IGNORE
+./it.sh image
 ```
 
 ### Run an IT from the Command Line
 
 ```bash
-mvn verify -P IT-<category> -pl :druid-it-cases $MAVEN_IGNORE
+./it.sh test <category>
 ```
 
 Where `<category>` is one of the test categories.
-
-Or
-
-```bash
-cd $DRUID_DEV/integration-tests-ex/cases
-mvn verify -P skip-static-checks,docker-tests,IT-<category> \
-    -Dmaven.javadoc.skip=true -DskipUTs=true \
-    -pl :druid-it-cases
-```
 
 ### Run an IT from the IDE
 
 Start the cluster:
 
 ```bash
-cd $DRUID_DEV/integration-tests-ex/cases
-./cluster.sh up <category>
+./it.sh up <category>
 ```
 
 Where `<category>` is one of the test categories. Then launch the
