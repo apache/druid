@@ -22,6 +22,7 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.exception.SanitizableException;
+import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -223,5 +224,18 @@ public class QueryException extends RuntimeException implements SanitizableExcep
   public FailType getFailType()
   {
     return fromErrorCode(errorCode);
+  }
+
+  @Override
+  public String toString()
+  {
+    return StringUtils.format(
+        "%s{msg=%s, code=%s, class=%s, host=%s}",
+        getClass().getSimpleName(),
+        getMessage(),
+        getErrorCode(),
+        getErrorClass(),
+        getHost()
+    );
   }
 }
