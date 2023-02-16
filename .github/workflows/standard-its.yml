@@ -16,6 +16,7 @@
 # Github workflow that runs standard/old ITs
 on:
   workflow_call
+  workflow_dispatch
 
 jobs:
   integration-index-tests-middleManager:
