@@ -18,7 +18,7 @@ on:
   push:
     paths-ignore:
       - 'docs/**'
-      - 'examples/**'
+      - 'dev/**'
       - 'helm/**'
       - 'web-console/**'
     branches:
