@@ -52,6 +52,8 @@ public class DruidMetrics
 
   public static final String PARTITION = "partition";
 
+  public static final String TAGS = "tags";
+
   public static int findNumComplexAggs(List<AggregatorFactory> aggs)
   {
     int retVal = 0;

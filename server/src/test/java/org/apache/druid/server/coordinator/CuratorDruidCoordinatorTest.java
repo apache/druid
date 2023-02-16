@@ -440,7 +440,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
       }
     };
 
-    serverView = new CoordinatorServerView(baseView, new CoordinatorSegmentWatcherConfig());
+    serverView = new CoordinatorServerView(baseView, new CoordinatorSegmentWatcherConfig(), new NoopServiceEmitter());
 
     baseView.start();
 

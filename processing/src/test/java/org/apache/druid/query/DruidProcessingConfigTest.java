@@ -190,13 +190,13 @@ public class DruidProcessingConfigTest
     config.intermediateComputeSizeBytes();
   }
 
-  static class MockRuntimeInfo extends RuntimeInfo
+  public static class MockRuntimeInfo extends RuntimeInfo
   {
     private final int availableProcessors;
     private final long maxHeapSize;
     private final long directSize;
 
-    MockRuntimeInfo(int availableProcessors, long directSize, long maxHeapSize)
+    public MockRuntimeInfo(int availableProcessors, long directSize, long maxHeapSize)
     {
       this.availableProcessors = availableProcessors;
       this.directSize = directSize;

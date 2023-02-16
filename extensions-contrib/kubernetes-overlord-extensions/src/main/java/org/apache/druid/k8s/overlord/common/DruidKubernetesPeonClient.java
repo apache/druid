@@ -167,6 +167,7 @@ public class DruidKubernetesPeonClient implements KubernetesPeonClient
                               .jobs()
                               .inNamespace(namespace)
                               .withName(taskId.getK8sTaskId())
+                              .inContainer("main")
                               .getLogReader();
         if (reader == null) {
           return Optional.absent();

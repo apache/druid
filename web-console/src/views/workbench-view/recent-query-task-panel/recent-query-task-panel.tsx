@@ -17,21 +17,24 @@
  */
 
 import { Button, Icon, Intent, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
-import { IconName, IconNames } from '@blueprintjs/icons';
+import type { IconName } from '@blueprintjs/icons';
+import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
 import { T } from 'druid-query-toolkit';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
+import { useStore } from 'zustand';
 
 import { Loader } from '../../../components';
-import { Execution, WorkbenchQuery } from '../../../druid-models';
+import type { Execution } from '../../../druid-models';
+import { WorkbenchQuery } from '../../../druid-models';
 import { cancelTaskExecution, getTaskExecution } from '../../../helpers';
 import { useClock, useInterval, useQueryManager } from '../../../hooks';
 import { AppToaster } from '../../../singletons';
 import { downloadQueryDetailArchive, formatDuration, queryDruidSql } from '../../../utils';
 import { CancelQueryDialog } from '../cancel-query-dialog/cancel-query-dialog';
-import { useWorkStateStore } from '../work-state-store';
+import { workStateStore } from '../work-state-store';
 
 import './recent-query-task-panel.scss';
 
@@ -89,7 +92,10 @@ export const RecentQueryTaskPanel = React.memo(function RecentQueryTaskPanel(
 
   const [confirmCancelId, setConfirmCancelId] = useState<string | undefined>();
 
-  const workStateVersion = useWorkStateStore(state => state.version);
+  const workStateVersion = useStore(
+    workStateStore,
+    useCallback(state => state.version, []),
+  );
 
   const [queryTaskHistoryState, queryManager] = useQueryManager<number, RecentQueryEntry[]>({
     query: workStateVersion,
@@ -116,7 +122,10 @@ LIMIT 100`,
 
   const now = useClock();
 
-  const incrementWorkVersion = useWorkStateStore(state => state.increment);
+  const incrementWorkVersion = useStore(
+    workStateStore,
+    useCallback(state => state.increment, []),
+  );
 
   const queryTaskHistory = queryTaskHistoryState.getSomeData();
   return (
@@ -140,6 +149,7 @@ LIMIT 100`,
                 <MenuItem
                   icon={IconNames.DOCUMENT_OPEN}
                   text="Attach in new tab"
+                  // eslint-disable-next-line @typescript-eslint/no-misused-promises
                   onClick={async () => {
                     let execution: Execution;
                     try {
@@ -191,7 +201,7 @@ LIMIT 100`,
                 <MenuItem
                   icon={IconNames.ARCHIVE}
                   text="Get query detail archive"
-                  onClick={() => downloadQueryDetailArchive(w.taskId)}
+                  onClick={() => void downloadQueryDetailArchive(w.taskId)}
                 />
                 {w.taskStatus === 'RUNNING' && (
                   <>
@@ -256,6 +266,7 @@ LIMIT 100`,
       ) : undefined}
       {confirmCancelId && (
         <CancelQueryDialog
+          // eslint-disable-next-line @typescript-eslint/no-misused-promises
           onCancel={async () => {
             if (!confirmCancelId) return;
             try {

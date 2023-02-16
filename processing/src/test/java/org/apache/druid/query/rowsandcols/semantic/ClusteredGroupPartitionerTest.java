@@ -24,6 +24,8 @@ import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
+import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -45,6 +47,18 @@ public class ClusteredGroupPartitionerTest extends SemanticTestBase
   }
 
   @Test
+  public void testEmpty()
+  {
+    RowsAndColumns rac = make(new MapOfColumnsRowsAndColumns(ImmutableMap.of(), 0));
+
+    final ClusteredGroupPartitioner parter = ClusteredGroupPartitioner.fromRAC(rac);
+
+    final List<String> cols = Collections.singletonList("notThere");
+    Assert.assertArrayEquals(new int[]{}, parter.computeBoundaries(cols));
+    Assert.assertTrue(parter.partitionOnBoundaries(cols).isEmpty());
+  }
+
+  @Test
   public void testDefaultClusteredGroupPartitioner()
   {
     RowsAndColumns rac = make(MapOfColumnsRowsAndColumns.fromMap(
@@ -54,10 +68,7 @@ public class ClusteredGroupPartitionerTest extends SemanticTestBase
         )
     ));
 
-    ClusteredGroupPartitioner parter = rac.as(ClusteredGroupPartitioner.class);
-    if (parter == null) {
-      parter = new DefaultClusteredGroupPartitioner(rac);
-    }
+    ClusteredGroupPartitioner parter = ClusteredGroupPartitioner.fromRAC(rac);
 
     int[] expectedBounds = new int[]{0, 3, 5, 6, 9};
 
@@ -116,5 +127,49 @@ public class ClusteredGroupPartitionerTest extends SemanticTestBase
       expectation.validate(unsortedChunks.next());
     }
     Assert.assertFalse(unsortedChunks.hasNext());
+  }
+
+  @Test
+  public void testDefaultClusteredGroupPartitionerWithNulls()
+  {
+    RowsAndColumns rac = make(MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "sorted", new ObjectArrayColumn(new Object[]{null, null, null, 1, 1, 2, 4, 4, 4}, ColumnType.LONG),
+            "unsorted", new IntArrayColumn(new int[]{3, 54, 21, 1, 5, 54, 2, 3, 92})
+        )
+    ));
+
+    ClusteredGroupPartitioner parter = ClusteredGroupPartitioner.fromRAC(rac);
+
+    int[] expectedBounds = new int[]{0, 3, 5, 6, 9};
+
+    List<RowsAndColumnsHelper> expectations = Arrays.asList(
+        new RowsAndColumnsHelper()
+            .expectColumn("sorted", new Object[]{null, null, null}, ColumnType.LONG)
+            .expectColumn("unsorted", new int[]{3, 54, 21})
+            .allColumnsRegistered(),
+        new RowsAndColumnsHelper()
+            .expectColumn("sorted", new int[]{1, 1})
+            .expectColumn("unsorted", new int[]{1, 5})
+            .allColumnsRegistered(),
+        new RowsAndColumnsHelper()
+            .expectColumn("sorted", new int[]{2})
+            .expectColumn("unsorted", new int[]{54})
+            .allColumnsRegistered(),
+        new RowsAndColumnsHelper()
+            .expectColumn("sorted", new int[]{4, 4, 4})
+            .expectColumn("unsorted", new int[]{2, 3, 92})
+            .allColumnsRegistered()
+    );
+
+    final List<String> partCols = Collections.singletonList("sorted");
+    Assert.assertArrayEquals(expectedBounds, parter.computeBoundaries(partCols));
+
+    final Iterator<RowsAndColumns> partedChunks = parter.partitionOnBoundaries(partCols).iterator();
+    for (RowsAndColumnsHelper expectation : expectations) {
+      Assert.assertTrue(partedChunks.hasNext());
+      expectation.validate(partedChunks.next());
+    }
+    Assert.assertFalse(partedChunks.hasNext());
   }
 }

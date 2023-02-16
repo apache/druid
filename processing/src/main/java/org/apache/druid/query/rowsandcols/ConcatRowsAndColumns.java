@@ -22,6 +22,7 @@ package org.apache.druid.query.rowsandcols;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
+import org.apache.druid.query.rowsandcols.column.NullColumn;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nonnull;
@@ -33,6 +34,13 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * A RowsAndColumns implementation that effectively concatenates multiple RowsAndColumns objects together.
+ * <p>
+ * That is, if it is given 3 RowsAndColumns objects, of sizes 4, 2, and 3 respectively, the resulting
+ * RowsAndColumns object will have 9 rows where rows 0-to-3 will be from the first object, 4-to-5 from the next and
+ * 6-to-8 from the last.
+ */
 public class ConcatRowsAndColumns implements RowsAndColumns
 {
   private final ArrayList<RowsAndColumns> racBuffer;
@@ -101,7 +109,11 @@ public class ConcatRowsAndColumns implements RowsAndColumns
         final ColumnType type = firstAccessor.getType();
         for (int i = 1; i < racBuffer.size(); ++i) {
           RowsAndColumns rac = racBuffer.get(i);
-          final Column col = rac.findColumn(name);
+          Column col = rac.findColumn(name);
+          if (col == null) {
+            // It doesn't exist, so must be all null!
+            col = new NullColumn(type, rac.numRows());
+          }
           final ColumnAccessor accessor = col.toAccessor();
           if (!type.equals(accessor.getType())) {
             throw new ISE("Type mismatch, expected[%s], got[%s] on entry[%,d]", type, accessor.getType(), i);
@@ -109,7 +121,11 @@ public class ConcatRowsAndColumns implements RowsAndColumns
           accessors.add(accessor);
         }
 
-        final ConcatedidColumn retVal = new ConcatedidColumn(type, type.getStrategy(), accessors);
+        final ConcatedidColumn retVal = new ConcatedidColumn(
+            type,
+            Comparator.nullsFirst(type.getStrategy()),
+            accessors
+        );
         columnCache.put(name, retVal);
         return retVal;
       }
@@ -232,6 +248,7 @@ public class ConcatRowsAndColumns implements RowsAndColumns
       };
     }
 
+    @Nullable
     @Override
     public <T> T as(Class<? extends T> clazz)
     {

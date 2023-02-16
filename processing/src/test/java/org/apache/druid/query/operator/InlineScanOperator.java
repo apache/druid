@@ -20,41 +20,70 @@
 package org.apache.druid.query.operator;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterators;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
+import java.io.Closeable;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
 public class InlineScanOperator implements Operator
 {
-  public static InlineScanOperator make(RowsAndColumns item)
+  public static InlineScanOperator make(RowsAndColumns... item)
   {
-    return new InlineScanOperator(Iterators.singletonIterator(item));
+    return new InlineScanOperator(Arrays.asList(item));
   }
 
   public static InlineScanOperator make(List<RowsAndColumns> items)
   {
-    return new InlineScanOperator(items.iterator());
+    return new InlineScanOperator(items);
   }
 
-  private Iterator<RowsAndColumns> iter;
+  private Iterable<RowsAndColumns> iterable;
 
   public InlineScanOperator(
-      Iterator<RowsAndColumns> iter
+      Iterable<RowsAndColumns> iterable
   )
   {
-    Preconditions.checkNotNull(iter);
-    this.iter = iter;
+    Preconditions.checkNotNull(iterable);
+    this.iterable = iterable;
   }
 
   @Override
-  public void go(Receiver receiver)
+  public Closeable goOrContinue(Closeable continuation, Receiver receiver)
   {
-    boolean keepItGoing = true;
-    while (keepItGoing && iter.hasNext()) {
+    final Iterator<RowsAndColumns> iter;
+    if (continuation == null) {
+      iter = iterable.iterator();
+    } else {
+      iter = ((Continuation) continuation).iter;
+    }
+
+    Signal keepItGoing = Signal.GO;
+    while (keepItGoing == Signal.GO && iter.hasNext()) {
       keepItGoing = receiver.push(iter.next());
     }
-    receiver.completed();
+    if (keepItGoing == Signal.PAUSE && iter.hasNext()) {
+      return new Continuation(iter);
+    } else {
+      receiver.completed();
+      return null;
+    }
+  }
+
+  private static class Continuation implements Closeable
+  {
+    private final Iterator<RowsAndColumns> iter;
+
+    public Continuation(Iterator<RowsAndColumns> iter)
+    {
+      this.iter = iter;
+    }
+
+    @Override
+    public void close()
+    {
+      // We don't actually have anything to close
+    }
   }
 }

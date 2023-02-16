@@ -62,7 +62,7 @@ public class ArrayOrdinalOperatorConversion extends DirectOperatorConversion
     {
       RelDataType type = sqlOperatorBinding.getOperandType(0);
       if (SqlTypeUtil.isArray(type)) {
-        type.getComponentType();
+        return type.getComponentType();
       }
       return type;
     }

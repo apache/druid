@@ -53,13 +53,13 @@ import static org.apache.druid.msq.util.MultiStageQueryContext.DEFAULT_MAX_NUM_T
 public class MultiStageQueryContextTest
 {
   @Test
-  public void isDurableStorageEnabled_noParameterSetReturnsDefaultValue()
+  public void isDurableShuffleStorageEnabled_noParameterSetReturnsDefaultValue()
   {
     Assert.assertFalse(MultiStageQueryContext.isDurableStorageEnabled(QueryContext.empty()));
   }
 
   @Test
-  public void isDurableStorageEnabled_parameterSetReturnsCorrectValue()
+  public void isDurableShuffleStorageEnabled_parameterSetReturnsCorrectValue()
   {
     Map<String, Object> propertyMap = ImmutableMap.of(CTX_DURABLE_SHUFFLE_STORAGE, "true");
     Assert.assertTrue(MultiStageQueryContext.isDurableStorageEnabled(QueryContext.of(propertyMap)));
@@ -98,6 +98,16 @@ public class MultiStageQueryContextTest
         WorkerAssignmentStrategy.MAX,
         MultiStageQueryContext.getAssignmentStrategy(QueryContext.empty())
     );
+  }
+
+  @Test
+  public void testGetMaxInputBytesPerWorker()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(MultiStageQueryContext.CTX_MAX_INPUT_BYTES_PER_WORKER, 1024);
+
+    Assert.assertEquals(
+        1024,
+        MultiStageQueryContext.getMaxInputBytesPerWorker(QueryContext.of(propertyMap)));
   }
 
   @Test

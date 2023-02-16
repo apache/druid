@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -32,8 +33,7 @@ import org.apache.druid.msq.indexing.ColumnMappings;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
-import org.apache.druid.msq.shuffle.DurableStorageUtils;
-import org.apache.druid.msq.test.CounterSnapshotBuilder;
+import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.query.InlineDataSource;
@@ -62,6 +62,7 @@ import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
 import org.junit.Test;
@@ -162,6 +163,21 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setQueryContext(context)
         .setExpectedRowSignature(resultSignature)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "shuffle"
+        )
         .setExpectedResultRows(ImmutableList.of(
             new Object[]{1L, !useDefault ? "" : null},
             new Object[]{1L, "10.1"},
@@ -206,7 +222,23 @@ public class MSQSelectTest extends MSQTestBase
             new Object[]{1L, "en"},
             new Object[]{1L, "ru"},
             new Object[]{1L, "he"}
-        )).verifyResults();
+        ))
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(3).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(3).frames(1),
+            0, 0, "shuffle"
+        )
+        .verifyResults();
   }
 
   @Test
@@ -247,6 +279,21 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
         .setQueryContext(context)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(1).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(1).frames(1),
+            0, 0, "shuffle"
+        )
         .verifyResults();
   }
 
@@ -305,6 +352,21 @@ public class MSQSelectTest extends MSQTestBase
                 new Object[]{1f, 1L}
             )
         )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "shuffle"
+        )
         .verifyResults();
   }
 
@@ -344,6 +406,21 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedRowSignature(resultSignature)
         .setExpectedResultRows(ImmutableList.of(new Object[]{6L}))
         .setQueryContext(context)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "shuffle"
+        )
         .verifyResults();
   }
 
@@ -475,6 +552,21 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedRowSignature(resultSignature)
         .setExpectedResultRows(expectedResults)
         .setQueryContext(context)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "shuffle"
+        )
         .verifyResults();
   }
 
@@ -593,6 +685,21 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedRowSignature(resultSignature)
         .setExpectedResultRows(expectedResults)
         .setQueryContext(context)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "shuffle"
+        )
         .verifyResults();
   }
 
@@ -653,7 +760,23 @@ public class MSQSelectTest extends MSQTestBase
                 new Object[]{2f, 2d},
                 new Object[]{1f, 1d}
             )
-        ).verifyResults();
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "shuffle"
+        )
+        .verifyResults();
   }
 
   @Test
@@ -710,7 +833,23 @@ public class MSQSelectTest extends MSQTestBase
                 new Object[]{5f, 5d},
                 new Object[]{4f, 4d}
             )
-        ).verifyResults();
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "shuffle"
+        )
+        .verifyResults();
   }
 
   @Test
@@ -767,13 +906,29 @@ public class MSQSelectTest extends MSQTestBase
                 new Object[]{5f, 5d},
                 new Object[]{4f, 4d}
             )
-        ).verifyResults();
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "shuffle"
+        )
+        .verifyResults();
   }
 
   @Test
   public void testExternSelect1() throws IOException
   {
-    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/wikipedia-sampled.json");
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/wikipedia-sampled.json");
     final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
@@ -837,10 +992,19 @@ public class MSQSelectTest extends MSQTestBase
                 .build()
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1),
             0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(1).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(1).frames(1),
+            0, 0, "shuffle"
         )
         .verifyResults();
   }
@@ -962,6 +1126,21 @@ public class MSQSelectTest extends MSQTestBase
             new Object[]{1L, "ru"},
             new Object[]{1L, "he"}
         ))
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(3).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(3).frames(1),
+            0, 0, "shuffle"
+        )
         .verifyResults();
   }
 
@@ -1207,6 +1386,20 @@ public class MSQSelectTest extends MSQTestBase
   }
 
   @Test
+  public void testGroupByWithComplexColumnThrowsUnsupportedException()
+  {
+    testSelectQuery()
+        .setSql("select unique_dim1 from foo2 group by unique_dim1")
+        .setQueryContext(context)
+        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
+            CoreMatchers.instanceOf(UnsupportedSQLQueryException.class),
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                "SQL requires a group-by on a column of type COMPLEX<hyperUnique> that is unsupported"))
+        ))
+        .verifyExecutionError();
+  }
+
+  @Test
   public void testGroupByMultiValueMeasureQuery()
   {
     final RowSignature rowSignature = RowSignature.builder()
@@ -1313,7 +1506,7 @@ public class MSQSelectTest extends MSQTestBase
   @Test
   public void testMultiValueStringWithIncorrectType() throws IOException
   {
-    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/unparseable-mv-string-array.json");
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/unparseable-mv-string-array.json");
     final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()

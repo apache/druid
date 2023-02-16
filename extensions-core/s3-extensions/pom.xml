@@ -42,6 +42,12 @@
     </dependency>
     <dependency>
       <groupId>org.apache.druid</groupId>
+      <artifactId>druid-server</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid</groupId>
       <artifactId>druid-aws-common</artifactId>
       <version>${project.parent.version}</version>
       <scope>provided</scope>
@@ -114,7 +120,6 @@
     <dependency>
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-sts</artifactId>
-      <version>${aws.sdk.version}</version>
     </dependency>
     <dependency>
       <groupId>it.unimi.dsi</groupId>
@@ -127,12 +132,6 @@
       <artifactId>druid-core</artifactId>
       <version>${project.parent.version}</version>
       <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.druid</groupId>
-      <artifactId>druid-server</artifactId>
-      <version>${project.parent.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>

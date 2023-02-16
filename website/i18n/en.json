@@ -108,6 +108,9 @@
       "development/build": {
         "title": "Build from source"
       },
+      "development/experimental-features": {
+        "title": "Experimental features"
+      },
       "development/experimental": {
         "title": "Experimental features"
       },
@@ -140,6 +143,9 @@
       },
       "development/extensions-contrib/influxdb-emitter": {
         "title": "InfluxDB Emitter"
+      },
+      "development/extensions-contrib/k8s-jobs": {
+        "title": "MM-less Druid in K8s"
       },
       "development/extensions-contrib/kafka-emitter": {
         "title": "Kafka Emitter"
@@ -328,8 +334,12 @@
         "title": "Ingestion spec reference",
         "sidebar_label": "Ingestion spec"
       },
+      "ingestion/migrate-from-firehose": {
+        "title": "Migrate from firehose to input source ingestion",
+        "sidebar_label": "Migrate from firehose"
+      },
       "ingestion/native-batch-firehose": {
-        "title": "Native batch ingestion with firehose",
+        "title": "Native batch ingestion with firehose (Deprecated)",
         "sidebar_label": "Firehose (deprecated)"
       },
       "ingestion/native-batch-input-sources": {
@@ -405,7 +415,8 @@
         "title": "API reference"
       },
       "operations/auth-ldap": {
-        "title": "LDAP auth"
+        "title": "Configure LDAP authentication",
+        "sidebar_label": "LDAP auth"
       },
       "operations/basic-cluster-tuning": {
         "title": "Basic cluster tuning"
@@ -463,6 +474,9 @@
       "operations/pull-deps": {
         "title": "pull-deps tool"
       },
+      "operations/python": {
+        "title": "Python Installation"
+      },
       "operations/request-logging": {
         "title": "Request logging",
         "sidebar_label": "Request logging"
@@ -474,7 +488,7 @@
         "title": "Rolling updates"
       },
       "operations/rule-configuration": {
-        "title": "Retaining or automatically dropping data"
+        "title": "Using rules to drop and retain data"
       },
       "operations/security-overview": {
         "title": "Security overview"
@@ -693,6 +707,13 @@
         "title": "Tutorial: Writing an ingestion spec",
         "sidebar_label": "Writing an ingestion spec"
       },
+      "tutorials/tutorial-jdbc": {
+        "title": "Tutorial: Using the JDBC driver to query Druid",
+        "sidebar_label": "JDBC connector"
+      },
+      "tutorials/tutorial-jupyter-index": {
+        "title": "Jupyter Notebook tutorials"
+      },
       "tutorials/tutorial-kafka": {
         "title": "Tutorial: Load streaming data from Apache Kafka",
         "sidebar_label": "Load from Apache Kafka"
@@ -728,6 +749,10 @@
       "tutorials/tutorial-transform-spec": {
         "title": "Tutorial: Transforming input data",
         "sidebar_label": "Transforming input data"
+      },
+      "tutorials/tutorial-unnest-datasource": {
+        "title": "Tutorial: Unnest data in a column",
+        "sidebar_label": "Using the unnest datasource"
       },
       "tutorials/tutorial-update-data": {
         "title": "Tutorial: Updating existing data",

@@ -39,11 +39,11 @@ import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.operator.NaivePartitioningOperatorFactory;
 import org.apache.druid.query.operator.NaiveSortOperatorFactory;
 import org.apache.druid.query.operator.OperatorFactory;
-import org.apache.druid.query.operator.WindowOperatorFactory;
 import org.apache.druid.query.operator.window.ComposingProcessor;
 import org.apache.druid.query.operator.window.Processor;
 import org.apache.druid.query.operator.window.WindowFrame;
 import org.apache.druid.query.operator.window.WindowFramedAggregateProcessor;
+import org.apache.druid.query.operator.window.WindowOperatorFactory;
 import org.apache.druid.query.operator.window.ranking.WindowCumeDistProcessor;
 import org.apache.druid.query.operator.window.ranking.WindowDenseRankProcessor;
 import org.apache.druid.query.operator.window.ranking.WindowPercentileProcessor;
@@ -380,6 +380,9 @@ public class Windowing
     {
       RexNode columnArgument = Expressions.fromFieldAccess(sig, project, call.getArgList().get(argPosition));
       final DruidExpression expression = Expressions.toDruidExpression(context, sig, columnArgument);
+      if (expression == null) {
+        throw new ISE("Couldn't get an expression from columnArgument[%s]", columnArgument);
+      }
       return expression.getDirectColumn();
     }
 

@@ -30,23 +30,49 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * This class exists to "decorate" a rows and columns such that it pretends to exist in a new ordering.
+ * <p>
+ * The constructor generally takes an int[] of pointers, these pointers are used to re-map the rows from the
+ * RowsAndColumns object.  That is, if the RowsAndColumns has 4 rows and the array {@code new int[]{3, 1, 2, 0}}
+ * is passed in, then the order of traverals of the rows will be {@code 3 -> 1 -> 2 -> 0}.
+ * <p>
+ * This can be useful for sorting potentially immutable data, as the list of pointers can identify the order
+ * that the rows should be traversed in.  It can also be used for clustering like-data together.
+ * <p>
+ * While this avoids a copy, in cases where the data will be iterated regularly, it also generates a random-access
+ * pattern that is not always optimal.
+ */
 public class RearrangedRowsAndColumns implements RowsAndColumns
 {
   private final Map<String, Column> columnCache = new LinkedHashMap<>();
 
   private final int[] pointers;
   private final RowsAndColumns rac;
+  private final int start;
+  private final int end;
 
   public RearrangedRowsAndColumns(
       int[] pointers,
       RowsAndColumns rac
   )
   {
-    if (pointers.length != rac.numRows()) {
-      throw new IAE("length mismatch, pointers[%,d], rac[%,d]", pointers.length, rac.numRows());
-    }
+    this(pointers, 0, pointers.length, rac);
+  }
 
+  public RearrangedRowsAndColumns(
+      int[] pointers,
+      int start,
+      int end,
+      RowsAndColumns rac
+  )
+  {
+    if (end - start < 0 || end > pointers.length) {
+      throw new IAE("end[%,d] - start[%,d] was invalid!? pointers.length[%,d]", end, start, pointers.length);
+    }
     this.pointers = pointers;
+    this.start = start;
+    this.end = end;
     this.rac = rac;
   }
 
@@ -59,13 +85,14 @@ public class RearrangedRowsAndColumns implements RowsAndColumns
   @Override
   public int numRows()
   {
-    return pointers.length;
+    return end - start;
   }
 
   @Override
   @Nullable
   public Column findColumn(String name)
   {
+    // We do a containsKey here so that we can negative-cache nulls.
     if (columnCache.containsKey(name)) {
       return columnCache.get(name);
     } else {
@@ -88,50 +115,50 @@ public class RearrangedRowsAndColumns implements RowsAndColumns
             @Override
             public int numRows()
             {
-              return pointers.length;
+              return end - start;
             }
 
             @Override
             public boolean isNull(int rowNum)
             {
-              return accessor.isNull(pointers[rowNum]);
+              return accessor.isNull(pointers[start + rowNum]);
             }
 
             @Nullable
             @Override
             public Object getObject(int rowNum)
             {
-              return accessor.getObject(pointers[rowNum]);
+              return accessor.getObject(pointers[start + rowNum]);
             }
 
             @Override
             public double getDouble(int rowNum)
             {
-              return accessor.getDouble(pointers[rowNum]);
+              return accessor.getDouble(pointers[start + rowNum]);
             }
 
             @Override
             public float getFloat(int rowNum)
             {
-              return accessor.getFloat(pointers[rowNum]);
+              return accessor.getFloat(pointers[start + rowNum]);
             }
 
             @Override
             public long getLong(int rowNum)
             {
-              return accessor.getLong(pointers[rowNum]);
+              return accessor.getLong(pointers[start + rowNum]);
             }
 
             @Override
             public int getInt(int rowNum)
             {
-              return accessor.getInt(pointers[rowNum]);
+              return accessor.getInt(pointers[start + rowNum]);
             }
 
             @Override
             public int compareRows(int lhsRowNum, int rhsRowNum)
             {
-              return accessor.compareRows(pointers[lhsRowNum], pointers[rhsRowNum]);
+              return accessor.compareRows(pointers[lhsRowNum], pointers[start + rhsRowNum]);
             }
           }
       );

@@ -21,6 +21,7 @@ package org.apache.druid.query.operator;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.query.operator.window.WindowOperatorFactory;
 
 /**
  * A factory for Operators.  This class exists to encapsulate the user-definition of an Operator. I.e. which operator,

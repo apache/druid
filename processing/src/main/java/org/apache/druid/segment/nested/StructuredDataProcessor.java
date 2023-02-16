@@ -25,12 +25,13 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
 
 public abstract class StructuredDataProcessor
 {
-  public abstract int processLiteralField(ArrayList<NestedPathPart> fieldPath, Object fieldValue);
+  public abstract ProcessedLiteral<?> processLiteralField(ArrayList<NestedPathPart> fieldPath, Object fieldValue);
 
   /**
    * Process fields, returning a list of all paths to literal fields, represented as an ordered sequence of
@@ -38,18 +39,18 @@ public abstract class StructuredDataProcessor
    */
   public ProcessResults processFields(Object raw)
   {
-    Queue<Field> toProcess = new ArrayDeque<>();
+    final Queue<Field> toProcess = new ArrayDeque<>();
     raw = StructuredData.unwrap(raw);
-    ArrayList<NestedPathPart> newPath = new ArrayList<>();
+    final ArrayList<NestedPathPart> newPath = new ArrayList<>();
     if (raw instanceof Map) {
       toProcess.add(new MapField(newPath, (Map<String, ?>) raw));
     } else if (raw instanceof List) {
       toProcess.add(new ListField(newPath, (List<?>) raw));
     } else {
-      return new ProcessResults().addLiteralField(newPath, processLiteralField(newPath, raw));
+      return new ProcessResults().addLiteralField(newPath, processLiteralField(newPath, raw).getSize());
     }
 
-    ProcessResults accumulator = new ProcessResults();
+    final ProcessResults accumulator = new ProcessResults();
 
     while (!toProcess.isEmpty()) {
       Field next = toProcess.poll();
@@ -65,7 +66,7 @@ public abstract class StructuredDataProcessor
   private ProcessResults processMapField(Queue<Field> toProcess, MapField map)
   {
     // just guessing a size for a Map as some constant, it might be bigger than this...
-    ProcessResults processResults = new ProcessResults().withSize(16);
+    final ProcessResults processResults = new ProcessResults().withSize(16);
     for (Map.Entry<String, ?> entry : map.getMap().entrySet()) {
       // add estimated size of string key
       processResults.addSize(estimateStringSize(entry.getKey()));
@@ -80,7 +81,7 @@ public abstract class StructuredDataProcessor
         toProcess.add(new MapField(newPath, (Map<String, ?>) value));
       } else {
         // literals get processed
-        processResults.addLiteralField(newPath, processLiteralField(newPath, value));
+        processResults.addLiteralField(newPath, processLiteralField(newPath, value).getSize());
       }
     }
     return processResults;
@@ -89,7 +90,7 @@ public abstract class StructuredDataProcessor
   private ProcessResults processListField(Queue<Field> toProcess, ListField list)
   {
     // start with object reference, is probably a bit bigger than this...
-    ProcessResults results = new ProcessResults().withSize(8);
+    final ProcessResults results = new ProcessResults().withSize(8);
     final List<?> theList = list.getList();
     for (int i = 0; i < theList.size(); i++) {
       final ArrayList<NestedPathPart> newPath = new ArrayList<>(list.getPath());
@@ -102,7 +103,7 @@ public abstract class StructuredDataProcessor
         toProcess.add(new ListField(newPath, (List<?>) element));
       } else {
         // literals get processed
-        results.addLiteralField(newPath, processLiteralField(newPath, element));
+        results.addLiteralField(newPath, processLiteralField(newPath, element).getSize());
       }
     }
     return results;
@@ -152,6 +153,51 @@ public abstract class StructuredDataProcessor
     public Map<String, ?> getMap()
     {
       return map;
+    }
+  }
+
+  public static class ProcessedLiteral<T>
+  {
+    public static final ProcessedLiteral<?> NULL_LITERAL = new ProcessedLiteral<>(null, 0);
+    @Nullable
+    private final T value;
+    private final int size;
+
+    public ProcessedLiteral(@Nullable T value, int size)
+    {
+      this.value = value;
+      this.size = size;
+    }
+
+    @SuppressWarnings("unused")
+    @Nullable
+    public T getValue()
+    {
+      return value;
+    }
+
+    public int getSize()
+    {
+      return size;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      ProcessedLiteral<?> that = (ProcessedLiteral<?>) o;
+      return size == that.size && Objects.equals(value, that.value);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(value, size);
     }
   }
 

@@ -26,6 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.sql.MSQMode;
 import org.apache.druid.query.QueryContext;
@@ -63,9 +64,17 @@ public class MultiStageQueryContext
 
   public static final String CTX_FAULT_TOLERANCE = "faultTolerance";
   public static final boolean DEFAULT_FAULT_TOLERANCE = false;
+  public static final String CTX_MAX_INPUT_BYTES_PER_WORKER = "maxInputBytesPerWorker";
 
   public static final String CTX_CLUSTER_STATISTICS_MERGE_MODE = "clusterStatisticsMergeMode";
   public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.PARALLEL.toString();
+
+  public static final String CTX_INTERMEDIATE_SUPER_SORTER_STORAGE_MAX_LOCAL_BYTES =
+      "intermediateSuperSorterStorageMaxLocalBytes";
+  public static final String CTX_COMPOSED_INTERMEDIATE_SUPER_SORTER_STORAGE =
+      "composedIntermediateSuperSorterStorageEnabled";
+  private static final boolean DEFAULT_COMPOSED_INTERMEDIATE_SUPER_SORTER_STORAGE = false;
+  private static final long DEFAULT_INTERMEDIATE_SUPER_SORTER_STORAGE_MAX_LOCAL_BYTES = Long.MAX_VALUE;
 
   public static final String CTX_DESTINATION = "destination";
   private static final String DEFAULT_DESTINATION = null;
@@ -105,6 +114,30 @@ public class MultiStageQueryContext
     return queryContext.getBoolean(
         CTX_FAULT_TOLERANCE,
         DEFAULT_FAULT_TOLERANCE
+    );
+  }
+
+  public static long getMaxInputBytesPerWorker(final QueryContext queryContext)
+  {
+    return queryContext.getLong(
+        CTX_MAX_INPUT_BYTES_PER_WORKER,
+        Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
+    );
+  }
+
+  public static boolean isComposedIntermediateSuperSorterStorageEnabled(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(
+        CTX_COMPOSED_INTERMEDIATE_SUPER_SORTER_STORAGE,
+        DEFAULT_COMPOSED_INTERMEDIATE_SUPER_SORTER_STORAGE
+    );
+  }
+
+  public static long getIntermediateSuperSorterStorageMaxLocalBytes(final QueryContext queryContext)
+  {
+    return queryContext.getLong(
+        CTX_INTERMEDIATE_SUPER_SORTER_STORAGE_MAX_LOCAL_BYTES,
+        DEFAULT_INTERMEDIATE_SUPER_SORTER_STORAGE_MAX_LOCAL_BYTES
     );
   }
 

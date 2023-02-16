@@ -194,6 +194,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
     return new ColumnCapabilitiesImpl().setType(outputType == null ? ColumnType.FLOAT : outputType);
   }
 
+  @Nullable
   @Override
   public ColumnCapabilities capabilities(ColumnInspector inspector, String columnName)
   {
