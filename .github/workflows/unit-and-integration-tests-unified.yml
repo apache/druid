@@ -20,7 +20,6 @@ on:
       - 'docs/**'
       - 'examples/**'
       - 'helm/**'
-      - 'integration-tests*/**'
       - 'web-console/**'
     branches:
       - master
@@ -30,7 +29,6 @@ on:
       - 'docs/**'
       - 'examples/**'
       - 'helm/**'
-      - 'integration-tests*/**'
       - 'web-console/**'
     branches:
       - master
