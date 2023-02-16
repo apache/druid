@@ -27,7 +27,7 @@ on:
   pull_request:
     paths-ignore:
       - 'docs/**'
-      - 'examples/**'
+      - 'dev/**'
       - 'helm/**'
       - 'web-console/**'
     branches:
