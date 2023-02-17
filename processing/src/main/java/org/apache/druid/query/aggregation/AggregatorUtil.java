@@ -100,7 +100,9 @@ public class AggregatorUtil
   public static final byte ARRAY_OF_DOUBLES_SKETCH_TO_QUANTILES_SKETCH_CACHE_TYPE_ID = 0x28;
   public static final byte ARRAY_OF_DOUBLES_SKETCH_T_TEST_CACHE_TYPE_ID = 0x29;
   public static final byte ARRAY_OF_DOUBLES_SKETCH_TO_STRING_CACHE_TYPE_ID = 0x2A;
-
+  public static final byte ARRAY_OF_DOUBLES_SKETCH_CONSTANT_SKETCH_CACHE_TYPE_ID = 0x4D;
+  public static final byte ARRAY_OF_DOUBLES_SKETCH_TO_BASE64_STRING_CACHE_TYPE_ID = 0x4C;
+  public static final byte ARRAY_OF_DOUBLES_SKETCH_TO_METRICS_ESTIMATE_CACHE_TYPE_ID = 0x4E; 
   // StringFirst, StringLast aggregator
   public static final byte STRING_FIRST_CACHE_TYPE_ID = 0x2B;
   public static final byte STRING_LAST_CACHE_TYPE_ID = 0x2C;
