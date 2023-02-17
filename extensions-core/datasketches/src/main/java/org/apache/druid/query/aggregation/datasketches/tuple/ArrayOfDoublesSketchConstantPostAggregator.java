@@ -29,6 +29,7 @@ import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketch;
 import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketches;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -114,7 +115,7 @@ public class ArrayOfDoublesSketchConstantPostAggregator extends ArrayOfDoublesSk
   @Override
   public Comparator getComparator()
   {
-    return null;
+    return Comparators.alwaysEqual();
   }
 
   @Override

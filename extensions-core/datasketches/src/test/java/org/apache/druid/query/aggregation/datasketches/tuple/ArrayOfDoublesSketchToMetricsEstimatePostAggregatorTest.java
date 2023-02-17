@@ -33,15 +33,10 @@ import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 public class ArrayOfDoublesSketchToMetricsEstimatePostAggregatorTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Test
   public void testSerde() throws JsonProcessingException
   {
@@ -76,13 +71,12 @@ public class ArrayOfDoublesSketchToMetricsEstimatePostAggregatorTest
   @Test
   public void testComparator()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Comparing arrays of estimate values is not supported");
     final PostAggregator postAgg = new ArrayOfDoublesSketchToMetricsEstimatePostAggregator(
         "a",
         new ConstantPostAggregator("", 0)
     );
-    postAgg.getComparator();
+    Exception exception = Assert.assertThrows(IAE.class, () -> postAgg.getComparator());
+    Assert.assertEquals("Comparing arrays of estimate values is not supported", exception.getMessage());
   }
 
   @Test
