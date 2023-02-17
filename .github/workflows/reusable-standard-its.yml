@@ -86,5 +86,5 @@ jobs:
         run: |
           # Debug echo
           echo "Mysql driver: ${MYSQL_DRIVER_CLASSNAME}"
-          echo "MAVEN_OPTS='-Xmx2048m' ${MVN} verify -pl integration-tests -P integration-tests ${{ inputs.testing_groups }} -Djvm.runtime=${{ inputs.runtime_jdk }} -Dit.indexer=${{ inputs.use_indexer }} ${MAVEN_SKIP} -Doverride.config.path=${{ inputs.override_config_path }}"
-          MAVEN_OPTS='-Xmx2048m' ${MVN} verify -pl integration-tests -P integration-tests ${{ inputs.testing_groups }} -Djvm.runtime=${{ inputs.runtime_jdk }} -Dit.indexer=${{ inputs.use_indexer }} ${MAVEN_SKIP} -Doverride.config.path=${{ inputs.override_config_path }}
+          echo "${MVN} verify -pl integration-tests -P integration-tests ${{ inputs.testing_groups }} -Djvm.runtime=${{ inputs.runtime_jdk }} -Dit.indexer=${{ inputs.use_indexer }} ${MAVEN_SKIP} -Doverride.config.path=${{ inputs.override_config_path }}"
+          ${MVN} verify -pl integration-tests -P integration-tests ${{ inputs.testing_groups }} -Djvm.runtime=${{ inputs.runtime_jdk }} -Dit.indexer=${{ inputs.use_indexer }} ${MAVEN_SKIP} -Doverride.config.path=${{ inputs.override_config_path }}
