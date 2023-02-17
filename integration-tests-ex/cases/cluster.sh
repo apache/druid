@@ -145,12 +145,12 @@ function docker_file {
   # If a template exists, generate the docker-compose.yaml file. Copy over the Common
   # folder.
   TEMPLATE_DIR=$MODULE_DIR/templates
-  TEMPLATE_FILE=${DRUID_INTEGRATION_TEST_GROUP}.py
-  if [ -f "$TEMPLATE_DIR/$TEMPLATE_FILE" ]; then
+  TEMPLATE_SCRIPT=${DRUID_INTEGRATION_TEST_GROUP}.py
+  if [ -f "$TEMPLATE_DIR/$TEMPLATE_SCRIPT" ]; then
     export COMPOSE_DIR=$TARGET_DIR/cluster/$DRUID_INTEGRATION_TEST_GROUP
     mkdir -p $COMPOSE_DIR
     pushd $TEMPLATE_DIR > /dev/null
-    python3 $TEMPLATE_FILE
+    python3 $TEMPLATE_SCRIPT
     popd > /dev/null
     cp -r $MODULE_DIR/cluster/Common $TARGET_DIR/cluster
   else
