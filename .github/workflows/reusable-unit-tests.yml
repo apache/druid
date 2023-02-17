@@ -39,7 +39,7 @@ env:
   MVN: mvn -B
   MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
   MAVEN_SKIP_TESTS: -P skip-tests
-  MAVEN_OPTS: -Xmx3000m
+  MAVEN_OPTS: -Xmx3500m
   FORCE_COLOR: 2
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
 
