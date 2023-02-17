@@ -21,6 +21,7 @@ package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -43,7 +44,7 @@ public class ParametrizedUriEmitterConfigTest
     Assert.assertNull(config.getBasicAuthentication());
     Assert.assertEquals(BatchingStrategy.ARRAY, config.getBatchingStrategy());
     Pair<Integer, Integer> batchConfigPair = BaseHttpEmittingConfig.getDefaultBatchSizeAndLimit(
-        Runtime.getRuntime().maxMemory()
+        JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes()
     );
     Assert.assertEquals(batchConfigPair.lhs.intValue(), config.getMaxBatchSize());
     Assert.assertEquals(batchConfigPair.rhs.intValue(), config.getBatchQueueSizeLimit());
