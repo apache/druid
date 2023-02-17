@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.external;
 
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.FunctionParameter;
 import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.TranslatableTable;
@@ -36,6 +37,7 @@ import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlOperandTypeInference;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.expression.AuthorizableOperator;
 
@@ -63,14 +65,12 @@ import java.util.Set;
  * SELECT ..
  * FROM myTable EXTEND (x VARCHAR, ...)
  * </pre></code>
- * Though, oddly, a search of Apache Phoenix itself does not find a hit for
- * EXTEND, so perhaps the feature was never completed?
  * <p>
  * For Druid, we want the above form: extend a table function, not a
  * literal table. Since we can't change the Calcite parser, we instead use
  * tricks within the constraints of the parser.
  * <ul>
- * <li>First, use use a Python script to modify the parser to add the
+ * <li>The Calcite parser is revised to add the
  * EXTEND rule for a table function.</li>
  * <li>Calcite expects the EXTEND operator to have two arguments: an identifier
  * and the column list. Since our case has a function call as the first argument,
@@ -99,9 +99,10 @@ import java.util.Set;
  * </pre></code>
  * Since we seldom use unparse, we can perhaps live with this limitation for now.
  */
-public abstract class UserDefinedTableMacroFunction extends BaseUserDefinedTableMacro implements AuthorizableOperator
+public abstract class SchemaAwareUserDefinedTableMacro
+    extends BaseUserDefinedTableMacro implements AuthorizableOperator
 {
-  public UserDefinedTableMacroFunction(
+  public SchemaAwareUserDefinedTableMacro(
       SqlIdentifier opName,
       SqlReturnTypeInference returnTypeInference,
       SqlOperandTypeInference operandTypeInference,
@@ -119,15 +120,20 @@ public abstract class UserDefinedTableMacroFunction extends BaseUserDefinedTable
    */
   public SqlBasicCall rewriteCall(SqlBasicCall oldCall, SqlNodeList schema)
   {
-    return new ExtendedCall(oldCall, new ShimTableMacroFunction(this, schema));
+    return new ExtendedCall(oldCall, new ShimUserDefinedTableMacro(this, schema));
   }
 
-  private static class ShimTableMacroFunction extends BaseUserDefinedTableMacro implements AuthorizableOperator
+  // Note the confusing use of "table macro". A TablMacro is a non-SqlNode that does the
+  // actual translation to a table. A *UserDefinedTableMacro is a function that wraps
+  // a table macro. The result is that "macro" by itself is ambiguous: it can be the
+  // implementation (TableMacro) or the function that wraps the implementation.
+  private static class ShimUserDefinedTableMacro extends BaseUserDefinedTableMacro implements AuthorizableOperator
   {
-    protected final UserDefinedTableMacroFunction base;
+    protected final SchemaAwareUserDefinedTableMacro base;
     protected final SqlNodeList schema;
+    private TranslatableTable table;
 
-    public ShimTableMacroFunction(final UserDefinedTableMacroFunction base, final SqlNodeList schema)
+    public ShimUserDefinedTableMacro(final SchemaAwareUserDefinedTableMacro base, final SqlNodeList schema)
     {
       super(
           base.getNameAsId(),
@@ -139,6 +145,21 @@ public abstract class UserDefinedTableMacroFunction extends BaseUserDefinedTable
       );
       this.base = base;
       this.schema = schema;
+    }
+
+    @Override
+    public TranslatableTable getTable(
+        RelDataTypeFactory typeFactory,
+        List<SqlNode> operandList
+    )
+    {
+      if (table == null) {
+        // Cache the table to avoid multiple conversions
+        // Possible because each call has a distinct instance
+        // of this operator.
+        table = super.getTable(typeFactory, operandList);
+      }
+      return table;
     }
 
     @Override
@@ -155,7 +176,7 @@ public abstract class UserDefinedTableMacroFunction extends BaseUserDefinedTable
   {
     private final SqlNodeList schema;
 
-    public ExtendedCall(SqlBasicCall oldCall, ShimTableMacroFunction macro)
+    public ExtendedCall(SqlBasicCall oldCall, ShimUserDefinedTableMacro macro)
     {
       super(
           macro,
@@ -207,6 +228,16 @@ public abstract class UserDefinedTableMacroFunction extends BaseUserDefinedTable
       Frame frame = writer.startList("(", ")");
       schema.unparse(writer, leftPrec, rightPrec);
       writer.endList(frame);
+    }
+
+    /**
+     * Required by GHA CodeQL even though Calcite doesn't use this
+     * particular method.
+     */
+    @Override
+    public Object clone()
+    {
+      throw new UOE("Not supported");
     }
   }
 
