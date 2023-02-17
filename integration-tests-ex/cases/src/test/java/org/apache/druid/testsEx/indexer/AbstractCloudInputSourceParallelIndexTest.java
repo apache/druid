@@ -130,7 +130,7 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
    * @param inputSourceType     Input source type (eg : s3, gcs, azure)
    */
   void doTest(
-      Pair<String, List> inputSource,
+      Pair<String, List<?>> inputSource,
       Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair,
       String inputSourceType
   ) throws Exception
@@ -205,7 +205,7 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
    *                            Should also contain expected results for those queries
    * @param inputSourceType     Input source type (eg : s3, gcs, azure)
    */
-  public void doMSQTest(Pair<String, List> inputSource,
+  public void doMSQTest(Pair<String, List<?>> inputSource,
                         String ingestSQLFilePath,
                         String testQueriesFilePath,
                         String inputSourceType

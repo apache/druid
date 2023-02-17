@@ -33,12 +33,14 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -779,6 +781,41 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testGroupByRootSingleTypeStringMixed2SparseJsonValueNonExistentPath()
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(string_sparse, '$[1]'), "
+        + "SUM(cnt) "
+        + "FROM druid.nested_mix_2 GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_MIXED_2)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0")
+                            )
+                        )
+                        .setVirtualColumns(
+                            new NestedFieldVirtualColumn("string_sparse", "$[1]", "v0", ColumnType.STRING)
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue(), 14L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
   public void testGroupByJsonValues()
   {
     testQuery(
@@ -853,6 +890,85 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.STRING)
                     .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testJsonAndArrayAgg()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT "
+        + "string, "
+        + "ARRAY_AGG(nest, 16384), "
+        + "SUM(cnt) "
+        + "FROM druid.nested GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("string", "d0")
+                            )
+                        )
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new ExpressionLambdaAggregatorFactory(
+                                    "a0",
+                                    ImmutableSet.of("nest"),
+                                    "__acc",
+                                    "ARRAY<COMPLEX<json>>[]",
+                                    "ARRAY<COMPLEX<json>>[]",
+                                    true,
+                                    true,
+                                    false,
+                                    "array_append(\"__acc\", \"nest\")",
+                                    "array_concat(\"__acc\", \"a0\")",
+                                    null,
+                                    null,
+                                    HumanReadableBytes.valueOf(16384),
+                                    queryFramework().macroTable()
+                                ),
+                                new LongSumAggregatorFactory("a1", "cnt")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{
+                "aaa",
+                "[{\"x\":100,\"y\":2.02,\"z\":\"300\",\"mixed\":1,\"mixed2\":\"1\"},{\"x\":100,\"y\":2.02,\"z\":\"400\",\"mixed2\":1.1}]",
+                2L
+            },
+            new Object[]{
+                "bbb",
+                "[null]",
+                1L
+            },
+            new Object[]{
+                "ccc",
+                "[{\"x\":200,\"y\":3.03,\"z\":\"abcdef\",\"mixed\":1.1,\"mixed2\":1}]",
+                1L
+            },
+            new Object[]{
+                "ddd",
+                "[null,null]",
+                2L
+            },
+            new Object[]{
+                "eee",
+                "[null]",
+                1L
+            }
+        ),
+        RowSignature.builder()
+                    .add("string", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.ofArray(NestedDataComplexTypeSerde.TYPE))
+                    .add("EXPR$2", ColumnType.LONG)
                     .build()
     );
   }

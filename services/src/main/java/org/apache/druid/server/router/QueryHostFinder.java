@@ -76,12 +76,12 @@ public class QueryHostFinder
     Server chosenServer = avaticaConnectionBalancer.pickServer(getAllServers(), connectionId);
     assertServerFound(
         chosenServer,
-        "No server found for Avatica request with connectionId[%s]",
+        "No server found for Avatica request with connectionId [%s]",
         connectionId
     );
 
     log.debug(
-        "Balancer class [%s] sending request with connectionId[%s] to server: %s",
+        "Balancer class [%s] sending request with connectionId [%s] to server: %s",
         avaticaConnectionBalancer.getClass(),
         connectionId,
         chosenServer.getHost()
@@ -121,7 +121,7 @@ public class QueryHostFinder
 
     if (server == null) {
       log.error(
-          "No server found for serviceName[%s]. Using backup",
+          "No server found for serviceName [%s]. Using backup",
           serviceName
       );
 
@@ -129,7 +129,7 @@ public class QueryHostFinder
 
       if (server == null) {
         log.error(
-            "No backup found for serviceName[%s]. Using default[%s]",
+            "No backup found for serviceName [%s]. Using default [%s]",
             serviceName,
             hostSelector.getDefaultServiceName()
         );
