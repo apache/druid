@@ -333,11 +333,11 @@ class BaseTemplate:
         return self.define_worker_service(name, name)
 
     def define_broker(self) -> dict:
-         '''
+        '''
         Defines a broker based on the standard definition. Override to
         customize environment variables, mounts, etc.
         '''
-       return self.define_std_worker_service(BROKER)
+        return self.define_std_worker_service(BROKER)
 
     def define_router(self) -> dict:
         '''
@@ -381,9 +381,9 @@ class BaseTemplate:
         Defines a middle manager based on the standard definition. Override to
         customize environment variables, mounts, etc.
         '''
-       return self.define_std_indexer(MIDDLE_MANAGER)
+        return self.define_std_indexer(MIDDLE_MANAGER)
 
-    def get_indexer_option(self) -> string:
+    def get_indexer_option(self) -> str:
         '''
         Choose which "indexer" to use: middle manager or indexer (the specific service)
         based on the USE_INDEXER environment variable. Defaults to middle manager.

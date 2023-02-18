@@ -59,14 +59,15 @@ fi
 CMD=$1
 shift
 
-# All commands need env vars
-ENV_FILE=$MODULE_DIR/../image/target/env.sh
-if [ ! -f $ENV_FILE ]; then
-  echo "Please build the Docker test image before testing" 1>&2
-  exit 1
-fi
+function check_env_file {
+  export ENV_FILE=$MODULE_DIR/../image/target/env.sh
+  if [ ! -f $ENV_FILE ]; then
+    echo "Please build the Docker test image before testing" 1>&2
+    exit 1
+  fi
 
-source $ENV_FILE
+  source $ENV_FILE
+}
 
 function category {
   if [ $# -eq 0 ]; then
@@ -238,6 +239,7 @@ case $CMD in
     $DOCKER_COMPOSE help
     ;;
   "prepare" )
+    check_env_file
     category $*
     build_shared_dir
     docker_file
@@ -249,6 +251,7 @@ case $CMD in
     echo "Generated file is in $COMPOSE_DIR"
     ;;
   "up" )
+    check_env_file
     category $*
     echo "Starting cluster $DRUID_INTEGRATION_TEST_GROUP"
     build_shared_dir
@@ -259,12 +262,14 @@ case $CMD in
     #show_status
     ;;
   "status" )
+    check_env_file
     category $*
     docker_file
     cd $COMPOSE_DIR
     show_status
     ;;
   "down" )
+    check_env_file
     category $*
     # Enable the following for debugging
     #show_status
@@ -273,6 +278,7 @@ case $CMD in
     $DOCKER_COMPOSE $DOCKER_ARGS $CMD
     ;;
   "*" )
+    check_env_file
     category $*
     verify_docker_file
     cd $COMPOSE_DIR
