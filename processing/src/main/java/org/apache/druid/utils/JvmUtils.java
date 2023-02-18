@@ -40,6 +40,11 @@ public class JvmUtils
   public static final int UNKNOWN_VERSION = -1;
   private static final int MAJOR_VERSION = computeMajorVersion();
 
+  @Inject
+  private static RuntimeInfo RUNTIME_INFO = new RuntimeInfo();
+
+  private static final ThreadMXBean THREAD_MX_BEAN = ManagementFactory.getThreadMXBean();
+
   private static int computeMajorVersion()
   {
     final StringTokenizer st = new StringTokenizer(System.getProperty("java.specification.version"), ".");
@@ -70,15 +75,10 @@ public class JvmUtils
     return MAJOR_VERSION >= 9;
   }
 
-  @Inject
-  private static RuntimeInfo runtimeInfo = new RuntimeInfo();
-
   public static RuntimeInfo getRuntimeInfo()
   {
-    return runtimeInfo;
+    return RUNTIME_INFO;
   }
-
-  private static final ThreadMXBean THREAD_MX_BEAN = ManagementFactory.getThreadMXBean();
 
   public static boolean isThreadCpuTimeEnabled()
   {
@@ -139,5 +139,13 @@ public class JvmUtils
         }
     ).collect(Collectors.toList());
     return jobURLs;
+  }
+
+  /**
+   * Only for testing.
+   */
+  public static void resetTestsToDefaultRuntimeInfo()
+  {
+    RUNTIME_INFO = new RuntimeInfo();
   }
 }
