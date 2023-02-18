@@ -361,7 +361,8 @@ public class DruidPlanner implements Closeable
 
   private static DruidException parseParserMessage(Exception e)
   {
-    // Calcite exception that probably includes a position.
+    // Calcite exception that probably includes a position. The normal parse
+    // exception is rather cumbersome. Clean it up a bit.
     String msg = e.getMessage();
     Pattern p = Pattern.compile(
         "Encountered \"(.*)\" at line (\\d+), column (\\d+).\nWas expecting one of:\n(.*)",
@@ -370,7 +371,9 @@ public class DruidPlanner implements Closeable
     Matcher m = p.matcher(msg);
     DruidException.Builder builder;
     if (m.matches()) {
-      String choices = m.group(4).trim().replaceAll("[ .]*\n\\ s+", ", ");
+      p = Pattern.compile("[ .]*\n\\ s+");
+      m = p.matcher(m.group(4).trim());
+      String choices = m.replaceAll(", ");
       builder = DruidException.user(
               "Line %s, Column %s: unexpected token %s",
               m.group(2),
