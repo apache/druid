@@ -42,11 +42,10 @@ public class SqlEngines
   {
     for (String contextParameterName : queryContext.keySet()) {
       if (specialContextKeys.contains(contextParameterName)) {
-        throw DruidException
-            .user("Cannot execute query with context parameter")
-            .context("Parameter", contextParameterName)
-            .context("Value", queryContext.get(contextParameterName))
-            .build();
+        throw DruidException.validationError(
+            "Query context parameter '%s' is not allowed",
+            contextParameterName
+        );
       }
     }
   }

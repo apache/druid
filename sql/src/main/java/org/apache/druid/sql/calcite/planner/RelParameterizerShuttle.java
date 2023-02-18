@@ -199,8 +199,9 @@ public class RelParameterizerShuttle implements RelShuttle
       if (plannerContext.getParameters().size() > dynamicParam.getIndex()) {
         TypedValue param = plannerContext.getParameters().get(dynamicParam.getIndex());
         if (param == null) {
-          throw DruidException.userError(
-              "Parameter at position %d is not bound", dynamicParam.getIndex()
+          throw DruidException.validationError(
+              "Parameter at position %d is not bound",
+              dynamicParam.getIndex()
           );
         }
         if (param.value == null) {
@@ -213,8 +214,9 @@ public class RelParameterizerShuttle implements RelShuttle
             true
         );
       } else {
-        throw DruidException.userError(
-            "Parameter at position %d is not bound", dynamicParam.getIndex()
+        throw DruidException.validationError(
+            "Parameter at position %d is not bound",
+            dynamicParam.getIndex()
         );
       }
     }
