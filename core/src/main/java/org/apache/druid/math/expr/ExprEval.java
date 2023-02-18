@@ -170,7 +170,7 @@ public abstract class ExprEval<T>
         Object[] array = new Object[val.size()];
         int i = 0;
         for (Object o : val) {
-          array[i++] = o == null ? null : ExprEval.ofType(ExpressionType.DOUBLE, o).value();
+          array[i++] = ExprEval.ofType(ExpressionType.DOUBLE, o).value();
         }
         return new NonnullPair<>(ExpressionType.DOUBLE_ARRAY, array);
       } else if (coercedType == Object.class) {
@@ -193,7 +193,7 @@ public abstract class ExprEval<T>
           if (eval != null) {
             array[i++] = eval.castTo(elementType).value();
           } else {
-            array[i++] = null;
+            array[i++] = ExprEval.ofType(elementType, null).value();
           }
         }
         ExpressionType arrayType = elementType == null
@@ -329,7 +329,7 @@ public abstract class ExprEval<T>
   }
 
 
-  public static ExprEval ofArray(ExpressionType outputType, Object[] value)
+  public static ExprEval ofArray(ExpressionType outputType, @Nullable Object[] value)
   {
     Preconditions.checkArgument(outputType.isArray(), "Output type %s is not an array", outputType);
     return new ArrayExprEval(outputType, value);
@@ -398,7 +398,7 @@ public abstract class ExprEval<T>
       final Long[] inputArray = (Long[]) val;
       final Object[] array = new Object[inputArray.length];
       for (int i = 0; i < inputArray.length; i++) {
-        array[i] = inputArray[i];
+        array[i] = inputArray[i] != null ? inputArray[i] : NullHandling.defaultLongValue();
       }
       return new ArrayExprEval(ExpressionType.LONG_ARRAY, array);
     }
@@ -414,7 +414,7 @@ public abstract class ExprEval<T>
       final Integer[] inputArray = (Integer[]) val;
       final Object[] array = new Object[inputArray.length];
       for (int i = 0; i < inputArray.length; i++) {
-        array[i] = inputArray[i] == null ? null : inputArray[i].longValue();
+        array[i] = inputArray[i] != null ? inputArray[i].longValue() : NullHandling.defaultLongValue();
       }
       return new ArrayExprEval(ExpressionType.LONG_ARRAY, array);
     }
@@ -430,7 +430,7 @@ public abstract class ExprEval<T>
       final Double[] inputArray = (Double[]) val;
       final Object[] array = new Object[inputArray.length];
       for (int i = 0; i < inputArray.length; i++) {
-        array[i] = inputArray[i];
+        array[i] = inputArray[i] != null ? inputArray[i] : NullHandling.defaultDoubleValue();
       }
       return new ArrayExprEval(ExpressionType.DOUBLE_ARRAY, array);
     }
@@ -446,7 +446,7 @@ public abstract class ExprEval<T>
       final Float[] inputArray = (Float[]) val;
       final Object[] array = new Object[inputArray.length];
       for (int i = 0; i < inputArray.length; i++) {
-        array[i] = inputArray[i] != null ? inputArray[i].doubleValue() : null;
+        array[i] = inputArray[i] != null ? inputArray[i].doubleValue() : NullHandling.defaultDoubleValue();
       }
       return new ArrayExprEval(ExpressionType.DOUBLE_ARRAY, array);
     }
@@ -568,9 +568,28 @@ public abstract class ExprEval<T>
 
         return ofComplex(type, value);
       case ARRAY:
-        // nested arrays, here be dragons... don't do any fancy coercion, assume everything is already sane types...
-        if (type.getElementType().isArray()) {
-          return ofArray(type, (Object[]) value);
+        ExpressionType elementType = (ExpressionType) type.getElementType();
+        if (value == null) {
+          return ofArray(type, null);
+        }
+        if (value instanceof List) {
+          List<?> theList = (List<?>) value;
+          Object[] array = new Object[theList.size()];
+          int i = 0;
+          for (Object o : theList) {
+            array[i++] = ExprEval.ofType(elementType, o).value();
+          }
+          return ofArray(type, array);
+        }
+
+        if (value instanceof Object[]) {
+          Object[] inputArray = (Object[]) value;
+          Object[] array = new Object[inputArray.length];
+          int i = 0;
+          for (Object o : inputArray) {
+            array[i++] = ExprEval.ofType(elementType, o).value();
+          }
+          return ofArray(type, array);
         }
         // in a better world, we might get an object that matches the type signature for arrays and could do a switch
         // statement here, but this is not that world yet, and things that are array typed might also be non-arrays,
@@ -798,7 +817,7 @@ public abstract class ExprEval<T>
               return ExprEval.ofStringArray(value == null ? null : new Object[] {value.toString()});
           }
       }
-      throw new IAE("invalid type " + castTo);
+      throw new IAE("invalid type cannot cast " + type() + " to " + castTo);
     }
 
     @Override
@@ -863,7 +882,7 @@ public abstract class ExprEval<T>
               return ExprEval.ofStringArray(value == null ? null : new Object[] {value.toString()});
           }
       }
-      throw new IAE("invalid type " + castTo);
+      throw new IAE("invalid type cannot cast " + type() + " to " + castTo);
     }
 
     @Override
@@ -1032,7 +1051,7 @@ public abstract class ExprEval<T>
               return ExprEval.ofStringArray(value == null ? null : new Object[] {value});
           }
       }
-      throw new IAE("invalid type " + castTo);
+      throw new IAE("invalid type cannot cast " + type() + " to " + castTo);
     }
 
     @Override
@@ -1221,7 +1240,7 @@ public abstract class ExprEval<T>
           return ExprEval.ofArray(castTo, cast);
       }
 
-      throw new IAE("invalid type " + castTo);
+      throw new IAE("invalid type cannot cast " + type() + " to " + castTo);
     }
 
     @Override
@@ -1308,7 +1327,11 @@ public abstract class ExprEval<T>
       if (expressionType.equals(castTo)) {
         return this;
       }
-      throw new IAE("invalid type " + castTo);
+      // allow cast of unknown complex to some other complex type
+      if (expressionType.getComplexTypeName() == null) {
+        return new ComplexExprEval(castTo, value);
+      }
+      throw new IAE("invalid type cannot cast " + expressionType + " to " + castTo);
     }
 
     @Override

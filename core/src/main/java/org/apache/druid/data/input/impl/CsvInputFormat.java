@@ -90,4 +90,10 @@ public class CsvInputFormat extends FlatTextInputFormat
                                        .withSeparator(SEPARATOR)
                                        .build();
   }
+
+  @Override
+  public String toString()
+  {
+    return "CsvInputFormat{" + fieldsToString() + "}";
+  }
 }

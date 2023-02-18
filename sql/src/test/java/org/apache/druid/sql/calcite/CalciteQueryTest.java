@@ -5613,20 +5613,40 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayAggQueryOnComplexDatatypes()
   {
+    cannotVectorize();
     msqCompatible();
-    try {
-      testQuery("SELECT ARRAY_AGG(unique_dim1) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
-      Assert.fail("query execution should fail");
-    }
-    catch (DruidException e) {
-      Assert.assertTrue(
-          e.getMessage().contains("Cannot use ARRAY_AGG on complex inputs COMPLEX<hyperUnique>")
-      );
-      Assert.assertEquals(
-          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.code()
-      );
-    }
+    testQuery(
+        "SELECT ARRAY_AGG(unique_dim1) FROM druid.foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(
+                      new ExpressionLambdaAggregatorFactory(
+                          "a0",
+                          ImmutableSet.of("unique_dim1"),
+                          "__acc",
+                          "ARRAY<COMPLEX<hyperUnique>>[]",
+                          "ARRAY<COMPLEX<hyperUnique>>[]",
+                          true,
+                          true,
+                          false,
+                          "array_append(\"__acc\", \"unique_dim1\")",
+                          "array_concat(\"__acc\", \"a0\")",
+                          null,
+                          null,
+                          ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                          queryFramework().macroTable()
+                      )
+                  ))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"AQAAAEAAAA==\",\"AQAAAQAAAAHNBA==\",\"AQAAAQAAAAOzAg==\",\"AQAAAQAAAAFREA==\",\"AQAAAQAAAACyEA==\",\"AQAAAQAAAAEkAQ==\"]"}
+        )
+    );
   }
 
   @Test
