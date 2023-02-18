@@ -207,3 +207,39 @@ Returns a human-readable summary of a given ArrayOfDoublesSketch. This is a stri
   "field"  : <post aggregator that refers to an ArrayOfDoublesSketch (fieldAccess or another post aggregator)>
 }
 ```
+
+
+### Constant ArrayOfDoublesSketch 
+
+You can use the this post aggregator to add a Base64-encoded constant ArrayOfDoublesSketch value for use in other post-aggregators.
+```json
+{
+  "type"  : "arrayOfDoublesSketchConstant",
+  "name": DESTINATION_COLUMN_NAME,
+  "value"  : CONSTANT_SKETCH_VALUE
+}
+```
+
+### Base64 Output of ArrayOfDoublesSketch 
+
+You can use the this post aggregator to output an ArrayOfDoublesSketch as Base64-encoded string constant tuple sketch value for use in other post-aggregators. 
+
+```json
+{
+  "type"  : "arrayOfDoublesSketchToBase64String",
+  "name": DESTINATION_COLUMN_NAME,
+  "field"  : <post aggregator that refers to a ArrayOfDoublesSketch (fieldAccess or another post aggregator)>
+}
+```
+
+### Estimated Metrics values for each column of ArrayOfDoublesSketch
+
+You can use this post aggregator to return a list of estimated values(sum) from a given ArrayOfDoublesSketch. The result will be N double values, where N is the number of double values kept in the sketch per key.
+
+```json
+{
+  "type"  : "arrayOfDoublesSketchToMetricsEstimate",
+  "name": DESTINATION_COLUMN_NAME,
+  "field"  : <post aggregator that refers to a ArrayOfDoublesSketch (fieldAccess or another post aggregator)>
+}
+```
