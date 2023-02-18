@@ -55,7 +55,6 @@ import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -202,15 +201,13 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
         // Consider BINDABLE convention when necessary. Used for metadata tables.
 
         if (!handlerContext.plannerContext().engineHasFeature(EngineFeature.ALLOW_BINDABLE_PLAN)) {
-          throw new ValidationException(
-              StringUtils.format(
-                  "Cannot query table%s %s with SQL engine '%s'.",
-                  bindableTables.size() != 1 ? "s" : "",
-                  bindableTables.stream()
-                                .map(table -> Joiner.on(".").join(table.getQualifiedName()))
-                                .collect(Collectors.joining(", ")),
-                  handlerContext.engine().name()
-              )
+          throw DruidException.validationError(
+                "Cannot query table%s %s with SQL engine %s.",
+                bindableTables.size() != 1 ? "s" : "",
+                bindableTables.stream()
+                              .map(table -> Joiner.on(".").join(table.getQualifiedName()))
+                              .collect(Collectors.joining(", ")),
+                handlerContext.engine().name()
           );
         }
 
@@ -598,10 +595,12 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     if (!handlerContext.queryContext().isDebug()) {
       logger = log.noStackTrace();
     }
-    DruidException.Builder builder = DruidException.system("Unsupported query")
+    DruidException.Builder builder = DruidException.internalError(
+          "Unsupported SQL query - failed to convert to a Druid native query"
+         )
         .cause(exception)
         .context("SQL", handlerContext.plannerContext().getSql())
-        .context(DruidException.ERROR_CODE, QueryException.QUERY_UNSUPPORTED_ERROR_CODE);
+        .code(QueryException.QUERY_UNSUPPORTED_ERROR_CODE);
     String errorMessage = handlerContext.plannerContext().getPlanningError();
     if (null == errorMessage && exception instanceof UnsupportedSQLQueryException) {
       builder.context("Specific error", errorMessage);
@@ -639,8 +638,8 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     public void validate()
     {
       if (!handlerContext.plannerContext().engineHasFeature(EngineFeature.CAN_SELECT)) {
-        throw DruidException.userError(
-            "Cannot execute SELECT with SQL engine '%s'.",
+        throw DruidException.validationError(
+            "Cannot execute SELECT with SQL engine %s",
             handlerContext.engine().name()
          );
       }

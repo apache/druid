@@ -31,7 +31,6 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
-import org.apache.druid.query.QueryException;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -94,10 +93,7 @@ public class DruidRexExecutor implements RexExecutor
           // as a primitive long/float/double.
           // ExprEval.isNumericNull checks whether the parsed primitive value is null or not.
           if (!constExp.getType().isNullable() && exprResult.isNumericNull()) {
-            throw DruidException.user("Illegal DATE constant")
-                .context(DruidException.ERROR_CODE, QueryException.QUERY_UNSUPPORTED_ERROR_CODE)
-                .context("Value", constExp)
-                .build();
+            throw DruidException.validationError("Illegal DATE constant %s", constExp);
           }
 
           literal = rexBuilder.makeDateLiteral(
@@ -111,10 +107,7 @@ public class DruidRexExecutor implements RexExecutor
           // as a primitive long/float/double.
           // ExprEval.isNumericNull checks whether the parsed primitive value is null or not.
           if (!constExp.getType().isNullable() && exprResult.isNumericNull()) {
-            throw DruidException.user("Illegal TIMESTAMP constant")
-                .context(DruidException.ERROR_CODE, QueryException.QUERY_UNSUPPORTED_ERROR_CODE)
-                .context("Value", constExp)
-                .build();
+            throw DruidException.validationError("Illegal TIMESTAMP constant %s", constExp);
           }
 
           literal = Calcites.jodaToCalciteTimestampLiteral(
@@ -139,9 +132,7 @@ public class DruidRexExecutor implements RexExecutor
               double exprResultDouble = exprResult.asDouble();
               if (Double.isNaN(exprResultDouble) || Double.isInfinite(exprResultDouble)) {
                 String expression = druidExpression.getExpression();
-                throw DruidException.user("Expression not supported in SQL")
-                    .context(DruidException.ERROR_CODE, QueryException.QUERY_UNSUPPORTED_ERROR_CODE)
-                    .context("Expression", expression)
+                throw DruidException.unsupported("Expression not supported in SQL : %s", expression)
                     .context("Evaluates to", Double.toString(exprResultDouble))
                     .context("Suggestion", StringUtils.format(
                         "You can either cast the expression as BIGINT ('CAST(%s as BIGINT)') or VARCHAR ('CAST(%s as VARCHAR)') or change the expression itself",
@@ -179,9 +170,7 @@ public class DruidRexExecutor implements RexExecutor
                   resultAsBigDecimalList.add(null);
                 } else if (Double.isNaN(doubleVal.doubleValue()) || Double.isInfinite(doubleVal.doubleValue())) {
                   String expression = druidExpression.getExpression();
-                  throw DruidException.user("Array element not supported in SQL")
-                      .context(DruidException.ERROR_CODE, QueryException.QUERY_UNSUPPORTED_ERROR_CODE)
-                      .context("Array", expression)
+                  throw DruidException.validation("Array element not supported in SQL: %s", expression)
                       .context("Evaluates to", Double.toString(doubleVal.doubleValue()))
                       .context("Suggestion",
                           "You can either cast the element in the ARRAY to BIGINT or VARCHAR or change the expression itself")

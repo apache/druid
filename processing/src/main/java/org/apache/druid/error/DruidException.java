@@ -21,6 +21,9 @@ package org.apache.druid.error;
 
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryException;
+
+import javax.annotation.Nullable;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -61,6 +64,21 @@ import java.util.Map;
  */
 public class DruidException extends RuntimeException
 {
+  /**
+   * The {@code ErrorType} is a high-level classification of errors that balances
+   * the idea of persona and code knowledge. The codes roughly identify who is most
+   * likely the persona that will resolve the error. In some case (e.g. {@code USER}),
+   * the person is clear: the person using Druid. In other cases (e.g. {@code RESOURCE}),
+   * the target persona is amgibuous: is it the person who submitted the query? The person
+   * who installed Druid? The system admin? The person who decided how much resource
+   * the project could afford?
+   * <p>
+   * Often the code is not sure of who the exact person is, but the code knows about
+   * the <i>kind</i> of error (e.g. {@code NETWORK}). In this case, it is up to each
+   * site to determine who is in charge of fixing this particular network error: the user
+   * (bad HTTP address), admin (forgot to open a port), system admin (a router died),
+   * hardware vendor (a network card failed), etc.
+   */
   public enum ErrorType
   {
     /**
@@ -83,7 +101,7 @@ public class DruidException extends RuntimeException
      * where the fix is either a workaround or a bug fix. Such error should only
      * be raised for "should never occur" type situations.
      */
-    SYSTEM,
+    INTERNAL,
 
     /**
      * Error for a resource limit: memory, CPU, slots or so on. The workaround is
@@ -113,7 +131,6 @@ public class DruidException extends RuntimeException
     NETWORK
   };
 
-  public static final String ERROR_CODE = "Error Code";
   public static final String HOST = "Host";
 
   public static class Builder
@@ -121,13 +138,18 @@ public class DruidException extends RuntimeException
     private final DruidException source;
     private final ErrorType type;
     private final String msg;
+    private String code;
     private Throwable e;
     private Map<String, String> context;
 
-    private Builder(ErrorType type, String msg, Object[] args)
+    private Builder(
+        final ErrorType type,
+        final String msg,
+        @Nullable final Object[] args)
     {
       this.source = null;
       this.type = type;
+      this.code = QueryException.UNKNOWN_EXCEPTION_ERROR_CODE;
       this.msg = StringUtils.format(msg, args);
     }
 
@@ -135,9 +157,16 @@ public class DruidException extends RuntimeException
     {
       this.source = e;
       this.type = e.type;
+      this.code = e.code;
       this.msg = e.message();
       this.e = e.getCause() == null ? e : e.getCause();
       this.context = e.context == null ? null : new HashMap<>(e.context);
+    }
+
+    public Builder code(String code)
+    {
+      this.code = code;
+      return this;
     }
 
     public Builder cause(Throwable e)
@@ -170,6 +199,7 @@ public class DruidException extends RuntimeException
           e,
           msg,
           type,
+          code,
           // Used linked hash map to preserve order
           context == null ? null : new LinkedHashMap<>(context),
           logged || wasLogged()
@@ -189,7 +219,7 @@ public class DruidException extends RuntimeException
       }
       switch (type) {
         case CONFIG:
-        case SYSTEM:
+        case INTERNAL:
           logger.error(e, e.getMessage());
           break;
         case NETWORK:
@@ -211,6 +241,15 @@ public class DruidException extends RuntimeException
   }
 
   private final ErrorType type;
+
+  /**
+   * Error codes are categories within the top-level codes. They mimic prior Druid
+   * conventions, although prior codes were very sparse. The code is a string, not
+   * an enum, because Druid has no clear catalog of such codes at present.
+   * <p>
+   * For now, error codes are enumerated in {@link org.apache.druid.query.QueryException}.
+   */
+  private final String code;
   private final Map<String, String> context;
   private final boolean logged;
 
@@ -218,12 +257,14 @@ public class DruidException extends RuntimeException
       final Throwable e,
       final String msg,
       final ErrorType type,
+      final String code,
       final Map<String, String> context,
       final boolean logged
   )
   {
     super(msg, e);
     this.type = type;
+    this.code = code;
     this.context = context;
     this.logged = logged;
   }
@@ -244,14 +285,49 @@ public class DruidException extends RuntimeException
   }
 
   /**
+   * User error for an unsupported operation. We assume the problem is that the user
+   * asked Druid to do something it cannot do, and so the user shouldn't ask. This
+   * is not an indication that Druid <i>should</i> provide an operation, and it is
+   * an internal error that it does not.
+   */
+  public static Builder unsupported(String msg, Object...args)
+  {
+    return new Builder(ErrorType.USER, msg, args)
+        .code(QueryException.UNSUPPORTED_OPERATION_ERROR_CODE);
+  }
+
+  public static DruidException unsupportedError(String msg, Object...args)
+  {
+    return unsupported(msg, args).build();
+  }
+
+  /**
+   * SQL query validation failed, most likely due to a problem in the SQL statement
+   * which the user provided. This is a somewhat less specific then the
+   * {@link #unsupported(String, Object...)} error, which says that validation failed
+   * because Druid doesn't support something. Use the validation error for case that
+   * are mostly likely because the SQL really is wrong.
+   */
+  public static Builder validation(String msg, Object...args)
+  {
+    return new Builder(ErrorType.USER, msg, args)
+        .code(QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE);
+  }
+
+  public static DruidException validationError(String msg, Object...args)
+  {
+    return validation(msg, args).build();
+  }
+
+  /**
    * Build an error that indicates that something went wrong internally
    * with Druid. This is the equivalent of an assertion failure: errors
    * of this type indicate a bug in the code: there is nothing the user
    * can do other than request a fix or find a workaround.
    */
-  public static Builder system(String msg, Object...args)
+  public static Builder internalError(String msg, Object...args)
   {
-    return new Builder(ErrorType.SYSTEM, msg, args);
+    return new Builder(ErrorType.INTERNAL, msg, args);
   }
 
   public static Builder notFound(String msg, Object...args)
@@ -261,7 +337,7 @@ public class DruidException extends RuntimeException
 
   public static DruidException unexpected(Exception e)
   {
-    return system(e.getMessage()).cause(e).build();
+    return internalError(e.getMessage()).cause(e).build();
   }
 
   /**
@@ -323,8 +399,41 @@ public class DruidException extends RuntimeException
     return context.get(key);
   }
 
+  public String code()
+  {
+    return code;
+  }
+
   @Override
   public String getMessage()
+  {
+    StringBuilder buf = new StringBuilder();
+    buf.append(type.name()).append(" - ");
+    buf.append(super.getMessage());
+    if (!QueryException.UNSUPPORTED_OPERATION_ERROR_CODE.equals(code)) {
+      buf.append("; Error Code: [")
+         .append(code)
+         .append("]");
+    }
+    if (context != null && context.size() > 0) {
+      int count = 0;
+      buf.append("; ");
+      for (Map.Entry<String, String> entry : context.entrySet()) {
+        if (count > 0) {
+          buf.append(", ");
+        }
+        buf.append("\n")
+           .append(entry.getKey())
+           .append(": [")
+           .append(entry.getValue())
+           .append("]");
+        count++;
+      }
+    }
+    return buf.toString();
+  }
+
+  public String getDisplayMessage()
   {
     StringBuilder buf = new StringBuilder();
     switch (type) {
@@ -334,13 +443,17 @@ public class DruidException extends RuntimeException
       case RESOURCE:
         buf.append("Resource error: ");
         break;
-      case SYSTEM:
-        buf.append("System error: ");
+      case INTERNAL:
+        buf.append("Internal error: ");
         break;
       default:
         break;
     }
     buf.append(super.getMessage());
+    if (!QueryException.UNSUPPORTED_OPERATION_ERROR_CODE.equals(code)) {
+      buf.append("\nError Code: ")
+         .append(code);
+    }
     if (context != null && context.size() > 0) {
       for (Map.Entry<String, String> entry : context.entrySet()) {
         buf.append("\n")

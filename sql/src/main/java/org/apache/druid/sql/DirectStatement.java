@@ -228,7 +228,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
     }
     catch (RelOptPlanner.CannotPlanException e) {
       // Not sure if this is even thrown here.
-      throw DruidException.system("Internal error: cannot plan SQL query")
+      throw DruidException.internalError("Cannot plan SQL query")
           .cause(e)
           .build();
     }

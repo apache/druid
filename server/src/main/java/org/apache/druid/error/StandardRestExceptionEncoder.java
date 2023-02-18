@@ -44,12 +44,9 @@ public class StandardRestExceptionEncoder implements RestExceptionEncoder
     builder.put("type", errorCode(e));
     builder.put("message", e.message());
     builder.put("errorMessage", e.getMessage());
+    builder.put("errorCode", e.code());
     if (e.context() != null && !e.context().isEmpty()) {
       Map<String, String> context = new HashMap<>(e.context());
-      String errorCode = context.remove(DruidException.ERROR_CODE);
-      if (errorCode != null) {
-        builder.put("errorCode", errorCode);
-      }
       String host = context.remove(DruidException.HOST);
       if (host != null) {
         builder.put("host", host);
@@ -79,7 +76,7 @@ public class StandardRestExceptionEncoder implements RestExceptionEncoder
   {
     switch (e.type()) {
       case CONFIG:
-      case SYSTEM:
+      case INTERNAL:
       case NETWORK:
         return Response.Status.INTERNAL_SERVER_ERROR;
       case TIMEOUT:

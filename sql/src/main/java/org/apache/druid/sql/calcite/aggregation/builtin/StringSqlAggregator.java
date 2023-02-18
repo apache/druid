@@ -40,7 +40,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.QueryException;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.filter.NotDimFilter;
@@ -197,9 +196,7 @@ public class StringSqlAggregator implements SqlAggregator
     {
       RelDataType type = sqlOperatorBinding.getOperandType(0);
       if (type instanceof RowSignatures.ComplexSqlType) {
-        throw DruidException.user("Cannot use STRING_AGG on complex inputs %s", type)
-            .context(DruidException.ERROR_CODE, QueryException.UNSUPPORTED_OPERATION_ERROR_CODE)
-            .build();
+        throw DruidException.unsupportedError("Cannot use STRING_AGG on complex input of type %s", type);
       }
       return Calcites.createSqlTypeWithNullability(
           sqlOperatorBinding.getTypeFactory(),

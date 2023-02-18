@@ -56,7 +56,7 @@ import java.util.Map;
  * <p>
  * The input text can be:
  * 1. a JSON string of an object in a line or multiple lines(such as pretty-printed JSON text)
- * 2. multiple JSON object strings concated by white space character(s)
+ * 2. multiple JSON object strings concatenated by white space character(s)
  * <p>
  * If an input string contains invalid JSON syntax, any valid JSON objects found prior to encountering the invalid
  * syntax will be successfully parsed, but parsing will not continue after the invalid syntax.

@@ -33,7 +33,6 @@ import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlTimestampLiteral;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -65,7 +64,6 @@ import java.util.stream.Collectors;
 
 public class DruidSqlParserUtils
 {
-
   private static final Logger log = new Logger(DruidSqlParserUtils.class);
   public static final String ALL = "all";
 
@@ -230,19 +228,26 @@ public class DruidSqlParserUtils
     List<Interval> intervals = filtration.getIntervals();
 
     if (filtration.getDimFilter() != null) {
-      throw DruidException.userError("Only " + ColumnHolder.TIME_COLUMN_NAME + " column is supported in OVERWRITE WHERE clause");
+      throw DruidException.validationError(
+          "Only %s column is supported in OVERWRITE WHERE clause",
+          ColumnHolder.TIME_COLUMN_NAME
+      );
     }
 
     if (intervals.isEmpty()) {
-      throw DruidException.userError("Intervals for replace are empty");
+      throw DruidException.validationError("Intervals for REPLACE are empty");
     }
 
     for (Interval interval : intervals) {
       DateTime intervalStart = interval.getStart();
       DateTime intervalEnd = interval.getEnd();
       if (!granularity.bucketStart(intervalStart).equals(intervalStart) || !granularity.bucketStart(intervalEnd).equals(intervalEnd)) {
-        throw DruidException.userError("OVERWRITE WHERE clause contains an interval " + intervals +
-                                      " which is not aligned with PARTITIONED BY granularity " + granularity);
+        throw DruidException.validationError(
+            "OVERWRITE WHERE clause contains an interval %s" +
+            " which is not aligned with PARTITIONED BY granularity %s",
+            intervals,
+            granularity
+        );
       }
     }
     return intervals
@@ -298,7 +303,7 @@ public class DruidSqlParserUtils
   {
     if (!(replaceTimeQuery instanceof SqlBasicCall)) {
       log.error("Expected SqlBasicCall during parsing, but found " + replaceTimeQuery.getClass().getName());
-      throw DruidException.userError("Invalid OVERWRITE WHERE clause");
+      throw DruidException.validationError("Invalid OVERWRITE WHERE clause");
     }
     String columnName;
     SqlBasicCall sqlBasicCall = (SqlBasicCall) replaceTimeQuery;
@@ -379,21 +384,26 @@ public class DruidSqlParserUtils
             StringComparators.NUMERIC
         );
       default:
-        throw DruidException.userError("Unsupported operation in OVERWRITE WHERE clause: " + sqlBasicCall.getOperator().getName());
+        throw DruidException.validationError(
+            "Unsupported operation in OVERWRITE WHERE clause: %s",
+            sqlBasicCall.getOperator().getName()
+        );
     }
   }
 
   /**
    * Converts a {@link SqlNode} identifier into a string representation
    *
-   * @param sqlNode the sql node
+   * @param sqlNode the SQL node
    * @return string representing the column name
-   * @throws ValidationException if the sql node is not an SqlIdentifier
+   * @throws ValidationException if the SQL node is not an SqlIdentifier
    */
   public static String parseColumnName(SqlNode sqlNode)
   {
     if (!(sqlNode instanceof SqlIdentifier)) {
-      throw DruidException.userError("Expressions must be of the form __time <operator> TIMESTAMP");
+      throw DruidException.validationError(
+          "OVERWRITE WHERE expressions must be of the form __time <operator> TIMESTAMP"
+      );
     }
     return ((SqlIdentifier) sqlNode).getSimple();
   }
@@ -401,15 +411,17 @@ public class DruidSqlParserUtils
   /**
    * Converts a {@link SqlNode} into a timestamp, taking into account the timezone
    *
-   * @param sqlNode the sql node
+   * @param sqlNode the SQL node
    * @param timeZone timezone
    * @return the timestamp string as milliseconds from epoch
-   * @throws ValidationException if the sql node is not a SqlTimestampLiteral
+   * @throws ValidationException if the SQL node is not a SqlTimestampLiteral
    */
   public static String parseTimeStampWithTimeZone(SqlNode sqlNode, DateTimeZone timeZone)
   {
     if (!(sqlNode instanceof SqlTimestampLiteral)) {
-      throw DruidException.userError("Expressions must be of the form __time <operator> TIMESTAMP");
+      throw DruidException.validationError(
+          "OVERWRITE WHERE expressions must be of the form __time <operator> TIMESTAMP"
+      );
     }
 
     Timestamp sqlTimestamp = Timestamp.valueOf(((SqlTimestampLiteral) sqlNode).toFormattedString());
@@ -425,15 +437,18 @@ public class DruidSqlParserUtils
   public static void throwIfUnsupportedGranularityInPartitionedBy(Granularity granularity)
   {
     if (!GranularityType.isStandard(granularity)) {
-      throw new IAE(
-          "The granularity specified in PARTITIONED BY is not supported. "
-          + "Please use an equivalent of these granularities: %s.",
-          Arrays.stream(GranularityType.values())
-                .filter(granularityType -> !granularityType.equals(GranularityType.NONE))
-                .map(Enum::name)
-                .map(StringUtils::toLowerCase)
-                .collect(Collectors.joining(", "))
-      );
+      throw DruidException.validation(
+            "The granularity specified in PARTITIONED BY is not supported."
+           )
+          .context(
+              "Valid granularities",
+              Arrays.stream(GranularityType.values())
+                    .filter(granularityType -> !granularityType.equals(GranularityType.NONE))
+                    .map(Enum::name)
+                    .map(StringUtils::toLowerCase)
+                    .collect(Collectors.joining(", "))
+           )
+         .build();
     }
   }
 }

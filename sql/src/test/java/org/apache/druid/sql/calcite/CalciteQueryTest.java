@@ -2853,7 +2853,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       );
       Assert.assertEquals(
           QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.context(DruidException.ERROR_CODE)
+          e.code()
       );
     }
   }
@@ -3132,7 +3132,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       );
       Assert.assertEquals(
           QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.context(DruidException.ERROR_CODE)
+          e.code()
       );
     }
   }
@@ -3159,7 +3159,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       );
       Assert.assertEquals(
           QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.context(DruidException.ERROR_CODE)
+          e.code()
       );
     }
   }
@@ -3186,7 +3186,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       );
       Assert.assertEquals(
           QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.context(DruidException.ERROR_CODE)
+          e.code()
       );
     }
   }
@@ -5624,7 +5624,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       );
       Assert.assertEquals(
           QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.context(DruidException.ERROR_CODE)
+          e.code()
       );
     }
   }
@@ -5643,7 +5643,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       );
       Assert.assertEquals(
           QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.context(DruidException.ERROR_CODE)
+          e.code()
       );
     }
   }
@@ -11247,7 +11247,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       );
       Assert.assertEquals(
           QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.context(DruidException.ERROR_CODE)
+          e.code()
       );
     }
   }

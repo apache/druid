@@ -27,7 +27,6 @@ import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.query.QueryException;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -130,18 +129,21 @@ public class DruidLogicalValuesRule extends RelOptRule
         return Calcites.calciteDateTimeLiteralToJoda(literal, plannerContext.getTimeZone()).getMillis();
       case NULL:
         if (!literal.isNull()) {
-          throw DruidException.user("Query has a non-null constant but is of NULL type.")
-              .context(DruidException.ERROR_CODE, QueryException.UNSUPPORTED_OPERATION_ERROR_CODE)
-              .build();
+          throw DruidException.unsupportedError(
+              "Non-null constant %s for a NULL literal",
+              literal
+          );
         }
         return null;
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
       case TIME:
       case TIME_WITH_LOCAL_TIME_ZONE:
       default:
-        throw DruidException.user("%s type is not supported", literal.getType().getSqlTypeName())
-            .context(DruidException.ERROR_CODE, QueryException.UNSUPPORTED_OPERATION_ERROR_CODE)
-            .build();
+        throw DruidException.unsupportedError(
+            "Literal %s type %s is not supported",
+            literal,
+            literal.getType().getSqlTypeName()
+        );
     }
   }
 }

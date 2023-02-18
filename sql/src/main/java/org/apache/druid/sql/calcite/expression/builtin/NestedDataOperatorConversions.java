@@ -45,7 +45,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
-import org.apache.druid.query.QueryException;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
@@ -201,13 +200,11 @@ public class NestedDataOperatorConversions
         parts = NestedPathFinder.parseJsonPath(path);
       }
       catch (IllegalArgumentException iae) {
-        throw DruidException.user(
-                "Cannot use %s",
-                call.getOperator().getName()
-             )
-            .context(DruidException.ERROR_CODE, QueryException.UNSUPPORTED_OPERATION_ERROR_CODE)
-            .cause(iae)
-            .build();
+        throw DruidException.unsupportedError(
+            "Cannot use [%s]: [%s]",
+            call.getOperator().getName(),
+            iae.getMessage()
+        );
       }
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
       final DruidExpression.ExpressionGenerator builder = (args) ->
@@ -234,7 +231,6 @@ public class NestedDataOperatorConversions
       return DruidExpression.ofExpression(NestedDataComplexTypeSerde.TYPE, builder, druidExpressions);
     }
   }
-
 
   /**
    * The {@link org.apache.calcite.sql2rel.StandardConvertletTable} converts json_value(.. RETURNING type) into
@@ -366,13 +362,11 @@ public class NestedDataOperatorConversions
         parts = NestedPathFinder.parseJsonPath(path);
       }
       catch (IllegalArgumentException iae) {
-        throw DruidException.user(
-                "Cannot use %s",
-                call.getOperator().getName()
-             )
-            .context(DruidException.ERROR_CODE, QueryException.UNSUPPORTED_OPERATION_ERROR_CODE)
-            .cause(iae)
-            .build();
+        throw DruidException.unsupportedError(
+            "Cannot use [%s]: [%s]",
+            call.getOperator().getName(),
+            iae.getMessage()
+        );
       }
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
       final DruidExpression.ExpressionGenerator builder = (args) ->
@@ -537,11 +531,10 @@ public class NestedDataOperatorConversions
         parts = NestedPathFinder.parseJsonPath(path);
       }
       catch (IllegalArgumentException iae) {
-        throw DruidException.user(
-                "Cannot use %s",
-                call.getOperator().getName()
+        throw DruidException.unsupported(
+              "JSON path [%s] is not supported",
+              call.getOperator().getName()
              )
-            .context(DruidException.ERROR_CODE, QueryException.UNSUPPORTED_OPERATION_ERROR_CODE)
             .cause(iae)
             .build();
       }

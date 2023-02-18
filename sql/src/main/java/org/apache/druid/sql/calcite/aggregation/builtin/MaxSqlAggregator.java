@@ -24,7 +24,6 @@ import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.QueryException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMaxAggregatorFactory;
@@ -72,9 +71,7 @@ public class MaxSqlAggregator extends SimpleSqlAggregator
       case DOUBLE:
         return new DoubleMaxAggregatorFactory(name, fieldName, null, macroTable);
       default:
-        throw DruidException.user("Max aggregation is not supported for '%s' type", aggregationType)
-            .context(DruidException.ERROR_CODE, QueryException.UNSUPPORTED_OPERATION_ERROR_CODE)
-            .build();
+        throw DruidException.unsupportedError("MAX does not support type %s", aggregationType);
     }
   }
 }

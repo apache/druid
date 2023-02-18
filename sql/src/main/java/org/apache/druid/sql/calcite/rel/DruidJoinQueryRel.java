@@ -45,7 +45,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.QueryException;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.column.RowSignature;
@@ -350,9 +349,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       case INNER:
         return JoinType.INNER;
       default:
-        throw DruidException.user("Cannot handle joinType '%s'", calciteJoinType)
-            .context(DruidException.ERROR_CODE, QueryException.UNSUPPORTED_OPERATION_ERROR_CODE)
-            .build();
+        throw DruidException.unsupportedError("Cannot handle joinType '%s'", calciteJoinType);
     }
   }
 

@@ -2694,10 +2694,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         (expected) -> {
           expected.expect(DruidException.class);
           expected.expectMessage(
-              "Cannot use JSON_VALUE_VARCHAR\n" +
-              "Error Code: Unsupported operation\n" +
-              "Cause: Bad format, '.array.[1]' is not a valid JSONPath path: must start with '$'"
-          );
+              "Cannot use [JSON_VALUE_VARCHAR]: [Bad format, '.array.[1]' is not a valid JSONPath path: must start with '$']");
         }
     );
   }

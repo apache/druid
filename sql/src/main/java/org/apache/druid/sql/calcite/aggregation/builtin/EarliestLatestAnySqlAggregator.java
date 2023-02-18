@@ -36,7 +36,6 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.util.Optionality;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.query.QueryException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.FloatAnyAggregatorFactory;
@@ -90,9 +89,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case COMPLEX:
             return new StringFirstAggregatorFactory(name, fieldName, timeColumn, maxStringBytes);
           default:
-            throw DruidException.user("EARLIEST aggregator is not supported for '%s' type", type)
-                .context(DruidException.ERROR_CODE, QueryException.UNSUPPORTED_OPERATION_ERROR_CODE)
-                .build();
+            throw DruidException.unsupportedError("EARLIEST aggregator is not supported for type %s", type);
         }
       }
     },
@@ -112,9 +109,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case COMPLEX:
             return new StringLastAggregatorFactory(name, fieldName, timeColumn, maxStringBytes);
           default:
-            throw DruidException.user("LATEST aggregator is not supported for '%s' type", type)
-            .context(DruidException.ERROR_CODE, QueryException.UNSUPPORTED_OPERATION_ERROR_CODE)
-            .build();
+            throw DruidException.unsupportedError("LATEST aggregator is not supported for type %s", type);
         }
       }
     },
@@ -133,9 +128,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case STRING:
             return new StringAnyAggregatorFactory(name, fieldName, maxStringBytes);
           default:
-            throw DruidException.user("ANY aggregation is not supported for '%s' type", type)
-            .context(DruidException.ERROR_CODE, QueryException.UNSUPPORTED_OPERATION_ERROR_CODE)
-            .build();
+            throw DruidException.unsupportedError("ANY aggregation is not supported for type %s", type);
         }
       }
     };
@@ -193,10 +186,10 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
     final ColumnType outputType = Calcites.getColumnTypeForRelDataType(aggregateCall.getType());
     if (outputType == null) {
-      throw DruidException.system(
-              "Cannot translate output SQL type %s to Druid type for aggregator [%s]",
-              aggregateCall.getType().getSqlTypeName(),
-              aggregateCall.getName()
+      throw DruidException.internalError(
+              "%s cannot translate output SQL type %s to a Druid type",
+              aggregateCall.getName(),
+              aggregateCall.getType().getSqlTypeName()
            )
           .build();
     }
@@ -214,8 +207,11 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           maxStringBytes = RexLiteral.intValue(rexNodes.get(1));
         }
         catch (AssertionError ae) {
-          plannerContext.setPlanningError("The second argument '%s' to function '%s' is not a number", rexNodes.get(1), aggregateCall.getName());
-          return null;
+          throw DruidException.validationError(
+              "%s, argument 2 must be a number but found [%s]",
+              aggregateCall.getName(),
+              rexNodes.get(1)
+             );
         }
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,
@@ -226,14 +222,11 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
         );
         break;
       default:
-        throw DruidException.user(
-              "aggregation [%s], Invalid number of arguments %,d to [%s] operator",
-              aggregatorName,
-              args.size(),
-              aggregatorType.name()
-             )
-            .context(DruidException.ERROR_CODE, QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE)
-            .build();
+        throw DruidException.validationError(
+              "%s expects 1 or 2 arguments but found %d",
+              aggregateCall.getName(),
+              args.size()
+             );
     }
 
     return Aggregation.create(

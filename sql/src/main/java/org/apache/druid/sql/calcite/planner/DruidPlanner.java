@@ -167,10 +167,10 @@ public class DruidPlanner implements Closeable
     if (query.isA(SqlKind.QUERY)) {
       return new QueryHandler.SelectHandler(handlerContext, query, explain);
     }
-    throw DruidException.user("Unsupported SQL statement")
-        .context("Statement kind", node.getKind())
-        .context(DruidException.ERROR_CODE, QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE)
-        .build();
+    throw DruidException.unsupportedError(
+        "Unsupported SQL statement %s",
+        node.getKind()
+    );
   }
 
   /**
@@ -334,9 +334,8 @@ public class DruidPlanner implements Closeable
       // Anything else. Should not get here. Anything else should already have
       // been translated to a DruidException unless it is an unexpected exception.
       return DruidException
-          .system(e.getMessage())
+          .internalError(e.getMessage())
           .cause(inner)
-          .context(DruidException.ERROR_CODE, QueryException.UNKNOWN_EXCEPTION_ERROR_CODE)
           .build();
     }
   }
@@ -349,15 +348,14 @@ public class DruidPlanner implements Closeable
     Matcher m = p.matcher(msg);
     DruidException.Builder builder;
     if (m.matches()) {
-      builder = DruidException
-          .user(m.group(3))
-          .context("Line", m.group(1))
-          .context("Column", m.group(2));
+      builder = DruidException.user(
+          "Line %s, Column %s: %s", m.group(1), m.group(2), m.group(3)
+      );
     } else {
       builder = DruidException.user(msg).cause(e);
     }
     return builder
-        .context(DruidException.ERROR_CODE, errorCode)
+        .code(errorCode)
         .build();
   }
 
@@ -373,16 +371,18 @@ public class DruidPlanner implements Closeable
     DruidException.Builder builder;
     if (m.matches()) {
       String choices = m.group(4).trim().replaceAll("[ .]*\n\\ s+", ", ");
-      builder = DruidException
-          .user("Parse error: unexpected token " + m.group(1))
-          .context("Line", m.group(2))
-          .context("Column", m.group(3))
+      builder = DruidException.user(
+              "Line %s, Column %s: unexpected token %s",
+              m.group(2),
+              m.group(3),
+              m.group(1)
+           )
           .context("Expected", choices);
     } else {
       builder = DruidException.user(msg).cause(e);
     }
     return builder
-        .context(DruidException.ERROR_CODE, QueryException.SQL_PARSE_FAILED_ERROR_CODE)
+        .code(QueryException.SQL_PARSE_FAILED_ERROR_CODE)
         .build();
   }
 }
