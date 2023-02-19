@@ -49,7 +49,7 @@ import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.frame.processor.BlockingQueueOutputChannelFactory;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.frame.processor.ComposingOutputChannelFactory;
-import org.apache.druid.frame.processor.DurableStorageOutputChannelFactory;
+import org.apache.druid.msq.shuffle.DurableStorageOutputChannelFactory;
 import org.apache.druid.frame.processor.FileOutputChannelFactory;
 import org.apache.druid.frame.processor.FrameChannelHashPartitioner;
 import org.apache.druid.frame.processor.FrameChannelMuxer;

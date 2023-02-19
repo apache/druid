@@ -25,6 +25,9 @@ import org.apache.druid.frame.key.KeyColumn;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * TODO(gianm): create all shuffle specs through this
+ */
 public class ShuffleSpecs
 {
   /**

@@ -26,7 +26,6 @@ import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
-import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
@@ -57,7 +56,6 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.storage.local.LocalFileStorageConnector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
@@ -116,17 +114,6 @@ public class SuperSorterTest
     @Test
     public void testSingleEmptyInputChannel_fileStorage() throws Exception
     {
-      testSingleEmptyInputChannel(false);
-    }
-
-    @Test
-    public void testSingleEmptyInputChannel_durableStorage() throws Exception
-    {
-      testSingleEmptyInputChannel(true);
-    }
-
-    private void testSingleEmptyInputChannel(boolean isDurableStorage) throws Exception
-    {
       final BlockingQueueFrameChannel inputChannel = BlockingQueueFrameChannel.minimal();
       inputChannel.writable().close();
 
@@ -141,15 +128,7 @@ public class SuperSorterTest
           outputPartitionsFuture,
           exec,
           new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
-          isDurableStorage ? new DurableStorageOutputChannelFactory(
-              "0",
-              0,
-              0,
-              "0",
-              FRAME_SIZE,
-              new LocalFileStorageConnector(tempFolder),
-              tempFolder
-          ) : new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
           2,
           2,
           -1,
@@ -307,15 +286,15 @@ public class SuperSorterTest
       final File tempFolder = temporaryFolder.newFolder();
       final OutputChannelFactory outputChannelFactory = isComposedStorage ? new ComposingOutputChannelFactory(
           ImmutableList.of(
-              new FileOutputChannelFactory(tempFolder, maxBytesPerFrame, new ByteTracker(maxBytesPerFrame)),
-              new DurableStorageOutputChannelFactory(
-                  "0",
-                  0,
-                  0,
-                  "0",
+              new FileOutputChannelFactory(
+                  new File(tempFolder, "1"),
                   maxBytesPerFrame,
-                  new LocalFileStorageConnector(tempFolder),
-                  tempFolder
+                  new ByteTracker(maxBytesPerFrame)
+              ),
+              new FileOutputChannelFactory(
+                  new File(tempFolder, "2"),
+                  maxBytesPerFrame,
+                  new ByteTracker(maxBytesPerFrame)
               )
           ),
           maxBytesPerFrame

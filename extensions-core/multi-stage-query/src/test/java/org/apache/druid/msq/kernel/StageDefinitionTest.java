@@ -23,7 +23,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.frame.key.ClusterBy;
-import org.apache.druid.frame.key.SortColumn;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.stage.StageInputSpec;
@@ -60,7 +61,7 @@ public class StageDefinitionTest
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
-    Assert.assertThrows(ISE.class, () -> stageDefinition.generatePartitionsForShuffle(null));
+    Assert.assertThrows(ISE.class, () -> stageDefinition.generatePartitionBoundariesForShuffle(null));
   }
 
   @Test
@@ -72,13 +73,17 @@ public class StageDefinitionTest
         ImmutableSet.of(),
         new OffsetLimitFrameProcessorFactory(0, 1L),
         RowSignature.empty(),
-        new MaxCountShuffleSpec(new ClusterBy(ImmutableList.of(new SortColumn("test", false)), 1), 2, false),
+        new GlobalSortMaxCountShuffleSpec(
+            new ClusterBy(ImmutableList.of(new KeyColumn("test", KeyOrder.ASCENDING)), 1),
+            2,
+            false
+        ),
         1,
         false,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
-    Assert.assertThrows(ISE.class, () -> stageDefinition.generatePartitionsForShuffle(null));
+    Assert.assertThrows(ISE.class, () -> stageDefinition.generatePartitionBoundariesForShuffle(null));
   }
 
 
@@ -91,7 +96,11 @@ public class StageDefinitionTest
         ImmutableSet.of(),
         new OffsetLimitFrameProcessorFactory(0, 1L),
         RowSignature.empty(),
-        new MaxCountShuffleSpec(new ClusterBy(ImmutableList.of(new SortColumn("test", false)), 0), 1, false),
+        new GlobalSortMaxCountShuffleSpec(
+            new ClusterBy(ImmutableList.of(new KeyColumn("test", KeyOrder.ASCENDING)), 0),
+            1,
+            false
+        ),
         1,
         false,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
@@ -99,8 +108,8 @@ public class StageDefinitionTest
 
     Assert.assertThrows(
         ISE.class,
-        () -> stageDefinition.generatePartitionsForShuffle(ClusterByStatisticsCollectorImpl.create(new ClusterBy(
-            ImmutableList.of(new SortColumn("test", false)),
+        () -> stageDefinition.generatePartitionBoundariesForShuffle(ClusterByStatisticsCollectorImpl.create(new ClusterBy(
+            ImmutableList.of(new KeyColumn("test", KeyOrder.ASCENDING)),
             1
         ), RowSignature.builder().add("test", ColumnType.STRING).build(), 1000, 100, false, false))
     );

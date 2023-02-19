@@ -83,7 +83,11 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
       1
   );
   private static final ClusterBy CLUSTER_BY_XYZ_BUCKET_BY_X = new ClusterBy(
-      ImmutableList.of(new SortColumn("x", false), new SortColumn("y", false), new SortColumn("z", false)),
+      ImmutableList.of(
+          new KeyColumn("x", KeyOrder.ASCENDING),
+          new KeyColumn("y", KeyOrder.ASCENDING),
+          new KeyColumn("z", KeyOrder.ASCENDING)
+      ),
       1
   );
 

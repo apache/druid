@@ -17,8 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.frame.processor;
+package org.apache.druid.msq.shuffle;
 
+import org.apache.druid.frame.processor.OutputChannelFactoryTest;
 import org.apache.druid.storage.local.LocalFileStorageConnector;
 import org.junit.ClassRule;
 import org.junit.rules.TemporaryFolder;

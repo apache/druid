@@ -38,7 +38,6 @@ import it.unimi.dsi.fastutil.longs.LongSortedSet;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;

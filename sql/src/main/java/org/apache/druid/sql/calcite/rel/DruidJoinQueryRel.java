@@ -357,7 +357,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     }
   }
 
-  private static boolean computeLeftRequiresSubquery(final PlannerContext plannerContext, final DruidRel<?> left)
+  public static boolean computeLeftRequiresSubquery(final PlannerContext plannerContext, final DruidRel<?> left)
   {
     if (plannerContext.getJoinAlgorithm().requiresSubquery()) {
       return true;

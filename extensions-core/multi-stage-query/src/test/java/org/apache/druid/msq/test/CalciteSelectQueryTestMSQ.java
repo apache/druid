@@ -76,7 +76,8 @@ public class CalciteSelectQueryTestMSQ extends CalciteQueryTest
             WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
             2,
             10,
-            2
+            2,
+            0
         );
     indexingServiceClient = new MSQTestOverlordServiceClient(
         queryJsonMapper,
