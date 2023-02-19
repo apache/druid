@@ -290,7 +290,7 @@ public class DimensionsSpec
            "dimensions=" + dimensions +
            ", dimensionExclusions=" + dimensionExclusions +
            ", includeAllDimensions=" + includeAllDimensions +
-           ", useNestedColumnIndexerForSchemaDiscovery=" + useSchemaDiscovery +
+           ", useSchemaDiscovery=" + useSchemaDiscovery +
            '}';
   }
 
@@ -301,7 +301,7 @@ public class DimensionsSpec
     private List<SpatialDimensionSchema> spatialDimensions;
     private boolean includeAllDimensions;
 
-    private boolean useNestedColumnIndexerForSchemaDiscovery;
+    private boolean useSchemaDiscovery;
 
     public Builder setDimensions(List<DimensionSchema> dimensions)
     {
@@ -334,9 +334,9 @@ public class DimensionsSpec
       return this;
     }
 
-    public Builder setUseNestedColumnIndexerForSchemaDiscovery(boolean useNestedColumnIndexerForSchemaDiscovery)
+    public Builder useSchemaDiscovery(boolean useSchemaDiscovery)
     {
-      this.useNestedColumnIndexerForSchemaDiscovery = useNestedColumnIndexerForSchemaDiscovery;
+      this.useSchemaDiscovery = useSchemaDiscovery;
       return this;
     }
 
@@ -347,7 +347,7 @@ public class DimensionsSpec
           dimensionExclusions,
           spatialDimensions,
           includeAllDimensions,
-          useNestedColumnIndexerForSchemaDiscovery
+          useSchemaDiscovery
       );
     }
   }

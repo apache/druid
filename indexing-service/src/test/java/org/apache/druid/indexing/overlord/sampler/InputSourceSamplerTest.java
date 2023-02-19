@@ -574,7 +574,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
 
     final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
     final DimensionsSpec dimensionsSpec = DimensionsSpec.builder()
-                                                        .setUseNestedColumnIndexerForSchemaDiscovery(true)
+                                                        .useSchemaDiscovery(true)
                                                         .build();
     final DataSchema dataSchema = createDataSchema(timestampSpec, dimensionsSpec, null, null, null);
     final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
