@@ -59,7 +59,7 @@ public class AvroParsers
             fromPigAvroStorage,
             binaryAsString,
             extractUnionsByType,
-            dimensionsSpec != null && dimensionsSpec.useNestedColumnIndexerForSchemaDiscovery()
+            dimensionsSpec != null && dimensionsSpec.useSchemaDiscovery()
         )
     );
   }

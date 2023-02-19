@@ -84,7 +84,7 @@ public class CsvInputSourceSamplerTest extends InitializedNullHandlingTest
             new StringDimensionSchema("Number"),
             new StringDimensionSchema("Gender")
         ),
-        response.getDimensions()
+        response.getLogicalDimensions()
     );
     Assert.assertEquals(
         RowSignature.builder()
@@ -94,7 +94,7 @@ public class CsvInputSourceSamplerTest extends InitializedNullHandlingTest
                     .add("Number", ColumnType.STRING)
                     .add("Gender", ColumnType.STRING)
                     .build(),
-        response.getSegmentSchema()
+        response.getLogicalSegmentSchema()
     );
 
     List<SamplerResponseRow> data = response.getData();

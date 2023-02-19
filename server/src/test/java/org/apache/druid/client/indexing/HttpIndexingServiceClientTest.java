@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.segment.NestedDataDimensionSchema;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.DataSegment;
@@ -84,6 +85,10 @@ public class HttpIndexingServiceClientTest
         ImmutableList.of(
             new StringDimensionSchema("x"),
             new StringDimensionSchema("y")
+        ),
+        ImmutableList.of(
+            new NestedDataDimensionSchema("x"),
+            new NestedDataDimensionSchema("y")
         ),
         RowSignature.builder().addTimeColumn().add("x", ColumnType.STRING).add("y", ColumnType.STRING).build(),
         ImmutableList.of(
@@ -143,6 +148,10 @@ public class HttpIndexingServiceClientTest
         ImmutableList.of(
             new StringDimensionSchema("x"),
             new StringDimensionSchema("y")
+        ),
+        ImmutableList.of(
+            new NestedDataDimensionSchema("x"),
+            new NestedDataDimensionSchema("y")
         ),
         RowSignature.builder().addTimeColumn().add("x", ColumnType.STRING).add("y", ColumnType.STRING).build(),
         ImmutableList.of(

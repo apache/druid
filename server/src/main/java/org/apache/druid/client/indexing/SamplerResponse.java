@@ -35,23 +35,26 @@ public class SamplerResponse
   private final int numRowsRead;
   private final int numRowsIndexed;
 
-  private final List<DimensionSchema> dimensions;
-  private final RowSignature segmentSchema;
+  private final List<DimensionSchema> logicalDimensions;
+  private final List<DimensionSchema> physicalDimensions;
+  private final RowSignature logicalSegmentSchema;
   private final List<SamplerResponseRow> data;
 
   @JsonCreator
   public SamplerResponse(
       @JsonProperty("numRowsRead") int numRowsRead,
       @JsonProperty("numRowsIndexed") int numRowsIndexed,
-      @JsonProperty("dimensions") List<DimensionSchema> dimensions,
-      @JsonProperty("segmentSchema") RowSignature segmentSchema,
+      @JsonProperty("logicalDimensions") List<DimensionSchema> logicalDimensions,
+      @JsonProperty("physicalDimensions") List<DimensionSchema> physicalDimensions,
+      @JsonProperty("logicalSegmentSchema") RowSignature logicalSegmentSchema,
       @JsonProperty("data") List<SamplerResponseRow> data
   )
   {
     this.numRowsRead = numRowsRead;
     this.numRowsIndexed = numRowsIndexed;
-    this.dimensions = dimensions;
-    this.segmentSchema = segmentSchema;
+    this.logicalDimensions = logicalDimensions;
+    this.physicalDimensions = physicalDimensions;
+    this.logicalSegmentSchema = logicalSegmentSchema;
     this.data = data;
   }
 
@@ -68,15 +71,21 @@ public class SamplerResponse
   }
 
   @JsonProperty
-  public List<DimensionSchema> getDimensions()
+  public List<DimensionSchema> getLogicalDimensions()
   {
-    return dimensions;
+    return logicalDimensions;
   }
 
   @JsonProperty
-  public RowSignature getSegmentSchema()
+  public List<DimensionSchema> getPhysicalDimensions()
   {
-    return segmentSchema;
+    return physicalDimensions;
+  }
+
+  @JsonProperty
+  public RowSignature getLogicalSegmentSchema()
+  {
+    return logicalSegmentSchema;
   }
 
   @JsonProperty
@@ -97,14 +106,36 @@ public class SamplerResponse
     SamplerResponse that = (SamplerResponse) o;
     return getNumRowsRead() == that.getNumRowsRead() &&
            getNumRowsIndexed() == that.getNumRowsIndexed() &&
-           Objects.equals(segmentSchema, that.segmentSchema) &&
+           Objects.equals(logicalDimensions, that.logicalDimensions) &&
+           Objects.equals(physicalDimensions, that.physicalDimensions) &&
+           Objects.equals(logicalSegmentSchema, that.logicalSegmentSchema) &&
            Objects.equals(data, that.data);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(getNumRowsRead(), getNumRowsIndexed(), segmentSchema, data);
+    return Objects.hash(
+        getNumRowsRead(),
+        getNumRowsIndexed(),
+        logicalDimensions,
+        physicalDimensions,
+        logicalSegmentSchema,
+        data
+    );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "SamplerResponse{" +
+           "numRowsRead=" + numRowsRead +
+           ", numRowsIndexed=" + numRowsIndexed +
+           ", logicalDimensions=" + logicalDimensions +
+           ", physicalDimensions=" + physicalDimensions +
+           ", logicalSegmentSchema=" + logicalSegmentSchema +
+           ", data=" + data +
+           '}';
   }
 
   @JsonInclude(JsonInclude.Include.NON_NULL)

@@ -33,10 +33,6 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.DoubleDimensionSchema;
-import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.LongDimensionSchema;
-import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimedShutoffInputSourceReader;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.annotations.Json;
@@ -48,12 +44,9 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
-import org.apache.druid.segment.NestedDataDimensionSchema;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.TypeSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -242,7 +235,8 @@ public class InputSourceSampler
 
         int numRowsRead = responseRows.size();
 
-        List<DimensionSchema> dimensionSchemas = new ArrayList<>();
+        List<DimensionSchema> logicalDimensionSchemas = new ArrayList<>();
+        List<DimensionSchema> physicalDimensionSchemas = new ArrayList<>();
 
         RowSignature.Builder signatureBuilder = RowSignature.builder();
         signatureBuilder.add(
@@ -253,11 +247,11 @@ public class InputSourceSampler
           if (!SamplerInputRow.SAMPLER_ORDERING_COLUMN.equals(dimensionDesc.getName())) {
             final ColumnType columnType = dimensionDesc.getCapabilities().toColumnType();
             signatureBuilder.add(dimensionDesc.getName(), columnType);
-            dimensionSchemas.add(
-                getDefaultSchemaForBuiltInType(
-                    dimensionDesc.getName(),
-                    dimensionDesc.getCapabilities()
-                )
+            logicalDimensionSchemas.add(
+                DimensionSchema.getDefaultSchemaForBuiltInType(dimensionDesc.getName(), dimensionDesc.getCapabilities())
+            );
+            physicalDimensionSchemas.add(
+                dimensionDesc.getHandler().getDimensionSchema(dimensionDesc.getCapabilities())
             );
           }
         }
@@ -273,7 +267,8 @@ public class InputSourceSampler
         return new SamplerResponse(
             numRowsRead,
             numRowsIndexed,
-            dimensionSchemas,
+            logicalDimensionSchemas,
+            physicalDimensionSchemas,
             signatureBuilder.build(),
             responseRows.stream()
                         .filter(Objects::nonNull)
@@ -319,24 +314,5 @@ public class InputSourceSampler
     return new OnheapIncrementalIndex.Builder().setIndexSchema(schema)
                                          .setMaxRowCount(samplerConfig.getNumRows())
                                          .build();
-  }
-
-  private static DimensionSchema getDefaultSchemaForBuiltInType(String name, TypeSignature<ValueType> type)
-  {
-    // this is a temporary home for this method, a future refactor should place this in a more centralized place
-    // for getting the default dimension schema for a given column type, or more approriately, get the default column
-    // "format" for a given type and with that "format" create a default dimension schema
-    switch (type.getType()) {
-      case STRING:
-        return new StringDimensionSchema(name);
-      case LONG:
-        return new LongDimensionSchema(name);
-      case FLOAT:
-        return new FloatDimensionSchema(name);
-      case DOUBLE:
-        return new DoubleDimensionSchema(name);
-      default:
-        return new NestedDataDimensionSchema(name);
-    }
   }
 }

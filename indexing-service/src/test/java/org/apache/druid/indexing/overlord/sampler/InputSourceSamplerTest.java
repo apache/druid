@@ -188,8 +188,8 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     Assert.assertEquals(6, response.getNumRowsRead());
     Assert.assertEquals(0, response.getNumRowsIndexed());
     Assert.assertEquals(6, response.getData().size());
-    Assert.assertEquals(ImmutableList.of(), response.getDimensions());
-    Assert.assertEquals(RowSignature.builder().addTimeColumn().build(), response.getSegmentSchema());
+    Assert.assertEquals(ImmutableList.of(), response.getLogicalDimensions());
+    Assert.assertEquals(RowSignature.builder().addTimeColumn().build(), response.getLogicalSegmentSchema());
 
     List<SamplerResponseRow> data = response.getData();
 
@@ -263,8 +263,8 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     Assert.assertEquals(3, response.getNumRowsRead());
     Assert.assertEquals(0, response.getNumRowsIndexed());
     Assert.assertEquals(3, response.getData().size());
-    Assert.assertEquals(ImmutableList.of(), response.getDimensions());
-    Assert.assertEquals(RowSignature.builder().addTimeColumn().build(), response.getSegmentSchema());
+    Assert.assertEquals(ImmutableList.of(), response.getLogicalDimensions());
+    Assert.assertEquals(RowSignature.builder().addTimeColumn().build(), response.getLogicalSegmentSchema());
 
     List<SamplerResponseRow> data = response.getData();
 
@@ -325,7 +325,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
             new StringDimensionSchema("dim2"),
             new StringDimensionSchema("met1")
         ),
-        response.getDimensions()
+        response.getLogicalDimensions()
     );
     Assert.assertEquals(
         parserType == ParserType.STR_JSON
@@ -343,7 +343,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
                       .add("dim2", ColumnType.STRING)
                       .add("met1", ColumnType.STRING)
                       .build(),
-        response.getSegmentSchema()
+        response.getLogicalSegmentSchema()
     );
 
     List<SamplerResponseRow> data = response.getData();
@@ -466,7 +466,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
             new StringDimensionSchema("dim2"),
             new StringDimensionSchema("met1")
         ),
-        response.getDimensions()
+        response.getLogicalDimensions()
     );
     Assert.assertEquals(
         parserType == ParserType.STR_JSON
@@ -482,7 +482,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
                       .add("dim2", ColumnType.STRING)
                       .add("met1", ColumnType.STRING)
                       .build(),
-        response.getSegmentSchema()
+        response.getLogicalSegmentSchema()
     );
 
     List<SamplerResponseRow> data = response.getData();
@@ -597,7 +597,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
             new StringDimensionSchema("dim2"),
             new StringDimensionSchema("met1")
         ),
-        response.getDimensions()
+        response.getLogicalDimensions()
     );
     Assert.assertEquals(
         parserType == ParserType.STR_JSON
@@ -613,7 +613,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
                       .add("dim2", ColumnType.STRING)
                       .add("met1", ColumnType.STRING)
                       .build(),
-        response.getSegmentSchema()
+        response.getLogicalSegmentSchema()
     );
 
     List<SamplerResponseRow> data = response.getData();
@@ -720,7 +720,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
             new StringDimensionSchema("dim1"),
             new StringDimensionSchema("met1")
         ),
-        response.getDimensions()
+        response.getLogicalDimensions()
     );
     Assert.assertEquals(
         RowSignature.builder()
@@ -728,7 +728,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
                     .add("dim1", ColumnType.STRING)
                     .add("met1", ColumnType.STRING)
                     .build(),
-        response.getSegmentSchema()
+        response.getLogicalSegmentSchema()
     );
 
     List<SamplerResponseRow> data = response.getData();
@@ -841,7 +841,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
             new StringDimensionSchema("dim1"),
             new StringDimensionSchema("dim2")
         ),
-        response.getDimensions()
+        response.getLogicalDimensions()
     );
     Assert.assertEquals(
         RowSignature.builder()
@@ -850,7 +850,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
                     .add("dim2", ColumnType.STRING)
                     .add("met1", ColumnType.LONG)
                     .build(),
-        response.getSegmentSchema()
+        response.getLogicalSegmentSchema()
     );
 
     List<SamplerResponseRow> data = response.getData();
@@ -968,7 +968,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
             new StringDimensionSchema("dim1"),
             new StringDimensionSchema("dim2")
         ),
-        response.getDimensions()
+        response.getLogicalDimensions()
     );
     Assert.assertEquals(
         RowSignature.builder()
@@ -977,7 +977,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
                     .add("dim2", ColumnType.STRING)
                     .add("met1", ColumnType.LONG)
                     .build(),
-        response.getSegmentSchema()
+        response.getLogicalSegmentSchema()
     );
 
     List<SamplerResponseRow> data = response.getData();
@@ -1066,7 +1066,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         ImmutableList.of(
             new StringDimensionSchema("dim1")
         ),
-        response.getDimensions()
+        response.getLogicalDimensions()
     );
     Assert.assertEquals(
         RowSignature.builder()
@@ -1074,7 +1074,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
                     .add("dim1", ColumnType.STRING)
                     .add("met1", ColumnType.LONG)
                     .build(),
-        response.getSegmentSchema()
+        response.getLogicalSegmentSchema()
     );
 
     List<SamplerResponseRow> data = response.getData();
@@ -1152,7 +1152,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
             new StringDimensionSchema("dim1"),
             new StringDimensionSchema("dim2")
         ),
-        response.getDimensions()
+        response.getLogicalDimensions()
     );
     Assert.assertEquals(
         RowSignature.builder()
@@ -1161,7 +1161,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
                     .add("dim2", ColumnType.STRING)
                     .add("met1", ColumnType.LONG)
                     .build(),
-        response.getSegmentSchema()
+        response.getLogicalSegmentSchema()
     );
 
     List<SamplerResponseRow> data = response.getData();
@@ -1256,7 +1256,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         ImmutableList.of(
             new StringDimensionSchema("dim1PlusBar")
         ),
-        response.getDimensions()
+        response.getLogicalDimensions()
     );
     Assert.assertEquals(
         RowSignature.builder()
@@ -1264,7 +1264,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
                     .add("dim1PlusBar", ColumnType.STRING)
                     .add("met1", ColumnType.LONG)
                     .build(),
-        response.getSegmentSchema()
+        response.getLogicalSegmentSchema()
     );
 
     List<SamplerResponseRow> data = response.getData();
@@ -1339,7 +1339,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
             new StringDimensionSchema("dim1"),
             new StringDimensionSchema("dim2")
         ),
-        response.getDimensions()
+        response.getLogicalDimensions()
     );
     Assert.assertEquals(
         RowSignature.builder()
@@ -1348,7 +1348,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
                     .add("dim2", ColumnType.STRING)
                     .add("met1", ColumnType.LONG)
                     .build(),
-        response.getSegmentSchema()
+        response.getLogicalSegmentSchema()
     );
 
     List<SamplerResponseRow> data = response.getData();
@@ -1442,7 +1442,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         ImmutableList.of(
             new StringDimensionSchema("dim1PlusBar")
         ),
-        response.getDimensions()
+        response.getLogicalDimensions()
     );
     Assert.assertEquals(
         RowSignature.builder()
@@ -1450,7 +1450,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
                     .add("dim1PlusBar", ColumnType.STRING)
                     .add("met1", ColumnType.LONG)
                     .build(),
-        response.getSegmentSchema()
+        response.getLogicalSegmentSchema()
     );
 
     List<SamplerResponseRow> data = response.getData();
@@ -1575,7 +1575,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         ImmutableList.of(
             new StringDimensionSchema("dim1PlusBar")
         ),
-        response.getDimensions()
+        response.getLogicalDimensions()
     );
     Assert.assertEquals(
         RowSignature.builder()
@@ -1583,7 +1583,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
                     .add("dim1PlusBar", ColumnType.STRING)
                     .add("met1", ColumnType.LONG)
                     .build(),
-        response.getSegmentSchema()
+        response.getLogicalSegmentSchema()
     );
 
     List<SamplerResponseRow> data = response.getData();
@@ -1714,7 +1714,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
             new StringDimensionSchema("dim2")
         ),
 
-        response.getDimensions()
+        response.getLogicalDimensions()
     );
     Assert.assertEquals(
         parserType == ParserType.STR_JSON
@@ -1729,7 +1729,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
                       .add("dim2", ColumnType.STRING)
                       .add("met1", ColumnType.LONG)
                       .build(),
-        response.getSegmentSchema()
+        response.getLogicalSegmentSchema()
     );
 
   }
@@ -1775,7 +1775,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
             new StringDimensionSchema("dim1"),
             new StringDimensionSchema("dim2")
         ),
-        response.getDimensions()
+        response.getLogicalDimensions()
     );
     Assert.assertEquals(
         parserType == ParserType.STR_JSON
@@ -1790,7 +1790,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
                       .add("dim2", ColumnType.STRING)
                       .add("met1", ColumnType.LONG)
                       .build(),
-        response.getSegmentSchema()
+        response.getLogicalSegmentSchema()
     );
   }
 
@@ -1831,7 +1831,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
             new StringDimensionSchema("dim1"),
             new StringDimensionSchema("dim2")
         ),
-        response.getDimensions()
+        response.getLogicalDimensions()
     );
     Assert.assertEquals(
         RowSignature.builder()
@@ -1840,7 +1840,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
                     .add("dim2", ColumnType.STRING)
                     .add("met1", ColumnType.LONG)
                     .build(),
-        response.getSegmentSchema()
+        response.getLogicalSegmentSchema()
     );
   }
 
