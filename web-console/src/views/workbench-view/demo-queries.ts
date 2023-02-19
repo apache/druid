@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-import { TabEntry, WorkbenchQuery } from '../../druid-models';
+import type { TabEntry } from '../../druid-models';
+import { WorkbenchQuery } from '../../druid-models';
 
 const BASE_QUERY = WorkbenchQuery.blank();
 

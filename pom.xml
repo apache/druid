@@ -76,7 +76,7 @@
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>5.4.0</apache.curator.version>
-        <apache.kafka.version>3.3.1</apache.kafka.version>
+        <apache.kafka.version>3.4.0</apache.kafka.version>
         <apache.ranger.version>2.0.0</apache.ranger.version>
         <apache.ranger.gson.version>2.2.4</apache.ranger.gson.version>
         <scala.library.version>2.13.9</scala.library.version>
@@ -1520,7 +1520,7 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>7.0.4</version>
+                <version>7.4.4</version>
                 <configuration>
                     <failBuildOnCVSS>7</failBuildOnCVSS>
                     <skipProvidedScope>true</skipProvidedScope>
@@ -1533,6 +1533,19 @@
                 <executions>
                     <execution>
                         <phase>none</phase>  <!-- TODO: Consider enabling so part of dev flow instead of just CI -->
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.cyclonedx</groupId>
+                <artifactId>cyclonedx-maven-plugin</artifactId>
+                <version>2.7.3</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>makeBom</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>

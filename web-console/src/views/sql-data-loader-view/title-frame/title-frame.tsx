@@ -17,7 +17,8 @@
  */
 
 import classNames from 'classnames';
-import React, { ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import React from 'react';
 
 import './title-frame.scss';
 

@@ -90,22 +90,22 @@ export const TableCell = React.memo(function TableCell(props: TableCellProps) {
     );
   }
 
-  if (value !== '' && value != null) {
-    if (value instanceof Date) {
-      const dateValue = value.valueOf();
-      return (
-        <div className="table-cell timestamp" title={String(value.valueOf())}>
-          {isNaN(dateValue) ? 'Unusable date' : value.toISOString()}
-        </div>
-      );
-    } else if (isSimpleArray(value)) {
-      return renderTruncated(`[${value.join(', ')}]`);
-    } else if (typeof value === 'object') {
-      return renderTruncated(JSONBig.stringify(value));
-    } else {
-      return renderTruncated(String(value));
-    }
-  } else {
+  if (value === '') {
+    return <div className="table-cell empty">empty</div>;
+  } else if (value == null) {
     return <div className="table-cell null">null</div>;
+  } else if (value instanceof Date) {
+    const dateValue = value.valueOf();
+    return (
+      <div className="table-cell timestamp" title={String(value.valueOf())}>
+        {isNaN(dateValue) ? 'Unusable date' : value.toISOString()}
+      </div>
+    );
+  } else if (isSimpleArray(value)) {
+    return renderTruncated(`[${value.join(', ')}]`);
+  } else if (typeof value === 'object') {
+    return renderTruncated(JSONBig.stringify(value));
+  } else {
+    return renderTruncated(String(value));
   }
 });

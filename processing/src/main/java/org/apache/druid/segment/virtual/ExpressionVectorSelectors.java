@@ -24,10 +24,14 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
+import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.ConstantVectorSelectors;
+import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -101,6 +105,45 @@ public class ExpressionVectorSelectors
     final Expr.VectorInputBinding bindings = createVectorBindings(plan.getAnalysis(), factory);
     final ExprVectorProcessor<?> processor = plan.getExpression().buildVectorized(bindings);
     return new ExpressionVectorObjectSelector(processor, bindings);
+  }
+
+  public static VectorObjectSelector castValueSelectorToObject(
+      ReadableVectorInspector inspector,
+      String columnName,
+      VectorValueSelector selector,
+      ColumnType selectorType,
+      ColumnType castTo
+  )
+  {
+    ExpressionVectorInputBinding binding = new ExpressionVectorInputBinding(inspector);
+    binding.addNumeric(columnName, ExpressionType.fromColumnType(selectorType), selector);
+    return new ExpressionVectorObjectSelector(
+        CastToTypeVectorProcessor.cast(
+            VectorProcessors.identifier(binding, columnName),
+            ExpressionType.fromColumnType(castTo)
+        ),
+        binding
+    );
+  }
+
+  public static VectorValueSelector castObjectSelectorToNumeric(
+      ReadableVectorInspector inspector,
+      String columnName,
+      VectorObjectSelector selector,
+      ColumnType selectorType,
+      ColumnType castTo
+  )
+  {
+    Preconditions.checkArgument(castTo.isNumeric(), "Must cast to a numeric type to make a value selector");
+    ExpressionVectorInputBinding binding = new ExpressionVectorInputBinding(inspector);
+    binding.addObjectSelector(columnName, ExpressionType.fromColumnType(selectorType), selector);
+    return new ExpressionVectorValueSelector(
+        CastToTypeVectorProcessor.cast(
+            VectorProcessors.identifier(binding, columnName),
+            ExpressionType.fromColumnType(castTo)
+        ),
+        binding
+    );
   }
 
   private static Expr.VectorInputBinding createVectorBindings(

@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.avro;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
 import org.apache.druid.data.input.AvroStreamInputRowParserTest;
@@ -40,9 +41,9 @@ import java.util.Map;
 public class AvroFlattenerMakerTest
 {
   private static final AvroFlattenerMaker FLATTENER_WITHOUT_EXTRACT_UNION_BY_TYPE =
-      new AvroFlattenerMaker(false, false, false);
+      new AvroFlattenerMaker(false, false, false, false);
   private static final AvroFlattenerMaker FLATTENER_WITH_EXTRACT_UNION_BY_TYPE =
-      new AvroFlattenerMaker(false, false, true);
+      new AvroFlattenerMaker(false, false, true, false);
 
   private static final SomeAvroDatum RECORD = AvroStreamInputRowParserTest.buildSomeAvroDatum();
 
@@ -77,7 +78,7 @@ public class AvroFlattenerMakerTest
   @Test
   public void jsonPathExtractorExtractUnionsByType()
   {
-    final AvroFlattenerMaker flattener = new AvroFlattenerMaker(false, false, true);
+    final AvroFlattenerMaker flattener = new AvroFlattenerMaker(false, false, true, false);
 
     // Unmamed types are accessed by type
 
@@ -154,6 +155,103 @@ public class AvroFlattenerMakerTest
         RECORD.getTimestamp(),
         FLATTENER_WITH_EXTRACT_UNION_BY_TYPE.makeJsonQueryExtractor("$.timestamp").apply(RECORD)
     );
+  }
+
+  @Test
+  public void testDiscovery()
+  {
+    final AvroFlattenerMaker flattener = new AvroFlattenerMaker(false, false, true, false);
+    final AvroFlattenerMaker flattenerNested = new AvroFlattenerMaker(false, false, true, true);
+
+    SomeAvroDatum input = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+    // isFieldPrimitive on someStringArray is false
+    // as it contains items as nulls and strings
+    // so flattenerNested should only be able to discover it
+    Assert.assertEquals(
+        ImmutableSet.of(
+            "someOtherId",
+            "someIntArray",
+            "someFloat",
+            "eventType",
+            "someFixed",
+            "someBytes",
+            "someUnion",
+            "id",
+            "someEnum",
+            "someLong",
+            "someInt",
+            "timestamp"
+        ),
+        ImmutableSet.copyOf(flattener.discoverRootFields(input))
+    );
+    Assert.assertEquals(
+        ImmutableSet.of(
+            "someStringValueMap",
+            "someOtherId",
+            "someStringArray",
+            "someIntArray",
+            "someFloat",
+            "isValid",
+            "someIntValueMap",
+            "eventType",
+            "someFixed",
+            "someBytes",
+            "someRecord",
+            "someMultiMemberUnion",
+            "someNull",
+            "someRecordArray",
+            "someUnion",
+            "id",
+            "someEnum",
+            "someLong",
+            "someInt",
+            "timestamp"
+        ),
+        ImmutableSet.copyOf(flattenerNested.discoverRootFields(input))
+    );
+  }
+
+
+  @Test
+  public void testNullsInStringArray()
+  {
+    final AvroFlattenerMaker flattenerNested = new AvroFlattenerMaker(false, false, true, true);
+
+    SomeAvroDatum input = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+
+    Assert.assertEquals(
+        ImmutableSet.of(
+            "someStringValueMap",
+            "someOtherId",
+            "someStringArray",
+            "someIntArray",
+            "someFloat",
+            "isValid",
+            "someIntValueMap",
+            "eventType",
+            "someFixed",
+            "someBytes",
+            "someRecord",
+            "someMultiMemberUnion",
+            "someNull",
+            "someRecordArray",
+            "someUnion",
+            "id",
+            "someEnum",
+            "someLong",
+            "someInt",
+            "timestamp"
+        ),
+        ImmutableSet.copyOf(flattenerNested.discoverRootFields(input))
+    );
+
+    ArrayList<Object> results = (ArrayList<Object>) flattenerNested.getRootField(input, "someStringArray");
+    // 4 strings a 1 null for a total of 5
+    Assert.assertEquals("8", results.get(0).toString());
+    Assert.assertEquals("4", results.get(1).toString());
+    Assert.assertEquals("2", results.get(2).toString());
+    Assert.assertEquals("1", results.get(3).toString());
+    Assert.assertEquals(null, results.get(4));
   }
 
   private void getRootField_common(final SomeAvroDatum record, final AvroFlattenerMaker flattener)

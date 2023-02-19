@@ -76,6 +76,8 @@ public class QueryTestBuilder
 
     PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig);
     ResultsVerifier defaultResultsVerifier(List<Object[]> expectedResults, RowSignature expectedResultSignature);
+
+    boolean isRunningMSQ();
   }
 
   protected final QueryTestConfig config;
@@ -86,6 +88,7 @@ public class QueryTestBuilder
   protected AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
   protected List<Query<?>> expectedQueries;
   protected List<Object[]> expectedResults;
+  protected List<QueryTestRunner.QueryRunStepFactory> customRunners = new ArrayList<>();
   protected List<QueryTestRunner.QueryVerifyStepFactory> customVerifications = new ArrayList<>();
   protected RowSignature expectedResultSignature;
   protected List<ResourceAction> expectedResources;
@@ -93,7 +96,9 @@ public class QueryTestBuilder
   @Nullable
   protected Consumer<ExpectedException> expectedExceptionInitializer;
   protected boolean skipVectorize;
+  protected boolean msqCompatible;
   protected boolean queryCannotVectorize;
+  protected boolean verifyNativeQueries = true;
   protected AuthConfig authConfig = new AuthConfig();
   protected PlannerFixture plannerFixture;
   protected String expectedLogicalPlan;
@@ -156,6 +161,23 @@ public class QueryTestBuilder
     return this;
   }
 
+  public QueryTestBuilder addCustomRunner(
+      QueryTestRunner.QueryRunStepFactory factory
+  )
+  {
+    this.customRunners.add(factory);
+    return this;
+  }
+
+  public QueryTestBuilder setCustomRunners(
+      List<QueryTestRunner.QueryRunStepFactory> factories
+  )
+  {
+    this.customRunners = new ArrayList<>(factories);
+    return this;
+  }
+
+
   public QueryTestBuilder addCustomVerification(
       QueryTestRunner.QueryVerifyStepFactory factory
   )
@@ -210,6 +232,18 @@ public class QueryTestBuilder
     return this;
   }
 
+  public QueryTestBuilder msqCompatible(boolean msqCompatible)
+  {
+    this.msqCompatible = msqCompatible;
+    return this;
+  }
+
+  public QueryTestBuilder verifyNativeQueries(boolean verifyNativeQueries)
+  {
+    this.verifyNativeQueries = verifyNativeQueries;
+    return this;
+  }
+
   public QueryTestBuilder cannotVectorize()
   {
     return cannotVectorize(true);
@@ -250,6 +284,11 @@ public class QueryTestBuilder
   {
     this.expectedSqlSchema = querySchema;
     return this;
+  }
+
+  public List<Query<?>> getExpectedQueries()
+  {
+    return expectedQueries;
   }
 
   public QueryTestRunner build()

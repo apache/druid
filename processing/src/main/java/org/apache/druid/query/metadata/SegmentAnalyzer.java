@@ -222,11 +222,15 @@ public class SegmentAnalyzer
     } else if (capabilities.isDictionaryEncoded().isTrue()) {
       // fallback if no bitmap index
       try (BaseColumn column = columnHolder.getColumn()) {
-        DictionaryEncodedColumn<String> theColumn = (DictionaryEncodedColumn<String>) column;
-        cardinality = theColumn.getCardinality();
-        if (analyzingMinMax() && cardinality > 0) {
-          min = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(0));
-          max = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(cardinality - 1));
+        if (column instanceof DictionaryEncodedColumn) {
+          DictionaryEncodedColumn<String> theColumn = (DictionaryEncodedColumn<String>) column;
+          cardinality = theColumn.getCardinality();
+          if (analyzingMinMax() && cardinality > 0) {
+            min = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(0));
+            max = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(cardinality - 1));
+          }
+        } else {
+          cardinality = 0;
         }
       }
       catch (IOException e) {

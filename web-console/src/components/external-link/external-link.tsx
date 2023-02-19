@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-import React, { ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import React from 'react';
 
 export interface ExternalLinkProps {
   href: string;

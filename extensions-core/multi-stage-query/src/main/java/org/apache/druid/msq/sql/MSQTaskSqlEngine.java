@@ -142,6 +142,11 @@ public class MSQTaskSqlEngine implements SqlEngine
     );
   }
 
+  public OverlordClient overlordClient()
+  {
+    return overlordClient;
+  }
+
   @Override
   public QueryMaker buildQueryMakerForInsert(
       final String targetDataSource,

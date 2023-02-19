@@ -21,6 +21,7 @@ package org.apache.druid.msq.kernel;
 
 import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -42,6 +43,7 @@ public class StageDefinitionBuilder
   private int maxWorkerCount = 1;
   private ShuffleSpec shuffleSpec = null;
   private boolean shuffleCheckHasMultipleValues = false;
+  private long maxInputBytesPerWorker = Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER;
 
   /**
    * Package-private: callers should prefer {@link StageDefinition#builder(int)} rather than this constructor.
@@ -105,6 +107,12 @@ public class StageDefinitionBuilder
     return this;
   }
 
+  public StageDefinitionBuilder maxInputBytesPerWorker(final long maxInputBytesPerWorker)
+  {
+    this.maxInputBytesPerWorker = maxInputBytesPerWorker;
+    return this;
+  }
+
   int getStageNumber()
   {
     return stageNumber;
@@ -125,7 +133,8 @@ public class StageDefinitionBuilder
         signature,
         shuffleSpec,
         maxWorkerCount,
-        shuffleCheckHasMultipleValues
+        shuffleCheckHasMultipleValues,
+        maxInputBytesPerWorker
     );
   }
 }

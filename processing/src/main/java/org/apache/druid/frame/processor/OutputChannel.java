@@ -202,6 +202,11 @@ public class OutputChannel
     return readableChannelUsableWhileWriting || writableChannel == null || writableChannel.isClosed();
   }
 
+  public Supplier<ReadableFrameChannel> getReadableChannelSupplier()
+  {
+    return readableChannelSupplier;
+  }
+
   public int getPartitionNumber()
   {
     return partitionNumber;

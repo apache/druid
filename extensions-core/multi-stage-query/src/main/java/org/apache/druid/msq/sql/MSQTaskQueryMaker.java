@@ -22,6 +22,7 @@ package org.apache.druid.msq.sql;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.common.guava.FutureUtils;
@@ -107,6 +108,7 @@ public class MSQTaskQueryMaker implements QueryMaker
   @Override
   public QueryResponse<Object[]> runQuery(final DruidQuery druidQuery)
   {
+    Hook.QUERY_PLAN.run(druidQuery.getQuery());
     String taskId = MSQTasks.controllerTaskId(plannerContext.getSqlQueryId());
 
     QueryContext queryContext = plannerContext.queryContext();

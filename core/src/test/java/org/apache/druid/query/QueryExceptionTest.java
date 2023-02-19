@@ -95,6 +95,36 @@ public class QueryExceptionTest
     expectFailTypeForCode(FailType.USER_ERROR, QueryException.SQL_QUERY_UNSUPPORTED_ERROR_CODE);
   }
 
+  /**
+   * This test exists primarily to get branch coverage of the null check on the QueryException constructor.
+   * The validations done in this test are not actually intended to be set-in-stone or anything.
+   */
+  @Test
+  public void testCanConstructWithoutThrowable()
+  {
+    QueryException exception = new QueryException(
+        (Throwable) null,
+        QueryException.UNKNOWN_EXCEPTION_ERROR_CODE,
+        "java.lang.Exception",
+        "test"
+    );
+
+    Assert.assertEquals(QueryException.UNKNOWN_EXCEPTION_ERROR_CODE, exception.getErrorCode());
+    Assert.assertNull(exception.getMessage());
+  }
+
+  @Test
+  public void testToStringReturnsUsefulInformation()
+  {
+    QueryException queryException = new QueryException(ERROR_CODE, ERROR_MESSAGE_ORIGINAL, ERROR_CLASS, HOST);
+    String exceptionToString = queryException.toString();
+    Assert.assertTrue(exceptionToString.startsWith(QueryException.class.getSimpleName()));
+    Assert.assertTrue(exceptionToString.contains("msg=" + ERROR_MESSAGE_ORIGINAL));
+    Assert.assertTrue(exceptionToString.contains("code=" + ERROR_CODE));
+    Assert.assertTrue(exceptionToString.contains("class=" + ERROR_CLASS));
+    Assert.assertTrue(exceptionToString.contains("host=" + HOST));
+  }
+
   private void expectFailTypeForCode(FailType expected, String code)
   {
     QueryException exception = new QueryException(new Exception(), code, "java.lang.Exception", "test");

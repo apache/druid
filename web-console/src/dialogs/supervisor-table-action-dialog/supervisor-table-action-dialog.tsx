@@ -23,8 +23,9 @@ import { ShowHistory } from '../../components/show-history/show-history';
 import { cleanSpec } from '../../druid-models';
 import { Api } from '../../singletons';
 import { deepGet } from '../../utils';
-import { BasicAction } from '../../utils/basic-action';
-import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
+import type { BasicAction } from '../../utils/basic-action';
+import type { SideButtonMetaData } from '../table-action-dialog/table-action-dialog';
+import { TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
 import { SupervisorStatisticsTable } from './supervisor-statistics-table/supervisor-statistics-table';
 

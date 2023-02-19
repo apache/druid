@@ -46,6 +46,7 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.log.NoopRequestLogger;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlLifecycleManager;
@@ -209,7 +210,8 @@ public class QueryFrameworkUtils
         createDefaultJoinableFactory(injector),
         SegmentMetadataCacheConfig.create(),
         CalciteTests.TEST_AUTHENTICATOR_ESCALATOR,
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        new NoopServiceEmitter()
     );
 
     try {

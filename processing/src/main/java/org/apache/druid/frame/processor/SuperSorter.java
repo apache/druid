@@ -20,6 +20,7 @@
 package org.apache.druid.frame.processor;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.FutureCallback;
@@ -37,21 +38,19 @@ import it.unimi.dsi.fastutil.longs.LongSortedSet;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.channel.FrameWithPartition;
-import org.apache.druid.frame.channel.ReadableFileFrameChannel;
+import org.apache.druid.frame.channel.PartitionedReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
-import org.apache.druid.frame.channel.WritableFrameFileChannel;
 import org.apache.druid.frame.file.FrameFile;
-import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -60,12 +59,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.math.RoundingMode;
-import java.nio.ByteBuffer;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -128,9 +124,8 @@ public class SuperSorter
   private final List<KeyColumn> sortKey;
   private final ListenableFuture<ClusterByPartitions> outputPartitionsFuture;
   private final FrameProcessorExecutor exec;
-  private final File directory;
-  private final FrameWriterFactory innerFrameWriterFactory;
   private final OutputChannelFactory outputChannelFactory;
+  private final OutputChannelFactory intermediateOutputChannelFactory;
   private final int maxChannelsPerProcessor;
   private final int maxActiveProcessors;
   private final long rowLimit;
@@ -149,6 +144,9 @@ public class SuperSorter
 
   @GuardedBy("runWorkersLock")
   private List<OutputChannel> outputChannels = null;
+
+  @GuardedBy("runWorkersLock")
+  private final Map<String, PartitionedOutputChannel> levelAndRankToReadableChannelMap = new HashMap<>();
 
   @GuardedBy("runWorkersLock")
   private int activeProcessors = 0;
@@ -172,9 +170,6 @@ public class SuperSorter
   private int ultimateMergersRunSoFar = 0;
 
   @GuardedBy("runWorkersLock")
-  private final Map<File, FrameFile> penultimateFrameFileCache = new HashMap<>();
-
-  @GuardedBy("runWorkersLock")
   private SettableFuture<OutputChannels> allDone = null;
 
   @GuardedBy("runWorkersLock")
@@ -189,34 +184,29 @@ public class SuperSorter
   /**
    * Initializes a SuperSorter.
    *
-   * @param inputChannels              input channels. All frames in these channels must be sorted according to the
-   *                                   {@link ClusterBy#getColumns()}, or else sorting will not produce correct
-   *                                   output.
-   * @param frameReader                frame reader for the input channels
-   * @param sortKey                    desired sorting order
-   * @param outputPartitionsFuture     a future that resolves to the desired output partitions. Sorting will block
-   *                                   prior to writing out final outputs until this future resolves. However, the
-   *                                   sorter will be able to read all inputs even if this future is unresolved.
-   *                                   If output need not be partitioned, use
-   *                                   {@link ClusterByPartitions#oneUniversalPartition()}. In this case a single
-   *                                   sorted channel is generated.
-   * @param exec                       executor to perform work in
-   * @param temporaryDirectory         directory to use for scratch files. This must have enough space to store at
-   *                                   least two copies of the dataset in {@link FrameFile} format.
-   * @param outputChannelFactory       factory for partitioned, sorted output channels
-   * @param innerFrameAllocatorFactory factory for allocators that are used to make merged frames for intermediate
-   *                                   levels of merging, prior to the final output. Final output frame allocation is
-   *                                   controlled by outputChannelFactory. One allocator is created per intermediate
-   *                                   scratch file.
-   * @param maxActiveProcessors        maximum number of merging processors to execute at once in the provided
-   *                                   {@link FrameProcessorExecutor}
-   * @param maxChannelsPerProcessor    maximum number of channels to merge at once per merging processor
-   * @param rowLimit                   limit to apply during sorting. The limit is merely advisory: the actual number
-   *                                   of rows returned may be larger than the limit. The limit is applied across
-   *                                   all partitions, not to each partition individually.
-   * @param cancellationId             cancellation id to use when running processors in the provided
-   *                                   {@link FrameProcessorExecutor}.
-   * @param superSorterProgressTracker progress tracker
+   * @param inputChannels                    input channels. All frames in these channels must be sorted according to the
+   *                                         {@link ClusterBy#getColumns()}, or else sorting will not produce correct
+   *                                         output.
+   * @param frameReader                      frame reader for the input channels
+   * @param sortKey                          desired sorting order
+   * @param outputPartitionsFuture           a future that resolves to the desired output partitions. Sorting will block
+   *                                         prior to writing out final outputs until this future resolves. However, the
+   *                                         sorter will be able to read all inputs even if this future is unresolved.
+   *                                         If output need not be partitioned, use
+   *                                         {@link ClusterByPartitions#oneUniversalPartition()}. In this case a single
+   *                                         sorted channel is generated.
+   * @param exec                             executor to perform work in
+   * @param outputChannelFactory             factory for partitioned, sorted output channels
+   * @param intermediateOutputChannelFactory factory for intermediate data produced by sorting levels
+   * @param maxActiveProcessors              maximum number of merging processors to execute at once in the provided
+   *                                         {@link FrameProcessorExecutor}
+   * @param maxChannelsPerProcessor          maximum number of channels to merge at once per merging processor
+   * @param rowLimit                         limit to apply during sorting. The limit is merely advisory: the actual number
+   *                                         of rows returned may be larger than the limit. The limit is applied across
+   *                                         all partitions, not to each partition individually.
+   * @param cancellationId                   cancellation id to use when running processors in the provided
+   *                                         {@link FrameProcessorExecutor}.
+   * @param superSorterProgressTracker       progress tracker
    */
   public SuperSorter(
       final List<ReadableFrameChannel> inputChannels,
@@ -224,9 +214,8 @@ public class SuperSorter
       final List<KeyColumn> sortKey,
       final ListenableFuture<ClusterByPartitions> outputPartitionsFuture,
       final FrameProcessorExecutor exec,
-      final File temporaryDirectory,
       final OutputChannelFactory outputChannelFactory,
-      final MemoryAllocatorFactory innerFrameAllocatorFactory,
+      final OutputChannelFactory intermediateOutputChannelFactory,
       final int maxActiveProcessors,
       final int maxChannelsPerProcessor,
       final long rowLimit,
@@ -239,9 +228,8 @@ public class SuperSorter
     this.sortKey = sortKey;
     this.outputPartitionsFuture = outputPartitionsFuture;
     this.exec = exec;
-    this.directory = temporaryDirectory;
-    this.innerFrameWriterFactory = createFrameWriterFactory(innerFrameAllocatorFactory);
     this.outputChannelFactory = outputChannelFactory;
+    this.intermediateOutputChannelFactory = intermediateOutputChannelFactory;
     this.maxChannelsPerProcessor = maxChannelsPerProcessor;
     this.maxActiveProcessors = maxActiveProcessors;
     this.rowLimit = rowLimit;
@@ -459,7 +447,7 @@ public class SuperSorter
       in.add(singleReadableFrameChannel(new FrameWithPartition(frame, FrameWithPartition.NO_PARTITION)));
     }
 
-    runMerger(0, levelZeroMergersRunSoFar++, in, null);
+    runMerger(0, levelZeroMergersRunSoFar++, in, null, ImmutableList.of());
     return true;
   }
 
@@ -519,19 +507,26 @@ public class SuperSorter
               (pos == maxChannelsPerProcessor - 1 || (totalInputs != UNKNOWN_TOTAL && w == totalInputs - 1))) {
             // We found a set to merge. Let's collect the input channels and launch the merger.
             final List<ReadableFrameChannel> in = new ArrayList<>();
+            final List<PartitionedReadableFrameChannel> partitionedReadableFrameChannels = new ArrayList<>();
             for (long i = currentSetStart; i < currentSetStart + maxChannelsPerProcessor; i++) {
               if (inputsReady.remove(i)) {
-                try {
-                  final FrameFile handle = FrameFile.open(mergerOutputFile(inLevel, i), FrameFile.Flag.DELETE_ON_CLOSE);
-                  in.add(new ReadableFileFrameChannel(handle));
-                }
-                catch (IOException e) {
-                  throw new RuntimeException(e);
-                }
+                String levelAndRankKey = mergerOutputFileName(inLevel, i);
+                PartitionedReadableFrameChannel partitionedReadableFrameChannel =
+                    levelAndRankToReadableChannelMap.remove(levelAndRankKey)
+                                                    .getReadableChannelSupplier()
+                                                    .get();
+                in.add(partitionedReadableFrameChannel.getReadableFrameChannel(0));
+                partitionedReadableFrameChannels.add(partitionedReadableFrameChannel);
               }
             }
 
-            runMerger(outLevel, currentSetStart / maxChannelsPerProcessor, in, outPartitions);
+            runMerger(
+                outLevel,
+                currentSetStart / maxChannelsPerProcessor,
+                in,
+                outPartitions,
+                partitionedReadableFrameChannels
+            );
             return true;
           } else if (w == currentSetStart + currentSetIndex + 1) {
             currentSetIndex++;
@@ -573,24 +568,11 @@ public class SuperSorter
     final List<ReadableFrameChannel> in = new ArrayList<>(numInputs);
 
     for (long i = 0; i < numInputs; i++) {
-      final FrameFile fileHandle = penultimateFrameFileCache.computeIfAbsent(
-          mergerOutputFile(inLevel, i),
-          file -> {
-            try {
-              return FrameFile.open(file, FrameFile.Flag.DELETE_ON_CLOSE);
-            }
-            catch (IOException e) {
-              throw new RuntimeException(e);
-            }
-          }
-      ).newReference();
-
       in.add(
-          new ReadableFileFrameChannel(
-              fileHandle,
-              fileHandle.getPartitionStartFrame(ultimateMergersRunSoFar),
-              fileHandle.getPartitionStartFrame(ultimateMergersRunSoFar + 1)
-          )
+          levelAndRankToReadableChannelMap.get(mergerOutputFileName(inLevel, i))
+                                          .getReadableChannelSupplier()
+                                          .get()
+                                          .getReadableFrameChannel(ultimateMergersRunSoFar)
       );
     }
 
@@ -598,7 +580,7 @@ public class SuperSorter
       outputChannels = Arrays.asList(new OutputChannel[getOutputPartitions().size()]);
     }
 
-    runMerger(outLevel, ultimateMergersRunSoFar, in, null);
+    runMerger(outLevel, ultimateMergersRunSoFar, in, null, ImmutableList.of());
     ultimateMergersRunSoFar++;
     return true;
   }
@@ -608,32 +590,29 @@ public class SuperSorter
       final int level,
       final long rank,
       final List<ReadableFrameChannel> in,
-      @Nullable final ClusterByPartitions partitions
+      @Nullable final ClusterByPartitions partitions,
+      final List<PartitionedReadableFrameChannel> partitionedReadableChannelsToClose
   )
   {
     try {
       final WritableFrameChannel writableChannel;
-      final FrameWriterFactory frameWriterFactory;
+      final MemoryAllocatorFactory frameAllocatorFactory;
+      String levelAndRankKey = mergerOutputFileName(level, rank);
 
       if (totalMergingLevels != UNKNOWN_LEVEL && level == totalMergingLevels - 1) {
         final int intRank = Ints.checkedCast(rank);
         final OutputChannel outputChannel = outputChannelFactory.openChannel(intRank);
         outputChannels.set(intRank, outputChannel.readOnly());
-        frameWriterFactory =
-            createFrameWriterFactory(new SingleMemoryAllocatorFactory(outputChannel.getFrameMemoryAllocator()));
+        frameAllocatorFactory = new SingleMemoryAllocatorFactory(outputChannel.getFrameMemoryAllocator());
         writableChannel = outputChannel.getWritableChannel();
       } else {
-        frameWriterFactory = innerFrameWriterFactory;
-        writableChannel = new WritableFrameFileChannel(
-            FrameFileWriter.open(
-                Files.newByteChannel(
-                    mergerOutputFile(level, rank).toPath(),
-                    StandardOpenOption.CREATE_NEW,
-                    StandardOpenOption.WRITE
-                ),
-                ByteBuffer.allocate(Frame.compressionBufferSize(frameWriterFactory.allocatorCapacity()))
-            )
+        PartitionedOutputChannel partitionedOutputChannel = intermediateOutputChannelFactory.openPartitionedChannel(
+            levelAndRankKey,
+            true
         );
+        writableChannel = partitionedOutputChannel.getWritableChannel();
+        frameAllocatorFactory = new SingleMemoryAllocatorFactory(partitionedOutputChannel.getFrameMemoryAllocator());
+        levelAndRankToReadableChannelMap.put(levelAndRankKey, partitionedOutputChannel);
       }
 
       final FrameChannelMerger worker =
@@ -641,7 +620,13 @@ public class SuperSorter
               in,
               frameReader,
               writableChannel,
-              frameWriterFactory,
+              FrameWriters.makeFrameWriterFactory(
+                  FrameType.ROW_BASED, // Row-based frames are generally preferred as inputs to mergers
+                  frameAllocatorFactory,
+                  frameReader.signature(),
+                  // No sortColumns, because FrameChannelMerger generates frames that are sorted all on its own
+                  Collections.emptyList()
+              ),
               sortKey,
               partitions,
               rowLimit
@@ -652,6 +637,17 @@ public class SuperSorter
           outputsReadyByLevel.computeIfAbsent(level, ignored2 -> new LongRBTreeSet())
                              .add(rank);
           superSorterProgressTracker.addMergedBatchesForLevel(level, 1);
+          for (PartitionedReadableFrameChannel partitionedReadableFrameChannel : partitionedReadableChannelsToClose) {
+            try {
+              partitionedReadableFrameChannel.close();
+            }
+            catch (IOException e) {
+              throw new UncheckedIOException(
+                  StringUtils.format("Could not close channel for level [%d] and rank [%d]", level, rank),
+                  e
+              );
+            }
+          }
         }
       });
     }
@@ -807,15 +803,16 @@ public class SuperSorter
 
     outputsReadyByLevel.clear();
     inputBuffer.clear();
-
-    for (FrameFile frameFile : penultimateFrameFileCache.values()) {
-      CloseableUtils.closeAndSuppressExceptions(
-          frameFile,
-          e -> log.warn(e, "Could not close intermediate file [%s]", frameFile.file())
-      );
+    for (Map.Entry<String, PartitionedOutputChannel> cleanupEntry :
+        levelAndRankToReadableChannelMap.entrySet()) {
+      try {
+        cleanupEntry.getValue().getReadableChannelSupplier().get().close();
+      }
+      catch (IOException e) {
+        throw new UncheckedIOException("Unable to close channel for name : " + cleanupEntry.getKey(), e);
+      }
     }
-
-    penultimateFrameFileCache.clear();
+    levelAndRankToReadableChannelMap.clear();
 
     if (!inputChannelsToRead.isEmpty()) {
       for (final ReadableFrameChannel inputChannel : inputChannels) {
@@ -831,19 +828,9 @@ public class SuperSorter
     inputChannelsToRead.clear();
   }
 
-  private File mergerOutputFile(final int level, final long rank)
+  private String mergerOutputFileName(final int level, final long rank)
   {
-    return new File(directory, StringUtils.format("merged.%d.%d", level, rank));
-  }
-
-  private FrameWriterFactory createFrameWriterFactory(final MemoryAllocatorFactory allocatorFactory)
-  {
-    return FrameWriters.makeFrameWriterFactory(
-        FrameType.ROW_BASED,
-        allocatorFactory,
-        frameReader.signature(),
-        Collections.emptyList() // No sorting, because input frames are already sorted; we just merge them.
-    );
+    return StringUtils.format("merged.%d.%d", level, rank);
   }
 
   /**

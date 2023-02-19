@@ -31,10 +31,10 @@ description: Introduces multi-stage query architecture and its task engine
 Apache Druid supports SQL-based ingestion using the bundled [`druid-multi-stage-query` extension](#load-the-extension).
 This extension adds a [multi-stage query task engine for SQL](concepts.md#multi-stage-query-task-engine) that allows running SQL
 [INSERT](concepts.md#insert) and [REPLACE](concepts.md#replace) statements as batch tasks. As an experimental feature,
-the task engine also supports running SELECT queries as batch tasks.
+the task engine also supports running `SELECT` queries as batch tasks.
 
-Nearly all SELECT capabilities are available in the multi-stage query (MSQ) task engine, with certain exceptions listed on the [Known
-issues](./known-issues.md#select) page. This allows great flexibility to apply transformations, filters, JOINs,
+Nearly all `SELECT` capabilities are available in the multi-stage query (MSQ) task engine, with certain exceptions listed on the [Known
+issues](./known-issues.md#select-statement) page. This allows great flexibility to apply transformations, filters, JOINs,
 aggregations, and so on as part of `INSERT ... SELECT` and `REPLACE ... SELECT` statements. This also allows in-database
 transformation: creating new tables based on queries of other tables.
 
@@ -64,8 +64,9 @@ To add the extension to an existing cluster, add `druid-multi-stage-query` to `d
 
 For more information about how to load an extension, see [Loading extensions](../development/extensions.md#loading-extensions).
 
-To use [EXTERN](reference.md#extern), you need READ permission on the resource named "EXTERNAL" of the resource type
-"EXTERNAL". If you encounter a 403 error when trying to use EXTERN, verify that you have the correct permissions.
+To use [EXTERN](reference.md#extern-function), you need READ permission on the resource named "EXTERNAL" of the resource type
+"EXTERNAL". If you encounter a 403 error when trying to use `EXTERN`, verify that you have the correct permissions.
+The same is true of any of the input-source specific table function such as `S3` or `LOCALFILES`.
 
 ## Next steps
 

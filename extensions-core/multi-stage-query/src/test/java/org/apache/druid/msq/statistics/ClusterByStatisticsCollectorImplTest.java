@@ -67,8 +67,11 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
 {
   private static final double PARTITION_SIZE_LEEWAY = 0.3;
 
-  private static final RowSignature SIGNATURE =
-      RowSignature.builder().add("x", ColumnType.LONG).add("y", ColumnType.LONG).build();
+  private static final RowSignature SIGNATURE = RowSignature.builder()
+                                                            .add("x", ColumnType.LONG)
+                                                            .add("y", ColumnType.LONG)
+                                                            .add("z", ColumnType.STRING)
+                                                            .build();
 
   private static final ClusterBy CLUSTER_BY_X = new ClusterBy(
       ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING)),
@@ -77,6 +80,10 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
 
   private static final ClusterBy CLUSTER_BY_XY_BUCKET_BY_X = new ClusterBy(
       ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING), new KeyColumn("y", KeyOrder.ASCENDING)),
+      1
+  );
+  private static final ClusterBy CLUSTER_BY_XYZ_BUCKET_BY_X = new ClusterBy(
+      ImmutableList.of(new SortColumn("x", false), new SortColumn("y", false), new SortColumn("z", false)),
       1
   );
 
@@ -437,6 +444,17 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
           verifySnapshotSerialization(testName, collector, aggregate);
         }
     );
+  }
+
+  @Test
+  public void testBucketDownsampledToSingleKeyFinishesCorrectly()
+  {
+    ClusterByStatisticsCollectorImpl clusterByStatisticsCollector = makeCollector(CLUSTER_BY_XYZ_BUCKET_BY_X, false);
+
+    clusterByStatisticsCollector.add(createKey(CLUSTER_BY_XYZ_BUCKET_BY_X, 1, 1, "Extremely long key string for unit test; Extremely long key string for unit test;"), 2);
+    clusterByStatisticsCollector.add(createKey(CLUSTER_BY_XYZ_BUCKET_BY_X, 2, 1, "b"), 2);
+
+    clusterByStatisticsCollector.downSample();
   }
 
   @Test(expected = IllegalArgumentException.class)

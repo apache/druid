@@ -55,6 +55,8 @@ import org.apache.druid.msq.indexing.error.NotEnoughMemoryFault;
 import org.apache.druid.msq.indexing.error.QueryNotSupportedFault;
 import org.apache.druid.msq.indexing.error.RowTooLargeFault;
 import org.apache.druid.msq.indexing.error.TaskStartTimeoutFault;
+import org.apache.druid.msq.indexing.error.TooManyAttemptsForJob;
+import org.apache.druid.msq.indexing.error.TooManyAttemptsForWorker;
 import org.apache.druid.msq.indexing.error.TooManyBucketsFault;
 import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
@@ -123,8 +125,10 @@ public class MSQIndexingModule implements DruidModule
       TooManyRowsWithSameKeyFault.class,
       TooManyWarningsFault.class,
       TooManyWorkersFault.class,
+      TooManyAttemptsForJob.class,
       UnknownFault.class,
       WorkerFailedFault.class,
+      TooManyAttemptsForWorker.class,
       WorkerRpcFailedFault.class
   );
 

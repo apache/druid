@@ -384,7 +384,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
    * Returns a Pair of "rightPrefix" (for JoinDataSource) and the signature of rows that will result from
    * applying that prefix.
    */
-  private static Pair<String, RowSignature> computeJoinRowSignature(
+  static Pair<String, RowSignature> computeJoinRowSignature(
       final RowSignature leftSignature,
       final RowSignature rightSignature
   )

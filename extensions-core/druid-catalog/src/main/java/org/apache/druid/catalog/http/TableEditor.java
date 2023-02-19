@@ -28,12 +28,13 @@ import org.apache.druid.catalog.http.TableEditRequest.MoveColumn.Position;
 import org.apache.druid.catalog.http.TableEditRequest.UnhideColumns;
 import org.apache.druid.catalog.http.TableEditRequest.UpdateColumns;
 import org.apache.druid.catalog.http.TableEditRequest.UpdateProperties;
+import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.TableDefn;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
-import org.apache.druid.catalog.model.table.AbstractDatasourceDefn;
+import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.catalog.storage.CatalogStorage;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.utils.CollectionUtils;
@@ -129,7 +130,7 @@ public class TableEditor
    */
   private TableSpec applyHiddenColumns(TableMetadata table, List<String> columns) throws CatalogException
   {
-    if (!AbstractDatasourceDefn.isDatasource(table.spec().type())) {
+    if (!DatasourceDefn.isDatasource(table.spec().type())) {
       throw CatalogException.badRequest("hideColumns is supported only for data source specs");
     }
     TableSpec spec = table.spec();
@@ -138,7 +139,7 @@ public class TableEditor
     }
     Map<String, Object> props = spec.properties();
     @SuppressWarnings("unchecked")
-    List<String> hiddenColumns = (List<String>) props.get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY);
+    List<String> hiddenColumns = (List<String>) props.get(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY);
     if (hiddenColumns == null) {
       hiddenColumns = Collections.emptyList();
     }
@@ -155,7 +156,7 @@ public class TableEditor
       return null;
     }
     Map<String, Object> revisedProps = new HashMap<>(props);
-    revisedProps.put(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY, revised);
+    revisedProps.put(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY, revised);
     return spec.withProperties(revisedProps);
   }
 
@@ -180,13 +181,13 @@ public class TableEditor
   private TableSpec applyUnhideColumns(TableMetadata table, List<String> columns) throws CatalogException
   {
     final TableSpec existingSpec = table.spec();
-    if (!AbstractDatasourceDefn.isDatasource(existingSpec.type())) {
+    if (!DatasourceDefn.isDatasource(existingSpec.type())) {
       throw CatalogException.badRequest("hideColumns is supported only for data source specs");
     }
 
     final Map<String, Object> props = existingSpec.properties();
     @SuppressWarnings("unchecked")
-    List<String> hiddenColumns = (List<String>) props.get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY);
+    List<String> hiddenColumns = (List<String>) props.get(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY);
     if (hiddenColumns == null || columns.isEmpty()) {
       return null;
     }
@@ -203,9 +204,9 @@ public class TableEditor
     }
     final Map<String, Object> revisedProps = new HashMap<>(props);
     if (revisedHiddenCols.isEmpty()) {
-      revisedProps.remove(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY);
+      revisedProps.remove(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY);
     } else {
-      revisedProps.put(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY, revisedHiddenCols);
+      revisedProps.put(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY, revisedHiddenCols);
     }
     return existingSpec.withProperties(revisedProps);
   }
@@ -276,7 +277,7 @@ public class TableEditor
 
   private TableDefn resolveDefn(String tableType) throws CatalogException
   {
-    TableDefn defn = catalog.tableRegistry().defnFor(tableType);
+    TableDefn defn = catalog.tableRegistry().tableDefnFor(tableType);
     if (defn == null) {
       throw new CatalogException(
           CatalogException.BAD_STATE,
@@ -309,7 +310,7 @@ public class TableEditor
     final TableDefn defn = resolveDefn(existingSpec.type());
     final List<ColumnSpec> revised = defn.mergeColumns(existingSpec.columns(), updates);
     try {
-      defn.validateColumns(revised, catalog.jsonMapper());
+      defn.validateColumns(revised);
     }
     catch (IAE e) {
       throw CatalogException.badRequest(e.getMessage());
@@ -342,13 +343,13 @@ public class TableEditor
     final TableSpec existingSpec = table.spec();
     final List<ColumnSpec> existingCols = existingSpec.columns();
     final List<ColumnSpec> revised = new ArrayList<>(existingCols);
-    final int colPosn = findColumn(existingCols, moveColumn.column);
+    final int colPosn = CatalogUtils.findColumn(existingCols, moveColumn.column);
     if (colPosn == -1) {
       throw CatalogException.badRequest("Column [%s] is not defined", moveColumn.column);
     }
     int anchorPosn;
     if (moveColumn.where == Position.BEFORE || moveColumn.where == Position.AFTER) {
-      anchorPosn = findColumn(existingCols, moveColumn.anchor);
+      anchorPosn = CatalogUtils.findColumn(existingCols, moveColumn.anchor);
       if (anchorPosn == -1) {
         throw CatalogException.badRequest("Anchor [%s] is not defined", moveColumn.column);
       }
@@ -376,15 +377,5 @@ public class TableEditor
     }
 
     return existingSpec.withColumns(revised);
-  }
-
-  private static int findColumn(List<ColumnSpec> columns, String colName)
-  {
-    for (int i = 0; i < columns.size(); i++) {
-      if (columns.get(i).name().equals(colName)) {
-        return i;
-      }
-    }
-    return -1;
   }
 }

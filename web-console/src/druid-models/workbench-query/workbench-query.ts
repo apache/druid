@@ -16,31 +16,35 @@
  * limitations under the License.
  */
 
+import type {
+  SqlClusteredByClause,
+  SqlExpression,
+  SqlPartitionedByClause,
+  SqlQuery,
+} from 'druid-query-toolkit';
 import {
   C,
   F,
-  SqlClusteredByClause,
-  SqlExpression,
   SqlLiteral,
   SqlOrderByClause,
   SqlOrderByExpression,
-  SqlPartitionedByClause,
-  SqlQuery,
   SqlTable,
 } from 'druid-query-toolkit';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 import { v4 as uuidv4 } from 'uuid';
 
-import { ColumnMetadata, deleteKeys, generate8HexId } from '../../utils';
-import { DruidEngine, validDruidEngine } from '../druid-engine/druid-engine';
-import { LastExecution } from '../execution/execution';
-import { ExternalConfig } from '../external-config/external-config';
+import type { ColumnMetadata } from '../../utils';
+import { deleteKeys, generate8HexId } from '../../utils';
+import type { DruidEngine } from '../druid-engine/druid-engine';
+import { validDruidEngine } from '../druid-engine/druid-engine';
+import type { LastExecution } from '../execution/execution';
+import type { ExternalConfig } from '../external-config/external-config';
 import {
   externalConfigToIngestQueryPattern,
   ingestQueryPatternToQuery,
 } from '../ingest-query-pattern/ingest-query-pattern';
-import { QueryContext } from '../query-context/query-context';
+import type { QueryContext } from '../query-context/query-context';
 
 import { WorkbenchQueryPart } from './workbench-query-part';
 

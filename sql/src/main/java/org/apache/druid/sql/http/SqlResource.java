@@ -48,9 +48,7 @@ import org.apache.druid.sql.SqlRowTransformer;
 import org.apache.druid.sql.SqlStatementFactory;
 
 import javax.annotation.Nullable;
-import javax.servlet.AsyncContext;
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.POST;
@@ -63,7 +61,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -121,22 +121,8 @@ public class SqlResource
     try {
       Thread.currentThread().setName(StringUtils.format("sql[%s]", sqlQueryId));
 
-      // We use an async context not because we are actually going to run this async, but because we want to delay
-      // the decision of what the response code should be until we have gotten the first few data points to return.
-      // Returning a Response object from this point forward requires that object to know the status code, which we
-      // don't actually know until we are in the accumulator, but if we try to return a Response object from the
-      // accumulator, we cannot properly stream results back, because the accumulator won't release control of the
-      // Response until it has consumed the underlying Sequence.
-      final AsyncContext asyncContext = req.startAsync();
-
-      try {
-        QueryResultPusher pusher = new SqlResourceQueryResultPusher(asyncContext, sqlQueryId, stmt, sqlQuery);
-        pusher.push();
-        return null;
-      }
-      finally {
-        asyncContext.complete();
-      }
+      QueryResultPusher pusher = makePusher(req, stmt, sqlQuery);
+      return pusher.push();
     }
     finally {
       Thread.currentThread().setName(currThreadName);
@@ -213,27 +199,43 @@ public class SqlResource
     }
   }
 
+  private SqlResourceQueryResultPusher makePusher(HttpServletRequest req, HttpStatement stmt, SqlQuery sqlQuery)
+  {
+    final String sqlQueryId = stmt.sqlQueryId();
+    Map<String, String> headers = new LinkedHashMap<>();
+    headers.put(SQL_QUERY_ID_RESPONSE_HEADER, sqlQueryId);
+
+    if (sqlQuery.includeHeader()) {
+      headers.put(SQL_HEADER_RESPONSE_HEADER, SQL_HEADER_VALUE);
+    }
+
+    return new SqlResourceQueryResultPusher(req, sqlQueryId, stmt, sqlQuery, headers);
+  }
+
   private class SqlResourceQueryResultPusher extends QueryResultPusher
   {
+
     private final String sqlQueryId;
     private final HttpStatement stmt;
     private final SqlQuery sqlQuery;
 
     public SqlResourceQueryResultPusher(
-        AsyncContext asyncContext,
+        HttpServletRequest req,
         String sqlQueryId,
         HttpStatement stmt,
-        SqlQuery sqlQuery
+        SqlQuery sqlQuery,
+        Map<String, String> headers
     )
     {
       super(
-          (HttpServletResponse) asyncContext.getResponse(),
+          req,
           SqlResource.this.jsonMapper,
           SqlResource.this.responseContextConfig,
           SqlResource.this.selfNode,
           SqlResource.QUERY_METRIC_COUNTER,
           sqlQueryId,
-          MediaType.APPLICATION_JSON_TYPE
+          MediaType.APPLICATION_JSON_TYPE,
+          headers
       );
       this.sqlQueryId = sqlQueryId;
       this.stmt = stmt;
@@ -245,19 +247,17 @@ public class SqlResource
     {
       return new ResultsWriter()
       {
+        private QueryResponse<Object[]> queryResponse;
         private ResultSet thePlan;
 
         @Override
         @Nullable
-        @SuppressWarnings({"unchecked", "rawtypes"})
-        public QueryResponse<Object> start(HttpServletResponse response)
+        public Response.ResponseBuilder start()
         {
-          response.setHeader(SQL_QUERY_ID_RESPONSE_HEADER, sqlQueryId);
-
-          final QueryResponse<Object[]> retVal;
           try {
             thePlan = stmt.plan();
-            retVal = thePlan.run();
+            queryResponse = thePlan.run();
+            return null;
           }
           catch (RelOptPlanner.CannotPlanException e) {
             throw new SqlPlanningException(
@@ -276,12 +276,13 @@ public class SqlResource
             // doesn't implement org.apache.druid.common.exception.SanitizableException.
             throw new QueryInterruptedException(e);
           }
+        }
 
-          if (sqlQuery.includeHeader()) {
-            response.setHeader(SQL_HEADER_RESPONSE_HEADER, SQL_HEADER_VALUE);
-          }
-
-          return (QueryResponse) retVal;
+        @Override
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        public QueryResponse<Object> getQueryResponse()
+        {
+          return (QueryResponse) queryResponse;
         }
 
         @Override
@@ -343,6 +344,11 @@ public class SqlResource
         @Override
         public void recordFailure(Exception e)
         {
+          if (sqlQuery.queryContext().isDebug()) {
+            log.warn(e, "Exception while processing sqlQueryId[%s]", sqlQueryId);
+          } else {
+            log.noStackTrace().warn(e, "Exception while processing sqlQueryId[%s]", sqlQueryId);
+          }
           stmt.reporter().failed(e);
         }
 

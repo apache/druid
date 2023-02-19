@@ -288,7 +288,7 @@ def verify_service_config(service, config):
 
         mm_task_java_opts_prop, mm_task_worker_capacity_prop = task_memory_params_present(config, MIDDLE_MANAGER)
 
-        if mm_task_java_opts_property is False:
+        if mm_task_java_opts_prop is False:
             raise ValueError('{0} property missing in {1}/runtime.properties'.format(TASK_JAVA_OPTS_PROPERTY, service))
 
 
