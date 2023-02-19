@@ -500,11 +500,7 @@ public class DruidOperatorTable implements SqlOperatorTable
       final SqlNameMatcher nameMatcher
   )
   {
-    if (opName == null) {
-      return;
-    }
-
-    if (opName.names.size() != 1) {
+    if (opName == null || opName.names.size() != 1) {
       return;
     }
 

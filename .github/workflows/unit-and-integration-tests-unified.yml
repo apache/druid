@@ -16,10 +16,20 @@
 name: Unit & Integration tests CI
 on:
   push:
+    paths-ignore:
+      - 'docs/**'
+      - 'dev/**'
+      - 'helm/**'
+      - 'web-console/**'
     branches:
       - master
       - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
   pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - 'dev/**'
+      - 'helm/**'
+      - 'web-console/**'
     branches:
       - master
       - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
@@ -29,6 +39,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  MYSQL_DRIVER_CLASSNAME: com.mysql.jdbc.Driver # Used to set druid config in docker image for revised ITs
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
 
 jobs:
