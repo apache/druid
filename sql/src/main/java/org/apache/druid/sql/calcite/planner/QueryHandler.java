@@ -57,7 +57,6 @@ import org.apache.calcite.util.Pair;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryException;
@@ -591,28 +590,23 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
 
   private DruidException buildSQLPlanningError(RelOptPlanner.CannotPlanException exception)
   {
-    Logger logger = log;
-    if (!handlerContext.queryContext().isDebug()) {
-      logger = log.noStackTrace();
-    }
-    DruidException.Builder builder = DruidException.internalError(
-          "Unsupported SQL query - failed to convert to a Druid native query"
-         )
-        .cause(exception)
-        .context("SQL", handlerContext.plannerContext().getSql())
-        .code(QueryException.QUERY_UNSUPPORTED_ERROR_CODE);
     String errorMessage = handlerContext.plannerContext().getPlanningError();
     if (null == errorMessage && exception instanceof UnsupportedSQLQueryException) {
-      builder.context("Specific error", errorMessage);
+      errorMessage = exception.getMessage();
     }
     if (null == errorMessage) {
-      builder.context("Note", "Please check Broker logs for additional details.");
+      errorMessage = "Please check Broker logs for additional details.";
     } else {
-      // Planning errors are more like hints: it isn't guaranteed that the
-      // planning error is actually what went wrong.
-      builder.context("Possible error", errorMessage);
+      // Planning errors are more like hints: it isn't guaranteed that the planning error is actually what went wrong.
+      errorMessage = "Possible error: " + errorMessage;
     }
-    return builder.build(logger);
+    // Finally, add the query itself to error message that user will get.
+    return DruidException
+        .unsupportedSql("Query not supported. %s", errorMessage)
+        .code(QueryException.SQL_QUERY_UNSUPPORTED_ERROR_CODE)
+        .cause(exception)
+        .context("SQL", handlerContext.plannerContext().getSql())
+        .build();
   }
 
   public static class SelectHandler extends QueryHandler

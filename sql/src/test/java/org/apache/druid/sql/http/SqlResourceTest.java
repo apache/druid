@@ -34,6 +34,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.guava.SettableSupplier;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
@@ -1334,12 +1335,12 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testCannotParse() throws Exception
   {
-    QueryException exception = postSyncForException("FROM druid.foo", Status.BAD_REQUEST.getStatusCode());
+    ErrorResponse exception = postSyncForException("FROM druid.foo", Status.BAD_REQUEST.getStatusCode());
 
     Assert.assertNotNull(exception);
     Assert.assertEquals(PlanningError.SQL_PARSE_ERROR.getErrorCode(), exception.getErrorCode());
     Assert.assertEquals(PlanningError.SQL_PARSE_ERROR.getErrorClass(), exception.getErrorClass());
-    Assert.assertTrue(exception.getMessage().contains("Encountered \"FROM\" at line 1, column 1."));
+    Assert.assertTrue(exception.getMessage().contains("Line 1, Column 1: unexpected token 'FROM'"));
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
@@ -1347,7 +1348,7 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testCannotValidate() throws Exception
   {
-    QueryException exception = postSyncForException("SELECT dim4 FROM druid.foo", Status.BAD_REQUEST.getStatusCode());
+    ErrorResponse exception = postSyncForException("SELECT dim4 FROM druid.foo", Status.BAD_REQUEST.getStatusCode());
 
     Assert.assertNotNull(exception);
     Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), exception.getErrorCode());
@@ -1362,11 +1363,11 @@ public class SqlResourceTest extends CalciteTestBase
   {
     // SELECT + ORDER unsupported
     final SqlQuery unsupportedQuery = createSimpleQueryWithId("id", "SELECT dim1 FROM druid.foo ORDER BY dim1");
-    QueryException exception = postSyncForException(unsupportedQuery, Status.BAD_REQUEST.getStatusCode());
+    ErrorResponse exception = postSyncForException(unsupportedQuery, Status.BAD_REQUEST.getStatusCode());
 
     Assert.assertTrue((Boolean) req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED));
     Assert.assertNotNull(exception);
-    Assert.assertEquals("SQL query is unsupported", exception.getErrorCode());
+    Assert.assertEquals(QueryException.SQL_QUERY_UNSUPPORTED_ERROR_CODE, exception.getErrorCode());
     Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorClass(), exception.getErrorClass());
     Assert.assertTrue(
         exception.getMessage()
@@ -1386,7 +1387,7 @@ public class SqlResourceTest extends CalciteTestBase
   public void testCannotConvert_UnsupportedSQLQueryException() throws Exception
   {
     // max(string) unsupported
-    QueryException exception = postSyncForException(
+    ErrorResponse exception = postSyncForException(
         "SELECT max(dim1) FROM druid.foo",
         Status.BAD_REQUEST.getStatusCode()
     );
@@ -1395,9 +1396,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorCode(), exception.getErrorCode());
     Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorClass(), exception.getErrorClass());
     Assert.assertTrue(
-        exception.getMessage()
-                 .contains("Query not supported. " +
-                           "Possible error: Max aggregation is not supported for 'STRING' type")
+        exception.getMessage().contains("MAX does not support type STRING")
     );
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
@@ -1437,7 +1436,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     String errorMessage = "This will be supported in Druid 9999";
     failOnExecute(errorMessage);
-    QueryException exception = postSyncForException(
+    ErrorResponse exception = postSyncForException(
         new SqlQuery(
             "SELECT ANSWER TO LIFE",
             ResultFormat.OBJECT,
@@ -1533,7 +1532,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     String errorMessage = "This will be supported in Druid 9999";
     failOnExecute(errorMessage);
-    QueryException exception = postSyncForException(
+    ErrorResponse exception = postSyncForException(
         new SqlQuery(
             "SELECT ANSWER TO LIFE",
             ResultFormat.OBJECT,
@@ -1585,7 +1584,7 @@ public class SqlResourceTest extends CalciteTestBase
     onExecute = s -> {
       throw new AssertionError(errorMessage);
     };
-    QueryException exception = postSyncForException(
+    ErrorResponse exception = postSyncForException(
         new SqlQuery(
             "SELECT ANSWER TO LIFE",
             ResultFormat.OBJECT,
@@ -1713,7 +1712,7 @@ public class SqlResourceTest extends CalciteTestBase
         sqlQueryId
     );
 
-    QueryException exception = postSyncForException(
+    ErrorResponse exception = postSyncForException(
         new SqlQuery(
             "SELECT CAST(__time AS DATE), dim1, dim2, dim3 FROM druid.foo GROUP by __time, dim1, dim2, dim3 ORDER BY dim2 DESC",
             ResultFormat.OBJECT,
@@ -1873,7 +1872,7 @@ public class SqlResourceTest extends CalciteTestBase
   public void testQueryContextKeyNotAllowed() throws Exception
   {
     Map<String, Object> queryContext = ImmutableMap.of(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY, "all");
-    QueryException exception = postSyncForException(
+    ErrorResponse exception = postSyncForException(
         new SqlQuery("SELECT 1337", ResultFormat.OBJECT, false, false, false, queryContext, null),
         Status.BAD_REQUEST.getStatusCode()
     );
@@ -1882,7 +1881,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), exception.getErrorCode());
     MatcherAssert.assertThat(
         exception.getMessage(),
-        CoreMatchers.containsString("Cannot execute query with context parameter [sqlInsertSegmentGranularity]")
+        CoreMatchers.containsString("Query context parameter 'sqlInsertSegmentGranularity' is not allowed")
     );
     checkSqlRequestLog(false);
   }
@@ -2014,16 +2013,16 @@ public class SqlResourceTest extends CalciteTestBase
     return response;
   }
 
-  private QueryException postSyncForException(String s, int expectedStatus) throws IOException
+  private ErrorResponse postSyncForException(String s, int expectedStatus) throws IOException
   {
     return postSyncForException(createSimpleQueryWithId("id", s), expectedStatus);
   }
 
-  private QueryException postSyncForException(SqlQuery query, int expectedStatus) throws IOException
+  private ErrorResponse postSyncForException(SqlQuery query, int expectedStatus) throws IOException
   {
     final Response response = postForSyncResponse(query, req);
     assertStatusAndCommonHeaders(response, expectedStatus);
-    return deserializeResponse(response, QueryException.class);
+    return deserializeResponse(response, ErrorResponse.class);
   }
 
   private <T> T deserializeResponse(Response resp, Class<T> clazz) throws IOException
@@ -2033,9 +2032,14 @@ public class SqlResourceTest extends CalciteTestBase
 
   private byte[] responseToByteArray(Response resp) throws IOException
   {
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    ((StreamingOutput) resp.getEntity()).write(baos);
-    return baos.toByteArray();
+    if (resp.getEntity() instanceof StreamingOutput) {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      ((StreamingOutput) resp.getEntity()).write(baos);
+      return baos.toByteArray();
+    } else {
+      String foo = JSON_MAPPER.writeValueAsString(resp.getEntity());
+      return JSON_MAPPER.writeValueAsBytes(resp.getEntity());
+    }
   }
 
   private String getContentType(Response resp)

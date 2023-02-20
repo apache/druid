@@ -170,7 +170,7 @@ public abstract class IngestHandler extends QueryHandler
     }
 
     if (insert.getTargetColumnList() != null) {
-      throw DruidException.unsupportedError(
+      throw DruidException.unsupportedSqlError(
           "%s with a target column list is not supported",
           operationName()
       );

@@ -196,7 +196,7 @@ public class StringSqlAggregator implements SqlAggregator
     {
       RelDataType type = sqlOperatorBinding.getOperandType(0);
       if (type instanceof RowSignatures.ComplexSqlType) {
-        throw DruidException.unsupportedError("Cannot use STRING_AGG on complex input of type %s", type);
+        throw DruidException.unsupportedSqlError("Cannot use STRING_AGG on complex input of type %s", type);
       }
       return Calcites.createSqlTypeWithNullability(
           sqlOperatorBinding.getTypeFactory(),

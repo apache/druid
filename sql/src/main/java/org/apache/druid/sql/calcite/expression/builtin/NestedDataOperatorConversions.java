@@ -200,7 +200,7 @@ public class NestedDataOperatorConversions
         parts = NestedPathFinder.parseJsonPath(path);
       }
       catch (IllegalArgumentException iae) {
-        throw DruidException.unsupportedError(
+        throw DruidException.unsupportedSqlError(
             "Cannot use [%s]: [%s]",
             call.getOperator().getName(),
             iae.getMessage()
@@ -362,7 +362,7 @@ public class NestedDataOperatorConversions
         parts = NestedPathFinder.parseJsonPath(path);
       }
       catch (IllegalArgumentException iae) {
-        throw DruidException.unsupportedError(
+        throw DruidException.unsupportedSqlError(
             "Cannot use [%s]: [%s]",
             call.getOperator().getName(),
             iae.getMessage()
@@ -531,7 +531,7 @@ public class NestedDataOperatorConversions
         parts = NestedPathFinder.parseJsonPath(path);
       }
       catch (IllegalArgumentException iae) {
-        throw DruidException.unsupported(
+        throw DruidException.unsupportedSql(
               "JSON path [%s] is not supported",
               call.getOperator().getName()
              )

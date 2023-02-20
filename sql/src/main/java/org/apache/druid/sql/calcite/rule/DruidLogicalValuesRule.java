@@ -129,7 +129,7 @@ public class DruidLogicalValuesRule extends RelOptRule
         return Calcites.calciteDateTimeLiteralToJoda(literal, plannerContext.getTimeZone()).getMillis();
       case NULL:
         if (!literal.isNull()) {
-          throw DruidException.unsupportedError(
+          throw DruidException.unsupportedSqlError(
               "Non-null constant %s for a NULL literal",
               literal
           );
@@ -139,7 +139,7 @@ public class DruidLogicalValuesRule extends RelOptRule
       case TIME:
       case TIME_WITH_LOCAL_TIME_ZONE:
       default:
-        throw DruidException.unsupportedError(
+        throw DruidException.unsupportedSqlError(
             "Literal %s type %s is not supported",
             literal,
             literal.getType().getSqlTypeName()

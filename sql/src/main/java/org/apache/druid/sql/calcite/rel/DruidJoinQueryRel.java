@@ -349,7 +349,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       case INNER:
         return JoinType.INNER;
       default:
-        throw DruidException.unsupportedError("Cannot handle joinType '%s'", calciteJoinType);
+        throw DruidException.unsupportedSqlError("Cannot handle joinType '%s'", calciteJoinType);
     }
   }
 

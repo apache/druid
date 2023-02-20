@@ -88,7 +88,7 @@ public class SumSqlAggregator extends SimpleSqlAggregator
       case DOUBLE:
         return new DoubleSumAggregatorFactory(name, fieldName, null, macroTable);
       default:
-        throw DruidException.unsupportedError("SUM is not supported for type %s", aggregationType);
+        throw DruidException.unsupportedSqlError("SUM is not supported for type %s", aggregationType);
     }
   }
 

@@ -167,7 +167,7 @@ public class DruidPlanner implements Closeable
     if (query.isA(SqlKind.QUERY)) {
       return new QueryHandler.SelectHandler(handlerContext, query, explain);
     }
-    throw DruidException.unsupportedError(
+    throw DruidException.unsupportedSqlError(
         "Unsupported SQL statement %s",
         node.getKind()
     );
@@ -371,11 +371,11 @@ public class DruidPlanner implements Closeable
     Matcher m = p.matcher(msg);
     DruidException.Builder builder;
     if (m.matches()) {
-      p = Pattern.compile("[ .]*\n\\ s+");
-      m = p.matcher(m.group(4).trim());
-      String choices = m.replaceAll(", ");
+      Pattern p2 = Pattern.compile("[ .]*\n\\ s+");
+      Matcher m2 = p2.matcher(m.group(4).trim());
+      String choices = m2.replaceAll(", ");
       builder = DruidException.user(
-              "Line %s, Column %s: unexpected token %s",
+              "Line %s, Column %s: unexpected token '%s'",
               m.group(2),
               m.group(3),
               m.group(1)
@@ -386,6 +386,7 @@ public class DruidPlanner implements Closeable
     }
     return builder
         .code(QueryException.SQL_PARSE_FAILED_ERROR_CODE)
+        .errorClass(SqlParseException.class.getName())
         .build();
   }
 }

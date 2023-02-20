@@ -132,7 +132,7 @@ public class DruidRexExecutor implements RexExecutor
               double exprResultDouble = exprResult.asDouble();
               if (Double.isNaN(exprResultDouble) || Double.isInfinite(exprResultDouble)) {
                 String expression = druidExpression.getExpression();
-                throw DruidException.unsupported("Expression not supported in SQL : %s", expression)
+                throw DruidException.unsupportedSql("Expression not supported in SQL : %s", expression)
                     .context("Evaluates to", Double.toString(exprResultDouble))
                     .context("Suggestion", StringUtils.format(
                         "You can either cast the expression as BIGINT ('CAST(%s as BIGINT)') or VARCHAR ('CAST(%s as VARCHAR)') or change the expression itself",

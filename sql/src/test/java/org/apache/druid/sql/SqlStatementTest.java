@@ -91,7 +91,7 @@ public class SqlStatementTest
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
   @Rule
   public QueryLogHook queryLogHook = QueryLogHook.create();
-  private SpecificSegmentsQuerySegmentWalker walker = null;
+  private SpecificSegmentsQuerySegmentWalker walker;
   private TestRequestLogger testRequestLogger;
   private ListeningExecutorService executorService;
   private SqlStatementFactory sqlStatementFactory;
@@ -287,7 +287,7 @@ public class SqlStatementTest
     catch (DruidException e) {
       // Expected
       Assert.assertEquals(
-          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
+          QueryException.SQL_PARSE_FAILED_ERROR_CODE,
           e.code()
       );
     }
@@ -372,7 +372,7 @@ public class SqlStatementTest
     catch (DruidException e) {
       // Expected
       Assert.assertEquals(
-          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
+          QueryException.SQL_PARSE_FAILED_ERROR_CODE,
           e.code()
       );
     }
@@ -461,7 +461,7 @@ public class SqlStatementTest
     catch (DruidException e) {
       // Expected
       Assert.assertEquals(
-          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
+          QueryException.SQL_PARSE_FAILED_ERROR_CODE,
           e.code()
       );
     }

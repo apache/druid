@@ -89,7 +89,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case COMPLEX:
             return new StringFirstAggregatorFactory(name, fieldName, timeColumn, maxStringBytes);
           default:
-            throw DruidException.unsupportedError("EARLIEST aggregator is not supported for type %s", type);
+            throw DruidException.unsupportedSqlError("EARLIEST aggregator is not supported for type %s", type);
         }
       }
     },
@@ -109,7 +109,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case COMPLEX:
             return new StringLastAggregatorFactory(name, fieldName, timeColumn, maxStringBytes);
           default:
-            throw DruidException.unsupportedError("LATEST aggregator is not supported for type %s", type);
+            throw DruidException.unsupportedSqlError("LATEST aggregator is not supported for type %s", type);
         }
       }
     },
@@ -128,7 +128,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case STRING:
             return new StringAnyAggregatorFactory(name, fieldName, maxStringBytes);
           default:
-            throw DruidException.unsupportedError("ANY aggregation is not supported for type %s", type);
+            throw DruidException.unsupportedSqlError("ANY aggregation is not supported for type %s", type);
         }
       }
     };

@@ -396,7 +396,7 @@ public class DruidSqlParserUtils
    *
    * @param sqlNode the SQL node
    * @return string representing the column name
-   * @throws ValidationException if the SQL node is not an SqlIdentifier
+   * @throws DruidException if the SQL node is not an SqlIdentifier
    */
   public static String parseColumnName(SqlNode sqlNode)
   {
@@ -414,7 +414,7 @@ public class DruidSqlParserUtils
    * @param sqlNode the SQL node
    * @param timeZone timezone
    * @return the timestamp string as milliseconds from epoch
-   * @throws ValidationException if the SQL node is not a SqlTimestampLiteral
+   * @throws DruidException if the SQL node is not a SqlTimestampLiteral
    */
   public static String parseTimeStampWithTimeZone(SqlNode sqlNode, DateTimeZone timeZone)
   {

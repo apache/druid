@@ -67,7 +67,7 @@ public class MinSqlAggregator extends SimpleSqlAggregator
       case DOUBLE:
         return new DoubleMinAggregatorFactory(name, fieldName, null, macroTable);
       default:
-        throw DruidException.unsupportedError("MIN does not support type %s", aggregationType);
+        throw DruidException.unsupportedSqlError("MIN does not support type %s", aggregationType);
     }
   }
 }

@@ -114,10 +114,19 @@ public abstract class QueryResultPusher
   @Nullable
   public Response push()
   {
+    // Create the results writer outside the try/catch block. The block uses
+    // the results writer on failure. But, if start() fails, we have a null
+    // resultsWriter and we'll get an NPE. Instead, if start() fails, just
+    // let any exception bubble up.
     ResultsWriter resultsWriter = null;
     try {
       resultsWriter = start();
-
+    }
+    catch (RuntimeException e) {
+      log.warn(e, "Failed to obtain the results writer for query [%s]", queryId);
+      throw e;
+    }
+    try {
       final Response.ResponseBuilder startResponse = resultsWriter.start();
       if (startResponse != null) {
         startResponse.header(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId);
@@ -170,7 +179,7 @@ public abstract class QueryResultPusher
         // returning results before a ForbiddenException gets thrown, that means that we've already leaked stuff
         // that should not have been leaked.  I.e. it means, we haven't validated the authorization early enough.
         if (response != null && response.isCommitted()) {
-          log.error(re, "Got a forbidden exception for query[%s] after the response was already committed.", queryId);
+          log.error(re, "Got a forbidden exception for query [%s] after the response was already committed.", queryId);
         }
         throw re;
       }
@@ -179,23 +188,27 @@ public abstract class QueryResultPusher
     catch (IOException ioEx) {
       return handleQueryException(resultsWriter, new QueryInterruptedException(ioEx));
     }
+    catch (Throwable t) {
+      // May only occur in tests.
+      return handleQueryException(resultsWriter, new QueryInterruptedException(t));
+    }
     finally {
       if (accumulator != null) {
         try {
           accumulator.close();
         }
         catch (IOException e) {
-          log.warn(e, "Suppressing exception closing accumulator for query[%s]", queryId);
+          log.warn(e, "Suppressing exception closing accumulator for query [%s]", queryId);
         }
       }
       if (resultsWriter == null) {
-        log.warn("resultsWriter was null for query[%s], work was maybe done in start() that shouldn't be.", queryId);
+        log.warn("resultsWriter was null for query [%s], work was maybe done in start() that shouldn't be.", queryId);
       } else {
         try {
           resultsWriter.close();
         }
         catch (IOException e) {
-          log.warn(e, "Suppressing exception closing accumulator for query[%s]", queryId);
+          log.warn(e, "Suppressing exception closing accumulator for query [%s]", queryId);
         }
       }
       if (asyncContext != null) {
@@ -218,7 +231,7 @@ public abstract class QueryResultPusher
       resultsWriter.recordFailure(e);
 
       // This case is always a failure because the error happened mid-stream of sending results back.  Therefore,
-      // we do not believe that the response stream was actually useable
+      // we do not believe that the response stream was actually usable
       counter.incrementFailed();
       return null;
     }
@@ -280,7 +293,7 @@ public abstract class QueryResultPusher
       catch (IOException ioException) {
         log.warn(
             ioException,
-            "Suppressing IOException thrown sending error response for query[%s]",
+            "Suppressing IOException thrown sending error response for query [%s]",
             queryId
         );
       }
@@ -300,7 +313,7 @@ public abstract class QueryResultPusher
       resultsWriter.recordFailure(e);
 
       // This case is always a failure because the error happened mid-stream of sending results back.  Therefore,
-      // we do not believe that the response stream was actually useable
+      // we do not believe that the response stream was actually usable
       counter.incrementFailed();
       return null;
     }
