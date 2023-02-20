@@ -28,10 +28,7 @@ import org.asynchttpclient.AsyncHttpClient;
 
 public class LoggingEmitterFactory extends LoggingEmitterConfig implements EmitterFactory
 {
-  public LoggingEmitterFactory()
-  {
-  }
-
+  @SuppressWarnings("unused")
   @Override
   public Emitter makeEmitter(ObjectMapper objectMapper, AsyncHttpClient httpClient, Lifecycle lifecycle)
   {

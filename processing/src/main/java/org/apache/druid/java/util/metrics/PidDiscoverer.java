@@ -21,5 +21,6 @@ package org.apache.druid.java.util.metrics;
 
 public interface PidDiscoverer
 {
+  @SuppressWarnings("unused")
   long getPid();
 }
