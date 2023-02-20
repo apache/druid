@@ -861,6 +861,24 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
           metadata.getBitmapSerdeFactory().getObjectStrategy(),
           columnBuilder.getFileMapper()
       );
+      final Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier;
+      final GenericIndexed<ImmutableBitmap> arrayElementBitmaps;
+      if (dataBuffer.hasRemaining()) {
+        arrayElementDictionarySupplier = FixedIndexed.read(
+            dataBuffer,
+            NestedDataColumnSerializer.INT_TYPE_STRATEGY,
+            metadata.getByteOrder(),
+            Integer.BYTES
+        );
+        arrayElementBitmaps = GenericIndexed.read(
+            dataBuffer,
+            metadata.getBitmapSerdeFactory().getObjectStrategy(),
+            columnBuilder.getFileMapper()
+        );
+      } else {
+        arrayElementDictionarySupplier = null;
+        arrayElementBitmaps = null;
+      }
       final boolean hasNull = localDictionarySupplier.get().get(0) == 0;
       Supplier<DictionaryEncodedColumn<?>> columnSupplier = () -> {
         FixedIndexed<Integer> localDict = localDictionarySupplier.get();
@@ -890,7 +908,9 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
               localDictionarySupplier,
               stringDictionarySupplier,
               longDictionarySupplier,
-              doubleDictionarySupplier
+              doubleDictionarySupplier,
+              arrayElementDictionarySupplier,
+              arrayElementBitmaps
           ),
           true,
           false

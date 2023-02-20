@@ -29,6 +29,7 @@ import java.nio.channels.WritableByteChannel;
 
 public class ArrayOfLiteralsFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<int[]>
 {
+
   protected ArrayOfLiteralsFieldColumnWriter(
       String columnName,
       String fieldName,
@@ -41,7 +42,7 @@ public class ArrayOfLiteralsFieldColumnWriter extends GlobalDictionaryEncodedFie
   }
 
   @Override
-  int[] processValue(Object value)
+  int[] processValue(int row, Object value)
   {
     if (value instanceof Object[]) {
       Object[] array = (Object[]) value;
@@ -59,6 +60,10 @@ public class ArrayOfLiteralsFieldColumnWriter extends GlobalDictionaryEncodedFie
           newIdsWhoDis[i] = -1;
         }
         Preconditions.checkArgument(newIdsWhoDis[i] >= 0, "unknown global id [%s] for value [%s]", newIdsWhoDis[i], array[i]);
+        arrayElements.computeIfAbsent(
+            newIdsWhoDis[i],
+            (id) -> indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap()
+        ).add(row);
       }
       return newIdsWhoDis;
     }

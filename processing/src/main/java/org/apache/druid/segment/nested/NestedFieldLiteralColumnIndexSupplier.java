@@ -83,6 +83,13 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
   private final Supplier<FixedIndexed<Long>> globalLongDictionarySupplier;
   private final Supplier<FixedIndexed<Double>> globalDoubleDictionarySupplier;
 
+  @SuppressWarnings("FieldCanBeLocal")
+  @Nullable
+  private final GenericIndexed<ImmutableBitmap> arrayElementBitmaps;
+  @SuppressWarnings("FieldCanBeLocal")
+  @Nullable
+  private final Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier;
+
   private final int adjustLongId;
   private final int adjustDoubleId;
 
@@ -93,7 +100,9 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
       Supplier<FixedIndexed<Integer>> localDictionarySupplier,
       Supplier<TStringDictionary> globalStringDictionarySupplier,
       Supplier<FixedIndexed<Long>> globalLongDictionarySupplier,
-      Supplier<FixedIndexed<Double>> globalDoubleDictionarySupplier
+      Supplier<FixedIndexed<Double>> globalDoubleDictionarySupplier,
+      @Nullable Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier,
+      @Nullable GenericIndexed<ImmutableBitmap> arrayElementBitmaps
   )
   {
     this.singleType = types.getSingleType();
@@ -103,6 +112,8 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
     this.globalStringDictionarySupplier = globalStringDictionarySupplier;
     this.globalLongDictionarySupplier = globalLongDictionarySupplier;
     this.globalDoubleDictionarySupplier = globalDoubleDictionarySupplier;
+    this.arrayElementDictionarySupplier = arrayElementDictionarySupplier;
+    this.arrayElementBitmaps = arrayElementBitmaps;
     this.adjustLongId = globalStringDictionarySupplier.get().size();
     this.adjustDoubleId = adjustLongId + globalLongDictionarySupplier.get().size();
   }

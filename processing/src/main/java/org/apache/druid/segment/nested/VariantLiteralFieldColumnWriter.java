@@ -45,7 +45,7 @@ public final class VariantLiteralFieldColumnWriter extends GlobalDictionaryEncod
 
 
   @Override
-  Object processValue(Object value)
+  Object processValue(int row, Object value)
   {
     if (value instanceof Object[]) {
       Object[] array = (Object[]) value;
@@ -66,7 +66,7 @@ public final class VariantLiteralFieldColumnWriter extends GlobalDictionaryEncod
       }
       return newIdsWhoDis;
     }
-    return super.processValue(value);
+    return super.processValue(row, value);
   }
 
   @Override

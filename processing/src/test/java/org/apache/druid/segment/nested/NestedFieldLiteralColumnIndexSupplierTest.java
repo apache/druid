@@ -1409,7 +1409,9 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
         dictionarySupplier,
         stringIndexed,
         longIndexed,
-        doubleIndexed
+        doubleIndexed,
+        null,
+        null
     );
 
     StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
@@ -1505,7 +1507,9 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
         dictionarySupplier,
         globalStrings,
         globalLongs,
-        globalDoubles
+        globalDoubles,
+        null,
+        null
     );
   }
 
@@ -1579,7 +1583,9 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
         dictionarySupplier,
         globalStrings,
         globalLongs,
-        globalDoubles
+        globalDoubles,
+        null,
+        null
     );
   }
 
@@ -1650,7 +1656,9 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
         dictionarySupplier,
         globalStrings,
         globalLongs,
-        globalDoubles
+        globalDoubles,
+        null,
+        null
     );
   }
 
@@ -1725,7 +1733,9 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
         dictionarySupplier,
         globalStrings,
         globalLongs,
-        globalDoubles
+        globalDoubles,
+        null,
+        null
     );
   }
 
@@ -1796,7 +1806,9 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
         dictionarySupplier,
         globalStrings,
         globalLongs,
-        globalDoubles
+        globalDoubles,
+        null,
+        null
     );
   }
 
@@ -1871,7 +1883,9 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
         dictionarySupplier,
         globalStrings,
         globalLongs,
-        globalDoubles
+        globalDoubles,
+        null,
+        null
     );
   }
 
@@ -1957,7 +1971,9 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
         dictionarySupplier,
         globalStrings,
         globalLongs,
-        globalDoubles
+        globalDoubles,
+        null,
+        null
     );
   }
 
