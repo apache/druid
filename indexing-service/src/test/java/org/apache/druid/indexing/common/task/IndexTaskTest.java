@@ -1620,13 +1620,12 @@ public class IndexTaskTest extends IngestionTestBase
 
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
-    final int processedBytes = useInputFormatApi ? 657 : 0;
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.DETERMINE_PARTITIONS,
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.PROCESSED, 4,
-            RowIngestionMeters.PROCESSED_BYTES, processedBytes,
+            RowIngestionMeters.PROCESSED_BYTES, 657,
             RowIngestionMeters.UNPARSEABLE, 4,
             RowIngestionMeters.THROWN_AWAY, 1
         ),
@@ -1634,7 +1633,7 @@ public class IndexTaskTest extends IngestionTestBase
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED_WITH_ERROR, 3,
             RowIngestionMeters.PROCESSED, 1,
-            RowIngestionMeters.PROCESSED_BYTES, processedBytes,
+            RowIngestionMeters.PROCESSED_BYTES, 657,
             RowIngestionMeters.UNPARSEABLE, 4,
             RowIngestionMeters.THROWN_AWAY, 1
         )
@@ -1829,7 +1828,7 @@ public class IndexTaskTest extends IngestionTestBase
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.PROCESSED, 1,
-            RowIngestionMeters.PROCESSED_BYTES, useInputFormatApi ? 182 : 0,
+            RowIngestionMeters.PROCESSED_BYTES, 182,
             RowIngestionMeters.UNPARSEABLE, 3,
             RowIngestionMeters.THROWN_AWAY, 1
         )
@@ -1954,7 +1953,7 @@ public class IndexTaskTest extends IngestionTestBase
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.PROCESSED, 1,
-            RowIngestionMeters.PROCESSED_BYTES, useInputFormatApi ? 182 : 0,
+            RowIngestionMeters.PROCESSED_BYTES, 182,
             RowIngestionMeters.UNPARSEABLE, 3,
             RowIngestionMeters.THROWN_AWAY, 1
         ),
