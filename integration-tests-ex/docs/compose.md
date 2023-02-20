@@ -82,6 +82,13 @@ files that define properties as environment variables. All are located in
 * `<service>.env` - Properties unique to one service. This is the test equivalent to
   the `service/runtime.properties` files.
 
+### MySQL Driver
+
+Unit tests can use any MySQL driver, typically MySQL or MariaDB. The tests use MySQL
+by default. Choose a different driver by setting the `MYSQL_DRIVER_CLASSNAME` environment
+variable when running tests. The variable chooses the selected driver both in the Druid
+server running in a container, and in the test "clients".
+
 ### Special Environment Variables
 
 Druid properties can be a bit awkward and verbose in a test environment. A number of
