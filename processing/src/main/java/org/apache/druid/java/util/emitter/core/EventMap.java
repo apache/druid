@@ -80,15 +80,6 @@ public class EventMap extends HashMap<String, Object>
     }
 
     /**
-     * Adds map entry to the map
-     */
-    public Builder put(Map.Entry<String, Object> entry)
-    {
-      map.put(entry.getKey(), entry.getValue());
-      return this;
-    }
-
-    /**
      * Adds all key -> value pairs from other map
      */
     public Builder putAll(Map<? extends String, ? extends Object> other)
