@@ -57,6 +57,7 @@ import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -650,6 +651,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
               .setDimension("dataSource", getDataSource())
               .setDimension("taskType", getType())
               .setDimension("taskId", getId())
+              .setDimensionIfNotNull(DruidMetrics.TAGS, getContextValue(DruidMetrics.TAGS))
               .setDimension("segmentAvailabilityConfirmed", segmentAvailabilityConfirmationCompleted)
               .build("task/segmentAvailability/wait/time", segmentAvailabilityWaitTimeMs)
       );
