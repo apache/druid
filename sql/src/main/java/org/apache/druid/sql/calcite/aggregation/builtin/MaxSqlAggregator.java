@@ -71,7 +71,7 @@ public class MaxSqlAggregator extends SimpleSqlAggregator
       case DOUBLE:
         return new DoubleMaxAggregatorFactory(name, fieldName, null, macroTable);
       default:
-        throw DruidException.unsupportedError("MAX does not support type %s", aggregationType);
+        throw DruidException.unsupportedSqlError("MAX does not support type %s", aggregationType);
     }
   }
 }

@@ -19,14 +19,10 @@
 
 package org.apache.druid.error;
 
-import com.google.common.collect.ImmutableMap;
-
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public class StandardRestExceptionEncoder implements RestExceptionEncoder
 {
@@ -40,35 +36,16 @@ public class StandardRestExceptionEncoder implements RestExceptionEncoder
   @Override
   public ResponseBuilder builder(DruidException e)
   {
-    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-    builder.put("type", errorCode(e));
-    builder.put("message", e.message());
-    builder.put("errorMessage", e.getMessage());
-    builder.put("errorCode", e.code());
-    if (e.context() != null && !e.context().isEmpty()) {
-      Map<String, String> context = new HashMap<>(e.context());
-      String host = context.remove(DruidException.HOST);
-      if (host != null) {
-        builder.put("host", host);
-      }
-      if (!context.isEmpty()) {
-        builder.put("context", context);
-      }
-    }
     return Response
       .status(status(e))
-      .entity(builder.build());
+      .entity(e.toErrorResponse())
+      .type(MediaType.APPLICATION_JSON);
   }
 
   @Override
   public Response encode(DruidException e)
   {
     return builder(e).build();
-  }
-
-  private Object errorCode(DruidException e)
-  {
-    return e.type().name();
   }
 
   // Temporary status mapping
@@ -86,6 +63,7 @@ public class StandardRestExceptionEncoder implements RestExceptionEncoder
       case RESOURCE:
         return Response.Status.fromStatusCode(429); // No predefined status name
       case USER:
+      case UNSUPPORTED:
         return Response.Status.BAD_REQUEST;
       default:
         // Should never occur

@@ -96,6 +96,12 @@ public class DruidException extends RuntimeException
     NOT_FOUND,
 
     /**
+     * Special case of a user error where the user asked for a feature that
+     * Druid does not support.
+     */
+    UNSUPPORTED,
+
+    /**
      * Error due to a problem beyond the user's control, such as an assertion
      * failed, unsupported operation, etc. These indicate problems with the software
      * where the fix is either a workaround or a bug fix. Such error should only
@@ -128,7 +134,13 @@ public class DruidException extends RuntimeException
      * Druid-to-external system, etc. Generally the end user cannot fix these errors:
      * it requires a DevOps person to resolve.
      */
-    NETWORK
+    NETWORK,
+
+    /**
+     * Indicates an exception deserialized from a {@link org.apache.druid.query.QueryException}
+     * which has no error type.
+     */
+    UNKNOWN
   };
 
   public static final String HOST = "Host";
@@ -141,6 +153,10 @@ public class DruidException extends RuntimeException
     private String code;
     private Throwable e;
     private Map<String, String> context;
+
+    // For backward compatibility with QueryException
+    private String errorClass;
+    private String host;
 
     private Builder(
         final ErrorType type,
@@ -166,12 +182,18 @@ public class DruidException extends RuntimeException
     public Builder code(String code)
     {
       this.code = code;
+      if (QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE.equals(code)) {
+        // Not always right, but close enough. For backward compatibility with
+        // code that needs the (now deprecated) error class.
+        this.errorClass = "org.apache.calcite.tools.ValidationException";
+      }
       return this;
     }
 
     public Builder cause(Throwable e)
     {
       this.e = e;
+      this.errorClass = e.getClass().getName();
       if (!msg.equals(e.getMessage())) {
         context("Cause", e.getMessage());
       }
@@ -188,6 +210,12 @@ public class DruidException extends RuntimeException
       return this;
     }
 
+    public Builder errorClass(String errorClass)
+    {
+      this.errorClass = errorClass;
+      return this;
+    }
+
     private boolean wasLogged()
     {
       return source != null && source.logged;
@@ -200,6 +228,8 @@ public class DruidException extends RuntimeException
           msg,
           type,
           code,
+          errorClass,
+          host,
           // Used linked hash map to preserve order
           context == null ? null : new LinkedHashMap<>(context),
           logged || wasLogged()
@@ -253,11 +283,17 @@ public class DruidException extends RuntimeException
   private final Map<String, String> context;
   private final boolean logged;
 
+  // For backward compatibility with QueryException
+  private final String errorClass;
+  private final String host;
+
   public DruidException(
       final Throwable e,
       final String msg,
       final ErrorType type,
       final String code,
+      final String errorClass,
+      final String host,
       final Map<String, String> context,
       final boolean logged
   )
@@ -265,6 +301,8 @@ public class DruidException extends RuntimeException
     super(msg, e);
     this.type = type;
     this.code = code;
+    this.errorClass = errorClass;
+    this.host = host;
     this.context = context;
     this.logged = logged;
   }
@@ -292,13 +330,26 @@ public class DruidException extends RuntimeException
    */
   public static Builder unsupported(String msg, Object...args)
   {
-    return new Builder(ErrorType.USER, msg, args)
+    return new Builder(ErrorType.UNSUPPORTED, msg, args)
         .code(QueryException.UNSUPPORTED_OPERATION_ERROR_CODE);
   }
 
   public static DruidException unsupportedError(String msg, Object...args)
   {
     return unsupported(msg, args).build();
+  }
+
+  public static Builder unsupportedSql(String msg, Object...args)
+  {
+    return new Builder(ErrorType.UNSUPPORTED, msg, args)
+        .code(QueryException.SQL_QUERY_UNSUPPORTED_ERROR_CODE)
+        // For backward compatibility: using text since class is not visible here.
+        .errorClass("org.apache.calcite.plan.RelOptPlanner$CannotPlanException");
+  }
+
+  public static DruidException unsupportedSqlError(String msg, Object...args)
+  {
+    return unsupportedSql(msg, args).build();
   }
 
   /**
@@ -384,6 +435,20 @@ public class DruidException extends RuntimeException
     return new Builder(this);
   }
 
+  public static DruidException fromErrorResponse(ErrorResponse response)
+  {
+    return new DruidException(
+        null,
+        response.getMessage(),
+        response.getType() == null ? ErrorType.UNKNOWN : response.getType(),
+        response.getErrorCode(),
+        response.getErrorClass(),
+        response.getHost(),
+        response.getContext(),
+        false
+    );
+  }
+
   public ErrorType type()
   {
     return type;
@@ -408,13 +473,14 @@ public class DruidException extends RuntimeException
   public String getMessage()
   {
     StringBuilder buf = new StringBuilder();
-    buf.append(type.name()).append(" - ");
-    buf.append(super.getMessage());
-    if (!QueryException.UNSUPPORTED_OPERATION_ERROR_CODE.equals(code)) {
-      buf.append("; Error Code: [")
-         .append(code)
-         .append("]");
+    if (type != ErrorType.USER) {
+      buf.append(type.name()).append(" - ");
     }
+    if (!QueryException.UNSUPPORTED_OPERATION_ERROR_CODE.equals(code)) {
+      buf.append(code)
+         .append(" - ");
+    }
+    buf.append(super.getMessage());
     if (context != null && context.size() > 0) {
       int count = 0;
       buf.append("; ");
@@ -468,5 +534,17 @@ public class DruidException extends RuntimeException
   public String message()
   {
     return super.getMessage();
+  }
+
+  public ErrorResponse toErrorResponse()
+  {
+    return new ErrorResponse(
+        code,
+        message(),
+        errorClass,
+        host,
+        type == ErrorType.UNKNOWN ? null : type,
+        context
+    );
   }
 }
