@@ -15,7 +15,8 @@
 
 # Github workflow that runs revised/new ITs
 on:
-  workflow_call
+  workflow_call:
+  workflow_dispatch:
 
 jobs:
   it:
@@ -34,3 +35,4 @@ jobs:
       use_indexer: ${{ matrix.indexer }}
       script: ./it.sh github ${{ matrix.it }}
       it: ${{ matrix.it }}
+      mysql_driver: com.mysql.jdbc.Driver

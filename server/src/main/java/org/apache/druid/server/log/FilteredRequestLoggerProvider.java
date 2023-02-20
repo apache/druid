@@ -114,7 +114,7 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
     {
       Object queryTime = requestLogLine.getQueryStats().getStats().get("query/time");
       if (queryTime != null && ((Number) queryTime).longValue() >= queryTimeThresholdMs) {
-        Query query = requestLogLine.getQuery();
+        Query<?> query = requestLogLine.getQuery();
         if (query != null && mutedQueryTypes.contains(query.getType())) {
           return;
         }
@@ -127,7 +127,7 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
     {
       Object sqlQueryTime = requestLogLine.getQueryStats().getStats().get("sqlQuery/time");
       if (sqlQueryTime != null && ((Number) sqlQueryTime).longValue() >= sqlQueryTimeThresholdMs) {
-        Query query = requestLogLine.getQuery();
+        Query<?> query = requestLogLine.getQuery();
         if (query != null && mutedQueryTypes.contains(query.getType())) {
           return;
         }
