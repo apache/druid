@@ -20,7 +20,8 @@
 package org.apache.druid.segment.join.table;
 
 import com.google.common.collect.ImmutableSet;
-import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntBidirectionalIterator;
+import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.io.Closer;
@@ -150,9 +151,10 @@ public class IndexedTableJoinable implements Joinable
         IndexedTable.Index index = table.columnIndex(filterColumnPosition);
         IndexedTable.Reader reader = table.columnReader(correlatedColumnPosition);
         closer.register(reader);
-        IntList rowIndex = index.find(searchColumnValue);
-        for (int i = 0; i < rowIndex.size(); i++) {
-          int rowNum = rowIndex.getInt(i);
+        final IntSortedSet rowIndex = index.find(searchColumnValue);
+        final IntBidirectionalIterator rowIterator = rowIndex.iterator();
+        while (rowIterator.hasNext()) {
+          int rowNum = rowIterator.nextInt();
           String correlatedDimVal = DimensionHandlerUtils.convertObjectToString(reader.read(rowNum));
           correlatedValues.add(correlatedDimVal);
 

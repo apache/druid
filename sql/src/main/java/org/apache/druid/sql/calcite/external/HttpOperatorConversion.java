@@ -23,7 +23,7 @@ import com.google.inject.Inject;
 import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.catalog.model.table.HttpInputSourceDefn;
 
-public class HttpOperatorConversion extends CatalogExternalTableOperatorConversion
+public class HttpOperatorConversion extends DruidUserDefinedTableMacroConversion
 {
   public static final String FUNCTION_NAME = "http";
 

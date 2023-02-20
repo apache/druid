@@ -199,7 +199,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     args.put(HttpInputSourceDefn.PASSWORD_PARAMETER, "secret");
     args.put(FormattedInputSourceDefn.FORMAT_PARAMETER, CsvFormatDefn.TYPE_KEY);
     ExternalTableSpec externSpec = fn.apply("x", args, COLUMNS, mapper);
-    validateHappyPath(externSpec);
+    validateHappyPath(externSpec, true);
 
     // But, it fails if there are no columns.
     assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
@@ -231,7 +231,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     // Convert to an external spec
     ExternalTableDefn externDefn = (ExternalTableDefn) resolved.defn();
     ExternalTableSpec externSpec = externDefn.convert(resolved);
-    validateHappyPath(externSpec);
+    validateHappyPath(externSpec, true);
 
     // Get the partial table function
     TableFunction fn = externDefn.tableFn(resolved);
@@ -239,23 +239,17 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
 
     // Convert to an external table.
     externSpec = fn.apply("x", Collections.emptyMap(), Collections.emptyList(), mapper);
-    validateHappyPath(externSpec);
+    validateHappyPath(externSpec, true);
 
     // But, it fails columns are provided since the table already has them.
     assertThrows(IAE.class, () -> fn.apply("x", Collections.emptyMap(), COLUMNS, mapper));
   }
 
   @Test
-  public void testTemplateSpecWithFormatHappyPath() throws URISyntaxException
+  public void testTemplateSpecWithFormatHappyPath()
   {
-    HttpInputSource inputSource = new HttpInputSource(
-        Collections.singletonList(new URI("http://foo.com/my.csv")), // removed
-        "bob",
-        new DefaultPasswordProvider("secret"),
-        new HttpInputSourceConfig(null)
-    );
     TableMetadata table = TableBuilder.external("foo")
-        .inputSource(httpToMap(inputSource))
+        .inputSource(ImmutableMap.of("type", HttpInputSource.TYPE_KEY))
         .inputFormat(CSV_FORMAT)
         .property(HttpInputSourceDefn.URI_TEMPLATE_PROPERTY, "http://foo.com/{}")
         .column("x", Columns.VARCHAR)
@@ -264,8 +258,54 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
 
     // Check validation
     table.validate();
+    ResolvedTable resolved = registry.resolve(table.spec());
+    assertNotNull(resolved);
 
-    // Check registry
+    // Not a full table, can't directly convert
+    // Convert to an external spec
+    ExternalTableDefn externDefn = (ExternalTableDefn) resolved.defn();
+    assertThrows(IAE.class, () -> externDefn.convert(resolved));
+
+    // Get the partial table function
+    TableFunction fn = externDefn.tableFn(resolved);
+    assertEquals(4, fn.parameters().size());
+    assertTrue(hasParam(fn, HttpInputSourceDefn.URIS_PARAMETER));
+    assertTrue(hasParam(fn, HttpInputSourceDefn.USER_PARAMETER));
+    assertTrue(hasParam(fn, HttpInputSourceDefn.PASSWORD_PARAMETER));
+    assertTrue(hasParam(fn, HttpInputSourceDefn.PASSWORD_ENV_VAR_PARAMETER));
+
+    // Convert to an external table.
+    ExternalTableSpec externSpec = fn.apply(
+        "x",
+        ImmutableMap.of(
+            HttpInputSourceDefn.URIS_PARAMETER,
+            Collections.singletonList("my.csv")
+        ),
+        Collections.emptyList(),
+        mapper
+    );
+    validateHappyPath(externSpec, false);
+  }
+
+  @Test
+  public void testTemplateSpecWithFormatAndPassword()
+  {
+    TableMetadata table = TableBuilder.external("foo")
+        .inputSource(ImmutableMap.of(
+            "type", HttpInputSource.TYPE_KEY,
+            HttpInputSourceDefn.USERNAME_FIELD, "bob",
+            HttpInputSourceDefn.PASSWORD_FIELD, ImmutableMap.of(
+                "type", "default",
+                "password", "secret"
+            )
+         ))
+        .inputFormat(CSV_FORMAT)
+        .property(HttpInputSourceDefn.URI_TEMPLATE_PROPERTY, "http://foo.com/{}")
+        .column("x", Columns.VARCHAR)
+        .column("y", Columns.BIGINT)
+        .build();
+
+    table.validate();
     ResolvedTable resolved = registry.resolve(table.spec());
     assertNotNull(resolved);
 
@@ -289,7 +329,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         Collections.emptyList(),
         mapper
     );
-    validateHappyPath(externSpec);
+    validateHappyPath(externSpec, true);
   }
 
   @Test
@@ -326,7 +366,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     args.put(HttpInputSourceDefn.URIS_PARAMETER, Collections.singletonList("my.csv"));
     args.put(FormattedInputSourceDefn.FORMAT_PARAMETER, CsvFormatDefn.TYPE_KEY);
     ExternalTableSpec externSpec = fn.apply("x", args, COLUMNS, mapper);
-    validateHappyPath(externSpec);
+    validateHappyPath(externSpec, true);
   }
 
   @Test
@@ -455,11 +495,13 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     assertEquals("SECRET", ((EnvironmentVariablePasswordProvider) sourceSpec.getHttpAuthenticationPasswordProvider()).getVariable());
   }
 
-  private void validateHappyPath(ExternalTableSpec externSpec)
+  private void validateHappyPath(ExternalTableSpec externSpec, boolean withUser)
   {
     HttpInputSource sourceSpec = (HttpInputSource) externSpec.inputSource;
-    assertEquals("bob", sourceSpec.getHttpAuthenticationUsername());
-    assertEquals("secret", ((DefaultPasswordProvider) sourceSpec.getHttpAuthenticationPasswordProvider()).getPassword());
+    if (withUser) {
+      assertEquals("bob", sourceSpec.getHttpAuthenticationUsername());
+      assertEquals("secret", ((DefaultPasswordProvider) sourceSpec.getHttpAuthenticationPasswordProvider()).getPassword());
+    }
     assertEquals("http://foo.com/my.csv", sourceSpec.getUris().get(0).toString());
 
     // Just a sanity check: details of CSV conversion are tested elsewhere.
