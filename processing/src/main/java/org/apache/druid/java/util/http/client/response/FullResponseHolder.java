@@ -49,5 +49,6 @@ public abstract class FullResponseHolder<T>
   /**
    * Get the data.
    */
+  @SuppressWarnings("unused")
   public abstract T getContent();
 }

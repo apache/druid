@@ -26,9 +26,9 @@ import org.apache.druid.java.util.emitter.core.ParametrizedUriEmitter;
 import org.apache.druid.java.util.emitter.core.ParametrizedUriEmitterConfig;
 import org.asynchttpclient.AsyncHttpClient;
 
+@SuppressWarnings("unused")
 public class ParametrizedUriEmitterFactory extends ParametrizedUriEmitterConfig implements EmitterFactory
 {
-
   @Override
   public Emitter makeEmitter(ObjectMapper objectMapper, AsyncHttpClient httpClient, Lifecycle lifecycle)
   {

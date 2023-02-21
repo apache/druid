@@ -45,11 +45,6 @@ public class FirehoseFactoryToInputSourceAdaptor extends AbstractInputSource imp
     return firehoseFactory;
   }
 
-  public InputRowParser getInputRowParser()
-  {
-    return inputRowParser;
-  }
-
   @Override
   public boolean isSplittable()
   {
