@@ -32,7 +32,6 @@ import org.apache.druid.math.expr.Expr;
 public abstract class UnivariateDoubleFunctionVectorValueProcessor<TInput> implements ExprVectorProcessor<double[]>
 {
   final ExprVectorProcessor<TInput> processor;
-  final int maxVectorSize;
   final boolean[] outNulls;
   final double[] outValues;
 
@@ -42,7 +41,6 @@ public abstract class UnivariateDoubleFunctionVectorValueProcessor<TInput> imple
   )
   {
     this.processor = processor;
-    this.maxVectorSize = maxVectorSize;
     this.outNulls = new boolean[maxVectorSize];
     this.outValues = new double[maxVectorSize];
   }

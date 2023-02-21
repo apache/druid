@@ -28,6 +28,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
  */
 public interface PasswordProviderRedactionMixIn
 {
+  @SuppressWarnings("unused")
   @JsonIgnore
   String getPassword();
 }

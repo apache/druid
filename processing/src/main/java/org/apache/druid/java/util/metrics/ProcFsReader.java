@@ -38,7 +38,6 @@ public class ProcFsReader
   private final File procDir;
 
   private static final Logger LOG = new Logger(ProcFsReader.class);
-  public static final Path DEFAULT_PROC_FS_ROOT = Paths.get("/proc/");
   private static final String BOOT_ID_PATH = "sys/kernel/random/boot_id";
   private static final String CPUINFO_PATH = "cpuinfo";
 
