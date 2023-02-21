@@ -79,17 +79,20 @@ public class BuildingSingleDimensionShardSpec extends BuildingDimensionRangeShar
     return jsonMap;
   }
 
+  @SuppressWarnings("unused")
   public String getDimension()
   {
     return dimension;
   }
 
+  @SuppressWarnings("unused")
   @Nullable
   public String getStart()
   {
     return start;
   }
 
+  @SuppressWarnings("unused")
   @Nullable
   public String getEnd()
   {

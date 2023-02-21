@@ -93,6 +93,7 @@ public class SingleDimensionShardSpec extends DimensionRangeShardSpec
     return jsonMap;
   }
 
+  @SuppressWarnings("unused")
   public String getDimension()
   {
     return dimension;

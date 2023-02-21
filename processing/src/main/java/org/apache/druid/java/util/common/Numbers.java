@@ -200,19 +200,11 @@ public final class Numbers
       return lobj;
     }
     // try as a double, for "ddd.dd" , Longs.tryParse(..) returns null
-    Double dobj = Doubles.tryParse((String) val);
+    Double dobj = Doubles.tryParse(val);
     if (dobj != null) {
       return dobj.longValue();
     }
     throw new NumberFormatException("Cannot parse string to long");
-  }
-
-  public static int toIntExact(long value, String error)
-  {
-    if ((int) value != value) {
-      throw new ArithmeticException(error);
-    }
-    return (int) value;
   }
 
   private Numbers()

@@ -171,11 +171,6 @@ public class DefineClassUtils
     return defineClass;
   }
 
-  static int getArrayLength(byte[] bytes)
-  {
-    return bytes.length;
-  }
-
   public static Class defineClass(
       Class<?> targetClass,
       byte[] byteCode,
