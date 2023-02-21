@@ -109,6 +109,11 @@ public class ArrayOfDoublesSketchConstantPostAggregator extends ArrayOfDoublesSk
   {
     return "ArrayOfDoublesSketchConstantPostAggregator{name='" + this.getName() + "', value='" + value + "'}";
   }
+  
+  private String getRawSketchValue()
+  {
+    return value;
+  }
 
   @Override
   public boolean equals(Object o)
@@ -126,6 +131,10 @@ public class ArrayOfDoublesSketchConstantPostAggregator extends ArrayOfDoublesSk
     if (this.getName() != null ? !this.getName().equals(that.getName()) : that.getName() != null) {
       return false;
     }
+
+    if (this.getRawSketchValue() != null ? !this.getRawSketchValue().equals(that.getRawSketchValue()) : that.getRawSketchValue() != null) {
+      return false;
+    }
     return true;
   }
 
@@ -133,6 +142,7 @@ public class ArrayOfDoublesSketchConstantPostAggregator extends ArrayOfDoublesSk
   public int hashCode()
   {
     int result = getName() != null ? getName().hashCode() : 0;
+    result = result * (getRawSketchValue() != null ? getRawSketchValue().hashCode() : 0);
     result = 37 * result + sketchValue.hashCode();
     return result;
   }
