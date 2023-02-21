@@ -3330,16 +3330,12 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithFilterAfter()
+  public void testUnnestWithInFilteringOnUnnestedCol()
   {
-    // This tells the test to skip generating (vectorize = force) path
-    // Generates only 1 native query with vectorize = false
     skipVectorize();
-    // This tells that both vectorize = force and vectorize = false takes the same path of non vectorization
-    // Generates 2 native queries with 2 different values of vectorize
     cannotVectorize();
     testQuery(
-        "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3 IN ('a','b')",
+        "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3 IN ('a','b') ",
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
@@ -3362,6 +3358,105 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             new Object[]{"a"},
             new Object[]{"b"},
             new Object[]{"b"}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithBoundFilteringOnUnnestedCol()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where (d3>= 'b' AND d3 < 'd') ",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new TableDataSource(CalciteTests.DATASOURCE3),
+                      "dim3",
+                      "EXPR$0"
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .filters(bound("EXPR$0", "b", "d", false, true, null, StringComparators.LEXICOGRAPHIC))
+                  .columns(ImmutableList.of(
+                      "EXPR$0"
+                  ))
+                  .build()
+        ),
+
+        ImmutableList.of(
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"c"}
+        )
+    );
+  }
+
+
+  @Test
+  public void testUnnestWithFilteringOnUnnestedVirtualCol()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "SELECT d12 FROM druid.numfoo, UNNEST(ARRAY[m1, m2]) as unnested (d12) where d12 IN ('1','2') AND m1 < 10",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new QueryDataSource(
+                          newScanQueryBuilder()
+                              .dataSource(
+                                  new TableDataSource(CalciteTests.DATASOURCE3)
+                              )
+                              .intervals(querySegmentSpec(Filtration.eternity()))
+                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                              .legacy(false)
+                              .filters(bound("m1", null, "10", false, true, null, StringComparators.NUMERIC))
+                              .columns(
+                                  "__time",
+                                  "cnt",
+                                  "d1",
+                                  "d2",
+                                  "dim1",
+                                  "dim2",
+                                  "dim3",
+                                  "dim4",
+                                  "dim5",
+                                  "dim6",
+                                  "f1",
+                                  "f2",
+                                  "l1",
+                                  "l2",
+                                  "m1",
+                                  "m2",
+                                  "unique_dim1"
+                              )
+                              .context(QUERY_CONTEXT_DEFAULT)
+                              .build()
+                      ),
+                      "v0",
+                      "EXPR$0"
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .virtualColumns(expressionVirtualColumn("v0", "array(\"m1\",\"m2\")", ColumnType.FLOAT_ARRAY))
+                  .filters(new InDimFilter("EXPR$0", ImmutableList.of("1.0", "2.0"), null))
+                  .columns(ImmutableList.of(
+                      "EXPR$0"
+                  ))
+                  .build()
+        ),
+
+        ImmutableList.of(
+            new Object[]{1.0f},
+            new Object[]{1.0f},
+            new Object[]{2.0f},
+            new Object[]{2.0f}
         )
     );
   }

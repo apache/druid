@@ -171,6 +171,11 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     final Filter unnestFilterFound = unnestDatasourceRel.getUnnestFilter();
     final Filter logicalFilter;
     if (unnestFilterFound != null) {
+      // The correlated value will be the last element in the row signature of correlate
+      // The filter points to $0 of the right data source e.g. OR(=($0, 'a'), =($0, 'b'))
+      // After the correlation the rowType becomes (left data source rowtype + 1)
+      // So the filter needs to be shifted to the last element of
+      // rowtype after the correlation for e.g OR(=($17, 'a'), =($17, 'b'))
       logicalFilter = LogicalFilter.create(
           correlateRel,
           RexUtil.shift(unnestFilterFound.getCondition(), rowSignature.size() - 1),
