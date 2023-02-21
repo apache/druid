@@ -20,7 +20,10 @@
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesUpdatableSketch;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesUpdatableSketchBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -32,8 +35,12 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Arrays;
+import java.util.Map;
 
 public class ArrayOfDoublesSketchToMetricsEstimatePostAggregatorTest
 {
@@ -67,6 +74,31 @@ public class ArrayOfDoublesSketchToMetricsEstimatePostAggregatorTest
         postAgg.toString()
     );
   }
+
+  @Test
+  public void testCompute()
+  {
+    ArrayOfDoublesUpdatableSketch s1 = new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(16)
+        .setNumberOfValues(2)
+        .build();
+
+    s1.update("key1", new double[] {1.0, 2.0});
+    s1.update("key2", new double[] {1.0, 2.0});
+    s1.update("key3", new double[] {1.0, 2.0});
+    s1.update("key4", new double[] {1.0, 2.0});
+
+    PostAggregator field1 = EasyMock.createMock(PostAggregator.class);
+    EasyMock.expect(field1.compute(EasyMock.anyObject(Map.class))).andReturn(s1).anyTimes();
+    EasyMock.replay(field1);
+
+    final PostAggregator postAgg = new ArrayOfDoublesSketchToMetricsEstimatePostAggregator(
+        "a",
+        field1
+    );
+    double[] expectedOutput = {4.0, 8.0};
+    Assert.assertTrue(Arrays.equals(expectedOutput, (double[]) postAgg.compute(ImmutableMap.of())));
+  }
+
 
   @Test
   public void testComparator()

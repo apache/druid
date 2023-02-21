@@ -24,10 +24,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketch;
 import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketches;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -35,15 +33,15 @@ import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.data.SafeWritableMemory;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 
-
 /**
- *
+ * This post-aggregator converts a given Base64 encoded string to an ArrayOfDoublesSketch.
+ * The input column contains name of post-aggregator output and base64 encoded input string.
+ * The output is a deserialized {@link ArrayOfDoublesSketch} .
  */
 public class ArrayOfDoublesSketchConstantPostAggregator extends ArrayOfDoublesSketchPostAggregator
 {
@@ -61,20 +59,9 @@ public class ArrayOfDoublesSketchConstantPostAggregator extends ArrayOfDoublesSk
     this.sketchValue = deserializeSafe(value);
   }
 
-
-  private ArrayOfDoublesSketch deserializeFromBase64EncodedString(final String str)
-  {
-    return deserializeFromByteArray(StringUtils.decodeBase64(str.getBytes(StandardCharsets.UTF_8)));
-  }
-
-  private ArrayOfDoublesSketch deserializeFromByteArray(final byte[] data)
-  {
-    return ArrayOfDoublesSketches.wrapSketch(Memory.wrap(data));
-  }
-
   private ArrayOfDoublesSketch deserializeFromBase64EncodedStringSafe(final String str)
   {
-    return deserializeFromByteArraySafe(StringUtils.decodeBase64(str.getBytes(StandardCharsets.UTF_8)));
+    return deserializeFromByteArraySafe(StringUtils.decodeBase64(StringUtils.toUtf8(str)));
   }
 
   private ArrayOfDoublesSketch deserializeFromByteArraySafe(final byte[] data)
@@ -82,28 +69,9 @@ public class ArrayOfDoublesSketchConstantPostAggregator extends ArrayOfDoublesSk
     return ArrayOfDoublesSketches.wrapSketch(SafeWritableMemory.wrap(data));
   }
 
-
-  private ArrayOfDoublesSketch deserialize(final Object serializedSketch)
-  {
-    if (serializedSketch instanceof String) {
-      return deserializeFromBase64EncodedString((String) serializedSketch);
-    } else if (serializedSketch instanceof byte[]) {
-      return deserializeFromByteArray((byte[]) serializedSketch);
-    } else if (serializedSketch instanceof ArrayOfDoublesSketch) {
-      return (ArrayOfDoublesSketch) serializedSketch;
-    }
-    throw new ISE("Object is not of a type that can deserialize to sketch: %s", serializedSketch.getClass());
-  }
-
   private ArrayOfDoublesSketch deserializeSafe(final Object serializedSketch)
   {
-    if (serializedSketch instanceof String) {
-      return deserializeFromBase64EncodedStringSafe((String) serializedSketch);
-    } else if (serializedSketch instanceof byte[]) {
-      return deserializeFromByteArraySafe((byte[]) serializedSketch);
-    }
-
-    return deserialize(serializedSketch);
+    return deserializeFromBase64EncodedStringSafe((String) serializedSketch);
   }
 
   @Override
@@ -123,7 +91,6 @@ public class ArrayOfDoublesSketchConstantPostAggregator extends ArrayOfDoublesSk
   {
     return sketchValue;
   }
-
 
   @Override
   public ArrayOfDoublesSketchConstantPostAggregator decorate(Map<String, AggregatorFactory> aggregators)

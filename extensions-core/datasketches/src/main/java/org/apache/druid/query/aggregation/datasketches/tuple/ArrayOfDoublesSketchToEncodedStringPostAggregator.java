@@ -53,12 +53,8 @@ public class ArrayOfDoublesSketchToEncodedStringPostAggregator extends ArrayOfDo
   @Override
   public String compute(final Map<String, Object> combinedAggregators)
   {
-    String resultant_string = "";
     final ArrayOfDoublesSketch sketch = (ArrayOfDoublesSketch) getField().compute(combinedAggregators);
-    if (sketch != null) {
-      resultant_string = Base64.getEncoder().encodeToString(sketch.toByteArray());
-    }
-    return resultant_string;
+    return Base64.getEncoder().encodeToString(sketch.toByteArray());
   }
 
   @Override
