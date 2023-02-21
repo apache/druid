@@ -37,7 +37,7 @@ public class StandardRestExceptionEncoder implements RestExceptionEncoder
   public ResponseBuilder builder(DruidException e)
   {
     return Response
-      .status(status(e))
+      .status(Response.Status.fromStatusCode(e.category().httpStatus()))
       .entity(e.toErrorResponse())
       .type(MediaType.APPLICATION_JSON);
   }
@@ -47,27 +47,27 @@ public class StandardRestExceptionEncoder implements RestExceptionEncoder
   {
     return builder(e).build();
   }
-
-  // Temporary status mapping
-  private Status status(DruidException e)
-  {
-    switch (e.type()) {
-      case CONFIG:
-      case INTERNAL:
-      case NETWORK:
-        return Response.Status.INTERNAL_SERVER_ERROR;
-      case TIMEOUT:
-        return Response.Status.fromStatusCode(504); // No predefined status name
-      case NOT_FOUND:
-        return Response.Status.NOT_FOUND;
-      case RESOURCE:
-        return Response.Status.fromStatusCode(429); // No predefined status name
-      case USER:
-      case UNSUPPORTED:
-        return Response.Status.BAD_REQUEST;
-      default:
-        // Should never occur
-        return Response.Status.INTERNAL_SERVER_ERROR;
-    }
-  }
+  //
+  //  // Temporary status mapping
+  //  private Status status(DruidExceptionV1 e)
+  //  {
+  //    switch (e.type()) {
+  //      case CONFIG:
+  //      case INTERNAL:
+  //      case NETWORK:
+  //        return Response.Status.INTERNAL_SERVER_ERROR;
+  //      case TIMEOUT:
+  //        return Response.Status.fromStatusCode(504); // No predefined status name
+  //      case NOT_FOUND:
+  //        return Response.Status.NOT_FOUND;
+  //      case RESOURCE:
+  //        return Response.Status.fromStatusCode(429); // No predefined status name
+  //      case USER:
+  //      case UNSUPPORTED:
+  //        return Response.Status.BAD_REQUEST;
+  //      default:
+  //        // Should never occur
+  //        return Response.Status.INTERNAL_SERVER_ERROR;
+  //    }
+  //  }
 }

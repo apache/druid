@@ -30,7 +30,7 @@ import java.util.Map;
 
 /**
  * Union of the {@link org.apache.druid.query.QueryException} and
- * {@link DruidException} fields. Used in tests to deserialize errors which may
+ * {@link DruidExceptionV1} fields. Used in tests to deserialize errors which may
  * be in either format.
  */
 public class ErrorResponse
@@ -39,7 +39,6 @@ public class ErrorResponse
   private final String code;
   private final String errorClass;
   private final String host;
-  private final DruidException.ErrorType type;
   private Map<String, String> context;
 
   @JsonCreator
@@ -48,7 +47,6 @@ public class ErrorResponse
       @JsonProperty("errorMessage") @Nullable String errorMessage,
       @JsonProperty("errorClass") @Nullable String errorClass,
       @JsonProperty("host") @Nullable String host,
-      @JsonProperty("type") @Nullable DruidException.ErrorType type,
       @JsonProperty("context") @Nullable Map<String, String> context
   )
   {
@@ -56,7 +54,6 @@ public class ErrorResponse
     this.code = errorCode;
     this.errorClass = errorClass;
     this.host = host;
-    this.type = type;
     this.context = context;
   }
 
@@ -93,12 +90,5 @@ public class ErrorResponse
   public Map<String, String> getContext()
   {
     return context;
-  }
-
-  @JsonProperty
-  @JsonInclude(Include.NON_NULL)
-  public DruidException.ErrorType getType()
-  {
-    return type;
   }
 }

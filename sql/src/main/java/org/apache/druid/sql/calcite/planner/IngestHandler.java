@@ -36,7 +36,8 @@ import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.error.SqlUnsupportedError;
+import org.apache.druid.error.SqlValidationError;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -87,8 +88,8 @@ public abstract class IngestHandler extends QueryHandler
       SqlNodeList orderByList = sqlOrderBy.orderList;
       if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
         String opName = sqlNode.getOperator().getName();
-        throw DruidException.validationError(
-            "Cannot use ORDER BY on %s %s statement, use CLUSTERED BY instead.",
+        throw new SqlValidationError(
+            "Cannot use ORDER BY on %s [%s] statement, use CLUSTERED BY instead.",
             "INSERT".equals(opName) ? "an" : "a",
             opName
         );
@@ -99,7 +100,7 @@ public abstract class IngestHandler extends QueryHandler
     }
 
     if (!query.isA(SqlKind.QUERY)) {
-      throw DruidException.validationError("Cannot execute SQL statement %s", query.getKind());
+      throw new SqlValidationError("Cannot execute SQL statement [%s]", query.getKind());
     }
     return query;
   }
@@ -115,8 +116,8 @@ public abstract class IngestHandler extends QueryHandler
   public void validate()
   {
     if (ingestNode().getPartitionedBy() == null) {
-      throw DruidException.validationError(
-          "%s statements must specify PARTITIONED BY clause explicitly",
+      throw new SqlValidationError(
+          "[%s] statements must specify PARTITIONED BY clause explicitly",
           operationName()
       );
     }
@@ -130,8 +131,8 @@ public abstract class IngestHandler extends QueryHandler
       }
     }
     catch (JsonProcessingException e) {
-      throw DruidException.validationError(
-              "Invalid partition granularity '%s",
+      throw new SqlValidationError(
+              "Invalid partition granularity [%s]",
               ingestionGranularity
           );
     }
@@ -139,8 +140,8 @@ public abstract class IngestHandler extends QueryHandler
     // Check if CTX_SQL_OUTER_LIMIT is specified and fail the query if it is. CTX_SQL_OUTER_LIMIT being provided causes
     // the number of rows inserted to be limited which is likely to be confusing and unintended.
     if (handlerContext.queryContextMap().get(PlannerContext.CTX_SQL_OUTER_LIMIT) != null) {
-      throw DruidException.validationError(
-              "Context parameter %s cannot be provided with %s",
+      throw new SqlValidationError(
+              "Context parameter [%s] cannot be provided with [%s]",
               PlannerContext.CTX_SQL_OUTER_LIMIT,
               operationName()
       );
@@ -166,12 +167,12 @@ public abstract class IngestHandler extends QueryHandler
   {
     final SqlInsert insert = ingestNode();
     if (insert.isUpsert()) {
-      throw DruidException.unsupportedError("UPSERT is not supported.");
+      throw new SqlUnsupportedError("UPSERT is not supported.");
     }
 
     if (insert.getTargetColumnList() != null) {
-      throw DruidException.unsupportedSqlError(
-          "%s with a target column list is not supported",
+      throw new SqlUnsupportedError(
+          "[%s] with a target column list is not supported",
           operationName()
       );
     }
@@ -181,7 +182,7 @@ public abstract class IngestHandler extends QueryHandler
 
     if (tableIdentifier.names.isEmpty()) {
       // I don't think this can happen, but include a branch for it just in case.
-      throw DruidException.validationError("%s requires a target table", operationName());
+      throw new SqlValidationError("[%s] requires a target table", operationName());
     } else if (tableIdentifier.names.size() == 1) {
       // Unqualified name.
       dataSource = Iterables.getOnlyElement(tableIdentifier.names);
@@ -193,8 +194,8 @@ public abstract class IngestHandler extends QueryHandler
       if (tableIdentifier.names.size() == 2 && defaultSchemaName.equals(tableIdentifier.names.get(0))) {
         dataSource = tableIdentifier.names.get(1);
       } else {
-        throw DruidException.validationError(
-              "Cannot %s into %s because it is not a Druid datasource.",
+        throw new SqlValidationError(
+              "Cannot [%s] into [%s] because it is not a Druid datasource.",
               operationName(),
               tableIdentifier
         );
@@ -205,7 +206,7 @@ public abstract class IngestHandler extends QueryHandler
       IdUtils.validateId(operationName() + " dataSource", dataSource);
     }
     catch (IllegalArgumentException e) {
-      throw DruidException.unexpected(e);
+      throw new SqlValidationError(e);
     }
 
     return dataSource;
@@ -274,7 +275,7 @@ public abstract class IngestHandler extends QueryHandler
     public void validate()
     {
       if (!handlerContext.plannerContext().engineHasFeature(EngineFeature.CAN_INSERT)) {
-        throw DruidException.userError(
+        throw new SqlUnsupportedError(
             "Cannot execute INSERT with SQL engine '%s'.",
             handlerContext.engine().name()
         );
@@ -322,14 +323,14 @@ public abstract class IngestHandler extends QueryHandler
     public void validate()
     {
       if (!handlerContext.plannerContext().engineHasFeature(EngineFeature.CAN_REPLACE)) {
-        throw DruidException.validationError(
-            "Cannot execute REPLACE with SQL engine %s",
+        throw new SqlValidationError(
+            "Cannot execute REPLACE with SQL engine [%s]",
             handlerContext.engine().name()
         );
       }
       SqlNode replaceTimeQuery = sqlNode.getReplaceTimeQuery();
       if (replaceTimeQuery == null) {
-        throw DruidException.validationError(
+        throw new SqlValidationError(
             "Missing time chunk information in OVERWRITE clause for REPLACE. Use "
             + "OVERWRITE WHERE <__time based condition> or OVERWRITE ALL to overwrite the entire table."
         );

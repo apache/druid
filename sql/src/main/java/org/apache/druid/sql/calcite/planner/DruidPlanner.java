@@ -29,7 +29,13 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.ValidationException;
+import org.apache.druid.error.DruidAssertionError;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionV1;
+import org.apache.druid.error.SqlParseError;
+import org.apache.druid.error.SqlUnsupportedError;
+import org.apache.druid.error.SqlValidationError;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.server.security.Access;
@@ -167,8 +173,8 @@ public class DruidPlanner implements Closeable
     if (query.isA(SqlKind.QUERY)) {
       return new QueryHandler.SelectHandler(handlerContext, query, explain);
     }
-    throw DruidException.unsupportedSqlError(
-        "Unsupported SQL statement %s",
+    throw new SqlUnsupportedError(
+        "Unsupported SQL statement [%s]",
         node.getKind()
     );
   }
@@ -322,71 +328,65 @@ public class DruidPlanner implements Closeable
       return inner;
     }
     catch (ValidationException inner) {
-      return parseValidationMessage(inner, QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE);
+      return parseValidationMessage(inner, false);
     }
     catch (SqlParseException inner) {
       return parseParserMessage(inner);
     }
     catch (RelOptPlanner.CannotPlanException inner) {
-      return parseValidationMessage(inner, QueryException.QUERY_UNSUPPORTED_ERROR_CODE);
+      return parseValidationMessage(inner, true);
     }
     catch (Exception inner) {
       // Anything else. Should not get here. Anything else should already have
       // been translated to a DruidException unless it is an unexpected exception.
-      return DruidException
-          .internalError(e.getMessage())
-          .cause(inner)
-          .build();
+      return new DruidAssertionError(inner, e.getMessage());
     }
   }
 
-  private static DruidException parseValidationMessage(Exception e, String errorCode)
+  private static DruidException parseValidationMessage(Exception e, boolean unsupported)
   {
     // Calcite exception that probably includes a position.
     String msg = e.getMessage();
     Pattern p = Pattern.compile("(?:org\\..*: )From line (\\d+), column (\\d+) to line \\d+, column \\d+: (.*)$");
     Matcher m = p.matcher(msg);
-    DruidException.Builder builder;
+    Exception cause;
+    String errorMsg;
     if (m.matches()) {
-      builder = DruidException.user(
-          "Line %s, Column %s: %s", m.group(1), m.group(2), m.group(3)
-      );
+      cause = null;
+      errorMsg = StringUtils.format("Line [%s], Column [%s]: %s", m.group(1), m.group(2), m.group(3));
     } else {
-      builder = DruidException.user(msg).cause(e);
+      cause = e;
+      errorMsg = msg;
     }
-    return builder
-        .code(errorCode)
-        .build();
+    if (unsupported) {
+      return new SqlUnsupportedError(cause, errorMsg);
+    } else {
+      return new SqlValidationError(cause, errorMsg);
+    }
   }
 
   private static DruidException parseParserMessage(Exception e)
   {
     // Calcite exception that probably includes a position. The normal parse
     // exception is rather cumbersome. Clean it up a bit.
-    String msg = e.getMessage();
+    final String msg = e.getMessage();
     Pattern p = Pattern.compile(
         "Encountered \"(.*)\" at line (\\d+), column (\\d+).\nWas expecting one of:\n(.*)",
         Pattern.MULTILINE | Pattern.DOTALL
     );
     Matcher m = p.matcher(msg);
-    DruidException.Builder builder;
-    if (m.matches()) {
-      Pattern p2 = Pattern.compile("[ .]*\n\\ s+");
-      Matcher m2 = p2.matcher(m.group(4).trim());
-      String choices = m2.replaceAll(", ");
-      builder = DruidException.user(
-              "Line %s, Column %s: unexpected token '%s'",
-              m.group(2),
-              m.group(3),
-              m.group(1)
-           )
-          .context("Expected", choices);
-    } else {
-      builder = DruidException.user(msg).cause(e);
+    if (!m.matches()) {
+      return new SqlParseError(e, msg);
     }
-    return builder
-        .code(QueryException.SQL_PARSE_FAILED_ERROR_CODE)
-        .errorClass(SqlParseException.class.getName())
-        .build();
+    Pattern p2 = Pattern.compile("[ .]*\n\\ s+");
+    Matcher m2 = p2.matcher(m.group(4).trim());
+    String choices = m2.replaceAll(", ");
+    return new SqlParseError(
+            "Line [%s], Column [%s]: unexpected token [%s]",
+            m.group(2),
+            m.group(3),
+            m.group(1)
+         )
+        .suggestion("Expected one of " + choices);
   }
 }

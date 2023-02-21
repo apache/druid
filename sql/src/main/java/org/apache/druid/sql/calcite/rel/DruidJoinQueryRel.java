@@ -38,7 +38,8 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionV1;
+import org.apache.druid.error.SqlUnsupportedError;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -349,7 +350,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       case INNER:
         return JoinType.INNER;
       default:
-        throw DruidException.unsupportedSqlError("Cannot handle joinType '%s'", calciteJoinType);
+        throw new SqlUnsupportedError("Cannot handle joinType [%s]", calciteJoinType);
     }
   }
 

@@ -35,7 +35,10 @@ import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.util.Optionality;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidAssertionError;
+import org.apache.druid.error.DruidExceptionV1;
+import org.apache.druid.error.SqlUnsupportedError;
+import org.apache.druid.error.SqlValidationError;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.FloatAnyAggregatorFactory;
@@ -89,7 +92,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case COMPLEX:
             return new StringFirstAggregatorFactory(name, fieldName, timeColumn, maxStringBytes);
           default:
-            throw DruidException.unsupportedSqlError("EARLIEST aggregator is not supported for type %s", type);
+            throw new SqlUnsupportedError("EARLIEST aggregator is not supported for type [%s]", type);
         }
       }
     },
@@ -109,7 +112,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case COMPLEX:
             return new StringLastAggregatorFactory(name, fieldName, timeColumn, maxStringBytes);
           default:
-            throw DruidException.unsupportedSqlError("LATEST aggregator is not supported for type %s", type);
+            throw new SqlUnsupportedError("LATEST aggregator is not supported for type [%s]", type);
         }
       }
     },
@@ -128,7 +131,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case STRING:
             return new StringAnyAggregatorFactory(name, fieldName, maxStringBytes);
           default:
-            throw DruidException.unsupportedSqlError("ANY aggregation is not supported for type %s", type);
+            throw new SqlUnsupportedError("ANY aggregation is not supported for type [%s]", type);
         }
       }
     };
@@ -186,12 +189,11 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
     final ColumnType outputType = Calcites.getColumnTypeForRelDataType(aggregateCall.getType());
     if (outputType == null) {
-      throw DruidException.internalError(
-              "%s cannot translate output SQL type %s to a Druid type",
+      throw new DruidAssertionError(
+              "[%s] cannot translate output SQL type [%s] to a Druid type",
               aggregateCall.getName(),
               aggregateCall.getType().getSqlTypeName()
-           )
-          .build();
+           );
     }
 
     final String fieldName = getColumnName(plannerContext, virtualColumnRegistry, args.get(0), rexNodes.get(0));
@@ -207,8 +209,8 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           maxStringBytes = RexLiteral.intValue(rexNodes.get(1));
         }
         catch (AssertionError ae) {
-          throw DruidException.validationError(
-              "%s, argument 2 must be a number but found [%s]",
+          throw new SqlValidationError(
+              "[%s], argument 2 must be a number but found [%s]",
               aggregateCall.getName(),
               rexNodes.get(1)
              );
@@ -222,8 +224,8 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
         );
         break;
       default:
-        throw DruidException.validationError(
-              "%s expects 1 or 2 arguments but found %d",
+        throw new SqlValidationError(
+              "[%s] expects 1 or 2 arguments but found [%d]",
               aggregateCall.getName(),
               args.size()
              );

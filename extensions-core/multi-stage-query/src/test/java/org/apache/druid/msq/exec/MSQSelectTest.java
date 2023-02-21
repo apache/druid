@@ -24,7 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionV1;
+import org.apache.druid.error.SqlValidationError;
 import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -1016,7 +1017,7 @@ public class MSQSelectTest extends MSQTestBase
     testSelectQuery()
         .setSql("select a from ")
         .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(DruidException.class),
+            CoreMatchers.instanceOf(SqlValidationError.class),
             ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Encountered \"from <EOF>\""))
         ))
         .setQueryContext(context)
@@ -1031,7 +1032,7 @@ public class MSQSelectTest extends MSQTestBase
         .setQueryContext(context)
         .setExpectedValidationErrorMatcher(
             CoreMatchers.allOf(
-                CoreMatchers.instanceOf(DruidException.class),
+                CoreMatchers.instanceOf(SqlValidationError.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
                     "Cannot query table INFORMATION_SCHEMA.SCHEMATA with SQL engine 'msq-task'."))
             )
@@ -1047,7 +1048,7 @@ public class MSQSelectTest extends MSQTestBase
         .setQueryContext(context)
         .setExpectedValidationErrorMatcher(
             CoreMatchers.allOf(
-                CoreMatchers.instanceOf(DruidException.class),
+                CoreMatchers.instanceOf(SqlValidationError.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
                     "Cannot query table sys.segments with SQL engine 'msq-task'."))
             )
@@ -1063,7 +1064,7 @@ public class MSQSelectTest extends MSQTestBase
         .setQueryContext(context)
         .setExpectedValidationErrorMatcher(
             CoreMatchers.allOf(
-                CoreMatchers.instanceOf(DruidException.class),
+                CoreMatchers.instanceOf(SqlValidationError.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
                     "Cannot query table sys.segments with SQL engine 'msq-task'."))
             )
@@ -1080,7 +1081,7 @@ public class MSQSelectTest extends MSQTestBase
         .setQueryContext(context)
         .setExpectedValidationErrorMatcher(
             CoreMatchers.allOf(
-                CoreMatchers.instanceOf(DruidException.class),
+                CoreMatchers.instanceOf(SqlValidationError.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
                     "Cannot query table sys.segments with SQL engine 'msq-task'."))
             )

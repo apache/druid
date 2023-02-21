@@ -117,6 +117,7 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -1340,7 +1341,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertNotNull(exception);
     Assert.assertEquals(PlanningError.SQL_PARSE_ERROR.getErrorCode(), exception.getErrorCode());
     Assert.assertEquals(PlanningError.SQL_PARSE_ERROR.getErrorClass(), exception.getErrorClass());
-    Assert.assertTrue(exception.getMessage().contains("Line 1, Column 1: unexpected token 'FROM'"));
+    Assert.assertTrue(exception.getMessage().contains("Line [1], Column [1]: unexpected token [FROM]"));
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
@@ -1396,7 +1397,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorCode(), exception.getErrorCode());
     Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorClass(), exception.getErrorClass());
     Assert.assertTrue(
-        exception.getMessage().contains("MAX does not support type STRING")
+        exception.getMessage().contains("MAX does not support type [STRING]")
     );
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
@@ -1881,7 +1882,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), exception.getErrorCode());
     MatcherAssert.assertThat(
         exception.getMessage(),
-        CoreMatchers.containsString("Query context parameter 'sqlInsertSegmentGranularity' is not allowed")
+        CoreMatchers.containsString("Query context parameter [sqlInsertSegmentGranularity] is not allowed")
     );
     checkSqlRequestLog(false);
   }
@@ -1929,14 +1930,6 @@ public class SqlResourceTest extends CalciteTestBase
   private Pair<QueryException, String> doPostRaw(final SqlQuery query) throws Exception
   {
     return doPostRaw(query, req);
-  }
-
-  private Pair<QueryException, List<Map<String, Object>>> doPost(final SqlQuery query, MockHttpServletRequest req)
-      throws Exception
-  {
-    return doPost(query, req, new TypeReference<List<Map<String, Object>>>()
-    {
-    });
   }
 
   // Returns either an error or a result, assuming the result is a JSON object.
@@ -2037,7 +2030,6 @@ public class SqlResourceTest extends CalciteTestBase
       ((StreamingOutput) resp.getEntity()).write(baos);
       return baos.toByteArray();
     } else {
-      String foo = JSON_MAPPER.writeValueAsString(resp.getEntity());
       return JSON_MAPPER.writeValueAsBytes(resp.getEntity());
     }
   }

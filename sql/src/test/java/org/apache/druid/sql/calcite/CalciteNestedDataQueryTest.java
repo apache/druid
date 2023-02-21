@@ -31,7 +31,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.error.SqlValidationError;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.HumanReadableBytes;
@@ -2808,7 +2808,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         + "SUM(cnt) "
         + "FROM druid.nested GROUP BY 1",
         (expected) -> {
-          expected.expect(DruidException.class);
+          expected.expect(SqlValidationError.class);
           expected.expectMessage(
               "Cannot use [JSON_VALUE_VARCHAR]: [Bad format, '.array.[1]' is not a valid JSONPath path: must start with '$']");
         }

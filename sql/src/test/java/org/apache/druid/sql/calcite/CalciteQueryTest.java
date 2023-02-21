@@ -25,7 +25,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionV1;
+import org.apache.druid.error.SqlValidationError;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
@@ -360,8 +361,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCannotInsertWithNativeEngine()
   {
-    final DruidException e = Assert.assertThrows(
-        DruidException.class,
+    final SqlValidationError e = Assert.assertThrows(
+        SqlValidationError.class,
         () -> testQuery(
             "INSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL",
             ImmutableList.of(),
@@ -380,8 +381,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCannotReplaceWithNativeEngine()
   {
-    final DruidException e = Assert.assertThrows(
-        DruidException.class,
+    final SqlValidationError e = Assert.assertThrows(
+        SqlValidationError.class,
         () -> testQuery(
             "REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL",
             ImmutableList.of(),
@@ -752,7 +753,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testEarliestByInvalidTimestamp()
   {
     msqCompatible();
-    expectedException.expect(DruidException.class);
+    expectedException.expect(SqlValidationError.class);
     expectedException.expectMessage("Cannot apply 'EARLIEST_BY' to arguments of type 'EARLIEST_BY(<FLOAT>, <BIGINT>)");
 
     testQuery(
@@ -766,7 +767,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testLatestByInvalidTimestamp()
   {
     msqCompatible();
-    expectedException.expect(DruidException.class);
+    expectedException.expect(SqlValidationError.class);
     expectedException.expectMessage("Cannot apply 'LATEST_BY' to arguments of type 'LATEST_BY(<FLOAT>, <BIGINT>)");
 
     testQuery(
@@ -2847,13 +2848,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       );
       Assert.fail("query execution should fail");
     }
-    catch (DruidException e) {
+    catch (SqlValidationError e) {
       Assert.assertTrue(
           e.getMessage().contains("Column count mismatch in UNION ALL")
       );
       Assert.assertEquals(
           QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.code()
+          e.getErrorCode()
       );
     }
   }
@@ -3126,13 +3127,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       );
       Assert.fail("query execution should fail");
     }
-    catch (DruidException e) {
+    catch (SqlValidationError e) {
       Assert.assertTrue(
           e.getMessage().contains("Column count mismatch in UNION ALL")
       );
       Assert.assertEquals(
           QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.code()
+          e.getErrorCode()
       );
     }
   }
@@ -3153,13 +3154,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       );
       Assert.fail("query execution should fail");
     }
-    catch (DruidException e) {
+    catch (SqlValidationError e) {
       Assert.assertTrue(
           e.getMessage().contains("Column count mismatch in UNION ALL")
       );
       Assert.assertEquals(
           QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.code()
+          e.getErrorCode()
       );
     }
   }
@@ -3180,13 +3181,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       );
       Assert.fail("query execution should fail");
     }
-    catch (DruidException e) {
+    catch (SqlValidationError e) {
       Assert.assertTrue(
           e.getMessage().contains("Column count mismatch in UNION ALL")
       );
       Assert.assertEquals(
           QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.code()
+          e.getErrorCode()
       );
     }
   }
@@ -5657,13 +5658,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       testQuery("SELECT STRING_AGG(unique_dim1, ',') FROM druid.foo", ImmutableList.of(), ImmutableList.of());
       Assert.fail("query execution should fail");
     }
-    catch (DruidException e) {
+    catch (SqlValidationError e) {
       Assert.assertTrue(
           e.getMessage().contains("Cannot use STRING_AGG on complex inputs COMPLEX<hyperUnique>")
       );
       Assert.assertEquals(
           QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.code()
+          e.getErrorCode()
       );
     }
   }
@@ -5803,7 +5804,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT COUNT(*) FROM druid.foo "
         + "WHERE TIME_IN_INTERVAL(__time, dim1)",
         expected -> {
-          expected.expect(CoreMatchers.instanceOf(DruidException.class));
+          expected.expect(CoreMatchers.instanceOf(SqlValidationError.class));
           expected.expect(ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
               "From line 1, column 38 to line 1, column 67: "
               + "Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(<TIMESTAMP(3)>, <VARCHAR>)'. "
@@ -5956,16 +5957,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     try {
       testBuilder().sql(sql).run();
     }
-    catch (DruidException e) {
+    catch (SqlValidationError e) {
       Assert.assertEquals(
           sql,
-          "Illegal TIMESTAMP constant",
+          "Illegal TIMESTAMP constant [CAST('z2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL]",
           e.message()
-      );
-      Assert.assertEquals(
-          sql,
-          "CAST('z2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL",
-          e.context("Value")
       );
     }
     catch (Exception e) {
@@ -11261,13 +11257,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       testQuery("SELECT TIME_EXTRACT(__time) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
       Assert.fail("query execution should fail");
     }
-    catch (DruidException e) {
+    catch (SqlValidationError e) {
       Assert.assertTrue(
           e.getMessage().contains("Invalid number of arguments to function 'TIME_EXTRACT'. Was expecting 2 arguments")
       );
       Assert.assertEquals(
           QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.code()
+          e.getErrorCode()
       );
     }
   }
@@ -13960,7 +13956,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test(expected = DruidException.class)
+  @Test(expected = SqlValidationError.class)
   public void testStringAggExpressionNonConstantSeparator()
   {
     msqCompatible();
@@ -14113,7 +14109,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testHumanReadableFormatFunctionExceptionWithWrongNumberType()
   {
     msqCompatible();
-    this.expectedException.expect(DruidException.class);
+    this.expectedException.expect(SqlValidationError.class);
     this.expectedException.expectMessage("Supported form(s): HUMAN_READABLE_BINARY_BYTE_FORMAT(Number, [Precision])");
     testQuery(
         "SELECT HUMAN_READABLE_BINARY_BYTE_FORMAT('45678')",
@@ -14126,7 +14122,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testHumanReadableFormatFunctionWithWrongPrecisionType()
   {
     msqCompatible();
-    this.expectedException.expect(DruidException.class);
+    this.expectedException.expect(SqlValidationError.class);
     this.expectedException.expectMessage("Supported form(s): HUMAN_READABLE_BINARY_BYTE_FORMAT(Number, [Precision])");
     testQuery(
         "SELECT HUMAN_READABLE_BINARY_BYTE_FORMAT(45678, '2')",
@@ -14139,7 +14135,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testHumanReadableFormatFunctionWithInvalidNumberOfArguments()
   {
     msqCompatible();
-    this.expectedException.expect(DruidException.class);
+    this.expectedException.expect(SqlValidationError.class);
 
     /*
      * frankly speaking, the exception message thrown here is a little bit confusing
