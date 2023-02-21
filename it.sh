@@ -185,6 +185,7 @@ function verify_env_vars {
 
 CMD=$1
 shift
+MAVEN_IGNORE="-P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true"
 
 case $CMD in
   "help" )
@@ -194,7 +195,7 @@ case $CMD in
     mvn -q clean package dependency:go-offline -P dist $MAVEN_IGNORE
     ;;
   "build" )
-    mvn clean package -P dist,skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -T1.0C $*
+    mvn clean package -P dist $MAVEN_IGNORE -T1.0C $*
     ;;
   "dist" )
     mvn package -P dist $MAVEN_IGNORE -pl :distribution

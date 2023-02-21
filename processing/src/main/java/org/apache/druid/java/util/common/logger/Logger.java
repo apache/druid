@@ -63,6 +63,7 @@ public class Logger
     return log;
   }
 
+  @SuppressWarnings("unused")
   @Override
   public String toString()
   {

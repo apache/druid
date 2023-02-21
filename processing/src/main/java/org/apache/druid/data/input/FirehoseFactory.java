@@ -86,6 +86,7 @@ public interface FirehoseFactory<T extends InputRowParser>
     return connect(parser, temporaryDirectory);
   }
 
+  @SuppressWarnings("unused")
   @JsonIgnore
   default boolean isSplittable()
   {

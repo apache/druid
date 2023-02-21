@@ -93,7 +93,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       BinaryOperator<T> combineFn,
       boolean hasTimeout,
       long timeoutMillis,
-      int queryPriority,
+      @SuppressWarnings("unused") int queryPriority,
       int parallelism,
       int yieldAfter,
       int batchSize,

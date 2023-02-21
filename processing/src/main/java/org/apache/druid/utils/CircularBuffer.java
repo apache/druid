@@ -28,6 +28,7 @@ import com.google.common.base.Preconditions;
  */
 public class CircularBuffer<E>
 {
+  @SuppressWarnings("unused")
   public E[] getBuffer()
   {
     return buffer;
