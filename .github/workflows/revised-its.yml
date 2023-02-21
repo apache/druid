@@ -15,7 +15,8 @@
 
 # Github workflow that runs revised/new ITs
 on:
-  workflow_call
+  workflow_call:
+  workflow_dispatch:
 
 jobs:
   it:
@@ -27,10 +28,11 @@ jobs:
         it: [HighAvailability, MultiStageQuery, Catalog, BatchIndex, MultiStageQueryWithMM, InputSource, InputFormat]
         #indexer: [indexer, middleManager]
         indexer: [middleManager]
-    uses: apache/druid/.github/workflows/reusable-revised-its.yml@master
+    uses: ./.github/workflows/reusable-revised-its.yml
     with:
       build_jdk: ${{ matrix.jdk }}
       runtime_jdk: ${{ matrix.jdk }}
       use_indexer: ${{ matrix.indexer }}
       script: ./it.sh github ${{ matrix.it }}
       it: ${{ matrix.it }}
+      mysql_driver: com.mysql.jdbc.Driver

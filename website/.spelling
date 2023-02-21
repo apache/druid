@@ -1444,6 +1444,7 @@ BUILD_SEGMENTS
 DETERMINE_PARTITIONS
 forceTimeChunkLock
 taskLockTimeout
+index.md
  - ../docs/misc/math-expr.md
 DOUBLE_ARRAY
 DOY

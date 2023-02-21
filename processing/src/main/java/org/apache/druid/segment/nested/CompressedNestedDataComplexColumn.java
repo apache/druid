@@ -510,6 +510,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
           metadata.getBitmapSerdeFactory().getObjectStrategy(),
           columnBuilder.getFileMapper()
       );
+      final boolean hasNull = localDictionarySupplier.get().get(0) == 0;
       Supplier<DictionaryEncodedColumn<?>> columnSupplier = () -> {
         FixedIndexed<Integer> localDict = localDictionarySupplier.get();
         return closer.register(new NestedFieldLiteralDictionaryEncodedColumn(
@@ -521,13 +522,13 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
             longDictionarySupplier.get(),
             doubleDictionarySupplier.get(),
             localDict,
-            localDict.get(0) == 0
+            hasNull
             ? rBitmaps.get(0)
             : metadata.getBitmapSerdeFactory().getBitmapFactory().makeEmptyImmutableBitmap()
         ));
       };
       columnBuilder.setHasMultipleValues(false)
-                   .setHasNulls(true)
+                   .setHasNulls(hasNull)
                    .setDictionaryEncodedColumnSupplier(columnSupplier);
       columnBuilder.setIndexSupplier(
           new NestedFieldLiteralColumnIndexSupplier(

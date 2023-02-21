@@ -18,13 +18,13 @@
 
 import { CSV_SAMPLE } from '../../utils/sampler.mock';
 
+import type { IngestionSpec } from './ingestion-spec';
 import {
   adjustId,
   cleanSpec,
   guessColumnTypeFromHeaderAndRows,
   guessColumnTypeFromInput,
   guessInputFormat,
-  IngestionSpec,
   updateSchemaWithSample,
   upgradeSpec,
 } from './ingestion-spec';

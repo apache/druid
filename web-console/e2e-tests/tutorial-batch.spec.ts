@@ -17,7 +17,7 @@
  */
 
 import { T } from 'druid-query-toolkit';
-import * as playwright from 'playwright-chromium';
+import type * as playwright from 'playwright-chromium';
 
 import { DatasourcesOverview } from './component/datasources/overview';
 import { IngestionOverview } from './component/ingestion/overview';

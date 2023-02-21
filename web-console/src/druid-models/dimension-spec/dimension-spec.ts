@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import { Field } from '../../components';
+import type { Field } from '../../components';
 import { filterMap, typeIs } from '../../utils';
-import { SampleHeaderAndRows } from '../../utils/sampler';
+import type { SampleHeaderAndRows } from '../../utils/sampler';
 import { guessColumnTypeFromHeaderAndRows } from '../ingestion-spec/ingestion-spec';
 
 export interface DimensionsSpec {
