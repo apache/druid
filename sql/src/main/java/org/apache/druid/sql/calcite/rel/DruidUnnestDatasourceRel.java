@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.rel;
 
 import org.apache.calcite.rel.RelWriter;
+import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Uncollect;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.type.RelDataType;
@@ -41,11 +42,11 @@ import java.util.Set;
 
 /**
  * The Rel node to capture the unnest (or uncollect) part in a query. This covers 2 cases:
- *
+ * <p>
  * Case 1:
  * If this is an unnest on a constant and no input table is required, the final query is built using
  * an UnnestDataSource with a base InlineDataSource in this rel.
- *
+ * <p>
  * Case 2:
  * If the unnest has an input table, this rel resolves the unnest part and delegates the rel to be consumed by other
  * rule ({@link org.apache.druid.sql.calcite.rule.DruidCorrelateUnnestRule}
@@ -55,11 +56,13 @@ public class DruidUnnestDatasourceRel extends DruidRel<DruidUnnestDatasourceRel>
   private final Uncollect uncollect;
   private final DruidQueryRel druidQueryRel;
   private final LogicalProject unnestProject;
+  private final Filter unnestFilter;
 
   public DruidUnnestDatasourceRel(
       Uncollect uncollect,
       DruidQueryRel queryRel,
       LogicalProject unnestProject,
+      Filter unnestFilter,
       PlannerContext plannerContext
   )
   {
@@ -67,11 +70,17 @@ public class DruidUnnestDatasourceRel extends DruidRel<DruidUnnestDatasourceRel>
     this.uncollect = uncollect;
     this.druidQueryRel = queryRel;
     this.unnestProject = unnestProject;
+    this.unnestFilter = unnestFilter;
   }
 
   public LogicalProject getUnnestProject()
   {
     return unnestProject;
+  }
+
+  public Filter getUnnestFilter()
+  {
+    return unnestFilter;
   }
 
   @Nullable
@@ -88,6 +97,7 @@ public class DruidUnnestDatasourceRel extends DruidRel<DruidUnnestDatasourceRel>
         uncollect,
         druidQueryRel.withPartialQuery(newQueryBuilder),
         unnestProject,
+        unnestFilter,
         getPlannerContext()
     );
   }
@@ -149,14 +159,24 @@ public class DruidUnnestDatasourceRel extends DruidRel<DruidUnnestDatasourceRel>
         new Uncollect(getCluster(), traitSet.replace(DruidConvention.instance()), uncollect.getInput(), false),
         druidQueryRel.asDruidConvention(),
         unnestProject,
+        unnestFilter,
         getPlannerContext()
     );
+  }
+
+  public DruidUnnestDatasourceRel withFilter(Filter f)
+  {
+    return new DruidUnnestDatasourceRel(uncollect, druidQueryRel, unnestProject, f, getPlannerContext());
   }
 
   @Override
   public RelWriter explainTerms(RelWriter pw)
   {
-    return super.explainTerms(pw);
+    return super.explainTerms(pw)
+                .item("Uncollect", uncollect)
+                .item("Query", druidQueryRel)
+                .item("unnestProject", unnestProject)
+                .item("unnestFilter", unnestFilter);
   }
 
   @Override
@@ -174,6 +194,6 @@ public class DruidUnnestDatasourceRel extends DruidRel<DruidUnnestDatasourceRel>
   @Override
   protected DruidUnnestDatasourceRel clone()
   {
-    return new DruidUnnestDatasourceRel(uncollect, druidQueryRel, unnestProject, getPlannerContext());
+    return new DruidUnnestDatasourceRel(uncollect, druidQueryRel, unnestProject, unnestFilter, getPlannerContext());
   }
 }

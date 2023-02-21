@@ -76,7 +76,7 @@ public class UnnestStorageAdapter implements StorageAdapter
     if (filter == null) {
       forBaseFilter = filter;
     } else {
-      // if the filter has thw unnested column
+      // if the filter has the unnested column
       // do not pass it into the base cursor
       // if there is a filter as d2 > 1 and unnest-d2 < 10
       // Calcite would push the filter on d2 into the data source

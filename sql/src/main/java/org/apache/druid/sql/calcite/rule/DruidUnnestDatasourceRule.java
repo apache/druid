@@ -95,6 +95,7 @@ public class DruidUnnestDatasourceRule extends RelOptRule
         uncollectRel,
         druidQueryRel.withPartialQuery(druidQueryRel.getPartialDruidQuery().withSelectProject(queryProject)),
         logicalProject,
+        null,
         plannerContext
     );
 

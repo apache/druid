@@ -229,6 +229,15 @@ public class DruidQuery
               virtualColumnRegistry
           )
       );
+    } else if (partialQuery.getUnnestFilter() != null) {
+      filter = Preconditions.checkNotNull(
+          computeUnnestFilter(
+              partialQuery,
+              plannerContext,
+              sourceRowSignature,
+              virtualColumnRegistry
+          )
+      );
     } else {
       filter = null;
     }
@@ -309,6 +318,7 @@ public class DruidQuery
       unnestProjection = null;
     }
 
+
     return new DruidQuery(
         dataSource,
         plannerContext,
@@ -333,6 +343,21 @@ public class DruidQuery
   )
   {
     return getDimFilter(plannerContext, rowSignature, virtualColumnRegistry, partialQuery.getWhereFilter());
+  }
+
+  @Nullable
+  private static DimFilter computeUnnestFilter(
+      final PartialDruidQuery partialQuery,
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final VirtualColumnRegistry virtualColumnRegistry
+  )
+  {
+    final Filter unnestFilter = partialQuery.getUnnestFilter();
+    if (unnestFilter == null) {
+      return null;
+    }
+    return getDimFilter(plannerContext, rowSignature, virtualColumnRegistry, unnestFilter);
   }
 
   @Nullable

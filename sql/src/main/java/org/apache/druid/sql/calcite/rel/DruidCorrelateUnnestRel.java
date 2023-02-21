@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.rel;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -32,9 +33,11 @@ import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.Correlate;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.JoinRelType;
+import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.QueryDataSource;
@@ -58,7 +61,7 @@ import java.util.stream.Collectors;
  * Each correlate can be perceived as a join with the join type being inner
  * the left of a correlate as seen in the rule {@link org.apache.druid.sql.calcite.rule.DruidCorrelateUnnestRule}
  * is the {@link DruidQueryRel} while the right will always be an {@link DruidUnnestDatasourceRel}.
- *
+ * <p>
  * Since this is a subclass of DruidRel it is automatically considered by other rules that involves DruidRels.
  * Some example being SELECT_PROJECT and SORT_PROJECT rules in {@link org.apache.druid.sql.calcite.rule.DruidRules.DruidQueryRule}
  */
@@ -157,13 +160,25 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
         unnestDatasourceRel.getUnnestProject().getProjects().get(0)
     );
 
-    LogicalProject unnestProject = LogicalProject.create(
+    final LogicalProject unnestProject = LogicalProject.create(
         this,
         ImmutableList.of(unnestDatasourceRel.getUnnestProject()
                                             .getProjects()
                                             .get(0)),
         unnestDatasourceRel.getUnnestProject().getRowType()
     );
+
+    final Filter unnestFilterFound = unnestDatasourceRel.getUnnestFilter();
+    final Filter logicalFilter;
+    if (unnestFilterFound != null) {
+      logicalFilter = LogicalFilter.create(
+          correlateRel,
+          RexUtil.shift(unnestFilterFound.getCondition(), rowSignature.size() - 1),
+          ImmutableSet.of(correlateRel.getCorrelationId())
+      );
+    } else {
+      logicalFilter = null;
+    }
 
     // placeholder for dimension or expression to be unnested
     final String dimOrExpToUnnest;
@@ -199,7 +214,10 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     // add the unnest project to the partial query if required
     // This is necessary to handle the virtual columns on the unnestProject
     // Also create the unnest datasource to be used by the partial query
-    PartialDruidQuery partialDruidQuery = unnestProjectNeeded ? partialQuery.withUnnest(unnestProject) : partialQuery;
+    PartialDruidQuery partialDruidQuery = unnestProjectNeeded
+                                          ? partialQuery.withUnnestProject(unnestProject)
+                                          : partialQuery;
+    partialDruidQuery = partialDruidQuery.withUnnestFilter(logicalFilter);
     return partialDruidQuery.build(
         UnnestDataSource.create(
             leftDataSource,
