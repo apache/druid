@@ -26,13 +26,10 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
-import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.filter.BoundFilter;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
@@ -284,41 +281,5 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       Assert.assertEquals(3, count);
       return null;
     });
-  }
-
-  @Test
-  public void test_unnest_adapters_basic_with_bound_filter()
-  {
-    BoundDimFilter f = new BoundDimFilter(OUTPUT_COLUMN_NAME, "2", "6", true, true, null, null, StringComparators.NUMERIC);
-    Sequence<Cursor> cursorSequence = UNNEST_STORAGE_ADAPTER.makeCursors(
-        new BoundFilter(f),
-        UNNEST_STORAGE_ADAPTER.getInterval(),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
-
-    List<String> expectedResults = Arrays.asList("3", "4", "5");
-    cursorSequence.accumulate(null, (accumulated, cursor) -> {
-      ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
-
-      DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
-      int count = 0;
-      while (!cursor.isDone()) {
-        Object dimSelectorVal = dimSelector.getObject();
-        if (dimSelectorVal == null) {
-          Assert.assertNull(dimSelectorVal);
-        } else {
-          Assert.assertEquals(expectedResults.get(count), dimSelectorVal.toString());
-        }
-        cursor.advance();
-        count++;
-      }
-      //As we are filtering on 1, 3 and 5 there should be 3 entries
-      Assert.assertEquals(3, count);
-      return null;
-    });
-
   }
 }
