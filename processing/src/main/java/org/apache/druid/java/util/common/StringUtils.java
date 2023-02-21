@@ -21,12 +21,10 @@ package org.apache.druid.java.util.common;
 
 import com.google.common.base.Strings;
 import it.unimi.dsi.fastutil.bytes.ByteArrayList;
-import it.unimi.dsi.fastutil.bytes.ByteList;
 import org.apache.commons.io.IOUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
@@ -266,11 +264,6 @@ public class StringUtils
   public static String fromUtf8(final ByteArrayList buffer)
   {
     return StringUtils.fromUtf8(buffer.elements(), 0, buffer.size());
-  }
-
-  public static String fromUtf8(final ByteList buffer)
-  {
-    return StringUtils.fromUtf8(buffer.toByteArray());
   }
 
   /**

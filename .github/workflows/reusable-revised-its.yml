@@ -90,7 +90,7 @@ jobs:
           ./it.sh ci
 
       - name: Create docker image
-        if: steps.docker-restore.outputs.cache-hit != 'true'
+        if: steps.docker-restore.outputs.cache-hit != 'true' || steps.maven-restore.outputs.cache-hit != 'true'
         env:
           docker-restore: ${{ toJson(steps.docker-restore.outputs) }}
         run: |

@@ -28,7 +28,6 @@ import org.apache.druid.math.expr.ExpressionType;
 public abstract class ObjectOutMultiObjectInVectorProcessor implements ExprVectorProcessor<Object[]>
 {
   final ExprVectorProcessor<Object[]>[] inputs;
-  final int maxVectorSize;
   final Object[] outValues;
 
   final ExpressionType expressionType;
@@ -40,7 +39,6 @@ public abstract class ObjectOutMultiObjectInVectorProcessor implements ExprVecto
   )
   {
     this.inputs = inputs;
-    this.maxVectorSize = maxVectorSize;
     this.outValues = new Object[maxVectorSize];
     this.expressionType = objectType;
   }
