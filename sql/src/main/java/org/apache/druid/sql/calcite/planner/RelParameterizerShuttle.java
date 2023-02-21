@@ -43,7 +43,8 @@ import org.apache.calcite.rex.RexDynamicParam;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionV1;
+import org.apache.druid.error.SqlValidationError;
 
 /**
  * Traverse {@link RelNode} tree and replaces all {@link RexDynamicParam} with {@link org.apache.calcite.rex.RexLiteral}
@@ -199,8 +200,8 @@ public class RelParameterizerShuttle implements RelShuttle
       if (plannerContext.getParameters().size() > dynamicParam.getIndex()) {
         TypedValue param = plannerContext.getParameters().get(dynamicParam.getIndex());
         if (param == null) {
-          throw DruidException.validationError(
-              "Parameter at position %d is not bound",
+          throw new SqlValidationError(
+              "Parameter at position [%d] is not bound",
               dynamicParam.getIndex()
           );
         }
@@ -214,8 +215,8 @@ public class RelParameterizerShuttle implements RelShuttle
             true
         );
       } else {
-        throw DruidException.validationError(
-            "Parameter at position %d is not bound",
+        throw new SqlValidationError(
+            "Parameter at position [%d] is not bound",
             dynamicParam.getIndex()
         );
       }

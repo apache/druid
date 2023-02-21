@@ -20,7 +20,8 @@
 package org.apache.druid.sql.calcite.run;
 
 import org.apache.calcite.tools.ValidationException;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionV1;
+import org.apache.druid.error.SqlValidationError;
 
 import java.util.Map;
 import java.util.Set;
@@ -42,8 +43,8 @@ public class SqlEngines
   {
     for (String contextParameterName : queryContext.keySet()) {
       if (specialContextKeys.contains(contextParameterName)) {
-        throw DruidException.validationError(
-            "Query context parameter '%s' is not allowed",
+        throw new SqlValidationError(
+            "Query context parameter [%s] is not allowed",
             contextParameterName
         );
       }

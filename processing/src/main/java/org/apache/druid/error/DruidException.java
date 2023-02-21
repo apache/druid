@@ -1,36 +1,20 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
-
 package org.apache.druid.error;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Strings;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.QueryException;
 
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.NotThreadSafe;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
  * Represents an error condition exposed to the user and/or operator of Druid.
+ * Each error category is given by a subclass of this class.
+ * <p>
  * Not needed for purely internal exceptions thrown and caught within Druid itself.
  * There are categories of error that determine the general form of corrective
  * action, and also determine HTTP (or other API) status codes.
@@ -42,459 +26,164 @@ import java.util.Map;
  * still logging the full details. Typical usage:
  * <pre><code>
  * if (something_is_wrong) {
- *   throw DruidException.user("File not found")
- *       .context("File name", theFile.getName())
- *       .context("Directory", theFile.getParent())
- *       .build();
+ *   throw new NotFoundException("File not found")
+ *       .addContext("File name", theFile.getName())
+ *       .addContext("Directory", theFile.getParent());
  * }
  * </code></pre>
  * <p>
- * Exceptions are immutable. In many cases, an error is thrown low in the code,
- * bit context is known at a higher level. In this case, the higher code should
- * catch the exception, convert back to a builder, add context, and throw the
- * new exception. The original call stack is maintained. Example:
+ * Exceptions are mutable and may not be modified by two thread concurrently.
+ * However, it is highly unlikely that such concurrent access would occur: that's
+ * not how exceptions work. Exceptions can be exchanged across threads, as long
+ * as only one thread at a time mutates the exception.
+ * <p>
+ * Druid exceptions allow the calling method (or thread) to add context and set
+ * the host name. It is often easier for a higher-level method to fill in this
+ * Information than to pass the information into every method. For example:
  * <pre><code>
- * catch (DruidExceptin e) {
- *   throw e.toBuilder().
- *       .context("File name", theFile.getName())
- *       .context("Directory", theFile.getParent())
- *       .build();
+ * void doTheRead(Reader reader) {
+ *   try {
+ *      // read some stuff
+ *   } catch (IOException e) {
+ *     throw new DruidIOException(e);
+ *   }
+ * }
+ *
+ * void outer(File theFile) {
+ *   try (Reader reader = open(theFile)) {
+ *     doTheRead(reader)
+ *   } catch (DruidException e) {
+ *      throw e.addContext("File name", theFile.getName());
+ *   }
  * }
  * </code></pre>
  */
-public class DruidException extends RuntimeException
+@NotThreadSafe
+public abstract class DruidException extends RuntimeException
 {
   /**
-   * The {@code ErrorType} is a high-level classification of errors that balances
-   * the idea of persona and code knowledge. The codes roughly identify who is most
-   * likely the persona that will resolve the error. In some case (e.g. {@code USER}),
-   * the person is clear: the person using Druid. In other cases (e.g. {@code RESOURCE}),
-   * the target persona is amgibuous: is it the person who submitted the query? The person
-   * who installed Druid? The system admin? The person who decided how much resource
-   * the project could afford?
-   * <p>
-   * Often the code is not sure of who the exact person is, but the code knows about
-   * the <i>kind</i> of error (e.g. {@code NETWORK}). In this case, it is up to each
-   * site to determine who is in charge of fixing this particular network error: the user
-   * (bad HTTP address), admin (forgot to open a port), system admin (a router died),
-   * hardware vendor (a network card failed), etc.
+   * The context provides additional information about an exception which may
+   * be redacted on a managed system. Provide essential information in the
+   * message itself.
    */
-  public enum ErrorType
-  {
-    /**
-     * General case of an error due to something the user asked to do in an REST
-     * request. Translates to an HTTP status 400 (BAD_REQUET) for a REST call
-     * (or the equivalent for other APIs.)
-     */
-    USER,
-
-    /**
-     * Special case of a user error where a resource is not found and we wish
-     * to return a 404 (NOT_FOUND) HTTP status (or the equivalent for other
-     * APIs.)
-     */
-    NOT_FOUND,
-
-    /**
-     * Special case of a user error where the user asked for a feature that
-     * Druid does not support.
-     */
-    UNSUPPORTED,
-
-    /**
-     * Error due to a problem beyond the user's control, such as an assertion
-     * failed, unsupported operation, etc. These indicate problems with the software
-     * where the fix is either a workaround or a bug fix. Such error should only
-     * be raised for "should never occur" type situations.
-     */
-    INTERNAL,
-
-    /**
-     * Error for a resource limit: memory, CPU, slots or so on. The workaround is
-     * generally to try later, get more resources, reduce load or otherwise resolve
-     * the resource pressure issue.
-     */
-    RESOURCE,
-
-    /**
-     * Similar to RESOURCE, except indicates a timeout, perhaps due to load, due
-     * to an external system being unavailable, etc.
-     */
-    TIMEOUT,
-
-    /**
-     * Error in configuration. Indicates that the administrator made a mistake during
-     * configuration or setup. The solution is for the administrator (not the end user)
-     * to resolve the issue.
-     */
-    CONFIG,
-
-    /**
-     * Indicates a network error of some kind: intra-Druid, client-to-Druid,
-     * Druid-to-external system, etc. Generally the end user cannot fix these errors:
-     * it requires a DevOps person to resolve.
-     */
-    NETWORK,
-
-    /**
-     * Indicates an exception deserialized from a {@link org.apache.druid.query.QueryException}
-     * which has no error type.
-     */
-    UNKNOWN
-  };
-
-  public static final String HOST = "Host";
-
-  public static class Builder
-  {
-    private final DruidException source;
-    private final ErrorType type;
-    private final String msg;
-    private String code;
-    private Throwable e;
-    private Map<String, String> context;
-
-    // For backward compatibility with QueryException
-    private String errorClass;
-    private String host;
-
-    private Builder(
-        final ErrorType type,
-        final String msg,
-        @Nullable final Object[] args)
-    {
-      this.source = null;
-      this.type = type;
-      this.code = QueryException.UNKNOWN_EXCEPTION_ERROR_CODE;
-      this.msg = StringUtils.format(msg, args);
-    }
-
-    private Builder(DruidException e)
-    {
-      this.source = e;
-      this.type = e.type;
-      this.code = e.code;
-      this.msg = e.message();
-      this.e = e.getCause() == null ? e : e.getCause();
-      this.context = e.context == null ? null : new HashMap<>(e.context);
-    }
-
-    public Builder code(String code)
-    {
-      this.code = code;
-      if (QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE.equals(code)) {
-        // Not always right, but close enough. For backward compatibility with
-        // code that needs the (now deprecated) error class.
-        this.errorClass = "org.apache.calcite.tools.ValidationException";
-      }
-      return this;
-    }
-
-    public Builder cause(Throwable e)
-    {
-      this.e = e;
-      this.errorClass = e.getClass().getName();
-      if (!msg.equals(e.getMessage())) {
-        context("Cause", e.getMessage());
-      }
-      return this;
-    }
-
-    public Builder context(String key, Object value)
-    {
-      if (context == null) {
-        // Used linked hash map to preserve order
-        context = new LinkedHashMap<String, String>();
-      }
-      context.put(key, value == null ? "" : value.toString());
-      return this;
-    }
-
-    public Builder errorClass(String errorClass)
-    {
-      this.errorClass = errorClass;
-      return this;
-    }
-
-    private boolean wasLogged()
-    {
-      return source != null && source.logged;
-    }
-
-    private DruidException build(boolean logged)
-    {
-      return new DruidException(
-          e,
-          msg,
-          type,
-          code,
-          errorClass,
-          host,
-          // Used linked hash map to preserve order
-          context == null ? null : new LinkedHashMap<>(context),
-          logged || wasLogged()
-      );
-    }
-
-    public DruidException build()
-    {
-      return build(false);
-    }
-
-    public DruidException build(Logger logger)
-    {
-      DruidException e = build(true);
-      if (wasLogged()) {
-        return e;
-      }
-      switch (type) {
-        case CONFIG:
-        case INTERNAL:
-          logger.error(e, e.getMessage());
-          break;
-        case NETWORK:
-        case RESOURCE:
-          logger.warn(e, e.getMessage());
-          break;
-        default:
-          logger.info(e, e.getMessage());
-          break;
-      }
-      return e;
-    }
-
-    @Override
-    public String toString()
-    {
-      return build().getMessage();
-    }
-  }
-
-  private final ErrorType type;
+  // Linked hash map to preserve order
+  private Map<String, String> context;
 
   /**
-   * Error codes are categories within the top-level codes. They mimic prior Druid
-   * conventions, although prior codes were very sparse. The code is a string, not
-   * an enum, because Druid has no clear catalog of such codes at present.
-   * <p>
-   * For now, error codes are enumerated in {@link org.apache.druid.query.QueryException}.
+   * Name of the host on which the error occurred, when the error occurred on
+   * a host other than the one to which the original request was sent. For example,
+   * in a query, if the error occurs on a historical, this field names that historical.
    */
-  private final String code;
-  private final Map<String, String> context;
-  private final boolean logged;
+  private String host;
 
-  // For backward compatibility with QueryException
-  private final String errorClass;
-  private final String host;
+  /**
+   * Good errors provide a suggestion to resolve the issue. Such suggestions should
+   * focus on a simple Druid installation where the user is also the admin. More
+   * advanced deployments may find such helpful suggestions to be off the mark.
+   * To resolve this conflict, add suggestions separately from the message itself
+   * so each consumer can decide whether to include it or not.
+   */
+  private String suggestion;
 
   public DruidException(
-      final Throwable e,
       final String msg,
-      final ErrorType type,
-      final String code,
-      final String errorClass,
-      final String host,
-      final Map<String, String> context,
-      final boolean logged
-  )
+      @Nullable final Object...args)
   {
-    super(msg, e);
-    this.type = type;
-    this.code = code;
-    this.errorClass = errorClass;
+    super(StringUtils.format(msg, args));
+  }
+
+  public DruidException(
+      final Throwable cause,
+      final String msg,
+      @Nullable final Object...args)
+  {
+    super(StringUtils.format(msg, args), cause);
+  }
+
+  public DruidException setHost(String host)
+  {
     this.host = host;
-    this.context = context;
-    this.logged = logged;
+    return this;
+  }
+
+  @JsonProperty
+  public String getErrorClass()
+  {
+    String errorClass = errorClass();
+    return errorClass == null ? getClass().getName() : errorClass;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public String getHost()
+  {
+    return host;
+  }
+
+  public DruidException suggestion(String suggestion)
+  {
+    this.suggestion = suggestion;
+    return this;
+  }
+
+  public String getSuggestion()
+  {
+    return suggestion;
+  }
+
+  public DruidException addContext(String key, String value)
+  {
+    if (context == null) {
+      context = new LinkedHashMap<>();
+    }
+    context.put(key, value);
+    return this;
+  }
+
+  public abstract ErrorCategory category();
+
+  public String errorClass()
+  {
+    return getClass().getName();
   }
 
   /**
-   * Build an error that indicates the user provided incorrect input.
-   * The user can correct the error by correcting their input (their query,
-   * REST message, etc.)
+   * The error code is a summary of the error returned to the user. Multiple errors
+   * map to the same code: the code is more like a category of errors. Error codes
+   * must be backward compatible, even if the prior "codes" are awkward.
    */
-  public static Builder user(String msg, Object...args)
+  @Nullable
+  @JsonProperty("error")
+  public String getErrorCode()
   {
-    return new Builder(ErrorType.USER, msg, args);
+    return category().userText();
   }
 
-  public static DruidException userError(String msg, Object...args)
+  public String message()
   {
-    return user(msg, args).build();
+    return super.getMessage();
   }
 
-  /**
-   * User error for an unsupported operation. We assume the problem is that the user
-   * asked Druid to do something it cannot do, and so the user shouldn't ask. This
-   * is not an indication that Druid <i>should</i> provide an operation, and it is
-   * an internal error that it does not.
-   */
-  public static Builder unsupported(String msg, Object...args)
-  {
-    return new Builder(ErrorType.UNSUPPORTED, msg, args)
-        .code(QueryException.UNSUPPORTED_OPERATION_ERROR_CODE);
-  }
-
-  public static DruidException unsupportedError(String msg, Object...args)
-  {
-    return unsupported(msg, args).build();
-  }
-
-  public static Builder unsupportedSql(String msg, Object...args)
-  {
-    return new Builder(ErrorType.UNSUPPORTED, msg, args)
-        .code(QueryException.SQL_QUERY_UNSUPPORTED_ERROR_CODE)
-        // For backward compatibility: using text since class is not visible here.
-        .errorClass("org.apache.calcite.plan.RelOptPlanner$CannotPlanException");
-  }
-
-  public static DruidException unsupportedSqlError(String msg, Object...args)
-  {
-    return unsupportedSql(msg, args).build();
-  }
-
-  /**
-   * SQL query validation failed, most likely due to a problem in the SQL statement
-   * which the user provided. This is a somewhat less specific then the
-   * {@link #unsupported(String, Object...)} error, which says that validation failed
-   * because Druid doesn't support something. Use the validation error for case that
-   * are mostly likely because the SQL really is wrong.
-   */
-  public static Builder validation(String msg, Object...args)
-  {
-    return new Builder(ErrorType.USER, msg, args)
-        .code(QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE);
-  }
-
-  public static DruidException validationError(String msg, Object...args)
-  {
-    return validation(msg, args).build();
-  }
-
-  /**
-   * Build an error that indicates that something went wrong internally
-   * with Druid. This is the equivalent of an assertion failure: errors
-   * of this type indicate a bug in the code: there is nothing the user
-   * can do other than request a fix or find a workaround.
-   */
-  public static Builder internalError(String msg, Object...args)
-  {
-    return new Builder(ErrorType.INTERNAL, msg, args);
-  }
-
-  public static Builder notFound(String msg, Object...args)
-  {
-    return new Builder(ErrorType.NOT_FOUND, msg, args);
-  }
-
-  public static DruidException unexpected(Exception e)
-  {
-    return internalError(e.getMessage()).cause(e).build();
-  }
-
-  /**
-   * Build an error that indicates Druid reached some kind of resource limit:
-   * memory, disk, CPU, etc. Generally the resolution is to reduce load or
-   * add resources to Druid.
-   */
-  public static Builder resourceError(String msg, Object...args)
-  {
-    return new Builder(ErrorType.RESOURCE, msg, args);
-  }
-
-  public static Builder timeoutError(String msg, Object...args)
-  {
-    return new Builder(ErrorType.TIMEOUT, msg, args);
-  }
-
-  /**
-   * Build an error that indicates a configuration error which generally means
-   * that Druid won't start until the user corrects a configuration file or
-   * similar artifact.
-   */
-  public static Builder configError(String msg, Object...args)
-  {
-    return new Builder(ErrorType.CONFIG, msg, args);
-  }
-
-  /**
-   * Network I/O, connection, timeout or other error that indicates a problem
-   * with the client-to-Druid connection, and internal Druid-to-Druid connection,
-   * or a Druid-to-External error.
-   */
-  public static Builder networkError(String msg, Object...args)
-  {
-    return new Builder(ErrorType.NETWORK, msg, args);
-  }
-
-  /**
-   * Convert the exception back into a builder, generally so a higher level
-   * of code can add more context.
-   */
-  public Builder toBuilder()
-  {
-    return new Builder(this);
-  }
-
-  public static DruidException fromErrorResponse(ErrorResponse response)
-  {
-    return new DruidException(
-        null,
-        response.getMessage(),
-        response.getType() == null ? ErrorType.UNKNOWN : response.getType(),
-        response.getErrorCode(),
-        response.getErrorClass(),
-        response.getHost(),
-        response.getContext(),
-        false
-    );
-  }
-
-  public ErrorType type()
-  {
-    return type;
-  }
-
-  public Map<String, String> context()
-  {
-    return context;
-  }
-
-  public String context(String key)
-  {
-    return context.get(key);
-  }
-
-  public String code()
-  {
-    return code;
-  }
-
+  @JsonProperty("errorMessage")
   @Override
   public String getMessage()
   {
     StringBuilder buf = new StringBuilder();
-    if (type != ErrorType.USER) {
-      buf.append(type.name()).append(" - ");
-    }
-    if (!QueryException.UNSUPPORTED_OPERATION_ERROR_CODE.equals(code)) {
-      buf.append(code)
-         .append(" - ");
-    }
     buf.append(super.getMessage());
+    String sep = "; ";
     if (context != null && context.size() > 0) {
-      int count = 0;
-      buf.append("; ");
       for (Map.Entry<String, String> entry : context.entrySet()) {
-        if (count > 0) {
-          buf.append(", ");
-        }
+        buf.append(sep);
+        sep = ", ";
         buf.append("\n")
            .append(entry.getKey())
            .append(": [")
            .append(entry.getValue())
            .append("]");
-        count++;
       }
+    }
+    if (!Strings.isNullOrEmpty(host)) {
+      buf.append(sep).append("Host: ").append(host);
     }
     return buf.toString();
   }
@@ -502,24 +191,12 @@ public class DruidException extends RuntimeException
   public String getDisplayMessage()
   {
     StringBuilder buf = new StringBuilder();
-    switch (type) {
-      case CONFIG:
-        buf.append("Configuration error: ");
-        break;
-      case RESOURCE:
-        buf.append("Resource error: ");
-        break;
-      case INTERNAL:
-        buf.append("Internal error: ");
-        break;
-      default:
-        break;
+    String prefix = category().prefix();
+    if (!Strings.isNullOrEmpty(prefix)) {
+      buf.append(prefix).append(" - ");
     }
     buf.append(super.getMessage());
-    if (!QueryException.UNSUPPORTED_OPERATION_ERROR_CODE.equals(code)) {
-      buf.append("\nError Code: ")
-         .append(code);
-    }
+    buf.append("\nError Code: ").append(category().userText());
     if (context != null && context.size() > 0) {
       for (Map.Entry<String, String> entry : context.entrySet()) {
         buf.append("\n")
@@ -528,22 +205,29 @@ public class DruidException extends RuntimeException
            .append(entry.getValue());
       }
     }
+    if (!Strings.isNullOrEmpty(host)) {
+      buf.append("\nHost: ").append(host);
+    }
+    if (!Strings.isNullOrEmpty(suggestion)) {
+      buf.append("\nSuggestion: ").append(suggestion);
+    }
     return buf.toString();
   }
 
-  public String message()
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
+  public Map<String, String> getContext()
   {
-    return super.getMessage();
+    return context;
   }
 
   public ErrorResponse toErrorResponse()
   {
     return new ErrorResponse(
-        code,
+        category().userText(),
         message(),
-        errorClass,
+        errorClass(),
         host,
-        type == ErrorType.UNKNOWN ? null : type,
         context
     );
   }

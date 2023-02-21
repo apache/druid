@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.CountingOutputStream;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionV1;
 import org.apache.druid.error.StandardRestExceptionEncoder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -318,11 +319,11 @@ public abstract class QueryResultPusher
       return null;
     }
 
-    switch (e.type()) {
-      case RESOURCE:
+    switch (e.category().metricCategory()) {
+      case INTERRUPTED:
         counter.incrementInterrupted();
         break;
-      case NETWORK:
+      case TIME_OUT:
         counter.incrementTimedOut();
         break;
       default:

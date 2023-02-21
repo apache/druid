@@ -34,6 +34,7 @@ import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlTimestampLiteral;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.SqlValidationError;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -105,7 +106,7 @@ public class DruidSqlParserUtils
   public static Granularity convertSqlNodeToGranularity(SqlNode sqlNode) throws ParseException
   {
 
-    final String genericParseFailedMessageFormatString = "Encountered %s after PARTITIONED BY. "
+    final String genericParseFailedMessageFormatString = "Encountered [%s] after PARTITIONED BY. "
                                                          + "Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR function or %s function";
 
     if (!(sqlNode instanceof SqlCall)) {
@@ -229,23 +230,23 @@ public class DruidSqlParserUtils
     List<Interval> intervals = filtration.getIntervals();
 
     if (filtration.getDimFilter() != null) {
-      throw DruidException.validationError(
+      throw new SqlValidationError(
           "Only %s column is supported in OVERWRITE WHERE clause",
           ColumnHolder.TIME_COLUMN_NAME
       );
     }
 
     if (intervals.isEmpty()) {
-      throw DruidException.validationError("Intervals for REPLACE are empty");
+      throw new SqlValidationError("Intervals for REPLACE are empty");
     }
 
     for (Interval interval : intervals) {
       DateTime intervalStart = interval.getStart();
       DateTime intervalEnd = interval.getEnd();
       if (!granularity.bucketStart(intervalStart).equals(intervalStart) || !granularity.bucketStart(intervalEnd).equals(intervalEnd)) {
-        throw DruidException.validationError(
-            "OVERWRITE WHERE clause contains an interval %s" +
-            " which is not aligned with PARTITIONED BY granularity %s",
+        throw new SqlValidationError(
+            "OVERWRITE WHERE clause contains an interval [%s]" +
+            " which is not aligned with PARTITIONED BY granularity [%s]",
             intervals,
             granularity
         );
@@ -330,7 +331,7 @@ public class DruidSqlParserUtils
   {
     if (!(replaceTimeQuery instanceof SqlBasicCall)) {
       log.error("Expected SqlBasicCall during parsing, but found " + replaceTimeQuery.getClass().getName());
-      throw DruidException.validationError("Invalid OVERWRITE WHERE clause");
+      throw new SqlValidationError("Invalid OVERWRITE WHERE clause");
     }
     String columnName;
     SqlBasicCall sqlBasicCall = (SqlBasicCall) replaceTimeQuery;
@@ -411,8 +412,8 @@ public class DruidSqlParserUtils
             StringComparators.NUMERIC
         );
       default:
-        throw DruidException.validationError(
-            "Unsupported operation in OVERWRITE WHERE clause: %s",
+        throw new SqlValidationError(
+            "Unsupported operation in OVERWRITE WHERE clause: [%s]",
             sqlBasicCall.getOperator().getName()
         );
     }
@@ -428,7 +429,7 @@ public class DruidSqlParserUtils
   public static String parseColumnName(SqlNode sqlNode)
   {
     if (!(sqlNode instanceof SqlIdentifier)) {
-      throw DruidException.validationError(
+      throw new SqlValidationError(
           "OVERWRITE WHERE expressions must be of the form __time <operator> TIMESTAMP"
       );
     }
@@ -446,7 +447,7 @@ public class DruidSqlParserUtils
   public static String parseTimeStampWithTimeZone(SqlNode sqlNode, DateTimeZone timeZone)
   {
     if (!(sqlNode instanceof SqlTimestampLiteral)) {
-      throw DruidException.validationError(
+      throw new SqlValidationError(
           "OVERWRITE WHERE expressions must be of the form __time <operator> TIMESTAMP"
       );
     }
@@ -464,18 +465,17 @@ public class DruidSqlParserUtils
   public static void throwIfUnsupportedGranularityInPartitionedBy(Granularity granularity)
   {
     if (!GranularityType.isStandard(granularity)) {
-      throw DruidException.validation(
+      throw new SqlValidationError(
             "The granularity specified in PARTITIONED BY is not supported."
            )
-          .context(
-              "Valid granularities",
+          .suggestion(
+              "Valid granularities: " +
               Arrays.stream(GranularityType.values())
                     .filter(granularityType -> !granularityType.equals(GranularityType.NONE))
                     .map(Enum::name)
                     .map(StringUtils::toLowerCase)
                     .collect(Collectors.joining(", "))
-           )
-         .build();
+           );
     }
   }
 }

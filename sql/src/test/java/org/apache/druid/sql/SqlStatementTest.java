@@ -25,7 +25,9 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionV1;
+import org.apache.druid.error.SqlParseError;
+import org.apache.druid.error.SqlValidationError;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
@@ -286,11 +288,11 @@ public class SqlStatementTest
       stmt.execute();
       fail();
     }
-    catch (DruidException e) {
+    catch (SqlParseError e) {
       // Expected
       Assert.assertEquals(
           QueryException.SQL_PARSE_FAILED_ERROR_CODE,
-          e.code()
+          e.getErrorCode()
       );
     }
   }
@@ -306,11 +308,11 @@ public class SqlStatementTest
       stmt.execute();
       fail();
     }
-    catch (DruidException e) {
+    catch (SqlValidationError e) {
       // Expected
       Assert.assertEquals(
           QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.code()
+          e.getErrorCode()
       );
     }
   }
@@ -371,11 +373,11 @@ public class SqlStatementTest
       stmt.execute();
       fail();
     }
-    catch (DruidException e) {
+    catch (SqlParseError e) {
       // Expected
       Assert.assertEquals(
           QueryException.SQL_PARSE_FAILED_ERROR_CODE,
-          e.code()
+          e.getErrorCode()
       );
     }
   }
@@ -391,11 +393,11 @@ public class SqlStatementTest
       stmt.execute();
       fail();
     }
-    catch (DruidException e) {
+    catch (SqlValidationError e) {
       // Expected
       Assert.assertEquals(
           QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.code()
+          e.getErrorCode()
       );
     }
   }
@@ -460,11 +462,11 @@ public class SqlStatementTest
       stmt.prepare();
       fail();
     }
-    catch (DruidException e) {
+    catch (SqlParseError e) {
       // Expected
       Assert.assertEquals(
           QueryException.SQL_PARSE_FAILED_ERROR_CODE,
-          e.code()
+          e.getErrorCode()
       );
     }
   }
@@ -480,11 +482,11 @@ public class SqlStatementTest
       stmt.prepare();
       fail();
     }
-    catch (DruidException e) {
+    catch (SqlValidationError e) {
       // Expected
       Assert.assertEquals(
           QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.code()
+          e.getErrorCode()
       );
     }
   }

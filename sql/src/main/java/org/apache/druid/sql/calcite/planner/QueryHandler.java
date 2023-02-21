@@ -55,6 +55,9 @@ import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionV1;
+import org.apache.druid.error.SqlUnsupportedError;
+import org.apache.druid.error.SqlValidationError;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -201,8 +204,8 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
         // Consider BINDABLE convention when necessary. Used for metadata tables.
 
         if (!handlerContext.plannerContext().featureAvailable(EngineFeature.ALLOW_BINDABLE_PLAN)) {
-          throw DruidException.validationError(
-                "Cannot query table%s %s with SQL engine %s.",
+          throw new SqlValidationError(
+                "Cannot query table%s [%s] with SQL engine [%s]",
                 bindableTables.size() != 1 ? "s" : "",
                 bindableTables.stream()
                               .map(table -> Joiner.on(".").join(table.getQualifiedName()))
@@ -625,20 +628,15 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     String errorMessage = handlerContext.plannerContext().getPlanningError();
     if (null == errorMessage && exception instanceof UnsupportedSQLQueryException) {
       errorMessage = exception.getMessage();
-    }
-    if (null == errorMessage) {
+    } else if (null == errorMessage) {
       errorMessage = "Please check Broker logs for additional details.";
     } else {
       // Planning errors are more like hints: it isn't guaranteed that the planning error is actually what went wrong.
       errorMessage = "Possible error: " + errorMessage;
     }
     // Finally, add the query itself to error message that user will get.
-    return DruidException
-        .unsupportedSql("Query not supported. %s", errorMessage)
-        .code(QueryException.SQL_QUERY_UNSUPPORTED_ERROR_CODE)
-        .cause(exception)
-        .context("SQL", handlerContext.plannerContext().getSql())
-        .build();
+    return new SqlUnsupportedError(exception, "Query not supported. %s", errorMessage)
+        .addContext("SQL", handlerContext.plannerContext().getSql());
   }
 
   public static class SelectHandler extends QueryHandler
@@ -655,8 +653,8 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     public void validate()
     {
       if (!handlerContext.plannerContext().featureAvailable(EngineFeature.CAN_SELECT)) {
-        throw DruidException.validationError(
-            "Cannot execute SELECT with SQL engine %s",
+        throw new SqlValidationError(
+            "Cannot execute SELECT with SQL engine [%s]",
             handlerContext.engine().name()
          );
       }

@@ -21,6 +21,7 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.SqlValidationError;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
@@ -334,7 +335,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setQueryContext(context)
                      .setExpectedValidationErrorMatcher(
                          CoreMatchers.allOf(
-                             CoreMatchers.instanceOf(DruidException.class),
+                             CoreMatchers.instanceOf(SqlValidationError.class),
                              ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
                                  "Missing time chunk information in OVERWRITE clause for REPLACE. Use OVERWRITE WHERE <__time based condition> or OVERWRITE ALL to overwrite the entire table."))
                          )
@@ -584,7 +585,7 @@ public class MSQReplaceTest extends MSQTestBase
                              + "PARTITIONED BY MONTH")
                      .setQueryContext(context)
                      .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(DruidException.class),
+                         CoreMatchers.instanceOf(SqlValidationError.class),
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
                              "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""))
                      ))
@@ -602,7 +603,7 @@ public class MSQReplaceTest extends MSQTestBase
                              + "OFFSET 10"
                              + "PARTITIONED BY ALL TIME")
                      .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(DruidException.class),
+                         CoreMatchers.instanceOf(SqlValidationError.class),
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
                              "INSERT and REPLACE queries cannot have an OFFSET"))
                      ))
