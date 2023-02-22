@@ -982,7 +982,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     long newNextCheckpointTime = task.getRunner().getNextCheckpointTime();
     Assert.assertTrue(
         StringUtils.format(
-            "Old checkpoint time: [%s], new checkpoint time: [%s]",
+            "Old checkpoint time: [%d], new checkpoint time: [%d]",
             currentNextCheckpointTime,
             newNextCheckpointTime),
         newNextCheckpointTime > currentNextCheckpointTime);
