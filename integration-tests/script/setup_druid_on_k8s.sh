@@ -16,7 +16,7 @@
 
 set -e
 
-export KUBECTL="sudo /usr/local/bin/kubectl"
+export KUBECTL="/usr/local/bin/kubectl"
 
 # setup client keystore
 cd integration-tests

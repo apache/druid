@@ -20,19 +20,20 @@ import { Button, Icon } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
-import { Column, QueryResult } from 'druid-query-toolkit';
+import type { Column, QueryResult } from 'druid-query-toolkit';
 import React, { useEffect, useState } from 'react';
+import type { RowRenderProps } from 'react-table';
 import ReactTable from 'react-table';
 
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
+import type { Pagination } from '../../utils';
 import {
   columnToIcon,
   columnToWidth,
   filterMap,
   formatNumber,
   getNumericColumnBraces,
-  Pagination,
 } from '../../utils';
 import { BracedText } from '../braced-text/braced-text';
 import { CellFilterMenu } from '../cell-filter-menu/cell-filter-menu';
@@ -149,7 +150,7 @@ export const RecordTablePane = React.memo(function RecordTablePane(props: Record
               },
               headerClassName: getHeaderClassName(h),
               accessor: String(i),
-              Cell(row) {
+              Cell(row: RowRenderProps) {
                 const value = row.value;
                 return (
                   <div>

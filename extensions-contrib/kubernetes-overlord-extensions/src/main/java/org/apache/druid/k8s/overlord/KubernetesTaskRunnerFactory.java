@@ -25,7 +25,7 @@ import com.google.inject.Inject;
 import io.fabric8.kubernetes.client.Config;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
-import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
@@ -42,11 +42,11 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   public static final String TYPE_NAME = "k8s";
   private final ObjectMapper smileMapper;
   private final KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig;
-  private final TaskConfig taskConfig;
   private final StartupLoggingConfig startupLoggingConfig;
   private final TaskQueueConfig taskQueueConfig;
   private final TaskLogPusher taskLogPusher;
   private final DruidNode druidNode;
+  private final TaskStorageDirTracker dirTracker;
   private KubernetesTaskRunner runner;
 
 
@@ -54,21 +54,21 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   public KubernetesTaskRunnerFactory(
       @Smile ObjectMapper smileMapper,
       KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig,
-      TaskConfig taskConfig,
       StartupLoggingConfig startupLoggingConfig,
       @JacksonInject TaskQueueConfig taskQueueConfig,
       TaskLogPusher taskLogPusher,
-      @Self DruidNode druidNode
+      @Self DruidNode druidNode,
+      TaskStorageDirTracker dirTracker
   )
   {
 
     this.smileMapper = smileMapper;
     this.kubernetesTaskRunnerConfig = kubernetesTaskRunnerConfig;
-    this.taskConfig = taskConfig;
     this.startupLoggingConfig = startupLoggingConfig;
     this.taskQueueConfig = taskQueueConfig;
     this.taskLogPusher = taskLogPusher;
     this.druidNode = druidNode;
+    this.dirTracker = dirTracker;
   }
 
   @Override
@@ -92,14 +92,14 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     }
 
     runner = new KubernetesTaskRunner(
-        taskConfig,
         startupLoggingConfig,
         adapter,
         kubernetesTaskRunnerConfig,
         taskQueueConfig,
         taskLogPusher,
         new DruidKubernetesPeonClient(client, kubernetesTaskRunnerConfig.namespace, kubernetesTaskRunnerConfig.debugJobs),
-        druidNode
+        druidNode,
+        dirTracker
     );
     return runner;
   }

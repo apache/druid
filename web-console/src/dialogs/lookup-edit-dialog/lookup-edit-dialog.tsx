@@ -27,8 +27,10 @@ import {
 } from '@blueprintjs/core';
 import React, { useState } from 'react';
 
-import { AutoForm, FormJsonSelector, FormJsonTabs, JsonInput } from '../../components';
-import { isLookupInvalid, LOOKUP_FIELDS, LookupSpec } from '../../druid-models';
+import type { FormJsonTabs } from '../../components';
+import { AutoForm, FormJsonSelector, JsonInput } from '../../components';
+import type { LookupSpec } from '../../druid-models';
+import { isLookupInvalid, LOOKUP_FIELDS } from '../../druid-models';
 
 import './lookup-edit-dialog.scss';
 
