@@ -19,8 +19,6 @@
 
 package org.apache.druid.timeline;
 
-import com.google.common.collect.Iterators;
-
 import java.util.Comparator;
 import java.util.Iterator;
 
