@@ -37,10 +37,8 @@ import org.junit.Ignore;
 /**
  * Runs {@link CalciteQueryTest} but with MSQ engine
  */
-public class CalciteSelectQueryTestMSQ extends CalciteQueryTest
+public class CalciteSelectQueryMSQTest extends CalciteQueryTest
 {
-
-  private MSQTestOverlordServiceClient indexingServiceClient;
   private TestGroupByBuffers groupByBuffers;
 
   @Before
@@ -79,7 +77,7 @@ public class CalciteSelectQueryTestMSQ extends CalciteQueryTest
             2,
             0
         );
-    indexingServiceClient = new MSQTestOverlordServiceClient(
+    final MSQTestOverlordServiceClient indexingServiceClient = new MSQTestOverlordServiceClient(
         queryJsonMapper,
         injector,
         new MSQTestTaskActionClient(queryJsonMapper),
