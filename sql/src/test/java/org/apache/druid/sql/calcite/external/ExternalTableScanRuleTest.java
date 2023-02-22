@@ -20,16 +20,17 @@
 package org.apache.druid.sql.calcite.external;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerToolbox;
-import org.apache.druid.sql.calcite.planner.SimplePlannerToolbox;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
@@ -52,7 +53,7 @@ public class ExternalTableScanRuleTest
         EasyMock.createMock(QuerySegmentWalker.class),
         EasyMock.createMock(QueryRunnerFactoryConglomerate.class)
     );
-    final PlannerToolbox toolbox = new SimplePlannerToolbox(
+    final PlannerToolbox toolbox = new PlannerToolbox(
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
         CalciteTests.getJsonMapper(),
@@ -65,7 +66,10 @@ public class ExternalTableScanRuleTest
             )
         ),
         CalciteTests.createJoinableFactoryWrapper(),
-        CatalogResolver.NULL_RESOLVER
+        CatalogResolver.NULL_RESOLVER,
+        "druid",
+        new CalciteRulesManager(ImmutableSet.of()),
+        CalciteTests.TEST_AUTHORIZER_MAPPER
     );
     final PlannerContext plannerContext = PlannerContext.create(
         toolbox,

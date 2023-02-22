@@ -52,7 +52,7 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import java.util.Map;
 import java.util.Properties;
 
-public class PlannerFactory implements PlannerToolbox
+public class PlannerFactory extends PlannerToolbox
 {
   static final SqlParser.Config PARSER_CONFIG = SqlParser
       .configBuilder()
@@ -61,19 +61,8 @@ public class PlannerFactory implements PlannerToolbox
       .setQuotedCasing(Casing.UNCHANGED)
       .setQuoting(Quoting.DOUBLE_QUOTE)
       .setConformance(DruidConformance.instance())
-      .setParserFactory(new DruidSqlParserImplFactory()) // Custom sql parser factory
+      .setParserFactory(new DruidSqlParserImplFactory()) // Custom SQL parser factory
       .build();
-
-  private final DruidSchemaCatalog rootSchema;
-  private final DruidOperatorTable operatorTable;
-  private final ExprMacroTable macroTable;
-  private final PlannerConfig plannerConfig;
-  private final ObjectMapper jsonMapper;
-  private final AuthorizerMapper authorizerMapper;
-  private final String druidSchemaName;
-  private final CalciteRulesManager calciteRuleManager;
-  private final JoinableFactoryWrapper joinableFactoryWrapper;
-  private final CatalogResolver catalog;
 
   @Inject
   public PlannerFactory(
@@ -89,16 +78,18 @@ public class PlannerFactory implements PlannerToolbox
       final CatalogResolver catalog
   )
   {
-    this.rootSchema = rootSchema;
-    this.operatorTable = operatorTable;
-    this.macroTable = macroTable;
-    this.plannerConfig = plannerConfig;
-    this.authorizerMapper = authorizerMapper;
-    this.jsonMapper = jsonMapper;
-    this.druidSchemaName = druidSchemaName;
-    this.calciteRuleManager = calciteRuleManager;
-    this.joinableFactoryWrapper = joinableFactoryWrapper;
-    this.catalog = catalog;
+    super(
+        operatorTable,
+        macroTable,
+        jsonMapper,
+        plannerConfig,
+        rootSchema,
+        joinableFactoryWrapper,
+        catalog,
+        druidSchemaName,
+        calciteRuleManager,
+        authorizerMapper
+    );
   }
 
   /**
@@ -199,53 +190,5 @@ public class PlannerFactory implements PlannerToolbox
           }
         })
         .build();
-  }
-
-  @Override
-  public DruidOperatorTable operatorTable()
-  {
-    return operatorTable;
-  }
-
-  @Override
-  public ExprMacroTable exprMacroTable()
-  {
-    return macroTable;
-  }
-
-  @Override
-  public ObjectMapper jsonMapper()
-  {
-    return jsonMapper;
-  }
-
-  @Override
-  public PlannerConfig plannerConfig()
-  {
-    return plannerConfig;
-  }
-
-  @Override
-  public JoinableFactoryWrapper joinableFactoryWrapper()
-  {
-    return joinableFactoryWrapper;
-  }
-
-  @Override
-  public CatalogResolver catalogResolver()
-  {
-    return catalog;
-  }
-
-  @Override
-  public String druidSchemaName()
-  {
-    return druidSchemaName;
-  }
-
-  @Override
-  public DruidSchemaCatalog rootSchema()
-  {
-    return rootSchema;
   }
 }

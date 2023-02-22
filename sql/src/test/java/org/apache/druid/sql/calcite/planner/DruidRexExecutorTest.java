@@ -79,7 +79,7 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
       .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
       .build();
 
-  private static final PlannerToolbox PLANNER_TOOLBOX = new SimplePlannerToolbox(
+  private static final PlannerToolbox PLANNER_TOOLBOX = new PlannerToolbox(
       new DruidOperatorTable(
           Collections.emptySet(),
           ImmutableSet.of(new DirectOperatorConversion(OPERATOR, "hyper_unique")),
@@ -96,7 +96,10 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
           )
       ),
       CalciteTests.createJoinableFactoryWrapper(),
-      CatalogResolver.NULL_RESOLVER
+      CatalogResolver.NULL_RESOLVER,
+      "druid",
+      new CalciteRulesManager(ImmutableSet.of()),
+      CalciteTests.TEST_AUTHORIZER_MAPPER
   );
   private static final PlannerContext PLANNER_CONTEXT = PlannerContext.create(
       PLANNER_TOOLBOX,
