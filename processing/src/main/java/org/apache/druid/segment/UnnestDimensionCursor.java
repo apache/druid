@@ -82,7 +82,6 @@ public class UnnestDimensionCursor implements Cursor
   private final String columnName;
   private final String outputName;
   private final ColumnSelectorFactory baseColumnSelectorFactory;
-  private final ValueMatcher valueMatcher;
   @Nullable
   private final Filter allowFilter;
   private int indexForRow;
@@ -90,6 +89,7 @@ public class UnnestDimensionCursor implements Cursor
   private IndexedInts indexedIntsForCurrentRow;
   private boolean needInitialization;
   private SingleIndexInts indexIntsForRow;
+  private ValueMatcher valueMatcher;
 
   public UnnestDimensionCursor(
       Cursor cursor,
@@ -107,11 +107,6 @@ public class UnnestDimensionCursor implements Cursor
     this.outputName = outputColumnName;
     this.needInitialization = true;
     this.allowFilter = allowFilter;
-    if (allowFilter != null) {
-      this.valueMatcher = allowFilter.makeMatcher(this.getColumnSelectorFactory());
-    } else {
-      this.valueMatcher = BooleanValueMatcher.of(true);
-    }
   }
 
   @Override
@@ -338,13 +333,18 @@ public class UnnestDimensionCursor implements Cursor
   private void initialize()
   {
     indexForRow = 0;
+    if (allowFilter != null) {
+      this.valueMatcher = allowFilter.makeMatcher(this.getColumnSelectorFactory());
+    } else {
+      this.valueMatcher = BooleanValueMatcher.of(true);
+    }
     this.indexIntsForRow = new SingleIndexInts();
 
     if (dimSelector.getObject() != null) {
       this.indexedIntsForCurrentRow = dimSelector.getRow();
     }
-    if (!valueMatcher.matches()) {
-      advanceAndUpdate();
+    if (!valueMatcher.matches() && !baseCursor.isDone()) {
+      advance();
     }
     needInitialization = false;
   }
