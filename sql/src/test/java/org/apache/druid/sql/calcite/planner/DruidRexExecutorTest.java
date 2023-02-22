@@ -83,8 +83,7 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
       "SELECT 1", // The actual query isn't important for this test
       new DruidOperatorTable(
           Collections.emptySet(),
-          ImmutableSet.of(new DirectOperatorConversion(OPERATOR, "hyper_unique")),
-          PlannerOperatorConfig.newInstance(null)
+          ImmutableSet.of(new DirectOperatorConversion(OPERATOR, "hyper_unique"))
       ),
       CalciteTests.createExprMacroTable(),
       CalciteTests.getJsonMapper(),
