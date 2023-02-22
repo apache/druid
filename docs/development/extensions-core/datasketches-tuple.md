@@ -211,35 +211,35 @@ Returns a human-readable summary of a given ArrayOfDoublesSketch. This is a stri
 
 ### Constant ArrayOfDoublesSketch 
 
-You can use the this post aggregator to add a Base64-encoded constant ArrayOfDoublesSketch value for use in other post-aggregators.
+This post aggregator adds a Base64-encoded constant ArrayOfDoublesSketch value that you can use in other post aggregators.
 ```json
 {
-  "type"  : "arrayOfDoublesSketchConstant",
+  "type": "arrayOfDoublesSketchConstant",
   "name": DESTINATION_COLUMN_NAME,
-  "value"  : CONSTANT_SKETCH_VALUE
+  "value": CONSTANT_SKETCH_VALUE
 }
 ```
 
-### Base64 Output of ArrayOfDoublesSketch 
+### Base64 output of ArrayOfDoublesSketch 
 
-You can use the this post aggregator to output an ArrayOfDoublesSketch as Base64-encoded string constant tuple sketch value for use in other post-aggregators. 
+This post aggregator outputs an ArrayOfDoublesSketch as a Base64-encoded string storing the constant tuple sketch value that you can use in other post aggregators. 
 
 ```json
 {
-  "type"  : "arrayOfDoublesSketchToBase64String",
+  "type": "arrayOfDoublesSketchToBase64String",
   "name": DESTINATION_COLUMN_NAME,
-  "field"  : <post aggregator that refers to a ArrayOfDoublesSketch (fieldAccess or another post aggregator)>
+  "field": <post aggregator that refers to a ArrayOfDoublesSketch (fieldAccess or another post aggregator)>
 }
 ```
 
-### Estimated Metrics values for each column of ArrayOfDoublesSketch
+### Estimated metrics values for each column of ArrayOfDoublesSketch
 
-You can use this post aggregator to return a list of estimated values(sum) from a given ArrayOfDoublesSketch. The result will be N double values, where N is the number of double values kept in the sketch per key.
+This post aggregator returns a list of estimated values(sum) from a given ArrayOfDoublesSketch. The result is _N_ double values, where _N_ is the number of double values kept in the sketch per key.
 
 ```json
 {
-  "type"  : "arrayOfDoublesSketchToMetricsEstimate",
+  "type": "arrayOfDoublesSketchToMetricsEstimate",
   "name": DESTINATION_COLUMN_NAME,
-  "field"  : <post aggregator that refers to a ArrayOfDoublesSketch (fieldAccess or another post aggregator)>
+  "field": <post aggregator that refers to a ArrayOfDoublesSketch (fieldAccess or another post aggregator)>
 }
 ```
