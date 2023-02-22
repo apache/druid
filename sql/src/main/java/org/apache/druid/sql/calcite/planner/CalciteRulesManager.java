@@ -98,7 +98,7 @@ public class CalciteRulesManager
   // Calcite 1.23.0 fixes this issue by not consider expression as reduced if this case happens. However, while
   // we are still using Calcite 1.21.0, a workaround is to limit the number of pattern matches to avoid infinite loop.
   private static final String HEP_DEFAULT_MATCH_LIMIT_CONFIG_STRING = "druid.sql.planner.hepMatchLimit";
-  private final int HEP_DEFAULT_MATCH_LIMIT = Integer.valueOf(
+  private static final int HEP_DEFAULT_MATCH_LIMIT = Integer.valueOf(
       System.getProperty(HEP_DEFAULT_MATCH_LIMIT_CONFIG_STRING, "1200")
   );
 
@@ -110,7 +110,7 @@ public class CalciteRulesManager
   //    functions).
   // 3) JoinCommuteRule (we don't support reordering joins yet).
   // 4) JoinPushThroughJoinRule (we don't support reordering joins yet).
-  private final List<RelOptRule> BASE_RULES =
+  private static final List<RelOptRule> BASE_RULES =
       ImmutableList.of(
           AggregateStarTableRule.INSTANCE,
           AggregateStarTableRule.INSTANCE2,
@@ -133,7 +133,7 @@ public class CalciteRulesManager
       );
 
   // Rules for scanning via Bindable, embedded directly in RelOptUtil's registerDefaultRules.
-  private final List<RelOptRule> DEFAULT_BINDABLE_RULES =
+  private static final List<RelOptRule> DEFAULT_BINDABLE_RULES =
       ImmutableList.of(
           Bindables.BINDABLE_TABLE_SCAN_RULE,
           ProjectTableScanRule.INSTANCE,
@@ -145,7 +145,7 @@ public class CalciteRulesManager
   // 1) ReduceExpressionsRule.JOIN_INSTANCE
   //    Removed by https://github.com/apache/druid/pull/9941 due to issue in https://github.com/apache/druid/issues/9942
   //    TODO: Re-enable when https://github.com/apache/druid/issues/9942 is fixed
-  private final List<RelOptRule> REDUCTION_RULES =
+  private static final List<RelOptRule> REDUCTION_RULES =
       ImmutableList.of(
           ReduceExpressionsRule.PROJECT_INSTANCE,
           ReduceExpressionsRule.FILTER_INSTANCE,
@@ -161,7 +161,7 @@ public class CalciteRulesManager
   // Omit DateRangeRules due to https://issues.apache.org/jira/browse/CALCITE-1601
   // Omit UnionMergeRule since it isn't very effective given how Druid unions currently operate and is potentially
   // expensive in terms of planning time.
-  private final List<RelOptRule> ABSTRACT_RULES =
+  private static final List<RelOptRule> ABSTRACT_RULES =
       ImmutableList.of(
           AggregateProjectPullUpConstantsRule.INSTANCE2,
           UnionPullUpConstantsRule.INSTANCE,
@@ -189,7 +189,7 @@ public class CalciteRulesManager
   // 4) FilterJoinRule.FILTER_ON_JOIN and FilterJoinRule.JOIN
   //    Removed by https://github.com/apache/druid/pull/9773 due to issue in https://github.com/apache/druid/issues/9843
   //    TODO: Re-enable when https://github.com/apache/druid/issues/9843 is fixed
-  private final List<RelOptRule> ABSTRACT_RELATIONAL_RULES =
+  private static final List<RelOptRule> ABSTRACT_RELATIONAL_RULES =
       ImmutableList.of(
           AbstractConverter.ExpandConversionRule.INSTANCE,
           AggregateRemoveRule.INSTANCE,
