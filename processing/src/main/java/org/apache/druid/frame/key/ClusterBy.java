@@ -60,8 +60,8 @@ public class ClusterBy
       throw new IAE("Invalid bucketByCount [%d]", bucketByCount);
     }
 
-    // Key must be 100% sortable or 100% nonsortable. If empty, call it unsortable.
-    boolean sortable = false;
+    // Key must be 100% sortable or 100% nonsortable. If empty, call it sortable.
+    boolean sortable = true;
 
     for (int i = 0; i < columns.size(); i++) {
       final KeyColumn column = columns.get(i);
@@ -112,7 +112,15 @@ public class ClusterBy
   }
 
   /**
-   * Whether this key is sortable. Empty keys (with no columns) are considered unsortable.
+   * Whether this key is empty.
+   */
+  public boolean isEmpty()
+  {
+    return columns.isEmpty();
+  }
+
+  /**
+   * Whether this key is sortable. Empty keys (with no columns) are considered sortable.
    */
   public boolean sortable()
   {

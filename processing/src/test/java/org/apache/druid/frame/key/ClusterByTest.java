@@ -25,6 +25,8 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
+
 public class ClusterByTest
 {
   @Test
@@ -80,7 +82,27 @@ public class ClusterByTest
   @Test
   public void test_sortable()
   {
-    // TODO(gianm): add test
+    Assert.assertFalse(
+        new ClusterBy(
+            ImmutableList.of(
+                new KeyColumn("x", KeyOrder.NONE),
+                new KeyColumn("y", KeyOrder.NONE)
+            ),
+            0
+        ).sortable()
+    );
+
+    Assert.assertTrue(
+        new ClusterBy(
+            ImmutableList.of(
+                new KeyColumn("x", KeyOrder.ASCENDING),
+                new KeyColumn("y", KeyOrder.ASCENDING)
+            ),
+            0
+        ).sortable()
+    );
+
+    Assert.assertTrue(new ClusterBy(Collections.emptyList(), 0).sortable());
   }
 
   @Test

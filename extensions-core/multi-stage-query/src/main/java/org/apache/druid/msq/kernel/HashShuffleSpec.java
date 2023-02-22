@@ -54,7 +54,7 @@ public class HashShuffleSpec implements ShuffleSpec
   @Override
   public ShuffleKind kind()
   {
-    return clusterBy.sortable() ? ShuffleKind.HASH_LOCAL_SORT : ShuffleKind.HASH;
+    return clusterBy.sortable() && !clusterBy.isEmpty() ? ShuffleKind.HASH_LOCAL_SORT : ShuffleKind.HASH;
   }
 
   @Override

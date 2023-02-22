@@ -219,7 +219,7 @@ public class StageDefinition
 
   public boolean doesSortDuringShuffle()
   {
-    if (shuffleSpec == null) {
+    if (shuffleSpec == null || shuffleSpec.clusterBy().isEmpty()) {
       return false;
     } else {
       return shuffleSpec.clusterBy().sortable();

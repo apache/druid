@@ -92,7 +92,7 @@ public class InputChannelsImpl implements InputChannels
     final StageDefinition stageDef = queryDefinition.getStageDefinition(stagePartition.getStageId());
     final ReadablePartition readablePartition = readablePartitionMap.get(stagePartition);
     final ClusterBy clusterBy = stageDef.getClusterBy();
-    final boolean isSorted = clusterBy.sortable() && clusterBy.getBucketByCount() != clusterBy.getColumns().size();
+    final boolean isSorted = clusterBy.sortable() && (clusterBy.getColumns().size() - clusterBy.getBucketByCount() > 0);
 
     if (isSorted) {
       return openSorted(stageDef, readablePartition);

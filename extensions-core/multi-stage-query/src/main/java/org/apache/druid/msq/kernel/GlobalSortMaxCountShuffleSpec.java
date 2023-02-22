@@ -58,7 +58,7 @@ public class GlobalSortMaxCountShuffleSpec implements ShuffleSpec
       throw new IAE("Partition count must be at least 1");
     }
 
-    if (!clusterBy.getColumns().isEmpty() && !clusterBy.sortable()) {
+    if (!clusterBy.sortable()) {
       throw new IAE("ClusterBy key must be sortable");
     }
 
