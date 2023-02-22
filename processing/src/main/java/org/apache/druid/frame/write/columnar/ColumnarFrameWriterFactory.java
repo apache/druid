@@ -20,6 +20,7 @@
 package org.apache.druid.frame.write.columnar;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.AppendableMemory;
 import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
@@ -49,7 +50,7 @@ public class ColumnarFrameWriterFactory implements FrameWriterFactory
    *
    * @param allocatorFactory memory allocator; will use as much as possible
    * @param signature        output signature for this frame writer
-   * @param keyColumns      columns to sort by, if any. May be empty.
+   * @param keyColumns       columns to sort by, if any. May be empty.
    *
    * @throws UnsupportedColumnTypeException if "signature" contains any type that we cannot handle
    */
@@ -114,5 +115,11 @@ public class ColumnarFrameWriterFactory implements FrameWriterFactory
   public RowSignature signature()
   {
     return signature;
+  }
+
+  @Override
+  public FrameType frameType()
+  {
+    return FrameType.COLUMNAR;
   }
 }

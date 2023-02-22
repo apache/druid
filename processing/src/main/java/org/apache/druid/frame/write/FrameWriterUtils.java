@@ -185,7 +185,7 @@ public class FrameWriterUtils
       final RowSignature signature
   )
   {
-    if (!areSortColumnsPrefixOfSignature(keyColumns, signature)) {
+    if (!areKeyColumnsPrefixOfSignature(keyColumns, signature)) {
       throw new IAE(
           "Sort column [%s] must be a prefix of the signature",
           keyColumns.stream().map(KeyColumn::columnName).collect(Collectors.joining(", "))
@@ -272,9 +272,9 @@ public class FrameWriterUtils
   }
 
   /**
-   * Returns whether the provided sortColumns are all a prefix of the signature.
+   * Returns whether the provided key columns are all a prefix of the signature.
    */
-  private static boolean areSortColumnsPrefixOfSignature(
+  private static boolean areKeyColumnsPrefixOfSignature(
       final List<KeyColumn> keyColumns,
       final RowSignature signature
   )

@@ -20,6 +20,7 @@
 package org.apache.druid.msq.test;
 
 import org.apache.datasketches.memory.WritableMemory;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -56,6 +57,12 @@ public class LimitedFrameWriterFactory implements FrameWriterFactory
   public RowSignature signature()
   {
     return baseFactory.signature();
+  }
+
+  @Override
+  public FrameType frameType()
+  {
+    return baseFactory.frameType();
   }
 
   private static class LimitedFrameWriter implements FrameWriter

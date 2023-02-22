@@ -90,7 +90,9 @@ public class StringFieldReader implements FieldReader
   @Override
   public boolean isNull(Memory memory, long position)
   {
-    return memory.getByte(position) == StringFieldWriter.NULL_BYTE
+    final byte nullByte = memory.getByte(position);
+    assert nullByte == StringFieldWriter.NULL_BYTE || nullByte == StringFieldWriter.NOT_NULL_BYTE;
+    return nullByte == StringFieldWriter.NULL_BYTE
            && memory.getByte(position + 1) == StringFieldWriter.VALUE_TERMINATOR
            && memory.getByte(position + 2) == StringFieldWriter.ROW_TERMINATOR;
   }

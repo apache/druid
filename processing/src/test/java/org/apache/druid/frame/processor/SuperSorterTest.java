@@ -68,10 +68,10 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -286,16 +286,8 @@ public class SuperSorterTest
       final File tempFolder = temporaryFolder.newFolder();
       final OutputChannelFactory outputChannelFactory = isComposedStorage ? new ComposingOutputChannelFactory(
           ImmutableList.of(
-              new FileOutputChannelFactory(
-                  new File(tempFolder, "1"),
-                  maxBytesPerFrame,
-                  new ByteTracker(maxBytesPerFrame)
-              ),
-              new FileOutputChannelFactory(
-                  new File(tempFolder, "2"),
-                  maxBytesPerFrame,
-                  new ByteTracker(maxBytesPerFrame)
-              )
+              new FileOutputChannelFactory(new File(tempFolder, "1"), maxBytesPerFrame, null),
+              new FileOutputChannelFactory(new File(tempFolder, "2"), maxBytesPerFrame, null)
           ),
           maxBytesPerFrame
       ) : new FileOutputChannelFactory(tempFolder, maxBytesPerFrame, null);
@@ -677,7 +669,13 @@ public class SuperSorterTest
       final File file = new File(tmpDir, StringUtils.format("channel-%d", i));
       files.add(file);
       writableChannels.add(
-          new WritableFrameFileChannel(FrameFileWriter.open(Channels.newChannel(new FileOutputStream(file)), null, ByteTracker.unboundedTracker()))
+          new WritableFrameFileChannel(
+              FrameFileWriter.open(
+                  Channels.newChannel(Files.newOutputStream(file.toPath())),
+                  null,
+                  ByteTracker.unboundedTracker()
+              )
+          )
       );
     }
 

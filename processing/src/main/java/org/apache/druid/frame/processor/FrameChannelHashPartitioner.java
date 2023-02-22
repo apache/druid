@@ -34,6 +34,7 @@ import org.apache.druid.frame.segment.row.FrameColumnSelectorFactory;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriterUtils;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -59,8 +60,8 @@ import java.util.function.Supplier;
  * Processor that hash-partitions rows from any number of input channels, and writes partitioned frames to output
  * channels.
  *
- * Input frames must be {@link FrameType#ROW_BASED}. This processor hashes each row using {@link Memory#xxHash64} with
- * a seed of {@link #HASH_SEED}.
+ * Input frames must be {@link FrameType#ROW_BASED}, and input signature must be the same as output signature.
+ * This processor hashes each row using {@link Memory#xxHash64} with a seed of {@link #HASH_SEED}.
  */
 public class FrameChannelHashPartitioner implements FrameProcessor<Long>
 {
@@ -102,6 +103,10 @@ public class FrameChannelHashPartitioner implements FrameProcessor<Long>
         Collections.singletonList(() -> cursor.getColumnSelectorFactory()),
         frameReader.signature()
     ).withRowMemoryAndSignatureColumns();
+
+    if (!frameReader.signature().equals(frameWriterFactory.signature())) {
+      throw new IAE("Input signature does not match output signature");
+    }
   }
 
   @Override

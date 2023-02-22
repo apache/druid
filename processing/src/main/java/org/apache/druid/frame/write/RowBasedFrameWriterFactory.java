@@ -19,6 +19,7 @@
 
 package org.apache.druid.frame.write;
 
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.AppendableMemory;
 import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
@@ -87,6 +88,12 @@ public class RowBasedFrameWriterFactory implements FrameWriterFactory
   public RowSignature signature()
   {
     return signature;
+  }
+
+  @Override
+  public FrameType frameType()
+  {
+    return FrameType.ROW_BASED;
   }
 
   /**

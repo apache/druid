@@ -74,7 +74,7 @@ public class StageDefinitionTest
         new OffsetLimitFrameProcessorFactory(0, 1L),
         RowSignature.empty(),
         new GlobalSortMaxCountShuffleSpec(
-            new ClusterBy(ImmutableList.of(new KeyColumn("test", KeyOrder.ASCENDING)), 1),
+            new ClusterBy(ImmutableList.of(new KeyColumn("test", KeyOrder.ASCENDING)), 0),
             2,
             false
         ),
@@ -85,7 +85,6 @@ public class StageDefinitionTest
 
     Assert.assertThrows(ISE.class, () -> stageDefinition.generatePartitionBoundariesForShuffle(null));
   }
-
 
   @Test
   public void testGeneratePartitionsForNonNullShuffleWithNonNullCollector()

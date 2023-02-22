@@ -47,6 +47,7 @@ public class OffsetLimitFrameProcessor implements FrameProcessor<Long>
   private final FrameWriterFactory frameWriterFactory;
   private final long offset;
   private final long limit;
+  private final boolean inputSignatureMatchesOutputSignature;
 
   long rowsProcessedSoFar = 0L;
 
@@ -65,6 +66,7 @@ public class OffsetLimitFrameProcessor implements FrameProcessor<Long>
     this.frameWriterFactory = frameWriterFactory;
     this.offset = offset;
     this.limit = limit;
+    this.inputSignatureMatchesOutputSignature = frameReader.signature().equals(frameWriterFactory.signature());
 
     if (offset < 0 || limit < 0) {
       throw new ISE("Offset and limit must be nonnegative");
@@ -130,7 +132,11 @@ public class OffsetLimitFrameProcessor implements FrameProcessor<Long>
       // Offset is past the end of the frame; skip it.
       rowsProcessedSoFar += frame.numRows();
       return null;
-    } else if (startRow == 0 && endRow == frame.numRows()) {
+    } else if (startRow == 0
+               && endRow == frame.numRows()
+               && inputSignatureMatchesOutputSignature
+               && frameWriterFactory.frameType().equals(frame.type())) {
+      // Want the whole frame; emit it as-is.
       rowsProcessedSoFar += frame.numRows();
       return frame;
     }

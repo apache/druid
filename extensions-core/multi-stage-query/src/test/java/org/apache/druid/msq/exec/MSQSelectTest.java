@@ -441,7 +441,7 @@ public class MSQSelectTest extends MSQTestBase
   {
     final Map<String, Object> queryContext =
         ImmutableMap.<String, Object>builder()
-                    .putAll(DEFAULT_MSQ_CONTEXT)
+                    .putAll(context)
                     .put(PlannerContext.CTX_SQL_JOIN_ALGORITHM, joinAlgorithm.toString())
                     .build();
 
@@ -478,7 +478,7 @@ public class MSQSelectTest extends MSQTestBase
                                     .columns("dim2", "m1", "m2")
                                     .context(
                                         defaultScanQueryContext(
-                                            context,
+                                            queryContext,
                                             RowSignature.builder()
                                                         .add("dim2", ColumnType.STRING)
                                                         .add("m1", ColumnType.FLOAT)
@@ -498,7 +498,7 @@ public class MSQSelectTest extends MSQTestBase
                                     .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                     .context(
                                         defaultScanQueryContext(
-                                            context,
+                                            queryContext,
                                             RowSignature.builder().add("m1", ColumnType.FLOAT).build()
                                         )
                                     )
@@ -545,10 +545,9 @@ public class MSQSelectTest extends MSQTestBase
                                     new FieldAccessPostAggregator(null, "a0:count")
                                 )
                             )
-
                         )
                     )
-                    .setContext(context)
+                    .setContext(queryContext)
                     .build();
 
     testSelectQuery()
@@ -562,16 +561,20 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedMSQSpec(
             MSQSpec.builder()
                    .query(query)
-                   .columnMappings(new ColumnMappings(ImmutableList.of(
-                       new ColumnMapping("d0", "dim2"),
-                       new ColumnMapping("a0", "EXPR$1")
-                   )))
+                   .columnMappings(
+                       new ColumnMappings(
+                           ImmutableList.of(
+                               new ColumnMapping("d0", "dim2"),
+                               new ColumnMapping("a0", "EXPR$1")
+                           )
+                       )
+                   )
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .build()
         )
         .setExpectedRowSignature(resultSignature)
         .setExpectedResultRows(expectedResults)
-        .setQueryContext(context)
+        .setQueryContext(queryContext)
         .setExpectedCountersForStageWorkerChannel(CounterSnapshotMatcher.with().totalFiles(1), 0, 0, "input0")
         .setExpectedCountersForStageWorkerChannel(CounterSnapshotMatcher.with().rows(6).frames(1), 0, 0, "output")
         .setExpectedCountersForStageWorkerChannel(CounterSnapshotMatcher.with().rows(6).frames(1), 0, 0, "shuffle")

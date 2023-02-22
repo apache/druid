@@ -356,9 +356,9 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
     Preconditions.checkState(leftTracker.hasMark() || leftTracker.isAtEnd(), "left.hasMark || left.isAtEnd");
     Preconditions.checkState(rightTracker.hasMark() || rightTracker.isAtEnd(), "right.hasMark || right.isAtEnd");
 
-    if (leftTracker.markFrame < 0) {
+    if (!leftTracker.hasMark()) {
       return rightTracker.markFrame < 0 ? 0 : 1;
-    } else if (rightTracker.markFrame < 0) {
+    } else if (!rightTracker.hasMark()) {
       return -1;
     } else {
       final FrameHolder leftHolder = leftTracker.holders.get(leftTracker.markFrame);
