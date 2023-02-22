@@ -50,6 +50,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -570,14 +571,14 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
           try (final CloseableIterator<DataSegment> iterator =
                    queryTool.retrieveUsedSegments(dataSourceName, intervals)) {
-            timeline.addSegments(iterator);
+            VersionedIntervalTimeline.addSegments(timeline, iterator);
           }
 
           try (final CloseableIterator<DataSegment> iterator =
                    queryTool.retrieveUnusedSegments(dataSourceName, intervals)) {
             while (iterator.hasNext()) {
               final DataSegment dataSegment = iterator.next();
-              timeline.addSegments(Iterators.singletonIterator(dataSegment));
+              VersionedIntervalTimeline.addSegments(timeline, Iterators.singletonIterator(dataSegment));
               unusedSegments.add(dataSegment);
             }
           }

@@ -30,6 +30,7 @@ import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -106,7 +107,7 @@ public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
     for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
       SegmentTimeline timeline = timelines
           .computeIfAbsent(dataSource.getName(), dsName -> new SegmentTimeline());
-      timeline.addSegments(dataSource.getSegments().iterator());
+      VersionedIntervalTimeline.addSegments(timeline, dataSource.getSegments().iterator());
     }
   }
 }
