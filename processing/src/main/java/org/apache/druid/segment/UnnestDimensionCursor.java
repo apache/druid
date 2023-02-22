@@ -157,6 +157,9 @@ public class UnnestDimensionCursor implements Cursor
               @Override
               public boolean matches()
               {
+                if (indexedIntsForCurrentRow.size() == 0) {
+                  return false;
+                }
                 return idForLookup == indexedIntsForCurrentRow.get(indexForRow);
               }
 
