@@ -21,6 +21,7 @@ on:
       - 'dev/**'
       - 'helm/**'
       - 'web-console/**'
+      - '**/*.md'
     branches:
       - master
       - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
@@ -30,6 +31,7 @@ on:
       - 'dev/**'
       - 'helm/**'
       - 'web-console/**'
+      - '**/*.md'
     branches:
       - master
       - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
