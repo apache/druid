@@ -396,7 +396,7 @@ When you use the `unnest` datasource, the unnested column looks like this:
 When unnesting data, keep the following in mind:
 
 - The total number of rows will grow to accommodate the new rows that the unnested data occupy.
-- You can unnest the values in more than one column in a single `unnest` datasource. This can lead to a very large number of new rows depending on your dataset. You can see an example of this in the [unnest tutorial](../tutorials/tutorial-unnest-datasource.md#unnest-multiple-columns).
+- You can unnest the values in more than one column in a single `unnest` datasource. This can lead to a very large number of new rows depending on your dataset. You can see an example of this in the [unnest tutorial](../tutorials/tutorial-unnest-arrays.md#unnest-multiple-columns).
 
 The `unnest` datasource uses the following syntax:
 
