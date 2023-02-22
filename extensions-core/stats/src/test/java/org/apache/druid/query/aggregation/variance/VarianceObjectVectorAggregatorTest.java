@@ -46,6 +46,17 @@ public class VarianceObjectVectorAggregatorTest extends InitializedNullHandlingT
       null,
       new VarianceAggregatorCollector(2, 183, 1984.5)
   };
+  /**
+   *   this variable is same as VALUES but with a different type.
+   *   This is used in *compatability tests to verify that VarianceObjectVectorAggregator can handle object arrays as well
+   */
+  private static final Object[] OBJECTS = new Object[]{
+      new VarianceAggregatorCollector(1, 7.8, 0),
+      new VarianceAggregatorCollector(1, 11, 0),
+      new VarianceAggregatorCollector(1, 23.67, 0),
+      null,
+      new VarianceAggregatorCollector(2, 183, 1984.5)
+  };
   private static final boolean[] NULLS = new boolean[]{false, false, true, true, false};
 
   @Mock
@@ -86,6 +97,17 @@ public class VarianceObjectVectorAggregatorTest extends InitializedNullHandlingT
   }
 
   @Test
+  public void aggregateCompatibilityTest()
+  {
+    this.resetSelectorObjectVectorWithObjects();
+    target.aggregate(buf, POSITION, START_ROW, VALUES.length);
+    VarianceAggregatorCollector collector = VarianceBufferAggregator.getVarianceCollector(buf, POSITION);
+    Assert.assertEquals(4, collector.count);
+    Assert.assertEquals(217.67, collector.sum, EPSILON);
+    Assert.assertEquals(7565.211675, collector.nvariance, EPSILON);
+  }
+
+  @Test
   public void aggregateBatchWithoutRows()
   {
     int[] positions = new int[]{0, 43, 70};
@@ -96,6 +118,23 @@ public class VarianceObjectVectorAggregatorTest extends InitializedNullHandlingT
       VarianceAggregatorCollector collector = VarianceBufferAggregator.getVarianceCollector(
           buf,
           positions[i] + positionOffset
+      );
+      Assert.assertEquals(VALUES[i], collector);
+    }
+  }
+
+  @Test
+  public void aggregateBatchWithoutRowsCompatibilityTest()
+  {
+    this.resetSelectorObjectVectorWithObjects();
+    int[] positions = new int[]{0, 43, 70};
+    int positionOffset = 2;
+    clearBufferForPositions(positionOffset, positions);
+    target.aggregate(buf, 3, positions, null, positionOffset);
+    for (int i = 0; i < positions.length; i++) {
+      VarianceAggregatorCollector collector = VarianceBufferAggregator.getVarianceCollector(
+              buf,
+              positions[i] + positionOffset
       );
       Assert.assertEquals(VALUES[i], collector);
     }
@@ -120,6 +159,25 @@ public class VarianceObjectVectorAggregatorTest extends InitializedNullHandlingT
   }
 
   @Test
+  public void aggregateBatchWithRowsCompatibilityTest()
+  {
+    this.resetSelectorObjectVectorWithObjects();
+    int[] positions = new int[]{0, 43, 70};
+    int[] rows = new int[]{3, 2, 0};
+    int positionOffset = 2;
+    clearBufferForPositions(positionOffset, positions);
+    target.aggregate(buf, 3, positions, rows, positionOffset);
+    for (int i = 0; i < positions.length; i++) {
+      VarianceAggregatorCollector collector = VarianceBufferAggregator.getVarianceCollector(
+              buf,
+              positions[i] + positionOffset
+      );
+      VarianceAggregatorCollector expectedCollector = VALUES[rows[i]];
+      Assert.assertEquals(expectedCollector == null ? new VarianceAggregatorCollector() : expectedCollector, collector);
+    }
+  }
+
+  @Test
   public void getShouldReturnAllZeros()
   {
     VarianceAggregatorCollector collector = target.get(buf, POSITION);
@@ -133,5 +191,10 @@ public class VarianceObjectVectorAggregatorTest extends InitializedNullHandlingT
     for (int position : positions) {
       VarianceBufferAggregator.doInit(buf, offset + position);
     }
+  }
+
+  private void resetSelectorObjectVectorWithObjects()
+  {
+    Mockito.doReturn(OBJECTS).when(selector).getObjectVector();
   }
 }

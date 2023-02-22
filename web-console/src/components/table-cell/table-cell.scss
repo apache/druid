@@ -16,8 +16,13 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .table-cell {
-  &.null {
+  padding: $table-cell-v-padding $table-cell-h-padding;
+
+  &.null,
+  &.empty {
     font-style: italic;
   }
 
@@ -41,8 +46,8 @@
 
     .action-icon {
       position: absolute;
-      top: 0;
-      right: 0;
+      top: $table-cell-v-padding;
+      right: $table-cell-h-padding;
       color: #f5f8fa;
     }
   }

@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.join.table;
 
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
+import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import org.apache.druid.segment.column.ColumnType;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
@@ -50,13 +50,13 @@ public class RowBasedIndexBuilderTest
     Assert.assertEquals(ColumnType.STRING, index.keyType());
     Assert.assertTrue(index.areKeysUnique());
 
-    Assert.assertEquals(intList(0), index.find("abc"));
-    Assert.assertEquals(intList(1), index.find(""));
-    Assert.assertEquals(intList(3), index.find(1L));
-    Assert.assertEquals(intList(3), index.find("1"));
-    Assert.assertEquals(intList(4), index.find("def"));
-    Assert.assertEquals(intList(), index.find(null));
-    Assert.assertEquals(intList(), index.find("nonexistent"));
+    Assert.assertEquals(intSet(0), index.find("abc"));
+    Assert.assertEquals(intSet(1), index.find(""));
+    Assert.assertEquals(intSet(3), index.find(1L));
+    Assert.assertEquals(intSet(3), index.find("1"));
+    Assert.assertEquals(intSet(4), index.find("def"));
+    Assert.assertEquals(intSet(), index.find(null));
+    Assert.assertEquals(intSet(), index.find("nonexistent"));
 
     expectedException.expect(UnsupportedOperationException.class);
     index.findUniqueLong(0L);
@@ -80,13 +80,13 @@ public class RowBasedIndexBuilderTest
     Assert.assertEquals(ColumnType.STRING, index.keyType());
     Assert.assertFalse(index.areKeysUnique());
 
-    Assert.assertEquals(intList(0, 3), index.find("abc"));
-    Assert.assertEquals(intList(1), index.find(""));
-    Assert.assertEquals(intList(4), index.find(1L));
-    Assert.assertEquals(intList(4), index.find("1"));
-    Assert.assertEquals(intList(5), index.find("def"));
-    Assert.assertEquals(intList(), index.find(null));
-    Assert.assertEquals(intList(), index.find("nonexistent"));
+    Assert.assertEquals(intSet(0, 3), index.find("abc"));
+    Assert.assertEquals(intSet(1), index.find(""));
+    Assert.assertEquals(intSet(4), index.find(1L));
+    Assert.assertEquals(intSet(4), index.find("1"));
+    Assert.assertEquals(intSet(5), index.find("def"));
+    Assert.assertEquals(intSet(), index.find(null));
+    Assert.assertEquals(intSet(), index.find("nonexistent"));
 
     expectedException.expect(UnsupportedOperationException.class);
     index.findUniqueLong(0L);
@@ -107,10 +107,10 @@ public class RowBasedIndexBuilderTest
     Assert.assertEquals(ColumnType.LONG, index.keyType());
     Assert.assertTrue(index.areKeysUnique());
 
-    Assert.assertEquals(intList(0), index.find(1L));
-    Assert.assertEquals(intList(1), index.find(5L));
-    Assert.assertEquals(intList(2), index.find(2L));
-    Assert.assertEquals(intList(), index.find(3L));
+    Assert.assertEquals(intSet(0), index.find(1L));
+    Assert.assertEquals(intSet(1), index.find(5L));
+    Assert.assertEquals(intSet(2), index.find(2L));
+    Assert.assertEquals(intSet(), index.find(3L));
 
     Assert.assertEquals(0, index.findUniqueLong(1L));
     Assert.assertEquals(1, index.findUniqueLong(5L));
@@ -133,10 +133,10 @@ public class RowBasedIndexBuilderTest
     Assert.assertEquals(ColumnType.LONG, index.keyType());
     Assert.assertTrue(index.areKeysUnique());
 
-    Assert.assertEquals(intList(0), index.find(1L));
-    Assert.assertEquals(intList(1), index.find(10_000_000L));
-    Assert.assertEquals(intList(2), index.find(2L));
-    Assert.assertEquals(intList(), index.find(3L));
+    Assert.assertEquals(intSet(0), index.find(1L));
+    Assert.assertEquals(intSet(1), index.find(10_000_000L));
+    Assert.assertEquals(intSet(2), index.find(2L));
+    Assert.assertEquals(intSet(), index.find(3L));
 
     Assert.assertEquals(0, index.findUniqueLong(1L));
     Assert.assertEquals(1, index.findUniqueLong(10_000_000L));
@@ -160,20 +160,20 @@ public class RowBasedIndexBuilderTest
     Assert.assertEquals(ColumnType.LONG, index.keyType());
     Assert.assertFalse(index.areKeysUnique());
 
-    Assert.assertEquals(intList(0, 2), index.find("1"));
-    Assert.assertEquals(intList(0, 2), index.find(1));
-    Assert.assertEquals(intList(0, 2), index.find(1L));
-    Assert.assertEquals(intList(1), index.find(5L));
-    Assert.assertEquals(intList(3), index.find(2L));
-    Assert.assertEquals(intList(), index.find(3L));
+    Assert.assertEquals(intSet(0, 2), index.find("1"));
+    Assert.assertEquals(intSet(0, 2), index.find(1));
+    Assert.assertEquals(intSet(0, 2), index.find(1L));
+    Assert.assertEquals(intSet(1), index.find(5L));
+    Assert.assertEquals(intSet(3), index.find(2L));
+    Assert.assertEquals(intSet(), index.find(3L));
 
     expectedException.expect(UnsupportedOperationException.class);
     index.findUniqueLong(5L);
   }
 
-  public IntList intList(final int... ints)
+  public IntSortedSet intSet(final int... ints)
   {
-    final IntArrayList retVal = new IntArrayList(ints.length);
+    final IntAVLTreeSet retVal = new IntAVLTreeSet();
     for (int i : ints) {
       retVal.add(i);
     }

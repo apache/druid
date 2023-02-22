@@ -55,7 +55,7 @@ export const MoreButton = React.memo(function MoreButton(props: MoreButtonProps)
         setOpenState(nextOpenState ? (e.altKey ? 'alt-open' : 'open') : undefined);
       }}
     >
-      <Button icon={IconNames.MORE} disabled={!childCount} />
+      <Button icon={IconNames.MORE} disabled={!childCount} title="More actions" />
     </Popover2>
   );
 });

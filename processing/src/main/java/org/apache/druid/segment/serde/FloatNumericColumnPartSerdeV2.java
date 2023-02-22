@@ -160,7 +160,8 @@ public class FloatNumericColumnPartSerdeV2 implements ColumnPartSerde
       builder.setType(ValueType.FLOAT)
              .setHasMultipleValues(false)
              .setHasNulls(hasNulls)
-             .setNumericColumnSupplier(new FloatNumericColumnSupplier(column, bitmap));
+             .setNumericColumnSupplier(new FloatNumericColumnSupplier(column, bitmap))
+             .setNullValueIndexSupplier(bitmap);
     };
   }
 }

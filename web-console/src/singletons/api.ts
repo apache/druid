@@ -16,14 +16,36 @@
  * limitations under the License.
  */
 
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import type { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
+import axios from 'axios';
 import * as JSONBig from 'json-bigint-native';
+
+import { nonEmptyString } from '../utils';
 
 export class Api {
   static instance: AxiosInstance;
 
   static initialize(config?: AxiosRequestConfig): void {
     Api.instance = axios.create(config);
+
+    // Intercept the request and if we get an error (status code > 2xx) and we have a "message" in the response then
+    // show it as it will be more informative than the default "Request failed with status code xxx" message.
+    Api.instance.interceptors.response.use(
+      resp => resp,
+      (error: AxiosError) => {
+        const responseData = error.response?.data;
+        const message = responseData?.message;
+        if (nonEmptyString(message)) {
+          return Promise.reject(new Error(message));
+        }
+
+        if (error.config?.method?.toLowerCase() === 'get' && nonEmptyString(responseData)) {
+          return Promise.reject(new Error(responseData));
+        }
+
+        return Promise.reject(error);
+      },
+    );
   }
 
   static getDefaultConfig(): AxiosRequestConfig {
@@ -46,6 +68,10 @@ export class Api {
   }
 
   static encodePath(path: string): string {
-    return path.replace(/[?#%&'[\]\\]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+    return path.replace(/[?#%;&'[\]\\]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+  }
+
+  static isNetworkError(e: Error): boolean {
+    return e.message === 'Network Error' && !(e as any).response;
   }
 }

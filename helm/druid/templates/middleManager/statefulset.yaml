@@ -42,10 +42,15 @@ spec:
         app: {{ template "druid.name" . }}
         component: {{ .Values.middleManager.name }}
         release: {{ .Release.Name }}
-        {{- if .Values.middleManager.podAnnotations }}
       annotations:
-{{ toYaml .Values.middleManager.podAnnotations | indent 8 }}
-        {{- end }}
+      {{- with .Values.middleManager.podAnnotations }}
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- if .Values.prometheus.enabled }}
+      {{- with .Values.prometheus.annotation }}
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- end }}
     spec:
       {{- if or .Values.middleManager.antiAffinity .Values.middleManager.nodeAffinity }}
       affinity:
@@ -95,6 +100,10 @@ spec:
       - name: druid
         args: [ "middleManager" ]
         env:
+        - name: POD_NAME
+          valueFrom:  {fieldRef: {fieldPath: metadata.name}}
+        - name: POD_NAMESPACE
+          valueFrom: {fieldRef: {fieldPath: metadata.namespace}}
         {{- range $key, $val := .Values.middleManager.config }}
         - name: {{ $key }}
           value: {{ $val | quote }}
@@ -119,6 +128,11 @@ spec:
         ports:
         - containerPort: {{ .Values.middleManager.port }}
           name: http
+        {{- if .Values.prometheus.enabled}}
+        - name: prometheus
+          containerPort: {{ .Values.prometheus.port }}
+          protocol: TCP
+        {{- end }}
         volumeMounts:
         - mountPath: /opt/druid/var/druid/
           name: data

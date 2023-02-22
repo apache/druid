@@ -19,10 +19,10 @@
 
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
-import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 public class NullableFloatGroupByVectorColumnSelector implements GroupByVectorColumnSelector
@@ -69,16 +69,16 @@ public class NullableFloatGroupByVectorColumnSelector implements GroupByVectorCo
 
   @Override
   public void writeKeyToResultRow(
-      final Memory keyMemory,
+      final MemoryPointer keyMemory,
       final int keyOffset,
       final ResultRow resultRow,
       final int resultRowPosition
   )
   {
-    if (keyMemory.getByte(keyOffset) == NullHandling.IS_NULL_BYTE) {
+    if (keyMemory.memory().getByte(keyMemory.position() + keyOffset) == NullHandling.IS_NULL_BYTE) {
       resultRow.set(resultRowPosition, null);
     } else {
-      resultRow.set(resultRowPosition, keyMemory.getFloat(keyOffset + 1));
+      resultRow.set(resultRowPosition, keyMemory.memory().getFloat(keyMemory.position() + keyOffset + 1));
     }
   }
 

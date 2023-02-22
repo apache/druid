@@ -235,7 +235,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
               LOG.debug("Scheduled db poll is done");
             }
             catch (Throwable t) {
-              LOG.makeAlert(t, "Error occured while polling for cachedUserMaps, cachedGroupMappingMaps, cachedRoleMaps.").emit();
+              LOG.makeAlert(t, "Error occurred while polling for cachedUserMaps, cachedGroupMappingMaps, cachedRoleMaps.").emit();
             }
             return ScheduledExecutors.Signal.REPEAT;
           }

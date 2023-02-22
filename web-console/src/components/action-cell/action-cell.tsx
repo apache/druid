@@ -21,7 +21,8 @@ import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import React from 'react';
 
-import { BasicAction, basicActionsToMenu } from '../../utils/basic-action';
+import type { BasicAction } from '../../utils/basic-action';
+import { basicActionsToMenu } from '../../utils/basic-action';
 import { ActionIcon } from '../action-icon/action-icon';
 
 import './action-cell.scss';
@@ -44,7 +45,7 @@ export const ActionCell = React.memo(function ActionCell(props: ActionCellProps)
       {onDetail && <ActionIcon icon={IconNames.SEARCH_TEMPLATE} onClick={onDetail} />}
       {actionsMenu && (
         <Popover2 content={actionsMenu} position={Position.BOTTOM_RIGHT}>
-          <ActionIcon icon={IconNames.WRENCH} />
+          <ActionIcon icon={IconNames.MORE} />
         </Popover2>
       )}
     </div>

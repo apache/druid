@@ -19,23 +19,13 @@
 
 package org.apache.druid.guice;
 
-import com.fasterxml.jackson.databind.Module;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 
-import java.util.Collections;
-import java.util.List;
-
 public class QueryablePeonModule implements DruidModule
 {
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return Collections.emptyList();
-  }
-
   @Override
   public void configure(Binder binder)
   {

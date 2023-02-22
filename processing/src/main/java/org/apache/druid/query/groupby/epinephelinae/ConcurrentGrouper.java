@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.druid.collections.CombiningIterator;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.CloseableIterators;
@@ -92,6 +93,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   private final long maxDictionarySizeForCombiner;
   @Nullable
   private final ParallelCombiner<KeyType> parallelCombiner;
+  private final boolean mergeThreadLocal;
 
   private volatile boolean initialized = false;
 
@@ -134,7 +136,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
         hasQueryTimeout,
         queryTimeoutAt,
         groupByQueryConfig.getIntermediateCombineDegree(),
-        groupByQueryConfig.getNumParallelCombineThreads()
+        groupByQueryConfig.getNumParallelCombineThreads(),
+        groupByQueryConfig.isMergeThreadLocal()
     );
   }
 
@@ -158,7 +161,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       final boolean hasQueryTimeout,
       final long queryTimeoutAt,
       final int intermediateCombineDegree,
-      final int numParallelCombineThreads
+      final int numParallelCombineThreads,
+      final boolean mergeThreadLocal
   )
   {
     Preconditions.checkArgument(concurrencyHint > 0, "concurrencyHint > 0");
@@ -206,6 +210,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     } else {
       this.parallelCombiner = null;
     }
+
+    this.mergeThreadLocal = mergeThreadLocal;
   }
 
   @Override
@@ -236,6 +242,10 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
             );
             grouper.init();
             groupers.add(grouper);
+
+            if (mergeThreadLocal) {
+              grouper.setSpillingAllowed(true);
+            }
           }
 
           initialized = true;
@@ -261,29 +271,46 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       throw new ISE("Grouper is closed");
     }
 
-    if (!spilling) {
-      final SpillingGrouper<KeyType> hashBasedGrouper = groupers.get(grouperNumberForKeyHash(keyHash));
+    final SpillingGrouper<KeyType> tlGrouper = threadLocalGrouper.get();
 
-      synchronized (hashBasedGrouper) {
-        if (!spilling) {
-          final AggregateResult aggregateResult = hashBasedGrouper.aggregate(key, keyHash);
+    if (mergeThreadLocal) {
+      // Always thread-local grouping: expect to get more memory use, but no thread contention.
+      return tlGrouper.aggregate(key, keyHash);
+    } else if (spilling) {
+      // Switch to thread-local grouping after spilling starts. No thread contention.
+      synchronized (tlGrouper) {
+        tlGrouper.setSpillingAllowed(true);
+        return tlGrouper.aggregate(key, keyHash);
+      }
+    } else {
+      // Use keyHash to find a grouper prior to spilling.
+      // There is potential here for thread contention, but it reduces memory use.
+      final SpillingGrouper<KeyType> subGrouper = groupers.get(grouperNumberForKeyHash(keyHash));
+
+      synchronized (subGrouper) {
+        if (subGrouper.isSpillingAllowed() && subGrouper != tlGrouper) {
+          // Another thread already started treating this grouper as its thread-local grouper. So, switch to ours.
+          // Fall through to release the lock on subGrouper and do the aggregation with tlGrouper.
+        } else {
+          final AggregateResult aggregateResult = subGrouper.aggregate(key, keyHash);
+
           if (aggregateResult.isOk()) {
             return AggregateResult.ok();
           } else {
             // Expecting all-or-nothing behavior.
             assert aggregateResult.getCount() == 0;
             spilling = true;
+
+            // Fall through to release the lock on subGrouper and do the aggregation with tlGrouper.
           }
         }
       }
-    }
 
-    // At this point we know spilling = true
-    final SpillingGrouper<KeyType> tlGrouper = threadLocalGrouper.get();
-
-    synchronized (tlGrouper) {
-      tlGrouper.setSpillingAllowed(true);
-      return tlGrouper.aggregate(key, keyHash);
+      synchronized (tlGrouper) {
+        assert spilling;
+        tlGrouper.setSpillingAllowed(true);
+        return tlGrouper.aggregate(key, keyHash);
+      }
     }
   }
 
@@ -316,21 +343,59 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
                                                                     parallelSortAndGetGroupersIterator() :
                                                                     getGroupersIterator(sorted);
 
-    // Parallel combine is used only when data is spilled. This is because ConcurrentGrouper uses two different modes
-    // depending on data is spilled or not. If data is not spilled, all inputs are completely aggregated and no more
-    // aggregation is required.
-    if (sorted && spilling && parallelCombiner != null) {
-      // First try to merge dictionaries generated by all underlying groupers. If it is merged successfully, the same
-      // merged dictionary is used for all combining threads
-      final List<String> dictionary = tryMergeDictionary();
-      if (dictionary != null) {
-        return parallelCombiner.combine(sortedIterators, dictionary);
-      }
-    }
+    if (sorted) {
+      final boolean fullyCombined = !spilling && !mergeThreadLocal;
 
-    return sorted ?
-           CloseableIterators.mergeSorted(sortedIterators, keyObjComparator) :
-           CloseableIterators.concat(sortedIterators);
+      // Parallel combine is used only when data is not fully merged.
+      if (!fullyCombined && parallelCombiner != null) {
+        // First try to merge dictionaries generated by all underlying groupers. If it is merged successfully, the same
+        // merged dictionary is used for all combining threads. Otherwise, fall back to single-threaded merge.
+        final List<String> dictionary = tryMergeDictionary();
+        if (dictionary != null) {
+          // Parallel combiner both merges and combines. Return its result directly.
+          return parallelCombiner.combine(sortedIterators, dictionary);
+        }
+      }
+
+      // Single-threaded merge. Still needs to be combined.
+      final CloseableIterator<Entry<KeyType>> mergedIterator =
+          CloseableIterators.mergeSorted(sortedIterators, keyObjComparator);
+
+      if (fullyCombined) {
+        return mergedIterator;
+      } else {
+        final ReusableEntry<KeyType> reusableEntry =
+            ReusableEntry.create(keySerdeFactory.factorize(), aggregatorFactories.length);
+
+        return CloseableIterators.wrap(
+            new CombiningIterator<>(
+                mergedIterator,
+                keyObjComparator,
+                (entry1, entry2) -> {
+                  if (entry2 == null) {
+                    // Copy key and value because we cannot retain the originals. They may be updated in-place after
+                    // this method returns.
+                    reusableEntry.setKey(keySerdeFactory.copyKey(entry1.getKey()));
+                    System.arraycopy(entry1.getValues(), 0, reusableEntry.getValues(), 0, entry1.getValues().length);
+                  } else {
+                    for (int i = 0; i < aggregatorFactories.length; i++) {
+                      reusableEntry.getValues()[i] = aggregatorFactories[i].combine(
+                          reusableEntry.getValues()[i],
+                          entry2.getValues()[i]
+                      );
+                    }
+                  }
+
+                  return reusableEntry;
+                }
+            ),
+            mergedIterator
+        );
+      }
+    } else {
+      // Cannot fully combine if the caller did not request a sorted iterator. Concat and return.
+      return CloseableIterators.concat(sortedIterators);
+    }
   }
 
   private boolean isParallelizable()
@@ -359,8 +424,16 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
 
     ListenableFuture<List<CloseableIterator<Entry<KeyType>>>> future = Futures.allAsList(futures);
     try {
-      final long timeout = queryTimeoutAt - System.currentTimeMillis();
-      return hasQueryTimeout ? future.get(timeout, TimeUnit.MILLISECONDS) : future.get();
+      if (!hasQueryTimeout) {
+        return future.get();
+      } else {
+        final long timeout = queryTimeoutAt - System.currentTimeMillis();
+        if (timeout > 0) {
+          return future.get(timeout, TimeUnit.MILLISECONDS);
+        } else {
+          throw new TimeoutException();
+        }
+      }
     }
     catch (InterruptedException | CancellationException e) {
       GuavaUtils.cancelAll(true, future, futures);

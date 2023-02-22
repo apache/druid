@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorStrategy;
 
 import javax.annotation.Nullable;
@@ -283,11 +284,14 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
   }
 
   @Override
-  public CloseableIterator<Entry<Memory>> iterator()
+  public CloseableIterator<Entry<MemoryPointer>> iterator()
   {
-    final CloseableIterator<Entry<Integer>> iterator = iterator(false);
+    final CloseableIterator<Entry<IntKey>> iterator = iterator(false);
     final WritableMemory keyMemory = WritableMemory.allocate(Integer.BYTES);
-    return new CloseableIterator<Entry<Memory>>()
+    final MemoryPointer reusableKey = new MemoryPointer(keyMemory, 0);
+    final ReusableEntry<MemoryPointer> reusableEntry = new ReusableEntry<>(reusableKey, new Object[aggregators.size()]);
+
+    return new CloseableIterator<Entry<MemoryPointer>>()
     {
       @Override
       public boolean hasNext()
@@ -296,11 +300,12 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
       }
 
       @Override
-      public Entry<Memory> next()
+      public Entry<MemoryPointer> next()
       {
-        final Entry<Integer> integerEntry = iterator.next();
-        keyMemory.putInt(0, integerEntry.getKey());
-        return new Entry<>(keyMemory, integerEntry.getValues());
+        final Entry<IntKey> integerEntry = iterator.next();
+        keyMemory.putInt(0, integerEntry.getKey().intValue());
+        reusableEntry.setValues(integerEntry.getValues());
+        return reusableEntry;
       }
 
       @Override
@@ -312,14 +317,17 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
   }
 
   @Override
-  public CloseableIterator<Entry<Integer>> iterator(boolean sorted)
+  public CloseableIterator<Entry<IntKey>> iterator(boolean sorted)
   {
     if (sorted) {
       throw new UnsupportedOperationException("sorted iterator is not supported yet");
     }
 
-    return new CloseableIterator<Entry<Integer>>()
+    return new CloseableIterator<Entry<IntKey>>()
     {
+      final ReusableEntry<IntKey> reusableEntry =
+          new ReusableEntry<>(new IntKey(0), new Object[aggregators.size()]);
+
       // initialize to the first used slot
       private int next = findNext(-1);
 
@@ -330,7 +338,7 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
       }
 
       @Override
-      public Entry<Integer> next()
+      public Entry<IntKey> next()
       {
         if (next < 0) {
           throw new NoSuchElementException();
@@ -339,14 +347,14 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
         final int current = next;
         next = findNext(current);
 
-        final Object[] values = new Object[aggregators.size()];
         final int recordOffset = current * recordSize;
         for (int i = 0; i < aggregators.size(); i++) {
-          values[i] = aggregators.get(valBuffer, recordOffset, i);
+          reusableEntry.getValues()[i] = aggregators.get(valBuffer, recordOffset, i);
         }
         // shift by -1 since values are initially shifted by +1 so they are all positive and
         // GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE is -1
-        return new Entry<>(current - 1, values);
+        reusableEntry.getKey().setValue(current - 1);
+        return reusableEntry;
       }
 
       @Override

@@ -188,6 +188,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     emitTieredStats(emitter, "segment/cost/normalization", stats, "normalization");
 
     emitTieredStats(emitter, "segment/moved/count", stats, "movedCount");
+    emitTieredStats(emitter, "segment/unmoved/count", stats, "unmovedCount");
 
     emitTieredStats(emitter, "segment/deleted/count", stats, "deletedCount");
 
@@ -240,12 +241,13 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
         ImmutableDruidServer server = serverHolder.getServer();
         LoadQueuePeon queuePeon = serverHolder.getPeon();
         log.info(
-            "Server[%s, %s, %s] has %,d left to load, %,d left to drop, %,d bytes queued, %,d bytes served.",
+            "Server[%s, %s, %s] has %,d left to load, %,d left to drop, %,d served, %,d bytes queued, %,d bytes served.",
             server.getName(),
             server.getType().toString(),
             server.getTier(),
             queuePeon.getSegmentsToLoad().size(),
             queuePeon.getSegmentsToDrop().size(),
+            server.getNumSegments(),
             queuePeon.getLoadQueueSize(),
             server.getCurrSize()
         );

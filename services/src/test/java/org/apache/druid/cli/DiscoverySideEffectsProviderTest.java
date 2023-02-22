@@ -32,8 +32,9 @@ import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.DruidService;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.AbstractDruidServiceModule;
-import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.initialization.ServerInjectorBuilder;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.server.DruidNode;
 import org.junit.Assert;
@@ -180,18 +181,17 @@ public class DiscoverySideEffectsProviderTest
 
   private Injector createInjector(List<Module> modules)
   {
-    List<Module> finalModules = new ArrayList<>(modules);
-    finalModules.addAll(
-        ImmutableList.of(
-            GuiceRunnable.registerNodeRoleModule(ImmutableSet.of(nodeRole)),
+    return new StartupInjectorBuilder()
+        .add(
+            ServerInjectorBuilder.registerNodeRoleModule(ImmutableSet.of(nodeRole)),
             binder -> {
               binder.bind(DruidNodeAnnouncer.class).toInstance(discoverableOnlyAnnouncer);
               binder.bind(DruidNode.class).annotatedWith(Self.class).toInstance(druidNode);
               binder.bind(ServiceAnnouncer.class).toInstance(legacyAnnouncer);
               binder.bind(Lifecycle.class).toInstance(lifecycle);
             }
-        )
-    );
-    return GuiceInjectors.makeStartupInjectorWithModules(finalModules);
+         )
+        .addAll(modules)
+        .build();
   }
 }

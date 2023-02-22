@@ -77,17 +77,18 @@ public class CompressedLongsAutoEncodingSerdeTest
     int numBits = (Long.SIZE - Long.numberOfLeadingZeros(1 << (bitsPerValue - 1)));
     double numValuesPerByte = 8.0 / (double) numBits;
 
-    int numRows = (int) (blockSize * numValuesPerByte) * 2 + ThreadLocalRandom.current().nextInt(1, 101);
+    final ThreadLocalRandom currRand = ThreadLocalRandom.current();
+    int numRows = (int) (blockSize * numValuesPerByte) * 2 + currRand.nextInt(1, 101);
     long[] chunk = new long[numRows];
     for (int i = 0; i < numRows; i++) {
-      chunk[i] = ThreadLocalRandom.current().nextLong(bound);
+      chunk[i] = currRand.nextLong(bound);
     }
     testValues(chunk);
 
     numRows++;
     chunk = new long[numRows];
     for (int i = 0; i < numRows; i++) {
-      chunk[i] = ThreadLocalRandom.current().nextLong(bound);
+      chunk[i] = currRand.nextLong(bound);
     }
     testValues(chunk);
   }

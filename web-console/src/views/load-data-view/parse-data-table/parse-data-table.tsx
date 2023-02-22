@@ -19,18 +19,18 @@
 import classNames from 'classnames';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
+import type { RowRenderProps } from 'react-table';
 import ReactTable from 'react-table';
 
-import { TableCell } from '../../../components';
-import { TableCellUnparseable } from '../../../components/table-cell-unparseable/table-cell-unparseable';
-import { FlattenField } from '../../../druid-models';
+import { TableCell, TableCellUnparseable } from '../../../components';
+import type { FlattenField } from '../../../druid-models';
 import {
-  caseInsensitiveContains,
-  filterMap,
+  DEFAULT_TABLE_CLASS_NAME,
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
-} from '../../../utils';
-import { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
+} from '../../../react-table';
+import { caseInsensitiveContains, filterMap } from '../../../utils';
+import type { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
 
 import './parse-data-table.scss';
 
@@ -58,7 +58,7 @@ export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDat
   const key = useInput ? 'input' : 'parsed';
   return (
     <ReactTable
-      className="parse-data-table -striped -highlight"
+      className={classNames('parse-data-table', DEFAULT_TABLE_CLASS_NAME)}
       data={sampleData.rows}
       sortable={false}
       defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
@@ -86,7 +86,8 @@ export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDat
           ),
           id: String(i),
           accessor: (row: SampleEntry) => (row[key] ? row[key]![columnName] : null),
-          Cell: function ParseDataTableCell(row) {
+          width: 140,
+          Cell: function ParseDataTableCell(row: RowRenderProps) {
             if (row.original.unparseable) {
               return <TableCellUnparseable />;
             }

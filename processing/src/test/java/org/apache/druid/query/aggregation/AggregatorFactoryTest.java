@@ -50,6 +50,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -266,5 +267,65 @@ public class AggregatorFactoryTest extends InitializedNullHandlingTest
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
+  }
+
+  @Test
+  public void testWithName()
+  {
+    List<AggregatorFactory> aggregatorFactories = Arrays.asList(
+        new CountAggregatorFactory("col"),
+        new JavaScriptAggregatorFactory(
+            "col",
+            ImmutableList.of("col"),
+            "function(a,b) { return a + b; }",
+            "function() { return 0; }",
+            "function(a,b) { return a + b }",
+            new JavaScriptConfig(true)
+        ),
+        // long aggs
+        new LongSumAggregatorFactory("col", "long-col"),
+        new LongMinAggregatorFactory("col", "long-col"),
+        new LongMaxAggregatorFactory("col", "long-col"),
+        new LongFirstAggregatorFactory("col", "long-col", null),
+        new LongLastAggregatorFactory("col", "long-col", null),
+        new LongAnyAggregatorFactory("col", "long-col"),
+        // double aggs
+        new DoubleSumAggregatorFactory("col", "double-col"),
+        new DoubleMinAggregatorFactory("col", "double-col"),
+        new DoubleMaxAggregatorFactory("col", "double-col"),
+        new DoubleFirstAggregatorFactory("col", "double-col", null),
+        new DoubleLastAggregatorFactory("col", "double-col", null),
+        new DoubleAnyAggregatorFactory("col", "double-col"),
+        new DoubleMeanAggregatorFactory("col", "double-col"),
+        // float aggs
+        new FloatSumAggregatorFactory("col", "float-col"),
+        new FloatMinAggregatorFactory("col", "float-col"),
+        new FloatMaxAggregatorFactory("col", "float-col"),
+        new FloatFirstAggregatorFactory("col", "float-col", null),
+        new FloatLastAggregatorFactory("col", "float-col", null),
+        new FloatAnyAggregatorFactory("col", "float-col"),
+        // string aggregators
+        new StringFirstAggregatorFactory("col", "col", null, 1024),
+        new StringLastAggregatorFactory("col", "col", null, 1024),
+        new StringAnyAggregatorFactory("col", "col", 1024),
+        // sketch aggs
+        new CardinalityAggregatorFactory("col", ImmutableList.of(DefaultDimensionSpec.of("some-col")), false),
+        new HyperUniquesAggregatorFactory("col", "hyperunique"),
+        new HistogramAggregatorFactory("col", "histogram", ImmutableList.of(0.25f, 0.5f, 0.75f)),
+        // delegate aggs
+        new FilteredAggregatorFactory(
+            new HyperUniquesAggregatorFactory("col", "hyperunique"),
+            new SelectorDimFilter("col", "hello", null),
+            "col"
+        ),
+        new SuppressedAggregatorFactory(
+            new HyperUniquesAggregatorFactory("col", "hyperunique")
+        )
+    );
+
+    for (AggregatorFactory aggregatorFactory : aggregatorFactories) {
+      Assert.assertEquals(aggregatorFactory, aggregatorFactory.withName("col"));
+      Assert.assertEquals("newTest", aggregatorFactory.withName("newTest").getName());
+    }
   }
 }

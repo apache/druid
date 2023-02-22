@@ -42,8 +42,10 @@ import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -72,6 +74,7 @@ import java.util.stream.Collectors;
 
 class ExpressionTestHelper
 {
+  private static final JoinableFactoryWrapper JOINABLE_FACTORY_WRAPPER = CalciteTests.createJoinableFactoryWrapper();
   private static final PlannerContext PLANNER_CONTEXT = PlannerContext.create(
       "SELECT 1", // The actual query isn't important for this test
       CalciteTests.createOperatorTable(),
@@ -85,7 +88,9 @@ class ExpressionTestHelper
               NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
           )
       ),
-      ImmutableMap.of()
+      null, /* Don't need engine */
+      Collections.emptyMap(),
+      JOINABLE_FACTORY_WRAPPER
   );
 
   private final RowSignature rowSignature;
@@ -137,7 +142,12 @@ class ExpressionTestHelper
 
   RexNode makeLiteral(DateTime timestamp)
   {
-    return rexBuilder.makeTimestampLiteral(Calcites.jodaToCalciteTimestampString(timestamp, DateTimeZone.UTC), 0);
+    return Calcites.jodaToCalciteTimestampLiteral(
+        rexBuilder,
+        timestamp,
+        DateTimeZone.UTC,
+        DruidTypeSystem.DEFAULT_TIMESTAMP_PRECISION
+    );
   }
 
   RexNode makeLiteral(Integer integer)
@@ -310,7 +320,7 @@ class ExpressionTestHelper
   )
   {
     final RexNode rexNode = rexBuilder.makeCall(op, exprs);
-    final VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(rowSignature, TestExprMacroTable.INSTANCE);
+    final VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(rowSignature, TestExprMacroTable.INSTANCE, false);
 
     final DimFilter filter = Expressions.toFilter(PLANNER_CONTEXT, rowSignature, virtualColumnRegistry, rexNode);
     Assert.assertEquals("Filter for: " + rexNode, expectedFilter, filter);
@@ -337,6 +347,7 @@ class ExpressionTestHelper
                 RowAdapters.standardRow(),
                 () -> new MapBasedRow(0L, bindings),
                 rowSignature,
+                false,
                 false
             ),
             VirtualColumns.create(virtualColumns)

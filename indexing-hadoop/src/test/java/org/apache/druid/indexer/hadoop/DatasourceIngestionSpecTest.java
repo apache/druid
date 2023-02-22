@@ -22,12 +22,14 @@ package org.apache.druid.indexer.hadoop;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.List;
@@ -37,6 +39,12 @@ import java.util.List;
 public class DatasourceIngestionSpecTest
 {
   private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
+
+  @Before
+  public void before()
+  {
+    NullHandling.initializeForTests();
+  }
 
   @Test
   public void testSingleIntervalSerde() throws Exception

@@ -16,13 +16,14 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Icon, Intent, Label, MenuItem, Switch } from '@blueprintjs/core';
+import { Button, ButtonGroup, Intent, Label, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import { SqlComparison, SqlExpression, SqlLiteral, SqlRef } from 'druid-query-toolkit';
+import { C, L, SqlComparison, SqlExpression } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
-import ReactTable, { Filter } from 'react-table';
+import type { Filter } from 'react-table';
+import ReactTable from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
@@ -33,39 +34,42 @@ import {
   MoreButton,
   RefreshButton,
   SegmentTimeline,
+  TableClickableCell,
   TableColumnSelector,
+  TableFilterableCell,
   ViewControlBar,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
 import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
-import { Api } from '../../singletons';
+import type { QueryWithContext } from '../../druid-models';
+import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
-  addFilter,
   booleanCustomTableFilter,
-  Capabilities,
-  CapabilitiesMode,
+  BooleanFilterInput,
+  parseFilterModeAndNeedle,
+  sqlQueryCustomTableFilter,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+} from '../../react-table';
+import { Api } from '../../singletons';
+import type { NumberLike } from '../../utils';
+import {
   compact,
   deepGet,
   filterMap,
   formatBytes,
   formatInteger,
-  getNeedleAndMode,
   hasPopoverOpen,
   isNumberLikeNaN,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
-  makeBooleanFilter,
-  NumberLike,
   queryDruidSql,
   QueryManager,
   QueryState,
-  sqlQueryCustomTableFilter,
-  STANDARD_TABLE_PAGE_SIZE,
-  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
   twoLines,
 } from '../../utils';
-import { BasicAction } from '../../utils/basic-action';
+import type { BasicAction } from '../../utils/basic-action';
 
 import './segments-view.scss';
 
@@ -84,9 +88,10 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Num rows',
     'Avg. row size',
     'Replicas',
-    'Is published',
-    'Is realtime',
     'Is available',
+    'Is active',
+    'Is realtime',
+    'Is published',
     'Is overshadowed',
     ACTION_COLUMN_LABEL,
   ],
@@ -113,19 +118,20 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Num rows',
     'Avg. row size',
     'Replicas',
-    'Is published',
-    'Is realtime',
     'Is available',
+    'Is active',
+    'Is realtime',
+    'Is published',
     'Is overshadowed',
   ],
 };
 
 function formatRangeDimensionValue(dimension: any, value: any): string {
-  return `${SqlRef.column(String(dimension))}=${SqlLiteral.create(String(value))}`;
+  return `${C(String(dimension))}=${L(String(value))}`;
 }
 
 export interface SegmentsViewProps {
-  goToQuery: (initSql: string) => void;
+  goToQuery(queryWithContext: QueryWithContext): void;
   datasource: string | undefined;
   onlyUnavailable: boolean | undefined;
   capabilities: Capabilities;
@@ -164,8 +170,9 @@ interface SegmentQueryResultRow {
   avg_row_size: NumberLike;
   num_replicas: number;
   is_available: number;
-  is_published: number;
+  is_active: number;
   is_realtime: number;
+  is_published: number;
   is_overshadowed: number;
 }
 
@@ -208,9 +215,10 @@ END AS "time_span"`,
       visibleColumns.shown('Avg. row size') &&
         `CASE WHEN "num_rows" <> 0 THEN ("size" / "num_rows") ELSE 0 END AS "avg_row_size"`,
       visibleColumns.shown('Replicas') && `"num_replicas"`,
-      visibleColumns.shown('Is published') && `"is_published"`,
       visibleColumns.shown('Is available') && `"is_available"`,
+      visibleColumns.shown('Is active') && `"is_active"`,
       visibleColumns.shown('Is realtime') && `"is_realtime"`,
+      visibleColumns.shown('Is published') && `"is_published"`,
       visibleColumns.shown('Is overshadowed') && `"is_overshadowed"`,
     ]);
 
@@ -249,7 +257,7 @@ END AS "time_span"`,
     super(props, context);
 
     const segmentFilter: Filter[] = [];
-    if (props.datasource) segmentFilter.push({ id: 'datasource', value: `"${props.datasource}"` });
+    if (props.datasource) segmentFilter.push({ id: 'datasource', value: `=${props.datasource}` });
     if (props.onlyUnavailable) segmentFilter.push({ id: 'is_available', value: 'false' });
 
     this.state = {
@@ -258,7 +266,7 @@ END AS "time_span"`,
       segmentFilter,
       visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION,
-        ['Time span'],
+        ['Time span', 'Is published', 'Is overshadowed'],
       ),
       groupByInterval: false,
       showSegmentTimeline: false,
@@ -275,15 +283,25 @@ END AS "time_span"`,
             if (f.id === 'shard_type') {
               // Special handling for shard_type that needs to be search in the shard_spec
               // Creates filters like `shard_spec LIKE '%"type":"numbered"%'`
-              const needleAndMode = getNeedleAndMode(f);
-              const closingQuote = needleAndMode.mode === 'exact' ? '"' : '';
-              return SqlComparison.like(
-                SqlRef.column('shard_spec'),
-                `%"type":"${needleAndMode.needle}${closingQuote}%`,
-              );
+              const modeAndNeedle = parseFilterModeAndNeedle(f);
+              if (!modeAndNeedle) return;
+              const shardSpecColumn = C('shard_spec');
+              switch (modeAndNeedle.mode) {
+                case '=':
+                  return SqlComparison.like(shardSpecColumn, `%"type":"${modeAndNeedle.needle}"%`);
+
+                case '!=':
+                  return SqlComparison.notLike(
+                    shardSpecColumn,
+                    `%"type":"${modeAndNeedle.needle}"%`,
+                  );
+
+                default:
+                  return SqlComparison.like(shardSpecColumn, `%"type":"${modeAndNeedle.needle}%`);
+              }
             } else if (f.id.startsWith('is_')) {
               if (f.value === 'all') return;
-              return SqlRef.columnWithQuotes(f.id).equal(f.value === 'true' ? 1 : 0);
+              return C(f.id).equal(f.value === 'true' ? 1 : 0);
             } else {
               return sqlQueryCustomTableFilter(f);
             }
@@ -324,7 +342,7 @@ END AS "time_span"`,
               queryParts.push(
                 'ORDER BY ' +
                   sorted
-                    .map((sort: any) => `${SqlRef.column(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
+                    .map((sort: any) => `${C(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
                     .join(', '),
               );
             }
@@ -341,7 +359,7 @@ END AS "time_span"`,
               queryParts.push(
                 'ORDER BY ' +
                   sorted
-                    .map((sort: any) => `${SqlRef.column(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
+                    .map((sort: any) => `${C(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
                     .join(', '),
               );
             }
@@ -402,8 +420,9 @@ END AS "time_span"`,
                 avg_row_size: -1,
                 num_replicas: -1,
                 is_available: -1,
-                is_published: -1,
+                is_active: -1,
                 is_realtime: -1,
+                is_published: -1,
                 is_overshadowed: -1,
               };
             });
@@ -466,6 +485,30 @@ END AS "time_span"`,
     return actions;
   }
 
+  private onDetail(segmentId: string, datasource: string): void {
+    this.setState({
+      segmentTableActionDialogId: segmentId,
+      datasourceTableActionDialogId: datasource,
+      actions: this.getSegmentActions(segmentId, datasource),
+    });
+  }
+
+  private renderFilterableCell(field: string, enableComparisons = false) {
+    const { segmentFilter } = this.state;
+
+    return (row: { value: any }) => (
+      <TableFilterableCell
+        field={field}
+        value={row.value}
+        filters={segmentFilter}
+        onFiltersChange={filters => this.setState({ segmentFilter: filters })}
+        enableComparisons={enableComparisons}
+      >
+        {row.value}
+      </TableFilterableCell>
+    );
+  }
+
   renderSegmentsTable() {
     const { segmentsState, segmentFilter, visibleColumns, groupByInterval } = this.state;
     const { capabilities } = this.props;
@@ -478,30 +521,13 @@ END AS "time_span"`,
 
     const avgRowSizeValues = segments.map(d => formatInteger(d.avg_row_size));
 
-    const renderFilterableCell = (field: string) => {
-      return (row: { value: any }) => {
-        const value = row.value;
-        return (
-          <a
-            onClick={() => {
-              this.setState({
-                segmentFilter: addFilter(segmentFilter, field, value),
-              });
-            }}
-          >
-            {value}
-          </a>
-        );
-      };
-    };
-
     const hasSql = capabilities.hasSql();
 
-    // Only allow filtering of columns other than datasource if in SQL mode or we are filtering on an exact datasource
+    // Only allow filtering of columns other than datasource if in SQL mode, or if we are filtering on an exact datasource
     const allowGeneralFilter =
       hasSql ||
       segmentFilter.some(
-        filter => filter.id === 'datasource' && getNeedleAndMode(filter).mode === 'exact',
+        filter => filter.id === 'datasource' && parseFilterModeAndNeedle(filter)?.mode === '=',
       );
 
     return (
@@ -513,10 +539,10 @@ END AS "time_span"`,
         manual
         filterable
         filtered={segmentFilter}
-        defaultSorted={[hasSql ? { id: 'start', desc: true } : { id: 'datasource', desc: false }]}
         onFilteredChange={filtered => {
           this.setState({ segmentFilter: filtered });
         }}
+        defaultSorted={[hasSql ? { id: 'start', desc: true } : { id: 'datasource', desc: false }]}
         onFetchData={tableState => {
           this.fetchData(groupByInterval, tableState);
         }}
@@ -531,15 +557,24 @@ END AS "time_span"`,
             Header: 'Segment ID',
             show: visibleColumns.shown('Segment ID'),
             accessor: 'segment_id',
-            width: 300,
+            width: 280,
             sortable: hasSql,
             filterable: allowGeneralFilter,
+            Cell: row => (
+              <TableClickableCell
+                onClick={() => this.onDetail(row.value, row.row.datasource)}
+                hoverIcon={IconNames.SEARCH_TEMPLATE}
+              >
+                {row.value}
+              </TableClickableCell>
+            ),
           },
           {
             Header: 'Datasource',
             show: visibleColumns.shown('Datasource'),
             accessor: 'datasource',
-            Cell: renderFilterableCell('datasource'),
+            width: 140,
+            Cell: this.renderFilterableCell('datasource'),
           },
           {
             Header: 'Interval',
@@ -549,36 +584,39 @@ END AS "time_span"`,
             sortable: hasSql,
             defaultSortDesc: true,
             filterable: allowGeneralFilter,
-            Cell: renderFilterableCell('interval'),
+            Cell: this.renderFilterableCell('interval'),
           },
           {
             Header: 'Start',
             show: visibleColumns.shown('Start'),
             accessor: 'start',
-            width: 120,
+            headerClassName: 'enable-comparisons',
+            width: 160,
             sortable: hasSql,
             defaultSortDesc: true,
             filterable: allowGeneralFilter,
-            Cell: renderFilterableCell('start'),
+            Cell: this.renderFilterableCell('start', true),
           },
           {
             Header: 'End',
             show: visibleColumns.shown('End'),
             accessor: 'end',
-            width: 120,
+            headerClassName: 'enable-comparisons',
+            width: 160,
             sortable: hasSql,
             defaultSortDesc: true,
             filterable: allowGeneralFilter,
-            Cell: renderFilterableCell('end'),
+            Cell: this.renderFilterableCell('end', true),
           },
           {
             Header: 'Version',
             show: visibleColumns.shown('Version'),
             accessor: 'version',
-            width: 120,
+            width: 160,
             sortable: hasSql,
             defaultSortDesc: true,
             filterable: allowGeneralFilter,
+            Cell: this.renderFilterableCell('version'),
           },
           {
             Header: 'Time span',
@@ -587,7 +625,7 @@ END AS "time_span"`,
             width: 100,
             sortable: hasSql,
             filterable: allowGeneralFilter,
-            Cell: renderFilterableCell('time_span'),
+            Cell: this.renderFilterableCell('time_span'),
           },
           {
             Header: 'Shard type',
@@ -604,7 +642,7 @@ END AS "time_span"`,
               if (typeof v?.type !== 'string') return '-';
               return v?.type;
             },
-            Cell: renderFilterableCell('shard_type'),
+            Cell: this.renderFilterableCell('shard_type', true),
           },
           {
             Header: 'Shard spec',
@@ -627,38 +665,40 @@ END AS "time_span"`,
                 });
               };
 
-              const fullShardIcon = (
-                <Icon className="full-shard-spec-icon" icon={IconNames.EYE_OPEN} />
-              );
-
               switch (v?.type) {
                 case 'range': {
-                  const dimensions = v.dimensions || [];
+                  const dimensions: string[] = v.dimensions || [];
                   const formatEdge = (values: string[]) =>
-                    values.map((x, i) => formatRangeDimensionValue(dimensions[i], x)).join('; ');
+                    dimensions.map((d, i) => formatRangeDimensionValue(d, values[i])).join('; ');
 
                   return (
-                    <div className="spec-detail range-detail" onClick={onShowFullShardSpec}>
+                    <TableClickableCell
+                      className="range-detail"
+                      onClick={onShowFullShardSpec}
+                      hoverIcon={IconNames.EYE_OPEN}
+                    >
                       <span className="range-label">Start:</span>
                       {Array.isArray(v.start) ? formatEdge(v.start) : '-∞'}
                       <br />
                       <span className="range-label">End:</span>
                       {Array.isArray(v.end) ? formatEdge(v.end) : '∞'}
-                      {fullShardIcon}
-                    </div>
+                    </TableClickableCell>
                   );
                 }
 
                 case 'single': {
                   return (
-                    <div className="spec-detail range-detail" onClick={onShowFullShardSpec}>
+                    <TableClickableCell
+                      className="range-detail"
+                      onClick={onShowFullShardSpec}
+                      hoverIcon={IconNames.EYE_OPEN}
+                    >
                       <span className="range-label">Start:</span>
                       {v.start != null ? formatRangeDimensionValue(v.dimension, v.start) : '-∞'}
                       <br />
                       <span className="range-label">End:</span>
                       {v.end != null ? formatRangeDimensionValue(v.dimension, v.end) : '∞'}
-                      {fullShardIcon}
-                    </div>
+                    </TableClickableCell>
                   );
                 }
 
@@ -666,14 +706,16 @@ END AS "time_span"`,
                   const { partitionDimensions } = v;
                   if (!Array.isArray(partitionDimensions)) return value;
                   return (
-                    <div className="spec-detail" onClick={onShowFullShardSpec}>
+                    <TableClickableCell
+                      onClick={onShowFullShardSpec}
+                      hoverIcon={IconNames.EYE_OPEN}
+                    >
                       {`hash(${
                         partitionDimensions.length
                           ? partitionDimensions.join(', ')
                           : '<all dimensions>'
                       })`}
-                      {fullShardIcon}
-                    </div>
+                    </TableClickableCell>
                   );
                 }
 
@@ -681,17 +723,22 @@ END AS "time_span"`,
                 case 'none':
                 case 'tombstone':
                   return (
-                    <div className="spec-detail" onClick={onShowFullShardSpec}>
-                      No detail{fullShardIcon}
-                    </div>
+                    <TableClickableCell
+                      onClick={onShowFullShardSpec}
+                      hoverIcon={IconNames.EYE_OPEN}
+                    >
+                      No detail
+                    </TableClickableCell>
                   );
 
                 default:
                   return (
-                    <div className="spec-detail" onClick={onShowFullShardSpec}>
+                    <TableClickableCell
+                      onClick={onShowFullShardSpec}
+                      hoverIcon={IconNames.EYE_OPEN}
+                    >
                       {String(value)}
-                      {fullShardIcon}
-                    </div>
+                    </TableClickableCell>
                   );
               }
             },
@@ -703,6 +750,7 @@ END AS "time_span"`,
             width: 60,
             filterable: false,
             sortable: hasSql,
+            className: 'padded',
           },
           {
             Header: 'Size',
@@ -711,6 +759,8 @@ END AS "time_span"`,
             filterable: false,
             sortable: hasSql,
             defaultSortDesc: true,
+            width: 120,
+            className: 'padded',
             Cell: row => (
               <BracedText
                 text={
@@ -728,6 +778,8 @@ END AS "time_span"`,
             accessor: 'num_rows',
             filterable: false,
             defaultSortDesc: true,
+            width: 120,
+            className: 'padded',
             Cell: row => (
               <BracedText
                 text={row.original.is_available ? formatInteger(row.value) : '(unknown)'}
@@ -742,6 +794,7 @@ END AS "time_span"`,
             accessor: 'avg_row_size',
             filterable: false,
             width: 100,
+            className: 'padded',
             Cell: ({ value }) => {
               if (isNumberLikeNaN(value)) return '-';
               return (
@@ -760,34 +813,52 @@ END AS "time_span"`,
             width: 60,
             filterable: false,
             defaultSortDesc: true,
-          },
-          {
-            Header: 'Is published',
-            show: hasSql && visibleColumns.shown('Is published'),
-            id: 'is_published',
-            accessor: row => String(Boolean(row.is_published)),
-            Filter: makeBooleanFilter(),
-          },
-          {
-            Header: 'Is realtime',
-            show: hasSql && visibleColumns.shown('Is realtime'),
-            id: 'is_realtime',
-            accessor: row => String(Boolean(row.is_realtime)),
-            Filter: makeBooleanFilter(),
+            className: 'padded',
           },
           {
             Header: 'Is available',
             show: hasSql && visibleColumns.shown('Is available'),
             id: 'is_available',
             accessor: row => String(Boolean(row.is_available)),
-            Filter: makeBooleanFilter(),
+            Filter: BooleanFilterInput,
+            className: 'padded',
+            width: 100,
+          },
+          {
+            Header: 'Is active',
+            show: hasSql && visibleColumns.shown('Is active'),
+            id: 'is_active',
+            accessor: row => String(Boolean(row.is_active)),
+            Filter: BooleanFilterInput,
+            className: 'padded',
+            width: 100,
+          },
+          {
+            Header: 'Is realtime',
+            show: hasSql && visibleColumns.shown('Is realtime'),
+            id: 'is_realtime',
+            accessor: row => String(Boolean(row.is_realtime)),
+            Filter: BooleanFilterInput,
+            className: 'padded',
+            width: 100,
+          },
+          {
+            Header: 'Is published',
+            show: hasSql && visibleColumns.shown('Is published'),
+            id: 'is_published',
+            accessor: row => String(Boolean(row.is_published)),
+            Filter: BooleanFilterInput,
+            className: 'padded',
+            width: 100,
           },
           {
             Header: 'Is overshadowed',
             show: hasSql && visibleColumns.shown('Is overshadowed'),
             id: 'is_overshadowed',
             accessor: row => String(Boolean(row.is_overshadowed)),
-            Filter: makeBooleanFilter(),
+            Filter: BooleanFilterInput,
+            className: 'padded',
+            width: 100,
           },
           {
             Header: ACTION_COLUMN_LABEL,
@@ -803,11 +874,7 @@ END AS "time_span"`,
               return (
                 <ActionCell
                   onDetail={() => {
-                    this.setState({
-                      segmentTableActionDialogId: id,
-                      datasourceTableActionDialogId: datasource,
-                      actions: this.getSegmentActions(id, datasource),
-                    });
+                    this.onDetail(id, datasource);
                   }}
                   actions={this.getSegmentActions(id, datasource)}
                 />
@@ -865,7 +932,7 @@ END AS "time_span"`,
             disabled={!lastSegmentsQuery}
             onClick={() => {
               if (!lastSegmentsQuery) return;
-              goToQuery(lastSegmentsQuery);
+              goToQuery({ queryString: lastSegmentsQuery });
             }}
           />
         )}

@@ -31,6 +31,7 @@ import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
@@ -46,6 +47,8 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
   private final FireDepartment fireDepartment;
   private final RowIngestionMeters rowIngestionMeters;
   private final Map<String, String[]> dimensions;
+  @Nullable
+  private final Map<String, Object> metricTags;
 
   private FireDepartmentMetrics previousFireDepartmentMetrics;
   private RowIngestionMetersTotals previousRowIngestionMetersTotals;
@@ -53,14 +56,16 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
   public TaskRealtimeMetricsMonitor(
       FireDepartment fireDepartment,
       RowIngestionMeters rowIngestionMeters,
-      Map<String, String[]> dimensions
+      Map<String, String[]> dimensions,
+      @Nullable Map<String, Object> metricTags
   )
   {
     this.fireDepartment = fireDepartment;
     this.rowIngestionMeters = rowIngestionMeters;
     this.dimensions = ImmutableMap.copyOf(dimensions);
+    this.metricTags = metricTags;
     previousFireDepartmentMetrics = new FireDepartmentMetrics();
-    previousRowIngestionMetersTotals = new RowIngestionMetersTotals(0, 0, 0, 0);
+    previousRowIngestionMetersTotals = new RowIngestionMetersTotals(0, 0, 0, 0, 0);
   }
 
   @Override
@@ -80,6 +85,7 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
           thrownAway
       );
     }
+    builder.setDimensionIfNotNull(DruidMetrics.TAGS, metricTags);
     emitter.emit(builder.build("ingest/events/thrownAway", thrownAway));
 
     final long unparseable = rowIngestionMetersTotals.getUnparseable()
@@ -119,7 +125,16 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
     emitter.emit(builder.build("ingest/merge/cpu", metrics.mergeCpuTime() - previousFireDepartmentMetrics.mergeCpuTime()));
     emitter.emit(builder.build("ingest/handoff/count", metrics.handOffCount() - previousFireDepartmentMetrics.handOffCount()));
     emitter.emit(builder.build("ingest/sink/count", metrics.sinkCount()));
-    emitter.emit(builder.build("ingest/events/messageGap", metrics.messageGap()));
+
+    long messageGap = metrics.messageGap();
+    if (messageGap >= 0) {
+      emitter.emit(builder.build("ingest/events/messageGap", messageGap));
+    }
+
+    long maxSegmentHandoffTime = metrics.maxSegmentHandoffTime();
+    if (maxSegmentHandoffTime >= 0) {
+      emitter.emit(builder.build("ingest/handoff/time", maxSegmentHandoffTime));
+    }
 
     previousRowIngestionMetersTotals = rowIngestionMetersTotals;
     previousFireDepartmentMetrics = metrics;

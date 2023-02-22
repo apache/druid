@@ -94,6 +94,7 @@ public class TaskSerdeTest
     );
 
     Assert.assertEquals(false, ioConfig.isAppendToExisting());
+    Assert.assertEquals(false, ioConfig.isDropExisting());
   }
 
   @Test
@@ -293,6 +294,7 @@ public class TaskSerdeTest
     Assert.assertTrue(taskIoConfig.getInputSource() instanceof LocalInputSource);
     Assert.assertTrue(task2IoConfig.getInputSource() instanceof LocalInputSource);
     Assert.assertEquals(taskIoConfig.isAppendToExisting(), task2IoConfig.isAppendToExisting());
+    Assert.assertEquals(taskIoConfig.isDropExisting(), task2IoConfig.isDropExisting());
 
     IndexTask.IndexTuningConfig taskTuningConfig = task.getIngestionSchema().getTuningConfig();
     IndexTask.IndexTuningConfig task2TuningConfig = task2.getIngestionSchema().getTuningConfig();
@@ -584,5 +586,53 @@ public class TaskSerdeTest
     );
     Assert.assertEquals("blah", task.getClasspathPrefix());
     Assert.assertEquals("blah", task2.getClasspathPrefix());
+  }
+
+  @Test
+  public void testHadoopIndexTaskWithContextSerde() throws Exception
+  {
+    final HadoopIndexTask task = new HadoopIndexTask(
+        null,
+        new HadoopIngestionSpec(
+            new DataSchema(
+                "foo",
+                null,
+                null,
+                new AggregatorFactory[0],
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    null, ImmutableList.of(Intervals.of("2010-01-01/P1D"))
+                ),
+                null,
+                null,
+                jsonMapper
+            ), new HadoopIOConfig(ImmutableMap.of("paths", "bar"), null, null), null
+        ),
+        null,
+        null,
+        "blah",
+        jsonMapper,
+        ImmutableMap.of("userid", 12345, "username", "bob"),
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        null
+    );
+
+    final String json = jsonMapper.writeValueAsString(task);
+
+    final HadoopIndexTask task2 = (HadoopIndexTask) jsonMapper.readValue(json, Task.class);
+
+    Assert.assertEquals("foo", task.getDataSource());
+
+    Assert.assertEquals(task.getId(), task2.getId());
+    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
+    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
+    Assert.assertEquals(
+        task.getSpec().getTuningConfig().getJobProperties(),
+        task2.getSpec().getTuningConfig().getJobProperties()
+    );
+    Assert.assertEquals("blah", task.getClasspathPrefix());
+    Assert.assertEquals("blah", task2.getClasspathPrefix());
+    Assert.assertEquals(ImmutableMap.of("userid", 12345, "username", "bob"), task2.getContext());
+    Assert.assertEquals(ImmutableMap.of("userid", 12345, "username", "bob"), task2.getSpec().getContext());
   }
 }

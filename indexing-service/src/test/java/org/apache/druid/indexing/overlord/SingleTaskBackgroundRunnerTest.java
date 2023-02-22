@@ -20,12 +20,13 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -64,6 +65,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
@@ -98,6 +100,8 @@ public class SingleTaskBackgroundRunnerTest
         false,
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null,
+        false,
         null
     );
     final ServiceEmitter emitter = new NoopServiceEmitter();
@@ -135,10 +139,13 @@ public class SingleTaskBackgroundRunnerTest
         new NoopChatHandlerProvider(),
         utils.getRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
-        new NoopIndexingServiceClient(),
+        new NoopOverlordClient(),
         null,
         null,
-        null
+        null,
+        null,
+        "1",
+        new TaskStorageDirTracker(taskConfig)
     );
     runner = new SingleTaskBackgroundRunner(
         toolboxFactory,
@@ -158,9 +165,24 @@ public class SingleTaskBackgroundRunnerTest
   @Test
   public void testRun() throws ExecutionException, InterruptedException
   {
+    NoopTask task = new NoopTask(null, null, null, 500L, 0, null, null, null)
+    {
+      @Nullable
+      @Override
+      public String setup(TaskToolbox toolbox)
+      {
+        return null;
+      }
+
+      @Override
+      public void cleanUp(TaskToolbox toolbox, boolean failure)
+      {
+        // do nothing
+      }
+    };
     Assert.assertEquals(
         TaskState.SUCCESS,
-        runner.run(new NoopTask(null, null, null, 500L, 0, null, null, null)).get().getStatusCode()
+        runner.run(task).get().getStatusCode()
     );
   }
 
@@ -239,9 +261,22 @@ public class SingleTaskBackgroundRunnerTest
         new RestorableTask(new BooleanHolder())
         {
           @Override
-          public TaskStatus run(TaskToolbox toolbox)
+          public TaskStatus runTask(TaskToolbox toolbox)
           {
             throw new Error("task failure test");
+          }
+
+          @Nullable
+          @Override
+          public String setup(TaskToolbox toolbox)
+          {
+            return null;
+          }
+
+          @Override
+          public void cleanUp(TaskToolbox toolbox, boolean failure)
+          {
+            // do nothing
           }
         }
     );
@@ -336,7 +371,7 @@ public class SingleTaskBackgroundRunnerTest
     }
 
     @Override
-    public TaskStatus run(TaskToolbox toolbox)
+    public TaskStatus runTask(TaskToolbox toolbox)
     {
       return TaskStatus.success(getId());
     }
@@ -352,6 +387,21 @@ public class SingleTaskBackgroundRunnerTest
     {
       gracefullyStopped.set();
     }
+
+    @Nullable
+    @Override
+    public String setup(TaskToolbox toolbox)
+    {
+      return null;
+    }
+
+    @Override
+    public void cleanUp(TaskToolbox toolbox, boolean failure)
+    {
+      // do nothing
+    }
+
+
   }
 
   private static class BooleanHolder

@@ -30,7 +30,7 @@ import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 
-class ExpressionVectorInputBinding implements Expr.VectorInputBinding
+public class ExpressionVectorInputBinding implements Expr.VectorInputBinding
 {
   private final Map<String, VectorValueSelector> numeric;
   private final Map<String, VectorObjectSelector> objects;
@@ -69,9 +69,9 @@ class ExpressionVectorInputBinding implements Expr.VectorInputBinding
   }
 
   @Override
-  public <T> T[] getObjectVector(String name)
+  public Object[] getObjectVector(String name)
   {
-    return (T[]) objects.getOrDefault(name, nilSelector).getObjectVector();
+    return objects.getOrDefault(name, nilSelector).getObjectVector();
   }
 
   @Override

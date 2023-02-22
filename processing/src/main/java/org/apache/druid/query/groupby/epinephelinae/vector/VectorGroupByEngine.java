@@ -21,19 +21,19 @@ package org.apache.druid.query.groupby.epinephelinae.vector;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
-import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.AggregateResult;
 import org.apache.druid.query.groupby.epinephelinae.BufferArrayGrouper;
@@ -41,6 +41,7 @@ import org.apache.druid.query.groupby.epinephelinae.CloseableGrouperIterator;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import org.apache.druid.query.groupby.epinephelinae.HashVectorGrouper;
 import org.apache.druid.query.groupby.epinephelinae.VectorGrouper;
+import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
@@ -54,6 +55,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -128,7 +130,9 @@ public class VectorGroupByEngine
       @Nullable final DateTime fudgeTimestamp,
       @Nullable final Filter filter,
       final Interval interval,
-      final GroupByQueryConfig config
+      final GroupByQueryConfig config,
+      final DruidProcessingConfig processingConfig,
+      @Nullable final GroupByQueryMetrics groupByQueryMetrics
   )
   {
     if (!canVectorize(query, storageAdapter, filter)) {
@@ -146,8 +150,8 @@ public class VectorGroupByEngine
                 interval,
                 query.getVirtualColumns(),
                 false,
-                QueryContexts.getVectorSize(query),
-                null
+                query.context().getVectorSize(),
+                groupByQueryMetrics
             );
 
             if (cursor == null) {
@@ -188,6 +192,7 @@ public class VectorGroupByEngine
               return new VectorGroupByEngineIterator(
                   query,
                   config,
+                  processingConfig,
                   storageAdapter,
                   cursor,
                   interval,
@@ -226,6 +231,7 @@ public class VectorGroupByEngine
   {
     private final GroupByQuery query;
     private final GroupByQueryConfig querySpecificConfig;
+    private final DruidProcessingConfig processingConfig;
     private final StorageAdapter storageAdapter;
     private final VectorCursor cursor;
     private final List<GroupByVectorColumnSelector> selectors;
@@ -252,11 +258,12 @@ public class VectorGroupByEngine
     private long selectorInternalFootprint = 0;
 
     @Nullable
-    private CloseableGrouperIterator<Memory, ResultRow> delegate = null;
+    private CloseableGrouperIterator<MemoryPointer, ResultRow> delegate = null;
 
     VectorGroupByEngineIterator(
         final GroupByQuery query,
-        final GroupByQueryConfig config,
+        final GroupByQueryConfig querySpecificConfig,
+        final DruidProcessingConfig processingConfig,
         final StorageAdapter storageAdapter,
         final VectorCursor cursor,
         final Interval queryInterval,
@@ -266,7 +273,8 @@ public class VectorGroupByEngine
     )
     {
       this.query = query;
-      this.querySpecificConfig = config;
+      this.querySpecificConfig = querySpecificConfig;
+      this.processingConfig = processingConfig;
       this.storageAdapter = storageAdapter;
       this.cursor = cursor;
       this.selectors = selectors;
@@ -374,7 +382,7 @@ public class VectorGroupByEngine
       return grouper;
     }
 
-    private CloseableGrouperIterator<Memory, ResultRow> initNewDelegate()
+    private CloseableGrouperIterator<MemoryPointer, ResultRow> initNewDelegate()
     {
       // Method must not be called unless there's a current bucketInterval.
       assert bucketInterval != null;
@@ -431,7 +439,7 @@ public class VectorGroupByEngine
           // Advance bucketInterval.
           bucketInterval = bucketIterator.hasNext() ? bucketIterator.next() : null;
           break;
-        } else if (selectorInternalFootprint > querySpecificConfig.getMaxSelectorDictionarySize()) {
+        } else if (selectorInternalFootprint > querySpecificConfig.getActualMaxSelectorDictionarySize(processingConfig)) {
           break;
         }
       }

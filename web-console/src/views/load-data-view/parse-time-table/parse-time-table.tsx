@@ -18,24 +18,23 @@
 
 import classNames from 'classnames';
 import React from 'react';
+import type { RowRenderProps } from 'react-table';
 import ReactTable from 'react-table';
 
-import { TableCell } from '../../../components';
-import { TableCellUnparseable } from '../../../components/table-cell-unparseable/table-cell-unparseable';
+import { TableCell, TableCellUnparseable } from '../../../components';
+import type { IngestionSpec, TimestampSpec } from '../../../druid-models';
 import {
   getTimestampDetailFromSpec,
   getTimestampSpecColumnFromSpec,
-  IngestionSpec,
   possibleDruidFormatForValues,
-  TimestampSpec,
 } from '../../../druid-models';
 import {
-  caseInsensitiveContains,
-  filterMap,
+  DEFAULT_TABLE_CLASS_NAME,
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
-} from '../../../utils';
-import { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
+} from '../../../react-table';
+import { caseInsensitiveContains, filterMap } from '../../../utils';
+import type { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
 
 import './parse-time-table.scss';
 
@@ -74,7 +73,7 @@ export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTim
 
   return (
     <ReactTable
-      className="parse-time-table -striped -highlight"
+      className={classNames('parse-time-table', DEFAULT_TABLE_CLASS_NAME)}
       data={headerAndRows.rows}
       sortable={false}
       defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
@@ -124,7 +123,7 @@ export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTim
             className: columnClassName,
             id: String(i),
             accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-            Cell: function ParseTimeTableCell(row) {
+            Cell: function ParseTimeTableCell(row: RowRenderProps) {
               if (columnName === '__error__') {
                 return <TableCell value={row.original.error} />;
               }
@@ -133,7 +132,7 @@ export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTim
               }
               return <TableCell value={isTimestamp ? new Date(row.value) : row.value} />;
             },
-            minWidth: isTimestamp ? 200 : 100,
+            width: isTimestamp ? 200 : 140,
             resizable: !isTimestamp,
           };
         },

@@ -203,7 +203,7 @@ public class RelParameterizerShuttle implements RelShuttle
         if (param == null) {
           throw new SqlPlanningException(
               PlanningError.VALIDATION_ERROR,
-              StringUtils.format("Parameter at position[%s] is not bound", dynamicParam.getIndex())
+              StringUtils.format("Parameter at position [%s] is not bound", dynamicParam.getIndex())
           );
         }
         if (param.value == null) {
@@ -218,7 +218,7 @@ public class RelParameterizerShuttle implements RelShuttle
       } else {
         throw new SqlPlanningException(
             PlanningError.VALIDATION_ERROR,
-            StringUtils.format("Parameter at position[%s] is not bound", dynamicParam.getIndex())
+            StringUtils.format("Parameter at position [%s] is not bound", dynamicParam.getIndex())
         );
       }
     }

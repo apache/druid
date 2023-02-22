@@ -9,6 +9,7 @@ exports[`MoreButton matches snapshot (empty) 1`] = `
     class="bp4-button bp4-disabled"
     disabled=""
     tabindex="-1"
+    title="More actions"
     type="button"
   >
     <span
@@ -40,6 +41,7 @@ exports[`MoreButton matches snapshot (full) 1`] = `
 >
   <button
     class="bp4-button"
+    title="More actions"
     type="button"
   >
     <span

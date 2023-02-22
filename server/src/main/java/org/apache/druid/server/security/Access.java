@@ -19,11 +19,15 @@
 
 package org.apache.druid.server.security;
 
+import com.google.common.base.Strings;
 import org.apache.druid.java.util.common.StringUtils;
 
 public class Access
 {
+  public static final String DEFAULT_ERROR_MESSAGE = "Unauthorized";
+
   public static final Access OK = new Access(true);
+  public static final Access DENIED = new Access(false);
 
   private final boolean allowed;
   private final String message;
@@ -47,6 +51,17 @@ public class Access
   public String getMessage()
   {
     return message;
+  }
+
+  public String toMessage()
+  {
+    if (!Strings.isNullOrEmpty(message)) {
+      return toString();
+    } else if (allowed) {
+      return "Authorized";
+    } else {
+      return DEFAULT_ERROR_MESSAGE;
+    }
   }
 
   @Override

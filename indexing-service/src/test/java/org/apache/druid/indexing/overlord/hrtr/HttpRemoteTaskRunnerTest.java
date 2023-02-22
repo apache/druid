@@ -58,6 +58,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.coordination.ChangeRequestHttpSyncer;
 import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -70,6 +71,7 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -80,6 +82,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import static org.easymock.EasyMock.isA;
 
@@ -230,7 +233,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -298,7 +302,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -402,7 +407,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         taskStorageMock,
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -544,7 +550,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -719,7 +726,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -916,7 +924,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -1405,7 +1414,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -1517,7 +1527,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -1598,7 +1609,114 @@ public class HttpRemoteTaskRunnerTest
     );
   }
 
-  private HttpRemoteTaskRunner createTaskRunnerForTestTaskAddedOrUpdated(
+  /**
+   * Validate the internal state of tasks within the task runner
+   * when shutdown is called on pending / running tasks and completed tasks
+   */
+  @Test
+  public void testShutdown()
+  {
+    List<Object> listenerNotificationsAccumulator = new ArrayList<>();
+    HttpRemoteTaskRunner taskRunner = createTaskRunnerForTestTaskAddedOrUpdated(
+        EasyMock.createStrictMock(TaskStorage.class),
+        listenerNotificationsAccumulator
+    );
+
+    Worker worker = new Worker("http", "localhost", "127.0.0.1", 1, "v1", WorkerConfig.DEFAULT_CATEGORY);
+
+    WorkerHolder workerHolder = EasyMock.createMock(WorkerHolder.class);
+    EasyMock.expect(workerHolder.getWorker()).andReturn(worker).anyTimes();
+    workerHolder.setLastCompletedTaskTime(EasyMock.anyObject());
+    workerHolder.resetContinuouslyFailedTasksCount();
+    EasyMock.expect(workerHolder.getContinuouslyFailedTasksCount()).andReturn(0);
+    EasyMock.replay(workerHolder);
+
+    taskRunner.start();
+
+    Task pendingTask = NoopTask.create("pendingTask");
+    taskRunner.run(pendingTask);
+    // Pending task is not cleaned up immediately
+    taskRunner.shutdown(pendingTask.getId(), "Forced shutdown");
+    Assert.assertTrue(taskRunner.getKnownTasks()
+                                .stream()
+                                .map(TaskRunnerWorkItem::getTaskId)
+                                .collect(Collectors.toSet())
+                                .contains(pendingTask.getId())
+    );
+
+    Task completedTask = NoopTask.create("completedTask");
+    taskRunner.run(completedTask);
+    taskRunner.taskAddedOrUpdated(TaskAnnouncement.create(
+        completedTask,
+        TaskStatus.success(completedTask.getId()),
+        TaskLocation.create("worker", 1, 2)
+    ), workerHolder);
+    Assert.assertEquals(completedTask.getId(), Iterables.getOnlyElement(taskRunner.getCompletedTasks()).getTaskId());
+    TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
+    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
+            .andReturn(druidNodeDiscovery);
+    EasyMock.replay(druidNodeDiscoveryProvider);
+
+
+    // Completed tasks are cleaned up when shutdown is invokded on them (by TaskQueue)
+    taskRunner.shutdown(completedTask.getId(), "Cleanup");
+    Assert.assertFalse(taskRunner.getKnownTasks()
+                                .stream()
+                                .map(TaskRunnerWorkItem::getTaskId)
+                                .collect(Collectors.toSet())
+                                .contains(completedTask.getId())
+    );
+
+  }
+
+  @Test(timeout = 60_000L)
+  public void testSyncMonitoring_finiteIteration()
+  {
+    TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
+    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
+            .andReturn(druidNodeDiscovery);
+    EasyMock.replay(druidNodeDiscoveryProvider);
+
+    HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
+        TestHelper.makeJsonMapper(),
+        new HttpRemoteTaskRunnerConfig(),
+        EasyMock.createNiceMock(HttpClient.class),
+        DSuppliers.of(new AtomicReference<>(DefaultWorkerBehaviorConfig.defaultConfig())),
+        new NoopProvisioningStrategy<>(),
+        druidNodeDiscoveryProvider,
+        EasyMock.createMock(TaskStorage.class),
+        EasyMock.createNiceMock(CuratorFramework.class),
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
+    )
+    {
+      @Override
+      protected WorkerHolder createWorkerHolder(
+          ObjectMapper smileMapper,
+          HttpClient httpClient,
+          HttpRemoteTaskRunnerConfig config,
+          ScheduledExecutorService workersSyncExec,
+          WorkerHolder.Listener listener,
+          Worker worker,
+          List<TaskAnnouncement> knownAnnouncements
+      )
+      {
+        return createNonSyncingWorkerHolder(worker);
+      }
+    };
+
+    taskRunner.start();
+    taskRunner.addWorker(createWorker("abc"));
+    taskRunner.addWorker(createWorker("xyz"));
+    taskRunner.addWorker(createWorker("lol"));
+    Assert.assertEquals(3, taskRunner.getWorkerSyncerDebugInfo().size());
+    taskRunner.syncMonitoring();
+    Assert.assertEquals(3, taskRunner.getWorkerSyncerDebugInfo().size());
+  }
+
+  public static HttpRemoteTaskRunner createTaskRunnerForTestTaskAddedOrUpdated(
       TaskStorage taskStorage,
       List<Object> listenerNotificationsAccumulator
   )
@@ -1625,7 +1743,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         taskStorage,
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     );
 
     taskRunner.start();
@@ -1657,6 +1776,30 @@ public class HttpRemoteTaskRunnerTest
     }
 
     return taskRunner;
+  }
+
+  private Worker createWorker(String host)
+  {
+    Worker worker = EasyMock.createMock(Worker.class);
+    EasyMock.expect(worker.getHost()).andReturn(host).anyTimes();
+    EasyMock.replay(worker);
+    return worker;
+  }
+
+  private WorkerHolder createNonSyncingWorkerHolder(Worker worker)
+  {
+    ChangeRequestHttpSyncer syncer = EasyMock.createMock(ChangeRequestHttpSyncer.class);
+    EasyMock.expect(syncer.isOK()).andReturn(false).anyTimes();
+    EasyMock.expect(syncer.getDebugInfo()).andReturn(Collections.emptyMap()).anyTimes();
+    WorkerHolder workerHolder = EasyMock.createMock(WorkerHolder.class);
+    EasyMock.expect(workerHolder.getUnderlyingSyncer()).andReturn(syncer).anyTimes();
+    EasyMock.expect(workerHolder.getWorker()).andReturn(worker).anyTimes();
+    workerHolder.start();
+    EasyMock.expectLastCall();
+    workerHolder.stop();
+    EasyMock.expectLastCall();
+    EasyMock.replay(syncer, workerHolder);
+    return workerHolder;
   }
 
   private static WorkerHolder createWorkerHolder(
@@ -1828,7 +1971,7 @@ public class HttpRemoteTaskRunnerTest
     };
   }
 
-  private static class TestDruidNodeDiscovery implements DruidNodeDiscovery
+  public static class TestDruidNodeDiscovery implements DruidNodeDiscovery
   {
     private List<Listener> listeners;
 
@@ -1863,7 +2006,7 @@ public class HttpRemoteTaskRunnerTest
     }
   }
 
-  private interface CustomFunction
+  public interface CustomFunction
   {
     WorkerHolder apply(
         ObjectMapper smileMapper,
@@ -1896,7 +2039,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override

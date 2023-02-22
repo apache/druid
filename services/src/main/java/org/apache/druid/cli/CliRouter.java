@@ -66,8 +66,8 @@ import java.util.Set;
  */
 @Command(
     name = "router",
-    description = "Experimental! Understands tiers and routes things to different brokers, "
-                  + "see https://druid.apache.org/docs/latest/development/router.html for a description"
+    description = "Understands tiers and routes requests to Druid nodes. "
+                  + "See https://druid.apache.org/docs/latest/design/router.html"
 )
 public class CliRouter extends ServerRunnable
 {

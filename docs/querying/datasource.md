@@ -54,7 +54,7 @@ The table datasource is the most common type. This is the kind of datasource you
 [data ingestion](../ingestion/index.md). They are split up into segments, distributed around the cluster,
 and queried in parallel.
 
-In [Druid SQL](sql-syntax.md#from), table datasources reside in the `druid` schema. This is the default schema, so table
+In [Druid SQL](sql.md#from), table datasources reside in the `druid` schema. This is the default schema, so table
 datasources can be referenced as either `druid.dataSourceName` or simply `dataSourceName`.
 
 In native queries, table datasources can be referenced using their names as strings (as in the example above), or by
@@ -91,7 +91,7 @@ SELECT k, v FROM lookup.countries
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-Lookup datasources correspond to Druid's key-value [lookup](lookups.md) objects. In [Druid SQL](sql-syntax.md#from),
+Lookup datasources correspond to Druid's key-value [lookup](lookups.md) objects. In [Druid SQL](sql.md#from),
 they reside in the `lookup` schema. They are preloaded in memory on all servers, so they can be accessed rapidly.
 They can be joined onto regular tables using the [join operator](#join).
 
@@ -139,10 +139,10 @@ FROM (
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 Unions allow you to treat two or more tables as a single datasource. In SQL, this is done with the UNION ALL operator
-applied directly to tables, called a ["table-level union"](sql-syntax.md#table-level). In native queries, this is done with a
+applied directly to tables, called a ["table-level union"](sql.md#table-level). In native queries, this is done with a
 "union" datasource.
 
-With SQL [table-level unions](sql-syntax.md#table-level) the same columns must be selected from each table in the same order,
+With SQL [table-level unions](sql.md#table-level) the same columns must be selected from each table in the same order,
 and those columns must either have the same types, or types that can be implicitly cast to each other (such as different
 numeric types). For this reason, it is more robust to write your queries to select specific columns.
 
@@ -370,3 +370,57 @@ always be correct.
 - Join algorithms other than broadcast hash-joins.
 - Join condition on a column compared to a constant value.
 - Join conditions on a column containing a multi-value dimension.
+
+### `unnest`
+
+> The unnest datasource is currently only available as part of a native query.
+
+Use the `unnest` datasource to unnest a column with multiple values in an array. 
+For example, you have a source column that looks like this:
+
+| Nested | 
+| -- | 
+| [a, b] |
+| [c, d] |
+| [e, [f,g]] |
+
+When you use the `unnest` datasource, the unnested column looks like this:
+
+| Unnested | 
+| -- |
+| a |
+| b |
+| c |
+| d |
+| e |
+| [f, g] |
+
+When unnesting data, keep the following in mind:
+
+- The total number of rows will grow to accommodate the new rows that the unnested data occupy.
+- You can unnest the values in more than one column in a single `unnest` datasource. This can lead to a very large number of new rows depending on your dataset. You can see an example of this in the [unnest tutorial](../tutorials/tutorial-unnest-datasource.md#unnest-multiple-columns).
+
+The `unnest` datasource uses the following syntax:
+
+```json
+  "dataSource": {
+    "type": "unnest",
+    "base": {
+      "type": "table",
+      "name": "nested_data"
+    },
+    "column": "nested_source_column",
+    "outputName": "unnested_target_column",
+    "allowList": []
+  },
+```
+
+* `dataSource.type`: Set this to `unnest`.
+* `dataSource.base`: Defines the datasource you want to unnest.
+  * `dataSource.base.type`: The type of datasource you want to unnest, such as a table.
+  * `dataSource.base.name`: The name of the datasource you want to unnest.
+* `dataSource.column`: The name of the source column that contains the nested values.
+* `dataSource.outputName`: The name you want to assign to the column that will contain the unnested values. You can replace the source column with the unnested column by specifying the source column's name or a new column by specifying a different name. Outputting it to a new column can help you verify that you get the results that you expect but isn't required.
+* `dataSource.allowList`: Optional. The subset of values you want to unnest.
+
+To learn more about how to use the `unnest` datasource, see the [unnest tutorial](../tutorials/tutorial-unnest-datasource.md).

@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
-import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 
 /**
  * Column processor for groupBy dimensions.
@@ -64,11 +64,12 @@ public interface GroupByVectorColumnSelector
    *
    * @param keyMemory         key memory
    * @param keyOffset         starting position for this key part within keyMemory
+   *                          (starting from {@link MemoryPointer#position})
    * @param resultRow         result row to receive key parts
    * @param resultRowPosition position within the result row for this key part
    */
   void writeKeyToResultRow(
-      Memory keyMemory,
+      MemoryPointer keyMemory,
       int keyOffset,
       ResultRow resultRow,
       int resultRowPosition

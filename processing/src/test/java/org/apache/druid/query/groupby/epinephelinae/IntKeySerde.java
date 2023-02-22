@@ -26,9 +26,9 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-public class IntKeySerde implements Grouper.KeySerde<Integer>
+public class IntKeySerde implements Grouper.KeySerde<IntKey>
 {
-  public static final Grouper.KeySerde<Integer> INSTANCE = new IntKeySerde();
+  public static final Grouper.KeySerde<IntKey> INSTANCE = new IntKeySerde();
 
   public static final Grouper.BufferComparator KEY_COMPARATOR = new Grouper.BufferComparator()
   {
@@ -48,9 +48,9 @@ public class IntKeySerde implements Grouper.KeySerde<Integer>
   }
 
   @Override
-  public Class<Integer> keyClazz()
+  public Class<IntKey> keyClazz()
   {
-    return Integer.class;
+    return IntKey.class;
   }
 
   @Override
@@ -60,17 +60,23 @@ public class IntKeySerde implements Grouper.KeySerde<Integer>
   }
 
   @Override
-  public ByteBuffer toByteBuffer(Integer key)
+  public ByteBuffer toByteBuffer(IntKey key)
   {
-    buf.putInt(0, key);
+    buf.putInt(0, key.intValue());
     buf.position(0);
     return buf;
   }
 
   @Override
-  public Integer fromByteBuffer(ByteBuffer buffer, int position)
+  public IntKey createKey()
   {
-    return buffer.getInt(position);
+    return new IntKey(0);
+  }
+
+  @Override
+  public void readFromByteBuffer(IntKey key, ByteBuffer buffer, int position)
+  {
+    key.setValue(buffer.getInt(position));
   }
 
   @Override

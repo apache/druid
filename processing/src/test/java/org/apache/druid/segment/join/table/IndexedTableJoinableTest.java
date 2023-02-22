@@ -38,6 +38,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinMatcher;
+import org.apache.druid.segment.join.Joinable;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -347,46 +348,47 @@ public class IndexedTableJoinableTest
   @Test
   public void getNonNullColumnValuesIfAllUniqueForValueColumnShouldReturnValues()
   {
-    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique(VALUE_COLUMN, Integer.MAX_VALUE);
+    final Joinable.ColumnValuesWithUniqueFlag values = target.getNonNullColumnValues(VALUE_COLUMN, Integer.MAX_VALUE);
 
-    Assert.assertEquals(Optional.of(ImmutableSet.of("1", "2")), values);
+    Assert.assertEquals(ImmutableSet.of("1", "2"), values.getColumnValues());
   }
 
   @Test
   public void getNonNullColumnValuesIfAllUniqueForNonexistentColumnShouldReturnEmpty()
   {
-    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique("nonexistent", Integer.MAX_VALUE);
+    final Joinable.ColumnValuesWithUniqueFlag values = target.getNonNullColumnValues("nonexistent", Integer.MAX_VALUE);
 
-    Assert.assertEquals(Optional.empty(), values);
+    Assert.assertEquals(ImmutableSet.of(), values.getColumnValues());
   }
 
   @Test
   public void getNonNullColumnValuesIfAllUniqueForKeyColumnShouldReturnValues()
   {
-    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique(KEY_COLUMN, Integer.MAX_VALUE);
+    final Joinable.ColumnValuesWithUniqueFlag values = target.getNonNullColumnValues(KEY_COLUMN, Integer.MAX_VALUE);
 
     Assert.assertEquals(
-        Optional.of(ImmutableSet.of("foo", "bar", "baz")),
-        values
+        ImmutableSet.of("foo", "bar", "baz"),
+        values.getColumnValues()
     );
   }
 
   @Test
   public void getNonNullColumnValuesIfAllUniqueForAllSameColumnShouldReturnEmpty()
   {
-    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique(ALL_SAME_COLUMN, Integer.MAX_VALUE);
+    final Joinable.ColumnValuesWithUniqueFlag values = target.getNonNullColumnValues(ALL_SAME_COLUMN, Integer.MAX_VALUE);
 
     Assert.assertEquals(
-        Optional.empty(),
-        values
+        ImmutableSet.of("1"),
+        values.getColumnValues()
     );
+    Assert.assertFalse(values.isAllUnique());
   }
 
   @Test
   public void getNonNullColumnValuesIfAllUniqueForKeyColumnWithLowMaxValuesShouldReturnEmpty()
   {
-    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique(KEY_COLUMN, 1);
+    final Joinable.ColumnValuesWithUniqueFlag values = target.getNonNullColumnValues(KEY_COLUMN, 1);
 
-    Assert.assertEquals(Optional.empty(), values);
+    Assert.assertEquals(ImmutableSet.of(), values.getColumnValues());
   }
 }

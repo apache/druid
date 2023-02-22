@@ -62,4 +62,18 @@ public class PostgreSQLConnectorTest
     Assert.assertFalse(connector.isTransientException(new Exception("I'm not happy")));
     Assert.assertFalse(connector.isTransientException(new Throwable("I give up")));
   }
+
+  @Test
+  public void testLimitClause()
+  {
+    PostgreSQLConnector connector = new PostgreSQLConnector(
+        Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
+        Suppliers.ofInstance(
+            new MetadataStorageTablesConfig(null, null, null, null, null, null, null, null, null, null, null)
+        ),
+        new PostgreSQLConnectorConfig(),
+        new PostgreSQLTablesConfig()
+    );
+    Assert.assertEquals("LIMIT 100", connector.limitClause(100));
+  }
 }

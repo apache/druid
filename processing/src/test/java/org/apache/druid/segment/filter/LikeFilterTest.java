@@ -273,6 +273,23 @@ public class LikeFilterTest extends BaseFilterTest
   }
 
   @Test
+  public void testListFilteredVirtualColumn()
+  {
+    assertFilterMatchesSkipVectorize(
+        new LikeDimFilter("allow-dim0", "1%", null, null),
+        ImmutableList.of()
+    );
+    assertFilterMatchesSkipVectorize(
+        new LikeDimFilter("allow-dim0", "3%", null, null),
+        ImmutableList.of("3")
+    );
+    assertFilterMatchesSkipVectorize(
+        new LikeDimFilter("allow-dim0", "%3", null, null),
+        ImmutableList.of("3")
+    );
+  }
+
+  @Test
   public void testRequiredColumnRewrite()
   {
     Filter filter = new LikeDimFilter("dim0", "e%", null, new SubstringDimExtractionFn(1, 100)).toFilter();

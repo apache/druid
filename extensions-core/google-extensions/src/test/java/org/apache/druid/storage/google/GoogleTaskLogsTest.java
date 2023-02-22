@@ -27,7 +27,6 @@ import com.google.api.services.storage.model.StorageObject;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.ByteSource;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
 import org.apache.druid.java.util.common.FileUtils;
@@ -42,6 +41,7 @@ import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.StringWriter;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -121,10 +121,10 @@ public class GoogleTaskLogsTest extends EasyMockSupport
 
     replayAll();
 
-    final Optional<ByteSource> byteSource = googleTaskLogs.streamTaskLog(TASKID, 0);
+    final Optional<InputStream> stream = googleTaskLogs.streamTaskLog(TASKID, 0);
 
     final StringWriter writer = new StringWriter();
-    IOUtils.copy(byteSource.get().openStream(), writer, "UTF-8");
+    IOUtils.copy(stream.get(), writer, "UTF-8");
     Assert.assertEquals(writer.toString(), testLog);
 
     verifyAll();
@@ -144,10 +144,10 @@ public class GoogleTaskLogsTest extends EasyMockSupport
 
     replayAll();
 
-    final Optional<ByteSource> byteSource = googleTaskLogs.streamTaskLog(TASKID, offset);
+    final Optional<InputStream> stream = googleTaskLogs.streamTaskLog(TASKID, offset);
 
     final StringWriter writer = new StringWriter();
-    IOUtils.copy(byteSource.get().openStream(), writer, "UTF-8");
+    IOUtils.copy(stream.get(), writer, "UTF-8");
     Assert.assertEquals(writer.toString(), expectedLog);
 
     verifyAll();
@@ -168,10 +168,10 @@ public class GoogleTaskLogsTest extends EasyMockSupport
 
     replayAll();
 
-    final Optional<ByteSource> byteSource = googleTaskLogs.streamTaskLog(TASKID, offset);
+    final Optional<InputStream> stream = googleTaskLogs.streamTaskLog(TASKID, offset);
 
     final StringWriter writer = new StringWriter();
-    IOUtils.copy(byteSource.get().openStream(), writer, "UTF-8");
+    IOUtils.copy(stream.get(), writer, "UTF-8");
     Assert.assertEquals(writer.toString(), expectedLog);
 
     verifyAll();

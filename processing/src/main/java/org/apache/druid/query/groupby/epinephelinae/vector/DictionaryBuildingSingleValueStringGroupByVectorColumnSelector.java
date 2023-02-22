@@ -20,11 +20,11 @@
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.DictionaryBuilding;
+import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import java.util.ArrayList;
@@ -92,13 +92,13 @@ public class DictionaryBuildingSingleValueStringGroupByVectorColumnSelector impl
 
   @Override
   public void writeKeyToResultRow(
-      final Memory keyMemory,
+      final MemoryPointer keyMemory,
       final int keyOffset,
       final ResultRow resultRow,
       final int resultRowPosition
   )
   {
-    final int id = keyMemory.getInt(keyOffset);
+    final int id = keyMemory.memory().getInt(keyMemory.position() + keyOffset);
     // GROUP_BY_MISSING_VALUE is used to indicate empty rows, which are omitted from the result map.
     if (id != GROUP_BY_MISSING_VALUE) {
       final String value = dictionary.get(id);

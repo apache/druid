@@ -21,6 +21,8 @@ package org.apache.druid.collections.bitmap;
 
 import com.google.common.collect.Sets;
 import org.apache.druid.collections.IntSetTestUtility;
+import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.roaringbitmap.IntIterator;
@@ -67,13 +69,15 @@ public class WrappedBitSetBitmapBitSetTest
   @Test
   public void testOffHeap()
   {
-    ByteBuffer buffer = ByteBuffer.allocateDirect(Long.SIZE * 100 / 8).order(ByteOrder.LITTLE_ENDIAN);
-    BitSet testSet = BitSet.valueOf(buffer);
-    testSet.set(1);
-    WrappedImmutableBitSetBitmap bitMap = new WrappedImmutableBitSetBitmap(testSet);
-    Assert.assertTrue(bitMap.get(1));
-    testSet.set(2);
-    Assert.assertTrue(bitMap.get(2));
+    try (final ResourceHolder<ByteBuffer> bufferHolder = ByteBufferUtils.allocateDirect(Long.SIZE * 100 / 8)) {
+      final ByteBuffer buffer = bufferHolder.get().order(ByteOrder.LITTLE_ENDIAN);
+      BitSet testSet = BitSet.valueOf(buffer);
+      testSet.set(1);
+      WrappedImmutableBitSetBitmap bitMap = new WrappedImmutableBitSetBitmap(testSet);
+      Assert.assertTrue(bitMap.get(1));
+      testSet.set(2);
+      Assert.assertTrue(bitMap.get(2));
+    }
   }
 
   @Test

@@ -54,17 +54,19 @@ import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.timeline.LogicalSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.function.BinaryOperator;
 
 public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAnalysis, SegmentMetadataQuery>
@@ -108,7 +110,8 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
           ResponseContext context
       )
       {
-        SegmentMetadataQuery updatedQuery = ((SegmentMetadataQuery) queryPlus.getQuery()).withFinalizedAnalysisTypes(config);
+        SegmentMetadataQuery updatedQuery = ((SegmentMetadataQuery) queryPlus.getQuery()).withFinalizedAnalysisTypes(
+            config);
         QueryPlus<SegmentAnalysis> updatedQueryPlus = queryPlus.withQuery(updatedQuery);
         return new MappedSequence<>(
             CombiningSequence.create(
@@ -135,7 +138,12 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   @Override
   public BinaryOperator<SegmentAnalysis> createMergeFn(Query<SegmentAnalysis> query)
   {
-    return (arg1, arg2) -> mergeAnalyses(arg1, arg2, ((SegmentMetadataQuery) query).isLenientAggregatorMerge());
+    return (arg1, arg2) -> mergeAnalyses(
+        Iterables.getFirst(query.getDataSource().getTableNames(), null),
+        arg1,
+        arg2,
+        ((SegmentMetadataQuery) query).isLenientAggregatorMerge()
+    );
   }
 
   @Override
@@ -246,8 +254,9 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
 
   @VisibleForTesting
   public static SegmentAnalysis mergeAnalyses(
-      final SegmentAnalysis arg1,
-      final SegmentAnalysis arg2,
+      @Nullable String dataSource,
+      SegmentAnalysis arg1,
+      SegmentAnalysis arg2,
       boolean lenientAggregatorMerge
   )
   {
@@ -257,6 +266,19 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
 
     if (arg2 == null) {
       return arg1;
+    }
+
+    // Swap arg1, arg2 so the later-ending interval is first. This ensures we prefer the latest column order.
+    // We're preserving it so callers can see columns in their natural order.
+    if (dataSource != null) {
+      final SegmentId id1 = SegmentId.tryParse(dataSource, arg1.getId());
+      final SegmentId id2 = SegmentId.tryParse(dataSource, arg2.getId());
+
+      if (id1 != null && id2 != null && id2.getIntervalEnd().isAfter(id1.getIntervalEnd())) {
+        final SegmentAnalysis tmp = arg1;
+        arg1 = arg2;
+        arg2 = tmp;
+      }
     }
 
     List<Interval> newIntervals = null;
@@ -272,7 +294,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
 
     final Map<String, ColumnAnalysis> leftColumns = arg1.getColumns();
     final Map<String, ColumnAnalysis> rightColumns = arg2.getColumns();
-    Map<String, ColumnAnalysis> columns = new TreeMap<>();
+    final LinkedHashMap<String, ColumnAnalysis> columns = new LinkedHashMap<>();
 
     Set<String> rightColumnNames = Sets.newHashSet(rightColumns.keySet());
     for (Map.Entry<String, ColumnAnalysis> entry : leftColumns.entrySet()) {

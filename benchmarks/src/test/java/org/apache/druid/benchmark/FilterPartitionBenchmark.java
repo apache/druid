@@ -36,7 +36,6 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.JavaScriptExtractionFn;
 import org.apache.druid.query.filter.AndDimFilter;
-import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.DruidDoublePredicate;
@@ -513,11 +512,6 @@ public class FilterPartitionBenchmark
       super(dimension, value);
     }
 
-    @Override
-    public boolean supportsBitmapIndex(BitmapIndexSelector selector)
-    {
-      return false;
-    }
   }
 
   private static class NoBitmapDimensionPredicateFilter extends DimensionPredicateFilter
@@ -531,11 +525,6 @@ public class FilterPartitionBenchmark
       super(dimension, predicateFactory, extractionFn);
     }
 
-    @Override
-    public boolean supportsBitmapIndex(BitmapIndexSelector selector)
-    {
-      return false;
-    }
   }
 
   private static class NoBitmapSelectorDimFilter extends SelectorDimFilter

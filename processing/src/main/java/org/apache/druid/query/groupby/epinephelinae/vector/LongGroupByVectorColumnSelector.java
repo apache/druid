@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
-import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 public class LongGroupByVectorColumnSelector implements GroupByVectorColumnSelector
@@ -63,13 +63,13 @@ public class LongGroupByVectorColumnSelector implements GroupByVectorColumnSelec
 
   @Override
   public void writeKeyToResultRow(
-      final Memory keyMemory,
+      final MemoryPointer keyMemory,
       final int keyOffset,
       final ResultRow resultRow,
       final int resultRowPosition
   )
   {
-    resultRow.set(resultRowPosition, keyMemory.getLong(keyOffset));
+    resultRow.set(resultRowPosition, keyMemory.memory().getLong(keyMemory.position() + keyOffset));
   }
 
   @Override

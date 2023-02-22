@@ -28,7 +28,7 @@ import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.lookup.LookupColumnSelectorFactory;
-import org.apache.druid.sql.calcite.table.DruidTable;
+import org.apache.druid.sql.calcite.table.LookupTable;
 
 import java.util.Map;
 
@@ -57,11 +57,12 @@ public class LookupSchema extends AbstractSchema
     final ImmutableMap.Builder<String, Table> tableMapBuilder = ImmutableMap.builder();
 
     for (final String lookupName : lookupProvider.getAllLookupNames()) {
-      // all lookups should be also joinable through lookup joinable factory, and lookups are effectively broadcast
-      // (if we ignore lookup tiers...)
       tableMapBuilder.put(
           lookupName,
-          new DruidTable(new LookupDataSource(lookupName), ROW_SIGNATURE, null, true, true)
+          new LookupTable(
+                new LookupDataSource(lookupName),
+                ROW_SIGNATURE
+          )
       );
     }
 

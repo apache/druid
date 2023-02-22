@@ -18,7 +18,7 @@
 
 import { sane } from 'druid-query-toolkit';
 
-import { DruidError, getDruidErrorMessage, parseHtmlError, trimSemicolon } from './druid-query';
+import { DruidError, getDruidErrorMessage, parseHtmlError } from './druid-query';
 
 describe('DruidQuery', () => {
   describe('DruidError.parsePosition', () => {
@@ -151,31 +151,16 @@ describe('DruidQuery', () => {
     });
 
     it('works for incorrectly quoted AS alias', () => {
-      const sql = sane`
-        SELECT
-          channel,
-          COUNT(*) AS 'Count'
-        FROM wikipedia
-        GROUP BY 1
-        ORDER BY 2 DESC
-      `;
-      const suggestion = DruidError.getSuggestion(
-        `Encountered "\\'Count\\'" at line 3, column 15...`,
+      const suggestion = DruidError.getSuggestion(`Encountered "AS \\'c\\'" at line 1, column 16.`);
+      expect(suggestion!.label).toEqual(`Replace 'c' with "c"`);
+      expect(suggestion!.fn(`SELECT channel AS 'c' FROM wikipedia`)).toEqual(
+        `SELECT channel AS "c" FROM wikipedia`,
       );
-      expect(suggestion!.label).toEqual(`Replace 'Count' with "Count"`);
-      expect(suggestion!.fn(sql)).toEqual(sane`
-        SELECT
-          channel,
-          COUNT(*) AS "Count"
-        FROM wikipedia
-        GROUP BY 1
-        ORDER BY 2 DESC
-      `);
     });
 
     it('removes comma (,) before FROM', () => {
       const suggestion = DruidError.getSuggestion(
-        `Encountered "FROM" at line 1, column 14. Was expecting one of: "ABS" ...`,
+        `Encountered ", FROM" at line 1, column 12. Was expecting one of: "ABS" ...`,
       );
       expect(suggestion!.label).toEqual(`Remove , before FROM`);
       expect(suggestion!.fn(`SELECT page, FROM wikipedia WHERE channel = '#ar.wikipedia'`)).toEqual(
@@ -197,7 +182,7 @@ describe('DruidQuery', () => {
 
     it('removes trailing semicolon (;)', () => {
       const suggestion = DruidError.getSuggestion(
-        `Encountered ";" at line 1, column 14. Was expecting one of: "ABS" ...`,
+        `Encountered ";" at line 1, column 59. Was expecting one of: "ABS" ...`,
       );
       expect(suggestion!.label).toEqual(`Remove trailing ;`);
       expect(suggestion!.fn(`SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia';`)).toEqual(
@@ -220,14 +205,6 @@ describe('DruidQuery', () => {
 
     it('parseHtmlError', () => {
       expect(getDruidErrorMessage({})).toMatchInlineSnapshot(`undefined`);
-    });
-  });
-
-  describe('.trimSemicolon', () => {
-    it('works', () => {
-      expect(trimSemicolon('SELECT * FROM tbl;')).toEqual('SELECT * FROM tbl');
-      expect(trimSemicolon('SELECT * FROM tbl;   ')).toEqual('SELECT * FROM tbl   ');
-      expect(trimSemicolon('SELECT * FROM tbl; --hello  ')).toEqual('SELECT * FROM tbl --hello  ');
     });
   });
 });

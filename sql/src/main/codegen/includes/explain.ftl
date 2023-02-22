@@ -63,6 +63,8 @@ SqlNode DruidQueryOrSqlQueryOrDml() :
   (
     stmt = DruidSqlInsertEof()
   |
+    stmt = DruidSqlReplaceEof()
+  |
     stmt = SqlQueryOrDml()
   )
   {

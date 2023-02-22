@@ -162,7 +162,9 @@ public class CliIndexerServerModule implements Module
         oldConfig.isEnableForwardedRequestCustomizer(),
         oldConfig.getAllowedHttpMethods(),
         oldConfig.isShowDetailedJettyErrors(),
-        oldConfig.getErrorResponseTransformStrategy()
+        oldConfig.getErrorResponseTransformStrategy(),
+        oldConfig.getContentSecurityPolicy(),
+        oldConfig.isEnableHSTS()
     );
   }
 }

@@ -44,9 +44,9 @@ Druid has several types of services:
 * [**Historical**](../design/historical.md) services store queryable data.
 * [**MiddleManager**](../design/middlemanager.md) services ingest data.
 
-You can view services in the **Services** tab in the Druid console: 
+You can view services in the **Services** tab in the web console: 
 
-![Druid services](../assets/services-overview.png "Services in the Druid console")
+![Druid services](../assets/services-overview.png "Services in the web console")
 
 
 ## Druid servers

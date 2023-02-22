@@ -128,7 +128,7 @@ As part of this directory:
 
 - `assets/` - The images (and other assets) used within the console
 - `e2e-tests/` - End-to-end tests for the console
-- `lib/` - A place where some overrides to the react-table stylus files live, this is outside of the normal SCSS build system.
+- `lib/` - A place where keywords and generated docs live.
 - `public/` - The compiled destination for the files powering this console
 - `script/` - Some helper bash scripts for running this console
 - `src/` - This directory (together with `lib`) constitutes all the source code for this console

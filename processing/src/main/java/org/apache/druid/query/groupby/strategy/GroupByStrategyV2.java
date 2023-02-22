@@ -31,6 +31,7 @@ import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.guice.annotations.Global;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.Intervals;
@@ -44,6 +45,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
@@ -59,6 +61,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.GroupByBinaryFnV2;
 import org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunnerV2;
@@ -73,6 +76,7 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.utils.CloseableUtils;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -95,6 +99,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   private final Supplier<GroupByQueryConfig> configSupplier;
   private final NonBlockingPool<ByteBuffer> bufferPool;
   private final BlockingPool<ByteBuffer> mergeBufferPool;
+  private final ObjectMapper jsonMapper;
   private final ObjectMapper spillMapper;
   private final QueryWatcher queryWatcher;
 
@@ -104,6 +109,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       Supplier<GroupByQueryConfig> configSupplier,
       @Global NonBlockingPool<ByteBuffer> bufferPool,
       @Merging BlockingPool<ByteBuffer> mergeBufferPool,
+      @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper spillMapper,
       QueryWatcher queryWatcher
   )
@@ -112,6 +118,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
     this.configSupplier = configSupplier;
     this.bufferPool = bufferPool;
     this.mergeBufferPool = mergeBufferPool;
+    this.jsonMapper = jsonMapper;
     this.spillMapper = spillMapper;
     this.queryWatcher = queryWatcher;
   }
@@ -130,8 +137,9 @@ public class GroupByStrategyV2 implements GroupByStrategy
       return new GroupByQueryResource();
     } else {
       final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders;
-      if (QueryContexts.hasTimeout(query)) {
-        mergeBufferHolders = mergeBufferPool.takeBatch(requiredMergeBufferNum, QueryContexts.getTimeout(query));
+      final QueryContext context = query.context();
+      if (context.hasTimeout()) {
+        mergeBufferHolders = mergeBufferPool.takeBatch(requiredMergeBufferNum, context.getTimeout());
       } else {
         mergeBufferHolders = mergeBufferPool.takeBatch(requiredMergeBufferNum);
       }
@@ -212,16 +220,17 @@ public class GroupByStrategyV2 implements GroupByStrategy
 
     // Set up downstream context.
     final ImmutableMap.Builder<String, Object> context = ImmutableMap.builder();
-    context.put("finalize", false);
+    context.put(QueryContexts.FINALIZE_KEY, false);
     context.put(GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2);
     context.put(CTX_KEY_OUTERMOST, false);
 
     Granularity granularity = query.getGranularity();
     List<DimensionSpec> dimensionSpecs = query.getDimensions();
     // the CTX_TIMESTAMP_RESULT_FIELD is set in DruidQuery.java
-    final String timestampResultField = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD);
+    final QueryContext queryContext = query.context();
+    final String timestampResultField = queryContext.getString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD);
     final boolean hasTimestampResultField = (timestampResultField != null && !timestampResultField.isEmpty())
-                                            && query.getContextBoolean(CTX_KEY_OUTERMOST, true)
+                                            && queryContext.getBoolean(CTX_KEY_OUTERMOST, true)
                                             && !query.isApplyLimitPushDown();
     int timestampResultFieldIndex = 0;
     if (hasTimestampResultField) {
@@ -247,7 +256,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       // the granularity and dimensions are slightly different.
       // now, part of the query plan logic is handled in GroupByStrategyV2, not only in DruidQuery.toGroupByQuery()
       final Granularity timestampResultFieldGranularity
-          = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY);
+          = queryContext.getGranularity(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, jsonMapper);
       dimensionSpecs =
           query.getDimensions()
                .stream()
@@ -256,7 +265,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       granularity = timestampResultFieldGranularity;
       // when timestampResultField is the last dimension, should set sortByDimsFirst=true,
       // otherwise the downstream is sorted by row's timestamp first which makes the final ordering not as expected
-      timestampResultFieldIndex = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
+      timestampResultFieldIndex = queryContext.getInt(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
       if (!query.getContextSortByDimsFirst() && timestampResultFieldIndex == query.getDimensions().size() - 1) {
         context.put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, true);
       }
@@ -310,8 +319,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
     // Apply postaggregators if this is the outermost mergeResults (CTX_KEY_OUTERMOST) and we are not executing a
     // pushed-down subquery (CTX_KEY_EXECUTING_NESTED_QUERY).
 
-    if (!query.getContextBoolean(CTX_KEY_OUTERMOST, true)
-        || query.getContextBoolean(GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY, false)) {
+    if (!queryContext.getBoolean(CTX_KEY_OUTERMOST, true)
+        || queryContext.getBoolean(GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY, false)) {
       return mergedResults;
     } else if (query.getPostAggregatorSpecs().isEmpty()) {
       if (!hasTimestampResultField) {
@@ -403,7 +412,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   public Sequence<ResultRow> applyPostProcessing(Sequence<ResultRow> results, GroupByQuery query)
   {
     // Don't apply limit here for inner results, that will be pushed down to the BufferHashGrouper
-    if (query.getContextBoolean(CTX_KEY_OUTERMOST, true)) {
+    if (query.context().getBoolean(CTX_KEY_OUTERMOST, true)) {
       return query.postProcess(results);
     } else {
       return results;
@@ -439,6 +448,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
           wasQueryPushedDown ? queryToRun : subquery,
           subqueryResult,
           configSupplier.get(),
+          processingConfig,
           resource,
           spillMapper,
           processingConfig.getTmpDir(),
@@ -511,6 +521,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
           baseSubtotalQuery,
           queryResult,
           configSupplier.get(),
+          processingConfig,
           resource,
           spillMapper,
           processingConfig.getTmpDir(),
@@ -573,6 +584,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
               subtotalQuery,
               resultSupplierOneFinal.results(subTotalDimensionSpec),
               configSupplier.get(),
+              processingConfig,
               resource,
               spillMapper,
               processingConfig.getTmpDir(),
@@ -678,6 +690,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   {
     return new GroupByMergingQueryRunnerV2(
         configSupplier.get(),
+        processingConfig,
         queryProcessingPool,
         queryWatcher,
         queryRunners,
@@ -690,13 +703,19 @@ public class GroupByStrategyV2 implements GroupByStrategy
   }
 
   @Override
-  public Sequence<ResultRow> process(GroupByQuery query, StorageAdapter storageAdapter)
+  public Sequence<ResultRow> process(
+      GroupByQuery query,
+      StorageAdapter storageAdapter,
+      @Nullable GroupByQueryMetrics groupByQueryMetrics
+  )
   {
     return GroupByQueryEngineV2.process(
         query,
         storageAdapter,
         bufferPool,
-        configSupplier.get().withOverrides(query)
+        configSupplier.get().withOverrides(query),
+        processingConfig,
+        groupByQueryMetrics
     );
   }
 

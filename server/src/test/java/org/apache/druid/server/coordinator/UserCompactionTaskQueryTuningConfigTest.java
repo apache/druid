@@ -62,6 +62,7 @@ public class UserCompactionTaskQueryTuningConfigTest
             null,
             null,
             null,
+            null,
             null
         );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -103,7 +104,8 @@ public class UserCompactionTaskQueryTuningConfigTest
         new Duration(3000L),
         7,
         1000,
-        100
+        100,
+        2
     );
 
     final String json = OBJECT_MAPPER.writeValueAsString(tuningConfig);

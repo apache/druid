@@ -53,7 +53,7 @@ public class WorkerConfig
   private long intermediaryPartitionCleanupPeriodSec = 300L;
 
   @JsonProperty
-  private Period intermediaryPartitionTimeout = new Period("P1D");
+  private Period intermediaryPartitionTimeout = new Period("PT5M");
 
   @JsonProperty
   private final long globalIngestionHeapLimitBytes = Runtime.getRuntime().maxMemory() / 6;

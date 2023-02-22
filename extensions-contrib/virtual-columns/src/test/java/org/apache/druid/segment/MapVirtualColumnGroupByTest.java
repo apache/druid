@@ -101,6 +101,7 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
             GroupByQueryConfig::new,
             new StupidPool<>("map-virtual-column-groupby-test", () -> ByteBuffer.allocate(1024)),
             new DefaultBlockingPool<>(() -> ByteBuffer.allocate(1024), 1),
+            TestHelper.makeJsonMapper(),
             new DefaultObjectMapper(),
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
         )

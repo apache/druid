@@ -19,23 +19,13 @@
 
 package org.apache.druid.guice.security;
 
-import com.fasterxml.jackson.databind.Module;
 import com.google.inject.Binder;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.server.security.AuthConfig;
 
-import java.util.Collections;
-import java.util.List;
-
 public class DruidAuthModule implements DruidModule
 {
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return Collections.emptyList();
-  }
-
   @Override
   public void configure(Binder binder)
   {

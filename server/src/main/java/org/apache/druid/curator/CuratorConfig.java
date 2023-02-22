@@ -28,6 +28,8 @@ import javax.validation.constraints.Min;
 
 public class CuratorConfig
 {
+  public static final String CONFIG_PREFIX = "druid.zk.service";
+
   static final String HOST = "host";
   @JsonProperty(HOST)
   private String zkHosts = "localhost";
@@ -55,6 +57,13 @@ public class CuratorConfig
 
   @JsonProperty("authScheme")
   private String authScheme = "digest";
+
+  public static CuratorConfig create(String hosts)
+  {
+    CuratorConfig config = new CuratorConfig();
+    config.zkHosts = hosts;
+    return config;
+  }
 
   public String getZkHosts()
   {

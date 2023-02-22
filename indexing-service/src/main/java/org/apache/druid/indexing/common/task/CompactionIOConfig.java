@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.IOConfig;
 
 import javax.annotation.Nullable;
@@ -46,7 +47,7 @@ public class CompactionIOConfig implements IOConfig
   )
   {
     this.inputSpec = inputSpec;
-    this.dropExisting = dropExisting == null ? DEFAULT_DROP_EXISTING : dropExisting;
+    this.dropExisting = dropExisting == null ? BatchIOConfig.DEFAULT_DROP_EXISTING : dropExisting;
   }
 
   @JsonProperty

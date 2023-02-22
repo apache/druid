@@ -61,7 +61,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
     final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
         "dataSource",
         null,
-        500L,
+        null,
         null,
         new Period(3600),
         null,
@@ -77,7 +77,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
-    Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
+    Assert.assertEquals(100_000_000_000_000L, fromJson.getInputSegmentSizeBytes());
     Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
@@ -141,6 +141,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
             null,
             null,
             null,
+            null,
             null
         ),
         null,
@@ -176,6 +177,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
             null,
             null,
             10000L,
+            null,
             null,
             null,
             null,
@@ -242,7 +244,8 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         new Duration(3000L),
         7,
         1000,
-        100
+        100,
+        2
     );
 
     final String json = OBJECT_MAPPER.writeValueAsString(tuningConfig);
@@ -282,7 +285,8 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         new Duration(3000L),
         7,
         1000,
-        100
+        100,
+        2
     );
 
     final String json = OBJECT_MAPPER.writeValueAsString(tuningConfig);

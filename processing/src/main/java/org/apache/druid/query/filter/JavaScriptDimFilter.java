@@ -249,7 +249,7 @@ public class JavaScriptDimFilter extends AbstractOptimizableDimFilter implements
     @Override
     public Predicate<String> makeStringPredicate()
     {
-      return input -> applyObject(input);
+      return this::applyObject;
     }
 
     @Override

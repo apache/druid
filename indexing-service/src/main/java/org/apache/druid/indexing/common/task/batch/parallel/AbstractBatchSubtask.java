@@ -22,25 +22,23 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Map;
 
 public abstract class AbstractBatchSubtask extends AbstractBatchIndexTask
 {
-  protected AbstractBatchSubtask(String id, String dataSource, Map<String, Object> context)
-  {
-    super(id, dataSource, context);
-  }
 
   protected AbstractBatchSubtask(
       String id,
       @Nullable String groupId,
       @Nullable TaskResource taskResource,
       String dataSource,
-      @Nullable Map<String, Object> context
+      @Nullable Map<String, Object> context,
+      @Nonnull IngestionMode ingestionMode
   )
   {
-    super(id, groupId, taskResource, dataSource, context, -1);
+    super(id, groupId, taskResource, dataSource, context, -1, ingestionMode);
   }
 
   /**

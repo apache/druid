@@ -41,9 +41,14 @@ spec:
         app: {{ include "druid.name" . }}
         release: {{ .Release.Name }}
         component: {{ .Values.overlord.name }}
-      {{- with .Values.overlord.podAnnotations }}
       annotations:
+      {{- with .Values.overlord.podAnnotations }}
 {{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- if .Values.prometheus.enabled }}
+      {{- with .Values.prometheus.annotation }}
+{{ toYaml . | indent 8 }}
+      {{- end }}
       {{- end }}
     spec:
       containers:
@@ -52,6 +57,10 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args: [ "overlord" ]
           env:
+          - name: POD_NAME
+            valueFrom:  {fieldRef: {fieldPath: metadata.name}}
+          - name: POD_NAMESPACE
+            valueFrom: {fieldRef: {fieldPath: metadata.namespace}}
           {{- range $key, $val := .Values.overlord.config }}
           - name: {{ $key }}
             value: {{ $val | quote }}
@@ -63,6 +72,11 @@ spec:
             - name: http
               containerPort: {{ .Values.overlord.port }}
               protocol: TCP
+            {{- if .Values.prometheus.enabled }}
+            - name: prometheus
+              containerPort: {{ .Values.prometheus.port }}
+              protocol: TCP
+            {{- end }}
           livenessProbe:
             initialDelaySeconds: 60
             httpGet:

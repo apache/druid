@@ -21,7 +21,11 @@ package org.apache.druid.segment.column;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
+import org.apache.druid.segment.serde.NullValueIndexSupplier;
 
 import javax.annotation.Nullable;
 
@@ -32,14 +36,19 @@ public class ColumnBuilder
   private final ColumnCapabilitiesImpl capabilitiesBuilder = ColumnCapabilitiesImpl.createDefault();
 
   @Nullable
+  private ColumnCapabilities handlerCapabilities = null;
+
+  @Nullable
   private Supplier<? extends BaseColumn> columnSupplier = null;
   @Nullable
-  private Supplier<BitmapIndex> bitmapIndex = null;
-  @Nullable
-  private Supplier<SpatialIndex> spatialIndex = null;
+  private ColumnIndexSupplier indexSupplier = NoIndexesColumnIndexSupplier.getInstance();
   @Nullable
   private SmooshedFileMapper fileMapper = null;
 
+  public ColumnCapabilitiesImpl getCapabilitiesBuilder()
+  {
+    return capabilitiesBuilder;
+  }
 
   public ColumnBuilder setFileMapper(SmooshedFileMapper fileMapper)
   {
@@ -50,6 +59,12 @@ public class ColumnBuilder
   public SmooshedFileMapper getFileMapper()
   {
     return this.fileMapper;
+  }
+
+  public ColumnBuilder setType(ColumnType type)
+  {
+    this.capabilitiesBuilder.setType(type);
+    return this;
   }
 
   public ColumnBuilder setType(ValueType type)
@@ -72,6 +87,7 @@ public class ColumnBuilder
 
   public ColumnBuilder setDictionaryEncodedColumnSupplier(Supplier<? extends DictionaryEncodedColumn<?>> columnSupplier)
   {
+    checkColumnSupplierNotSet();
     this.columnSupplier = columnSupplier;
     this.capabilitiesBuilder.setDictionaryEncoded(true);
     this.capabilitiesBuilder.setDictionaryValuesSorted(true);
@@ -88,27 +104,35 @@ public class ColumnBuilder
 
   public ColumnBuilder setComplexColumnSupplier(Supplier<? extends ComplexColumn> columnSupplier)
   {
+    checkColumnSupplierNotSet();
     this.columnSupplier = columnSupplier;
     return this;
   }
 
   public ColumnBuilder setNumericColumnSupplier(Supplier<? extends NumericColumn> columnSupplier)
   {
+    checkColumnSupplierNotSet();
     this.columnSupplier = columnSupplier;
     return this;
   }
 
-  public ColumnBuilder setBitmapIndex(Supplier<BitmapIndex> bitmapIndex)
+  public ColumnBuilder setIndexSupplier(
+      @Nullable ColumnIndexSupplier indexSupplier,
+      boolean hasBitmapIndex,
+      boolean hasSpatial
+  )
   {
-    this.bitmapIndex = bitmapIndex;
-    this.capabilitiesBuilder.setHasBitmapIndexes(true);
+    checkIndexSupplierNotSet();
+    this.indexSupplier = indexSupplier;
+    capabilitiesBuilder.setHasBitmapIndexes(hasBitmapIndex);
+    capabilitiesBuilder.setHasSpatialIndexes(hasSpatial);
     return this;
   }
 
-  public ColumnBuilder setSpatialIndex(Supplier<SpatialIndex> spatialIndex)
+  public ColumnBuilder setNullValueIndexSupplier(ImmutableBitmap nullValueIndex)
   {
-    this.spatialIndex = spatialIndex;
-    this.capabilitiesBuilder.setHasSpatialIndexes(true);
+    checkIndexSupplierNotSet();
+    this.indexSupplier = new NullValueIndexSupplier(nullValueIndex);
     return this;
   }
 
@@ -123,10 +147,31 @@ public class ColumnBuilder
     return this;
   }
 
+  public ColumnBuilder setHandlerCapabilities(ColumnCapabilities handlerCapabilities)
+  {
+    this.handlerCapabilities = handlerCapabilities;
+    return this;
+  }
+
   public ColumnHolder build()
   {
     Preconditions.checkState(capabilitiesBuilder.getType() != null, "Type must be set.");
 
-    return new SimpleColumnHolder(capabilitiesBuilder, columnSupplier, bitmapIndex, spatialIndex);
+    return new SimpleColumnHolder(capabilitiesBuilder, handlerCapabilities, columnSupplier, indexSupplier);
+  }
+
+  private void checkColumnSupplierNotSet()
+  {
+    if (columnSupplier != null) {
+      throw new ISE("Column supplier already set!");
+    }
+  }
+
+  private void checkIndexSupplierNotSet()
+  {
+    //noinspection ObjectEquality
+    if (indexSupplier != NoIndexesColumnIndexSupplier.getInstance()) {
+      throw new ISE("Index supplier already set!");
+    }
   }
 }

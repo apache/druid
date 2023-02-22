@@ -25,11 +25,16 @@ $view-control-bar-height: 30px;
 $standard-padding: 15px;
 $thin-padding: 10px;
 
-// various style variables
+// various style Variables
 
 $druid-brand: #2ceefb;
 $druid-brand2: #00b6bf;
 $druid-brand-background: #1c1c26;
+
+// ReactTable related
+
+$table-cell-v-padding: 10px;
+$table-cell-h-padding: 5px;
 
 @mixin card-background {
   background: $white;

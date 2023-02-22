@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-chromium';
+import type * as playwright from 'playwright-chromium';
 
 import { clickButton, getLabeledInput, setLabeledInput } from '../../util/playwright';
 import { extractTable } from '../../util/table';
@@ -124,7 +124,7 @@ export class DatasourcesOverview {
       throw new Error(`Could not find datasource: ${datasourceName}`);
     }
 
-    const editActions = await this.page.$$('span[icon=wrench]');
+    const editActions = await this.page.$$('.action-cell span[icon=more]');
     await editActions[index].click();
     await this.waitForPopupMenu();
   }
@@ -141,7 +141,7 @@ export class DatasourcesOverview {
   }
 
   private async clickMoreButton(options: any): Promise<void> {
-    await this.page.click('//button[span[@icon="more"]]', options);
+    await this.page.click('.more-button button', options);
     await this.waitForPopupMenu();
   }
 }

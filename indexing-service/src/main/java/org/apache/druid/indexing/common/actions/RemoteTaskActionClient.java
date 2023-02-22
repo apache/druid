@@ -20,43 +20,38 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.discovery.DruidLeaderClient;
-import org.apache.druid.indexing.common.RetryPolicy;
-import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
-import org.jboss.netty.channel.ChannelException;
+import org.apache.druid.rpc.HttpResponseException;
+import org.apache.druid.rpc.RequestBuilder;
+import org.apache.druid.rpc.ServiceClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.joda.time.Duration;
 
-import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.ExecutionException;
 
 public class RemoteTaskActionClient implements TaskActionClient
 {
   private final Task task;
-  private final RetryPolicyFactory retryPolicyFactory;
   private final ObjectMapper jsonMapper;
-  private final DruidLeaderClient druidLeaderClient;
+  private final ServiceClient client;
 
   private static final Logger log = new Logger(RemoteTaskActionClient.class);
 
   public RemoteTaskActionClient(
       Task task,
-      DruidLeaderClient druidLeaderClient,
-      RetryPolicyFactory retryPolicyFactory,
+      ServiceClient client,
       ObjectMapper jsonMapper
   )
   {
     this.task = task;
-    this.retryPolicyFactory = retryPolicyFactory;
+    this.client = client;
     this.jsonMapper = jsonMapper;
-    this.druidLeaderClient = druidLeaderClient;
   }
 
   @Override
@@ -64,73 +59,40 @@ public class RemoteTaskActionClient implements TaskActionClient
   {
     log.debug("Performing action for task[%s]: %s", task.getId(), taskAction);
 
-    byte[] dataToSend = jsonMapper.writeValueAsBytes(new TaskActionHolder(task, taskAction));
+    try {
+      // We're using a ServiceClient directly here instead of OverlordClient, because OverlordClient does
+      // not have access to the TaskAction class. (OverlordClient is in the druid-server package, and TaskAction
+      // is in the druid-indexing-service package.)
+      final Map<String, Object> response = jsonMapper.readValue(
+          client.request(
+              new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/action")
+                  .jsonContent(jsonMapper, new TaskActionHolder(task, taskAction)),
+              new BytesFullResponseHandler()
+          ).getContent(),
+          JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+      );
 
-    final RetryPolicy retryPolicy = retryPolicyFactory.makeRetryPolicy();
-
-    while (true) {
-      try {
-
-        final StringFullResponseHolder fullResponseHolder;
-
-        log.debug(
-            "Submitting action for task[%s] to Overlord: %s",
-            task.getId(),
-            jsonMapper.writeValueAsString(taskAction)
-        );
-
-        fullResponseHolder = druidLeaderClient.go(
-            druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/action")
-                             .setContent(MediaType.APPLICATION_JSON, dataToSend)
-        );
-
-        if (fullResponseHolder.getStatus().getCode() / 100 == 2) {
-          final Map<String, Object> responseDict = jsonMapper.readValue(
-              fullResponseHolder.getContent(),
-              JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-          );
-          return jsonMapper.convertValue(responseDict.get("result"), taskAction.getReturnTypeReference());
-        } else {
-          // Want to retry, so throw an IOException.
-          throw new IOE(
-              "Error with status[%s] and message[%s]. Check overlord logs for details.",
-              fullResponseHolder.getStatus(),
-              fullResponseHolder.getContent()
-          );
-        }
-      }
-      catch (IOException | ChannelException e) {
-        log.noStackTrace().warn(
-            e,
-            "Exception submitting action for task[%s]: %s",
-            task.getId(),
-            jsonMapper.writeValueAsString(taskAction)
-        );
-
-        final Duration delay = retryPolicy.getAndIncrementRetryDelay();
-        if (delay == null) {
-          throw e;
-        } else {
-          try {
-            final long sleepTime = jitter(delay.getMillis());
-            log.warn("Will try again in [%s].", new Duration(sleepTime).toString());
-            Thread.sleep(sleepTime);
-          }
-          catch (InterruptedException e2) {
-            throw new RuntimeException(e2);
-          }
-        }
-      }
-      catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
+      return jsonMapper.convertValue(
+          response.get("result"),
+          taskAction.getReturnTypeReference()
+      );
     }
-  }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
+    }
+    catch (ExecutionException e) {
+      if (e.getCause() instanceof HttpResponseException) {
+        // Rewrite the error to be slightly more useful: point out that there may be information in the Overlord logs.
+        final StringFullResponseHolder fullResponseHolder = ((HttpResponseException) e.getCause()).getResponse();
+        throw new IOE(
+            "Error with status[%s] and message[%s]. Check overlord logs for details.",
+            fullResponseHolder.getStatus(),
+            fullResponseHolder.getContent()
+        );
+      }
 
-  private long jitter(long input)
-  {
-    final double jitter = ThreadLocalRandom.current().nextGaussian() * input / 4.0;
-    long retval = input + (long) jitter;
-    return retval < 0 ? 0 : retval;
+      throw new IOException(e.getCause());
+    }
   }
 }

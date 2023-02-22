@@ -19,17 +19,25 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles.sql;
 
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlOperandCountRange;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.type.OperandTypes;
+import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
+import org.apache.calcite.sql.type.SqlOperandTypeChecker;
+import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.Static;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -72,45 +80,22 @@ public abstract class DoublesSketchListArgBaseOperatorConversion implements SqlO
   {
     final List<RexNode> operands = ((RexCall) rexNode).getOperands();
     final double[] args = new double[operands.size() - 1];
-    PostAggregator inputSketchPostAgg = null;
-
-    int operandCounter = 0;
-    for (RexNode operand : operands) {
-      final PostAggregator convertedPostAgg = OperatorConversions.toPostAggregator(
-          plannerContext,
-          rowSignature,
-          operand,
-          postAggregatorVisitor
-      );
-      if (convertedPostAgg == null) {
-        if (operandCounter > 0) {
-          try {
-            if (!operand.isA(SqlKind.LITERAL)) {
-              return null;
-            }
-            double arg = ((Number) RexLiteral.value(operand)).doubleValue();
-            args[operandCounter - 1] = arg;
-          }
-          catch (ClassCastException cce) {
-            return null;
-          }
-        } else {
-          return null;
-        }
-      } else {
-        if (operandCounter == 0) {
-          inputSketchPostAgg = convertedPostAgg;
-        } else {
-          if (!operand.isA(SqlKind.LITERAL)) {
-            return null;
-          }
-        }
-      }
-      operandCounter++;
-    }
+    final PostAggregator inputSketchPostAgg = OperatorConversions.toPostAggregator(
+        plannerContext,
+        rowSignature,
+        operands.get(0),
+        postAggregatorVisitor,
+        true
+    );
 
     if (inputSketchPostAgg == null) {
       return null;
+    }
+
+    for (int i = 1; i < operands.size(); i++) {
+      RexNode operand = operands.get(i);
+      double arg = ((Number) RexLiteral.value(operand)).doubleValue();
+      args[i - 1] = arg;
     }
 
     return makePostAgg(
@@ -129,7 +114,7 @@ public abstract class DoublesSketchListArgBaseOperatorConversion implements SqlO
             factory -> Calcites.createSqlType(factory, SqlTypeName.OTHER)
         ),
         null,
-        OperandTypes.variadic(SqlOperandCountRanges.from(2)),
+        new DoublesSketchListArgOperandTypeChecker(),
         SqlFunctionCategory.USER_DEFINED_FUNCTION
     );
   }
@@ -141,4 +126,68 @@ public abstract class DoublesSketchListArgBaseOperatorConversion implements SqlO
       PostAggregator field,
       double[] args
   );
+
+  /**
+   * Minimum 2 arguments. 2nd and further arguments must be literal numbers.
+   */
+  private static class DoublesSketchListArgOperandTypeChecker implements SqlOperandTypeChecker
+  {
+    private static final int REQUIRED_OPERANDS = 2;
+
+    @Override
+    public boolean checkOperandTypes(SqlCallBinding callBinding, boolean throwOnFailure)
+    {
+      for (int i = 1; i < callBinding.operands().size(); i++) {
+        final SqlNode operand = callBinding.operands().get(i);
+        final RelDataType operandType = callBinding.getValidator().deriveType(callBinding.getScope(), operand);
+
+        // Verify that 'operand' is a literal number.
+        if (!SqlUtil.isLiteral(operand)) {
+          return OperatorConversions.throwOrReturn(
+              throwOnFailure,
+              callBinding,
+              cb -> cb.getValidator()
+                      .newValidationError(
+                          operand,
+                          Static.RESOURCE.argumentMustBeLiteral(callBinding.getOperator().getName())
+                      )
+          );
+        }
+
+        if (!SqlTypeFamily.NUMERIC.contains(operandType)) {
+          return OperatorConversions.throwOrReturn(
+              throwOnFailure,
+              callBinding,
+              SqlCallBinding::newValidationSignatureError
+          );
+        }
+      }
+
+      return true;
+    }
+
+    @Override
+    public SqlOperandCountRange getOperandCountRange()
+    {
+      return SqlOperandCountRanges.from(REQUIRED_OPERANDS);
+    }
+
+    @Override
+    public String getAllowedSignatures(SqlOperator op, String opName)
+    {
+      return StringUtils.format("'%s(sketch, arg1, [arg2, ...])'", opName);
+    }
+
+    @Override
+    public Consistency getConsistency()
+    {
+      return Consistency.NONE;
+    }
+
+    @Override
+    public boolean isOptional(int i)
+    {
+      return i + 1 > REQUIRED_OPERANDS;
+    }
+  }
 }

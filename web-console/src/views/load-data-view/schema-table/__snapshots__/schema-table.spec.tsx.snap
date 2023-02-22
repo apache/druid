@@ -2,7 +2,7 @@
 
 exports[`SchemaTable matches snapshot 1`] = `
 <div
-  class="ReactTable schema-table -striped -highlight"
+  class="ReactTable schema-table -striped -highlight padded-header"
 >
   <div
     class="rt-table"
@@ -10,7 +10,7 @@ exports[`SchemaTable matches snapshot 1`] = `
   >
     <div
       class="rt-thead -header"
-      style="min-width: 100px;"
+      style="min-width: 140px;"
     >
       <div
         class="rt-tr"
@@ -19,7 +19,7 @@ exports[`SchemaTable matches snapshot 1`] = `
         <div
           class="rt-th dimension string rt-resizable-header"
           role="columnheader"
-          style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+          style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           tabindex="-1"
         >
           <div
@@ -49,7 +49,7 @@ exports[`SchemaTable matches snapshot 1`] = `
     </div>
     <div
       class="rt-tbody"
-      style="min-width: 100px;"
+      style="min-width: 140px;"
     >
       <div
         class="rt-tr-group"
@@ -62,13 +62,13 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
-            <span
+            <div
               class="table-cell plain"
             >
               hello
-            </span>
+            </div>
           </div>
         </div>
       </div>
@@ -83,7 +83,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -102,7 +102,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -121,7 +121,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -140,7 +140,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -159,7 +159,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -178,7 +178,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -197,7 +197,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -216,7 +216,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -235,7 +235,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -254,7 +254,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -273,7 +273,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -292,7 +292,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -311,7 +311,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -330,7 +330,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -349,7 +349,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -368,7 +368,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -387,7 +387,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -406,7 +406,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -425,7 +425,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -444,7 +444,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -463,7 +463,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -482,7 +482,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -501,7 +501,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -520,7 +520,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -539,7 +539,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -558,7 +558,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -577,7 +577,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -596,7 +596,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -615,7 +615,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -634,7 +634,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -653,7 +653,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -672,7 +672,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -691,7 +691,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -710,7 +710,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -729,7 +729,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -748,7 +748,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -767,7 +767,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -786,7 +786,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -805,7 +805,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -824,7 +824,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -843,7 +843,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -862,7 +862,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -881,7 +881,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -900,7 +900,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -919,7 +919,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -938,7 +938,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -957,7 +957,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -976,7 +976,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -995,7 +995,7 @@ exports[`SchemaTable matches snapshot 1`] = `
           <div
             class="rt-td dimension string"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                

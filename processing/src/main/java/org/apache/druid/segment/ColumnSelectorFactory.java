@@ -53,4 +53,15 @@ public interface ColumnSelectorFactory extends ColumnInspector
   @Override
   @Nullable
   ColumnCapabilities getColumnCapabilities(String column);
+
+  /**
+   * Returns a {@link RowIdSupplier} that allows callers to detect whether the selectors returned by this
+   * factory have moved or not. Useful for selectors that wrap other selectors, such as virtual columns,
+   * as it allows them to cache their outputs.
+   */
+  @Nullable
+  default RowIdSupplier getRowIdSupplier()
+  {
+    return null;
+  }
 }

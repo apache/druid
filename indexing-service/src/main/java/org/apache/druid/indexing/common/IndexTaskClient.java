@@ -87,11 +87,11 @@ public abstract class IndexTaskClient implements AutoCloseable
     }
   }
 
+  public static final int MIN_RETRY_WAIT_SECONDS = 2;
   public static final int MAX_RETRY_WAIT_SECONDS = 10;
 
   private static final EmittingLogger log = new EmittingLogger(IndexTaskClient.class);
   private static final String BASE_PATH = "/druid/worker/v1/chat";
-  private static final int MIN_RETRY_WAIT_SECONDS = 2;
   private static final int TASK_MISMATCH_RETRY_DELAY_SECONDS = 5;
 
   private final HttpClient httpClient;
@@ -115,7 +115,7 @@ public abstract class IndexTaskClient implements AutoCloseable
     this.objectMapper = objectMapper;
     this.taskInfoProvider = taskInfoProvider;
     this.httpTimeout = httpTimeout;
-    this.retryPolicyFactory = initializeRetryPolicyFactory(numRetries);
+    this.retryPolicyFactory = makeRetryPolicyFactory(numRetries);
     this.executorService = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(
             numThreads,
@@ -127,7 +127,7 @@ public abstract class IndexTaskClient implements AutoCloseable
     );
   }
 
-  private static RetryPolicyFactory initializeRetryPolicyFactory(long numRetries)
+  public static RetryPolicyFactory makeRetryPolicyFactory(long numRetries)
   {
     // Retries [numRetries] times before giving up; this should be set long enough to handle any temporary
     // unresponsiveness such as network issues, if a task is still in the process of starting up, or if the task is in
@@ -138,11 +138,6 @@ public abstract class IndexTaskClient implements AutoCloseable
             .setMaxWait(Period.seconds(MAX_RETRY_WAIT_SECONDS))
             .setMaxRetryCount(numRetries)
     );
-  }
-
-  protected HttpClient getHttpClient()
-  {
-    return httpClient;
   }
 
   protected RetryPolicy newRetryPolicy()

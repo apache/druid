@@ -866,7 +866,7 @@ public class SchemalessTestFullTest extends InitializedNullHandlingTest
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
-                TestHelper.createExpectedMap(
+                TestHelper.makeMap(
                     "rows", 1L,
                     "index", NullHandling.replaceWithDefault() ? 0.0D : null,
                     "addRowsIndexConstant", NullHandling.replaceWithDefault() ? 2.0D : null,
@@ -881,7 +881,7 @@ public class SchemalessTestFullTest extends InitializedNullHandlingTest
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
-                TestHelper.createExpectedMap(
+                TestHelper.makeMap(
                     "rows", 0L,
                     "index", NullHandling.replaceWithDefault() ? 0.0D : null,
                     "addRowsIndexConstant", NullHandling.replaceWithDefault() ? 1.0D : null,

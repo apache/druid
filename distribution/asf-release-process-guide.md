@@ -39,7 +39,37 @@ $ git checkout origin/master
 $ git checkout -b 0.17.0
 ```
 
-Then push the branch to `origin`. 
+#### Preparing the release branch
+Ensure that the web console and docker-compose file are in the correct state in the release branch.
+
+[package.json](../web-console/package.json) and [package-lock.json](../web-console/package-lock.json) should match the release version. If they do not, run:
+
+```bash
+npm version 0.17.0
+```
+
+[unified-console.html](../web-console/unified-console.html), Javascript script tag must match the package.json version:
+
+```html
+<script src="public/web-console-0.17.0.js"></script>
+```
+
+[`links.ts`](../web-console/src/links.ts) needs to be adjusted from `'latest'` to the release version:
+```
+const DRUID_DOCS_VERSION = '0.17.0';
+```
+
+The sample [`docker-compose.yml`](https://github.com/apache/druid/blob/master/distribution/docker/docker-compose.yml) used in the Docker quickstart documentation should match the release version:
+
+```yaml
+...
+  coordinator:
+    image: apache/druid:0.17.0
+    container_name: coordinator
+...
+```
+
+Once everything is ready, then push the branch to `origin`. 
 
 #### Preparing the master branch for the next version after branching
 If doing a quarterly release, it will also be necessary to prepare master for the release _after_ the release you are working on, by setting the version to the next release snapshot:
@@ -53,13 +83,18 @@ You should also prepare the web-console for the next release, by bumping the [pa
 ```bash
 npm version 0.18.0
 ```
-and update the script tag top level html file, [unified-console.html](../web-console/unified-console.html):
+
+which will update `package.json` and `package-lock.json`.
+
+You will also need to manually update the top level html file, [unified-console.html](../web-console/unified-console.html), to ensure that the Javascript script tag is set to match the package.json version:
 
 ```html
 <script src="public/web-console-0.18.0.js"></script>
 ```
 
-Finally, the sample [`docker-compose.yml`](https://github.com/apache/druid/blob/master/distribution/docker/docker-compose.yml) used in the Docker quickstart documentation should be updated to reflect the version for the next release:
+[`DRUID_DOCS_VERSION` in `links.ts`](../web-console/src/links.ts) should already be set to `'latest'` in the master branch, and so should not have to be adjusted.
+
+The sample [`docker-compose.yml`](https://github.com/apache/druid/blob/master/distribution/docker/docker-compose.yml) used in the Docker quickstart documentation should be updated to reflect the version for the next release:
 
 ```yaml
 ...
@@ -71,11 +106,21 @@ Finally, the sample [`docker-compose.yml`](https://github.com/apache/druid/blob/
 
 Once this is completed, open a PR to the master branch. Also, be sure to confirm that these versions are all correct in the release branch, otherwise fix them and open a backport PR to the release branch.
 
+#### Updating redirect links in the docs
+
+For docs, please make sure to add any relevant redirects in `website/redirects.json`. This has to be done before building the new website. 
+
+
 ### Release branch hygiene
 
-The only additions to the release branch after branching should be bug fixes, which should be back-ported from the master branch, via a second PR, not with a direct PR to the release branch. Bug fix release branches may be initially populated via cherry-picking, but it is recommended to leave at least 1 commit to do as a backport PR in order to run through CI. (Note that CI is sometimes flaky for older branches).
+The only additions to the release branch after branching should be bug fixes, which should be back-ported from the master branch, via a second PR or a cherry-pick, not with a direct PR to the release branch.  
 
-Once all issues and PRs that are still tagged with the release milestone have been merged, closed, or removed from the milestone, the next step is to put together a release candidate.
+Release manager must also ensure that CI is passing successfully on the release branch. Since CI on branch can contain additional tests such as ITs for different JVM flavours. (Note that CI is sometimes flaky for older branches).
+To check the CI status on a release branch, you can go to the commits page e.g. https://github.com/apache/druid/commits/24.0.0. On this page, latest commmit should show
+a green &#10004; in the commit description. If the commit has a failed build, please click on red &#10005; icon in the commit description to go to travis build job and investigate. 
+You can restart a failed build via travis if it is flaky. 
+
+Once all issues and PRs that are still tagged with the release milestone have been merged, closed, or removed from the milestone and CI on branch is green, the next step is to put together a release candidate.
 
 ## Initial setup to create a release candidate
 
@@ -145,7 +190,7 @@ You'll need to configure Maven with your Apache credentials by adding the follow
 
 ## LICENSE and NOTICE handling
 
-Before cutting a release candidate, the release manager should ensure that the contents of our `LICENSE` and `NOTICE` files are up-to-date.
+Before cutting a release candidate, the release manager should ensure that the contents of our `LICENSE` and `NOTICE` files are up-to-date. You should specifically check that copyright YEAR is updated in the `NOTICE` file. 
 
 The following links are helpful for understanding Apache's third-party licensing policies:
 
@@ -213,21 +258,6 @@ Next create an issue in the Druid github to contain the release notes and allow 
 
 The [make-linkable-release-notes](bin/make-linkable-release-notes.py) script can assist in converting plain markdown into a version with headers that have embedded self links, to allow directly linking to specific release note entries.
 
-## Web console package version
-Make sure the web console Javascript package version matches the upcoming release version prior to making tags and artifacts. You can find the release version in [package.json](../web-console/package.json). This should be set correctly, but if it isn't, it can be set with: 
-
-```bash
-npm version 0.17.0
-```
-
-which will update `package.json` and `package-lock.json`.
-
-You will also need to manually update the top level html file, [unified-console.html](../web-console/unified-console.html), to ensure that the Javascript script tag is set to match the package.json version.
-
-```html
-<script src="public/web-console-0.17.0.js"></script>
-```
-
 
 ## Building a release candidate
 
@@ -248,10 +278,16 @@ must be tagged properly to make this script working. See the above [Release note
 Once the release branch is good for an RC, you can build a new tag with:
 
 ```bash
-$ mvn -DreleaseVersion=0.17.0 -DdevelopmentVersion=0.18.0-SNAPSHOT -Dtag=druid-0.17.0-rc3 -DpushChanges=false clean release:clean release:prepare
+$ mvn -Pwebsite-docs -DreleaseVersion=0.17.0 -DdevelopmentVersion=0.18.0-SNAPSHOT -Dtag=druid-0.17.0-rc3 -DpushChanges=false clean release:clean release:prepare
 ```
 
-In this example it will create a tag, `druid-0.17.0-rc3`. If this release passes vote then we can add the final `druid-0.17.0` release tag later.
+In this example it will create a tag, `druid-0.17.0-rc3`. If this release passes vote then we can add the final `druid-0.17.0` release tag later. 
+We added `website-docs` profile, because otherwise, website module is not updated with rc version. 
+If you want to skip tests, you can do so with following command
+
+```bash
+$ mvn -DreleaseVersion=0.17.0 -DdevelopmentVersion=0.18.0-SNAPSHOT -Dtag=druid-0.17.0-rc3 -DpushChanges=false -DskipTests -Darguments=-DskipTests clean release:clean release:prepare
+```
 
 **Retain the release.properties file! You will need it when uploading the Maven artifacts for the final release.**
 
@@ -284,6 +320,30 @@ apache-druid-0.17.0-src.tar.gz.asc
 apache-druid-0.17.0-src.tar.gz.sha512
 ```
 
+#### Build artifacts for Hadoop-3
+
+```bash
+$ mvn clean install -Phadoop3,apache-release,dist,rat -DskipTests -Dgpg.keyname=<your GPG key fingerprint>
+```
+
+This should produce the following artifacts:
+
+```plaintext
+apache-druid-0.17.0-bin.tar.gz
+apache-druid-0.17.0-bin.tar.gz.asc
+apache-druid-0.17.0-bin.tar.gz.sha512
+apache-druid-0.17.0-src.tar.gz
+apache-druid-0.17.0-src.tar.gz.asc
+apache-druid-0.17.0-src.tar.gz.sha512
+```
+
+You can ignore the src artifacts as they are the same as the main profile. The binary artifacts should be renamed to include the suffix `hadoop3`. So the final artifacts would be as follows:  
+```plaintext
+apache-druid-0.17.0-hadoop3-bin.tar.gz
+apache-druid-0.17.0-hadoop3-bin.tar.gz.asc
+apache-druid-0.17.0-hadoop3-bin.tar.gz.sha512
+```
+
 Ensure that the GPG key fingerprint used in the `mvn install` command matches your release signing key in https://dist.apache.org/repos/dist/release/druid/KEYS.                                                                                               
  
 ### Verify checksums
@@ -292,6 +352,9 @@ Ensure that the GPG key fingerprint used in the `mvn install` command matches yo
 $ diff <(shasum -a512 apache-druid-0.17.0-bin.tar.gz | cut -d ' ' -f1) <(cat apache-druid-0.17.0-bin.tar.gz.sha512 ; echo)
 ...
 $ diff <(shasum -a512 apache-druid-0.17.0-src.tar.gz | cut -d ' ' -f1) <(cat apache-druid-0.17.0-src.tar.gz.sha512 ; echo)
+...
+$ diff <(shasum -a512 apache-druid-0.17.0-hadoop3-bin.tar.gz | cut -d ' ' -f1) <(cat apache-druid-0.17.0-hadoop3-bin.tar.gz.sha512 ; echo)
+...
 ```
 
 ### Verify GPG signatures
@@ -300,6 +363,9 @@ $ diff <(shasum -a512 apache-druid-0.17.0-src.tar.gz | cut -d ' ' -f1) <(cat apa
 $ gpg --verify apache-druid-0.17.0-bin.tar.gz.asc apache-druid-0.17.0-bin.tar.gz
 ...
 $ gpg --verify apache-druid-0.17.0-src.tar.gz.asc apache-druid-0.17.0-src.tar.gz
+...
+$ gpg --verify apache-druid-0.17.0-hadoop3-bin.tar.gz.asc apache-druid-0.17.0-hadoop3-bin.tar.gz
+...
 ```
 
 ### Commit artifacts to SVN repo
@@ -317,6 +383,14 @@ $ svn add 0.17.0-rc3
 ...
 $ svn commit -m 'add 0.17.0-rc3 artifacts'
 ```
+
+> The commit might fail with the following message if the tarball exceeds 450MB in size (the current limit on the size of a single commit). If this happens, ensure that the tar does not include any superfluous dependencies. If the size is still not within 450MB, raise a ticket with asfinfra to increase the limit.
+> ```
+> $ svn commit -m 'add 0.17.0-rc3 artifacts'
+> Adding  (bin)  apache-druid-25.0.0-bin.tar.gz
+> Transmitting file data .svn: E175002: Commit failed (details follow):
+> svn: E175002: PUT request on '/repos/dist/!svn/txr/58803-1dhj/dev/druid/25.0.0-rc1/apache-druid-25.0.0-bin.tar.gz' failed
+> ```
 
 ### Update druid.staged.apache.org
 
@@ -593,17 +667,17 @@ Copy the release notes and create the release from the tag.
 
 ### Announce the release
 
-Announce the release to all the lists, announce@apache.org, dev@druid.apache.org, druid-user@googlegroups.com (general announcement list, druid dev list, druid user group).
+Announce the release to all the lists, dev@druid.apache.org, druid-user@googlegroups.com (Druid dev list, Druid user group).
 
 Additionally, announce it to the Druid official ASF Slack channel, https://druid.apache.org/community/join-slack.
 
-##### subject
+##### Subject
 
 ```plaintext
 [ANNOUNCE] Apache Druid 0.17.0 release
 ```
 
-##### body
+##### Body
 
 ```plaintext
 The Apache Druid team is proud to announce the release of Apache Druid 0.17.0. 

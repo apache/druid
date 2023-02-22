@@ -59,7 +59,8 @@ public class DoublesSketchAggregatorFactoryTest
         "myFactory",
         "myField",
         1024,
-        1000L
+        1000L,
+        null
     );
     final byte[] json = mapper.writeValueAsBytes(factory);
     final DoublesSketchAggregatorFactory fromJson = (DoublesSketchAggregatorFactory) mapper.readValue(
@@ -76,6 +77,7 @@ public class DoublesSketchAggregatorFactoryTest
         "myFactory",
         "myField",
         null,
+        null,
         null
     );
 
@@ -90,6 +92,7 @@ public class DoublesSketchAggregatorFactoryTest
         "myFactory",
         "myField",
         128,
+        null,
         null
     );
     Assert.assertEquals(64, factory.guessAggregatorHeapFootprint(1));
@@ -105,6 +108,7 @@ public class DoublesSketchAggregatorFactoryTest
         "myFactory",
         "myField",
         128,
+        null,
         null
     );
     Assert.assertEquals(24608L, factory.getMaxIntermediateSize());
@@ -113,7 +117,8 @@ public class DoublesSketchAggregatorFactoryTest
         "myFactory",
         "myField",
         128,
-        1_000_000_000_000L
+        1_000_000_000_000L,
+        null
     );
     Assert.assertEquals(34848L, factory.getMaxIntermediateSize());
   }
@@ -152,5 +157,19 @@ public class DoublesSketchAggregatorFactoryTest
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
+  }
+
+  @Test
+  public void testWithName()
+  {
+    final DoublesSketchAggregatorFactory factory = new DoublesSketchAggregatorFactory(
+        "myFactory",
+        "myField",
+        1024,
+        1000L,
+        null
+    );
+    Assert.assertEquals(factory, factory.withName("myFactory"));
+    Assert.assertEquals("newTest", factory.withName("newTest").getName());
   }
 }

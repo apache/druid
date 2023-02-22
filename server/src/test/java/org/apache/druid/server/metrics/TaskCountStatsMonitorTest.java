@@ -75,15 +75,10 @@ public class TaskCountStatsMonitorTest
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
     Assert.assertEquals(5, emitter.getEvents().size());
-    Assert.assertEquals("task/success/count", emitter.getEvents().get(0).toMap().get("metric"));
-    Assert.assertEquals(1L, emitter.getEvents().get(0).toMap().get("value"));
-    Assert.assertEquals("task/failed/count", emitter.getEvents().get(1).toMap().get("metric"));
-    Assert.assertEquals(1L, emitter.getEvents().get(1).toMap().get("value"));
-    Assert.assertEquals("task/running/count", emitter.getEvents().get(2).toMap().get("metric"));
-    Assert.assertEquals(1L, emitter.getEvents().get(2).toMap().get("value"));
-    Assert.assertEquals("task/pending/count", emitter.getEvents().get(3).toMap().get("metric"));
-    Assert.assertEquals(1L, emitter.getEvents().get(3).toMap().get("value"));
-    Assert.assertEquals("task/waiting/count", emitter.getEvents().get(4).toMap().get("metric"));
-    Assert.assertEquals(1L, emitter.getEvents().get(4).toMap().get("value"));
+    emitter.verifyValue("task/success/count", 1L);
+    emitter.verifyValue("task/failed/count", 1L);
+    emitter.verifyValue("task/running/count", 1L);
+    emitter.verifyValue("task/pending/count", 1L);
+    emitter.verifyValue("task/waiting/count", 1L);
   }
 }
