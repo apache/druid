@@ -27,7 +27,7 @@ import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.processor.FrameChannelMerger;
-import org.apache.druid.frame.processor.FrameChannelMuxer;
+import org.apache.druid.frame.processor.FrameChannelMixer;
 import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.write.FrameWriters;
@@ -164,7 +164,7 @@ public class InputChannelsImpl implements InputChannels
       return Iterables.getOnlyElement(channels);
     } else {
       final BlockingQueueFrameChannel queueChannel = BlockingQueueFrameChannel.minimal();
-      final FrameChannelMuxer muxer = new FrameChannelMuxer(channels, queueChannel.writable());
+      final FrameChannelMixer muxer = new FrameChannelMixer(channels, queueChannel.writable());
 
       // Discard future, since there is no need to keep it. We aren't interested in its return value. If it fails,
       // downstream processors are notified through fail(e) on in-memory channels. If we need to cancel it, we use

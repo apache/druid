@@ -54,7 +54,7 @@ import java.util.function.Supplier;
  * Frames from input channels must be {@link org.apache.druid.frame.FrameType#ROW_BASED}. Output frames will
  * be row-based as well.
  *
- * For unsorted output, use {@link FrameChannelMuxer} instead.
+ * For unsorted output, use {@link FrameChannelMixer} instead.
  */
 public class FrameChannelMerger implements FrameProcessor<Long>
 {

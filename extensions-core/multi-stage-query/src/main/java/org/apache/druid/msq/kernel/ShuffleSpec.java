@@ -36,7 +36,7 @@ import javax.annotation.Nullable;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = MuxShuffleSpec.TYPE, value = MuxShuffleSpec.class),
+    @JsonSubTypes.Type(name = MixShuffleSpec.TYPE, value = MixShuffleSpec.class),
     @JsonSubTypes.Type(name = HashShuffleSpec.TYPE, value = HashShuffleSpec.class),
     @JsonSubTypes.Type(name = GlobalSortMaxCountShuffleSpec.TYPE, value = GlobalSortMaxCountShuffleSpec.class),
     @JsonSubTypes.Type(name = GlobalSortTargetSizeShuffleSpec.TYPE, value = GlobalSortTargetSizeShuffleSpec.class)
@@ -74,7 +74,7 @@ public interface ShuffleSpec
   /**
    * Number of partitions, if known.
    *
-   * Partition count is always known if {@link #kind()} is {@link ShuffleKind#MUX}, {@link ShuffleKind#HASH}, or
+   * Partition count is always known if {@link #kind()} is {@link ShuffleKind#MIX}, {@link ShuffleKind#HASH}, or
    * {@link ShuffleKind#HASH_LOCAL_SORT}. It is sometimes known if the kind is {@link ShuffleKind#GLOBAL_SORT}: in
    * particular, it is known if {@link GlobalSortMaxCountShuffleSpec} is used.
    *

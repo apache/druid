@@ -52,7 +52,7 @@ import org.apache.druid.frame.processor.ComposingOutputChannelFactory;
 import org.apache.druid.msq.shuffle.DurableStorageOutputChannelFactory;
 import org.apache.druid.frame.processor.FileOutputChannelFactory;
 import org.apache.druid.frame.processor.FrameChannelHashPartitioner;
-import org.apache.druid.frame.processor.FrameChannelMuxer;
+import org.apache.druid.frame.processor.FrameChannelMixer;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.processor.OutputChannel;
@@ -1148,8 +1148,8 @@ public class WorkerImpl implements Worker
       shufflePipeline.initialize(workResultAndOutputChannels);
 
       switch (shuffleSpec.kind()) {
-        case MUX:
-          shufflePipeline.mux(shuffleOutputChannelFactory);
+        case MIX:
+          shufflePipeline.mix(shuffleOutputChannelFactory);
           break;
 
         case HASH:
@@ -1337,26 +1337,26 @@ public class WorkerImpl implements Worker
     }
 
     /**
-     * Add {@link FrameChannelMuxer}, which mixes all current outputs into a single channel from the provided factory.
+     * Add {@link FrameChannelMixer}, which mixes all current outputs into a single channel from the provided factory.
      */
-    public void mux(final OutputChannelFactory outputChannelFactory)
+    public void mix(final OutputChannelFactory outputChannelFactory)
     {
-      // No sorting or statistics gathering, just combining all outputs into one big partition. Use a muxer to get
-      // everything into one file. Note: even if there is only one output channel, we'll run it through the muxer
+      // No sorting or statistics gathering, just combining all outputs into one big partition. Use a mixer to get
+      // everything into one file. Note: even if there is only one output channel, we'll run it through the mixer
       // anyway, to ensure the data gets written to a file. (httpGetChannelData requires files.)
 
       push(
           resultAndChannels -> {
             final OutputChannel outputChannel = outputChannelFactory.openChannel(0);
 
-            final FrameChannelMuxer muxer =
-                new FrameChannelMuxer(
+            final FrameChannelMixer mixer =
+                new FrameChannelMixer(
                     resultAndChannels.getOutputChannels().getAllReadableChannels(),
                     outputChannel.getWritableChannel()
                 );
 
             return new ResultAndChannels<>(
-                exec.runFully(muxer, cancellationId),
+                exec.runFully(mixer, cancellationId),
                 OutputChannels.wrap(Collections.singletonList(outputChannel.readOnly()))
             );
           }

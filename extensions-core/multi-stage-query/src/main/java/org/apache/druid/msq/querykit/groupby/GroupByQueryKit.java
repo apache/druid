@@ -28,9 +28,9 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.input.stage.StageInputSpec;
+import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
-import org.apache.druid.msq.kernel.ShuffleSpecs;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.DataSourcePlan;
 import org.apache.druid.msq.querykit.QueryKit;
@@ -164,7 +164,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
                          .inputs(new StageInputSpec(firstStageNumber + 1))
                          .signature(resultSignature)
                          .maxWorkerCount(1)
-                         .shuffleSpec(ShuffleSpecs.singlePartition())
+                         .shuffleSpec(MixShuffleSpec.instance())
                          .processorFactory(
                              new OffsetLimitFrameProcessorFactory(
                                  limitSpec.getOffset(),

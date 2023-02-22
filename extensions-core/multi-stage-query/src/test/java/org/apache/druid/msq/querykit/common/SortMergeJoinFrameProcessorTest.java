@@ -792,6 +792,99 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testRightJoinCountryNumber() throws Exception
+  {
+    final ReadableInput factChannel = buildFactInput(
+        ImmutableList.of(
+            new KeyColumn("countryNumber", KeyOrder.ASCENDING),
+            new KeyColumn("page", KeyOrder.ASCENDING)
+        )
+    );
+
+    final ReadableInput countriesChannel =
+        buildCountriesInput(ImmutableList.of(new KeyColumn("countryNumber", KeyOrder.ASCENDING)));
+
+    final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
+
+    final RowSignature joinSignature =
+        RowSignature.builder()
+                    .add("j0.page", ColumnType.STRING)
+                    .add("j0.countryIsoCode", ColumnType.STRING)
+                    .add("countryIsoCode", ColumnType.STRING)
+                    .add("countryName", ColumnType.STRING)
+                    .add("countryNumber", ColumnType.LONG)
+                    .build();
+
+    final SortMergeJoinFrameProcessor processor = new SortMergeJoinFrameProcessor(
+        countriesChannel,
+        factChannel,
+        outputChannel.writable(),
+        makeFrameWriterFactory(joinSignature),
+        "j0.",
+        ImmutableList.of(
+            ImmutableList.of(new KeyColumn("countryNumber", KeyOrder.ASCENDING)),
+            ImmutableList.of(new KeyColumn("countryNumber", KeyOrder.ASCENDING))
+        ),
+        JoinType.RIGHT
+    );
+
+    final String countryCodeForNull;
+    final String countryNameForNull;
+    final Long countryNumberForNull;
+
+    if (NullHandling.sqlCompatible()) {
+      countryCodeForNull = null;
+      countryNameForNull = null;
+      countryNumberForNull = null;
+    } else {
+      // In default-value mode, null country number from the left-hand table converts to zero, which matches Australia.
+      countryCodeForNull = "AU";
+      countryNameForNull = "Australia";
+      countryNumberForNull = 0L;
+    }
+
+    final List<List<Object>> expectedRows = Lists.newArrayList(
+        Arrays.asList("Agama mossambica", null, countryCodeForNull, countryNameForNull, countryNumberForNull),
+        Arrays.asList("Apamea abruzzorum", null, countryCodeForNull, countryNameForNull, countryNumberForNull),
+        Arrays.asList("Atractus flammigerus", null, countryCodeForNull, countryNameForNull, countryNumberForNull),
+        Arrays.asList("Rallicula", null, countryCodeForNull, countryNameForNull, countryNumberForNull),
+        Arrays.asList("Talk:Oswald Tilghman", null, countryCodeForNull, countryNameForNull, countryNumberForNull),
+        Arrays.asList("Peremptory norm", "AU", "AU", "Australia", 0L),
+        Arrays.asList("Didier Leclair", "CA", "CA", "Canada", 1L),
+        Arrays.asList("Les Argonautes", "CA", "CA", "Canada", 1L),
+        Arrays.asList("Sarah Michelle Gellar", "CA", "CA", "Canada", 1L),
+        Arrays.asList("Golpe de Estado en Chile de 1973", "CL", "CL", "Chile", 2L),
+        Arrays.asList("Diskussion:Sebastian Schulz", "DE", "DE", "Germany", 3L),
+        Arrays.asList("Gabinete Ministerial de Rafael Correa", "EC", "EC", "Ecuador", 4L),
+        Arrays.asList("Saison 9 de Secret Story", "FR", "FR", "France", 5L),
+        Arrays.asList("Glasgow", "GB", "GB", "United Kingdom", 6L),
+        Arrays.asList("Giusy Ferreri discography", "IT", "IT", "Italy", 7L),
+        Arrays.asList("Roma-Bangkok", "IT", "IT", "Italy", 7L),
+        Arrays.asList("青野武", "JP", "JP", "Japan", 8L),
+        Arrays.asList("유희왕 GX", "KR", "KR", "Republic of Korea", 9L),
+        Arrays.asList("Mathis Bolly", "MX", "MX", "Mexico", 10L),
+        Arrays.asList("Алиса в Зазеркалье", "NO", "NO", "Norway", 11L),
+        Arrays.asList("Wendigo", "SV", "SV", "El Salvador", 12L),
+        Arrays.asList("Carlo Curti", "US", "US", "United States", 13L),
+        Arrays.asList("DirecTV", "US", "US", "United States", 13L),
+        Arrays.asList("Old Anatolian Turkish", "US", "US", "United States", 13L),
+        Arrays.asList("Otjiwarongo Airport", "US", "US", "United States", 13L),
+        Arrays.asList("President of India", "US", "US", "United States", 13L),
+        Arrays.asList("Cream Soda", "SU", "SU", "States United", 15L),
+        Arrays.asList("Orange Soda", "MatchNothing", null, null, null),
+        Arrays.asList("History of Fourems", "MMMM", "MMMM", "Fourems", 205L)
+    );
+
+    if (!NullHandling.sqlCompatible()) {
+      // Sorting order is different in default-value mode, since 0 and null collapse.
+      // "Peremptory norm" moves before "Rallicula".
+      expectedRows.add(3, expectedRows.remove(5));
+    }
+
+    assertResult(processor, outputChannel.readable(), joinSignature, expectedRows);
+  }
+
+  @Test
   public void testInnerJoinCountryIsoCode() throws Exception
   {
     final ReadableInput factChannel = buildFactInput(

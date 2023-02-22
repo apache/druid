@@ -26,10 +26,10 @@ import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.input.stage.StageInputSpec;
+import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.ShuffleSpec;
-import org.apache.druid.msq.kernel.ShuffleSpecs;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.DataSourcePlan;
 import org.apache.druid.msq.querykit.QueryKit;
@@ -114,7 +114,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
     //  1. There is no cluster by
     //  2. There is an offset which means everything gets funneled into a single partition hence we use MaxCountShuffleSpec
     if (queryToRun.getOrderBys().isEmpty() && hasLimitOrOffset) {
-      shuffleSpec = ShuffleSpecs.singlePartition();
+      shuffleSpec = MixShuffleSpec.instance();
       signatureToUse = scanSignature;
     } else {
       final RowSignature.Builder signatureBuilder = RowSignature.builder().addAll(scanSignature);
@@ -161,7 +161,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
                          .inputs(new StageInputSpec(firstStageNumber))
                          .signature(signatureToUse)
                          .maxWorkerCount(1)
-                         .shuffleSpec(ShuffleSpecs.singlePartition())
+                         .shuffleSpec(MixShuffleSpec.instance())
                          .processorFactory(
                              new OffsetLimitFrameProcessorFactory(
                                  queryToRun.getScanRowsOffset(),

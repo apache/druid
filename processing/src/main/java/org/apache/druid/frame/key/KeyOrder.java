@@ -25,17 +25,25 @@ package org.apache.druid.frame.key;
 public enum KeyOrder
 {
   /**
-   * Not ordered. Possible if the key is used only for non-sorting purposes, such as hashing.
+   * Not ordered.
+   *
+   * Possible if the key is used only for non-sorting purposes, such as hashing without sorting.
    */
   NONE(false),
 
   /**
    * Ordered ascending.
+   *
+   * Note that sortable key order does not necessarily mean that we are using range-based partitioning. We may be
+   * using hash-based partitioning along with each partition internally being sorted by a key.
    */
   ASCENDING(true),
 
   /**
    * Ordered descending.
+   *
+   * Note that sortable key order does not necessarily mean that we are using range-based partitioning. We may be
+   * using hash-based partitioning along with each partition internally being sorted by a key.
    */
   DESCENDING(true);
 

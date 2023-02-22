@@ -27,18 +27,21 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 
 import javax.annotation.Nullable;
 
-public class MuxShuffleSpec implements ShuffleSpec
+/**
+ * Shuffle spec that generates a single, unsorted partition.
+ */
+public class MixShuffleSpec implements ShuffleSpec
 {
-  public static final String TYPE = "mux";
+  public static final String TYPE = "mix";
 
-  private static final MuxShuffleSpec INSTANCE = new MuxShuffleSpec();
+  private static final MixShuffleSpec INSTANCE = new MixShuffleSpec();
 
-  private MuxShuffleSpec()
+  private MixShuffleSpec()
   {
   }
 
   @JsonCreator
-  public static MuxShuffleSpec instance()
+  public static MixShuffleSpec instance()
   {
     return INSTANCE;
   }
@@ -46,7 +49,7 @@ public class MuxShuffleSpec implements ShuffleSpec
   @Override
   public ShuffleKind kind()
   {
-    return ShuffleKind.MUX;
+    return ShuffleKind.MIX;
   }
 
   @Override

@@ -30,6 +30,7 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
@@ -39,9 +40,9 @@ import org.apache.druid.msq.input.NilInputSource;
 import org.apache.druid.msq.input.external.ExternalInputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.input.table.TableInputSpec;
+import org.apache.druid.msq.kernel.HashShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
-import org.apache.druid.msq.kernel.ShuffleSpecs;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
@@ -431,7 +432,7 @@ public class DataSourcePlan
     );
 
     final List<KeyColumn> leftPartitionKey = partitionKeys.get(0);
-    leftBuilder.shuffleSpec(ShuffleSpecs.hashPartition(leftPartitionKey, maxWorkerCount));
+    leftBuilder.shuffleSpec(new HashShuffleSpec(new ClusterBy(leftPartitionKey, 0), maxWorkerCount));
     leftBuilder.signature(QueryKitUtils.sortableSignature(leftBuilder.getSignature(), leftPartitionKey));
 
     // Build up the right stage.
@@ -440,7 +441,7 @@ public class DataSourcePlan
     );
 
     final List<KeyColumn> rightPartitionKey = partitionKeys.get(1);
-    rightBuilder.shuffleSpec(ShuffleSpecs.hashPartition(rightPartitionKey, maxWorkerCount));
+    rightBuilder.shuffleSpec(new HashShuffleSpec(new ClusterBy(rightPartitionKey, 0), maxWorkerCount));
     rightBuilder.signature(QueryKitUtils.sortableSignature(rightBuilder.getSignature(), rightPartitionKey));
 
     // Compute join signature.

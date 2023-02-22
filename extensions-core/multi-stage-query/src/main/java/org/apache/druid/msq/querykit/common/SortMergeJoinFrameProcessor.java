@@ -69,7 +69,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Processor for a sort-merge join of two inputs.
@@ -109,20 +108,9 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
   private static final int RIGHT = 1;
 
   /**
-   * Two sides of the join. Must be channels; i.e. {@link ReadableInput#hasChannel()} must be true. Two-element array:
-   * {@link #LEFT} and {@link #RIGHT}.
-   */
-  private final List<ReadableInput> inputs;
-
-  /**
-   * Channels from {@link #inputs}. Two-element array: {@link #LEFT} and {@link #RIGHT}.
+   * Input channels for each side of the join. Two-element array: {@link #LEFT} and {@link #RIGHT}.
    */
   private final List<ReadableFrameChannel> inputChannels;
-
-  /**
-   * Names of the key columns on each side of the join, unprefixed. Two-element array: {@link #LEFT} and {@link #RIGHT}.
-   */
-  private final List<List<KeyColumn>> keyColumns;
 
   /**
    * Trackers for each side of the join. Two-element array: {@link #LEFT} and {@link #RIGHT}.
@@ -152,14 +140,15 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
       JoinType joinType
   )
   {
-    this.inputs = ImmutableList.of(left, right);
-    this.inputChannels = inputs.stream().map(ReadableInput::getChannel).collect(Collectors.toList());
-    this.keyColumns = keyColumns;
+    this.inputChannels = ImmutableList.of(left.getChannel(), right.getChannel());
     this.outputChannel = outputChannel;
     this.frameWriterFactory = frameWriterFactory;
     this.rightPrefix = rightPrefix;
     this.joinType = joinType;
-    this.trackers = ImmutableList.of(new Tracker(LEFT), new Tracker(RIGHT));
+    this.trackers = ImmutableList.of(
+        new Tracker(left, keyColumns.get(LEFT)),
+        new Tracker(right, keyColumns.get(RIGHT))
+    );
   }
 
   @Override
@@ -188,9 +177,11 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
     // Initialize new output frame, if needed.
     startNewFrameIfNeeded();
 
-    while (!trackers.get(LEFT).needsMoreData()
-           && !trackers.get(RIGHT).needsMoreData()
-           && !(trackers.get(LEFT).isAtEnd() && trackers.get(RIGHT).isAtEnd())) {
+    while (!allTrackersAreAtEnd()
+           && !trackers.get(LEFT).needsMoreData()
+           && !trackers.get(RIGHT).needsMoreData()) {
+      // Algorithm can proceed: not all trackers are at the end of their streams, and no tracker needs more data to
+      // read the current cursor or move it forward.
       if (nextIterationRunnable != null) {
         final Runnable tmp = nextIterationRunnable;
         nextIterationRunnable = null;
@@ -198,14 +189,19 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
       }
 
       final int markCmp = compareMarks();
-      final boolean match = markCmp == 0 && !trackers.get(LEFT).hasPartiallyNullMark();
 
-      // Fetch new frames until the algorithm can proceed:
-      //   1) If marked keys are equal on both sides, at least one side has a complete set of rows for the marked key.
-      //   2) Otherwise, each side has at least one readable row, or is completely done. (Checked by "while" condition.)
+      // Two rows match if the keys compare equal _and_ neither key has a null component. (x JOIN y ON x.a = y.a does
+      // not match rows where "x.a" is null.)
+      final boolean match = markCmp == 0 && trackers.get(LEFT).hasCompletelyNonNullMark();
+
+      // If marked keys are equal on both sides ("match"), at least one side must have a complete set of rows
+      // for the marked key.
       if (match && trackerWithCompleteSetForCurrentKey < 0) {
         for (int i = 0; i < inputChannels.size(); i++) {
           final Tracker tracker = trackers.get(i);
+
+          // Fetch up to one frame from each tracker, to check if that tracker has a complete set.
+          // Can't fetch more than one frame, because channels are only guaranteed to have one frame per run.
           if (tracker.hasCompleteSetForMark() || (pushNextFrame(i) && tracker.hasCompleteSetForMark())) {
             trackerWithCompleteSetForCurrentKey = i;
             break;
@@ -213,7 +209,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
         }
 
         if (trackerWithCompleteSetForCurrentKey < 0) {
-          // Algorithm cannot proceed; fetch more frames.
+          // Algorithm cannot proceed; fetch more frames on the next run.
           return nextAwait();
         }
       }
@@ -287,8 +283,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
       }
     }
 
-    if (trackers.get(LEFT).isAtEnd() && trackers.get(RIGHT).isAtEnd()) {
-      // Both channels completely done.
+    if (allTrackersAreAtEnd()) {
       flushCurrentFrame();
       return ReturnOrAwait.returnObject(0L);
     } else {
@@ -341,6 +336,20 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
     }
 
     return ReturnOrAwait.awaitAll(awaitSet);
+  }
+
+  /**
+   * Whether all trackers return true from {@link Tracker#isAtEnd()}.
+   */
+  private boolean allTrackersAreAtEnd()
+  {
+    for (Tracker tracker : trackers) {
+      if (!tracker.isAtEnd()) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   /**
@@ -432,10 +441,15 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
    * markFrame and markRow are set when we encounter a new key, which enables rewinding and re-reading data with the
    * same key.
    */
-  private class Tracker
+  private static class Tracker
   {
+    /**
+     * Frame holders for the current frame, as well as immediately prior frames that share the same marked key.
+     * Prior frames are cleared on each call to {@link #markCurrent()}.
+     */
     private final List<FrameHolder> holders = new ArrayList<>();
-    private final int channelNumber;
+    private final ReadableInput input;
+    private final List<KeyColumn> keyColumns;
 
     // markFrame and markRow are the first frame and row with the current key.
     private int markFrame = -1;
@@ -447,9 +461,10 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
     // done indicates that no more data is available in the channel.
     private boolean done;
 
-    public Tracker(int channelNumber)
+    public Tracker(ReadableInput input, List<KeyColumn> keyColumns)
     {
-      this.channelNumber = channelNumber;
+      this.input = input;
+      this.keyColumns = keyColumns;
     }
 
     /**
@@ -472,13 +487,13 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
       }
 
       final boolean atEndOfPushedData = isAtEndOfPushedData();
-      final FrameReader frameReader = inputs.get(channelNumber).getChannelFrameReader();
+      final FrameReader frameReader = input.getChannelFrameReader();
       final FrameCursor cursor = FrameProcessors.makeCursor(frame, frameReader);
       final FrameComparisonWidget comparisonWidget =
-          frameReader.makeComparisonWidget(frame, keyColumns.get(channelNumber));
+          frameReader.makeComparisonWidget(frame, keyColumns);
 
       final RowSignature.Builder keySignatureBuilder = RowSignature.builder();
-      for (final KeyColumn keyColumn : keyColumns.get(channelNumber)) {
+      for (final KeyColumn keyColumn : keyColumns) {
         keySignatureBuilder.add(
             keyColumn.columnName(),
             frameReader.signature().getColumnType(keyColumn.columnName()).orElse(null)
@@ -558,11 +573,11 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
     }
 
     /**
-     * Whether this tracker has a marked row that is partially null.
+     * Whether this tracker has a marked row that is completely nonnull.
      */
-    public boolean hasPartiallyNullMark()
+    public boolean hasCompletelyNonNullMark()
     {
-      return hasMark() && holders.get(markFrame).comparisonWidget.isPartiallyNullKey(markRow);
+      return hasMark() && !holders.get(markFrame).comparisonWidget.isPartiallyNullKey(markRow);
     }
 
     /**
@@ -603,7 +618,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
       if (isAtEndOfPushedData()) {
         clear();
       } else {
-        // Remove unnecessary holders.
+        // Remove unnecessary holders, now that the mark has moved on.
         while (currentFrame > 0) {
           if (currentFrame == holders.size() - 1) {
             final FrameHolder lastHolder = holders.get(currentFrame);
@@ -696,16 +711,22 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
      */
     private boolean isSameKeyAsMark(final FrameHolder holder, final int row)
     {
-      // Mark row must exist.
-      assert markFrame >= 0;
-
-      // Row must exist.
-      assert row >= 0 && row < holder.frame.numRows();
+      if (markFrame < 0) {
+        throw new ISE("No marked frame");
+      }
+      if (row < 0 || row >= holder.frame.numRows()) {
+        throw new ISE("Row [%d] out of bounds", row);
+      }
 
       final FrameHolder markHolder = holders.get(markFrame);
       final int cmp = markHolder.comparisonWidget.compare(markRow, holder.comparisonWidget, row);
 
-      assert cmp <= 0;
+      if (cmp > 0) {
+        // The provided row is at, or after, the marked row.
+        // Therefore, cmp > 0 may indicate that input was provided out of order.
+        throw new ISE("Row compares higher than mark; out-of-order input?");
+      }
+
       return cmp == 0;
     }
   }

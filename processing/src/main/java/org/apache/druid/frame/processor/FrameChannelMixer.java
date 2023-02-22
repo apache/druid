@@ -35,7 +35,7 @@ import java.util.List;
  *
  * For sorted output, use {@link FrameChannelMerger} instead.
  */
-public class FrameChannelMuxer implements FrameProcessor<Long>
+public class FrameChannelMixer implements FrameProcessor<Long>
 {
   private final List<ReadableFrameChannel> inputChannels;
   private final WritableFrameChannel outputChannel;
@@ -43,7 +43,7 @@ public class FrameChannelMuxer implements FrameProcessor<Long>
   private final IntSet awaitSet;
   private long rowsRead = 0L;
 
-  public FrameChannelMuxer(
+  public FrameChannelMixer(
       final List<ReadableFrameChannel> inputChannels,
       final WritableFrameChannel outputChannel
   )

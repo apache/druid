@@ -24,7 +24,7 @@ public enum ShuffleKind
   /**
    * Put all data in a single partition, with no sorting and no statistics gathering.
    */
-  MUX(false, false),
+  MIX(false, false),
 
   /**
    * Partition using hash codes, with no sorting.
