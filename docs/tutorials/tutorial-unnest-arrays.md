@@ -165,7 +165,7 @@ SELECT * FROM UNNEST(ARRAY[1,2,3])
 If you unnest that same inline array  while using a table as the datasource, Druid treats this as a JOIN between a left datasource and a constant datasource. For example:
 
 ```sql
-SELECT longs FROM nested_data, UNNEST(ARRAY[1,2,3]) AS example_table (longs)
+SELECT longs FROM nested_data, UNNEST(ARRAY[1,2,3]) AS example_table(longs)
 ```
 
 ### Unnest a single column in a table
@@ -173,7 +173,7 @@ SELECT longs FROM nested_data, UNNEST(ARRAY[1,2,3]) AS example_table (longs)
 The following query returns a column called `d3` from the table `nested_data`. `d3` contains the unnested values from the source column `dim3`:
 
 ```sql
-SELECT d3 FROM "nested_data", UNNEST(MV_TO_ARRAY(dim3)) AS example_table (d3) 
+SELECT d3 FROM "nested_data", UNNEST(MV_TO_ARRAY(dim3)) AS example_table(d3) 
 ```
 
 Notice the MV_TO_ARRAY helper function, which converts the multi-value records in `dim3` to arrays. It is required since `dim3` is a multi-value string dimension. 
@@ -185,7 +185,7 @@ If the column you are unnesting is not a string dimension, then you do not need 
 You can unnest into a virtual column (multiple columns treated as one). The following query returns the two source columns and a third virtual column containing the unnested data:
 
 ```sql
-SELECT dim4,dim5,d45 FROM nested_data, UNNEST(ARRAY[dim4,dim5]) AS example_table (d45)
+SELECT dim4,dim5,d45 FROM nested_data, UNNEST(ARRAY[dim4,dim5]) AS example_table(d45)
 ```
 
 This virtual column is the product of the two source columns. Notice how the total number of rows has grown. The table `nested_data` had only seven rows originally.
@@ -193,7 +193,7 @@ This virtual column is the product of the two source columns. Notice how the tot
 Another way to unnest a virtual column is to concatenate them with ARRAY_CONCAT:
 
 ```sql
-SELECT d45 FROM nested_data, UNNEST(ARRAY_CONCAT(dim4,dim5)) AS example_table (d45)
+SELECT d45 FROM nested_data, UNNEST(ARRAY_CONCAT(dim4,dim5)) AS example_table(d45)
 ```
 
 Decide which method to use based on what your goals are. 
@@ -203,7 +203,7 @@ Decide which method to use based on what your goals are.
 The following query uses only three columns from the `nested_data` table as the datasource. From that subset, it unnests the column `dim3` into `d3` and returns `d3`.
 
 ```sql
-SELECT d3 FROM (select dim1, dim2, dim3 from "nested_data"), UNNEST(MV_TO_ARRAY(dim3)) AS example_table (d3)
+SELECT d3 FROM (select dim1, dim2, dim3 from "nested_data"), UNNEST(MV_TO_ARRAY(dim3)) AS example_table(d3)
 ```
 
 ### Unnest with a filter
@@ -215,7 +215,7 @@ You can specify which rows to unnest by including a filter in your query. The fo
 * Returns the records for  the unnested `d3` that have a `dim2` record that matches the filter
 
 ```sql
-SELECT d3 FROM (SELCT * FROM nested_data WHERE dim2 IN ('abc')), UNNEST(MV_TO_ARRAY(dim3)) AS example_table (d3)
+SELECT d3 FROM (SELECT * FROM nested_data WHERE dim2 IN ('abc')), UNNEST(MV_TO_ARRAY(dim3)) AS example_table(d3)
 ```
 
 ### Unnest and then GROUP BY
@@ -223,7 +223,7 @@ SELECT d3 FROM (SELCT * FROM nested_data WHERE dim2 IN ('abc')), UNNEST(MV_TO_AR
 The following query unnests `dim3` and then performs a GROUP BY on the output `d3`.
 
 ```sql
-SELECT d3 FROM nested_data, UNNEST(MV_TO_ARRAY(dim3)) AS example_table (d3) GROUP BY d3 
+SELECT d3 FROM nested_data, UNNEST(MV_TO_ARRAY(dim3)) AS example_table(d3) GROUP BY d3 
 ```
 
 You can further transform your results by  including clauses like `ORDER BY d3 DESC` or LIMIT.

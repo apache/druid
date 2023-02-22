@@ -96,7 +96,7 @@ SELECT column_alias_name FROM datasource, UNNEST(source_expression) AS table_ali
 * The `datasource` for UNNEST can be any Druid datasource, such as the following:
   * A table, such as  `FROM a_table`.
   * A subset of a table based on a query, a filter, or a JOIN. For example, `FROM (SELECT columnA,columnB,columnC from a_table)`.
-* The `source_expression` for the UNNEST function must be an array and can come from any expression. If the dimension you are unnesting is a multi-value dimension, you have to specify `MV_TO_ARRAY(dimension)` to convert it to an implicit ARRAY type. You can also specify any expression that has an SQL array datatype. For example, you cancall UNNEST on the following:
+* The `source_expression` for the UNNEST function must be an array and can come from any expression. If the dimension you are unnesting is a multi-value dimension, you have to specify `MV_TO_ARRAY(dimension)` to convert it to an implicit ARRAY type. You can also specify any expression that has an SQL array datatype. For example, you can call UNNEST on the following:
   * `ARRAY[dim1,dim2]` if you want to make an array out of two dimensions. 
   * `ARRAY_CONCAT(dim1,dim2)` if you have to concatenate two multi-value dimensions. 
 * The `AS table_alias_name(column_alias_name)` clause  is not required but is highly recommended. Use it to specify the output, which can be an existing column or a new one. Replace `table_alias_name` and `column_alias_name` with a table and column name you want to alias the unnested results to. If you don't provide this, Druid uses a nondescriptive name, such as `EXPR$0`.
