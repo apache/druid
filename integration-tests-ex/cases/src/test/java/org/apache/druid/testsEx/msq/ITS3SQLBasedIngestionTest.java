@@ -54,7 +54,7 @@ public class ITS3SQLBasedIngestionTest extends AbstractS3InputSourceParallelInde
   @Test
   @Parameters(method = "resources")
   @TestCaseName("Test_{index} ({0})")
-  public void testSQLBasedBatchIngestion(Pair<String, List> s3InputSource)
+  public void testSQLBasedBatchIngestion(Pair<String, List<?>> s3InputSource)
   {
     doMSQTest(s3InputSource, CLOUD_INGEST_SQL, INDEX_QUERIES_FILE, "s3");
   }

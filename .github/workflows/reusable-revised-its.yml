@@ -37,8 +37,14 @@ on:
         description: 'IT test Category'
         required: true
         type: string
+      mysql_driver:
+        description: 'MySQL driver to use'
+        required: false
+        type: string
+        default: com.mysql.jdbc.Driver
 
 env:
+  MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }} # Used by tests to connect to metadata store directly.
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
 
 jobs:
@@ -84,7 +90,7 @@ jobs:
           ./it.sh ci
 
       - name: Create docker image
-        if: steps.docker-restore.outputs.cache-hit != 'true'
+        if: steps.docker-restore.outputs.cache-hit != 'true' || steps.maven-restore.outputs.cache-hit != 'true'
         env:
           docker-restore: ${{ toJson(steps.docker-restore.outputs) }}
         run: |

@@ -39,7 +39,7 @@ env:
   MVN: mvn -B
   MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
   MAVEN_SKIP_TESTS: -P skip-tests
-  MAVEN_OPTS: -Xmx3000m
+  MAVEN_OPTS: -Xmx3500m
   FORCE_COLOR: 2
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
 
@@ -75,8 +75,13 @@ jobs:
         run: |
           export base_ref=${{ github.base_ref }}
           echo "GITHUB_BASE_REF=${base_ref}" >> $GITHUB_ENV
-          export druid_use_default_value_for_null=${{ inputs.sql_compatibility }}
-          echo "DRUID_USE_DEFAULT_VALUE_FOR_NULL=${druid_use_default_value_for_null}" >> $GITHUB_ENV
+          # If sql_compatibilty is true, we want to set default_value_for_null
+          # which enables compatibility mode
+          if (${{ inputs.sql_compatibility }} == true); then
+            echo "DRUID_USE_DEFAULT_VALUE_FOR_NULL=false" >> $GITHUB_ENV
+          else
+            echo "DRUID_USE_DEFAULT_VALUE_FOR_NULL=true" >> $GITHUB_ENV
+          fi
 
       - name: fetch base branch for test coverage
         if: ${{ github.base_ref != '' }}

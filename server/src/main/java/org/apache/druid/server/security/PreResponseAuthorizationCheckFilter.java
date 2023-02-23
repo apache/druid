@@ -22,6 +22,7 @@ package org.apache.druid.server.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.AlertBuilder;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.DruidNode;
@@ -66,7 +67,6 @@ public class PreResponseAuthorizationCheckFilter implements Filter
   @Override
   public void init(FilterConfig filterConfig)
   {
-
   }
 
   @Override
@@ -90,7 +90,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
       // (e.g. OverlordServletProxy), so this is not implemented for now.
       handleAuthorizationCheckError(
           StringUtils.format(
-              "Request did not have an authorization check performed, original response status[%s].",
+              "Request did not have an authorization check performed, original response status [%s].",
               response.getStatus()
           ),
           request,
@@ -110,7 +110,6 @@ public class PreResponseAuthorizationCheckFilter implements Filter
   @Override
   public void destroy()
   {
-
   }
 
   private void handleUnauthenticatedRequest(
@@ -148,16 +147,24 @@ public class PreResponseAuthorizationCheckFilter implements Filter
       HttpServletResponse servletResponse
   )
   {
-    final String queryId = servletResponse.getHeader(QueryResource.QUERY_ID_RESPONSE_HEADER);
-
     // Send out an alert so there's a centralized collection point for seeing errors of this nature
-    log.makeAlert(errorMsg)
-       .addData("uri", servletRequest.getRequestURI())
-       .addData("method", servletRequest.getMethod())
-       .addData("remoteAddr", servletRequest.getRemoteAddr())
-       .addData("remoteHost", servletRequest.getRemoteHost())
-       .addData("queryId", queryId)
-       .emit();
+    AlertBuilder builder = log.makeAlert(errorMsg)
+        .addData("uri", servletRequest.getRequestURI())
+        .addData("method", servletRequest.getMethod())
+        .addData("remoteAddr", servletRequest.getRemoteAddr());
+
+    // Omit the host name if it just repeats the IP address.
+    String remoteHost = servletRequest.getRemoteHost();
+    if (remoteHost != null && !remoteHost.equals(servletRequest.getRemoteAddr())) {
+      builder.addData("remoteHost", remoteHost);
+    }
+
+    // Omit the query ID if there is no ID.
+    final String queryId = servletResponse.getHeader(QueryResource.QUERY_ID_RESPONSE_HEADER);
+    if (queryId != null) {
+      builder.addData("queryId", queryId);
+    }
+    builder.emit();
 
     if (!servletResponse.isCommitted()) {
       try {
