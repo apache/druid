@@ -22,7 +22,7 @@ title: "Quickstart (local)"
   ~ under the License.
   -->
 
-This quickstart helps you install Apache Druid and introduces you to Druid ingestion and query features. For this tutorial, you need a machine with at least 16 GiB of RAM.
+This quickstart helps you install Apache Druid and introduces you to Druid ingestion and query features. For this tutorial, you need a machine with at least 6 GiB of RAM.
 
 In this quickstart, you'll:
 - install Druid
@@ -34,7 +34,7 @@ Druid supports a variety of ingestion options. Once you're done with this tutori
 
 ## Prerequisites
 
-You can follow these steps on a relatively modest machine, such as a workstation or virtual server with 16 GiB of RAM.
+You can follow these steps on a relatively modest machine, such as a workstation or virtual server with 6 GiB of RAM.
 
 Druid comes equipped with launch scripts that can be used to start all processes on a single server. Here, we will use [`auto`](../operations/single-server.md#druid-auto-start), which automatically sets various runtime properties based on available processors and memory.
 
