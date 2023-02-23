@@ -33,14 +33,14 @@ import java.util.function.Function;
 
 @RunWith(DruidTestRunner.class)
 @Category(BatchIndex.class)
-public class ITCombiningFirehoseFactoryIndexTest extends AbstractITBatchIndexTest
+public class ITCombiningInputSourceIndexTest extends AbstractITBatchIndexTest
 {
   private static final String INDEX_TASK = "/indexer/wikipedia_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
   private static final String INDEX_DATASOURCE = "wikipedia_index_test";
 
-  private static final String COMBINING_INDEX_TASK = "/indexer/wikipedia_combining_firehose_index_task.json";
-  private static final String COMBINING_QUERIES_RESOURCE = "/indexer/wikipedia_combining_firehose_index_queries.json";
+  private static final String COMBINING_INDEX_TASK = "/indexer/wikipedia_combining_input_source_index_task.json";
+  private static final String COMBINING_QUERIES_RESOURCE = "/indexer/wikipedia_combining_input_source_index_queries.json";
   private static final String COMBINING_INDEX_DATASOURCE = "wikipedia_comb_index_test";
 
   @Test
@@ -50,7 +50,7 @@ public class ITCombiningFirehoseFactoryIndexTest extends AbstractITBatchIndexTes
         final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
         final Closeable ignored2 = unloader(COMBINING_INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
     ) {
-      final Function<String, String> combiningFirehoseSpecTransform = spec -> {
+      final Function<String, String> combiningInputSourceSpecTransform = spec -> {
         try {
           return StringUtils.replace(
               spec,
@@ -88,7 +88,7 @@ public class ITCombiningFirehoseFactoryIndexTest extends AbstractITBatchIndexTes
       doIndexTest(
           COMBINING_INDEX_DATASOURCE,
           COMBINING_INDEX_TASK,
-          combiningFirehoseSpecTransform,
+          combiningInputSourceSpecTransform,
           COMBINING_QUERIES_RESOURCE,
           false,
           true,

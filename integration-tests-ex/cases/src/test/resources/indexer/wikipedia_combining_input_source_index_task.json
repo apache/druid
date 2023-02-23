@@ -3,6 +3,25 @@
   "spec": {
     "dataSchema": {
       "dataSource": "%%DATASOURCE%%",
+      "timestampSpec": {
+        "column": "timestamp"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          "page",
+          {"type": "string", "name": "language", "createBitmapIndex": false},
+          "user",
+          "unpatrolled",
+          "newPage",
+          "robot",
+          "anonymous",
+          "namespace",
+          "continent",
+          "country",
+          "region",
+          "city"
+        ]
+      },
       "metricsSpec": [
         {
           "type": "count",
@@ -43,35 +62,11 @@
         "segmentGranularity": "DAY",
         "queryGranularity": "second",
         "intervals" : [ "2013-08-31/2013-09-02" ]
-      },
-      "parser": {
-        "parseSpec": {
-          "format" : "json",
-          "timestampSpec": {
-            "column": "timestamp"
-          },
-          "dimensionsSpec": {
-            "dimensions": [
-              "page",
-              {"type": "string", "name": "language", "createBitmapIndex": false},
-              "user",
-              "unpatrolled",
-              "newPage",
-              "robot",
-              "anonymous",
-              "namespace",
-              "continent",
-              "country",
-              "region",
-              "city"
-            ]
-          }
-        }
       }
     },
     "ioConfig": {
       "type": "index",
-      "firehose": {
+      "inputSource": {
         "type": "combining",
         "delegates": [
           {
@@ -80,11 +75,14 @@
             "filter": "wikipedia_combining_index_data.json"
           },
           {
-            "type": "ingestSegment",
+            "type": "druid",
             "dataSource": "%%COMBINING_DATASOURCE%%",
             "interval": "2013-08-31/2013-09-02"
           }
         ]
+      },
+      "inputFormat": {
+        "type": "json"
       }
     },
     "tuningConfig": {
