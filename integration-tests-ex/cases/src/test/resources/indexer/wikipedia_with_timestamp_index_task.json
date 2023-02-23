@@ -5,7 +5,7 @@
             "dataSource": "%%DATASOURCE%%",
             "timestampSpec": {
                 "column": "timestamp",
-                "format": "auto" //test
+                "format": "auto"
             },
             "dimensionsSpec": {
                 "dimensions": [
@@ -76,7 +76,7 @@
             "inputFormat": {
                 "type": "json"
             },
-            "appendToExisting": false // test
+            "appendToExisting": false
         },
         "tuningConfig": {
             "type": "index",

@@ -299,6 +299,8 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
         () -> {
           int metadataSegmentCount = coordinator.getSegments(fullDatasourceName).size();
           LOG.info("Current metadata segment count: %d, expected: %d", metadataSegmentCount, numExpectedSegments);
+          LOG.info("Segments metadata for datasource %s - %s",
+                   fullDatasourceName, coordinator.getFullSegmentsMetadata(fullDatasourceName));
           return metadataSegmentCount == numExpectedSegments;
         },
         "Segment count check"

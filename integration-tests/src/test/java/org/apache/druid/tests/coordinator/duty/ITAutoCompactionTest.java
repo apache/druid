@@ -1523,10 +1523,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
   private void loadData(String indexTask, Map<String, Object> specs) throws Exception
   {
-    LOG.info("Number of segments present before loading data  for datasource %s - %s",
-             fullDatasourceName, coordinator.getSegments(fullDatasourceName));
-    LOG.info("Old segments metadata for datasource %s - %s",
-             fullDatasourceName, coordinator.getFullSegmentsMetadata(fullDatasourceName));
     String taskSpec = getResourceAsString(indexTask);
     taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", fullDatasourceName);
     taskSpec = StringUtils.replace(

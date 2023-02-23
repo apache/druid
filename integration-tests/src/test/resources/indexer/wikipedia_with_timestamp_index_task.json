@@ -4,7 +4,8 @@
         "dataSchema": {
             "dataSource": "%%DATASOURCE%%",
             "timestampSpec": {
-                "column": "timestamp"
+                "column": "timestamp",
+                "format": "auto"
             },
             "dimensionsSpec": {
                 "dimensions": [
@@ -74,7 +75,8 @@
             },
             "inputFormat": {
                 "type" : "json"
-            }
+            },
+            "appendToExisting": false
         },
         "tuningConfig": {
             "type": "index",
