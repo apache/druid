@@ -153,9 +153,10 @@ Set the following properties:
 
 - `period`: a JSON object representing [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) periods. The period is from some time in the past to the present, or into the future if `includeFuture` is set to `true`.
 - `includeFuture`: a boolean flag to instruct Druid to match a segment if:
-<br />- the segment interval overlaps the rule interval, or
-<br />- the segment interval starts any time after the rule interval starts.
-<br />You can use this property to load segments with future start and end dates, where "future" is relative to the time when the Coordinator evaluates data against the rule. Defaults to `true`.
+  - the segment interval overlaps the rule interval, or
+  - the segment interval starts any time after the rule interval starts.
+
+  You can use this property to load segments with future start and end dates, where "future" is relative to the time when the Coordinator evaluates data against the rule. Defaults to `true`.
 - `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
 
 ### Interval load rule
