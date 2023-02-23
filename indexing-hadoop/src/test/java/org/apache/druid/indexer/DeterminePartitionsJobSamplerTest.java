@@ -36,7 +36,7 @@ public class DeterminePartitionsJobSamplerTest
         maxRowsPerSegment
     );
     Assert.assertEquals(100000, sampler.getSampledTargetPartitionSize());
-    Assert.assertEquals(500000, sampler.getSampledMaxSegmentSize());
+    Assert.assertEquals(500000, sampler.getSampledMaxRowsPerSegment());
   }
 
   @Test
@@ -51,6 +51,6 @@ public class DeterminePartitionsJobSamplerTest
         maxRowsPerSegment
     );
     Assert.assertEquals(targetPartitionSize, sampler.getSampledTargetPartitionSize());
-    Assert.assertEquals(maxRowsPerSegment, sampler.getSampledMaxSegmentSize());
+    Assert.assertEquals(maxRowsPerSegment, sampler.getSampledMaxRowsPerSegment());
   }
 }

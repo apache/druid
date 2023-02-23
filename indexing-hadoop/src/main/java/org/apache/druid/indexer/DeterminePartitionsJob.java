@@ -872,7 +872,7 @@ public class DeterminePartitionsJob implements Jobby
         // Make sure none of these shards are oversized
         boolean oversized = false;
         for (final DimPartition partition : dimPartitions.partitions) {
-          if (partition.rows > sampler.getSampledMaxSegmentSize()) {
+          if (partition.rows > sampler.getSampledMaxRowsPerSegment()) {
             log.info("Dimension[%s] has an oversized shard: %s", dimPartitions.dims, partition.shardSpec);
             oversized = true;
           }

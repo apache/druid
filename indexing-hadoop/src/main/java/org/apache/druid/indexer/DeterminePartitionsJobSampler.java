@@ -32,13 +32,13 @@ public class DeterminePartitionsJobSampler
 
   private final int sampledTargetPartitionSize;
 
-  private final int sampledMaxSegmentSize;
+  private final int sampledMaxRowsPerSegment;
 
   public DeterminePartitionsJobSampler(int samplingFactor, int targetPartitionSize, int maxRowsPerSegment)
   {
     this.samplingFactor = Math.max(samplingFactor, 1);
     this.sampledTargetPartitionSize = targetPartitionSize / this.samplingFactor;
-    this.sampledMaxSegmentSize = maxRowsPerSegment / this.samplingFactor;
+    this.sampledMaxRowsPerSegment = maxRowsPerSegment / this.samplingFactor;
   }
 
   /**
@@ -63,8 +63,8 @@ public class DeterminePartitionsJobSampler
     return sampledTargetPartitionSize;
   }
 
-  public int getSampledMaxSegmentSize()
+  public int getSampledMaxRowsPerSegment()
   {
-    return sampledMaxSegmentSize;
+    return sampledMaxRowsPerSegment;
   }
 }
