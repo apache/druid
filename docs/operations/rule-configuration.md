@@ -48,7 +48,7 @@ To set retention rules in the Druid web console:
 2. Click the name of your datasource to open the data window.
 3. Select **Actions > Edit retention rules**.
 4. Click **+New rule**.
-5. Select a rule type and set properties according to the [rules reference]().
+5. Select a rule type and set properties for the rule.
 6. Click **Next** and enter a description for the rule.
 7. Click **Save** to save and apply the rule to the datasource.
 

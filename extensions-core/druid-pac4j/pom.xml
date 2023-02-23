@@ -118,12 +118,6 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.druid</groupId>
-      <artifactId>druid-core</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
       <groupId>org.pac4j</groupId>
       <artifactId>pac4j-core</artifactId>
       <version>${pac4j.version}</version>
