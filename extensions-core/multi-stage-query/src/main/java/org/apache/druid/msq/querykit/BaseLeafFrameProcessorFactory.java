@@ -26,7 +26,6 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.channel.ReadableConcatFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
-import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannelFactory;
@@ -149,7 +148,6 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
                   }
               ),
               makeLazyResourceHolder(frameWriterFactoryQueueRef, ignored -> {}),
-              stageDefinition.getSortKey(),
               frameContext
           );
         }
