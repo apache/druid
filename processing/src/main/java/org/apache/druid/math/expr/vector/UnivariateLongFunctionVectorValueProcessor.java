@@ -32,7 +32,6 @@ import org.apache.druid.math.expr.Expr;
 public abstract class UnivariateLongFunctionVectorValueProcessor<TInput> implements ExprVectorProcessor<long[]>
 {
   final ExprVectorProcessor<TInput> processor;
-  final int maxVectorSize;
   final boolean[] outNulls;
   final long[] outValues;
 
@@ -42,7 +41,6 @@ public abstract class UnivariateLongFunctionVectorValueProcessor<TInput> impleme
   )
   {
     this.processor = processor;
-    this.maxVectorSize = maxVectorSize;
     this.outNulls = new boolean[maxVectorSize];
     this.outValues = new long[maxVectorSize];
   }

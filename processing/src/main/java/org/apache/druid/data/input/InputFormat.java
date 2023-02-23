@@ -58,6 +58,7 @@ public interface InputFormat
    * This method is not being used anywhere for now, but should be considered
    * in {@link SplittableInputSource#createSplits} in the future.
    */
+  @SuppressWarnings("unused")
   @JsonIgnore
   boolean isSplittable();
 

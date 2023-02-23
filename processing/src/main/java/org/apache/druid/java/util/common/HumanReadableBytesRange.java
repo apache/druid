@@ -47,6 +47,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.CONSTRUCTOR, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
+@SuppressWarnings("unused")
 @Constraint(validatedBy = HumanReadableBytesRange.HumanReadableBytesRangeValidator.class)
 public @interface HumanReadableBytesRange
 {
@@ -66,9 +67,11 @@ public @interface HumanReadableBytesRange
   //ConstraintValidator requires
   String message() default "value must be in the range of [{min}, {max}]";
 
+
   //ConstraintValidator requires
   Class<? extends Payload>[] payload() default {};
 
+  @SuppressWarnings("unused")
   class HumanReadableBytesRangeValidator implements ConstraintValidator<HumanReadableBytesRange, Object>
   {
     private HumanReadableBytesRange range;
