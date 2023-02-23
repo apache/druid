@@ -19,10 +19,11 @@
 import { Button, Callout, Classes, Code, Dialog, Intent } from '@blueprintjs/core';
 import React, { useState } from 'react';
 
-import { AutoForm, FormJsonSelector, FormJsonTabs, JsonInput } from '../../components';
+import type { FormJsonTabs } from '../../components';
+import { AutoForm, FormJsonSelector, JsonInput } from '../../components';
+import type { CompactionConfig } from '../../druid-models';
 import {
   COMPACTION_CONFIG_FIELDS,
-  CompactionConfig,
   compactionConfigHasLegacyInputSegmentSizeBytesSet,
 } from '../../druid-models';
 import { deepDelete, formatBytesCompact } from '../../utils';
@@ -31,7 +32,7 @@ import './compaction-dialog.scss';
 
 export interface CompactionDialogProps {
   onClose: () => void;
-  onSave: (compactionConfig: CompactionConfig) => void;
+  onSave: (compactionConfig: CompactionConfig) => void | Promise<void>;
   onDelete: () => void;
   datasource: string;
   compactionConfig: CompactionConfig | undefined;
@@ -105,7 +106,7 @@ export const CompactionDialog = React.memo(function CompactionDialog(props: Comp
             text="Submit"
             intent={Intent.PRIMARY}
             disabled={disableSubmit}
-            onClick={() => onSave(currentConfig)}
+            onClick={() => void onSave(currentConfig)}
           />
         </div>
       </div>

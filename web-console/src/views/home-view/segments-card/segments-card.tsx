@@ -20,7 +20,7 @@ import { IconNames } from '@blueprintjs/icons';
 import { sum } from 'd3-array';
 import React from 'react';
 
-import { Capabilities } from '../../../helpers';
+import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
 import { deepGet, pluralIfNeeded, queryDruidSql } from '../../../utils';

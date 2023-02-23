@@ -32,11 +32,20 @@ sidebar_label: Reference
 This topic is a reference guide for the multi-stage query architecture in Apache Druid. For examples of real-world
 usage, refer to the [Examples](examples.md) page.
 
-### `EXTERN`
+`INSERT` and `REPLACE` load data into a Druid datasource from either an external input source, or from another
+datasource. When loading from an external datasource, you typically must provide the kind of input source,
+the data format, and the schema (signature) of the input file. Druid provides *table functions* to allow you to
+specify the external file. There are two kinds. `EXTERN` works with the JSON-serialized specs for the three
+items, using the same JSON you would use in native ingest. A set of other, input-source-specific functions
+use SQL syntax to specify the format and the input schema. There is one function for each input source. The
+input-source-specific functions allow you to use SQL query parameters to specify the set of files (or URIs),
+making it easy to reuse the same SQL statement for each ingest: just specify the set of files to use each time.
 
-Use the `EXTERN` function to read external data.
+### `EXTERN` Function
 
-Function format:
+Use the `EXTERN` function to read external data. The function has two variations.
+
+Function variation 1, with the input schema expressed as JSON:
 
 ```sql
 SELECT
@@ -54,16 +63,41 @@ FROM TABLE(
 
 1. Any [Druid input source](../ingestion/native-batch-input-source.md) as a JSON-encoded string.
 2. Any [Druid input format](../ingestion/data-formats.md) as a JSON-encoded string.
-3. A row signature, as a JSON-encoded array of column descriptors. Each column descriptor must have a `name` and a `type`. The type can be `string`, `long`, `double`, or `float`. This row signature is used to map the external data into the SQL layer.
+3. A row signature, as a JSON-encoded array of column descriptors. Each column descriptor must have a
+   `name` and a `type`. The type can be `string`, `long`, `double`, or `float`. This row signature is
+   used to map the external data into the SQL layer.
+
+Variation 2, with the input schema expressed in SQL using an `EXTEND` clause. (See the next
+section for more detail on `EXTEND`). This format also uses named arguments to make the
+SQL a bit easier to read:
+
+```sql
+SELECT
+ <column>
+FROM TABLE(
+  EXTERN(
+    inputSource => '<Druid input source>',
+    inputFormat => '<Druid input format>'
+  ) (<columns>)
+)
+```
+
+The input source and format are as above. The columns are expressed as in a SQL `CREATE TABLE`.
+Example: `(timestamp VARCHAR, metricType VARCHAR, value BIGINT)`. The optional `EXTEND` keyword
+can precede the column list: `EXTEND (timestamp VARCHAR...)`.
 
 For more information, see [Read external data with EXTERN](concepts.md#extern).
 
-### `HTTP`, `INLINE` and `LOCALFILES`
+### `HTTP`, `INLINE`, `LOCALFILES` and `S3` Functions
 
 While `EXTERN` allows you to specify an external table using JSON, other table functions allow you
 describe the external table using SQL syntax. Each function works for one specific kind of input
 source. You provide properties using SQL named arguments. The row signature is given using the
-Druid SQL `EXTEND` keyword using SQL syntax and types. Function format:
+Druid SQL `EXTEND` keyword using SQL syntax and types.
+
+The set of table functions and formats is preliminary in this release.
+
+Function format:
 
 ```sql
 SELECT
@@ -72,11 +106,18 @@ FROM TABLE(
   http(
     userName => 'bob',
     password => 'secret',
-    uris => 'http:foo.com/bar.csv',
+    uris => ARRAY['http:example.com/foo.csv', 'http:example.com/bar.csv'],
     format => 'csv'
     )
   ) EXTEND (x VARCHAR, y VARCHAR, z BIGINT)
 ```
+
+For each function, you provide:
+
+* The function name indicates the kind of input source: `http`, `inline` or `localfiles`.
+* The function arguments correspond to a subset of the JSON fields for that input source.
+* A `format` argument to indicate the desired input format.
+* Additional arguments required for the selected format type.
 
 Note that the `EXTEND` keyword is optional. The following is equally valid (and perhaps
 more convenient):
@@ -88,93 +129,323 @@ FROM TABLE(
   http(
     userName => 'bob',
     password => 'secret',
-    uris => 'http:foo.com/bar.csv',
+    uris => ARRAY['http:example.com/foo.csv', 'http:example.com/bar.csv'],
     format => 'csv'
     )
   ) (x VARCHAR, y VARCHAR, z BIGINT)
 ```
 
+#### Function Arguments
 
-The set of table functions and formats is preliminary in this release.
+These table functions are intended for use with the SQL by-name argument syntax
+as shown above. Because the functions include all parameters for all formats,
+using positional calls is both cumbersome and error-prone.
 
-#### `HTTP`
+Function argument names are generally the same as the JSON field names, except
+as noted below. Each argument has a SQL type which matches the JSON type. For
+arguments that take a string list in JSON, use the SQL `ARRAY[...]` syntax in
+SQL as shown in the above example.
 
-The `HTTP` table function represents the `HttpInputSource` class in Druid which allows you to
-read from an HTTP server. The function accepts the following arguments:
+Array parameters are good candidates for use in parameterized queries. That is:
 
-| Name | Description | JSON equivalent | Required |
-| ---- | ----------- | --------------- | -------- |
-| `userName` | Basic authentication user name | `httpAuthenticationUsername` | No |
-| `password` | Basic authentication password | `httpAuthenticationPassword` | No |
-| `passwordEnvVar` | Environment variable that contains the basic authentication password| `httpAuthenticationPassword` | No |
-| `uris` | Comma-separated list of URIs to read. | `uris` | Yes |
+```sql
+SELECT
+ <column>
+FROM TABLE(
+  http(
+    userName => 'bob',
+    password => 'secret',
+    uris => ?,
+    format => 'csv'
+    )
+  ) (x VARCHAR, y VARCHAR, z BIGINT)
+```
 
-#### `INLINE`
+Provide the list of URIs (in this case) as a query parameter in each ingest. Doing
+so is simpler than writing a script to insert the array into the SQL text.
 
-The `INLINE` table function represents the `InlineInputSource` class in Druid which provides
-data directly in the table function. The function accepts the following arguments:
+#### `HTTP` Function
 
-| Name | Description | JSON equivalent | Required |
-| ---- | ----------- | --------------- | -------- |
-| `data` | Text lines of inline data. Separate lines with a newline. | `data` | Yes |
+The `HTTP` table function represents the
+[HTTP input source](../ingestion/native-batch-input-source.md#http-input-source)
+to read from an HTTP server. The function accepts the following arguments:
 
-#### `LOCALFILES`
+* `userName` (`VARCHAR`) -  Same as JSON `httpAuthenticationUsername`.
+* `password`  (`VARCHAR`) - Same as`httpAuthenticationPassword` when used with the default option.
+* `passwordEnvVar` (`VARCHAR`) - Same as the HTTP `httpAuthenticationPassword` when used with
+  the `"type": "environment"` option.
+* `uris` (`ARRAY` of `VARCHAR`)
 
-The `LOCALFILES` table function represents the `LocalInputSource` class in Druid which reads
+#### `INLINE` Function
+
+The `INLINE` table function represents the
+[Inline input source](../ingestion/native-batch-input-source.md#inline-input-source)
+which provides data directly in the table function. Parameter:
+
+* `data` (`ARRAY` of `VARCHAR`) - Data lines, without a trailing newline, as an array.
+
+Example:
+
+```sql
+SELECT ...
+FROM TABLE(
+  inline(
+    data => ARRAY[
+    	'a,b',
+    	'c,d'],
+    format => 'csv'
+    )
+  ) (x VARCHAR, y VARCHAR)
+```
+
+#### `LOCALFILES` Function
+
+The `LOCALFILES` table function represents the
+[Local input source](../ingestion/native-batch-input-source.md#local-input-source) which reads
 files from the file system of the node running Druid. This is most useful for single-node
-installations. The function accepts the following arguments:
+installations. The function accepts the following parameters:
 
-| Name | Description | JSON equivalent | Required |
-| ---- | ----------- | --------------- | -------- |
-| `baseDir` | Directory to read from. | `baseDir` | No |
-| `filter` | Filter pattern to read. Example: `*.csv`. | `filter` | No |
-| `files` | Comma-separated list of files to read. | `files` | No |
+* `baseDir`
+* `filter`
+* `files`
 
-You must either provide the `baseDir` or the list of `files`. You can provide both, in which case
-the files are assumed relative to the `baseDir`. If you provide a `filter`, you must provide the
-`baseDir`.
+When the local files input source is used directly in an `extern` function, or ingestion spec, you
+can provide either `baseDir` and `filter` or `files` but not both. This function, however, allows
+you to provide any of the following combinations:
 
-#### Table Function Format
+* `baseDir` - Matches all files in the given directory. (Assumes the filter is `*`.)
+* `baseDir` and `filter` - Match files in the given directory using the filter.
+* `baseDir` and `files` - A set of files relative to `baseDir`.
+* `files` - The files should be absolute paths, else they will be computed relative to Druid's
+  working directory (usually the Druid install directory.)
 
-Each of the table functions above requires that you specify a format.
+Examples:
 
-| Name | Description | JSON equivalent | Required |
-| ---- | ----------- | --------------- | -------- |
-| `format` | The input format, using the same names as for `EXTERN`. | `inputFormat.type` | Yes |
+To read All files in /tmp, which must be CSV files:
+
+```sql
+SELECT ...
+FROM TABLE(
+  localfiles(
+      baseDir => '/tmp',
+      format => 'csv')
+  ) (x VARCHAR, y VARCHAR)
+```
+
+Some additional variations (omitting the common bits):
+
+```sql
+  -- CSV files in /tmp
+  localfiles(baseDir => '/tmp',
+             filter => '*.csv',
+             format => 'csv')
+
+  -- /tmp/a.csv and /tmp/b.csv
+  localfiles(baseDir => '/tmp',
+             files => ARRAY['a.csv', 'b.csv'],
+             format => 'csv')
+
+  -- /tmp/a.csv and /tmp/b.csv
+  localfiles(files => ARRAY['/tmp/a.csv', '/tmp/b.csv'],
+             format => 'csv')
+```
+
+#### `S3` Function
+
+The `S3` table function represents the
+[S3 input source](../ingestion/native-batch-input-source.md#s3-input-source) which reads
+files from an S3 bucket. The function accepts the following parameters to specify the
+objects to read:
+
+* `uris` (`ARRAY` of `VARCHAR`)
+* `prefix` (`VARCHAR`) - Corresponds to the JSON `prefixes` property, but allows a single
+  prefix.
+* `bucket` (`VARCHAR`) - Corresponds to the `bucket` field of the `objects` JSON field. SQL
+  does not have syntax for an array of objects. Instead, this function takes a single bucket,
+  and one or more objects within that bucket.
+* `paths` (`ARRAY` of `VARCHAR`) - Corresponds to the `path` fields of the `object` JSON field.
+  All paths are within the single `bucket` parameter.
+
+The S3 input source accepts one of the following patterns:
+
+* `uris` - A list of fully-qualified object URIs.
+* `prefixes` - A list of fully-qualified "folder" prefixes.
+* `bucket` and `paths` - A list of objects relative to the given bucket path.
+
+The `S3` function also accepts the following security parameters:
+
+* `accessKeyId` (`VARCHAR`)
+* `secretAccessKey` (`VARCHAR`)
+* `assumeRoleArn` (`VARCHAR`)
+
+The `S3` table function does not support either the `clientConfig` or `proxyConfig`
+JSON properties.
+
+If you need the full power of the S3 input source, then consider the use of the `extern`
+function, which accepts the full S3 input source serialized as JSON. Alternatively,
+create a catalog external table that has the full set of properties, leaving just the
+`uris` or `paths` to be provided at query time.
+
+Examples, each of which correspond to an example on the
+[S3 input source](../ingestion/native-batch-input-source.md#s3-input-source) page.
+The examples omit the format and schema; however you must remember to provide those
+in an actual query.
+
+```sql
+SELECT ...
+FROM TABLE(S3(
+    uris => ARRAY['s3://foo/bar/file.json', 's3://bar/foo/file2.json'],
+    format => 'csv'))
+  ) (x VARCHAR, y VARCHAR)
+```
+
+Additional variations, omitting the common bits:
+
+```sql
+  S3(prefixes => ARRAY['s3://foo/bar/', 's3://bar/foo/']))
+```
+
+```sql
+  -- Not an exact match for the JSON example: the S3 function allows
+  -- only one bucket.
+  S3(bucket => 's3://foo`,
+           paths => ARRAY['bar/file1.json', 'foo/file2.json'])
+```
+
+```sql
+  S3(uris => ARRAY['s3://foo/bar/file.json', 's3://bar/foo/file2.json'],
+           accessKeyId => 'KLJ78979SDFdS2',
+           secretAccessKey => 'KLS89s98sKJHKJKJH8721lljkd')
+```
+
+```sql
+  S3(uris => ARRAY['s3://foo/bar/file.json', 's3://bar/foo/file2.json'],
+           accessKeyId => 'KLJ78979SDFdS2',
+           secretAccessKey => 'KLS89s98sKJHKJKJH8721lljkd',
+           assumeRoleArn => 'arn:aws:iam::2981002874992:role/role-s3')
+```
+
+#### Input Format
+
+Each of the table functions above requires that you specify a format using the `format`
+parameter which accepts a value the same as the format names used for `EXTERN` and described
+for [each input source](../ingestion/native-batch-input-source.md).
 
 #### CSV Format
 
-Use the `csv` format to read from CSV. This choice selects the Druid `CsvInputFormat` class.
+The `csv` format selects the [CSV input format](../ingestion/data-formats.md#csv).
+Parameters:
 
-| Name | Description | JSON equivalent | Required |
-| ---- | ----------- | --------------- | -------- |
-| `listDelimiter` | The delimiter to use for fields that represent a list of strings. | `listDelimiter` | No |
-| `skipRows` | The number of rows to skip at the start of the file. Default is 0. | `skipHeaderRows` | No |
+* `listDelimiter` (`VARCHAR`)
+* `skipHeaderRows` (`BOOLEAN`)
 
-MSQ does not have the ability to infer schema from a CSV, file, so the `findColumnsFromHeader` property
-is unavailable. Instead, Columns are given using the `EXTEND` syntax described above.
+Example for a CSV format with a list delimiter and where we want to skip the first
+input row:
+
+```sql
+SELECT ...
+FROM TABLE(
+  inline(
+    data => ARRAY[
+        'skip me',
+    	'a;foo,b',
+    	'c;bar,d'],
+    format => 'csv',
+    listDelimiter => ';',
+    skipHeaderRows => 1
+    )
+  ) (x VARCHAR, y VARCHAR)
+```
 
 #### Delimited Text Format
 
-Use the `tsv` format to read from an arbitrary delimited (CSV-like) file such as tab-delimited,
-pipe-delimited, etc. This choice selects the Druid `DelimitedInputFormat` class.
+The `tsv` format selects the [TSV (Delimited) input format](../ingestion/data-formats.md#tsv-delimited).
+Parameters:
 
-| Name | Description | JSON equivalent | Required |
-| ---- | ----------- | --------------- | -------- |
-| `delimiter` | The delimiter which separates fields. | `delimiter` | Yes |
-| `listDelimiter` | The delimiter to use for fields that represent a list of strings. | `listDelimiter` | No |
-| `skipRows` | The number of rows to skip at the start of the file. Default is 0. | `skipHeaderRows` | No |
+* `delimiter` (`VARCHAR`)
+* `listDelimiter` (`VARCHAR`)
+* `skipHeaderRows` (`BOOLEAN`)
 
-As noted above, MSQ cannot infer schema using headers. Use `EXTEND` instead.
+Example for a pipe-separated format with a list delimiter and where we want to skip the first
+input row:
+
+```sql
+SELECT ...
+FROM TABLE(
+  inline(
+    data => ARRAY[
+        'skip me',
+    	'a;foo|b',
+    	'c;bar|d'],
+    format => 'tsv',
+    listDelimiter => ';',
+    skipHeaderRows => 1,
+    delimiter => '|'
+    )
+  ) (x VARCHAR, y VARCHAR)
+```
 
 #### JSON Format
 
-Use the `json` format to read from a JSON input source. This choice selects the Druid `JsonInputFormat` class.
+The `json` format selects the
+[JSON input format](../ingestion/data-formats.html#json).
+The JSON format accepts no additional parameters.
 
-| Name | Description | JSON equivalent | Required |
-| ---- | ----------- | --------------- | -------- |
-| `keepNulls` | Whether to keep null values. Defaults to `false`. | `keepNullColumns` | No |
+Example:
 
+```sql
+SELECT ...
+FROM TABLE(
+  inline(
+    data => ARRAY['{"x": "foo", "y": "bar"}'],
+    format => 'json')
+  ) (x VARCHAR, y VARCHAR)
+```
+
+### Parameters
+
+Starting with the Druid 26.0 release, you can use query parameters with MSQ queries. You may find
+that you periodically ingest a new set of files into Druid. Often, the bulk of the query is identical
+for each ingestion: only the list of files (or URIs or objects) changes. For example, for the `S3`
+input source, you will likely ingest from the same bucket and security setup in
+each query; only the specific objects will change. Consider using a query parameter
+to pass the object names:
+
+```sql
+INSERT INTO ...
+SELECT ...
+FROM TABLE(S3(bucket => 's3://foo`,
+              accessKeyId => ?,
+              paths => ?,
+              format => JSON))
+     (a VARCHAR, b BIGINT, ...)
+```
+
+This same technique can be used with the `uris` or `prefixes` parameters instead.
+
+Function arguments that take an array parameter require an array function in your JSON request.
+For example:
+
+```json
+{
+  "query" : "INSERT INTO ...
+SELECT ...
+FROM TABLE(S3(bucket => 's3://foo`,
+              accessKeyId => ?,
+              paths => ?,
+              format => JSON))
+     (a VARCHAR, b BIGINT, ...)",
+  "parameters": [
+    { "type": "VARCHAR", "value": "ABCD-EF01"},
+    { "type": "VARCHAR", "value": [
+    	"foo.csv", "bar.csv"
+    ] }
+  ]
+}
+```
+
+The type in the above example is the type of each element. It must be `VARCHAR` for all the array
+parameters for functions described on this page.
 
 ### `INSERT`
 
@@ -197,7 +468,8 @@ INSERT consists of the following parts:
 
 1. Optional [context parameters](./reference.md#context-parameters).
 2. An `INSERT INTO <dataSource>` clause at the start of your query, such as `INSERT INTO your-table`.
-3. A clause for the data you want to insert, such as `SELECT ... FROM ...`. You can use [EXTERN](#extern) to reference external tables using `FROM TABLE(EXTERN(...))`.
+3. A clause for the data you want to insert, such as `SELECT ... FROM ...`. You can use [`EXTERN`](#extern-function)
+   to reference external tables using `FROM TABLE(EXTERN(...))`.
 4. A [PARTITIONED BY](#partitioned-by) clause, such as `PARTITIONED BY DAY`.
 5. An optional [CLUSTERED BY](#clustered-by) clause.
 
@@ -257,14 +529,18 @@ The `PARTITIONED BY <time granularity>` clause is required for [INSERT](#insert)
 
 The following granularity arguments are accepted:
 
-- Time unit: `HOUR`, `DAY`, `MONTH`, or `YEAR`. Equivalent to `FLOOR(__time TO TimeUnit)`.
+- Time unit keywords: `HOUR`, `DAY`, `MONTH`, or `YEAR`. Equivalent to `FLOOR(__time TO TimeUnit)`.
+- Time units as ISO 8601 period strings: :`'PT1H'`, '`P1D`, etc. (Druid 26.0 and later.)
 - `TIME_FLOOR(__time, 'granularity_string')`, where granularity_string is one of the ISO 8601 periods listed below. The
   first argument must be `__time`.
 - `FLOOR(__time TO TimeUnit)`, where `TimeUnit` is any unit supported by the [FLOOR function](../querying/sql-scalar.md#date-and-time-functions). The first argument must be `__time`.
 - `ALL` or `ALL TIME`, which effectively disables time partitioning by placing all data in a single time chunk. To use
-  LIMIT or OFFSET at the outer level of your INSERT or REPLACE query, you must set PARTITIONED BY to ALL or ALL TIME.
+  LIMIT or OFFSET at the outer level of your `INSERT` or `REPLACE` query, you must set `PARTITIONED BY` to `ALL` or `ALL TIME`.
 
-The following ISO 8601 periods are supported for `TIME_FLOOR`:
+Earlier versions required the `TIME_FLOOR` notation to specify a granularity other than the keywords.
+In the current version, the string constant provides a simpler equivalent solution.
+
+The following ISO 8601 periods are supported for `TIME_FLOOR` and the string constant:
 
 - PT1S
 - PT1M
@@ -324,6 +600,9 @@ The following table lists the context parameters for the MSQ task engine:
 | `clusterStatisticsMergeMode` | Whether to use parallel or sequential mode for merging of the worker sketches. Can be `PARALLEL`, `SEQUENTIAL` or `AUTO`. See [Sketch Merging Mode](#sketch-merging-mode) for more information. | `PARALLEL` |
 | `durableShuffleStorage` | SELECT, INSERT, REPLACE <br /><br />Whether to use durable storage for shuffle mesh. To use this feature, configure the durable storage at the server level using `druid.msq.intermediate.storage.enable=true`). If these properties are not configured, any query with the context variable `durableShuffleStorage=true` fails with a configuration error. <br /><br /> | `false` |
 | `faultTolerance` | SELECT, INSERT, REPLACE<br /><br /> Whether to turn on fault tolerance mode or not. Failed workers are retried based on [Limits](#limits). Cannot be used when `durableShuffleStorage` is explicitly set to false.  | `false` |
+| `composedIntermediateSuperSorterStorageEnabled` | SELECT, INSERT, REPLACE<br /><br /> Whether to enable automatic fallback to durable storage from local storage for sorting's intermediate data. Requires to setup `intermediateSuperSorterStorageMaxLocalBytes` limit for local storage and durable shuffle storage feature as well.| `false` |
+| `intermediateSuperSorterStorageMaxLocalBytes` | SELECT, INSERT, REPLACE<br /><br /> Whether to enable a byte limit on local storage for sorting's intermediate data. If that limit is crossed, the task fails with `ResourceLimitExceededException`.| `9223372036854775807` |
+| `maxInputBytesPerWorker` | Should be used in conjunction with taskAssignment `auto` mode. When dividing the input of a stage among the workers, this parameter determines the maximum size in bytes that are given to a single worker before the next worker is chosen. This parameter is only used as a guideline during input slicing, and does not guarantee that a the input cannot be larger. For example, we have 3 files. 3, 7, 12 GB each. then we would end up using 2 worker: worker 1 -> 3, 7 and worker 2 -> 12. This value is used for all stages in a query. | `10737418240` |
 
 ## Sketch Merging Mode
 This section details the advantages and performance of various Cluster By Statistics Merge Modes.

@@ -90,7 +90,11 @@ public class SimpleDictionaryMergingIterator<T extends Comparable<T>> implements
     }
 
     while (!pQueue.isEmpty() && Objects.equals(value, pQueue.peek().peek())) {
-      pQueue.remove();
+      PeekingIterator<T> same = pQueue.remove();
+      same.next();
+      if (same.hasNext()) {
+        pQueue.add(same);
+      }
     }
     counter++;
 

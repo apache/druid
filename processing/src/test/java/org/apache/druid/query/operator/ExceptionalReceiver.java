@@ -24,7 +24,7 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 public class ExceptionalReceiver implements Operator.Receiver
 {
   @Override
-  public boolean push(RowsAndColumns rac)
+  public Operator.Signal push(RowsAndColumns rac)
   {
     throw new UnsupportedOperationException();
   }

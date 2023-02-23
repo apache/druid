@@ -19,10 +19,11 @@
 import { Code } from '@blueprintjs/core';
 import React from 'react';
 
-import { ExternalLink, Field } from '../../components';
+import type { Field } from '../../components';
+import { ExternalLink } from '../../components';
 import { getLink } from '../../links';
 import { filterMap, typeIs } from '../../utils';
-import { SampleHeaderAndRows } from '../../utils/sampler';
+import type { SampleHeaderAndRows } from '../../utils/sampler';
 import { guessColumnTypeFromHeaderAndRows } from '../ingestion-spec/ingestion-spec';
 
 export interface MetricSpec {

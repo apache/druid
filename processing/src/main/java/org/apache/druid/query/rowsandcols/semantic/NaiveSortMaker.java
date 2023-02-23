@@ -23,6 +23,7 @@ import com.google.common.collect.Lists;
 import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 
 /**
@@ -53,6 +54,7 @@ public interface NaiveSortMaker
      * @param rac the data to include in the sort
      * @return optionally, a RowsAndColumns object of data that is known to be in sorted order, null if nothing yet.
      */
+    @Nullable
     RowsAndColumns moreData(RowsAndColumns rac);
 
     /**
@@ -60,15 +62,12 @@ public interface NaiveSortMaker
      *
      * @return A RowsAndColumns object of sorted data that has not been returned already from {@link #moreData} calls.
      */
+    @Nullable
     RowsAndColumns complete();
   }
 
   /**
-   * Makes the NaiveSorter that will actually do the sort.  This method uses {@code List<OrderByColumnSpec>} to avoid
-   * littering the code with extra objects for the same thing.  {@code OrderByColumnSpec} is only used to identify
-   * which column should be sorted and in which direction.  Specifically, it has a "dimensionComparator" field which
-   * seems to indicate that it's possible to provide a specific comparator ordering, this should be completely ignored
-   * by implementations of the NaiveSorter interface.
+   * Makes the NaiveSorter that will actually do the sort.
    *
    * @param ordering a specification of which columns to sort in which direction
    * @return a NaiveSorter that will sort according to the provided spec

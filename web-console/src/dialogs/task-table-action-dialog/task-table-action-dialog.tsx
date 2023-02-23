@@ -21,8 +21,9 @@ import React, { useState } from 'react';
 import { ShowJson, ShowLog } from '../../components';
 import { Api } from '../../singletons';
 import { deepGet } from '../../utils';
-import { BasicAction } from '../../utils/basic-action';
-import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
+import type { BasicAction } from '../../utils/basic-action';
+import type { SideButtonMetaData } from '../table-action-dialog/table-action-dialog';
+import { TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
 interface TaskTableActionDialogProps {
   taskId: string;

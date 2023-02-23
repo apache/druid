@@ -48,9 +48,7 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
-import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -167,9 +165,6 @@ public class ArraySqlAggregator implements SqlAggregator
     public RelDataType inferReturnType(SqlOperatorBinding sqlOperatorBinding)
     {
       RelDataType type = sqlOperatorBinding.getOperandType(0);
-      if (type instanceof RowSignatures.ComplexSqlType) {
-        throw new UnsupportedSQLQueryException("Cannot use ARRAY_AGG on complex inputs %s", type);
-      }
       return sqlOperatorBinding.getTypeFactory().createArrayType(
           type,
           -1

@@ -46,8 +46,11 @@ public class GlobalDictionaryIdLookup
   public GlobalDictionaryIdLookup()
   {
     this.stringLookup = new Object2IntLinkedOpenHashMap<>();
+    stringLookup.defaultReturnValue(-1);
     this.longLookup = new Long2IntLinkedOpenHashMap();
+    longLookup.defaultReturnValue(-1);
     this.doubleLookup = new Double2IntLinkedOpenHashMap();
+    doubleLookup.defaultReturnValue(-1);
   }
 
   public void addString(@Nullable String value)

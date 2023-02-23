@@ -21,17 +21,15 @@ package org.apache.druid.sql.calcite.external;
 
 import com.google.inject.Inject;
 import org.apache.druid.catalog.model.TableDefnRegistry;
-import org.apache.druid.catalog.model.table.InlineTableDefn;
+import org.apache.druid.catalog.model.table.InlineInputSourceDefn;
 
-public class InlineOperatorConversion extends CatalogExternalTableOperatorConversion
+public class InlineOperatorConversion extends DruidUserDefinedTableMacroConversion
 {
   public static final String FUNCTION_NAME = "inline";
 
   @Inject
-  public InlineOperatorConversion(
-      final TableDefnRegistry registry
-  )
+  public InlineOperatorConversion(final TableDefnRegistry registry)
   {
-    super(FUNCTION_NAME, registry, InlineTableDefn.TABLE_TYPE, registry.jsonMapper());
+    super(FUNCTION_NAME, registry, InlineInputSourceDefn.TYPE_KEY, registry.jsonMapper());
   }
 }

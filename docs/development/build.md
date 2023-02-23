@@ -38,7 +38,8 @@ make sure it has `/master/` in the URL.
 
 ##### Other dependencies
 
-- Distribution builds require Python 3.x and the `pyyaml` module
+- Distribution builds require Python 3.x and the `pyyaml` module.
+- Integration tests require `pyyaml` version 5.1 or later.
 
 ##### Downloading the source
 
@@ -86,7 +87,7 @@ mvn clean install -Phadoop3
 To generate distribution with hadoop3 dependencies, run :
 
 ```bash
-mvn clean install -Papache-release,dist-hadoop3,rat,hadoop3 -DskipTests 
+mvn clean install -Papache-release,dist-hadoop3,rat,hadoop3 -DskipTests
 ```
 
 #### Potential issues

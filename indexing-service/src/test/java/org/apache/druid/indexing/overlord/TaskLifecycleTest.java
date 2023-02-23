@@ -59,6 +59,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -606,9 +607,10 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         ),
         new TaskAuditLogConfig(true)
     );
-    File tmpDir = temporaryFolder.newFolder();
+    final String taskDirA = temporaryFolder.newFolder().toString();
+    final String taskDirB = temporaryFolder.newFolder().toString();
     taskConfig = new TaskConfig(
-        tmpDir.toString(),
+        null,
         null,
         null,
         50000,
@@ -621,7 +623,11 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false
+        false,
+        ImmutableList.of(
+            taskDirA,
+            taskDirB
+        )
     );
 
     return new TaskToolboxFactory(
@@ -707,7 +713,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        "1"
+        "1",
+        new TaskStorageDirTracker(taskConfig)
     );
   }
 

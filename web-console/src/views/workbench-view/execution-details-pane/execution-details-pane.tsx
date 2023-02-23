@@ -21,7 +21,7 @@ import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
 import { FancyTabPane } from '../../../components';
-import { Execution } from '../../../druid-models';
+import type { Execution } from '../../../druid-models';
 import { ExecutionErrorPane } from '../execution-error-pane/execution-error-pane';
 import { ExecutionStagesPane } from '../execution-stages-pane/execution-stages-pane';
 import { ExecutionWarningsPane } from '../execution-warnings-pane/execution-warnings-pane';

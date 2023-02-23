@@ -22,6 +22,7 @@ package org.apache.druid.msq.exec;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.FutureCallback;
@@ -32,6 +33,7 @@ import com.google.common.util.concurrent.SettableFuture;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
+import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableNilFrameChannel;
@@ -41,6 +43,8 @@ import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.frame.processor.BlockingQueueOutputChannelFactory;
 import org.apache.druid.frame.processor.Bouncer;
+import org.apache.druid.frame.processor.ComposingOutputChannelFactory;
+import org.apache.druid.frame.processor.DurableStorageOutputChannelFactory;
 import org.apache.druid.frame.processor.FileOutputChannelFactory;
 import org.apache.druid.frame.processor.FrameChannelMuxer;
 import org.apache.druid.frame.processor.FrameProcessor;
@@ -50,6 +54,7 @@ import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.processor.SuperSorter;
 import org.apache.druid.frame.processor.SuperSorterProgressTracker;
+import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
@@ -102,8 +107,6 @@ import org.apache.druid.msq.kernel.worker.WorkerStageKernel;
 import org.apache.druid.msq.kernel.worker.WorkerStagePhase;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.msq.shuffle.DurableStorageInputChannelFactory;
-import org.apache.druid.msq.shuffle.DurableStorageOutputChannelFactory;
-import org.apache.druid.msq.shuffle.DurableStorageUtils;
 import org.apache.druid.msq.shuffle.WorkerInputChannelFactory;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
@@ -162,6 +165,7 @@ public class WorkerImpl implements Worker
   private final ConcurrentHashMap<StageId, ConcurrentHashMap<Integer, ReadableFrameChannel>> stageOutputs = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<StageId, CounterTracker> stageCounters = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<StageId, WorkerStageKernel> stageKernelMap = new ConcurrentHashMap<>();
+  private final ByteTracker intermediateSuperSorterLocalStorageTracker;
   private final boolean durableStageStorageEnabled;
 
   /**
@@ -186,6 +190,9 @@ public class WorkerImpl implements Worker
     this.context = context;
     this.selfDruidNode = context.selfNode();
     this.processorBouncer = context.processorBouncer();
+    this.intermediateSuperSorterLocalStorageTracker = new ByteTracker(
+        MultiStageQueryContext.getIntermediateSuperSorterStorageMaxLocalBytes(QueryContext.of(task.getContext()))
+    );
     this.durableStageStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(
         QueryContext.of(task.getContext())
     );
@@ -476,7 +483,7 @@ public class WorkerImpl implements Worker
     if (channel instanceof ReadableNilFrameChannel) {
       // Build an empty frame file.
       final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      FrameFileWriter.open(Channels.newChannel(baos), null).close();
+      FrameFileWriter.open(Channels.newChannel(baos), null, ByteTracker.unboundedTracker()).close();
 
       final ByteArrayInputStream in = new ByteArrayInputStream(baos.toByteArray());
 
@@ -567,7 +574,12 @@ public class WorkerImpl implements Worker
         holder -> {
           cleanStageOutput(stageId, true);
           // Mark the stage as FINISHED
-          holder.getStageKernelMap().get(stageId).setStageFinished();
+          WorkerStageKernel stageKernel = holder.getStageKernelMap().get(stageId);
+          if (stageKernel == null) {
+            log.warn("Stage id [%s] non existent. Unable to mark the stage kernel for it as FINISHED", stageId);
+          } else {
+            stageKernel.setStageFinished();
+          }
         }
     );
   }
@@ -661,13 +673,48 @@ public class WorkerImpl implements Worker
           stageNumber,
           task().getId(),
           frameSize,
-          MSQTasks.makeStorageConnector(context.injector())
+          MSQTasks.makeStorageConnector(context.injector()),
+          context.tempDir()
       );
     } else {
       final File fileChannelDirectory =
           new File(context.tempDir(), StringUtils.format("output_stage_%06d", stageNumber));
 
-      return new FileOutputChannelFactory(fileChannelDirectory, frameSize);
+      return new FileOutputChannelFactory(fileChannelDirectory, frameSize, null);
+    }
+  }
+
+  private OutputChannelFactory makeSuperSorterIntermediateOutputChannelFactory(
+      final FrameContext frameContext,
+      final int stageNumber,
+      final File tmpDir
+  )
+  {
+    final int frameSize = frameContext.memoryParameters().getLargeFrameSize();
+    final File fileChannelDirectory =
+        new File(tmpDir, StringUtils.format("intermediate_output_stage_%06d", stageNumber));
+    final FileOutputChannelFactory fileOutputChannelFactory =
+        new FileOutputChannelFactory(fileChannelDirectory, frameSize, intermediateSuperSorterLocalStorageTracker);
+
+    if (MultiStageQueryContext.isComposedIntermediateSuperSorterStorageEnabled(QueryContext.of(task.getContext())) &&
+        durableStageStorageEnabled) {
+      return new ComposingOutputChannelFactory(
+          ImmutableList.of(
+              fileOutputChannelFactory,
+              DurableStorageOutputChannelFactory.createStandardImplementation(
+                  task.getControllerTaskId(),
+                  task().getWorkerNumber(),
+                  stageNumber,
+                  task().getId(),
+                  frameSize,
+                  MSQTasks.makeStorageConnector(context.injector()),
+                  tmpDir
+              )
+          ),
+          frameSize
+      );
+    } else {
+      return fileOutputChannelFactory;
     }
   }
 
@@ -871,16 +918,22 @@ public class WorkerImpl implements Worker
           stagePartitionBoundariesFuture = Futures.immediateFuture(kernel.getResultPartitionBoundaries());
         }
 
+        final File sorterTmpDir = new File(context.tempDir(), "super-sort-" + UUID.randomUUID());
+        FileUtils.mkdirp(sorterTmpDir);
+        if (!sorterTmpDir.isDirectory()) {
+          throw new IOException("Cannot create directory: " + sorterTmpDir);
+        }
+
         outputChannelsFuture = superSortOutputChannels(
             workOrder.getStageDefinition(),
             clusterBy,
             workerResultAndOutputChannels.getOutputChannels(),
             stagePartitionBoundariesFuture,
             shuffleOutputChannelFactory,
+            makeSuperSorterIntermediateOutputChannelFactory(frameContext, stageDef.getStageNumber(), sorterTmpDir),
             exec,
             cancellationId,
             frameContext.memoryParameters(),
-            context,
             kernelManipulationQueue,
             counters.sortProgress()
         );
@@ -958,7 +1011,8 @@ public class WorkerImpl implements Worker
                       stageDef.getStageNumber(),
                       task().getId(),
                       frameContext.memoryParameters().getStandardFrameSize(),
-                      MSQTasks.makeStorageConnector(context.injector())
+                      MSQTasks.makeStorageConnector(context.injector()),
+                      context.tempDir()
                   );
               try {
                 durableStorageOutputChannelFactory.createSuccessFile(task.getId());
@@ -1078,10 +1132,10 @@ public class WorkerImpl implements Worker
       final OutputChannels processorOutputChannels,
       final ListenableFuture<ClusterByPartitions> stagePartitionBoundariesFuture,
       final OutputChannelFactory outputChannelFactory,
+      final OutputChannelFactory intermediateOutputChannelFactory,
       final FrameProcessorExecutor exec,
       final String cancellationId,
       final WorkerMemoryParameters memoryParameters,
-      final WorkerContext context,
       final BlockingQueue<Consumer<KernelHolder>> kernelManipulationQueue,
       final SuperSorterProgressTracker superSorterProgressTracker
   ) throws IOException
@@ -1123,21 +1177,14 @@ public class WorkerImpl implements Worker
                                                    .collect(Collectors.toList());
     }
 
-    final File sorterTmpDir = new File(context.tempDir(), "super-sort-" + UUID.randomUUID());
-    FileUtils.mkdirp(sorterTmpDir);
-    if (!sorterTmpDir.isDirectory()) {
-      throw new IOException("Cannot create directory: " + sorterTmpDir);
-    }
-
     final SuperSorter sorter = new SuperSorter(
         channelsToSuperSort,
         stageDefinition.getFrameReader(),
         clusterBy,
         stagePartitionBoundariesFuture,
         exec,
-        sorterTmpDir,
         outputChannelFactory,
-        () -> ArenaMemoryAllocator.createOnHeap(memoryParameters.getLargeFrameSize()),
+        intermediateOutputChannelFactory,
         memoryParameters.getSuperSorterMaxActiveProcessors(),
         memoryParameters.getSuperSorterMaxChannelsPerProcessor(),
         -1,
