@@ -56,7 +56,7 @@ public class ArrayOfDoublesSketchConstantPostAggregator extends ArrayOfDoublesSk
     Preconditions.checkArgument(value != null && !value.isEmpty(),
         "Constant value cannot be null or empty, expecting base64 encoded sketch string");
     this.value = value;
-    this.sketchValue = deserializeSafe(value);
+    this.sketchValue = deserializeFromBase64EncodedStringSafe(value);
   }
 
   private ArrayOfDoublesSketch deserializeFromBase64EncodedStringSafe(final String str)
@@ -67,11 +67,6 @@ public class ArrayOfDoublesSketchConstantPostAggregator extends ArrayOfDoublesSk
   private ArrayOfDoublesSketch deserializeFromByteArraySafe(final byte[] data)
   {
     return ArrayOfDoublesSketches.wrapSketch(SafeWritableMemory.wrap(data));
-  }
-
-  private ArrayOfDoublesSketch deserializeSafe(final Object serializedSketch)
-  {
-    return deserializeFromBase64EncodedStringSafe((String) serializedSketch);
   }
 
   @Override
