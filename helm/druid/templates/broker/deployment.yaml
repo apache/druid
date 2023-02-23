@@ -42,15 +42,19 @@ spec:
         release: {{ .Release.Name }}
         component: {{ .Values.broker.name }}
       annotations:
-      {{- with .Values.broker.podAnnotations }}
-{{ toYaml . | indent 8 }}
-      {{- end }}
-      {{- if .Values.prometheus.enabled }}
-      {{- with .Values.prometheus.annotation }}
-{{ toYaml . | indent 8 }}
-      {{- end }}
-      {{- end }}
+        druid.k8s.enablePatching: "true"
+        {{- with .Values.broker.podAnnotations }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.prometheus.enabled }}
+          {{- with .Values.prometheus.annotation }}
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+        {{- end }}
     spec:
+      {{- if .Values.broker.serviceAccount.create }}
+      serviceAccountName: {{ include "druid.broker.serviceAccountName" . }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

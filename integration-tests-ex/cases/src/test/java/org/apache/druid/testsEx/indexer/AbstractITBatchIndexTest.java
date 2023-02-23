@@ -196,7 +196,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
   }
 
   /**
-   * Sumits a sqlTask, waits for task completion.
+   * Submits a sqlTask, waits for task completion.
    */
   protected void submitMSQTaskFromFile(String sqlFilePath, String datasource, Map<String, Object> msqContext) throws Exception
   {

@@ -79,12 +79,10 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
       .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
       .build();
 
-  private static final PlannerContext PLANNER_CONTEXT = PlannerContext.create(
-      "SELECT 1", // The actual query isn't important for this test
+  private static final PlannerToolbox PLANNER_TOOLBOX = new PlannerToolbox(
       new DruidOperatorTable(
           Collections.emptySet(),
-          ImmutableSet.of(new DirectOperatorConversion(OPERATOR, "hyper_unique")),
-          PlannerOperatorConfig.newInstance(null)
+          ImmutableSet.of(new DirectOperatorConversion(OPERATOR, "hyper_unique"))
       ),
       CalciteTests.createExprMacroTable(),
       CalciteTests.getJsonMapper(),
@@ -96,9 +94,18 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
               NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
           )
       ),
+      CalciteTests.createJoinableFactoryWrapper(),
+      CatalogResolver.NULL_RESOLVER,
+      "druid",
+      new CalciteRulesManager(ImmutableSet.of()),
+      CalciteTests.TEST_AUTHORIZER_MAPPER
+  );
+  private static final PlannerContext PLANNER_CONTEXT = PlannerContext.create(
+      PLANNER_TOOLBOX,
+      "SELECT 1", // The actual query isn't important for this test
       null, /* Don't need an engine */
       Collections.emptyMap(),
-      CalciteTests.createJoinableFactoryWrapper()
+      null
   );
 
   private final RexBuilder rexBuilder = new RexBuilder(new JavaTypeFactoryImpl());

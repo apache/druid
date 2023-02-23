@@ -16,10 +16,22 @@
 name: Unit & Integration tests CI
 on:
   push:
+    paths-ignore:
+      - 'docs/**'
+      - 'dev/**'
+      - 'helm/**'
+      - 'web-console/**'
+      - '**/*.md'
     branches:
       - master
       - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
   pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - 'dev/**'
+      - 'helm/**'
+      - 'web-console/**'
+      - '**/*.md'
     branches:
       - master
       - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
