@@ -821,40 +821,51 @@ public class CompactionTask extends AbstractBatchIndexTask
   {
     return Iterables.transform(
         Iterables.filter(dataSegments, dataSegment -> !dataSegment.isTombstone()),
-        dataSegment ->
-            Pair.of(
-                dataSegment,
-                () -> {
-                  try {
-                    final Closer closer = Closer.create();
-                    final File file = segmentCacheManager.getSegmentFiles(dataSegment);
-                    closer.register(() -> segmentCacheManager.cleanup(dataSegment));
-                    final QueryableIndex queryableIndex = closer.register(indexIO.loadIndex(file));
-                    return new ResourceHolder<QueryableIndex>()
-                    {
-                      @Override
-                      public QueryableIndex get()
-                      {
-                        return queryableIndex;
-                      }
+        dataSegment -> fetchSegment(dataSegment, segmentCacheManager, indexIO)
+    );
+  }
 
-                      @Override
-                      public void close()
-                      {
-                        try {
-                          closer.close();
-                        }
-                        catch (IOException e) {
-                          throw new RuntimeException(e);
-                        }
-                      }
-                    };
-                  }
-                  catch (Exception e) {
-                    throw new RuntimeException(e);
-                  }
+  // Broken out into a separate function because Some tools can't infer the
+  // pair type, but if the type is given explicitly, IntelliJ inspections raises
+  // an error. Creating a function keeps everyone happy.
+  private static Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>> fetchSegment(
+      DataSegment dataSegment,
+      SegmentCacheManager segmentCacheManager,
+      IndexIO indexIO
+  )
+  {
+    return Pair.of(
+        dataSegment,
+        () -> {
+          try {
+            final Closer closer = Closer.create();
+            final File file = segmentCacheManager.getSegmentFiles(dataSegment);
+            closer.register(() -> segmentCacheManager.cleanup(dataSegment));
+            final QueryableIndex queryableIndex = closer.register(indexIO.loadIndex(file));
+            return new ResourceHolder<QueryableIndex>()
+            {
+              @Override
+              public QueryableIndex get()
+              {
+                return queryableIndex;
+              }
+
+              @Override
+              public void close()
+              {
+                try {
+                  closer.close();
                 }
-            )
+                catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
+              }
+            };
+          }
+          catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        }
     );
   }
 

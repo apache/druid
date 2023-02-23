@@ -50,11 +50,11 @@ import org.apache.druid.sql.calcite.aggregation.builtin.CountSqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.planner.PlannerOperatorConfig;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
@@ -486,7 +486,8 @@ public class SqlBenchmark
         CalciteTests.getJsonMapper(),
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of()),
-        CalciteTests.createJoinableFactoryWrapper()
+        CalciteTests.createJoinableFactoryWrapper(),
+        CatalogResolver.NULL_RESOLVER
     );
   }
 
@@ -531,7 +532,7 @@ public class SqlBenchmark
           new ApproxCountDistinctSqlAggregator(new HllSketchApproxCountDistinctSqlAggregator());
       aggregators.add(new CountSqlAggregator(countDistinctSqlAggregator));
       aggregators.add(countDistinctSqlAggregator);
-      return new DruidOperatorTable(aggregators, extractionOperators, PlannerOperatorConfig.newInstance(null));
+      return new DruidOperatorTable(aggregators, extractionOperators);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
