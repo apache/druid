@@ -137,6 +137,61 @@ public class DimensionRangeShardSpecTest
   }
 
   @Test
+  public void testShardSpecLookupWithNull()
+  {
+    setDimensions("dim1", "dim2");
+
+    final DimensionRangeShardSpec shard0 = new DimensionRangeShardSpec(
+        dimensions,
+        null,
+        StringTuple.create("India", null),
+        1,
+        1
+    );
+
+    final DimensionRangeShardSpec shard1 = new DimensionRangeShardSpec(
+        dimensions,
+        StringTuple.create("India", null),
+        StringTuple.create("Spain", "Valencia"),
+        10,
+        1
+    );
+
+    final DimensionRangeShardSpec shard2 = new DimensionRangeShardSpec(
+        dimensions,
+        StringTuple.create("Spain", "Valencia"),
+        StringTuple.create("Tokyo", null),
+        10,
+        1
+    );
+
+    final DimensionRangeShardSpec shard3 = new DimensionRangeShardSpec(
+        dimensions,
+        StringTuple.create("Tokyo", null),
+        null,
+        100,
+        1
+    );
+    final ShardSpecLookup lookup = shard0.getLookup(Arrays.asList(shard0, shard1, shard2, shard3));
+    final long timestamp = System.currentTimeMillis();
+
+    Assert.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("India", "Delhi")));
+    Assert.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("India", "Kolkata")));
+    Assert.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("Japan", "Tokyo")));
+    Assert.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("Spain", "Barcelona")));
+    Assert.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("India", "Bengaluru")));
+    Assert.assertEquals(shard2, lookup.getShardSpec(timestamp, createRow("Spain", "Valencia")));
+    Assert.assertEquals(shard3, lookup.getShardSpec(timestamp, createRow("United Kingdom", "London")));
+
+    Assert.assertEquals(shard0, lookup.getShardSpec(timestamp, createRow(null, null)));
+    Assert.assertEquals(shard0, lookup.getShardSpec(timestamp, createRow(null, "Lyon")));
+    Assert.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("India", null)));
+    Assert.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("Spain", null)));
+    Assert.assertEquals(shard3, lookup.getShardSpec(timestamp, createRow("Tokyo", null)));
+    Assert.assertEquals(shard3, lookup.getShardSpec(timestamp, createRow("United Kingdom", null)));
+  }
+
+  @Test
   public void testPossibleInDomain_withNullStart()
   {
     setDimensions("planet", "country", "city");
