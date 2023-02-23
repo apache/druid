@@ -53,24 +53,25 @@ Make sure you meet the following requirements before starting the Jupyter-based 
     # Install Jupyter Notebook
     pip3 install notebook
     ```
-  -  Start Jupyter:
-      -  JupyterLab
-         ```bash
-         # Start JupyterLab on port 3001
-         jupyter lab --port 3001
-         ```
-      - Jupyter Notebook
-        ```bash
-        # Start Jupyter Notebook on port 3001
-        jupyter notebook --port 3001
-        ```
+  - Start Jupyter using either JupyterLab
+    ```bash
+    # Start JupyterLab on port 3001
+    jupyter lab --port 3001
+    ```
+
+    Or using Jupyter Notebook
+    ```bash
+    # Start Jupyter Notebook on port 3001
+    jupyter notebook --port 3001
+    ```
 
 - An available Druid instance. You can use the `micro-quickstart` configuration
   described in [Quickstart](https://druid.apache.org/docs/latest/tutorials/index.html).
   The tutorials assume that you are using the quickstart, so no authentication or authorization
   is expected unless explicitly mentioned.
 
-  Druid developers can use a cluster launched for an integration test:
+  If you contribute to Druid, and work with Druid integration tests, can use a test cluster.
+  Assume you have an environment variable, `DRUID_DEV`, which identifies your Druid source repo.
 
   ```bash
   cd $DRUID_DEV
@@ -79,11 +80,9 @@ Make sure you meet the following requirements before starting the Jupyter-based 
   ./it.sh up <category>
   ```
 
-  Where `DRUID_DEV` points to your Druid source code repo, and `<catagory>` is one
-  of the available integration test categories. See the integration test `README.md`
-  for details.
+  Replace `<catagory>` with one of the available integration test categories. See the integration 
+  test `README.md` for details.
 
 ## Continue in Jupyter
 
-Fire up Jupyter (see above) and navigate to the "- START HERE -" page for more
-information.
+Start Jupyter (see above) and navigate to the "- START HERE -" page for more information.

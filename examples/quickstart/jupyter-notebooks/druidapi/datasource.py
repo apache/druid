@@ -32,7 +32,7 @@ class DatasourceClient:
     '''
     
     def __init__(self, rest_client):
-        self.client = rest_client
+        self.rest_client = rest_client
 
     def names(self, include_unused=False, include_disabled=False):
         """
@@ -63,7 +63,7 @@ class DatasourceClient:
             params['includeUnused'] = ''
         if include_disabled:
             params['includeDisabled'] = ''
-        return self.client.get_json(REQ_DATASOURCES, params=params)
+        return self.rest_client.get_json(REQ_DATASOURCES, params=params)
     
     def drop(self, ds_name, ifExists=False):
         """
@@ -89,7 +89,7 @@ class DatasourceClient:
         ---------
         `DELETE /druid/coordinator/v1/datasources/{dataSourceName}`
         """
-        r = self.client.delete(REQ_DATASOURCE, args=[ds_name])
+        r = self.rest_client.delete(REQ_DATASOURCE, args=[ds_name])
         if ifExists and r.status_code == requests.codes.not_found:
             return
         check_error(r)
