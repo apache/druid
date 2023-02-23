@@ -48,7 +48,7 @@ The software requirements for the installation machine are:
 * Python 2 or Python 3
 
 You must set either the `JAVA_HOME` or `DRUID_JAVA_HOME` environment variable for Druid to find Java on the machine. If there is more than one version of Java installed, set
-`DRUID_JAVA_HOME`. You can run `bin/verify-java` to verify Java requirements for your environment.
+`DRUID_JAVA_HOME`. You can run `apache-druid-{{DRUIDVERSION}}/bin/verify-java` to verify Java requirements for your environment.
 
 Before installing a production Druid instance, be sure to review the [security
 overview](../operations/security-overview.md). In general, avoid running Druid as root user. Consider creating a
@@ -98,11 +98,11 @@ $ ./bin/start-druid
 [Tue Nov 29 16:31:06 2022] Running command[middleManager]: bin/run-druid middleManager /apache-druid-{{DRUIDVERSION}}/conf/druid/single-server/quickstart '-Xms64m -Xmx64m' '-Ddruid.worker.capacity=2 -Ddruid.indexer.runner.javaOptsArray=["-server","-Duser.timezone=UTC","-Dfile.encoding=UTF-8","-XX:+ExitOnOutOfMemoryError","-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager","-Xms256m","-Xmx256m","-XX:MaxDirectMemorySize=256m"]'
 ```
 
-It may use up to 80% of the total available system memory.
+Druid may use up to 80% of the total available system memory.
 To explicitly set the total memory available to Druid, pass a value for the memory parameter. For example, `./bin/start-druid -m 16g`. 
 
 Druid stores all persistent state data, such as the cluster metadata store and data segments, in `apache-druid-{{DRUIDVERSION}}/var`.
-Each service writes to a log file under `var/sv`.
+Each service writes to a log file under `apache-druid-{{DRUIDVERSION}}/log`.
 
 At any time, you can revert Druid to its original, post-installation state by deleting the entire `var` directory. You may want to do this, for example, between Druid tutorials or after experimentation, to start with a fresh instance. 
 
@@ -110,7 +110,7 @@ To stop Druid at any time, use CTRL+C in the terminal. This exits the `bin/start
 
 ## Open the web console 
 
-After the Druid services launch, open the [web console](../operations/web-console.md) at [http://localhost:8888](http://localhost:8888). 
+After starting the Druid services, open the [web console](../operations/web-console.md) at [http://localhost:8888](http://localhost:8888). 
 
 ![web console](../assets/tutorial-quickstart-01.png "web console")
 
