@@ -1697,11 +1697,10 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   {
     ITRetryUtil.retryUntilTrue(
         () -> {
-          int metadataSegmentCount = coordinator.getSegments(fullDatasourceName).size();
-          LOG.info("Current metadata segment count: %d, expected: %d", metadataSegmentCount, numExpectedSegments);
-          LOG.info("Segments metadata for datasource %s - %s",
-                   fullDatasourceName, coordinator.getFullSegmentsMetadata(fullDatasourceName));
-          return metadataSegmentCount == numExpectedSegments;
+          List<DataSegment> metadataSegments = coordinator.getFullSegmentsMetadata(fullDatasourceName);
+          LOG.info("Current metadata segment count: %d, expected: %d", metadataSegments.size(), numExpectedSegments);
+          LOG.info("Segments metadata - %s", metadataSegments.stream().map(x->x.getId() + " - " + x.getSize()));
+          return metadataSegments.size() == numExpectedSegments;
         },
         "Compaction segment count check"
     );

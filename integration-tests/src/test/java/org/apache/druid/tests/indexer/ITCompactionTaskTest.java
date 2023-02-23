@@ -29,6 +29,7 @@ import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.tests.TestNGGroup;
+import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 import org.testng.annotations.BeforeMethod;
@@ -297,11 +298,10 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   {
     ITRetryUtil.retryUntilTrue(
         () -> {
-          int metadataSegmentCount = coordinator.getSegments(fullDatasourceName).size();
-          LOG.info("Current metadata segment count: %d, expected: %d", metadataSegmentCount, numExpectedSegments);
-          LOG.info("Segments metadata for datasource %s - %s",
-                   fullDatasourceName, coordinator.getFullSegmentsMetadata(fullDatasourceName));
-          return metadataSegmentCount == numExpectedSegments;
+          List<DataSegment> metadataSegments = coordinator.getFullSegmentsMetadata(fullDatasourceName);
+          LOG.info("Current metadata segment count: %d, expected: %d", metadataSegments.size(), numExpectedSegments);
+          LOG.info("Segments metadata - %s", metadataSegments.stream().map(x->x.getId() + " - " + x.getSize()));
+          return metadataSegments.size() == numExpectedSegments;
         },
         "Segment count check"
     );
