@@ -43,12 +43,12 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -57,8 +57,9 @@ import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Like {@link PlannerConfig}, but that has static configuration and this class contains dynamic, per-query
- * configuration.
+ * Like {@link PlannerConfig}, but that has static configuration and this class
+ * contains dynamic, per-query configuration. Additional Druid-specific static
+ * configuration resides in the {@link PlannerToolbox} class.
  */
 public class PlannerContext
 {
@@ -75,19 +76,16 @@ public class PlannerContext
   // DataContext keys
   public static final String DATA_CTX_AUTHENTICATION_RESULT = "authenticationResult";
 
+  private final PlannerToolbox plannerToolbox;
   private final String sql;
-  private final DruidOperatorTable operatorTable;
-  private final ExprMacroTable macroTable;
-  private final JoinableFactoryWrapper joinableFactoryWrapper;
-  private final ObjectMapper jsonMapper;
   private final PlannerConfig plannerConfig;
   private final DateTime localNow;
-  private final DruidSchemaCatalog rootSchema;
   private final SqlEngine engine;
   private final Map<String, Object> queryContext;
   private final String sqlQueryId;
   private final boolean stringifyArrays;
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
+  private final PlannerHook hook;
   // bindings for dynamic parameters to bind during planning
   private List<TypedValue> parameters = Collections.emptyList();
   // result of authentication, providing identity to authorize set of resources produced by validation
@@ -103,30 +101,24 @@ public class PlannerContext
   private VirtualColumnRegistry joinExpressionVirtualColumnRegistry;
 
   private PlannerContext(
+      final PlannerToolbox plannerToolbox,
       final String sql,
-      final DruidOperatorTable operatorTable,
-      final ExprMacroTable macroTable,
-      final ObjectMapper jsonMapper,
       final PlannerConfig plannerConfig,
       final DateTime localNow,
       final boolean stringifyArrays,
-      final DruidSchemaCatalog rootSchema,
       final SqlEngine engine,
       final Map<String, Object> queryContext,
-      final JoinableFactoryWrapper joinableFactoryWrapper
+      final PlannerHook hook
   )
   {
+    this.plannerToolbox = plannerToolbox;
     this.sql = sql;
-    this.operatorTable = operatorTable;
-    this.macroTable = macroTable;
-    this.jsonMapper = jsonMapper;
     this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
-    this.rootSchema = rootSchema;
     this.engine = engine;
     this.queryContext = queryContext;
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
     this.stringifyArrays = stringifyArrays;
-    this.joinableFactoryWrapper = joinableFactoryWrapper;
+    this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
 
     String sqlQueryId = (String) this.queryContext.get(QueryContexts.CTX_SQL_QUERY_ID);
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
@@ -137,15 +129,11 @@ public class PlannerContext
   }
 
   public static PlannerContext create(
+      final PlannerToolbox plannerToolbox,
       final String sql,
-      final DruidOperatorTable operatorTable,
-      final ExprMacroTable macroTable,
-      final ObjectMapper jsonMapper,
-      final PlannerConfig plannerConfig,
-      final DruidSchemaCatalog rootSchema,
       final SqlEngine engine,
       final Map<String, Object> queryContext,
-      final JoinableFactoryWrapper joinableFactoryWrapper
+      final PlannerHook hook
   )
   {
     final DateTime utcNow;
@@ -165,7 +153,7 @@ public class PlannerContext
     if (tzParam != null) {
       timeZone = DateTimes.inferTzFromString(String.valueOf(tzParam));
     } else {
-      timeZone = plannerConfig.getSqlTimeZone();
+      timeZone = plannerToolbox.plannerConfig().getSqlTimeZone();
     }
 
     if (stringifyParam != null) {
@@ -175,33 +163,32 @@ public class PlannerContext
     }
 
     return new PlannerContext(
+        plannerToolbox,
         sql,
-        operatorTable,
-        macroTable,
-        jsonMapper,
-        plannerConfig.withOverrides(queryContext),
+        plannerToolbox.plannerConfig().withOverrides(queryContext),
         utcNow.withZone(timeZone),
         stringifyArrays,
-        rootSchema,
         engine,
         queryContext,
-        joinableFactoryWrapper
+        hook
     );
   }
 
-  public DruidOperatorTable getOperatorTable()
+  public PlannerToolbox getPlannerToolbox()
   {
-    return operatorTable;
+    return plannerToolbox;
   }
 
+  // Deprecated: prefer using the toolbox
   public ExprMacroTable getExprMacroTable()
   {
-    return macroTable;
+    return plannerToolbox.exprMacroTable();
   }
 
+  // Deprecated: prefer using the toolbox
   public ObjectMapper getJsonMapper()
   {
-    return jsonMapper;
+    return plannerToolbox.jsonMapper();
   }
 
   public PlannerConfig getPlannerConfig()
@@ -221,13 +208,13 @@ public class PlannerContext
 
   public JoinableFactoryWrapper getJoinableFactoryWrapper()
   {
-    return joinableFactoryWrapper;
+    return plannerToolbox.joinableFactoryWrapper();
   }
 
   @Nullable
   public String getSchemaResourceType(String schema, String resourceName)
   {
-    return rootSchema.getResourceType(schema, resourceName);
+    return plannerToolbox.rootSchema().getResourceType(schema, resourceName);
   }
 
   /**
@@ -266,6 +253,11 @@ public class PlannerContext
   public String getSql()
   {
     return sql;
+  }
+
+  public PlannerHook getPlannerHook()
+  {
+    return hook;
   }
 
   public String getSqlQueryId()
