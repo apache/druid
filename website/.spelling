@@ -2054,8 +2054,8 @@ druid_pendingSegments
 druid_rules
 druid_segments
 druid_supervisors
-druid_taskLock
-druid_taskLog
+druid_tasklocks
+druid_tasklogs
 druid_tasks
 DruidQueryRel
 durationToRetain
