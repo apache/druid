@@ -104,3 +104,4 @@ The links that follow are the raw GitHub URLs, so you can use them to download t
 - [Introduction to the Druid Python API](
   https://raw.githubusercontent.com/apache/druid/master/examples/quickstart/jupyter-notebooks/Python_API_Tutorial.ipynb)
   walks you through some of the basics related to the Druid API using the Python wrapper API.
+- [Introduction to Druid SQL](https://raw.githubusercontent.com/apache/druid/master/examples/quickstart/jupyter-notebooks/sql-tutorial.ipynb) covers the basics of Druid SQL.

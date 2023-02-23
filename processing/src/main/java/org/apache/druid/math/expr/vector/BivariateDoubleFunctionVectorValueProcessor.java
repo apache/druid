@@ -34,7 +34,6 @@ public abstract class BivariateDoubleFunctionVectorValueProcessor<TLeftInput, TR
 {
   final ExprVectorProcessor<TLeftInput> left;
   final ExprVectorProcessor<TRightInput> right;
-  final int maxVectorSize;
   final boolean[] outNulls;
   final double[] outValues;
 
@@ -46,7 +45,6 @@ public abstract class BivariateDoubleFunctionVectorValueProcessor<TLeftInput, TR
   {
     this.left = left;
     this.right = right;
-    this.maxVectorSize = maxVectorSize;
     this.outValues = new double[maxVectorSize];
     this.outNulls = new boolean[maxVectorSize];
   }

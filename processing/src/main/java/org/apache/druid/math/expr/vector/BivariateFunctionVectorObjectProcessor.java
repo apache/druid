@@ -35,20 +35,17 @@ public abstract class BivariateFunctionVectorObjectProcessor<TLeftInput, TRightI
 {
   final ExprVectorProcessor<TLeftInput> left;
   final ExprVectorProcessor<TRightInput> right;
-  final int maxVectorSize;
   final TOutput outValues;
   final boolean sqlCompatible = NullHandling.sqlCompatible();
 
   protected BivariateFunctionVectorObjectProcessor(
       ExprVectorProcessor<TLeftInput> left,
       ExprVectorProcessor<TRightInput> right,
-      int maxVectorSize,
       TOutput outValues
   )
   {
     this.left = left;
     this.right = right;
-    this.maxVectorSize = maxVectorSize;
     this.outValues = outValues;
   }
 

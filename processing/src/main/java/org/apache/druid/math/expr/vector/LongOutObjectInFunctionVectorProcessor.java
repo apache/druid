@@ -27,8 +27,6 @@ import org.apache.druid.math.expr.ExpressionType;
 public abstract class LongOutObjectInFunctionVectorProcessor
     extends UnivariateFunctionVectorObjectProcessor<Object[], long[]>
 {
-  final ExpressionType inputType;
-
   public LongOutObjectInFunctionVectorProcessor(
       ExprVectorProcessor<Object[]> processor,
       int maxVectorSize,
@@ -36,7 +34,6 @@ public abstract class LongOutObjectInFunctionVectorProcessor
   )
   {
     super(CastToTypeVectorProcessor.cast(processor, inputType), maxVectorSize, new long[maxVectorSize]);
-    this.inputType = inputType;
   }
 
   @Override

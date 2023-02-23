@@ -40,6 +40,7 @@ public class HttpClientProxyConfig
   @JsonProperty("password")
   private String password;
 
+  @SuppressWarnings("unused")
   public HttpClientProxyConfig()
   {
   }

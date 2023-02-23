@@ -40,6 +40,7 @@ import org.skife.jdbi.v2.util.TimestampMapper;
 
 import javax.annotation.Nullable;
 import java.sql.Timestamp;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -191,10 +192,21 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
       dbi = dbiCache.get(key);
     }
     if (dbi == null) {
+      Properties props = new Properties();
+      if (namespace.getConnectorConfig().getUser() != null) {
+        props.setProperty("user", namespace.getConnectorConfig().getUser());
+      }
+      if (namespace.getConnectorConfig().getPassword() != null) {
+        props.setProperty("password", namespace.getConnectorConfig().getPassword());
+      }
+
+      // We use double quotes to quote identifiers. This enables us to write SQL
+      // that works with most databases that are SQL compliant.
+      props.setProperty("sessionVariables", "sql_mode='ANSI_QUOTES'");
+
       final DBI newDbi = new DBI(
           namespace.getConnectorConfig().getConnectURI(),
-          namespace.getConnectorConfig().getUser(),
-          namespace.getConnectorConfig().getPassword()
+          props
       );
       dbiCache.putIfAbsent(key, newDbi);
       dbi = dbiCache.get(key);
