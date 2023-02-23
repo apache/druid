@@ -26,7 +26,6 @@ import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.channel.WritableFrameChannel;
-import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.Pair;
@@ -35,10 +34,7 @@ import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessorFactory;
 import org.apache.druid.msq.querykit.LazyResourceHolder;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
-
-import java.util.List;
 
 @JsonTypeName("groupByPreShuffle")
 public class GroupByPreShuffleFrameProcessorFactory extends BaseLeafFrameProcessorFactory
@@ -63,8 +59,6 @@ public class GroupByPreShuffleFrameProcessorFactory extends BaseLeafFrameProcess
       final Int2ObjectMap<ReadableInput> sideChannels,
       final ResourceHolder<WritableFrameChannel> outputChannelHolder,
       final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
-      final RowSignature signature,
-      final List<KeyColumn> sortKey,
       final FrameContext frameContext
   )
   {

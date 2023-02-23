@@ -37,7 +37,7 @@ import org.junit.Ignore;
 /**
  * Runs {@link CalciteQueryTest} but with MSQ engine
  */
-public class CalciteSelectQueryMSQTest extends CalciteQueryTest
+public class CalciteSelectQueryTestMSQ extends CalciteQueryTest
 {
   private TestGroupByBuffers groupByBuffers;
 

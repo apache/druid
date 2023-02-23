@@ -48,7 +48,6 @@ import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
-import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -150,7 +149,6 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
                   }
               ),
               makeLazyResourceHolder(frameWriterFactoryQueueRef, ignored -> {}),
-              stageDefinition.getSignature(),
               stageDefinition.getSortKey(),
               frameContext
           );
@@ -260,8 +258,6 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
       Int2ObjectMap<ReadableInput> sideChannels,
       ResourceHolder<WritableFrameChannel> outputChannelSupplier,
       ResourceHolder<FrameWriterFactory> frameWriterFactory,
-      RowSignature signature,
-      List<KeyColumn> sortKey,
       FrameContext providerThingy
   );
 

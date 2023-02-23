@@ -26,7 +26,6 @@ import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.channel.WritableFrameChannel;
-import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.Pair;
@@ -35,11 +34,9 @@ import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessorFactory;
 import org.apache.druid.msq.querykit.LazyResourceHolder;
 import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 
 import javax.annotation.Nullable;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 @JsonTypeName("scan")
@@ -78,8 +75,6 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
       Int2ObjectMap<ReadableInput> sideChannels,
       ResourceHolder<WritableFrameChannel> outputChannelHolder,
       ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
-      RowSignature signature,
-      List<KeyColumn> sortKey,
       FrameContext frameContext
   )
   {
