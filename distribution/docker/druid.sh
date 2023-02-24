@@ -167,6 +167,32 @@ if [ -n "$DRUID_MAXNEWSIZE" ]; then setJavaKey ${SERVICE} -XX:MaxNewSize -XX:Max
 if [ -n "$DRUID_NEWSIZE" ]; then setJavaKey ${SERVICE} -XX:NewSize -XX:NewSize=${DRUID_NEWSIZE}; fi
 if [ -n "$DRUID_MAXDIRECTMEMORYSIZE" ]; then setJavaKey ${SERVICE} -XX:MaxDirectMemorySize -XX:MaxDirectMemorySize=${DRUID_MAXDIRECTMEMORYSIZE}; fi
 
+# If java version is 17 or greater, add command line args to enable class loading via Guice
+JAVA_MAJOR="$(java -version 2>&1 | sed -n -E 's/.* version "([^."]*).*/\1/p')"
+
+if [ "$JAVA_MAJOR" != "" ] && [ "$JAVA_MAJOR" -ge "17" ]
+then
+  # Must disable strong encapsulation for certain packages on Java 17.
+  JAVA_OPTS="--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
+    --add-exports=java.base/jdk.internal.perf=ALL-UNNAMED \
+    --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED \
+    --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED \
+    --add-opens=java.base/java.nio=ALL-UNNAMED \
+    --add-opens=java.base/sun.nio.ch=ALL-UNNAMED \
+    --add-opens=java.base/java.io=ALL-UNNAMED \
+    --add-opens=java.base/java.lang=ALL-UNNAMED \
+    --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED \
+    $JAVA_OPTS"
+elif [ "$JAVA_MAJOR" != "" ] && [ "$JAVA_MAJOR" -ge "11" ]
+then
+  # Parameters below are required to use datasketches-memory as a library
+  JAVA_OPTS="$JAVA_OPTS \
+    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
+    --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED \
+    --add-opens=java.base/java.nio=ALL-UNNAMED \
+    --add-opens=java.base/sun.nio.ch=ALL-UNNAMED"
+fi
+
 # Combine options from jvm.config and those given as JAVA_OPTS
 # If a value is specified in both then JAVA_OPTS will take precedence when using OpenJDK
 # However this behavior is not part of the spec and is thus implementation specific
