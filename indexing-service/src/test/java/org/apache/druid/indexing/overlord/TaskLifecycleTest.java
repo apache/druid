@@ -59,6 +59,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -97,6 +98,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -176,7 +178,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 @RunWith(Parameterized.class)
 public class TaskLifecycleTest extends InitializedNullHandlingTest
@@ -606,9 +607,10 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         ),
         new TaskAuditLogConfig(true)
     );
-    File tmpDir = temporaryFolder.newFolder();
+    final String taskDirA = temporaryFolder.newFolder().toString();
+    final String taskDirB = temporaryFolder.newFolder().toString();
     taskConfig = new TaskConfig(
-        tmpDir.toString(),
+        null,
         null,
         null,
         50000,
@@ -621,7 +623,11 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false
+        false,
+        ImmutableList.of(
+            taskDirA,
+            taskDirB
+        )
     );
 
     return new TaskToolboxFactory(
@@ -707,7 +713,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        "1"
+        "1",
+        new TaskStorageDirTracker(taskConfig)
     );
   }
 
@@ -1364,7 +1371,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   @Test
   public void testUnifiedAppenderatorsManagerCleanup() throws Exception
   {
-    final ExecutorService exec = Executors.newFixedThreadPool(8);
+    final ExecutorService exec = Execs.multiThreaded(8, "TaskLifecycleTest-%d");
 
     UnifiedIndexerAppenderatorsManager unifiedIndexerAppenderatorsManager = new UnifiedIndexerAppenderatorsManager(
         new ForwardingQueryProcessingPool(exec),

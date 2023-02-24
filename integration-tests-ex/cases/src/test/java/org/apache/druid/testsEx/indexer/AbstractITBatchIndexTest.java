@@ -37,20 +37,25 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.ClientInfoResourceTestClient;
+import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.testing.utils.MsqTestQueryHelper;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.junit.Assert;
+import org.junit.Rule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
@@ -94,12 +99,153 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
   private static final Logger LOG = new Logger(AbstractITBatchIndexTest.class);
 
   @Inject
-  protected IntegrationTestingConfig config;
-  @Inject
   protected SqlTestQueryHelper sqlQueryHelper;
 
   @Inject
   ClientInfoResourceTestClient clientInfoResourceTestClient;
+
+  @Inject
+  private MsqTestQueryHelper msqHelper;
+
+  @Inject
+  private DataLoaderHelper dataLoaderHelper;
+
+  @Rule
+  public TestWatcher watchman = new TestWatcher()
+  {
+    @Override
+    public void starting(Description d)
+    {
+      LOG.info("RUNNING %s", d.getDisplayName());
+    }
+
+    @Override
+    public void failed(Throwable e, Description d)
+    {
+      LOG.error("FAILED %s", d.getDisplayName());
+    }
+
+    @Override
+    public void finished(Description d)
+    {
+      LOG.info("FINISHED %s", d.getDisplayName());
+    }
+  };
+
+  /**
+   * Reads file as utf-8 string and replace %%DATASOURCE%% with the provide datasource value.
+   */
+  public String getStringFromFileAndReplaceDatasource(String filePath, String datasource)
+  {
+    String fileString;
+    try {
+      InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(filePath);
+      fileString = IOUtils.toString(is, StandardCharsets.UTF_8);
+    }
+    catch (IOException e) {
+      throw new ISE(e, "could not read query file: %s", filePath);
+    }
+
+    fileString = StringUtils.replace(
+        fileString,
+        "%%DATASOURCE%%",
+        datasource
+    );
+
+    return fileString;
+  }
+
+  protected void doTestQuery(String dataSource, String queryFilePath)
+  {
+    doTestQuery(dataSource, queryFilePath, false);
+  }
+
+  /**
+   * Reads native queries from a file and runs against the provided datasource.
+   */
+  protected void doTestQuery(String dataSource, String queryFilePath, boolean isSql)
+  {
+    try {
+      String query = getStringFromFileAndReplaceDatasource(queryFilePath, dataSource);
+      if (isSql) {
+        sqlQueryHelper.testQueriesFromString(query);
+      } else {
+        queryHelper.testQueriesFromString(query);
+      }
+    }
+    catch (Exception e) {
+      LOG.error(e, "Error while running test query at path " + queryFilePath);
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Submits a sqlTask, waits for task completion.
+   */
+  protected void submitMSQTask(String sqlTask, String datasource, Map<String, Object> msqContext) throws Exception
+  {
+    LOG.info("SqlTask - \n %s", sqlTask);
+
+    // Submit the tasks and wait for the datasource to get loaded
+    msqHelper.submitMsqTaskAndWaitForCompletion(
+        sqlTask,
+        msqContext
+    );
+
+    dataLoaderHelper.waitUntilDatasourceIsReady(datasource);
+  }
+
+  /**
+   * Submits a sqlTask, waits for task completion.
+   */
+  protected void submitMSQTaskFromFile(String sqlFilePath, String datasource, Map<String, Object> msqContext) throws Exception
+  {
+    String sqlTask = getStringFromFileAndReplaceDatasource(sqlFilePath, datasource);
+    submitMSQTask(sqlTask, datasource, msqContext);
+  }
+
+  /**
+   * Runs a SQL ingest test.
+   *
+   * @param  sqlFilePath path of file containing the sql query.
+   * @param  queryFilePath path of file containing the native test queries to be run on the ingested datasource.
+   * @param  datasource name of the datasource. %%DATASOURCE%% in the sql and queries will be replaced with this value.
+   * @param  msqContext context parameters to be passed with MSQ API call.
+   */
+  protected void runMSQTaskandTestQueries(String sqlFilePath,
+                                          String queryFilePath,
+                                          String datasource,
+                                          Map<String, Object> msqContext
+  ) throws Exception
+  {
+    LOG.info("Starting MSQ test for sql path: %s, query path: %s]", sqlFilePath, queryFilePath);
+
+    submitMSQTaskFromFile(sqlFilePath, datasource, msqContext);
+    doTestQuery(datasource, queryFilePath);
+  }
+
+  /**
+   * Runs a reindex SQL ingest test.
+   * Same as runMSQTaskandTestQueries, but replaces both %%DATASOURCE%% and %%REINDEX_DATASOURCE%% in the SQL Task.
+   */
+  protected void runReindexMSQTaskandTestQueries(String sqlFilePath,
+                                                 String queryFilePath,
+                                                 String datasource,
+                                                 String reindexDatasource,
+                                                 Map<String, Object> msqContext
+  ) throws Exception
+  {
+    LOG.info("Starting Reindex MSQ test for sql path: %s, query path: %s", sqlFilePath, queryFilePath);
+
+    String sqlTask = getStringFromFileAndReplaceDatasource(sqlFilePath, datasource);
+    sqlTask = StringUtils.replace(
+        sqlTask,
+        "%%REINDEX_DATASOURCE%%",
+        reindexDatasource
+    );
+    submitMSQTask(sqlTask, reindexDatasource, msqContext);
+    doTestQuery(reindexDatasource, queryFilePath);
+  }
 
   protected void doIndexTest(
       String dataSource,
@@ -118,6 +264,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
         queryFilePath,
         waitForNewVersion,
         runTestQueries,
+        false,
         waitForSegmentsToLoad,
         segmentAvailabilityConfirmationPair
     );
@@ -130,6 +277,31 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       String queryFilePath,
       boolean waitForNewVersion,
       boolean runTestQueries,
+      boolean waitForSegmentsToLoad,
+      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
+  ) throws IOException
+  {
+    doIndexTest(
+        dataSource,
+        indexTaskFilePath,
+        taskSpecTransform,
+        queryFilePath,
+        waitForNewVersion,
+        runTestQueries,
+        false,
+        waitForSegmentsToLoad,
+        segmentAvailabilityConfirmationPair
+    );
+  }
+
+  protected void doIndexTest(
+      String dataSource,
+      String indexTaskFilePath,
+      Function<String, String> taskSpecTransform,
+      String queryFilePath,
+      boolean waitForNewVersion,
+      boolean runTestQueries,
+      boolean isSqlQueries,
       boolean waitForSegmentsToLoad,
       Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
   ) throws IOException
@@ -151,33 +323,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
         segmentAvailabilityConfirmationPair
     );
     if (runTestQueries) {
-      doTestQuery(dataSource, queryFilePath);
-    }
-  }
-
-  protected void doTestQuery(String dataSource, String queryFilePath)
-  {
-    try {
-      String queryResponseTemplate;
-      try {
-        InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(queryFilePath);
-        queryResponseTemplate = IOUtils.toString(is, StandardCharsets.UTF_8);
-      }
-      catch (IOException e) {
-        throw new ISE(e, "could not read query file: %s", queryFilePath);
-      }
-
-      queryResponseTemplate = StringUtils.replace(
-          queryResponseTemplate,
-          "%%DATASOURCE%%",
-          dataSource + config.getExtraDatasourceNameSuffix()
-      );
-      queryHelper.testQueriesFromString(queryResponseTemplate);
-
-    }
-    catch (Exception e) {
-      LOG.error(e, "Error while testing");
-      throw new RuntimeException(e);
+      doTestQuery(dataSource, queryFilePath, isSqlQueries);
     }
   }
 
@@ -318,6 +464,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       startSubTaskCount = countCompleteSubTasks(dataSourceName, !taskSpec.contains("dynamic"));
     }
 
+    LOG.info("Submitting the following spec for ingestion - \n%s", taskSpec);
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for loading index task %s", taskID);
     indexer.waitUntilTaskCompletes(taskID);

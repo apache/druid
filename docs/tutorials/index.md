@@ -36,16 +36,14 @@ Druid supports a variety of ingestion options. Once you're done with this tutori
 
 You can follow these steps on a relatively modest machine, such as a workstation or virtual server with 6 GiB of RAM.
 
-Druid comes equipped with launch scripts that can be used to start all processes on a single server. Here, we will use [`auto`](../operations/single-server.md#druid-auto-start), which automatically sets various runtime properties based on available processors and memory.
-
-In addition, Druid includes several [bundled static profiles](../operations/single-server.md) for a range of machine sizes. These range from nano (1 CPU, 4 GiB RAM) to x-large (64 CPU, 512 GiB RAM).
-See [Single server deployment](../operations/single-server.md) for more information. To learn how to deploy Druid services across clustered machines, see [Clustered deployment](./cluster.md).
-
 The software requirements for the installation machine are:
 
 * Linux, Mac OS X, or other Unix-like OS. (Windows is not supported)
 * [Java 8u92+ or Java 11](../operations/java.md)
-* Python 2 or Python 3
+
+* [Python2 or Python3](../operations/python.md)
+* Perl 5
+
 
 You must set either the `JAVA_HOME` or `DRUID_JAVA_HOME` environment variable for Druid to find Java on the machine. If there is more than one version of Java installed, set
 `DRUID_JAVA_HOME`. You can run `apache-druid-{{DRUIDVERSION}}/bin/verify-java` to verify Java requirements for your environment.
@@ -69,9 +67,10 @@ The distribution directory contains `LICENSE` and `NOTICE` files and subdirector
 
 ## Start up Druid services
 
-Start up Druid services using the `auto` single-machine configuration.
-This configuration includes default settings that are appropriate for this tutorial.
-For example, it loads `druid-multi-stage-query` extension so that you can use the MSQ task engine to ingest data using SQL.
+
+Start up Druid services using the automatic single-machine configuration.
+This configuration includes default settings that are appropriate for this tutorial, such as loading the `druid-multi-stage-query` extension by default so that you can use the MSQ task engine.
+
 
 You can view the default settings in the configuration files located in `conf/druid/auto`.
 

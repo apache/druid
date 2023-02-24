@@ -18,16 +18,16 @@
 
 import classNames from 'classnames';
 import React from 'react';
+import type { RowRenderProps } from 'react-table';
 import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
+import type { DimensionSpec, MetricSpec } from '../../../druid-models';
 import {
-  DimensionSpec,
   getDimensionSpecName,
   getDimensionSpecType,
   getMetricSpecName,
   inflateDimensionSpec,
-  MetricSpec,
 } from '../../../druid-models';
 import {
   DEFAULT_TABLE_CLASS_NAME,
@@ -35,7 +35,7 @@ import {
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../../react-table';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
-import { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
+import type { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
 
 import './schema-table.scss';
 
@@ -102,7 +102,7 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
             id: String(i),
             accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
             width: 120,
-            Cell: function SchemaTableCell({ value }) {
+            Cell: function SchemaTableCell({ value }: RowRenderProps) {
               return <TableCell value={value} />;
             },
           };
@@ -148,7 +148,7 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
             id: String(i),
             width: isTimestamp ? 200 : 140,
             accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-            Cell: function SchemaTableCell(row) {
+            Cell: function SchemaTableCell(row: RowRenderProps) {
               return <TableCell value={isTimestamp ? new Date(row.value) : row.value} />;
             },
           };

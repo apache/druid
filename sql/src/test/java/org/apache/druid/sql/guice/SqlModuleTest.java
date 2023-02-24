@@ -60,6 +60,7 @@ import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.NoopEscalator;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.view.DruidViewMacro;
@@ -204,6 +205,7 @@ public class SqlModuleTest
                     .toProvider(QuerySchedulerProvider.class)
                     .in(LazySingleton.class);
               binder.bind(ResponseContextConfig.class).toInstance(SqlResourceTest.TEST_RESPONSE_CONTEXT_CONFIG);
+              binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
             },
             sqlModule,
             new TestViewManagerModule()

@@ -21,6 +21,7 @@ package org.apache.druid.segment.nested;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -69,6 +70,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -94,6 +96,8 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   private final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
   private final SmooshedFileMapper fileMapper;
 
+  private final String rootFieldPath;
+
   private final ConcurrentHashMap<String, ColumnHolder> columns = new ConcurrentHashMap<>();
 
   private static final ObjectStrategy<Object> STRATEGY = NestedDataComplexTypeSerde.INSTANCE.getObjectStrategy();
@@ -108,7 +112,8 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       Supplier<TStringDictionary> stringDictionary,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
-      SmooshedFileMapper fileMapper
+      SmooshedFileMapper fileMapper,
+      String rootFieldPath
   )
   {
     this.metadata = metadata;
@@ -121,6 +126,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     this.fileMapper = fileMapper;
     this.closer = Closer.create();
     this.compressedRawColumnSupplier = compressedRawColumnSupplier;
+    this.rootFieldPath = rootFieldPath;
   }
 
   public abstract List<NestedPathPart> parsePath(String path);
@@ -188,9 +194,16 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
   {
+    if (fields.size() == 1 && rootFieldPath.equals(fields.get(0))) {
+      return makeColumnValueSelector(
+          ImmutableList.of(),
+          offset
+      );
+    }
     if (compressedRawColumn == null) {
       compressedRawColumn = closer.register(compressedRawColumnSupplier.get());
     }
+
     return new ObjectColumnSelector()
     {
       @Nullable
@@ -221,6 +234,12 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   @Override
   public VectorObjectSelector makeVectorObjectSelector(ReadableVectorOffset offset)
   {
+    if (fields.size() == 1 && rootFieldPath.equals(fields.get(0))) {
+      return makeVectorObjectSelector(
+          Collections.emptyList(),
+          offset
+      );
+    }
     if (compressedRawColumn == null) {
       compressedRawColumn = closer.register(compressedRawColumnSupplier.get());
     }
@@ -283,6 +302,17 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     };
   }
 
+  @Override
+  public VectorValueSelector makeVectorValueSelector(ReadableVectorOffset offset)
+  {
+    if (fields.size() == 1 && rootFieldPath.equals(fields.get(0))) {
+      return makeVectorValueSelector(
+          Collections.emptyList(),
+          offset
+      );
+    }
+    return super.makeVectorValueSelector(offset);
+  }
 
   @Override
   public int getLength()
@@ -480,6 +510,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
           metadata.getBitmapSerdeFactory().getObjectStrategy(),
           columnBuilder.getFileMapper()
       );
+      final boolean hasNull = localDictionarySupplier.get().get(0) == 0;
       Supplier<DictionaryEncodedColumn<?>> columnSupplier = () -> {
         FixedIndexed<Integer> localDict = localDictionarySupplier.get();
         return closer.register(new NestedFieldLiteralDictionaryEncodedColumn(
@@ -491,13 +522,13 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
             longDictionarySupplier.get(),
             doubleDictionarySupplier.get(),
             localDict,
-            localDict.get(0) == 0
+            hasNull
             ? rBitmaps.get(0)
             : metadata.getBitmapSerdeFactory().getBitmapFactory().makeEmptyImmutableBitmap()
         ));
       };
       columnBuilder.setHasMultipleValues(false)
-                   .setHasNulls(true)
+                   .setHasNulls(hasNull)
                    .setDictionaryEncodedColumnSupplier(columnSupplier);
       columnBuilder.setIndexSupplier(
           new NestedFieldLiteralColumnIndexSupplier(

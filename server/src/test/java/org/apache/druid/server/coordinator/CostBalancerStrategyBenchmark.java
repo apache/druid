@@ -23,6 +23,7 @@ import com.carrotsearch.junitbenchmarks.AbstractBenchmark;
 import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.AfterClass;
@@ -34,7 +35,6 @@ import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.Executors;
 
 @Ignore
 @RunWith(Parameterized.class)
@@ -46,11 +46,11 @@ public class CostBalancerStrategyBenchmark extends AbstractBenchmark
     return Arrays.asList(
         new CostBalancerStrategy[] {
             new CostBalancerStrategy(MoreExecutors.listeningDecorator(
-                Executors.newFixedThreadPool(1)))
+                Execs.multiThreaded(1, "CostBalancerStrategyBenchmark-%d")))
         },
         new CostBalancerStrategy[] {
             new CostBalancerStrategy(MoreExecutors.listeningDecorator(
-                Executors.newFixedThreadPool(4)))
+                Execs.multiThreaded(4, "CostBalancerStrategyBenchmark-%d")))
         }
     );
   }

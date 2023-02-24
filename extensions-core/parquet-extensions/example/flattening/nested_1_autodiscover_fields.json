@@ -32,7 +32,9 @@
             "format": "auto"
           },
           "dimensionsSpec": {
-            "dimensions": [],
+            "dimensions": [
+              "dim1"
+            ],
             "dimensionExclusions": [],
             "spatialDimensions": []
           }

@@ -18,7 +18,7 @@
 
 import React, { useState } from 'react';
 
-import { DruidError, RowColumn } from '../../utils';
+import type { DruidError, RowColumn } from '../../utils';
 import { HighlightText } from '../highlight-text/highlight-text';
 
 import './query-error-pane.scss';

@@ -35,6 +35,7 @@ import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -50,6 +51,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     this.rac = rac;
   }
 
+  @Nonnull
   @Override
   public RowsAndColumns aggregateAll(
       WindowFrame frame,
@@ -299,12 +301,10 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       int upperOffset
   )
   {
-    /**
-     * There are 3 different phases of operation when we have more rows than our window size
-     * 1. Our window is not full, as we walk the rows we build up towards filling it
-     * 2. Our window is full, as we walk the rows we take a value off and add a new aggregation
-     * 3. We are nearing the end of the rows, we need to start shrinking the window aperture
-     */
+    // There are 3 different phases of operation when we have more rows than our window size
+    // 1. Our window is not full, as we walk the rows we build up towards filling it
+    // 2. Our window is full, as we walk the rows we take a value off and add a new aggregation
+    // 3. We are nearing the end of the rows, we need to start shrinking the window aperture
 
     int numRows = rac.numRows();
     int windowSize = lowerOffset + upperOffset + 1;
@@ -434,15 +434,16 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       int upperOffset
   )
   {
-    int numRows = rac.numRows();
-    int windowSize = numRows;
+    // In this case, we need to store a value for all items, so our windowSize is equivalent to the number of rows
+    // from the RowsAndColumns object that we are using.
+    int windowSize = rac.numRows();
 
     // We store the results in an Object array for convenience.  This is definitely sub-par from a memory management
     // point of view as we should use native arrays when possible.  This will be fine for now, but it probably makes
     // sense to look at optimizing this in the future.  That said, such an optimization might best come by having
     // a specialized implementation of this interface against, say, a Frame object that can deal with arrays instead
     // of trying to optimize this generic implementation.
-    Object[][] results = new Object[aggFactories.length][numRows];
+    Object[][] results = new Object[aggFactories.length][windowSize];
     int resultStorageIndex = 0;
 
     AtomicInteger rowIdProvider = new AtomicInteger(0);
@@ -458,11 +459,11 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
     // This is the index to stop at for the current window aperture
     // The first row is used by all of the results for the lowerOffset num results, plus 1 for the "current row"
-    int stopIndex = Math.min(lowerOffset + 1, numRows);
+    int stopIndex = Math.min(lowerOffset + 1, windowSize);
 
     int startIndex = 0;
     int rowId = rowIdProvider.get();
-    while (rowId < numRows) {
+    while (rowId < windowSize) {
       for (Aggregator[] aggregator : aggregators) {
         for (int j = startIndex; j < stopIndex; ++j) {
           aggregator[j].aggregate();
@@ -540,13 +541,16 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     }
 
     @Override
-    public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
+    @Nonnull
+    public DimensionSelector makeDimensionSelector(@Nonnull DimensionSpec dimensionSpec)
     {
       throw new UOE("combining factory shouldn't need dimensions, just columnValue, dim[%s]", dimensionSpec);
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
-    public ColumnValueSelector makeColumnValueSelector(String columnName)
+    @Nonnull
+    public ColumnValueSelector makeColumnValueSelector(@Nonnull String columnName)
     {
       return new ObjectColumnSelector()
       {
@@ -564,6 +568,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
         }
 
         @Override
+        @Nonnull
         public Class classOfObject()
         {
           return results[index].getClass();
@@ -573,7 +578,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
     @Nullable
     @Override
-    public ColumnCapabilities getColumnCapabilities(String column)
+    public ColumnCapabilities getColumnCapabilities(@Nonnull String column)
     {
       return columnCapabilities;
     }
