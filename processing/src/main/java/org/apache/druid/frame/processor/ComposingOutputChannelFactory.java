@@ -114,7 +114,7 @@ public class ComposingOutputChannelFactory implements OutputChannelFactory
             }
           })::get;
       writableFrameChannelsBuilder.add(() -> channel.get().getWritableChannel());
-      readableFrameChannelSuppliersBuilder.add(() -> channel.get().getReadableChannelSupplier().get());
+      readableFrameChannelSuppliersBuilder.add(() -> channel.get().readOnly().getReadableChannelSupplier().get());
     }
     // the map maintains a mapping of channels which have the data for a given partition.
     // it is useful to identify the readable channels to open in the composition while reading the partition data.
