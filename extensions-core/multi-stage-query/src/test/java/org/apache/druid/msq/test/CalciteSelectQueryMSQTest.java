@@ -20,9 +20,11 @@
 package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
@@ -31,8 +33,10 @@ import org.apache.druid.sql.calcite.CalciteQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  * Runs {@link CalciteQueryTest} but with MSQ engine
@@ -161,4 +165,19 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
 
   }
 
+  @Test
+  @Override
+  public void testArrayAggQueryOnComplexDatatypes()
+  {
+    msqCompatible();
+    try {
+      testQuery("SELECT ARRAY_AGG(unique_dim1) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
+      Assert.fail("query execution should fail");
+    }
+    catch (ISE e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Cannot handle column [a0] with type [ARRAY<COMPLEX<hyperUnique>>]")
+      );
+    }
+  }
 }
