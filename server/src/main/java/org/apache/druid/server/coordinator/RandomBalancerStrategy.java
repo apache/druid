@@ -28,12 +28,22 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.stream.Collectors;
 
+/**
+ * A simple {@link BalancerStrategy} that
+ * <ul>
+ *   <li>assigns segments randomly amongst eligible servers</li>
+ *   <li>performs no balancing</li>
+ * </ul>
+ */
 public class RandomBalancerStrategy implements BalancerStrategy
 {
   @Override
-  public Iterator<ServerHolder> findNewSegmentHomeReplicator(DataSegment proposalSegment, List<ServerHolder> serverHolders)
+  public Iterator<ServerHolder> findNewSegmentHomeReplicator(
+      DataSegment proposalSegment,
+      List<ServerHolder> serverHolders
+  )
   {
-    // filter out servers whose avaialable size is less than required for this segment and those already serving this segment
+    // Filter out servers which cannot load this segment
     final List<ServerHolder> usableServerHolders =
         serverHolders.stream()
                      .filter(server -> server.canLoadSegment(proposalSegment))
@@ -45,7 +55,8 @@ public class RandomBalancerStrategy implements BalancerStrategy
   @Override
   public ServerHolder findNewSegmentHomeBalancer(DataSegment proposalSegment, List<ServerHolder> serverHolders)
   {
-    return null;  //To change body of implemented methods use File | Settings | File Templates.
+    // This strategy does not do any balancing
+    return null;
   }
 
   @Override

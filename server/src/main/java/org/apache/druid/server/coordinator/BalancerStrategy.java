@@ -37,21 +37,23 @@ import java.util.Set;
 public interface BalancerStrategy
 {
   /**
-   * Find the best server to move a {@link DataSegment} to according the balancing strategy.
+   * Finds the best server to move a segment to according to the balancing strategy.
+   *
    * @param proposalSegment segment to move
-   * @param serverHolders servers to consider as move destinations
+   * @param serverHolders   servers to consider as move destinations
    * @return The server to move to, or null if no move should be made or no server is suitable
    */
   @Nullable
   ServerHolder findNewSegmentHomeBalancer(DataSegment proposalSegment, List<ServerHolder> serverHolders);
 
   /**
-   * Finds the best servers on which to place a replica of the {@code proposalSegment}
-   * according to the balancing strategy.
+   * Finds the best servers on which to place the {@code proposalSegment}.
+   * This method can be used both for placing the first copy of a segment
+   * in the cluster or a replica of the segment.
    *
-   * @param proposalSegment segment to replicate
-   * @param serverHolders   servers to consider as replica holders
-   * @return Iterator over the best servers (in order) on which the replica(s)
+   * @param proposalSegment segment to place on servers
+   * @param serverHolders   servers to consider as segment homes
+   * @return Iterator over the best servers (in order) on which the segment
    * can be placed.
    */
   Iterator<ServerHolder> findNewSegmentHomeReplicator(
@@ -60,7 +62,8 @@ public interface BalancerStrategy
   );
 
   /**
-   * Pick the best segments to move from one of the supplied set of servers according to the balancing strategy.
+   * Picks the best segments to move from one of the supplied set of servers
+   * according to the balancing strategy.
    *
    * @param serverHolders set of historicals to consider for moving segments
    * @param broadcastDatasources Datasources that contain segments which were loaded via broadcast rules.
@@ -71,7 +74,7 @@ public interface BalancerStrategy
    *                                   implementation, only forever broadcast rules are supported.
    * @param reservoirSize the reservoir size maintained by the Reservoir Sampling algorithm.
    * @return Iterator for set of {@link BalancerSegmentHolder} containing segment to move and server they currently
-   * reside on, or empty if there are no segments to pick from (i. e. all provided serverHolders are empty).
+   * reside on, or empty if there are no segments to pick from (i.e. all provided serverHolders are empty).
    */
   default Iterator<BalancerSegmentHolder> pickSegmentsToMove(
       List<ServerHolder> serverHolders,
