@@ -18,7 +18,7 @@
 
 export * from './about-dialog/about-dialog';
 export * from './async-action-dialog/async-action-dialog';
-export * from './compaction-dialog/compaction-dialog';
+export * from './compaction-config-dialog/compaction-config-dialog';
 export * from './coordinator-dynamic-config-dialog/coordinator-dynamic-config-dialog';
 export * from './diff-dialog/diff-dialog';
 export * from './doctor-dialog/doctor-dialog';

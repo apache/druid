@@ -28,9 +28,9 @@ import {
 } from '../../druid-models';
 import { deepDelete, formatBytesCompact } from '../../utils';
 
-import './compaction-dialog.scss';
+import './compaction-config-dialog.scss';
 
-export interface CompactionDialogProps {
+export interface CompactionConfigDialogProps {
   onClose: () => void;
   onSave: (compactionConfig: CompactionConfig) => void | Promise<void>;
   onDelete: () => void;
@@ -38,7 +38,9 @@ export interface CompactionDialogProps {
   compactionConfig: CompactionConfig | undefined;
 }
 
-export const CompactionDialog = React.memo(function CompactionDialog(props: CompactionDialogProps) {
+export const CompactionConfigDialog = React.memo(function CompactionConfigDialog(
+  props: CompactionConfigDialogProps,
+) {
   const { datasource, compactionConfig, onSave, onClose, onDelete } = props;
 
   const [currentTab, setCurrentTab] = useState<FormJsonTabs>('form');
@@ -55,7 +57,7 @@ export const CompactionDialog = React.memo(function CompactionDialog(props: Comp
 
   return (
     <Dialog
-      className="compaction-dialog"
+      className="compaction-config-dialog"
       isOpen
       onClose={onClose}
       canOutsideClickClose={false}

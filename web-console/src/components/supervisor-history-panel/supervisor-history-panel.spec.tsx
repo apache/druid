@@ -16,23 +16,15 @@
  * limitations under the License.
  */
 
-@import '../../variables';
+import { render } from '@testing-library/react';
+import React from 'react';
 
-.show-history {
-  position: relative;
-  height: 100%;
+import { SupervisorHistoryPanel } from './supervisor-history-panel';
 
-  .#{$bp-ns}-tabs {
-    position: relative;
-    height: 100%;
-  }
-
-  .panel {
-    position: relative;
-    width: 100%;
-  }
-
-  .#{$bp-ns}-tab-list {
-    overflow-y: auto;
-  }
-}
+describe('SupervisorHistoryPanel', () => {
+  it('matches snapshot', () => {
+    const showJson = <SupervisorHistoryPanel supervisorId="test" />;
+    const { container } = render(showJson);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});

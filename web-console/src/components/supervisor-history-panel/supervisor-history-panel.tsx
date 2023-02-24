@@ -29,29 +29,32 @@ import { deepSet } from '../../utils';
 import { Loader } from '../loader/loader';
 import { ShowValue } from '../show-value/show-value';
 
-import './show-history.scss';
+import './supervisor-history-panel.scss';
 
 export interface VersionSpec {
   version: string;
   spec: IngestionSpec;
 }
 
-export interface ShowHistoryProps {
-  endpoint: string;
-  downloadFilenamePrefix?: string;
+export interface SupervisorHistoryPanelProps {
+  supervisorId: string;
 }
 
-export const ShowHistory = React.memo(function ShowHistory(props: ShowHistoryProps) {
-  const { downloadFilenamePrefix, endpoint } = props;
+export const SupervisorHistoryPanel = React.memo(function SupervisorHistoryPanel(
+  props: SupervisorHistoryPanelProps,
+) {
+  const { supervisorId } = props;
 
+  const [diffIndex, setDiffIndex] = useState(-1);
   const [historyState] = useQueryManager<string, VersionSpec[]>({
-    processQuery: async (endpoint: string) => {
-      const resp = await Api.instance.get(endpoint);
+    initQuery: supervisorId,
+    processQuery: async supervisorId => {
+      const resp = await Api.instance.get(
+        `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}/history`,
+      );
       return resp.data.map((vs: VersionSpec) => deepSet(vs, 'spec', cleanSpec(vs.spec, true)));
     },
-    initQuery: endpoint,
   });
-  const [diffIndex, setDiffIndex] = useState(-1);
 
   if (historyState.loading) return <Loader />;
 
@@ -59,7 +62,7 @@ export const ShowHistory = React.memo(function ShowHistory(props: ShowHistoryPro
   if (!historyData) return null;
 
   return (
-    <div className="show-history">
+    <div className="supervisor-history-panel">
       <Tabs animate renderActiveTabPanelOnly vertical defaultSelectedTabId={0}>
         {historyData.map((pastSupervisor, i) => (
           <Tab
@@ -70,7 +73,7 @@ export const ShowHistory = React.memo(function ShowHistory(props: ShowHistoryPro
               <ShowValue
                 jsonValue={JSONBig.stringify(pastSupervisor.spec, undefined, 2)}
                 onDiffWithPrevious={i < historyData.length - 1 ? () => setDiffIndex(i) : undefined}
-                downloadFilename={`${downloadFilenamePrefix}-version-${pastSupervisor.version}.json`}
+                downloadFilename={`supervisor-${supervisorId}-version-${pastSupervisor.version}.json`}
               />
             }
             panelClassName="panel"

@@ -1,9 +1,9 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partitionsSpec) 1`] = `
+exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic partitionsSpec) 1`] = `
 <Blueprint4.Dialog
   canOutsideClickClose={false}
-  className="compaction-dialog"
+  className="compaction-config-dialog"
   isOpen={true}
   onClose={[Function]}
   title="Compaction config: test1"
@@ -376,10 +376,10 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
 </Blueprint4.Dialog>
 `;
 
-exports[`CompactionDialog matches snapshot with compactionConfig (hashed partitionsSpec) 1`] = `
+exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed partitionsSpec) 1`] = `
 <Blueprint4.Dialog
   canOutsideClickClose={false}
-  className="compaction-dialog"
+  className="compaction-config-dialog"
   isOpen={true}
   onClose={[Function]}
   title="Compaction config: test1"
@@ -752,10 +752,10 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
 </Blueprint4.Dialog>
 `;
 
-exports[`CompactionDialog matches snapshot with compactionConfig (range partitionsSpec) 1`] = `
+exports[`CompactionConfigDialog matches snapshot with compactionConfig (range partitionsSpec) 1`] = `
 <Blueprint4.Dialog
   canOutsideClickClose={false}
-  className="compaction-dialog"
+  className="compaction-config-dialog"
   isOpen={true}
   onClose={[Function]}
   title="Compaction config: test1"
@@ -1128,10 +1128,10 @@ exports[`CompactionDialog matches snapshot with compactionConfig (range partitio
 </Blueprint4.Dialog>
 `;
 
-exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
+exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = `
 <Blueprint4.Dialog
   canOutsideClickClose={false}
-  className="compaction-dialog"
+  className="compaction-config-dialog"
   isOpen={true}
   onClose={[Function]}
   title="Compaction config: test1"
