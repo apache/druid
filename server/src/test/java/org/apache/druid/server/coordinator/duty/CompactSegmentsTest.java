@@ -251,8 +251,8 @@ public class CompactSegmentsTest
     JSON_MAPPER.setInjectableValues(
         new InjectableValues.Std()
             .addValue(DruidCoordinatorConfig.class, COORDINATOR_CONFIG)
-            .addValue(ObjectMapper.class, JSON_MAPPER)
             .addValue(IndexingServiceClient.class, indexingServiceClient)
+            .addValue(CompactionSegmentSearchPolicy.class, SEARCH_POLICY)
     );
 
     final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, indexingServiceClient);
