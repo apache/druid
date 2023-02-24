@@ -117,7 +117,7 @@ public class TombstoneHelperTest
   }
 
   @Test
-  public void tombstonesCreatedForReplaceWhenReplaceIsContainedInUsedIntervals() throws Exception
+  public void tombstoneIntervalsCreatedForReplaceWhenReplaceIsContainedInUsedIntervals() throws Exception
   {
     Interval usedInterval = Intervals.of("2020-02-01/2020-04-01");
     Interval replaceInterval = Intervals.of("2020-03-01/2020-03-31");
@@ -149,7 +149,7 @@ public class TombstoneHelperTest
   }
 
   @Test
-  public void tombstonesCreatedForReplaceWhenThereIsAGapInUsedIntervals() throws Exception
+  public void tombstoneIntervalsCreatedForReplaceWhenThereIsAGapInUsedIntervals() throws Exception
   {
     List<Interval> usedIntervals = ImmutableList.of(
         Intervals.of("2020-02-01/2020-04-01"),
@@ -187,7 +187,7 @@ public class TombstoneHelperTest
   }
 
   @Test
-  public void tombstonesCreatedForReplaceWhenUsedIntervalsDonotAlign() throws Exception
+  public void tombstoneIntervalsCreatedForReplaceWhenUsedIntervalsDonotAlign() throws Exception
   {
     Interval usedInterval = Intervals.of("2020-02-01T12:12:12.121/2020-04-01T00:00:00.000");
     Interval replaceInterval = Intervals.of("2020-01-30/2020-03-31");
@@ -216,7 +216,7 @@ public class TombstoneHelperTest
   }
 
   @Test
-  public void tombstonesCreatedForReplaceWhenUsedIntervalsAreCompletelyDisjoint() throws Exception
+  public void tombstoneIntervalsCreatedForReplaceWhenUsedIntervalsAreCompletelyDisjoint() throws Exception
   {
     Interval usedInterval = Intervals.of("2020-02-01T12:12:12.121/2020-04-01T00:00:00.000");
     Interval replaceInterval = Intervals.of("2023-01-30/2023-03-31");

@@ -1257,7 +1257,7 @@ public class ControllerImpl implements Controller
       if (!intervalsToDrop.isEmpty()) {
         TombstoneHelper tombstoneHelper = new TombstoneHelper(context.taskActionClient());
         try {
-          Set<DataSegment> tombstones = tombstoneHelper.computeTombstonesForReplace(
+          Set<DataSegment> tombstones = tombstoneHelper.computeTombstoneSegmentsForReplace(
               intervalsToDrop,
               destination.getReplaceTimeChunks(),
               task.getDataSource(),

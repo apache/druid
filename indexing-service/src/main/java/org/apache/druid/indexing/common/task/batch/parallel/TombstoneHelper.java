@@ -97,8 +97,7 @@ public class TombstoneHelper
     List<Interval> pushedSegmentsIntervals = getCondensedPushedSegmentsIntervals(pushedSegments);
     List<Interval> intervalsForUsedSegments = getCondensedUsedIntervals(
         dataSchema.getGranularitySpec().inputIntervals(),
-        dataSchema.getDataSource(),
-        taskActionClient
+        dataSchema.getDataSource()
     );
     for (Interval timeChunkInterval : granularitySpec.sortedBucketIntervals()) {
       // is it an empty time chunk?
@@ -125,7 +124,7 @@ public class TombstoneHelper
     return retVal;
   }
 
-  public Set<DataSegment> computeTombstonesForReplace(
+  public Set<DataSegment> computeTombstoneSegmentsForReplace(
       List<Interval> intervalsToDrop,
       List<Interval> intervalsToReplace,
       String dataSource,
@@ -168,8 +167,10 @@ public class TombstoneHelper
   }
 
   /**
-   * @param intervalsToDrop Empty intervals in the query that need to be dropped
-   * @param intervalsToReplace Intervals in the query which are eligible for replacement with new data
+   * @param intervalsToDrop Empty intervals in the query that need to be dropped. They should be aligned with the
+   *                        replaceGranularity
+   * @param intervalsToReplace Intervals in the query which are eligible for replacement with new data.
+   *                           They should be aligned with the replaceGranularity
    * @param dataSource Datasource on which the replace is to be performed
    * @param replaceGranularity Granularity of the replace query
    * @return Intervals computed for the tombstones
@@ -183,7 +184,7 @@ public class TombstoneHelper
   ) throws IOException
   {
     Set<Interval> retVal = new HashSet<>();
-    List<Interval> usedIntervals = getCondensedUsedIntervals(intervalsToReplace, dataSource, taskActionClient);
+    List<Interval> usedIntervals = getCondensedUsedIntervals(intervalsToReplace, dataSource);
 
     for (Interval intervalToDrop : intervalsToDrop) {
       for (Interval usedInterval : usedIntervals) {
@@ -204,6 +205,12 @@ public class TombstoneHelper
         // is aligned by the granularity, and by extension all the elements inside the intervals to drop would
         // also be aligned by the same granularity (since intervalsToDrop = replaceIntervals - publishIntervals, and
         // the right-hand side is always aligned)
+        //
+        // For example, if the replace granularity is DAY, intervalsToReplace are 20/02/2023 - 24/02/2023 (always
+        // aligned with the replaceGranularity), intervalsToDrop are 22/02/2023 - 24/02/2023 (they must also be aligned with the replaceGranularity)
+        // If the relevant usedIntervals for the datasource are from 22/02/2023 01:00:00 - 23/02/2023 02:00:00, then
+        // the overlap would be 22/02/2023 01:00:00 - 23/02/2023 02:00:00. When iterating over the overlap we will get
+        // the intervals from 22/02/2023 - 23/02/2023, and 23/02/2023 - 24/02/2023
         IntervalsByGranularity intervalsToDropByGranularity = new IntervalsByGranularity(
             ImmutableList.of(overlap),
             replaceGranularity
@@ -251,14 +258,12 @@ public class TombstoneHelper
    *
    * @param inputIntervals   Intervals corresponding to the task
    * @param dataSource       Datasource corresponding to the task
-   * @param taskActionClient Task action client to fetch the used intervals for the datasource
    * @return Intervals corresponding to used segments that overlap with any of the spec's input intervals
    * @throws IOException If used segments cannot be retrieved
    */
   private List<Interval> getCondensedUsedIntervals(
       List<Interval> inputIntervals,
-      String dataSource,
-      TaskActionClient taskActionClient
+      String dataSource
   ) throws IOException
   {
     List<Interval> retVal = new ArrayList<>();

@@ -583,7 +583,7 @@ public class MSQReplaceTest extends MSQTestBase
   }
 
   @Test
-  public void testInsertCannotReplaceExistingSegmentFault()
+  public void testReplaceTombstonesOverPartiallyOverlappingSegments()
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
