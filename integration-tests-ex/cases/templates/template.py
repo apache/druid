@@ -23,7 +23,7 @@ internally as a Python data structure made up of maps, arrays and scalars.
 PyYaml does the grunt work of converting the data structure to the YAML file.
 '''
 
-import yaml, os, os.path
+import yaml, os
 from pathlib import Path
 
 # Constants used frequently in the template.
@@ -49,16 +49,21 @@ def generate(template_path, template):
     '''
 
     # Compute the cluster (test category) name from the template path which
-    # we assume to be module/<something>/<template>/<something>.py
+    # we assume to be <module>/templates/<something>.py
     template_path = Path(template_path)
     cluster = template_path.stem
 
-    # Move up to the module (that is, the cases folder) relative to the template file.
-    module_dir = Path(__file__).parent.parent
+    # Move up to the module (usually the 'cases' folder) relative to the template file.
+    module_dir = template_path.parent.parent
 
     # The target location for the output file is <module>/target/cluster/<cluster>/docker-compose.yaml
     target_dir = module_dir.joinpath("target")
+    os.makedirs(target_dir, exist_ok=True)
     target_file = target_dir.joinpath('cluster', cluster, 'docker-compose.yaml')
+    # Uncomment the following for debugging
+    #print("template_path:", template_path)
+    #print("module_dir:", module_dir)
+    #print("target_file:", target_file)
 
     # Defer back to the template class to create the output into the docker-compose.yaml file.
     with target_file.open("w") as f:

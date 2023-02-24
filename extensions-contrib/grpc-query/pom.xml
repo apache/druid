@@ -32,12 +32,12 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <properties>
-    <grpc.version>1.52.0</grpc.version>
-    <maven.shade.plugin.version>3.2.1</maven.shade.plugin.version>
-  </properties>
-
   <dependencies>
+    <dependency>
+      <groupId>org.apache.druid.extensions.contrib</groupId>
+      <artifactId>druid-shaded-grpc</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
     <dependency>
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-core</artifactId>
@@ -202,18 +202,18 @@
           <execution>
             <id>build-shaded-jar</id>
             <goals>
-                <goal>exec</goal>
+              <goal>exec</goal>
             </goals>
             <phase>initialize</phase>
             <configuration>
-                <workingDirectory>${project.basedir}/../grpc-shaded</workingDirectory>
-                <executable>mvn</executable>
-                <arguments>
-                  <argument>install</argument>
-                  <argument>-P</argument>
-                  <argument>skip-static-checks,skip-tests</argument>
-                  <argument>-Dmaven.javadoc.skip=true</argument>
-                </arguments>
+              <workingDirectory>${project.basedir}/../grpc-shaded</workingDirectory>
+              <executable>mvn</executable>
+              <arguments>
+                <argument>install</argument>
+                <argument>-P</argument>
+                <argument>skip-static-checks,skip-tests</argument>
+                <argument>-Dmaven.javadoc.skip=true</argument>
+              </arguments>
             </configuration>
           </execution>
         </executions>
@@ -243,24 +243,24 @@
         </executions>
       </plugin>
         <plugin>
-            <groupId>org.xolstice.maven.plugins</groupId>
-            <artifactId>protobuf-maven-plugin</artifactId>
-            <version>0.6.1</version>
-            <configuration>
-                <protocArtifact>com.google.protobuf:protoc:3.21.7:exe:${os.detected.classifier}</protocArtifact>
-                <pluginId>grpc-java</pluginId>
-                <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.52.0:exe:${os.detected.classifier}</pluginArtifact>
-            </configuration>
-            <executions>
-                <execution>
-                    <goals>
-                        <goal>compile</goal>
-                        <goal>compile-custom</goal>
-                        <goal>test-compile</goal>
-                        <goal>test-compile-custom</goal>
-                    </goals>
-                </execution>
-            </executions>
+          <groupId>org.xolstice.maven.plugins</groupId>
+          <artifactId>protobuf-maven-plugin</artifactId>
+          <version>0.6.1</version>
+          <configuration>
+            <protocArtifact>com.google.protobuf:protoc:3.21.7:exe:${os.detected.classifier}</protocArtifact>
+            <pluginId>grpc-java</pluginId>
+            <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.52.0:exe:${os.detected.classifier}</pluginArtifact>
+          </configuration>
+          <executions>
+            <execution>
+              <goals>
+                <goal>compile</goal>
+                <goal>compile-custom</goal>
+                <goal>test-compile</goal>
+                <goal>test-compile-custom</goal>
+              </goals>
+            </execution>
+          </executions>
         </plugin>
     </plugins>
   </build>

@@ -27,15 +27,16 @@ set -e
 # Enable for debugging
 #set -x
 
-export MODULE_DIR=$(cd $(dirname $0) && pwd)
+export BASE_MODULE_DIR=$(cd $(dirname $0) && pwd)
+
+# The location of the tests, if different than the
+export MODULE_DIR=${IT_MODULE_DIR:-$BASE_MODULE_DIR}
 
 function usage {
   cat <<EOF
 Usage: $0 cmd [category]
   -h, help
       Display this message
-  prepare category
-      Generate the docker-compose.yaml file for the category for debugging.
   up category
       Start the cluster
   down category
@@ -45,7 +46,7 @@ Usage: $0 cmd [category]
   compose-cmd category
       Pass the command to Docker compose. Cluster should already be up.
   gen category
-      Generate docker-compose.yaml files (only.) Done automatically as
+      Generate docker-compose.yaml file (only.) Done automatically as
       part of up. Use only for debugging.
 EOF
 }
@@ -60,7 +61,7 @@ CMD=$1
 shift
 
 function check_env_file {
-  export ENV_FILE=$MODULE_DIR/../image/target/env.sh
+  export ENV_FILE=$BASE_MODULE_DIR/../image/target/env.sh
   if [ ! -f $ENV_FILE ]; then
     echo "Please build the Docker test image before testing" 1>&2
     exit 1
@@ -133,7 +134,7 @@ function build_shared_dir {
   mkdir -p $SHARED_DIR/db
   mkdir -p $SHARED_DIR/kafka
   mkdir -p $SHARED_DIR/resources
-  cp $MODULE_DIR/assets/log4j2.xml $SHARED_DIR/resources
+  cp $BASE_MODULE_DIR/assets/log4j2.xml $SHARED_DIR/resources
   # Permissions in some build setups are screwed up. See above. The user
   # which runs Docker does not have permission to write into the /shared
   # directory. Force ownership to allow writing.
@@ -153,7 +154,7 @@ function docker_file {
     pushd $TEMPLATE_DIR > /dev/null
     python3 $TEMPLATE_SCRIPT
     popd > /dev/null
-    cp -r $MODULE_DIR/cluster/Common $TARGET_DIR/cluster
+    cp -r $BASE_MODULE_DIR/cluster/Common $TARGET_DIR/cluster
   else
     # Else, use the existing non-template file in place.
     if [ ! -d $CLUSTER_DIR ]; then
@@ -219,17 +220,6 @@ set -e
 # Print environment for debugging
 #env
 
-# Determine if docker-compose is available. If not, assume Docker supports
-# the compose subcommand
-set +e
-if which docker-compose > /dev/null
-then
-  DOCKER_COMPOSE='docker-compose'
-else
-  DOCKER_COMPOSE='docker compose'
-fi
-set -e
-
 case $CMD in
   "-h" )
     usage
@@ -238,17 +228,11 @@ case $CMD in
     usage
     $DOCKER_COMPOSE help
     ;;
-  "prepare" )
-    check_env_file
-    category $*
-    build_shared_dir
-    docker_file
-    ;;
   "gen" )
     category $*
     build_shared_dir
     docker_file
-    echo "Generated file is in $COMPOSE_DIR"
+    echo "Generated file is $COMPOSE_DIR/docker-compose.yaml"
     ;;
   "up" )
     check_env_file

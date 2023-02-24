@@ -30,7 +30,7 @@ export DRUID_DEV=$(cd $(dirname $0) && pwd)
 function usage
 {
   cat <<EOF
-Usage: $0 cmd [category]
+Usage: $0 cmd [category] [module]
   ci
       build Druid and the distribution for CI pipelines
   build
@@ -41,21 +41,26 @@ Usage: $0 cmd [category]
       Build druid-it-tools
   image
       Build the test image
-  up <category>
+  up <category> [<module>]
       Start the cluster for category
-  down <category>
+  down <category> [<module>]
       Stop the cluster for category
-  test <category>
+  test <category> [<module>]
       Start the cluster, run the test for category, and stop the cluster
-  tail <category>
+  tail <category> [<module>]
       Show the last 20 lines of each container log
-  gen
+  gen <category> [<module>]
       Generate docker-compose.yaml files (done automatically on up)
       run one IT in Travis (build dist, image, run test, tail logs)
-  github <category>
+  github <category> [<module>]
       Run one IT in Github Workflows (run test, tail logs)
   prune
       prune Docker volumes
+
+Arguments:
+  category: A defined IT JUnit category, and IT-<category> profile
+  module: relative path to the module with tests. Defaults to
+          integration-tests-ex/cases
 
 Environment:
   OVERRIDE_ENV: optional, name of env file to pass to Docker
@@ -70,13 +75,13 @@ EOF
 
 function tail_logs
 {
-  category=$1
-  cd integration-tests-ex/cases/target/$category/logs
+  pushd $TARGET_DIR/target/$CATEGORY/logs > /dev/null
   ls *.log | while read log;
   do
-    echo "----- $category/$log -----"
+    echo "----- $CATEGORY/$log -----"
     tail -20 $log
   done
+  popd > /dev/null
 }
 
 # Many tests require us to pass information into containers using environment variables.
@@ -102,8 +107,8 @@ function tail_logs
 # into Docker compose.
 function build_override {
 
-	mkdir -p target
-	OVERRIDE_FILE="$(pwd)/target/override.env"
+	mkdir -p "$TARGET_DIR/target"
+	OVERRIDE_FILE="$TARGET_DIR/target/override.env"
 	rm -f "$OVERRIDE_FILE"
 	touch "$OVERRIDE_FILE"
 
@@ -122,36 +127,30 @@ function build_override {
 		cat "$LOCAL_ENV" >> "$OVERRIDE_FILE"
 	fi
 
-    # Add all environment variables of the form druid_*
-    set +e # Grep gives exit status 1 if no lines match. Let's not fail.
-    env | grep "^druid_" >> "$OVERRIDE_FILE"
-    set -e
+  # Add all environment variables of the form druid_*
+  set +e # Grep gives exit status 1 if no lines match. Let's not fail.
+  env | grep "^druid_" >> "$OVERRIDE_FILE"
+  set -e
 
-    # TODO: Add individual env vars that we want to pass from the local
-    # environment into the container.
+  # TODO: Add individual env vars that we want to pass from the local
+  # environment into the container.
 
-    # Reuse the OVERRIDE_ENV variable to pass the full list to Docker compose
-    export OVERRIDE_ENV="$OVERRIDE_FILE"
+  # Reuse the OVERRIDE_ENV variable to pass the full list to Docker compose
+  export OVERRIDE_ENV="$OVERRIDE_FILE"
 }
 
-function prepare_category {
-	if [ $# -eq 0 ]; then
+function require_category {
+	if [ -z "$CATEGORY" ]; then
 		usage 1>&2
 		exit 1
 	fi
-	export CATEGORY=$1
-}
-
-function prepare_docker {
-    cd $DRUID_DEV/integration-tests-ex/cases
-    build_override
 }
 
 function require_env_var {
-	if [ -n "$1" ]; then
+	if [ -z "$1" ]; then
 	  echo "$1 must be set for test category $CATEGORY" 1>&2
 	  exit 1
-    fi
+  fi
 }
 
 # Verfiy any test-specific environment variables that must be set in this local
@@ -186,13 +185,39 @@ function verify_env_vars {
 	esac
 }
 
-if [ $# = 0 ]; then
+if [ $# -eq 0 ]; then
   usage
   exit 1
 fi
 
 CMD=$1
 shift
+if [ $# -gt 0 ]; then
+	CATEGORY=$1
+	shift
+fi
+
+# Handle an IT in either the usual druid-it-cases project, or elsewhere,
+# typically in an extension. The Maven module, if needed must be the third
+# parameter in path, not coordinate, form.
+if [ $# -eq 0 ]; then
+  # Use the usual project
+  MAVEN_PROJECT=":druid-it-cases"
+  # Don't provide a project path to cluster.sh
+  unset IT_MODULE_DIR
+  # Generate the override.sh file in the druid-it-cases module
+  TARGET_DIR=$DRUID_DEV/integration-tests-ex/cases
+else
+  # The test module is given via the command line argument as a relative path
+  MAVEN_PROJECT="$1"
+  # Compute the full path to the target module for use by cluster.sh
+  export IT_MODULE_DIR="$DRUID_DEV/$1"
+  # Write the override.sh file to the target module
+  TARGET_DIR=$IT_MODULE_DIR
+  shift
+fi
+IT_CASES_DIR="$DRUID_DEV/integration-tests-ex/cases"
+
 MAVEN_IGNORE="-P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true"
 
 case $CMD in
@@ -218,34 +243,31 @@ case $CMD in
   "gen")
     # Generate the docker-compose.yaml files. Mostly for debugging
     # since the up command does generation implicitly.
-    prepare_category $1
-    prepare_docker
-    ./cluster.sh gen $CATEGORY
+    require_category
+    $IT_CASES_DIR/cluster.sh gen $CATEGORY
     ;;
   "up" )
-    prepare_category $1
-    prepare_docker
+    require_category
+    build_override
     verify_env_vars
-    ./cluster.sh up $CATEGORY
+    $IT_CASES_DIR/cluster.sh up $CATEGORY
     ;;
   "down" )
-    prepare_category $1
-    prepare_docker
-    ./cluster.sh down $CATEGORY
+    require_category
+    $IT_CASES_DIR/cluster.sh down $CATEGORY
     ;;
   "test" )
-    prepare_category $1
-    prepare_docker
+    require_category
+    build_override
     mvn verify -P skip-static-checks,docker-tests,IT-$CATEGORY \
             -Dmaven.javadoc.skip=true -DskipUTs=true \
-            -pl :druid-it-cases
+            -pl $MAVEN_PROJECT
     ;;
   "tail" )
-    prepare_category $1
-    tail_logs $CATEGORY
+    require_category
+    tail_logs
     ;;
   "github" )
-    prepare_category $1
     $0 test $CATEGORY
     $0 tail $CATEGORY
     ;;
@@ -256,6 +278,6 @@ case $CMD in
     ;;
   * )
     usage
-    exit -1
+    exit 1
     ;;
 esac
