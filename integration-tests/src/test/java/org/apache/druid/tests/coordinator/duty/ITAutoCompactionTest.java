@@ -89,6 +89,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Test(groups = {TestNGGroup.COMPACTION})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
@@ -1699,7 +1700,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
         () -> {
           List<DataSegment> metadataSegments = coordinator.getFullSegmentsMetadata(fullDatasourceName);
           LOG.info("Current metadata segment count: %d, expected: %d", metadataSegments.size(), numExpectedSegments);
-          LOG.info("Segments metadata - %s", metadataSegments.stream().map(x->x.getId() + " - " + x.getSize()));
+          LOG.info("Segments metadata - %s", metadataSegments.stream().map(x->x.getId() + " - " + x.getSize()).collect(
+              Collectors.toList()));
           return metadataSegments.size() == numExpectedSegments;
         },
         "Compaction segment count check"

@@ -61,7 +61,7 @@
       ],
       "granularitySpec": {
         "segmentGranularity": "DAY",
-        "queryGranularity": "DAY",
+        "queryGranularity": "second",
         "intervals" : [ "2013-08-31/2013-09-02" ]
       }
     },
@@ -69,11 +69,14 @@
       "type": "index",
       "inputSource": {
         "type": "local",
-        "baseDir": "/resources/data/batch_index/json",
-        "filter": "wikipedia_index_data*"
+        "files": [
+          "/resources/data/batch_index/json/wikipedia_index_data1.json",
+          "/resources/data/batch_index/json/wikipedia_index_data2.json",
+          "/resources/data/batch_index/json/wikipedia_index_data3.json"
+        ]
       },
       "inputFormat": {
-        "type" : "json"
+        "type": "json"
       },
       "appendToExisting": false
     },
