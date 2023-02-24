@@ -510,7 +510,8 @@ public class ServiceClientImpl implements ServiceClient
   }
 
   /**
-   * Whether two service locations are same or not. If a port is negative, we ignore that port for comparison.
+   * Returns true if two service locations are same or false otherwise. If a port is negative, we ignore that
+   * port for comparison.
    */
   static boolean serviceLocationMatches(final ServiceLocation left, final ServiceLocation right)
   {
