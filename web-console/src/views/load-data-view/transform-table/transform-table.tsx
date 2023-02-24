@@ -18,10 +18,11 @@
 
 import classNames from 'classnames';
 import React from 'react';
+import type { RowRenderProps } from 'react-table';
 import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
-import { Transform } from '../../../druid-models';
+import type { Transform } from '../../../druid-models';
 import {
   DEFAULT_TABLE_CLASS_NAME,
   STANDARD_TABLE_PAGE_SIZE,
@@ -29,7 +30,7 @@ import {
 } from '../../../react-table';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
 import { escapeColumnName } from '../../../utils/druid-expression';
-import { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
+import type { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
 
 import './transform-table.scss';
 
@@ -111,7 +112,7 @@ export const TransformTable = React.memo(function TransformTable(props: Transfor
           id: String(i),
           accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
           width: 140,
-          Cell: function TransformTableCell(row) {
+          Cell: function TransformTableCell(row: RowRenderProps) {
             return <TableCell value={timestamp ? new Date(row.value) : row.value} />;
           },
         };

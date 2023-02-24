@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.msq.test.CounterSnapshotBuilder;
+import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
@@ -110,6 +110,21 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f}
                          )
                      )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().totalFiles(1),
+                         0, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(1, 1, 1, 1, 1, 1).frames(1, 1, 1, 1, 1, 1),
+                         0, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(1, 1, 1, 1, 1, 1).frames(1, 1, 1, 1, 1, 1),
+                         1, 0, "input0"
+                     )
                      .verifyResults();
   }
 
@@ -139,6 +154,21 @@ public class MSQReplaceTest extends MSQTestBase
                          0
                      )))
                      .setExpectedResultRows(ImmutableList.of(new Object[]{946771200000L, 2.0f}))
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().totalFiles(1),
+                         0, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(1).frames(1),
+                         0, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(1).frames(1),
+                         1, 0, "input0"
+                     )
                      .verifyResults();
   }
 
@@ -195,10 +225,24 @@ public class MSQReplaceTest extends MSQTestBase
                          )
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1),
                          0, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(3).frames(1),
+                         0, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(3).frames(1),
+                         1, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(1, 1, 1).frames(1, 1, 1),
+                         1, 0, "shuffle"
                      )
                      .verifyResults();
   }
@@ -247,10 +291,19 @@ public class MSQReplaceTest extends MSQTestBase
                          )
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1),
                          0, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(4).frames(1),
+                         0, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(4).frames(1),
+                         1, 0, "input0"
                      )
                      .verifyResults();
   }
@@ -305,6 +358,21 @@ public class MSQReplaceTest extends MSQTestBase
                          )
                      )
                      .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().totalFiles(1),
+                         0, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(6).frames(1),
+                         0, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(6).frames(1),
+                         1, 0, "input0"
+                     )
                      .verifyResults();
   }
 
@@ -346,6 +414,21 @@ public class MSQReplaceTest extends MSQTestBase
                                              SegmentId.of("foo", Intervals.of("2001-01-01T/P1M"), "test", 0)
                                          )
                      )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().totalFiles(1),
+                         0, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(3, 3).frames(1, 1),
+                         0, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(3, 3).frames(1, 1),
+                         1, 0, "input0"
+                     )
                      .verifyResults();
   }
 
@@ -385,6 +468,21 @@ public class MSQReplaceTest extends MSQTestBase
                          "test",
                          0
                      )))
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().totalFiles(1),
+                         0, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(2).frames(1),
+                         0, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(2).frames(1),
+                         1, 0, "input0"
+                     )
                      .verifyResults();
   }
 
@@ -418,6 +516,21 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{946684800000L, 1.0f},
                              new Object[]{946771200000L, 2.0f}
                          )
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().totalFiles(1),
+                         0, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(2).frames(1),
+                         0, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(2).frames(1),
+                         1, 0, "input0"
                      )
                      .verifyResults();
   }

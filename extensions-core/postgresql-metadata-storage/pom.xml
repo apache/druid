@@ -37,7 +37,7 @@
     <dependencies>
         <dependency>
             <groupId>org.apache.druid</groupId>
-            <artifactId>druid-core</artifactId>
+            <artifactId>druid-processing</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -106,12 +106,6 @@
         <dependency>
             <groupId>nl.jqno.equalsverifier</groupId>
             <artifactId>equalsverifier</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid</groupId>
-            <artifactId>druid-processing</artifactId>
-            <version>${project.parent.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

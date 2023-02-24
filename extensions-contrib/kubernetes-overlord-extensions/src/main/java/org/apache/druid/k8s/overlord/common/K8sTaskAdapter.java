@@ -88,13 +88,17 @@ public abstract class K8sTaskAdapter implements TaskAdapter<Pod, Job>
   {
     String myPodName = System.getenv("HOSTNAME");
     Pod pod = client.executeRequest(client -> client.pods().inNamespace(config.namespace).withName(myPodName).get());
-    return createJobFromPodSpec(pod.getSpec(), task, context);
+    PodSpec podSpec = pod.getSpec();
+    massageSpec(podSpec, config.primaryContainerName);
+    return createJobFromPodSpec(podSpec, task, context);
   }
 
   @Override
   public Task toTask(Pod from) throws IOException
   {
-    List<EnvVar> envVars = from.getSpec().getContainers().get(0).getEnv();
+    PodSpec podSpec = from.getSpec();
+    massageSpec(podSpec, "main");
+    List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
     Optional<EnvVar> taskJson = envVars.stream().filter(x -> "TASK_JSON".equals(x.getName())).findFirst();
     String contents = taskJson.map(envVar -> taskJson.get().getValue()).orElse(null);
     if (contents == null) {
@@ -104,12 +108,13 @@ public abstract class K8sTaskAdapter implements TaskAdapter<Pod, Job>
   }
 
   @VisibleForTesting
-  public abstract Job createJobFromPodSpec(PodSpec podSpec, Task task, PeonCommandContext context) throws IOException;
+  abstract Job createJobFromPodSpec(PodSpec podSpec, Task task, PeonCommandContext context) throws IOException;
 
   protected Job buildJob(
       K8sTaskId k8sTaskId,
       Map<String, String> labels,
-      Map<String, String> annotations, PodTemplateSpec podTemplate
+      Map<String, String> annotations,
+      PodTemplateSpec podTemplate
   )
   {
     return new JobBuilder()
@@ -273,6 +278,30 @@ public abstract class K8sTaskAdapter implements TaskAdapter<Pod, Job>
     podTemplate.setMetadata(objectMeta);
     podTemplate.setSpec(podSpec);
     return podTemplate;
+  }
+
+  @VisibleForTesting
+  static void massageSpec(PodSpec spec, String primaryContainerName)
+  {
+    // find the primary container and make it first,
+    if (StringUtils.isNotBlank(primaryContainerName)) {
+      int i = 0;
+      while (i < spec.getContainers().size()) {
+        if (primaryContainerName.equals(spec.getContainers().get(i).getName())) {
+          break;
+        }
+        i++;
+      }
+      // if the primaryContainer is not found, assume the primary container is the first container.
+      if (i >= spec.getContainers().size()) {
+        throw new IllegalArgumentException("Could not find container named: "
+                                           + primaryContainerName
+                                           + " in PodSpec");
+      }
+      Container primary = spec.getContainers().get(i);
+      spec.getContainers().remove(i);
+      spec.getContainers().add(0, primary);
+    }
   }
 
 }

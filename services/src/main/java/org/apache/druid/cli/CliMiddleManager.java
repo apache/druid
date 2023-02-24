@@ -46,6 +46,7 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.MiddleManagerServiceModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
@@ -131,6 +132,7 @@ public class CliMiddleManager extends ServerRunnable
 
             JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
             JsonConfigProvider.bind(binder, "druid.worker", WorkerConfig.class);
+            binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);
 
             binder.bind(TaskRunner.class).to(ForkingTaskRunner.class);
             binder.bind(ForkingTaskRunner.class).in(ManageLifecycle.class);

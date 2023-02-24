@@ -20,6 +20,7 @@
 package org.apache.druid.query.rowsandcols.column;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.rowsandcols.util.FindResult;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nonnull;
@@ -43,62 +44,7 @@ public class ConstantObjectColumn implements Column
   @Override
   public ColumnAccessor toAccessor()
   {
-    return new ColumnAccessor()
-    {
-      @Override
-      public ColumnType getType()
-      {
-        return type;
-      }
-
-      @Override
-      public int numRows()
-      {
-        return numRows;
-      }
-
-      @Override
-      public boolean isNull(int rowNum)
-      {
-        return obj == null;
-      }
-
-      @Override
-      public Object getObject(int rowNum)
-      {
-        return obj;
-      }
-
-      @Override
-      public double getDouble(int rowNum)
-      {
-        return ((Number) obj).doubleValue();
-      }
-
-      @Override
-      public float getFloat(int rowNum)
-      {
-        return ((Number) obj).floatValue();
-      }
-
-      @Override
-      public long getLong(int rowNum)
-      {
-        return ((Number) obj).longValue();
-      }
-
-      @Override
-      public int getInt(int rowNum)
-      {
-        return ((Number) obj).intValue();
-      }
-
-      @Override
-      public int compareRows(int lhsRowNum, int rhsRowNum)
-      {
-        return 0;
-      }
-    };
+    return new ConstantColumnAccessor();
   }
 
   @Nullable
@@ -120,5 +66,105 @@ public class ConstantObjectColumn implements Column
     }
 
     return null;
+  }
+
+  private class ConstantColumnAccessor implements BinarySearchableAccessor
+  {
+    @Override
+    public ColumnType getType()
+    {
+      return type;
+    }
+
+    @Override
+    public int numRows()
+    {
+      return numRows;
+    }
+
+    @Override
+    public boolean isNull(int rowNum)
+    {
+      return obj == null;
+    }
+
+    @Override
+    public Object getObject(int rowNum)
+    {
+      return obj;
+    }
+
+    @Override
+    public double getDouble(int rowNum)
+    {
+      return ((Number) obj).doubleValue();
+    }
+
+    @Override
+    public float getFloat(int rowNum)
+    {
+      return ((Number) obj).floatValue();
+    }
+
+    @Override
+    public long getLong(int rowNum)
+    {
+      return ((Number) obj).longValue();
+    }
+
+    @Override
+    public int getInt(int rowNum)
+    {
+      return ((Number) obj).intValue();
+    }
+
+    @Override
+    public int compareRows(int lhsRowNum, int rhsRowNum)
+    {
+      return 0;
+    }
+
+    @Override
+    public FindResult findNull(int startIndex, int endIndex)
+    {
+      return findComplex(startIndex, endIndex, null);
+    }
+
+    @Override
+    public FindResult findDouble(int startIndex, int endIndex, double val)
+    {
+      return findComplex(startIndex, endIndex, val);
+    }
+
+    @Override
+    public FindResult findFloat(int startIndex, int endIndex, float val)
+    {
+      return findComplex(startIndex, endIndex, val);
+    }
+
+    @Override
+    public FindResult findLong(int startIndex, int endIndex, long val)
+    {
+      return findComplex(startIndex, endIndex, val);
+    }
+
+    @Override
+    public FindResult findString(int startIndex, int endIndex, String val)
+    {
+      return findComplex(startIndex, endIndex, val);
+    }
+
+    @Override
+    public FindResult findComplex(int startIndex, int endIndex, Object val)
+    {
+      final boolean same;
+      if (obj == null) {
+        same = val == null;
+      } else {
+        same = obj.equals(val);
+      }
+
+      return same ? FindResult.found(startIndex, endIndex) : FindResult.notFound(endIndex);
+    }
   }
 }

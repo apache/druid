@@ -83,7 +83,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
       ColumnConfig columnConfig
   )
   {
-    NestedDataColumnSupplier supplier = new NestedDataColumnSupplier(buffer, builder, columnConfig, OBJECT_MAPPER);
+    NestedDataColumnSupplier supplier = NestedDataColumnSupplier.read(buffer, builder, columnConfig, OBJECT_MAPPER);
     ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
     capabilitiesBuilder.setDictionaryEncoded(true);
     capabilitiesBuilder.setDictionaryValuesSorted(true);

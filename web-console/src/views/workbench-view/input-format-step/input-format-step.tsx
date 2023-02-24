@@ -18,20 +18,19 @@
 
 import { Button, Callout, FormGroup, Icon, Intent, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { C, SqlExpression } from 'druid-query-toolkit';
+import type { SqlExpression } from 'druid-query-toolkit';
+import { C } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
 import { AutoForm, CenterMessage, LearnMore, Loader } from '../../../components';
+import type { InputFormat, InputSource, SignatureColumn } from '../../../druid-models';
 import {
   guessColumnTypeFromHeaderAndRows,
   guessIsArrayFromHeaderAndRows,
   INPUT_FORMAT_FIELDS,
-  InputFormat,
   inputFormatOutputsNumericStrings,
-  InputSource,
   PLACEHOLDER_TIMESTAMP_SPEC,
   possibleDruidFormatForValues,
-  SignatureColumn,
 } from '../../../druid-models';
 import { useQueryManager } from '../../../hooks';
 import { getLink } from '../../../links';
@@ -42,12 +41,8 @@ import {
   filterMap,
   timeFormatToSql,
 } from '../../../utils';
-import {
-  headerAndRowsFromSampleResponse,
-  postToSampler,
-  SampleHeaderAndRows,
-  SampleSpec,
-} from '../../../utils/sampler';
+import type { SampleHeaderAndRows, SampleSpec } from '../../../utils/sampler';
+import { headerAndRowsFromSampleResponse, postToSampler } from '../../../utils/sampler';
 import { ParseDataTable } from '../../load-data-view/parse-data-table/parse-data-table';
 
 import './input-format-step.scss';

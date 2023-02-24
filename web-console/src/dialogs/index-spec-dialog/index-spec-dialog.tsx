@@ -19,8 +19,10 @@
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import React, { useState } from 'react';
 
-import { AutoForm, FormJsonSelector, FormJsonTabs, JsonInput } from '../../components';
-import { INDEX_SPEC_FIELDS, IndexSpec } from '../../druid-models';
+import type { FormJsonTabs } from '../../components';
+import { AutoForm, FormJsonSelector, JsonInput } from '../../components';
+import type { IndexSpec } from '../../druid-models';
+import { INDEX_SPEC_FIELDS } from '../../druid-models';
 
 import './index-spec-dialog.scss';
 

@@ -1,7 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`MaxTasksButton matches snapshot 1`] = `
-<Fragment>
+<React.Fragment>
   <Blueprint4.Popover2
     boundary="clippingParents"
     captureDismiss={false}
@@ -140,5 +140,5 @@ exports[`MaxTasksButton matches snapshot 1`] = `
       text="Max tasks: 6 (full cluster capacity)"
     />
   </Blueprint4.Popover2>
-</Fragment>
+</React.Fragment>
 `;

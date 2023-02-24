@@ -18,7 +18,7 @@
 
 import { sum } from 'd3-array';
 
-import { CapacityInfo } from '../druid-models';
+import type { CapacityInfo } from '../druid-models';
 import { Api } from '../singletons';
 
 export async function getClusterCapacity(): Promise<CapacityInfo> {
