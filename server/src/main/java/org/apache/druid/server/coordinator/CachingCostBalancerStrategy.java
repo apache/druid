@@ -56,7 +56,7 @@ public class CachingCostBalancerStrategy extends CostBalancerStrategy
     cost += costCacheForLoadingSegments(server).computeCost(serverName, proposalSegment);
 
     // minus the cost of the segment itself
-    if (server.isServingSegment(proposalSegment)) {
+    if (server.isServingSegment(proposalSegment) || server.isLoadingSegment(proposalSegment)) {
       cost -= costCacheForSegments(server, Collections.singleton(proposalSegment))
           .computeCost(serverName, proposalSegment);
     }

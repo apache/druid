@@ -102,7 +102,7 @@ public class SegmentLoader
         return stateManager.loadSegment(segment, serverB, loadedCountOnTier < 1, replicationThrottler);
       }
 
-      // Cancel failed, let the segment load on serverA and fail the move operation
+      // Could not cancel load, let the segment load on serverA and fail this move operation
       return false;
     } else if (serverA.isServingSegment(segment)) {
       return stateManager.moveSegment(segment, serverA, serverB, replicationThrottler.getMaxLifetime());
