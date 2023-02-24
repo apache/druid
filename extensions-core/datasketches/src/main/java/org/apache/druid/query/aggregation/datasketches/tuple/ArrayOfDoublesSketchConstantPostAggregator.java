@@ -25,13 +25,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketch;
-import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketches;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.segment.data.SafeWritableMemory;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -56,17 +53,7 @@ public class ArrayOfDoublesSketchConstantPostAggregator extends ArrayOfDoublesSk
     Preconditions.checkArgument(value != null && !value.isEmpty(),
         "Constant value cannot be null or empty, expecting base64 encoded sketch string");
     this.value = value;
-    this.sketchValue = deserializeFromBase64EncodedStringSafe(value);
-  }
-
-  private ArrayOfDoublesSketch deserializeFromBase64EncodedStringSafe(final String str)
-  {
-    return deserializeFromByteArraySafe(StringUtils.decodeBase64(StringUtils.toUtf8(str)));
-  }
-
-  private ArrayOfDoublesSketch deserializeFromByteArraySafe(final byte[] data)
-  {
-    return ArrayOfDoublesSketches.wrapSketch(SafeWritableMemory.wrap(data));
+    this.sketchValue = ArrayOfDoublesSketchOperations.deserializeFromBase64EncodedStringSafe(value);
   }
 
   @Override

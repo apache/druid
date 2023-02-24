@@ -23,13 +23,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketch;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnType;
 
-import java.util.Base64;
 import java.util.Comparator;
 import java.util.Map;
 
@@ -38,11 +38,11 @@ import java.util.Map;
  * This is a string returned by  encoding the output of toByteArray() using Base64 method of the sketch.
  * This can be useful for debugging and using the sketch output in other operations.
  */
-public class ArrayOfDoublesSketchToEncodedStringPostAggregator extends ArrayOfDoublesSketchUnaryPostAggregator
+public class ArrayOfDoublesSketchToBase64StringPostAggregator extends ArrayOfDoublesSketchUnaryPostAggregator
 {
 
   @JsonCreator
-  public ArrayOfDoublesSketchToEncodedStringPostAggregator(
+  public ArrayOfDoublesSketchToBase64StringPostAggregator(
       @JsonProperty("name") final String name,
       @JsonProperty("field") final PostAggregator field
   )
@@ -54,7 +54,7 @@ public class ArrayOfDoublesSketchToEncodedStringPostAggregator extends ArrayOfDo
   public String compute(final Map<String, Object> combinedAggregators)
   {
     final ArrayOfDoublesSketch sketch = (ArrayOfDoublesSketch) getField().compute(combinedAggregators);
-    return Base64.getEncoder().encodeToString(sketch.toByteArray());
+    return StringUtils.encodeBase64String(sketch.toByteArray());
   }
 
   @Override

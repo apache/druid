@@ -41,19 +41,19 @@ import org.junit.Test;
 
 import java.util.Map;
 
-public class ArrayOfDoublesSketchToEncodedStringPostAggregatorTest
+public class ArrayOfDoublesSketchToBase64StringPostAggregatorTest
 {
   @Test
   public void testSerde() throws JsonProcessingException
   {
-    final PostAggregator there = new ArrayOfDoublesSketchToEncodedStringPostAggregator(
+    final PostAggregator there = new ArrayOfDoublesSketchToBase64StringPostAggregator(
         "a",
         new ConstantPostAggregator("", 0)
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    ArrayOfDoublesSketchToEncodedStringPostAggregator andBackAgain = mapper.readValue(
+    ArrayOfDoublesSketchToBase64StringPostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        ArrayOfDoublesSketchToEncodedStringPostAggregator.class
+        ArrayOfDoublesSketchToBase64StringPostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);
@@ -63,13 +63,13 @@ public class ArrayOfDoublesSketchToEncodedStringPostAggregatorTest
   @Test
   public void testToString()
   {
-    final PostAggregator postAgg = new ArrayOfDoublesSketchToEncodedStringPostAggregator(
+    final PostAggregator postAgg = new ArrayOfDoublesSketchToBase64StringPostAggregator(
         "a",
         new ConstantPostAggregator("", 0)
     );
 
     Assert.assertEquals(
-        "ArrayOfDoublesSketchToEncodedStringPostAggregator{name='a', field=ConstantPostAggregator{name='', constantValue=0}}",
+        "ArrayOfDoublesSketchToBase64StringPostAggregator{name='a', field=ConstantPostAggregator{name='', constantValue=0}}",
         postAgg.toString()
     );
   }
@@ -87,7 +87,7 @@ public class ArrayOfDoublesSketchToEncodedStringPostAggregatorTest
     EasyMock.expect(field1.compute(EasyMock.anyObject(Map.class))).andReturn(s1).anyTimes();
     EasyMock.replay(field1);
 
-    final PostAggregator postAgg = new ArrayOfDoublesSketchToEncodedStringPostAggregator(
+    final PostAggregator postAgg = new ArrayOfDoublesSketchToBase64StringPostAggregator(
         "a",
         field1
     );
@@ -97,7 +97,7 @@ public class ArrayOfDoublesSketchToEncodedStringPostAggregatorTest
   @Test
   public void testComparator()
   {
-    final PostAggregator postAgg = new ArrayOfDoublesSketchToEncodedStringPostAggregator(
+    final PostAggregator postAgg = new ArrayOfDoublesSketchToBase64StringPostAggregator(
         "a",
         new ConstantPostAggregator("", 0)
     );
@@ -108,7 +108,7 @@ public class ArrayOfDoublesSketchToEncodedStringPostAggregatorTest
   @Test
   public void testEqualsAndHashCode()
   {
-    EqualsVerifier.forClass(ArrayOfDoublesSketchToEncodedStringPostAggregator.class)
+    EqualsVerifier.forClass(ArrayOfDoublesSketchToBase64StringPostAggregator.class)
         .withNonnullFields("name", "field")
         .withIgnoredFields("dependentFields")
         .usingGetClass()
@@ -127,7 +127,7 @@ public class ArrayOfDoublesSketchToEncodedStringPostAggregatorTest
                 new CountAggregatorFactory("count")
             )
             .postAggregators(
-                new ArrayOfDoublesSketchToEncodedStringPostAggregator(
+                new ArrayOfDoublesSketchToBase64StringPostAggregator(
                     "a",
                     new ConstantPostAggregator("", 1)
                 )

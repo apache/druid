@@ -52,7 +52,7 @@ public class ArrayOfDoublesSketchModule implements DruidModule
 
   public static final String ARRAY_OF_DOUBLES_SKETCH_TO_BASE64_STRING = "arrayOfDoublesSketchToBase64String";
 
-  public static final String ARRAY_OF_DOUBLES_SKETCH_METRICS_ESTIMATE = "arrayOfDoublesSketchToMetricsEstimate";
+  public static final String ARRAY_OF_DOUBLES_SKETCH_METRICS_ESTIMATE = "arrayOfDoublesSketchToMetricsSumEstimate";
 
 
 
@@ -118,7 +118,7 @@ public class ArrayOfDoublesSketchModule implements DruidModule
                 ARRAY_OF_DOUBLES_SKETCH_CONSTANT
             ),
             new NamedType(
-                ArrayOfDoublesSketchToEncodedStringPostAggregator.class,
+                ArrayOfDoublesSketchToBase64StringPostAggregator.class,
                 ARRAY_OF_DOUBLES_SKETCH_TO_BASE64_STRING
             )
         ).addSerializer(ArrayOfDoublesSketch.class, new ArrayOfDoublesSketchJsonSerializer())

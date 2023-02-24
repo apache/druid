@@ -238,7 +238,7 @@ This post aggregator returns a list of estimated values(sum) from a given ArrayO
 
 ```json
 {
-  "type": "arrayOfDoublesSketchToMetricsEstimate",
+  "type": "arrayOfDoublesSketchToMetricsSumEstimate",
   "name": DESTINATION_COLUMN_NAME,
   "field": <post aggregator that refers to a ArrayOfDoublesSketch (fieldAccess or another post aggregator)>
 }

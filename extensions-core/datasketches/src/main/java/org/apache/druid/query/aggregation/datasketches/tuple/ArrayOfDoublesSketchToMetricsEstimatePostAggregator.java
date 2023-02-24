@@ -65,7 +65,7 @@ public class ArrayOfDoublesSketchToMetricsEstimatePostAggregator extends ArrayOf
       }
     }
     final double[] estimates = new double[sketch.getNumValues()];
-    Arrays.setAll(estimates, i -> ((stats[i].getMean()) * (sketch.getRetainedEntries())) / (sketch.getTheta()));
+    Arrays.setAll(estimates, i -> (stats[i].getSum()) / (sketch.getTheta()));
     return estimates;
   }
 
