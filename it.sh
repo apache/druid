@@ -105,6 +105,9 @@ function tail_logs
 #
 # All of the above are combined into a temporary environment file which is then passed
 # into Docker compose.
+#
+# The file is built when the cluster comes up. It is reused in the test and down
+# commands so we have a consistent environment.
 function build_override {
 
 	mkdir -p "$TARGET_DIR/target"
@@ -136,6 +139,15 @@ function build_override {
   # environment into the container.
 
   # Reuse the OVERRIDE_ENV variable to pass the full list to Docker compose
+  export OVERRIDE_ENV="$OVERRIDE_FILE"
+}
+
+function reuse_override {
+  OVERRIDE_FILE="$TARGET_DIR/target/override.env"
+  if [ ! -f "$OVERRIDE_FILE" ]; then
+      echo "Override file $OVERRIDE_FILE not found: Was an 'up' run?" 1>&2
+      exit 1
+  fi
   export OVERRIDE_ENV="$OVERRIDE_FILE"
 }
 
@@ -254,6 +266,7 @@ case $CMD in
     ;;
   "down" )
     require_category
+    reuse_override
     $IT_CASES_DIR/cluster.sh down $CATEGORY
     ;;
   "test" )

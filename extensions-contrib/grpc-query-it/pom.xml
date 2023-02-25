@@ -47,7 +47,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.druid.extensions.contrib</groupId>
-      <artifactId>druid-shaded-grpc</artifactId>
+      <artifactId>grpc-query</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
@@ -129,26 +129,7 @@
                   <workingDirectory>${project.basedir}</workingDirectory>
                   <executable>bash</executable>
                   <arguments>
-                    <argument>${it.base.dir}/cluster.sh</argument>
-                    <argument>up</argument>
-                    <argument>${it.category}</argument>
-                  </arguments>
-                </configuration>
-              </execution>
-
-              <execution>
-                <id>stop-cluster</id>
-                <phase>post-integration-test</phase>
-                <goals>
-                  <goal>exec</goal>
-                </goals>
-                <configuration>
-                  <workingDirectory>${project.basedir}</workingDirectory>
-                  <executable>bash</executable>
-                  <arguments>
-                    <argument>${it.base.dir}/cluster.sh</argument>
-                    <argument>down</argument>
-                    <argument>${it.category}</argument>
+                    <argument>setup-test.sh</argument>
                   </arguments>
                 </configuration>
               </execution>
