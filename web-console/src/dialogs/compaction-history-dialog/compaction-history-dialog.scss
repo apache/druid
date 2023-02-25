@@ -18,35 +18,29 @@
 
 @import '../../variables';
 
-.compaction-config-dialog {
+.compaction-history-dialog {
   &.#{$bp-ns}-dialog {
+    width: 70vw;
     height: 80vh;
   }
 
-  .legacy-callout {
-    width: auto;
-    margin: 10px 15px 0;
-  }
-
-  .form-json-selector {
-    margin: 15px;
-  }
-
-  .#{$bp-ns}-dialog-footer-actions {
+  .#{$bp-ns}-tabs {
     position: relative;
-
-    .history-button {
-      position: absolute;
-      top: 0;
-      left: 0;
-      margin: 0;
-    }
+    height: 100%;
   }
 
-  .content {
-    margin: 0 15px 10px 0;
-    padding: 0 5px 0 15px;
-    flex: 1;
-    overflow: auto;
+  .panel {
+    position: relative;
+    width: 100%;
+
+    .global-info {
+      position: absolute;
+      bottom: 10px;
+      left: 30px;
+      right: 10px;
+      width: auto;
+      white-space: pre;
+      background: $gray1;
+    }
   }
 }

@@ -27,6 +27,7 @@ import {
   compactionConfigHasLegacyInputSegmentSizeBytesSet,
 } from '../../druid-models';
 import { deepDelete, formatBytesCompact } from '../../utils';
+import { CompactionHistoryDialog } from '../compaction-history-dialog/compaction-history-dialog';
 
 import './compaction-config-dialog.scss';
 
@@ -43,6 +44,7 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
 ) {
   const { datasource, compactionConfig, onSave, onClose, onDelete } = props;
 
+  const [showHistory, setShowHistory] = useState(false);
   const [currentTab, setCurrentTab] = useState<FormJsonTabs>('form');
   const [currentConfig, setCurrentConfig] = useState<CompactionConfig>(
     compactionConfig || {
@@ -54,6 +56,12 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
 
   const issueWithCurrentConfig = AutoForm.issueWithModel(currentConfig, COMPACTION_CONFIG_FIELDS);
   const disableSubmit = Boolean(jsonError || issueWithCurrentConfig);
+
+  if (showHistory) {
+    return (
+      <CompactionHistoryDialog datasource={datasource} onClose={() => setShowHistory(false)} />
+    );
+  }
 
   return (
     <Dialog
@@ -102,6 +110,12 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
       </div>
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+          <Button
+            className="history-button"
+            text="History"
+            minimal
+            onClick={() => setShowHistory(true)}
+          />
           {compactionConfig && <Button text="Delete" intent={Intent.DANGER} onClick={onDelete} />}
           <Button text="Close" onClick={onClose} />
           <Button

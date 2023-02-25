@@ -31,7 +31,7 @@ import { ShowValue } from '../show-value/show-value';
 
 import './supervisor-history-panel.scss';
 
-export interface VersionSpec {
+export interface SupervisorHistoryEntry {
   version: string;
   spec: IngestionSpec;
 }
@@ -46,13 +46,15 @@ export const SupervisorHistoryPanel = React.memo(function SupervisorHistoryPanel
   const { supervisorId } = props;
 
   const [diffIndex, setDiffIndex] = useState(-1);
-  const [historyState] = useQueryManager<string, VersionSpec[]>({
+  const [historyState] = useQueryManager<string, SupervisorHistoryEntry[]>({
     initQuery: supervisorId,
     processQuery: async supervisorId => {
       const resp = await Api.instance.get(
         `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}/history`,
       );
-      return resp.data.map((vs: VersionSpec) => deepSet(vs, 'spec', cleanSpec(vs.spec, true)));
+      return resp.data.map((vs: SupervisorHistoryEntry) =>
+        deepSet(vs, 'spec', cleanSpec(vs.spec, true)),
+      );
     },
   });
 
@@ -69,6 +71,7 @@ export const SupervisorHistoryPanel = React.memo(function SupervisorHistoryPanel
             id={i}
             key={i}
             title={pastSupervisor.version}
+            panelClassName="panel"
             panel={
               <ShowValue
                 jsonValue={JSONBig.stringify(pastSupervisor.spec, undefined, 2)}
@@ -76,7 +79,6 @@ export const SupervisorHistoryPanel = React.memo(function SupervisorHistoryPanel
                 downloadFilename={`supervisor-${supervisorId}-version-${pastSupervisor.version}.json`}
               />
             }
-            panelClassName="panel"
           />
         ))}
         <Tabs.Expander />
