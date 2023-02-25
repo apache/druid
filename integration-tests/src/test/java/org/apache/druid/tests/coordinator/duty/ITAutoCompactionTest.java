@@ -1298,7 +1298,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   {
     // Index data with dimensions "page", "language", "user", "unpatrolled", "newPage", "robot", "anonymous",
     // "namespace", "continent", "country", "region", "city"
-    loadDataWithReportLog(INDEX_TASK_WITH_DIMENSION_SPEC);
+    loadDataWithReportLog(INDEX_TASK_WITH_DIMENSION_SPEC, ImmutableMap.of());
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
       intervalsBeforeCompaction.sort(null);
@@ -1345,7 +1345,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   @Test
   public void testAutoCompactionDutyWithFilter() throws Exception
   {
-    loadDataWithReportLog(INDEX_TASK_WITH_DIMENSION_SPEC);
+    loadDataWithReportLog(INDEX_TASK_WITH_DIMENSION_SPEC, ImmutableMap.of());
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
       intervalsBeforeCompaction.sort(null);
@@ -1393,7 +1393,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   @Test
   public void testAutoCompactionDutyWithMetricsSpec() throws Exception
   {
-    loadDataWithReportLog(INDEX_TASK_WITH_DIMENSION_SPEC);
+    loadDataWithReportLog(INDEX_TASK_WITH_DIMENSION_SPEC, ImmutableMap.of());
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
       intervalsBeforeCompaction.sort(null);
@@ -1548,7 +1548,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     );
   }
 
-  private void loadDataWithReportLog(String indexTask) throws Exception
+  private void loadDataWithReportLog(String indexTask, Map<String, Object> specs) throws Exception
   {
     String taskSpec = getResourceAsString(indexTask);
     taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", fullDatasourceName);
@@ -1557,6 +1557,13 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
         "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
         jsonMapper.writeValueAsString("0")
     );
+    for (Map.Entry<String, Object> entry : specs.entrySet()) {
+      taskSpec = StringUtils.replace(
+          taskSpec,
+          entry.getKey(),
+          jsonMapper.writeValueAsString(entry.getValue())
+      );
+    }
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for loading index task %s", taskID);
     indexer.waitUntilTaskCompletes(taskID);
@@ -1723,11 +1730,9 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   {
     ITRetryUtil.retryUntilTrue(
         () -> {
-          List<DataSegment> metadataSegments = coordinator.getFullSegmentsMetadata(fullDatasourceName);
-          LOG.info("Current metadata segment count: %d, expected: %d", metadataSegments.size(), numExpectedSegments);
-          LOG.info("Segments metadata - %s", metadataSegments.stream().map(x->x.getId() + " - " + x.getSize()).collect(
-              Collectors.toList()));
-          return metadataSegments.size() == numExpectedSegments;
+          int metadataSegmentCount = coordinator.getSegments(fullDatasourceName).size();
+          LOG.info("Current metadata segment count: %d, expected: %d", metadataSegmentCount, numExpectedSegments);
+          return metadataSegmentCount == numExpectedSegments;
         },
         "Compaction segment count check"
     );
