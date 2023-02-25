@@ -63,11 +63,6 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.druid.extensions.contrib</groupId>
-      <artifactId>druid-shaded-grpc</artifactId>
-      <version>${project.parent.version}</version>
-    </dependency>
-    <dependency>
       <groupId>com.fasterxml.jackson.module</groupId>
       <artifactId>jackson-module-guice</artifactId>
       <scope>provided</scope>
@@ -264,4 +259,39 @@
         </plugin>
     </plugins>
   </build>
+  <profiles>
+    <profile>
+      <id>dist</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+        <property>
+          <name>tar</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>distro-assembly</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+                <configuration>
+                  <finalName>${project.artifactId}-${project.parent.version}</finalName>
+                  <tarLongFileMode>posix</tarLongFileMode>
+                  <descriptors>
+                    <descriptor>src/assembly/assembly.xml</descriptor>
+                  </descriptors>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
