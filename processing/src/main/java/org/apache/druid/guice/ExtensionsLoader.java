@@ -20,11 +20,13 @@
 package org.apache.druid.guice;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.inject.Injector;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.inject.Inject;
 
@@ -154,45 +156,112 @@ public class ExtensionsLoader
   }
 
   /**
-   * Find all the extension files that should be loaded by druid.
+   * Find all the extension files that should be loaded by Druid.
    * <p/>
-   * If user explicitly specifies druid.extensions.loadList, then it will look for those extensions under root
-   * extensions directory. If one of them is not found, druid will fail loudly.
+   * If user explicitly specifies {@code druid.extensions.loadList}, then it will look for those extensions under root
+   * extensions directory. If one of them is not found, Druid will fail loudly.
    * <p/>
-   * If user doesn't specify druid.extension.toLoad (or its value is empty), druid will load all the extensions
+   * If user doesn't specify {@code druid.extensions.loadList} (or its value is empty), druid will load all the extensions
    * under the root extensions directory.
    *
-   * @return an array of druid extension files that will be loaded by druid process
+   * @return an array of Druid extension files that will be loaded by Druid process
    */
-  public File[] getExtensionFilesToLoad()
+  public List<File> getExtensionFilesToLoad()
   {
-    final File rootExtensionsDir = new File(extensionsConfig.getDirectory());
-    if (rootExtensionsDir.exists() && !rootExtensionsDir.isDirectory()) {
-      throw new ISE("Root extensions directory [%s] is not a directory!?", rootExtensionsDir);
-    }
-    File[] extensionsToLoad;
+    List<File> extensionsPath = new ArrayList<>();
     final LinkedHashSet<String> toLoad = extensionsConfig.getLoadList();
-    if (toLoad == null) {
-      extensionsToLoad = rootExtensionsDir.listFiles();
-    } else {
-      int i = 0;
-      extensionsToLoad = new File[toLoad.size()];
-      for (final String extensionName : toLoad) {
-        File extensionDir = new File(extensionName);
-        if (!extensionDir.isAbsolute()) {
-          extensionDir = new File(rootExtensionsDir, extensionName);
-        }
+    List<String> path = extensionsConfig.getPath();
 
-        if (!extensionDir.isDirectory()) {
-          throw new ISE(
-              "Extension [%s] specified in \"druid.extensions.loadList\" didn't exist!?",
-              extensionDir.getAbsolutePath()
-          );
-        }
-        extensionsToLoad[i++] = extensionDir;
+    // For backward compatibility, we allow the extensions directory to be set to
+    // its default value, but to not exist. This is a bit
+    // of hack: a better solution is to require that the directory exist if configured.
+    // But, since a missing config means (use the default), we can't require the user
+    // to use the workaround which is to set the directory to an empty string. Experienced
+    // users can use that feature, but newbies won't have a clue. Also, pull-deps and other
+    // tools count on the old behavior.
+    // Note that, in the case of a non-existent directory, any extensions have to be
+    // an absolute path, on the extensions path, or built-in. The result is a much more
+    // confusing error than just saying, "hey, your extensions directory is wrong!"
+    String extensionsDir = extensionsConfig.getDirectory();
+    if (!Strings.isNullOrEmpty(extensionsDir)) {
+      final File rootExtensionsDir = new File(extensionsDir);
+      if (rootExtensionsDir.isDirectory()) {
+        // Verify the directory is readable.
+        verifyDirectory("Extensions", rootExtensionsDir);
+        extensionsPath.add(rootExtensionsDir);
+      // Verify a non-default path, but only if there are extensions. PullDeps will
+      // create the directory, but other tools require that the path exists. We count on
+      // the fact that, for LoadDeps, the load list will be empty, while for a Druid server,
+      // it is very likely to be set. This DOES NOT handle the corner case in which the user
+      // wants to load all extensions, but messes up their extension directory. To fix that,
+      // PullDeps should require that the extension directory exists, which does not occur
+      // today in the distribution project.
+      } else if (!ExtensionsConfig.DEFAULT_EXTENSIONS_DIR.equals(extensionsDir) &&
+                 !CollectionUtils.isNullOrEmpty(toLoad)) {
+        // Non-default value. It must exist. Fail since it doesn't.
+        verifyDirectory("Extensions", rootExtensionsDir);
       }
     }
-    return extensionsToLoad == null ? new File[]{} : extensionsToLoad;
+    if (!CollectionUtils.isNullOrEmpty(path)) {
+      // Validate the paths
+      for (String extnDir : path) {
+        final File rootExtensionsDir = new File(extnDir);
+        // Breaking change: we require that the directory exists. Prior versions didn't
+        // check unless there we actually extensions loaded, which meant that if the loadList
+        // was empty, the user got no extensions, rather than the standard ones.
+        // This more strict approach is safer.
+        verifyDirectory("Extensions", rootExtensionsDir);
+        extensionsPath.add(rootExtensionsDir);
+      }
+    }
+
+    List<File> extensionsToLoad = new ArrayList<>();
+    if (toLoad == null) {
+      // No load list? Load everything in all along the path.
+      for (File extnDir : extensionsPath) {
+        extensionsToLoad.addAll(Arrays.asList(extnDir.listFiles()));
+      }
+    } else {
+      // Resolve extensions one by one, searching the path for each
+      for (final String extensionName : toLoad) {
+        File extensionDir = new File(extensionName);
+        if (extensionDir.isAbsolute()) {
+          // The path is absolute: no need to search
+          verifyDirectory("Extension", extensionDir);
+          extensionsToLoad.add(extensionDir);
+        } else {
+          // Search the path. The extension must exist.
+          boolean found = false;
+          for (File rootExtensionsDir : extensionsPath) {
+            extensionDir = new File(rootExtensionsDir, extensionName);
+            if (extensionDir.exists()) {
+              verifyDirectory("Extension", extensionDir);
+              extensionsToLoad.add(extensionDir);
+              found = true;
+              break;
+            }
+          }
+
+          if (!found) {
+            throw new ISE(
+                "Extension [%s] specified in \"druid.extensions.loadList\" not found in the extension path",
+                extensionDir.getAbsolutePath()
+            );
+          }
+        }
+      }
+    }
+    return extensionsToLoad;
+  }
+
+  private void verifyDirectory(String label, File dir)
+  {
+    if (!dir.isDirectory()) {
+      throw new ISE("%s directory [%s] is not a directory", label, dir);
+    }
+    if (!dir.canRead()) {
+      throw new ISE("%s directory [%s] is not readable", label, dir);
+    }
   }
 
   /**

@@ -20,7 +20,6 @@
 package org.apache.druid.guice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import com.google.inject.Injector;
 import org.apache.druid.initialization.DruidModule;
@@ -36,10 +35,11 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 
 public class ExtensionsLoaderTest
@@ -49,8 +49,11 @@ public class ExtensionsLoaderTest
 
   private Injector startupInjector()
   {
+    // There is no extensions directory for this test. Must explicitly say so.
+    Properties properties = new Properties();
+    properties.put(ExtensionsConfig.PROPERTY_BASE + ".directory", "");
     return new StartupInjectorBuilder()
-        .withEmptyProperties()
+        .withProperties(properties)
         .withExtensions()
         .build();
   }
@@ -70,6 +73,7 @@ public class ExtensionsLoaderTest
   public void test04DuplicateClassLoaderExtensions() throws Exception
   {
     final File extensionDir = temporaryFolder.newFolder();
+
     Injector startupInjector = startupInjector();
     ExtensionsLoader extnLoader = ExtensionsLoader.instance(startupInjector);
 
@@ -109,7 +113,10 @@ public class ExtensionsLoaderTest
   @Test
   public void testGetLoadedModules()
   {
-    final ExtensionsLoader extnLoader = new ExtensionsLoader(new ExtensionsConfig());
+    final ExtensionsConfig config = ExtensionsConfig.builder()
+        .directory("")
+        .build();
+    final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
     Collection<DruidModule> modules = extnLoader.getModules();
     HashSet<DruidModule> moduleSet = new HashSet<>(modules);
 
@@ -123,60 +130,82 @@ public class ExtensionsLoaderTest
   }
 
   @Test
+  public void testGetExtensionFilesToLoad_no_extensions_dir() throws IOException
+  {
+    final ExtensionsConfig config = ExtensionsConfig.builder()
+        .directory("")
+        .build();
+    final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
+    Assert.assertTrue(
+        "Empty root extensionsDir should return an empty list",
+        extnLoader.getExtensionFilesToLoad().isEmpty()
+    );
+  }
+
+  /**
+   * For backward compatibility, allow the default "extensions" directory to be
+   * missing as long as the load list is empty.
+   */
+  @Test
+  public void testGetExtensionFilesToLoad_default_extensions_dir() throws IOException
+  {
+    final ExtensionsConfig config = new ExtensionsConfig();
+    final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
+    Assert.assertTrue(
+        "Empty root extensionsDir should return an empty list",
+        extnLoader.getExtensionFilesToLoad().isEmpty()
+    );
+  }
+
+  /**
+   * If the default "extensions" directory is missing, but there is a load list,
+   * then complain about the missing directory.
+   */
+  @Test
+  public void testGetExtensionFilesToLoad_default_with_load_list() throws IOException
+  {
+    final ExtensionsConfig config = ExtensionsConfig.builder()
+        .loadList(Collections.singletonList("foo"))
+        .build();
+    final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
+    Assert.assertThrows(ISE.class, () -> extnLoader.getExtensionFilesToLoad());
+  }
+
+  @Test
   public void testGetExtensionFilesToLoad_non_exist_extensions_dir() throws IOException
   {
     final File tmpDir = temporaryFolder.newFolder();
     Assert.assertTrue("could not create missing folder", !tmpDir.exists() || tmpDir.delete());
-    final ExtensionsLoader extnLoader = new ExtensionsLoader(new ExtensionsConfig()
-    {
-      @Override
-      public String getDirectory()
-      {
-        return tmpDir.getAbsolutePath();
-      }
-    });
-    Assert.assertArrayEquals(
-        "Non-exist root extensionsDir should return an empty array of File",
-        new File[]{},
-        extnLoader.getExtensionFilesToLoad()
-    );
+    final ExtensionsConfig config = ExtensionsConfig.builder()
+        .directory(tmpDir.getAbsolutePath())
+        .build();
+    final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
+    Assert.assertThrows(ISE.class, () -> extnLoader.getExtensionFilesToLoad());
   }
 
-
-  @Test(expected = ISE.class)
+  @Test
   public void testGetExtensionFilesToLoad_wrong_type_extensions_dir() throws IOException
   {
     final File extensionsDir = temporaryFolder.newFile();
-    final ExtensionsConfig config = new ExtensionsConfig()
-    {
-      @Override
-      public String getDirectory()
-      {
-        return extensionsDir.getAbsolutePath();
-      }
-    };
+    final ExtensionsConfig config = ExtensionsConfig.builder()
+        .directory(extensionsDir.getAbsolutePath())
+        .build();
     final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
-    extnLoader.getExtensionFilesToLoad();
+    Assert.assertThrows(ISE.class, () -> extnLoader.getExtensionFilesToLoad());
   }
 
   @Test
   public void testGetExtensionFilesToLoad_empty_extensions_dir() throws IOException
   {
     final File extensionsDir = temporaryFolder.newFolder();
-    final ExtensionsConfig config = new ExtensionsConfig()
-    {
-      @Override
-      public String getDirectory()
-      {
-        return extensionsDir.getAbsolutePath();
-      }
-    };
+    final ExtensionsConfig config = ExtensionsConfig.builder()
+        .directory(extensionsDir.getAbsolutePath())
+        .build();
 
     final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
-    Assert.assertArrayEquals(
-        "Empty root extensionsDir should return an empty array of File",
-        new File[]{},
-        extnLoader.getExtensionFilesToLoad()
+    Assert.assertTrue(
+        "Empty root extensionsDir should return an empty list",
+        extnLoader.getExtensionFilesToLoad().isEmpty()
     );
   }
 
@@ -188,22 +217,17 @@ public class ExtensionsLoaderTest
   public void testGetExtensionFilesToLoad_null_load_list() throws IOException
   {
     final File extensionsDir = temporaryFolder.newFolder();
-    final ExtensionsConfig config = new ExtensionsConfig()
-    {
-      @Override
-      public String getDirectory()
-      {
-        return extensionsDir.getAbsolutePath();
-      }
-    };
+    final ExtensionsConfig config = ExtensionsConfig.builder()
+        .directory(extensionsDir.getAbsolutePath())
+        .build();
     final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
     final File mysql_metadata_storage = new File(extensionsDir, "mysql-metadata-storage");
     mysql_metadata_storage.mkdir();
 
-    final File[] expectedFileList = new File[]{mysql_metadata_storage};
-    final File[] actualFileList = extnLoader.getExtensionFilesToLoad();
-    Arrays.sort(actualFileList);
-    Assert.assertArrayEquals(expectedFileList, actualFileList);
+    final List<File> expectedFileList = Arrays.asList(mysql_metadata_storage);
+    final List<File> actualFileList = extnLoader.getExtensionFilesToLoad();
+    Collections.sort(actualFileList);
+    Assert.assertEquals(expectedFileList, actualFileList);
   }
 
   /**
@@ -217,20 +241,10 @@ public class ExtensionsLoaderTest
 
     final File absolutePathExtension = temporaryFolder.newFolder();
 
-    final ExtensionsConfig config = new ExtensionsConfig()
-    {
-      @Override
-      public LinkedHashSet<String> getLoadList()
-      {
-        return Sets.newLinkedHashSet(Arrays.asList("mysql-metadata-storage", absolutePathExtension.getAbsolutePath()));
-      }
-
-      @Override
-      public String getDirectory()
-      {
-        return extensionsDir.getAbsolutePath();
-      }
-    };
+    final ExtensionsConfig config = ExtensionsConfig.builder()
+        .directory(extensionsDir.getAbsolutePath())
+        .loadList(Arrays.asList("mysql-metadata-storage", absolutePathExtension.getAbsolutePath()))
+        .build();
     final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
     final File mysql_metadata_storage = new File(extensionsDir, "mysql-metadata-storage");
     final File random_extension = new File(extensionsDir, "random-extensions");
@@ -238,37 +252,110 @@ public class ExtensionsLoaderTest
     mysql_metadata_storage.mkdir();
     random_extension.mkdir();
 
-    final File[] expectedFileList = new File[]{mysql_metadata_storage, absolutePathExtension};
-    final File[] actualFileList = extnLoader.getExtensionFilesToLoad();
-    Assert.assertArrayEquals(expectedFileList, actualFileList);
+    final List<File> expectedFileList = Arrays.asList(mysql_metadata_storage, absolutePathExtension);
+    final List<File> actualFileList = extnLoader.getExtensionFilesToLoad();
+    Assert.assertEquals(expectedFileList, actualFileList);
+  }
+
+  @Test
+  public void testGetExtensionFilesToLoad_with_load_list_and_path() throws IOException
+  {
+    // The loader only looks for directories: doesn't matter if they are empty.
+    final File extensionsDir1 = temporaryFolder.newFolder();
+    String extn1 = "extension1";
+    File extn1Dir = new File(extensionsDir1, extn1);
+    extn1Dir.mkdir();
+    final File extensionsDir2 = temporaryFolder.newFolder();
+    String extn2 = "extension2";
+    File extn2Dir = new File(extensionsDir2, extn2);
+    extn2Dir.mkdir();
+
+    final ExtensionsConfig config = ExtensionsConfig.builder()
+        .directory(extensionsDir1.getAbsolutePath())
+        .path(Collections.singletonList(extensionsDir2.getAbsolutePath()))
+        .loadList(Arrays.asList(extn1, extn2))
+        .build();
+    final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
+
+    final List<File> expectedFileList = Arrays.asList(extn1Dir, extn2Dir);
+    final List<File> actualFileList = extnLoader.getExtensionFilesToLoad();
+    Assert.assertEquals(expectedFileList, actualFileList);
+  }
+
+  @Test
+  public void testGetExtensionFilesToLoad_with_load_list_with_path_only() throws IOException
+  {
+    // The loader only looks for directories: doesn't matter if they are empty.
+    final File extensionsDir1 = temporaryFolder.newFolder();
+    final File extensionsDir2 = temporaryFolder.newFolder();
+
+    // For fun, mix up the order
+    String extn1 = "extension1";
+    File extn1Dir = new File(extensionsDir2, extn1);
+    extn1Dir.mkdir();
+    String extn2 = "extension2";
+    File extn2Dir = new File(extensionsDir1, extn2);
+    extn2Dir.mkdir();
+
+    final List<File> expectedFileList = Arrays.asList(extn1Dir, extn2Dir);
+
+    {
+      // No directory. But, the user can never achieve this since a null directory
+      // in the input means use the default.
+      final ExtensionsConfig config = ExtensionsConfig.builder()
+          .directory(null)
+          .path(Arrays.asList(extensionsDir1.getAbsolutePath(), extensionsDir2.getAbsolutePath()))
+          .loadList(Arrays.asList(extn1, extn2))
+          .build();
+      final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
+
+      final List<File> actualFileList = extnLoader.getExtensionFilesToLoad();
+      Assert.assertEquals(expectedFileList, actualFileList);
+    }
+
+    {
+      // Blank directory, which is what the user can provide.
+      final ExtensionsConfig config = ExtensionsConfig.builder()
+          .directory("")
+          .path(Arrays.asList(extensionsDir1.getAbsolutePath(), extensionsDir2.getAbsolutePath()))
+          .loadList(Arrays.asList(extn1, extn2))
+          .build();
+      final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
+
+      final List<File> actualFileList = extnLoader.getExtensionFilesToLoad();
+      Assert.assertEquals(expectedFileList, actualFileList);
+    }
+
+    {
+      // Sanity check: reverse the order. Results should be the same.
+      final ExtensionsConfig config = ExtensionsConfig.builder()
+          .directory("")
+          .path(Arrays.asList(extensionsDir2.getAbsolutePath(), extensionsDir1.getAbsolutePath()))
+          .loadList(Arrays.asList(extn1, extn2))
+          .build();
+      final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
+
+      final List<File> actualFileList = extnLoader.getExtensionFilesToLoad();
+      Assert.assertEquals(expectedFileList, actualFileList);
+    }
   }
 
   /**
-   * druid.extension.load is specified, but contains an extension that is not prepared under root extension directory.
+   * druid.extension.loadList is specified, but contains an extension that is not prepared under root extension directory.
    * Initialization.getExtensionFilesToLoad is supposed to throw ISE.
    */
-  @Test(expected = ISE.class)
+  @Test
   public void testGetExtensionFilesToLoad_with_non_exist_item_in_load_list() throws IOException
   {
     final File extensionsDir = temporaryFolder.newFolder();
-    final ExtensionsConfig config = new ExtensionsConfig()
-    {
-      @Override
-      public LinkedHashSet<String> getLoadList()
-      {
-        return Sets.newLinkedHashSet(ImmutableList.of("mysql-metadata-storage"));
-      }
-
-      @Override
-      public String getDirectory()
-      {
-        return extensionsDir.getAbsolutePath();
-      }
-    };
+    final ExtensionsConfig config = ExtensionsConfig.builder()
+        .directory(extensionsDir.getAbsolutePath())
+        .loadList(Collections.singletonList("mysql-metadata-storage"))
+        .build();
     final File random_extension = new File(extensionsDir, "random-extensions");
     random_extension.mkdir();
     final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
-    extnLoader.getExtensionFilesToLoad();
+    Assert.assertThrows(ISE.class, () -> extnLoader.getExtensionFilesToLoad());
   }
 
   @Test

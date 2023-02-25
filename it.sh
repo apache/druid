@@ -218,7 +218,7 @@ else
 fi
 IT_CASES_DIR="$DRUID_DEV/integration-tests-ex/cases"
 
-MAVEN_IGNORE="-P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true"
+MAVEN_IGNORE="-P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -Dcyclonedx.skip=true"
 
 case $CMD in
   "help" )
@@ -259,9 +259,12 @@ case $CMD in
   "test" )
     require_category
     build_override
+    verify_env_vars
+    $IT_CASES_DIR/cluster.sh up $CATEGORY
     mvn verify -P skip-static-checks,docker-tests,IT-$CATEGORY \
             -Dmaven.javadoc.skip=true -DskipUTs=true \
             -pl $MAVEN_PROJECT
+    $IT_CASES_DIR/cluster.sh down $CATEGORY
     ;;
   "tail" )
     require_category
