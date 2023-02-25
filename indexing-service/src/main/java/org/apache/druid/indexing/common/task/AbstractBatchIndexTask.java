@@ -567,7 +567,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
   /**
    * <p>
-   * This task will overwrite some segments with data read from some input source outside of Druid.
+   * This task will overwrite some segments with data read from input source outside of Druid.
    * As a result, only the segments falling in intervalsToRead should be locked.
    * <p>
    * The order of segments within the returned list is unspecified, but each segment is guaranteed to appear in the list

@@ -171,7 +171,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
   }
 
   @Test
-  public void testWithInputRowParser() throws IOException
+  public void testSampleWithInputRowParser() throws IOException, InterruptedException
   {
     ObjectMapper objectMapper = new DefaultObjectMapper();
     TimestampSpec timestampSpec = new TimestampSpec("timestamp", "iso", null);
@@ -244,6 +244,8 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
         new InputSourceSampler(new DefaultObjectMapper()),
         null
     );
+
+    runSamplerAndCompareResponse(samplerSpec, false);
   }
 
   private void runSamplerAndCompareResponse(SamplerSpec samplerSpec, boolean useInputFormat) throws InterruptedException

@@ -239,7 +239,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
           tuningConfig
       );
     } else {
-      Preconditions.checkArgument(inputFormat == null);
+      Preconditions.checkArgument(inputFormat == null && parseSpec != null);
       ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
           null,
           new LocalInputSource(inputDirectory, filter),

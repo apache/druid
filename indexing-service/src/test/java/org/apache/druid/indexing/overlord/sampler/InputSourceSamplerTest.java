@@ -173,7 +173,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   @Test
   public void testNoDataSchema()
   {
-    final InputSource inputSource = createInputSource(getTestRows(), null);
+    final InputSource inputSource = createInputSource(getTestRows());
     final SamplerResponse response = inputSourceSampler.sample(inputSource, createInputFormat(), null, null);
 
     Assert.assertEquals(6, response.getNumRowsRead());
@@ -241,7 +241,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   @Test
   public void testNoDataSchemaNumRows()
   {
-    final InputSource inputSource = createInputSource(getTestRows(), null);
+    final InputSource inputSource = createInputSource(getTestRows());
     final SamplerResponse response = inputSourceSampler.sample(
         inputSource,
         createInputFormat(),
@@ -290,7 +290,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     final TimestampSpec timestampSpec = new TimestampSpec(null, null, DateTimes.of("1970"));
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(null);
     final DataSchema dataSchema = createDataSchema(timestampSpec, dimensionsSpec, null, null, null);
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
@@ -399,7 +399,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(null);
     final DataSchema dataSchema = createDataSchema(timestampSpec, dimensionsSpec, null, null, null);
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
@@ -499,7 +499,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         ImmutableList.of(StringDimensionSchema.create("dim1"), StringDimensionSchema.create("met1"))
     );
     final DataSchema dataSchema = createDataSchema(timestampSpec, dimensionsSpec, null, null, null);
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
@@ -605,7 +605,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         granularitySpec,
         null
     );
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
@@ -716,7 +716,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         granularitySpec,
         null
     );
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
@@ -799,7 +799,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         granularitySpec,
         null
     );
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
@@ -870,7 +870,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         granularitySpec,
         transformSpec
     );
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
@@ -959,7 +959,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         granularitySpec,
         transformSpec
     );
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
@@ -1027,7 +1027,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         granularitySpec,
         transformSpec
     );
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
@@ -1114,7 +1114,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
                       "2019-04-22T12:00,foo2,,invalidNumber" :
                       OBJECT_MAPPER.writeValueAsString(rawColumns4ParseExceptionRow));
 
-    final InputSource inputSource = createInputSource(inputTestRows, dataSchema);
+    final InputSource inputSource = createInputSource(inputTestRows);
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
@@ -1346,7 +1346,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         granularitySpec,
         null
     );
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(
@@ -1381,7 +1381,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         granularitySpec,
         null
     );
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(
@@ -1415,7 +1415,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         granularitySpec,
         null
     );
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(
@@ -1526,7 +1526,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     return OBJECT_MAPPER.readValue(OBJECT_MAPPER.writeValueAsBytes(parser), Map.class);
   }
 
-  private InputSource createInputSource(List<String> rows, DataSchema dataSchema)
+  private InputSource createInputSource(List<String> rows)
   {
     final String data = String.join("\n", rows);
     return new InlineInputSource(data);

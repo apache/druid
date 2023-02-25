@@ -120,9 +120,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * ParallelIndexSupervisorTask is capable of running multiple subTasks for parallel indexing.
- * While this task is running, it can submit multiple child tasks to overlords. This task
- * succeeds only when all its child tasks succeed; otherwise it fails.
+ * ParallelIndexSupervisorTask is capable of running multiple subTasks for parallel indexing. This is
+ * applicable if the input {@link InputSource} is splittable. While this task is running, it can submit
+ * multiple child tasks to overlords. This task succeeds only when all its child tasks succeed; otherwise it fails.
  *
  * @see ParallelIndexTaskRunner
  */
