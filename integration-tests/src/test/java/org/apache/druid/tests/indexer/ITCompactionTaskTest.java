@@ -47,7 +47,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Test(groups = {TestNGGroup.COMPACTION, TestNGGroup.QUICKSTART_COMPATIBLE})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
@@ -299,11 +298,9 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   {
     ITRetryUtil.retryUntilTrue(
         () -> {
-          List<DataSegment> metadataSegments = coordinator.getFullSegmentsMetadata(fullDatasourceName);
-          LOG.info("Current metadata segment count: %d, expected: %d", metadataSegments.size(), numExpectedSegments);
-          LOG.info("Segments metadata");
-          LOG.info(metadataSegments.toString());
-          return metadataSegments.size() == numExpectedSegments;
+          int metadataSegmentCount = coordinator.getSegments(fullDatasourceName).size();
+          LOG.info("Current metadata segment count: %d, expected: %d", metadataSegmentCount, numExpectedSegments);
+          return metadataSegmentCount == numExpectedSegments;
         },
         "Segment count check"
     );

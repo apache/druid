@@ -89,7 +89,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Test(groups = {TestNGGroup.COMPACTION})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
@@ -1298,7 +1297,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   {
     // Index data with dimensions "page", "language", "user", "unpatrolled", "newPage", "robot", "anonymous",
     // "namespace", "continent", "country", "region", "city"
-    loadDataWithReportLog(INDEX_TASK_WITH_DIMENSION_SPEC, ImmutableMap.of());
+    loadData(INDEX_TASK_WITH_DIMENSION_SPEC);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
       intervalsBeforeCompaction.sort(null);
@@ -1345,7 +1344,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   @Test
   public void testAutoCompactionDutyWithFilter() throws Exception
   {
-    loadDataWithReportLog(INDEX_TASK_WITH_DIMENSION_SPEC, ImmutableMap.of());
+    loadData(INDEX_TASK_WITH_DIMENSION_SPEC);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
       intervalsBeforeCompaction.sort(null);
@@ -1393,7 +1392,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   @Test
   public void testAutoCompactionDutyWithMetricsSpec() throws Exception
   {
-    loadDataWithReportLog(INDEX_TASK_WITH_DIMENSION_SPEC, ImmutableMap.of());
+    loadData(INDEX_TASK_WITH_DIMENSION_SPEC);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
       intervalsBeforeCompaction.sort(null);
@@ -1523,32 +1522,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   private void loadData(String indexTask, Map<String, Object> specs) throws Exception
-  {
-    String taskSpec = getResourceAsString(indexTask);
-    taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", fullDatasourceName);
-    taskSpec = StringUtils.replace(
-        taskSpec,
-        "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
-        jsonMapper.writeValueAsString("0")
-    );
-    for (Map.Entry<String, Object> entry : specs.entrySet()) {
-      taskSpec = StringUtils.replace(
-          taskSpec,
-          entry.getKey(),
-          jsonMapper.writeValueAsString(entry.getValue())
-      );
-    }
-    final String taskID = indexer.submitTask(taskSpec);
-    LOG.info("TaskID for loading index task %s", taskID);
-    indexer.waitUntilTaskCompletes(taskID);
-
-    ITRetryUtil.retryUntilTrue(
-        () -> coordinator.areSegmentsLoaded(fullDatasourceName),
-        "Segment Load"
-    );
-  }
-
-  private void loadDataWithReportLog(String indexTask, Map<String, Object> specs) throws Exception
   {
     String taskSpec = getResourceAsString(indexTask);
     taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", fullDatasourceName);
