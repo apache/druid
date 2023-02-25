@@ -69,11 +69,8 @@
             "type": "index",
             "inputSource": {
                 "type": "local",
-                "files": [
-                    "/resources/data/batch_index/json/wikipedia_index_data1.json",
-                    "/resources/data/batch_index/json/wikipedia_index_data2.json",
-                    "/resources/data/batch_index/json/wikipedia_index_data3.json"
-                ]
+                "baseDir": "/resources/data/batch_index/json",
+                "filter": "wikipedia_index_data*"
             },
             "inputFormat": {
                 "type" : "json"

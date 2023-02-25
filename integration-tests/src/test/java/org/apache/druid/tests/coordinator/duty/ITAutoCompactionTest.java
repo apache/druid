@@ -1567,12 +1567,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for loading index task %s", taskID);
     indexer.waitUntilTaskCompletes(taskID);
-    LOG.info("Task log for %s", taskID);
-    try {
-      LOG.info(indexer.getTaskReport(taskID).toString());
-    } catch (Exception e) {
-      LOG.info("Task reports not found");
-    }
 
     ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(fullDatasourceName),
