@@ -34,8 +34,8 @@ public class VectorStringProcessors
     final ExprVectorProcessor processor;
     if (NullHandling.sqlCompatible()) {
       processor = new ObjectOutObjectsInFunctionVectorProcessor(
-          left.buildVectorized(inspector),
-          right.buildVectorized(inspector),
+          left.asVectorProcessor(inspector),
+          right.asVectorProcessor(inspector),
           inspector.getMaxVectorSize(),
           ExpressionType.STRING
       )
@@ -50,8 +50,8 @@ public class VectorStringProcessors
       };
     } else {
       processor = new ObjectOutObjectsInFunctionVectorProcessor(
-          left.buildVectorized(inspector),
-          right.buildVectorized(inspector),
+          left.asVectorProcessor(inspector),
+          right.asVectorProcessor(inspector),
           inspector.getMaxVectorSize(),
           ExpressionType.STRING
       )
@@ -73,7 +73,7 @@ public class VectorStringProcessors
     final ExprVectorProcessor<Object[]>[] inputProcessors = new ExprVectorProcessor[inputs.size()];
     for (int i = 0; i < inputs.size(); i++) {
       inputProcessors[i] = CastToTypeVectorProcessor.cast(
-          inputs.get(i).buildVectorized(inspector),
+          inputs.get(i).asVectorProcessor(inspector),
           ExpressionType.STRING
       );
     }

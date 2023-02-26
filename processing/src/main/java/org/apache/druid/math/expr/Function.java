@@ -131,9 +131,9 @@ public interface Function extends NamedFunction
 
   /**
    * Builds a 'vectorized' function expression processor, that can build vectorized processors for its input values
-   * using {@link Expr#buildVectorized}, for use in vectorized query engines.
+   * using {@link Expr#asVectorProcessor}, for use in vectorized query engines.
    *
-   * @see Expr#buildVectorized(Expr.VectorInputBindingInspector)
+   * @see Expr#asVectorProcessor(Expr.VectorInputBindingInspector)
    * @see ApplyFunction#asVectorProcessor(Expr.VectorInputBindingInspector, Expr, List)
    */
   default <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
@@ -2014,7 +2014,7 @@ public interface Function extends NamedFunction
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
       return CastToTypeVectorProcessor.cast(
-          args.get(0).buildVectorized(inspector),
+          args.get(0).asVectorProcessor(inspector),
           ExpressionType.fromString(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()))
       );
     }
