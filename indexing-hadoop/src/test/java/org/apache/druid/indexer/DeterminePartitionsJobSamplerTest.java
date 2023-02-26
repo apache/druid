@@ -30,11 +30,11 @@ public class DeterminePartitionsJobSamplerTest
   @Test
   public void testSampled()
   {
-    int sample = 10;
+    int samplingFactor = 10;
     int targetPartitionSize = 1000000;
     int maxRowsPerSegment = 5000000;
     DeterminePartitionsJobSampler sampler = new DeterminePartitionsJobSampler(
-        sample,
+        samplingFactor,
         targetPartitionSize,
         maxRowsPerSegment
     );
@@ -45,11 +45,11 @@ public class DeterminePartitionsJobSamplerTest
   @Test
   public void testNotSampled()
   {
-    int sample = 0;
+    int samplingFactor = 0;
     int targetPartitionSize = 1000000;
     int maxRowsPerSegment = 5000000;
     DeterminePartitionsJobSampler sampler = new DeterminePartitionsJobSampler(
-        sample,
+        samplingFactor,
         targetPartitionSize,
         maxRowsPerSegment
     );
@@ -60,43 +60,43 @@ public class DeterminePartitionsJobSamplerTest
   @Test
   public void testShouldEmitRowByHash()
   {
-    int sample = 10;
+    int samplingFactor = 10;
     DeterminePartitionsJobSampler sampler = new DeterminePartitionsJobSampler(
-        sample,
+        samplingFactor,
         1000,
         5000
     );
-    long n = 10000000L;
-    long m = 0;
-    for (long i = 0; i < n; i++) {
+    long total = 10000000L;
+    long hit = 0;
+    for (long i = 0; i < total; i++) {
       String str = UUID.randomUUID().toString();
       if (sampler.shouldEmitRow(str.getBytes(StandardCharsets.UTF_8))) {
-        m++;
+        hit++;
       }
     }
-    double p = n * 1.0 / sample;
-    double d = Math.abs(m - p) / p;
-    Assert.assertTrue(d < 0.01);
+    double sample = total * 1.0 / samplingFactor;
+    double error_ratio = Math.abs(hit - sample) / sample;
+    Assert.assertTrue(error_ratio < 0.01);
   }
 
   @Test
   public void testShouldEmitRowByRandom()
   {
-    int sample = 10;
+    int samplingFactor = 10;
     DeterminePartitionsJobSampler sampler = new DeterminePartitionsJobSampler(
-        sample,
+        samplingFactor,
         1000,
         5000
     );
-    long n = 1000000L;
-    long m = 0;
-    for (long i = 0; i < n; i++) {
+    long total = 1000000L;
+    long hit = 0;
+    for (long i = 0; i < total; i++) {
       if (sampler.shouldEmitRow()) {
-        m++;
+        hit++;
       }
     }
-    double p = n * 1.0 / sample;
-    double d = Math.abs(m - p) / p;
-    Assert.assertTrue(d < 0.01);
+    double sample = total * 1.0 / samplingFactor;
+    double error_ratio = Math.abs(hit - sample) / sample;
+    Assert.assertTrue(error_ratio < 0.01);
   }
 }
