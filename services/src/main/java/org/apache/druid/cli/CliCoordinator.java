@@ -119,6 +119,7 @@ import org.apache.druid.server.router.TieredBrokerConfig;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.Duration;
 
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -315,7 +316,8 @@ public class CliCoordinator extends ServerRunnable
             );
 
             //TODO: make this configurable when there are multiple search policies
-            binder.bind(CompactionSegmentSearchPolicy.class).to(NewestSegmentFirstPolicy.class);
+            binder.bind(CompactionSegmentSearchPolicy.class).to(NewestSegmentFirstPolicy.class).in(LazySingleton.class);
+            binder.bind(Clock.class).toInstance(Clock.systemUTC());
 
             bindAnnouncer(
                 binder,

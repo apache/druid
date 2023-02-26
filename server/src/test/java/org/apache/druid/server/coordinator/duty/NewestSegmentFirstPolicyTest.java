@@ -48,6 +48,7 @@ import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
@@ -65,6 +66,7 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -81,7 +83,8 @@ public class NewestSegmentFirstPolicyTest
   private static final long DEFAULT_SEGMENT_SIZE = 1000;
   private static final int DEFAULT_NUM_SEGMENTS_PER_SHARD = 4;
   private ObjectMapper mapper = new DefaultObjectMapper();
-  private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(mapper);
+  private final NewestSegmentFirstPolicy policy =
+      new NewestSegmentFirstPolicy(mapper, new TestDruidCoordinatorConfig.Builder().build(), Clock.systemUTC());
 
   @Test
   public void testLargeOffsetAndSmallSegmentInterval()

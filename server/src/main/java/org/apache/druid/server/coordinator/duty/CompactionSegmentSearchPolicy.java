@@ -19,6 +19,9 @@
 
 package org.apache.druid.server.coordinator.duty;
 
+import com.google.common.base.Suppliers;
+import com.google.common.cache.CacheBuilder;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
@@ -31,6 +34,16 @@ import java.util.Map;
  */
 public interface CompactionSegmentSearchPolicy
 {
+  /**
+   * @return An iterator over the intervals that need to be compacted. The iterator may not be reset on every call.
+   * Callers who want to guarantee that the iterator will be reset, should call {@link #reset} instead.
+   */
+  Pair<CompactionSegmentIterator, Boolean> resetIfNeeded(
+      Map<String, DataSourceCompactionConfig> compactionConfigs,
+      Map<String, SegmentTimeline> dataSources,
+      Map<String, List<Interval>> skipIntervals
+  );
+
   /**
    * Reset the current states of this policy. This method should be called whenever iterating starts.
    */

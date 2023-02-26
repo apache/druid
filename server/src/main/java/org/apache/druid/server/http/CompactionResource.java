@@ -52,7 +52,9 @@ public class CompactionResource
   }
 
   /**
-   * This API is meant to only be used by Druid's integration tests.
+   * This API schedules an out of compaction task. It's primary purpose was for testing, but can be used in production
+   * clusters. If you are using this API excessively, you should look at scheduling the CompactSegments duty in a custom
+   * duty group at a shorter period.
    */
   @POST
   @Path("/compact")

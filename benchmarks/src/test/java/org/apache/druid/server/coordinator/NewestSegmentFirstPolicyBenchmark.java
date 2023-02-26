@@ -32,6 +32,7 @@ import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -45,6 +46,7 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.Blackhole;
 
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -61,7 +63,14 @@ public class NewestSegmentFirstPolicyBenchmark
 {
   private static final String DATA_SOURCE_PREFIX = "dataSource_";
 
-  private final CompactionSegmentSearchPolicy policy = new NewestSegmentFirstPolicy(new DefaultObjectMapper());
+  private final CompactionSegmentSearchPolicy policy =
+      new NewestSegmentFirstPolicy(
+          new DefaultObjectMapper(),
+          new TestDruidCoordinatorConfig.Builder()
+              .withCompactionSearchPolicyRefreshPeriod(Duration.standardMinutes(5))
+              .build(),
+          Clock.systemUTC()
+      );
 
   @Param("100")
   private int numDataSources;

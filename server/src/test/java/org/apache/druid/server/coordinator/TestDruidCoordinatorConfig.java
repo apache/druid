@@ -47,6 +47,7 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final int curatorLoadQueuePeonNumCallbackThreads;
   private final Duration httpLoadQueuePeonHostTimeout;
   private final int httpLoadQueuePeonBatchSize;
+  private final Duration compactionSearchPolicyRefreshPeriod;
 
   public TestDruidCoordinatorConfig(
       Duration coordinatorStartDelay,
@@ -72,7 +73,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       Duration httpLoadQueuePeonRepeatDelay,
       Duration httpLoadQueuePeonHostTimeout,
       int httpLoadQueuePeonBatchSize,
-      int curatorLoadQueuePeonNumCallbackThreads
+      int curatorLoadQueuePeonNumCallbackThreads,
+      Duration compactionSearchPolicyRefreshPeriod
   )
   {
     this.coordinatorStartDelay = coordinatorStartDelay;
@@ -99,6 +101,7 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.httpLoadQueuePeonHostTimeout = httpLoadQueuePeonHostTimeout;
     this.httpLoadQueuePeonBatchSize = httpLoadQueuePeonBatchSize;
     this.curatorLoadQueuePeonNumCallbackThreads = curatorLoadQueuePeonNumCallbackThreads;
+    this.compactionSearchPolicyRefreshPeriod = compactionSearchPolicyRefreshPeriod;
   }
 
   @Override
@@ -210,6 +213,12 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   }
 
   @Override
+  public Duration getCompactionSearchPolicyRefreshPeriod()
+  {
+    return compactionSearchPolicyRefreshPeriod;
+  }
+
+  @Override
   public boolean getCoordinatorKillIgnoreDurationToRetain()
   {
     return coordinatorKillIgnoreDurationToRetain;
@@ -271,6 +280,7 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     private static final boolean DEFAULT_COMPACTION_SKIP_LOCKED_INTERVALS = true;
     private static final Duration DEFAULT_COORDINATOR_AUDIT_KILL_PERIOD = new Duration("PT86400s");
     private static final Duration DEFAULT_COORDINATOR_AUTIT_KILL_DURATION_TO_RETAIN = new Duration("PT7776000s");
+    private static final Duration DEFAULT_COMPACTION_SEARCH_POLICY_REFRESH_PERIOD = new Duration("PT5M");
 
 
     private Duration coordinatorStartDelay;
@@ -297,6 +307,7 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     private Boolean compactionSkippedLockedIntervals;
     private Duration coordinatorAuditKillPeriod;
     private Duration coordinatorAuditKillDurationToRetain;
+    private Duration compactionSearchPolicyRefreshPeriod;
 
     public Builder()
     {
@@ -446,6 +457,12 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       return this;
     }
 
+    public Builder withCompactionSearchPolicyRefreshPeriod(Duration compactionSearchPolicyRefreshPeriod)
+    {
+      this.compactionSearchPolicyRefreshPeriod = compactionSearchPolicyRefreshPeriod;
+      return this;
+    }
+
     public TestDruidCoordinatorConfig build()
     {
       return new TestDruidCoordinatorConfig(
@@ -473,7 +490,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
           httpLoadQueuePeonHostTimeout == null ? DEFAULT_HTTP_LOAD_QUEUE_PEON_HOST_TIMEOUT : httpLoadQueuePeonHostTimeout,
           httpLoadQueuePeonBatchSize == null ? DEFAULT_HTTP_LOAD_QUEUE_PEON_BATCH_SIZE : httpLoadQueuePeonBatchSize,
           curatorLoadQueuePeonNumCallbackThreads == null ? DEFAULT_CURATOR_LOAD_QUEUE_PEON_NUM_CALLBACK_THREADS
-                                                         : curatorLoadQueuePeonNumCallbackThreads
+                                                         : curatorLoadQueuePeonNumCallbackThreads,
+          compactionSearchPolicyRefreshPeriod == null ? DEFAULT_COMPACTION_SEARCH_POLICY_REFRESH_PERIOD : compactionSearchPolicyRefreshPeriod
       );
     }
 

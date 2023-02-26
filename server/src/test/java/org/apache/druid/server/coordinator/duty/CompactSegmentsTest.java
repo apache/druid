@@ -79,6 +79,7 @@ import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
@@ -116,6 +117,7 @@ import org.mockito.Mockito;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -139,7 +141,8 @@ public class CompactSegmentsTest
   private static final int TOTAL_SEGMENT_PER_DATASOURCE = 44;
   private static final int TOTAL_INTERVAL_PER_DATASOURCE = 11;
   private static final int MAXIMUM_CAPACITY_WITH_AUTO_SCALE = 10;
-  private static final NewestSegmentFirstPolicy SEARCH_POLICY = new NewestSegmentFirstPolicy(JSON_MAPPER);
+  private static final NewestSegmentFirstPolicy SEARCH_POLICY =
+      new NewestSegmentFirstPolicy(JSON_MAPPER, new TestDruidCoordinatorConfig.Builder().build(), Clock.systemUTC());
 
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()

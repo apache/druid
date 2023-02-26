@@ -76,6 +76,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+import java.time.Clock;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -146,13 +147,13 @@ public class DruidCoordinatorTest extends CuratorTestBase
     curator.blockUntilConnected();
     curator.create().creatingParentsIfNeeded().forPath(LOADPATH);
     objectMapper = new DefaultObjectMapper();
-    newestSegmentFirstPolicy = new NewestSegmentFirstPolicy(objectMapper);
     druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
         .withCoordinatorStartDelay(new Duration(COORDINATOR_START_DELAY))
         .withCoordinatorPeriod(new Duration(COORDINATOR_PERIOD))
         .withCoordinatorKillPeriod(new Duration(COORDINATOR_PERIOD))
         .withCoordinatorKillIgnoreDurationToRetain(false)
         .build();
+    newestSegmentFirstPolicy = new NewestSegmentFirstPolicy(objectMapper, druidCoordinatorConfig, Clock.systemUTC());
     pathChildrenCache = new PathChildrenCache(
         curator,
         LOADPATH,
@@ -214,7 +215,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.replay(segment);
 
     loadQueuePeon = EasyMock.createNiceMock(LoadQueuePeon.class);
-    EasyMock.expect(loadQueuePeon.getLoadQueueSize()).andReturn(new Long(1));
+    EasyMock.expect(loadQueuePeon.getLoadQueueSize()).andReturn(1L);
     loadQueuePeon.markSegmentToDrop(segment);
     EasyMock.expectLastCall().once();
     Capture<LoadPeonCallback> loadCallbackCapture = Capture.newInstance();

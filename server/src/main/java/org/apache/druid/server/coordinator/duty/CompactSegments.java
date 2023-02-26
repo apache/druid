@@ -34,6 +34,7 @@ import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -185,8 +186,8 @@ public class CompactSegments implements CoordinatorCustomDuty
                     .addAll(intervals)
         );
 
-        final CompactionSegmentIterator iterator =
-            policy.reset(compactionConfigs, dataSources, intervalsToSkipCompaction);
+        final Pair<CompactionSegmentIterator, Boolean> iteratorAndReset =
+            policy.resetIfNeeded(compactionConfigs, dataSources, intervalsToSkipCompaction);
 
         int totalCapacity;
         if (dynamicConfig.isUseAutoScaleSlots()) {
@@ -232,11 +233,15 @@ public class CompactSegments implements CoordinatorCustomDuty
                   compactionConfigs,
                   currentRunAutoCompactionSnapshotBuilders,
                   numAvailableCompactionTaskSlots,
-                  iterator
+                  iteratorAndReset.lhs,
+                  iteratorAndReset.rhs
               )
           );
         } else {
-          stats.accumulate(makeStats(currentRunAutoCompactionSnapshotBuilders, 0, iterator));
+          stats.addToGlobalStat(COMPACTION_TASK_COUNT, 0);
+          if (iteratorAndReset.rhs){
+            stats.accumulate(makeStats(currentRunAutoCompactionSnapshotBuilders, iteratorAndReset.lhs));
+          }
         }
       } else {
         LOG.info("compactionConfig is empty. Skip.");
@@ -350,7 +355,8 @@ public class CompactSegments implements CoordinatorCustomDuty
       Map<String, DataSourceCompactionConfig> compactionConfigs,
       Map<String, AutoCompactionSnapshot.Builder> currentRunAutoCompactionSnapshotBuilders,
       int numAvailableCompactionTaskSlots,
-      CompactionSegmentIterator iterator
+      CompactionSegmentIterator iterator,
+      boolean calculateStats
   )
   {
     int numSubmittedTasks = 0;
@@ -474,7 +480,9 @@ public class CompactSegments implements CoordinatorCustomDuty
       }
     }
 
-    return makeStats(currentRunAutoCompactionSnapshotBuilders, numSubmittedTasks, iterator);
+    final CoordinatorStats stats = new CoordinatorStats();
+    stats.addToGlobalStat(COMPACTION_TASK_COUNT, numSubmittedTasks);
+    return calculateStats ? stats.accumulate(makeStats(currentRunAutoCompactionSnapshotBuilders, iterator)) : stats;
   }
 
   private Map<String, Object> newAutoCompactionContext(@Nullable Map<String, Object> configuredContext)
@@ -488,19 +496,17 @@ public class CompactSegments implements CoordinatorCustomDuty
 
   private CoordinatorStats makeStats(
       Map<String, AutoCompactionSnapshot.Builder> currentRunAutoCompactionSnapshotBuilders,
-      int numCompactionTasks,
       CompactionSegmentIterator iterator
   )
   {
     final Map<String, AutoCompactionSnapshot> currentAutoCompactionSnapshotPerDataSource = new HashMap<>();
     final CoordinatorStats stats = new CoordinatorStats();
-    stats.addToGlobalStat(COMPACTION_TASK_COUNT, numCompactionTasks);
 
     // Iterate through all the remaining segments in the iterator.
     // As these segments could be compacted but were not compacted due to lack of task slot, we will aggregates
     // the statistic to the AwaitingCompaction statistics
-    while (iterator.hasNext()) {
-      final List<DataSegment> segmentsToCompact = iterator.next();
+
+    iterator.forEachRemainingSegmentsToCompact(segmentsToCompact -> {
       if (!segmentsToCompact.isEmpty()) {
         final String dataSourceName = segmentsToCompact.get(0).getDataSource();
         AutoCompactionSnapshot.Builder snapshotBuilder = currentRunAutoCompactionSnapshotBuilders.computeIfAbsent(
@@ -520,7 +526,7 @@ public class CompactSegments implements CoordinatorCustomDuty
         );
         snapshotBuilder.incrementSegmentCountAwaitingCompaction(segmentsToCompact.size());
       }
-    }
+    });
 
     // Statistics of all segments considered compacted after this run
     Map<String, CompactionStatistics> allCompactedStatistics = iterator.totalCompactedStatistics();

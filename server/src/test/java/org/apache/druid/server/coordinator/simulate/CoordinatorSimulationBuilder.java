@@ -56,6 +56,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -80,8 +81,6 @@ public class CoordinatorSimulationBuilder
               DataSegment.PruneSpecsHolder.DEFAULT
           )
       );
-  private static final CompactionSegmentSearchPolicy COMPACTION_SEGMENT_SEARCH_POLICY =
-      new NewestSegmentFirstPolicy(OBJECT_MAPPER);
   private String balancerStrategy;
   private CoordinatorDynamicConfig dynamicConfig =
       CoordinatorDynamicConfig.builder()
@@ -193,7 +192,8 @@ public class CoordinatorSimulationBuilder
         (datasource, rules) ->
             env.ruleManager.overrideRule(datasource, rules, null)
     );
-
+    CompactionSegmentSearchPolicy compactionSegmentSearchPolicy =
+        new NewestSegmentFirstPolicy(OBJECT_MAPPER, env.coordinatorConfig, Clock.systemUTC());
     // Build the coordinator
     final DruidCoordinator coordinator = new DruidCoordinator(
         env.coordinatorConfig,
@@ -213,7 +213,7 @@ public class CoordinatorSimulationBuilder
         createBalancerStrategy(env),
         env.lookupCoordinatorManager,
         env.leaderSelector,
-        COMPACTION_SEGMENT_SEARCH_POLICY
+        compactionSegmentSearchPolicy
     );
 
     return new SimulationImpl(coordinator, env);

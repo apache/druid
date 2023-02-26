@@ -73,6 +73,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -196,6 +197,17 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   }
 
   @Override
+  public void forEachRemainingSegmentsToCompact(Consumer<List<DataSegment>> action)
+  {
+    for (CompactibleTimelineObjectHolderCursor compactibleTimelineObjectHolderCursor : timelineIterators.values()) {
+      for (TimelineObjectHolder<String, DataSegment> holder : compactibleTimelineObjectHolderCursor.holders) {
+        List<DataSegment> candidates = compactibleTimelineObjectHolderCursor.getCandidates(holder);
+        action.accept(candidates);
+      }
+    }
+  }
+
+  @Override
   public boolean hasNext()
   {
     return !queue.isEmpty();
@@ -310,6 +322,11 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         throw new NoSuchElementException();
       }
       TimelineObjectHolder<String, DataSegment> timelineObjectHolder = holders.remove(holders.size() - 1);
+      return getCandidates(timelineObjectHolder);
+    }
+
+    private List<DataSegment> getCandidates(TimelineObjectHolder<String, DataSegment> timelineObjectHolder)
+    {
       List<DataSegment> candidates = Streams.sequentialStreamFrom(timelineObjectHolder.getObject())
                                             .map(PartitionChunk::getObject)
                                             .collect(Collectors.toList());

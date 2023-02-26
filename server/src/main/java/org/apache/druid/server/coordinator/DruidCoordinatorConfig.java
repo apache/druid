@@ -137,4 +137,7 @@ public abstract class DruidCoordinatorConfig
     return true;
   }
 
+  @Config("druid.coordinator.compaction.searchPolicyRefreshPeriod")
+  @Default("PT5M")
+  public abstract Duration getCompactionSearchPolicyRefreshPeriod();
 }

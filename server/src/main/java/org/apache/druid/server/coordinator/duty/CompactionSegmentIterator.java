@@ -25,6 +25,7 @@ import org.apache.druid.timeline.DataSegment;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Segments in the lists which are the elements of this iterator are sorted according to the natural segment order
@@ -48,4 +49,9 @@ public interface CompactionSegmentIterator extends Iterator<List<DataSegment>>
    */
   Map<String, CompactionStatistics> totalSkippedStatistics();
 
+  /**
+   * Performs the given action over the remaining segments to compact in the iterator. Similar to
+   * {@link #forEachRemaining} however, this iteration does not advance the iterator.
+   */
+  void forEachRemainingSegmentsToCompact(Consumer<List<DataSegment>> action);
 }
