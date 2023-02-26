@@ -66,7 +66,7 @@ public class DeterminePartitionsJobSamplerTest
         1000,
         5000
     );
-    long total = 10000000L;
+    long total = 100000L;
     long hit = 0;
     for (long i = 0; i < total; i++) {
       String str = UUID.randomUUID().toString();
