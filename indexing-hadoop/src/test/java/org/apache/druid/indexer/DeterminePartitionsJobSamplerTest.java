@@ -74,9 +74,9 @@ public class DeterminePartitionsJobSamplerTest
         hit++;
       }
     }
-    double sample = total * 1.0 / samplingFactor;
-    double error_ratio = Math.abs(hit - sample) / sample;
-    Assert.assertTrue(error_ratio < 0.01);
+    double expect = total * 1.0 / samplingFactor;
+    double error = Math.abs(hit - expect) / expect;
+    Assert.assertTrue(error < 0.01);
   }
 
   @Test
@@ -95,8 +95,8 @@ public class DeterminePartitionsJobSamplerTest
         hit++;
       }
     }
-    double sample = total * 1.0 / samplingFactor;
-    double error_ratio = Math.abs(hit - sample) / sample;
-    Assert.assertTrue(error_ratio < 0.01);
+    double expect = total * 1.0 / samplingFactor;
+    double error = Math.abs(hit - expect) / expect;
+    Assert.assertTrue(error < 0.01);
   }
 }
