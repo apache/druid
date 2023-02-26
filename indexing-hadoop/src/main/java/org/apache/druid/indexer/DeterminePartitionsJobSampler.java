@@ -47,7 +47,7 @@ public class DeterminePartitionsJobSampler
    */
   boolean shouldEmitRow(byte[] groupKeyBytes)
   {
-    return samplingFactor == 1 || Math.abs(HASH_FUNCTION.hashBytes(groupKeyBytes).asInt()) % samplingFactor == 0;
+    return samplingFactor == 1 || HASH_FUNCTION.hashBytes(groupKeyBytes).asInt() % samplingFactor == 0;
   }
 
   /**

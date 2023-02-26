@@ -22,6 +22,9 @@ package org.apache.druid.indexer;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
+
 public class DeterminePartitionsJobSamplerTest
 {
   @Test
@@ -52,5 +55,48 @@ public class DeterminePartitionsJobSamplerTest
     );
     Assert.assertEquals(targetPartitionSize, sampler.getSampledTargetPartitionSize());
     Assert.assertEquals(maxRowsPerSegment, sampler.getSampledMaxRowsPerSegment());
+  }
+
+  @Test
+  public void testShouldEmitRowByHash()
+  {
+    int sample = 10;
+    DeterminePartitionsJobSampler sampler = new DeterminePartitionsJobSampler(
+        sample,
+        1000,
+        5000
+    );
+    long n = 10000000L;
+    long m = 0;
+    for (long i = 0; i < n; i++) {
+      String str = UUID.randomUUID().toString();
+      if (sampler.shouldEmitRow(str.getBytes(StandardCharsets.UTF_8))) {
+        m++;
+      }
+    }
+    double p = n * 1.0 / sample;
+    double d = Math.abs(m - p) / p;
+    Assert.assertTrue(d < 0.01);
+  }
+
+  @Test
+  public void testShouldEmitRowByRandom()
+  {
+    int sample = 10;
+    DeterminePartitionsJobSampler sampler = new DeterminePartitionsJobSampler(
+        sample,
+        1000,
+        5000
+    );
+    long n = 1000000L;
+    long m = 0;
+    for (long i = 0; i < n; i++) {
+      if (sampler.shouldEmitRow()) {
+        m++;
+      }
+    }
+    double p = n * 1.0 / sample;
+    double d = Math.abs(m - p) / p;
+    Assert.assertTrue(d < 0.01);
   }
 }
