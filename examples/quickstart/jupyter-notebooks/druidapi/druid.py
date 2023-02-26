@@ -21,6 +21,10 @@ from .tasks import TaskClient
 from .datasource import DatasourceClient
 
 class DruidClient:
+    '''
+    Client for a Druid cluster. Functionality is split into a number of
+    specialized "clients" that group many of Druid's REST API calls.
+    '''
 
     def __init__(self, router_endpoint):
         self.rest_client = DruidRestClient(router_endpoint)
@@ -31,40 +35,79 @@ class DruidClient:
         self.datasource_client = None
 
     def rest(self):
+        '''
+        Returns the low-level REST client. Useful for debugging and to access REST API
+        calls not yet wrapped by the various function-specific clients.
+
+        If you find you need to use this, consider creating a wrapper function in Python
+        and contributing it to Druid via a pull request.
+        '''
         return self.rest_client
 
     def trace(self, enable=True):
+        '''
+        Enable or disable tracing. When enabled, the Druid client prints the
+        URL and payload for each REST API call. Useful for debugging, or if you want
+        to learn what the code does so you can replicate it in your own client.
+        '''
         self.rest_client.enable_trace(enable)
     
     def status(self, endpoint=None) -> StatusClient:
         '''
-        Returns the status client for the router by default, else the status
-        endpoint for the specified endpoint.
+        Returns the status client for a Druid service.
+
+        Parameters
+        ----------
+        endpoint: str
+            The URL for a Druid service. If None, then returns the status client
+            for the Router.
         '''
-        if endpoint is None:
-            if self.status_client is None:
+        if not endpoint:
+            if not self.status_client:
                 self.status_client = StatusClient(self.rest_client)
             return self.status_client
         else:
             endpoint_client = DruidRestClient(endpoint)
-            return StatusClient(endpoint_client)
+            return StatusClient(endpoint_client, True)
 
-    def catalog(self):
-        if self.catalog_client is None:
+    def catalog(self) -> CatalogClient:
+        '''
+        Returns the catalog client to interact with the Druid catalog.
+        '''
+        if not self.catalog_client:
             self.catalog_client = CatalogClient(self.rest_client)
         return self.catalog_client
 
-    def sql(self):
-        if self.sql_client is None:
+    def sql(self) -> QueryClient:
+        '''
+        Returns the SQL query client to submit interactive or MSQ queries.
+        '''
+        if not self.sql_client:
             self.sql_client = QueryClient(self)
         return self.sql_client
 
-    def tasks(self):
-        if self.tasks_client is None:
+    def tasks(self) -> TaskClient:
+        '''
+        Returns the Overlord tasks client to submit and track tasks.
+        '''
+        if not self.tasks_client:
             self.tasks_client = TaskClient(self.rest_client)
         return self.tasks_client
 
-    def datasources(self):
-        if self.datasource_client is None:
+    def datasources(self) -> DatasourceClient:
+        '''
+        Returns the Coordinator datasources client to manipulate datasources.
+        Prefer to use the SQL client to query the INFORMATION_SCHEMA to obtain
+        information about datasources.
+        '''
+        if not self.datasource_client:
             self.datasource_client = DatasourceClient(self.rest_client)
         return self.datasource_client
+    
+    def close(self):
+        self.rest_client.close()
+        self.rest_client = None
+        self.catalog_client = None
+        self.tasks_client = None
+        self.datasource_client = None
+        self.sql_client = None

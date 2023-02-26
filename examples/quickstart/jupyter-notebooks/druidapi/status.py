@@ -15,11 +15,11 @@
 
 import time
 
-STATUS_BASE = "/status"
+STATUS_BASE = '/status'
 REQ_STATUS = STATUS_BASE
-REQ_HEALTH = STATUS_BASE + "/health"
-REQ_PROPERTIES = STATUS_BASE + "/properties"
-REQ_IN_CLUSTER = STATUS_BASE + "/selfDiscovered/status"
+REQ_HEALTH = STATUS_BASE + '/health'
+REQ_PROPERTIES = STATUS_BASE + '/properties'
+REQ_IN_CLUSTER = STATUS_BASE + '/selfDiscovered/status'
 
 ROUTER_BASE = '/druid/router/v1'
 REQ_BROKERS = ROUTER_BASE + '/brokers'
@@ -27,65 +27,77 @@ REQ_BROKERS = ROUTER_BASE + '/brokers'
 class StatusClient:
     '''
     Client for status APIs. These APIs are available on all nodes.
-    If used with the router, they report the status of just the router.
+    If used with the Router, they report the status of just the Router.
+    To check the status of other nodes, first create a REST endpoint for that
+    node:
+
+      status_client = StatusClient(DruidRestClient("<service endpoint>"))
+
+    You can find the service endpoints by querying the sys.servers table using SQL.
+
+    See https://druid.apache.org/docs/latest/operations/api-reference.html#process-information
     '''
     
-    def __init__(self, rest_client):
+    def __init__(self, rest_client, owns_client=False):
         self.client = rest_client
+        self.owns_client = owns_client
+
+    def close(self):
+        if self.owns_client:
+            self.client.close()
+        self.client = None
     
     #-------- Common --------
 
     def status(self):
-        """
+        '''
         Returns the Druid version, loaded extensions, memory used, total memory 
-        and other useful information about the process.
+        and other useful information about the Druid service.
 
         GET `/status`
-
-        See https://druid.apache.org/docs/latest/operations/api-reference.html#process-information
-        """
+        '''
         return self.client.get_json(REQ_STATUS)
     
     def is_healthy(self) -> bool:
-        """
-        Returns `True` if the node is healthy, an exception otherwise.
-        Useful for automated health checks.
+        '''
+        Returns `True` if the node is healthy, `False`` otherwise. Check service health
+        before using other Druid API methods to ensure the server is ready.
 
+        See also `wait_until_ready()`.
+ 
         GET `/status/health`
-
-        See https://druid.apache.org/docs/latest/operations/api-reference.html#process-information
-        """
+        '''
         try:
             return self.client.get_json(REQ_HEALTH)
         except Exception:
             return False
     
     def wait_until_ready(self):
+        '''
+        Sleeps until the node reports itself as healthy. Will run forever if the node
+        is down or never becomes healthy.
+        '''
         while not self.is_healthy():
             time.sleep(0.5)
     
     def properties(self) -> map:
-        """
+        '''
         Returns the effective set of Java properties used by the service, including
         system properties and properties from the `common_runtime.propeties` and
         `runtime.properties` files.
 
         GET `/status/properties`
-
-        See https://druid.apache.org/docs/latest/operations/api-reference.html#process-information
-        """
+        '''
         return self.client.get_json(REQ_PROPERTIES)
     
     def in_cluster(self):
-        """
-        Returns `True` if the node is visible wihtin the cluster, `False` if not.
-        (That is, returns the value of the `{"selfDiscovered": true/false}`
+        '''
+        Returns `True` if the node is visible within the cluster, `False` if not.
+        That is, returns the value of the `{"selfDiscovered": true/false}`
         field in the response.
 
         GET `/status/selfDiscovered/status`
-
-        See https://druid.apache.org/docs/latest/operations/api-reference.html#process-information
-        """
+        '''
         try:
             result = self.client.get_json(REQ_IN_CLUSTER)
             return result.get('selfDiscovered', False)
@@ -93,7 +105,14 @@ class StatusClient:
             return False
 
     def version(self):
+        '''
+        Returns the version of the Druid server. If the server is running in an IDE, the
+        version will be empty.
+        '''
         return self.status().get('version')
 
     def brokers(self):
+        '''
+        Retrieve the list of broker nodes known to this node. Must be called on the Router.
+        '''
         return self.client.get_json(REQ_BROKERS)

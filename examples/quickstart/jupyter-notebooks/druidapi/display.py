@@ -48,37 +48,18 @@ class Display:
 
     def show_error(self, msg):
         from .html_table import html_error
-        html_error("<b>ERROR: " + msg + "</b")
+        html_error('<b>ERROR: ' + msg + '</b>')
     
     def show_message(self, msg):
         from .html_table import html
-        html("<b>" + msg + "</b")
+        html('<b>' + msg + '</b>')
 
-def list_to_table(table, objects, cols):
-    cols = infer_keys(objects) if cols is None else cols
-    rows = []
-    for obj in objects:
-        row = []
-        for key in cols.keys():
-            row.append(obj.get(key))
-        rows.append(row)
-    table.headers([head for head in cols.values()])
-    table.show(rows)
+def list_to_table(table, objects, cols = None):
+    table.from_object_list(objects, cols)
+    return table.show()
 
 def object_to_table(table, obj, labels):
-    labels = infer_keys(obj) if labels is None else labels
-    table_rows = []
-    for key, head in labels.items():
-        table_rows.append([head, obj.get(key)])
-    table.headers(['Key', 'Value'])
-    table.show(table_rows)
-
-def infer_keys(data):
-    if type(data) is list:
-        data = data[0]
-    keys = {}
-    for key in data.keys():
-        keys[key] = key
-    return keys
+    table.from_object(obj, labels)
+    table.show()
 
 display = Display()

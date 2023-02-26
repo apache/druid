@@ -15,7 +15,6 @@
 
 from .consts import OVERLORD_BASE
 
-# Tasks
 REQ_TASKS = OVERLORD_BASE + '/tasks'
 REQ_POST_TASK = OVERLORD_BASE + '/task'
 REQ_GET_TASK = REQ_POST_TASK + '/{}'
@@ -25,154 +24,167 @@ REQ_END_TASK = REQ_GET_TASK
 REQ_END_DS_TASKS = REQ_END_TASK + '/shutdownAllTasks'
 
 class TaskClient:
-    """
-    Client for task-related APIs. The APIs connect through the Router to
-    the Overlord.
-    """
+    '''
+    Client for Overlord task-related APIs.
+
+    See https://druid.apache.org/docs/latest/operations/api-reference.html#tasks
+    '''
     
     def __init__(self, rest_client):
         self.client = rest_client
 
-    def tasks(self, state=None, table=None, type=None, max=None, created_time_interval=None):
+    def tasks(self, state=None, table=None, task_type=None, max=None, created_time_interval=None):
         '''
-        Retrieve list of tasks.
+        Retrieves the list of tasks.
 
         Parameters
         ----------
-        state : str, default = None
-        	Filter list of tasks by task state. Valid options are "running", 
+        state: str, default = None
+            Filter list of tasks by task state. Valid options are "running", 
             "complete", "waiting", and "pending". Constants are defined for
             each of these in the `consts` file.
-        table : str, default = None
-        	Return tasks filtered by Druid table (datasource).
-        created_time_interval : str, Default = None
-        	Return tasks created within the specified interval.
-        max	: int, default = None
+        table  str, default = None
+            Return tasks for the this one Druid table (datasource).
+        created_time_interval: str, Default = None
+            Return tasks created within the specified interval.
+        max: int, default = None
             Maximum number of "complete" tasks to return. Only applies when state is set to "complete".
-        type : str, default = None
-        	filter tasks by task type.
+        task_type: str, default = None
+            Filter tasks by task type.
 
         Reference
         ---------
         `GET /druid/indexer/v1/tasks`
-
-        See https://druid.apache.org/docs/latest/operations/api-reference.html#get-15
         '''
         params = {}
-        if state is not None:
+        if state:
             params['state'] = state
-        if table is not None:
+        if table :
             params['datasource'] = table
-        if type is not None:
-            params['type'] = type
+        if task_type:
+            params['type'] = task_type
         if max is not None:
             params['max'] = max
-        if created_time_interval is not None:
+        if created_time_interval:
             params['createdTimeInterval'] = created_time_interval
         return self.client.get_json(REQ_TASKS, params=params)
 
-    def task(self, task_id):
-        """
-        Retrieve the "payload" of a task.
+    def task(self, task_id) -> dict:
+        '''
+        Retrieves the "payload" of a task.
 
         Parameters
         ----------
-        task_id : str
-            The id of the task to retrieve
+        task_id: str
+            The ID of the task to retrieve.
+
+        Returns
+        -------
+            The task payload as a Python dictionary.
 
         Reference
         ---------
         `GET /druid/indexer/v1/task/{taskId}`
-
-        See https://druid.apache.org/docs/latest/operations/api-reference.html#get-15
-        """
+        '''
         return self.client.get_json(REQ_GET_TASK, args=[task_id])
 
-    def task_status(self, task_id):
+    def task_status(self, task_id) -> dict:
         '''
-        Retrieve the status of a task.
+        Retrieves the status of a task.
 
         Parameters
         ----------
-        task_id : str
-            The id of the task to retrieve
+        task_id: str
+            The ID of the task to retrieve.
+
+        Returns
+        -------
+            The task status as a Python dictionary. See the `consts` module for a list
+            of status codes.
 
         Reference
         ---------
         `GET /druid/indexer/v1/task/{taskId}/status`
-
-        See https://druid.apache.org/docs/latest/operations/api-reference.html#get-15
         '''
         return self.client.get_json(REQ_TASK_STATUS, args=[task_id])
 
-    def task_reports(self, task_id):
+    def task_reports(self, task_id) -> dict:
         '''
-        Retrieve a task completion report for a task.
-        Only works for completed tasks.
+        Retrieves the completion report for a completed task.
 
         Parameters
         ----------
-        task_id : str
-            The id of the task to retrieve
+        task_id: str
+            The ID of the task to retrieve.
+
+        Returns
+        -------
+            The task reports as a Python dictionary.
 
         Reference
         ---------
         `GET /druid/indexer/v1/task/{taskId}/reports`
-
-        See https://druid.apache.org/docs/latest/operations/api-reference.html#get-15
         '''
         return self.client.get_json(REQ_TASK_REPORTS, args=[task_id])
 
     def submit_task(self, payload):
-        """
-        Submit a task or supervisor specs to the Overlord.
+        '''
+        Submits a task to the Overlord.
         
-        Returns the taskId of the submitted task.
+        Returns the `taskId` of the submitted task.
 
         Parameters
         ----------
-        payload : object
-            The task object. Serialized to JSON.
+        payload: object
+            The task object represented as a Python dictionary.
 
+        Returns
+        -------
+            The REST response.
+
+        Returns
+        -------
+            The REST response.
         Reference
         ---------
         `POST /druid/indexer/v1/task`
-
-        See https://druid.apache.org/docs/latest/operations/api-reference.html#post-5
-        """
+        '''
         return self.client.post_json(REQ_POST_TASK, payload)
 
     def shut_down_task(self, task_id):
-        """
+        '''
         Shuts down a task.
 
         Parameters
         ----------
-        task_id : str
-            The id of the task to shut down
+        task_id: str
+            The ID of the task to shut down.
+
+        Returns
+        -------
+            The REST response.
         
         Reference
         ---------
         `POST /druid/indexer/v1/task/{taskId}/shutdown`
-
-        See https://druid.apache.org/docs/latest/operations/api-reference.html#post-5
-        """
+        '''
         return self.client.post_json(REQ_END_TASK, args=[task_id])
 
     def shut_down_tasks_for(self, table):
-        """
-        Shuts down all tasks for a table (data source).
+        '''
+        Shuts down all tasks for a table (datasource).
 
         Parameters
         ----------
-        table : str
-            The name of the table (data source).
+        table: str
+            The name of the table (datasource).
+
+        Returns
+        -------
+            The REST response.
         
         Reference
         ---------
         `POST /druid/indexer/v1/datasources/{dataSource}/shutdownAllTasks`
-
-        See https://druid.apache.org/docs/latest/operations/api-reference.html#post-5
-        """
+        '''
         return self.client.post_json(REQ_END_DS_TASKS, args=[table])
-

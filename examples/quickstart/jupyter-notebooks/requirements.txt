@@ -12,20 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# ------------------------------------------------------------------------
 
-class ClientError(Exception):
-    '''
-    Indicates an error with usage of the Python API.
-    '''
-    
-    def __init__(self, msg):
-        self.message = msg
+# Requirements for the Jupyter Notebooks
+# See: https://pip.pypa.io/en/stable/reference/requirements-file-format/
+#
+# Requirements are both few and simple at present.
 
-class DruidError(Exception):
-    '''
-    Indicates that something went wrong on Druid, typically as the result of a
-    request that this client sent.
-    '''
-
-    def __init__(self, msg):
-        self.message = msg
+requests

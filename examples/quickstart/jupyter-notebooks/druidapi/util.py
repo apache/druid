@@ -13,18 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-def is_blank(s):
-    """
-    Returns True if the given string is None or blank (after stripping spaces),
-    False otherwise.
-    """
-    return s is None or len(s.strip()) == 0
+from .error import ClientError
 
 def dict_get(dict, key, default=None):
-    """
+    '''
     Returns the value of key in the given dict, or the default value if
     the key is not found. 
-    """
-    if dict is None:
+    '''
+    if not dict:
         return default
     return dict.get(key, default)
+
+def split_table_name(table_name, default_schema):
+    if not table_name:
+        raise ClientError('Table name is required')
+    parts = table_name.split('.')
+    if len(parts) > 2:
+        raise ClientError('Druid supports one or two-part table names')
+    if len(parts) == 2:
+        return parts
+    return [default_schema, parts[0]]

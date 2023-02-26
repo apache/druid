@@ -30,11 +30,11 @@ You can try out the Druid APIs using the Jupyter Notebook-based tutorials. These
 tutorials provide snippets of Python code that you can use to run calls against
 the Druid API to complete the tutorial.
 
-## Prerequisites 
+## Prerequisites
 
 Make sure you meet the following requirements before starting the Jupyter-based tutorials:
 
-- Python 3
+- Python 3.7 or later
 
 - The `requests` package for Python. For example, you can install it with the following command:
 
@@ -79,7 +79,7 @@ Make sure you meet the following requirements before starting the Jupyter-based 
   ./it.sh up <category>
   ```
 
-  Replace `<catagory>` with one of the available integration test categories. See the integration 
+  Replace `<catagory>` with one of the available integration test categories. See the integration
   test `README.md` for details.
 
 ## Simple Druid API

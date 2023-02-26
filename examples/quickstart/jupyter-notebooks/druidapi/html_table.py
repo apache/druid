@@ -48,7 +48,7 @@ STYLES = '''
 '''
 
 def escape_for_html(s):
-    # Anoying: IPython treats $ as the start of Latex, which is cool,
+    # Annoying: IPython treats $ as the start of Latex, which is cool,
     # but not wanted here.
     return s.replace('$', '\\$')
 
@@ -67,7 +67,7 @@ alignments = ['druid-left', 'druid-center', 'druid-right']
 
 def start_tag(tag, align):
     s = '<' + tag
-    if align is not None:
+    if align:
         s += ' class="{}"'.format(alignments[align])
     return s + '>'
 
@@ -79,20 +79,22 @@ class HtmlTable(BaseTable):
     def widths(self, widths):
         self._widths = widths
 
-    def format(self, rows):
-        _, width = self.row_width(rows)
+    def format(self) -> str:
+        if not self._rows and not self._headers:
+            return ''
+        _, width = self.row_width(self._rows)
         headers = self.pad_headers(width)
-        rows = self.pad_rows(rows, width)
+        rows = self.pad_rows(self._rows, width)
         s = '<table>\n'
         s += self.gen_header(headers)
         s += self.gen_rows(rows)
         return s + '\n</table>'
 
-    def show(self, rows):
-        html(self.format(rows))
+    def show(self):
+        html(self.format())
 
     def gen_header(self, headers):
-        if headers is None or len(headers) == 0:
+        if not headers:
             return ''
         s = '<tr>'
         for i in range(len(headers)):
@@ -102,17 +104,17 @@ class HtmlTable(BaseTable):
     def gen_rows(self, rows):
         html_rows = []
         for row in rows:
-            r = "<tr>"
+            r = '<tr>'
             for i in range(len(row)):
                 r += start_tag('td', self.col_align(i))
                 cell = row[i]
                 value = '' if cell is None else escape(str(cell))
                 r += value + '</td>'
-            html_rows.append(r + "</tr>")
-        return "\n".join(html_rows)
+            html_rows.append(r + '</tr>')
+        return '\n'.join(html_rows)
 
     def col_align(self, col):
-        if self._align is None:
+        if not self._align:
             return None
         if col >= len(self._align):
             return None

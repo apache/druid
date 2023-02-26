@@ -27,46 +27,17 @@ REQ_DS_LOAD_STATUS = REQ_DATASOURCES + '/{}/loadstatus'
 
 class DatasourceClient:
     '''
-    Client for status APIs. These APIs are available on all nodes.
-    If used with the router, they report the status of just the router.
+    Client for datasource APIs. Prefer to use the SQL to query the
+    INFORMATION_SCHEMA to obtain information.
+
+    See https://druid.apache.org/docs/latest/operations/api-reference.html#datasources
     '''
     
     def __init__(self, rest_client):
         self.rest_client = rest_client
-
-    def names(self, include_unused=False, include_disabled=False):
-        """
-        Returns a list of the names of data sources in the metadata store.
-        
-        Parameters
-        ----------
-        include_unused : bool, default = False
-            if False, returns only datasources with at least one used segment
-            in the cluster.
-
-        include_unused : bool, default = False
-            if False, returns only enamed datasources.
-
-        Reference
-        ---------
-        * `GET /druid/coordinator/v1/metadata/datasources`
-        * `GET /druid/coordinator/v1/metadata/datasources?includeUnused`
-        * `GET /druid/coordinator/v1/metadata/datasources?includeDisabled`
-
-        See https://druid.apache.org/docs/latest/operations/api-reference.html#get-4
-
-        Note: this method uses a semi-deprecated API.
-        See `Metadata.user_table_names()` for the preferred solution.
-        """
-        params = {}
-        if include_unused:
-            params['includeUnused'] = ''
-        if include_disabled:
-            params['includeDisabled'] = ''
-        return self.rest_client.get_json(REQ_DATASOURCES, params=params)
     
-    def drop(self, ds_name, ifExists=False):
-        """
+    def drop(self, ds_name, if_exists=False):
+        '''
         Drops a data source.
 
         Marks as unused all segments belonging to a datasource. 
@@ -76,7 +47,7 @@ class DatasourceClient:
         Parameters
         ----------
         ds_name: str
-            name of the datasource to query
+            The name of the datasource to query
 
         Returns
         -------
@@ -88,9 +59,9 @@ class DatasourceClient:
         Reference
         ---------
         `DELETE /druid/coordinator/v1/datasources/{dataSourceName}`
-        """
+        '''
         r = self.rest_client.delete(REQ_DATASOURCE, args=[ds_name])
-        if ifExists and r.status_code == requests.codes.not_found:
+        if if_exists and r.status_code == requests.codes.not_found:
             return
         check_error(r)
 
@@ -108,4 +79,3 @@ class DatasourceClient:
             if dict_get(resp, ds_name) == 100.0:
                 return
             time.sleep(0.5)
-            

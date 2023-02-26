@@ -20,7 +20,7 @@ alignments = ['', '^', '>']
 
 def simple_table(table_def):
     table = []
-    if table_def.headers is not None:
+    if table_def.headers:
         table.append(' '.join(table_def.format_row(table_def.headers)))
     for row in table_def.rows:
         table.append(' '.join(table_def.format_row(row)))
@@ -29,7 +29,7 @@ def simple_table(table_def):
 def border_table(table_def):
     fmt = ' | '.join(table_def.formats)
     table = []
-    if table_def.headers is not None:
+    if table_def.headers:
         table.append(fmt.format(*table_def.headers))
         bar = ''
         for i in range(table_def.width):
@@ -62,7 +62,7 @@ class TableDef:
 
     def find_widths(self):
         self.widths = [0 for i in range(self.width)]
-        if self.headers is not None:
+        if self.headers:
             for i in range(len(self.headers)):
                 self.widths[i] = len(self.headers[i])
         for row in self.rows:
@@ -71,7 +71,7 @@ class TableDef:
                     self.widths[i] = max(self.widths[i], len(row[i]))
 
     def apply_widths(self, widths):
-        if widths is None:
+        if not widths:
             return
         for i in range(min(len(self.widths), len(widths))):
             if widths[i] is not None:
@@ -86,7 +86,7 @@ class TableDef:
             self.formats.append(f)
 
     def format_header(self):
-        if self.headers is None:
+        if not self.headers:
             return None
         return self.format_row(self.headers)
 
@@ -94,7 +94,7 @@ class TableDef:
         row = []
         for i in range(self.width):
             value = data_row[i]
-            if value is None:
+            if not value:
                 row.append(' ' * self.widths[i])
             else:
                 row.append(self.formats[i].format(value))
@@ -106,6 +106,9 @@ class TextTable(BaseTable):
         BaseTable.__init__(self)
         self.formatter = simple_table
         self._widths = None
+
+    def with_border(self):
+        self.formatter = border_table
 
     def widths(self, widths):
         self._widths = widths
@@ -122,17 +125,17 @@ class TextTable(BaseTable):
         table_def.define_row_formats()
         return table_def
 
-    def format(self, rows):
-        if rows is None:
-            rows = []
-        table_rows = self.formatter(self.compute_def(rows))
+    def format(self):
+        if not self._rows:
+            self._rows = []
+        table_rows = self.formatter(self.compute_def(self._rows))
         return '\n'.join(table_rows)
     
     def show(self, rows):
         print(self.format(rows))
     
     def format_rows(self, rows, min_width, max_width):
-        if self._col_fmt is None:
+        if not self._col_fmt:
             return self.default_row_format(rows, min_width, max_width)
         else:
             return self.apply_row_formats(rows, max_width)

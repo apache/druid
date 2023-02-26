@@ -18,9 +18,9 @@ ALIGN_CENTER = 1
 ALIGN_RIGHT = 2
 
 def padded(array, width, fill):
-    if array is not None and len(array) >= width:
+    if array and len(array) >= width:
         return array
-    if array is None:
+    if not array:
         result = []
     else:
         result = array.copy()
@@ -30,6 +30,14 @@ def pad(array, width, fill):
     for _ in range(len(array), width):
         array.append(fill)
     return array
+       
+def infer_keys(data):
+    if type(data) is list:
+        data = data[0]
+    keys = {}
+    for key in data.keys():
+        keys[key] = key
+    return keys
 
 class BaseTable:
 
@@ -38,9 +46,13 @@ class BaseTable:
         self._align = None
         self._col_fmt = None
         self.sample_size = 10
+        self._rows = None
 
     def headers(self, headers):
         self._headers = headers
+    
+    def rows(self, rows):
+        self._rows = rows
 
     def alignments(self, align):
         self._align = align
@@ -51,7 +63,7 @@ class BaseTable:
     def row_width(self, rows):
         max_width = 0
         min_width = None
-        if self._headers is not None:
+        if self._headers:
             max_width = len(self._headers)
             min_width = max_width
         for row in rows:
@@ -70,7 +82,7 @@ class BaseTable:
             return align
         for row in rows:
             for i in range(len(row)):
-                if align[i] is not None:
+                if align[i]:
                     continue
                 v = row[i]
                 if v is None:
@@ -94,13 +106,13 @@ class BaseTable:
         return new_rows
 
     def pad_headers(self, width):
-        if self._headers is None:
+        if not self._headers:
             return None
         if len(self._headers) == 0:
             return None
         has_none = False
         for i in range(len(self._headers)):
-            if self._headers[i] is None:
+            if not self._headers[i]:
                 has_none = True
                 break
         if len(self._headers) >= width and not has_none:
@@ -108,6 +120,24 @@ class BaseTable:
         headers = self._headers.copy()
         if has_none:
             for i in range(len(headers)):
-                if headers[i] is None:
+                if not headers[i]:
                     headers[i] = ''
         return pad(headers, width, '')
+    
+    def from_object_list(self, objects, cols=None):
+        cols = infer_keys(objects) if not cols else cols
+        self._rows = []
+        for obj in objects:
+            row = []
+            for key in cols.keys():
+                row.append(obj.get(key))
+            self._rows.append(row)
+        self.headers([head for head in cols.values()])
+        self.alignments(self.find_alignments(self._rows, len(self._rows)))
+
+    def from_object(self, obj, labels=None):
+        labels = infer_keys(obj) if not labels else labels
+        self._rows = []
+        for key, head in labels.items():
+            self._rows.append([head, obj.get(key)])
+        self.headers(['Key', 'Value'])

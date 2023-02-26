@@ -26,13 +26,17 @@ REQ_CAT_SCHEMA_TABLE = REQ_CAT_SCHEMA_TABLES + '/{}'
 REQ_CAT_SCHEMA_TABLE_EDIT = REQ_CAT_SCHEMA_TABLE + '/edit'
 
 class CatalogClient:
+    '''
+    Client for the Druid catalog feature that provides metadata for tables,
+    including both datasources and external tables.
+    '''
     
     def __init__(self, rest_client):
         self.client = rest_client
     
     def post_table(self, schema, table_name, table_spec, version=None, overwrite=None):
         params = {}
-        if version is not None:
+        if version:
             params['version'] = version
         if overwrite is not None:
             params['overwrite'] = overwrite
@@ -44,9 +48,9 @@ class CatalogClient:
     def table(self, schema, table_name):
         return self.client.get_json(REQ_CAT_SCHEMA_TABLE, args=[schema, table_name])
 
-    def drop_table(self, schema, table_name, ifExists=False):
+    def drop_table(self, schema, table_name, if_exists=False):
         r = self.client.delete(REQ_CAT_SCHEMA_TABLE, args=[schema, table_name])
-        if ifExists and r.status_code == requests.codes.not_found:
+        if if_exists and r.status_code == requests.codes.not_found:
             return
         check_error(r)
         

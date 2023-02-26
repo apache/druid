@@ -14,18 +14,26 @@
 # limitations under the License.
 
 import requests
-from .util import dict_get, is_blank
+from .util import dict_get
 from urllib.parse import quote
 from .error import ClientError
 
 def check_error(response):
-    """
-    Raises a requests HttpError if the response code is not OK or Accepted.
+    '''
+    Raises an HttpError from the requests library if the response code is neither
+    OK (200) nor Accepted (202).
 
-    If the response included a JSON payload, then the message is extracted
-    from that payload, else the message is from requests. The JSON
-    payload, if any, is returned in the json field of the error.
-    """
+    Druid's REST API is inconsistent with how it resports errors. Some APIs return
+    an error as a JSON object. Others return a text message. Still others return
+    nothing at all. With the JSON format, sometimes the error returns an
+    'errorMessage' field, other times only a generic 'error' field.
+
+    This method attempts to parse these variations. If the error response JSON
+    matches one of the known error formats, then raises a `ClientError` with the error
+    message. Otherise, raises a Requests library `HTTPError` for a generic error.
+    If the response includes a JSON payload, then the it is returned in the json field 
+    of the `HTTPError` object so that the client can perhaps decode it.
+    '''
     code = response.status_code
     if code == requests.codes.ok or code == requests.codes.accepted:
         return
@@ -34,29 +42,58 @@ def check_error(response):
     try:
         json = response.json()
     except Exception:
-        # If we can't get the JSON, just move on, we'll figure
-        # things out another way.
-        pass
+        # If we can't get the JSON, raise a Requets error
+        response.raise_for_status()
+    
+    # Druid JSON payload. Try to make sense of the error
     msg = dict_get(json, 'errorMessage')
-    if msg is None:
+    if not msg:
         msg = dict_get(json, 'error')
-    if not is_blank(msg):
+    if msg:
+        # We have an explanation from Druid. Raise a Client exception
         raise ClientError(msg)
-    if code == requests.codes.not_found and error is None:
-        error = "Not found"
-    if error is not None:
-        response.reason = error
+    
+    # Don't know what the Druid JSON is. Raise a Requetss exception, but
+    # add on the JSON in the hopes that the caller can make use of it.
     try:
         response.raise_for_status()
     except Exception as e:
         e.json = json
         raise e
 
+def build_url(endpoint, req, args=None) -> str:
+    '''
+    Returns the full URL for a REST call given the relative request API and
+    optional parameters to fill placeholders within the request URL.
+
+    Parameters
+    ----------
+    endpoint: str
+        The base URL for the service.
+
+    req: str
+        Relative URL, with optional {} placeholders
+
+    args: list
+        Optional list of values to match {} placeholders in the URL.
+    '''
+    url = endpoint + req
+    if args:
+        quoted = [quote(arg) for arg in args]
+        url = url.format(*quoted)
+    return url
+
 class DruidRestClient:
     '''
     Wrapper around the basic Druid REST API operations using the
     requests Python package. Handles the grunt work of building up
     URLs, working with JSON, etc.
+
+    The REST client accepts an endpoint that represents a Druid service, typically
+    the Router. All requests are made to this service, which means using the service
+    URL as the base. That is, if the service is http://localhost:8888, then
+    a request for status is just '/status': the methods here build up the URL by
+    concatenating the service endpoint with the request URL.
     '''
 
     def __init__(self, endpoint):
@@ -68,24 +105,19 @@ class DruidRestClient:
         self.trace = flag
 
     def build_url(self, req, args=None) -> str:
-        """
+        '''
         Returns the full URL for a REST call given the relative request API and
         optional parameters to fill placeholders within the request URL.
 
         Parameters
         ----------
-        req : str
-            relative URL, with optional {} placeholders
+        req: str
+            Relative URL, with optional {} placeholders
 
-        args : list
-            optional list of values to match {} placeholders
-            in the URL.
-        """
-        url = self.endpoint + req
-        if args is not None:
-            quoted = [quote(arg) for arg in args]
-            url = url.format(*quoted)
-        return url
+        args: list
+            Optional list of values to match {} placeholders in the URL.
+        '''
+        return build_url(self.endpoint, req, args)
 
     def get(self, req, args=None, params=None, require_ok=True) -> requests.Request:
         '''
@@ -117,7 +149,7 @@ class DruidRestClient:
         '''
         url = self.build_url(req, args)
         if self.trace:
-            print("GET:", url)
+            print('GET:', url)
         r = self.session.get(url, params=params)
         if require_ok:
             check_error(r)
@@ -130,51 +162,105 @@ class DruidRestClient:
         r = self.get(url_tail, args, params)
         return r.json()
 
-    def post(self, req, body, args=None, headers=None, require_ok=True) -> requests.Request:
-        """
+    def post(self, req, body, args=None, headers=None, require_ok=True) -> requests.Response:
+        '''
         Issues a POST request for the given URL on this
         node, with the given payload and optional URL query
         parameters.
-        """
+        '''
         url = self.build_url(req, args)
         if self.trace:
-            print("POST:", url)
-            print("body:", body)
+            print('POST:', url)
+            print('body:', body)
         r = self.session.post(url, data=body, headers=headers)
         if require_ok:
             check_error(r)
         return r
 
-    def post_json(self, req, body, args=None, headers=None, params=None):
-        """
-        Issues a POST request for the given URL on this
-        node, with the given payload and optional URL query
-        parameters. The payload is serialized to JSON.
-        """
+    def post_json(self, req, body, args=None, headers=None, params=None) -> requests.Response:
+        '''
+        Issues a POST request for the given URL on this node, with a JSON request, returning
+        the JSON response.
+
+        Parameters
+        ----------
+        req: str
+            URL relative to the service base URL.
+
+        body: any
+            JSON-encodable Python object to send in the request body.
+
+        args: array[str], default = None
+            Arguments to include in the relative URL to replace {} markers.
+        
+        headers: dict, default = None
+            Additional HTTP header fields to send in the request.
+
+        params: dict, default = None
+            Parameters to inlude in the URL as the `?name=value` query string.
+
+        Returns
+        -------
+            The JSON response as a Python object.
+
+        See
+        ---
+            `post_only_json()` for the form that returns the response object, not JSON.
+        '''
         r = self.post_only_json(req, body, args, headers, params)
         check_error(r)
         return r.json()
 
     def post_only_json(self, req, body, args=None, headers=None, params=None) -> requests.Request:
-        """
-        Issues a POST request for the given URL on this
-        node, with the given payload and optional URL query
-        parameters. The payload is serialized to JSON.
+        '''
+        Issues a POST request for the given URL on this node, with a JSON request, returning
+        the Requests library `Response` object.
 
-        Does not parse error messages: that is up to the caller.
-        """
+        Parameters
+        ----------
+        req: str
+            URL relative to the service base URL.
+
+        body: any
+            JSON-encodable Python object to send in the request body.
+
+        args: array[str], default = None
+            Arguments to include in the relative URL to replace {} markers.
+        
+        headers: dict, default = None
+            Additional HTTP header fields to send in the request.
+
+        params: dict, default = None
+            Parameters to inlude in the URL as the `?name=value` query string.
+
+        Returns
+        -------
+            The JSON response as a Python object.
+
+        See
+        ---
+            `post_json()` for the form that returns the response JSON.
+        '''
         url = self.build_url(req, args)
         if self.trace:
-            print("POST:", url)
-            print("body:", body)
+            print('POST:', url)
+            print('body:', body)
         return self.session.post(url, json=body, headers=headers, params=params)
 
     def delete(self, req, args=None, params=None, headers=None):
         url = self.build_url(req, args)
         if self.trace:
-            print("DELETE:", url)
+            print('DELETE:', url)
         r = self.session.delete(url, params=params, headers=headers)
         return r
 
     def delete_json(self, req, args=None, params=None, headers=None):
         return self.delete(req, args=args, params=params, headers=headers).json()
+    
+    def close(self):
+        '''
+        Close the session. Use in scripts and tests when the system will otherwise complain
+        about open sockets.
+        '''
+        self.session.close()
+        self.session = None

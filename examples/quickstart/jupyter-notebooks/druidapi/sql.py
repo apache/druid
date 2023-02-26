@@ -16,7 +16,7 @@
 import time, requests
 from . import consts, display
 from .consts import ROUTER_BASE
-from .util import is_blank, dict_get
+from .util import dict_get, split_table_name
 from .error import DruidError, ClientError
 
 REQ_ROUTER_QUERY = ROUTER_BASE
@@ -34,20 +34,20 @@ class SqlRequest:
         self.format = consts.SQL_OBJECT
         self.headers = None
         self.types = None
-        self.sqlTypes = None
+        self.sql_types = None
 
     def with_format(self, result_format):
         self.format = result_format
         return self
 
-    def with_headers(self, sqlTypes=False, druidTypes=False):
+    def with_headers(self, sql_types=False, druidTypes=False):
         self.headers = True
         self.types = druidTypes
-        self.sqlTypes = sqlTypes
+        self.sql_types = sql_types
         return self
 
     def with_context(self, context):
-        if self.context is None:
+        if not self.context:
             self.context = context
         else:
             self.context.update(context)
@@ -59,7 +59,7 @@ class SqlRequest:
         {'type': the_type, 'value': the_value}. The type must be a valid SQL type
         (in upper case). See the consts module for a list.
         '''
-        if self.params is None:
+        if not self.params:
             self.params = params
         else:
             self.params.update(params)
@@ -70,7 +70,7 @@ class SqlRequest:
         Add one parameter value. Infers the type of the parameter from the Python type.
         '''
         if value is None:
-            raise ClientError("Druid does not support null parameter values")
+            raise ClientError('Druid does not support null parameter values')
         data_type = None
         value_type = type(value)
         if value_type is str:
@@ -82,8 +82,8 @@ class SqlRequest:
         elif value_type is list:
             data_type = consts.SQL_ARRAY_TYPE
         else:
-            raise ClientError("Unsupported value type")
-        if self.params is None:
+            raise ClientError('Unsupported value type')
+        if not self.params:
             self.params = []
         self.params.append({'type': data_type, 'value': value})
 
@@ -96,18 +96,18 @@ class SqlRequest:
         return self
 
     def to_request(self):
-        query_obj = {"query": self.sql}
-        if self.context is not None and len(self.context) > 0:
+        query_obj = {'query': self.sql}
+        if self.context:
             query_obj['context'] = self.context
-        if self.params is not None and len(self.params) > 0:
+        if self.params:
             query_obj['parameters'] = self.params
         if self.header:
             query_obj['header'] = True
-        if self.result_format is not None:
+        if self.result_format:
             query_obj['resultFormat'] = self.format
-        if self.sqlTypes:
-            query_obj['sqlTypesHeader'] = self.sqlTypes
-        if self.types:
+        if self.sql_types is not None: # Note: boolean variable
+            query_obj['sqlTypesHeader'] = self.sql_types
+        if self.types is not None: # Note: boolean variable
             query_obj['typesHeader'] = self.types
         return query_obj
 
@@ -134,21 +134,15 @@ def parse_rows(fmt, context, results):
     return rows[header_size:]
 
 def label_non_null_cols(results):
-    if results is None or len(results) == 0:
+    if not results:
         return []
     is_null = {}
     for key in results[0].keys():
         is_null[key] = True
     for row in results:
         for key, value in row.items():
-            if type(value) == str:
-                if value != '':
-                    is_null[key] = False
-            elif type(value) == float:
-                if value != 0.0:
-                    is_null[key] = False
-            elif value is not None:
-                is_null[key] = False
+            # The following is hack to check for null values, empty strings and numeric 0s.
+            is_null[key] = not not value
     return is_null
 
 def filter_null_cols(results):
@@ -159,7 +153,7 @@ def filter_null_cols(results):
     string, or a numeric 0. All rows are preserved, as is the order
     of the remaining columns.
     '''
-    if results is None or len(results) == 0:
+    if not results:
         return results
     is_null = label_non_null_cols(results)
     revised = []
@@ -229,12 +223,12 @@ class ColumnSchema:
         self.druid_type = druid_type
 
     def __str__(self):
-        return "{{name={}, SQL type={}, Druid type={}}}".format(self.name, self.sql_type, self.druid_type)
+        return '{{name={}, SQL type={}, Druid type={}}}'.format(self.name, self.sql_type, self.druid_type)
 
 class SqlQueryResult:
-    """
-    Defines the core protocol for Druid SQL queries.
-    """
+    '''
+    Response from a classic request/response query.
+    '''
 
     def __init__(self, request, response):
         self.http_response = response
@@ -249,44 +243,44 @@ class SqlQueryResult:
                 self._error = response.json()
             except Exception:
                 self._error = response.text
-                if self._error is None or len(self._error) == 0:
-                    self._error = "Failed with HTTP status {}".format(response.status_code)
+                if not self._error:
+                    self._error = 'Failed with HTTP status {}'.format(response.status_code)
         try:
             self._id = self.http_response.headers['X-Druid-SQL-Query-Id']
         except KeyError:
-            self._error = "Query returned no query ID"
+            self._error = 'Query returned no query ID'
 
     def result_format(self):
         return self.request.result_format()
 
     def ok(self):
-        """
+        '''
         Reports if the query succeeded.
 
         The query rows and schema are available only if ok() returns True.
-        """
+        '''
         return is_response_ok(self.http_response)
 
     def error_msg(self):
         err = self.error()
-        if err is None:
-            return "unknown"
+        if not err:
+            return 'unknown'
         if type(err) is str:
             return err
-        msg = err.get("error")
-        text = err.get("errorMessage")
-        if msg is None and text is None:
-            return "unknown"
-        if msg is None:
+        msg = err.get('error')
+        text = err.get('errorMessage')
+        if not msg and not text:
+            return 'unknown'
+        if not msg:
             return text
-        if text is None:
+        if not text:
             return msg
-        return msg + ": " + text
+        return msg + ': ' + text
 
     def id(self):
-        """
+        '''
         Returns the unique identifier for the query.
-        """
+        '''
         return self._id
 
     def non_null(self):
@@ -306,49 +300,49 @@ class SqlQueryResult:
             return self.rows()
 
     def error(self):
-        """
+        '''
         If the query fails, returns the error, if any provided by Druid.
-        """
+        '''
         if self.ok():
             return None
-        if self._error is not None:
+        if self._error:
             return self._error
-        if self.http_response is None:
-            return { "error": "unknown"}
+        if not self.http_response:
+            return { 'error': 'unknown'}
         if is_response_ok(self.http_response):
             return None
-        return {"error": "HTTP {}".format(self.http_response.status_code)}
+        return {'error': 'HTTP {}'.format(self.http_response.status_code)}
 
     def json(self):
         if not self.ok():
             return None
-        if self._json is None:
+        if not self._json:
             self._json = self.http_response.json()
         return self._json
 
     def rows(self):
-        """
+        '''
         Returns the rows of data for the query.
 
         Druid supports many data formats. The method makes its best
         attempt to map the format into an array of rows of some sort.
-        """
-        if self._rows is None:
+        '''
+        if not self._rows:
             json = self.json()
-            if json is None:
+            if not json:
                 return self.http_response.text
             self._rows = parse_rows(self.result_format(), self.request.context, json)
         return self._rows
 
     def schema(self):
-        """
+        '''
         Returns the data schema as a list of ColumnSchema objects.
 
-        Druid supports many data formats, not all of them provide
-        schema information. This method makes its best attempt to
+        Druid supports many data formats; not all of which provide
+        schema information. This method makes a best effort to
         extract the schema from the query results.
-        """
-        if self._schema is None:
+        '''
+        if not self._schema:
             self._schema = parse_schema(self.result_format(), self.request.context, self.json())
         return self._schema
 
@@ -356,10 +350,10 @@ class SqlQueryResult:
         data = None
         if non_null:
             data = self.non_null()
-        if data is None:
+        if not data:
             data = self.as_array()
-        if data is None or len(data) == 0:
-            display.display.show_message("Query returned no results")
+        if not data:
+            display.display.show_message('Query returned no results')
             return
         disp = display.display.table()
         disp.headers([c.name for c in self.schema()])
@@ -374,6 +368,16 @@ class SqlQueryResult:
         disp.show(data)
 
 class QueryTaskResult:
+    '''
+    Response from an asynchronous MSQ query, which may be an ingestion or a retrieval
+    query. Can monitor task progreess and wait for the task to complete. For a SELECT query,
+    obtains the rows from the task reports. There are no results for an ingestion query,
+    just a success/failure status.
+
+    Note that SELECT query support is preliminary. The result structure is subject to
+    change. Use a version of the library that matches your version of Druid for best
+    results with MSQ SELECT queries.
+    '''
 
     def __init__(self, request, response):
         self._request = request
@@ -394,8 +398,8 @@ class QueryTaskResult:
                 self._error = response.json()
             except Exception:
                 self._error = response.text
-                if self._error is None or len(self._error) == 0:
-                    self._error = "Failed with HTTP status {}".format(response.status_code)
+                if not self._error:
+                    self._error = 'Failed with HTTP status {}'.format(response.status_code)
             return
 
         # Typical response:
@@ -406,12 +410,11 @@ class QueryTaskResult:
         self._state = self.response_obj['state']
 
     def ok(self):
-        """
-        Reports if the query succeeded.
-
-        The query rows and schema are available only if ok() returns True.
-        """
-        return self._error is None
+        '''
+        Reports if the query completed successfully or is still running.
+        Use suceeded() to check if the task is done and successful.
+        '''
+        return not self._error
 
     def id(self):
         return self._id
@@ -420,9 +423,9 @@ class QueryTaskResult:
         return self._request.query_client.druid_client.tasks()
 
     def status(self):
-        """
+        '''
         Polls Druid for an update on the query run status.
-        """
+        '''
         self.check_valid()
         # Example:
         # {'task': 'talaria-sql-w000-b373b68d-2675-4035-b4d2-7a9228edead6',
@@ -441,23 +444,25 @@ class QueryTaskResult:
         return self._status
 
     def done(self):
-        """
-        Reports if the query is done: succeeded or failed.
-        """
+        '''
+        Reports whether the query is done. The query is done when the Overlord task
+        which runs the query completes. A completed task is one with a status of either
+        SUCCESS or FAILED.
+        '''
         return self._state == consts.FAILED_STATE or self._state == consts.SUCCESS_STATE
 
     def succeeded(self):
-        """
+        '''
         Reports if the query succeeded.
-        """
+        '''
         return self._state == consts.SUCCESS_STATE
 
     def state(self):
-        """
-        Reports the engine-specific query state.
+        '''
+        Reports the task state from the Overlord task.
 
         Updated after each call to status().
-        """
+        '''
         return self._state
 
     def error(self):
@@ -465,23 +470,29 @@ class QueryTaskResult:
 
     def error_msg(self):
         err = self.error()
-        if err is None:
-            return "unknown"
+        if not err:
+            return 'unknown'
         if type(err) is str:
             return err
-        msg = dict_get(err, "error")
-        text = dict_get(err, "errorMessage")
-        if msg is None and text is None:
-            return "unknown"
-        if text is not None:
+        msg = dict_get(err, 'error')
+        text = dict_get(err, 'errorMessage')
+        if not msg and not text:
+            return 'unknown'
+        if text:
             text = text.replace('\\n', '\n')
-        if msg is None:
+        if not msg:
             return text
-        if text is None:
+        if not text:
             return msg
-        return msg + ": " + text
+        return msg + ': ' + text
 
     def join(self):
+        '''
+        Wait for the task to complete, if still running. Returns at task
+        completion: success or failure.
+
+        Returns True for success, False for failure.
+        '''
         if not self.done():
             self.status()
             while not self.done():
@@ -490,43 +501,51 @@ class QueryTaskResult:
         return self.succeeded()
 
     def check_valid(self):
-        if self._id is None:
-            raise ClientError("Operation is invalid on a failed query")
+        if not self._id:
+            raise ClientError('Operation is invalid on a failed query')
 
     def wait_done(self):
+        '''
+        Wait for the task to complete. Raises an error if the task fails.
+        A caller can proceed to do something with the successful result
+        once this method returns without raising an error.
+        '''
         if not self.join():
-            raise DruidError("Query failed: " + self.error_msg())
+            raise DruidError('Query failed: ' + self.error_msg())
 
     def wait(self):
+        '''
+        Wait for a SELECT query to finish running, then return the rows from the query.
+        '''
         self.wait_done()
         return self.rows()
 
     def reports(self) -> dict:
         self.check_valid()
-        if self._reports is None:
+        if not self._reports:
             self.join()
             self._reports = self._tasks().task_reports(self._id)
         return self._reports
 
     def results(self):
-        if self._results is None:
+        if not self._results:
             rpts = self.reports()
             self._results = rpts['multiStageQuery']['payload']['results']
         return self._results
 
     def schema(self):
-        if self._schema is None:
+        if not self._schema:
             results = self.results()
             sig = results['signature']
-            sqlTypes = results['sqlTypeNames']
+            sql_types = results['sqlTypeNames']
             size = len(sig)
             self._schema = []
             for i in range(size):
-                self._schema.append(ColumnSchema(sig[i]['name'], sqlTypes[i], sig[i]['type']))
+                self._schema.append(ColumnSchema(sig[i]['name'], sql_types[i], sig[i]['type']))
         return self._schema
 
     def rows(self):
-        if self._rows is None:
+        if not self._rows:
             results = self.results()
             self._rows = results['results']
         return self._rows
@@ -543,18 +562,18 @@ class QueryClient:
 
     def __init__(self, druid, rest_client=None):
         self.druid_client = druid
-        self._rest_client = druid.rest_client if rest_client is None else rest_client
+        self._rest_client = druid.rest_client if not rest_client else rest_client
 
     def rest_client(self):
         return self._rest_client
 
     def _prepare_query(self, request):
-        if request is None:
-            raise ClientError("No query provided.")
+        if not request:
+            raise ClientError('No query provided.')
         if type(request) == str:
             request = self.sql_request(request)
-        if is_blank(request.sql):
-            raise ClientError("No query provided.")
+        if not request.sql:
+            raise ClientError('No query provided.')
         if self.rest_client().trace:
             print(request.sql)
         query_obj = request.to_request()
@@ -562,9 +581,27 @@ class QueryClient:
 
     def sql_query(self, request) -> SqlQueryResult:
         '''
-        Submit a SQL query with control over the context, parameters and other
+        Submits a SQL query with control over the context, parameters and other
         options. Returns a response with either a detailed error message, or
         the rows and query ID.
+
+        Parameters
+        ----------
+        request: str or SqlRequest
+            Either a simple SQL string, or a SqlRequest, obtained from the
+            'sql_request()` method, with optional query context, query parameters or
+            other options.
+
+            Note that some of the Druid SqlQuery options will return data in a format
+            that this library cannot parse. In that case, obtain the raw payload from
+            the response and avoid using the rows() and schema() methods.
+
+        Returns
+        -------
+        A SqlQueryResult object that provides either the error message for a failed query,
+        or the results of a successul query. The object provides access to the schema and
+        rows if data is requested in a supported format. The default request object sets the
+        options to return data in the required format.
         '''
         request, query_obj = self._prepare_query(request)
         r = self.rest_client().post_only_json(REQ_ROUTER_SQL, query_obj, headers=request.headers)
@@ -579,8 +616,8 @@ class QueryClient:
         raise ClientError(resp.error_msg())
 
     def explain_sql(self, query):
-        """
-        Run an EXPLAIN PLAN FOR query for the given query.
+        '''
+        Runs an EXPLAIN PLAN FOR query for the given query.
 
         Returns
         -------
@@ -588,29 +625,56 @@ class QueryClient:
         plan: the query plan
         columns: column schema
         tables: dictionary of name/type pairs
-        """
-        if is_blank(query):
-            raise ClientError("No query provided.")
+        '''
+        if not query:
+            raise ClientError('No query provided.')
         results = self.sql('EXPLAIN PLAN FOR ' + query)
         return results[0]
 
-    def sql_request(self, sql):
+    def sql_request(self, sql) -> SqlRequest:
+        '''
+        Create a SqlRequest object for the given SQL query text.
+        '''
         return SqlRequest(self, sql)
 
     def show(self, query):
+        '''
+        Run a query and display the result as a table.
+
+        Parameters
+        ----------
+        query
+            The query as either a string or a SqlRequest object.
+        '''
         result = self.sql_query(query)
         if result.ok():
             result.show()
         else:
             display.display.show_error(result.error_msg())
 
-    def task(self, request):
-        request, query_obj = self._prepare_query(request)
+    def task(self, query) -> QueryTaskResult:
+        '''
+        Submit an MSQ query. Returns a QueryTaskResult to track the task.
+
+        Parameters
+        ----------
+        query
+            The query as either a string or a SqlRequest object.
+        '''
+        request, query_obj = self._prepare_query(query)
         r = self.rest_client().post_only_json(REQ_ROUTER_SQL_TASK, query_obj, headers=request.headers)
         return QueryTaskResult(request, r)
 
-    def run_task(self, request):
-        resp = self.task(request)
+    def run_task(self, query):
+        '''
+        Submit an MSQ query and wait for completion. Returns a QueryTaskResult to track the task.
+
+        Parameters
+        ----------
+        query
+            The query as either a string or a SqlRequest object.
+       '''
+        resp = self.task(query)
         if not resp.ok():
             raise ClientError(resp.error_msg())
         resp.wait_done()
@@ -624,6 +688,14 @@ class QueryClient:
             '''.format(schema))
 
     def tables(self, schema=consts.DRUID_SCHEMA):
+        '''
+        Return a list of tables in the given schema.
+
+        Parameters
+        ----------
+        schema
+            The schema to query, `druid` by default.
+        '''
         return self._tables_query(schema).rows()
 
     def show_tables(self, schema=consts.DRUID_SCHEMA):
@@ -637,16 +709,14 @@ class QueryClient:
             ''')
 
     def show_schemas(self):
+        '''
+        Display the list of schemas available in Druid.
+        '''
         self._schemas_query().show()
 
-    def describe_table(self, part1, part2=None):
-        if part2 is None:
-            schema = consts.DRUID_SCHEMA
-            table = part1
-        else:
-            schema = part1
-            table = part2
-        self.show('''
+    def _schema_query(self, table_name):
+        parts = split_table_name(table_name, consts.DRUID_SCHEMA)
+        return self.sql_query('''
             SELECT
               ORDINAL_POSITION AS "Position",
               COLUMN_NAME AS "Name",
@@ -655,16 +725,36 @@ class QueryClient:
             WHERE TABLE_SCHEMA = '{}'
               AND TABLE_NAME = '{}'
             ORDER BY ORDINAL_POSITION
-            '''.format(schema, table))
+            '''.format(parts[0], parts[1]))
 
-    def describe_function(self,  part1, part2=None):
-        if part2 is None:
-            schema = consts.EXT_SCHEMA
-            table = part1
-        else:
-            schema = part1
-            table = part2
-        self.show('''
+    def table_schema(self, table_name):
+        '''
+        Return the schema of a table as an array of dictionaries of the
+        form {"Position": "<n>", "Name": "<name>", "Type": "<type>"}
+ 
+        Parameters
+        ----------
+        table_name: str
+            The name of the table as either "table" or "schema.table".
+            If the form is "table", then the 'druid' schema is assumed.
+        '''
+        return self._schema_query(table_name).rows()
+
+    def describe_table(self, table_name):
+        '''
+        Describe a table by returning the list of columns in the table.
+ 
+        Parameters
+        ----------
+        table_name str
+            The name of the table as either "table" or "schema.table".
+            If the form is "table", then the 'druid' schema is assumed.
+        '''
+        self._schema_query(table_name)
+ 
+    def _function_args_query(self, table_name):
+        parts = split_table_name(table_name, consts.EXT_SCHEMA)
+        return self.sql_query('''
             SELECT
               ORDINAL_POSITION AS "Position",
               PARAMETER_NAME AS "Parameter",
@@ -674,16 +764,49 @@ class QueryClient:
             WHERE SCHEMA_NAME = '{}'
               AND FUNCTION_NAME = '{}'
             ORDER BY ORDINAL_POSITION
-            '''.format(schema, table))
+            '''.format(parts[0], parts[1]))
 
-    def wait_until_ready(self, ds_name):
+    def function_parameters(self,  table_name):
         '''
-        Wait for a datasource to be loaded in the cluster, and to become available in SQL.
+        Retrieve the list of parameters for a partial external table defined in
+        the Druid catalog. Returns the parameters as an array of objects in the
+        form {"Position": <n>, "Parameter": "<name>", "Type": "<type>",
+              "Optional": True|False}
+
+        Parameters
+        ----------
+        table_name str
+            The name of the table as either "table" or "schema.table".
+            If the form is "table", then the 'ext' schema is assumed.
         '''
-        self.druid_client.datasources().wait_until_ready(ds_name)
+        return self._function_args_query(table_name).rows()
+
+    def describe_function(self,  table_name):
+        '''
+        Retrieve the list of parameters for a partial external table defined in
+        the Druid catalog.
+
+        Parameters
+        ----------
+        table_name str
+            The name of the table as either "table" or "schema.table".
+            If the form is "table", then the 'ext' schema is assumed.
+        '''
+        return self._function_args_query(table_name).show()
+
+    def wait_until_ready(self, table_name):
+        '''
+        Wait for a datasource to be loaded in the cluster, and to become available to SQL.
+
+        Parameters
+        ----------
+        table_name str
+            The name of a datasource in the 'druid' schema.
+        '''
+        self.druid_client.datasources().wait_until_ready(table_name)
         while True:
             try:
-                self.sql('SELECT 1 FROM "{}" LIMIT 1'.format(ds_name));
+                self.sql('SELECT 1 FROM "{}" LIMIT 1'.format(table_name));
                 return
             except Exception:
                 time.sleep(0.5)
