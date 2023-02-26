@@ -428,6 +428,56 @@ The configuration options are:
 |partitionDimension|The dimension to partition on. Leave blank to select a dimension automatically.|no|
 |assumeGrouped|Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.|no|
 
+### Multi-dimension range partitioning
+
+Range partitioning has [several benefits](#benefits-of-range-partitioning) related to storage footprint and query
+performance. Multi-dimension range partitioning improves over single-dimension range partitioning by allowing
+Druid to distribute segment sizes more evenly, and to prune on more dimensions.
+
+Range partitioning is not possible on multi-value dimensions. If one of the provided
+`partitionDimensions` is multi-value, your ingestion job will report an error.
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|Set the value to `range`.|none|yes|
+|partitionDimensions|An array of dimensions to partition on. Order the dimensions from most frequently queried to least frequently queried. For best results, limit your number of dimensions to between three and five dimensions.|none|yes|
+|targetRowsPerSegment|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|none|either this or `maxRowsPerSegment`|
+|maxRowsPerSegment|Soft max for the number of rows to include in a partition.|none|either this or `targetRowsPerSegment`|
+|assumeGrouped|Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.|false|no|
+
+#### Benefits of range partitioning
+
+Range partitioning, either `single_dim` or `range`, has several benefits:
+
+1. Lower storage footprint due to combining similar data into the same segments, which improves compressibility.
+2. Better query performance due to Broker-level segment pruning, which removes segments from
+   consideration when they cannot possibly contain data matching the query filter.
+
+For Broker-level segment pruning to be effective, you must include partition dimensions in the `WHERE` clause. Each
+partition dimension can participate in pruning if the prior partition dimensions (those to its left) are also
+participating, and if the query uses filters that support pruning.
+
+Filters that support pruning include:
+
+- Equality on string literals, like `x = 'foo'` and `x IN ('foo', 'bar')` where `x` is a string.
+- Comparison between string columns and string literals, like `x < 'foo'` or other comparisons
+  involving `<`, `>`, `<=`, or `>=`.
+
+For example, if you configure the following `range` partitioning during ingestion:
+
+```json
+"partitionsSpec": {
+  "type": "range",
+  "partitionDimensions": ["countryName", "cityName"],
+  "targetRowsPerSegment": 5000000
+}
+```
+
+Then, filters like `WHERE countryName = 'United States'` or `WHERE countryName = 'United States' AND cityName = 'New York'`
+can make use of pruning. However, `WHERE cityName = 'New York'` cannot make use of pruning, because countryName is not
+involved. The clause `WHERE cityName LIKE 'New%'` cannot make use of pruning either, because LIKE filters do not
+support pruning.
+
 ## Remote Hadoop clusters
 
 If you have a remote Hadoop cluster, make sure to include the folder holding your configuration `*.xml` files in your Druid `_common` configuration folder.
