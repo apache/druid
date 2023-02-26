@@ -1286,12 +1286,6 @@ public abstract class ExprEval<T>
       return new ArrayExpr(arrayType, value);
     }
 
-    @Nullable
-    public Object getIndex(int index)
-    {
-      return value == null ? null : value[index];
-    }
-
     protected boolean isScalar()
     {
       return value != null && value.length == 1;

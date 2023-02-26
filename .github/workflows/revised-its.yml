@@ -15,7 +15,8 @@
 
 # Github workflow that runs revised/new ITs
 on:
-  workflow_call
+  workflow_call:
+  workflow_dispatch:
 
 jobs:
   it:

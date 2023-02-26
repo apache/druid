@@ -25,6 +25,7 @@ import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.asynchttpclient.AsyncHttpClient;
 
+@SuppressWarnings("unused")
 public class NoopEmitterFactory implements EmitterFactory
 {
   @Override

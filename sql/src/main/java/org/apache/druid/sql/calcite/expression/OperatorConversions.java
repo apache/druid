@@ -268,7 +268,7 @@ public class OperatorConversions
       );
     } else if (rexNode instanceof RexCall) {
       final SqlOperator operator = ((RexCall) rexNode).getOperator();
-      final SqlOperatorConversion conversion = plannerContext.getOperatorTable()
+      final SqlOperatorConversion conversion = plannerContext.getPlannerToolbox().operatorTable()
                                                              .lookupOperatorConversion(operator);
 
       if (conversion != null) {
