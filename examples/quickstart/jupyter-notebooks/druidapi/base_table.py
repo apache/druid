@@ -82,7 +82,7 @@ class BaseTable:
             return align
         for row in rows:
             for i in range(len(row)):
-                if align[i]:
+                if align[i] is not None:
                     continue
                 v = row[i]
                 if v is None:

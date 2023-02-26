@@ -132,7 +132,8 @@ class TextTable(BaseTable):
         return '\n'.join(table_rows)
     
     def show(self, rows):
-        print(self.format(rows))
+        self._rows = rows
+        print(self.format())
     
     def format_rows(self, rows, min_width, max_width):
         if not self._col_fmt:

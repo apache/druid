@@ -20,14 +20,14 @@ OVERLORD_BASE = '/druid/indexer/v1'
 # System schemas and table names. Note: case must match in Druid, though
 # SQL itself is supposed to be case-insensitive.
 SYS_SCHEMA = 'sys'
-SCHEMA_SCHEMA = 'INFORMATION_SCHEMA'
+INFORMATION_SCHEMA = 'INFORMATION_SCHEMA'
 DRUID_SCHEMA = 'druid'
 EXT_SCHEMA = 'ext'
 
 # Information Schema tables
-SCHEMAS_TABLE = SCHEMA_SCHEMA + '.SCHEMATA'
-TABLES_TABLE = SCHEMA_SCHEMA + '.TABLES'
-COLUMNS_TABLE = SCHEMA_SCHEMA + '.COLUMNS'
+SCHEMA_TABLE = INFORMATION_SCHEMA + '.SCHEMATA'
+TABLES_TABLE = INFORMATION_SCHEMA + '.TABLES'
+COLUMNS_TABLE = INFORMATION_SCHEMA + '.COLUMNS'
 
 # SQL request formats
 SQL_OBJECT = 'object'

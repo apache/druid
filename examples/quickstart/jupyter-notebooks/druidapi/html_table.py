@@ -90,7 +90,8 @@ class HtmlTable(BaseTable):
         s += self.gen_rows(rows)
         return s + '\n</table>'
 
-    def show(self):
+    def show(self, rows):
+        self._rows = rows
         html(self.format())
 
     def gen_header(self, headers):

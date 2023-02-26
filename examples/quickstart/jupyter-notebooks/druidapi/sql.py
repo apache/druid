@@ -52,6 +52,9 @@ class SqlRequest:
         else:
             self.context.update(context)
         return self
+    
+    def add_context(self, key, value):
+        return self.with_context({key: value})
 
     def with_parameters(self, params):
         '''
@@ -59,10 +62,8 @@ class SqlRequest:
         {'type': the_type, 'value': the_value}. The type must be a valid SQL type
         (in upper case). See the consts module for a list.
         '''
-        if not self.params:
-            self.params = params
-        else:
-            self.params.update(params)
+        for param in params:
+            self.add_parameters(param)
         return self
 
     def add_parameter(self, value):
@@ -94,6 +95,13 @@ class SqlRequest:
     def request_headers(self, headers):
         self.headers = headers
         return self
+    
+    def to_common_format(self):
+        self.header = False
+        self.sql_types = False
+        self.types = False
+        self.format = consts.SQL_OBJECT
+        return self
 
     def to_request(self):
         query_obj = {'query': self.sql}
@@ -103,7 +111,7 @@ class SqlRequest:
             query_obj['parameters'] = self.params
         if self.header:
             query_obj['header'] = True
-        if self.result_format:
+        if self.format:
             query_obj['resultFormat'] = self.format
         if self.sql_types is not None: # Note: boolean variable
             query_obj['sqlTypesHeader'] = self.sql_types
@@ -116,6 +124,20 @@ class SqlRequest:
 
     def run(self):
         return self.query_client.sql_query(self)
+    
+def request_from_sql_query(query_client, sql_query):
+    try:
+        req = SqlRequest(query_client, sql_query['query'])
+    except KeyError:
+        raise ClientError('A SqlRequest dictionary must have \'query\' set')
+    req.context = sql_query.get('context')
+    req.params = sql_query.get('parameters')
+    req.header = sql_query.get('header')
+    req.format = sql_query.get('resultFormat')
+    req.format = consts.SQL_OBJECT if req.format is None else req.format
+    req.sql_types = sql_query.get('sqlTypesHeader')
+    req.types = sql_query.get('typesHeader')
+    return req
 
 def parse_rows(fmt, context, results):
     if fmt == consts.SQL_ARRAY_WITH_TRAILER:
@@ -261,7 +283,23 @@ class SqlQueryResult:
         '''
         return is_response_ok(self.http_response)
 
+    def error(self):
+        '''
+        If the query fails, returns the error, if any provided by Druid.
+        '''
+        if self.ok():
+            return None
+        if self._error:
+            return self._error
+        if not self.http_response:
+            return { 'error': 'unknown'}
+        if is_response_ok(self.http_response):
+            return None
+        return {'error': 'HTTP {}'.format(self.http_response.status_code)}
+
     def error_msg(self):
+        if self.ok():
+            return None
         err = self.error()
         if not err:
             return 'unknown'
@@ -298,20 +336,6 @@ class SqlQueryResult:
             return rows
         else:
             return self.rows()
-
-    def error(self):
-        '''
-        If the query fails, returns the error, if any provided by Druid.
-        '''
-        if self.ok():
-            return None
-        if self._error:
-            return self._error
-        if not self.http_response:
-            return { 'error': 'unknown'}
-        if is_response_ok(self.http_response):
-            return None
-        return {'error': 'HTTP {}'.format(self.http_response.status_code)}
 
     def json(self):
         if not self.ok():
@@ -570,13 +594,19 @@ class QueryClient:
     def _prepare_query(self, request):
         if not request:
             raise ClientError('No query provided.')
-        if type(request) == str:
+        # If the request is a dictionary, assume it is already in SqlQuery form.
+        query_obj = None
+        if type(request) == dict:
+            query_obj = request
+            request = request_from_sql_query(self, request)
+        elif type(request) == str:
             request = self.sql_request(request)
         if not request.sql:
             raise ClientError('No query provided.')
         if self.rest_client().trace:
             print(request.sql)
-        query_obj = request.to_request()
+        if not query_obj:
+            query_obj = request.to_request()
         return (request, query_obj)
 
     def sql_query(self, request) -> SqlQueryResult:
@@ -587,14 +617,19 @@ class QueryClient:
 
         Parameters
         ----------
-        request: str or SqlRequest
-            Either a simple SQL string, or a SqlRequest, obtained from the
+        request: str | SqlRequest | dict
+            If a string, then gives the SQL query to execute.
+
+            Can also be a `SqlRequest`, obtained from the
             'sql_request()` method, with optional query context, query parameters or
             other options.
 
-            Note that some of the Druid SqlQuery options will return data in a format
-            that this library cannot parse. In that case, obtain the raw payload from
-            the response and avoid using the rows() and schema() methods.
+            Can also be a dictionary that represents a `SqlQuery` object. The
+            `SqlRequest` is a convenient wrapper to generate a `SqlQuery`.
+
+        Note that some of the Druid SqlQuery options will return data in a format
+        that this library cannot parse. In that case, obtain the raw payload from
+        the response and avoid using the rows() and schema() methods.
 
         Returns
         -------
@@ -607,9 +642,21 @@ class QueryClient:
         r = self.rest_client().post_only_json(REQ_ROUTER_SQL, query_obj, headers=request.headers)
         return SqlQueryResult(request, r)
 
-    def sql(self, sql, *args):
+    def sql(self, sql, *args) -> list:
+        '''
+        Run a SQL query and return the results. Typically used to retieve data as part
+        of another operation, rathre than to display results to the user.
+
+        Parameters
+        ----------
+        sql: str
+            The SQL statement with optional Python `{}` parameters.
+
+        args: list[str], Default = None
+            Array of values to insert into the parameters.
+        '''
         if len(args) > 0:
-            sql = sql.result_format(*args)
+            sql = sql.format(*args)
         resp = self.sql_query(sql)
         if resp.ok():
             return resp.rows()
@@ -708,6 +755,9 @@ class QueryClient:
             ORDER BY SCHEMA_NAME
             ''')
 
+    def schemas(self):
+        return self._schemas_query().rows()
+
     def show_schemas(self):
         '''
         Display the list of schemas available in Druid.
@@ -750,7 +800,7 @@ class QueryClient:
             The name of the table as either "table" or "schema.table".
             If the form is "table", then the 'druid' schema is assumed.
         '''
-        self._schema_query(table_name)
+        self._schema_query(table_name).show()
  
     def _function_args_query(self, table_name):
         parts = split_table_name(table_name, consts.EXT_SCHEMA)
