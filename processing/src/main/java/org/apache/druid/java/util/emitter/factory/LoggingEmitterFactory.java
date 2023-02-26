@@ -26,12 +26,9 @@ import org.apache.druid.java.util.emitter.core.LoggingEmitter;
 import org.apache.druid.java.util.emitter.core.LoggingEmitterConfig;
 import org.asynchttpclient.AsyncHttpClient;
 
+@SuppressWarnings("unused")
 public class LoggingEmitterFactory extends LoggingEmitterConfig implements EmitterFactory
 {
-  public LoggingEmitterFactory()
-  {
-  }
-
   @Override
   public Emitter makeEmitter(ObjectMapper objectMapper, AsyncHttpClient httpClient, Lifecycle lifecycle)
   {

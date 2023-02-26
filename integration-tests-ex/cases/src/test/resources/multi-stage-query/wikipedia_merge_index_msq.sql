@@ -13,8 +13,11 @@ SELECT
   SUM("added") AS "added",
   SUM("deleted") AS "deleted",
   SUM("delta") AS "delta",
-  EARLIEST("user", 128) AS "first_user",
-  LATEST("user", 128) AS "last_user"
+-- Disabled due to https://github.com/apache/druid/issues/13824. To be reverted once issue is resolved.
+--  EARLIEST("user", 128) AS "first_user",
+--  LATEST("user", 128) AS "last_user"
+  EARLIEST_BY("user", CASE WHEN CAST("timestamp" AS BIGINT) > 0 THEN MILLIS_TO_TIMESTAMP(CAST("timestamp" AS BIGINT)) ELSE TIME_PARSE("timestamp") END, 128) AS "first_user",
+  LATEST_BY("user", CASE WHEN CAST("timestamp" AS BIGINT) > 0 THEN MILLIS_TO_TIMESTAMP(CAST("timestamp" AS BIGINT)) ELSE TIME_PARSE("timestamp") END, 128) AS "last_user"
 FROM "source"
 GROUP BY 1, 2
 PARTITIONED BY DAY

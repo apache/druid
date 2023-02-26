@@ -29,7 +29,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -41,7 +40,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.stream.IntStream;
 
@@ -231,18 +229,6 @@ public final class SegmentId implements Comparable<SegmentId>
       }
       return segmentId.substring(0, dataSourceEnd);
     }
-  }
-
-  public static Function<String, Interval> makeIntervalExtractor(final String dataSource)
-  {
-    return identifier -> {
-      SegmentId segmentIdentifierParts = tryParse(dataSource, identifier);
-      if (segmentIdentifierParts == null) {
-        throw new IAE("Invalid identifier [%s]", identifier);
-      }
-
-      return segmentIdentifierParts.getInterval();
-    };
   }
 
   /**

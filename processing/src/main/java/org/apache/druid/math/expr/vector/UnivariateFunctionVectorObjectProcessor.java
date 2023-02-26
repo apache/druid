@@ -28,7 +28,6 @@ import org.apache.druid.math.expr.Expr;
 public abstract class UnivariateFunctionVectorObjectProcessor<TInput, TOutput> implements ExprVectorProcessor<TOutput>
 {
   final ExprVectorProcessor<TInput> processor;
-  final int maxVectorSize;
   final boolean[] outNulls;
   final TOutput outValues;
 
@@ -39,7 +38,6 @@ public abstract class UnivariateFunctionVectorObjectProcessor<TInput, TOutput> i
   )
   {
     this.processor = processor;
-    this.maxVectorSize = maxVectorSize;
     this.outNulls = new boolean[maxVectorSize];
     this.outValues = outValues;
   }

@@ -43,14 +43,15 @@ spec:
         component: {{ .Values.historical.name }}
         release: {{ .Release.Name }}
       annotations:
-      {{- with .Values.historical.podAnnotations }}
-{{ toYaml . | indent 8 }}
-      {{- end }}
-      {{- if .Values.prometheus.enabled }}
-      {{- with .Values.prometheus.annotation }}
-{{ toYaml . | indent 8 }}
-      {{- end }}
-      {{- end }}
+        druid.k8s.enablePatching: "true"
+        {{- with .Values.historical.podAnnotations }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.prometheus.enabled }}
+          {{- with .Values.prometheus.annotation }}
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+        {{- end }}
     spec:
       {{- if or .Values.historical.antiAffinity .Values.historical.nodeAffinity }}
       affinity:
@@ -96,6 +97,9 @@ spec:
       imagePullSecrets:
 {{ toYaml .Values.image.pullSecrets | indent 8 }}
 {{- end }}
+      {{- if .Values.historical.serviceAccount.create }}
+      serviceAccountName: {{ include "druid.historical.serviceAccountName" . }}
+      {{- end }}
       containers:
       - name: druid
         args: [ "historical" ]
