@@ -225,7 +225,7 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`ingest/notices/queueSize`|Number of pending notices to be processed by the coordinator.|`dataSource`, `tags`|Typically 0 and occasionally in lower single digits. Should not be a very high number. |
 |`ingest/notices/time`|Milliseconds taken to process a notice by the supervisor.|`dataSource`, `tags`| < 1s |
 |`ingest/pause/time`|Milliseconds spent by a task in a paused state without ingesting.|`dataSource`, `taskId`, `tags`| < 10 seconds|
-|`ingest/handoff/time`|Total time taken for each set of segments handed off.|`dataSource`, `taskId`, `taskType`, `tags`|Depends on coordinator cycle time.|
+|`ingest/handoff/time`|Total milliseconds taken to handoff a set of segments.|`dataSource`, `taskId`, `taskType`, `tags`|Depends on coordinator cycle time.|
 
 Note: If the JVM does not support CPU time measurement for the current thread, `ingest/merge/cpu` and `ingest/persists/cpu` will be 0.
 
