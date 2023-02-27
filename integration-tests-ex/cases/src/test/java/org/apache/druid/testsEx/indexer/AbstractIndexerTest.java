@@ -44,6 +44,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 public abstract class AbstractIndexerTest
 {
@@ -102,9 +103,6 @@ public abstract class AbstractIndexerTest
 
   protected String submitIndexTask(String indexTask, final String fullDatasourceName) throws Exception
   {
-    // Wait for any existing kill tasks to complete before submitting new index task otherwise
-    // kill tasks can fail with interval lock revoked.
-    waitForAllTasksToCompleteForDataSource(fullDatasourceName);
     String taskSpec = getResourceAsString(indexTask);
     taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", fullDatasourceName);
     taskSpec = StringUtils.replace(
@@ -137,8 +135,14 @@ public abstract class AbstractIndexerTest
     Interval interval = Intervals.of(start + "/" + end);
     coordinator.unloadSegmentsForDataSource(dataSource);
     ITRetryUtil.retryUntilFalse(
-        () -> coordinator.areSegmentsLoaded(dataSource),
-        "Segment Unloading"
+        new Callable<Boolean>()
+        {
+          @Override
+          public Boolean call()
+          {
+            return coordinator.areSegmentsLoaded(dataSource);
+          }
+        }, "Segment Unloading"
     );
     coordinator.deleteSegmentsDataSource(dataSource, interval);
     waitForAllTasksToCompleteForDataSource(dataSource);
