@@ -148,8 +148,7 @@ public class QueryFrameworkUtils
         walker,
         plannerConfig,
         druidSchemaManager,
-        catalogResolver,
-        druidSchemaManager
+        catalogResolver
     );
     SystemSchema systemSchema =
         CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
@@ -211,7 +210,7 @@ public class QueryFrameworkUtils
         new NoopDruidSchemaManager(),
         authorizerMapper,
         CatalogResolver.NULL_RESOLVER,
-        authorizerMapper
+        null
     );
   }
 

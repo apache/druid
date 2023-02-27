@@ -79,7 +79,7 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
       .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
       .build();
 
-  private static final PlannerToolbox PLANNER_TOOLBOX = new SimplePlannerToolbox(
+  private static final PlannerToolbox PLANNER_TOOLBOX = new PlannerToolbox(
       new DruidOperatorTable(
           Collections.emptySet(),
           ImmutableSet.of(new DirectOperatorConversion(OPERATOR, "hyper_unique"))

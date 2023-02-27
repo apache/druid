@@ -171,7 +171,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
   @Test
   public void testExtensionCalciteRule()
   {
-    PlannerToolbox toolbox = new SimplePlannerToolbox(
+    PlannerToolbox toolbox = new PlannerToolbox(
         injector.getInstance(DruidOperatorTable.class),
         macroTable,
         new DefaultObjectMapper(),
