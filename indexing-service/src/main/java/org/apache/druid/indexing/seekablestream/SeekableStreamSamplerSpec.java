@@ -217,7 +217,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
     }
 
     @Override
-    public CloseableIterator<InputRow> read(InputStats inputStats) throws IOException
+    public CloseableIterator<InputRow> read(InputStats inputStats)
     {
       return null;
     }
