@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Callout, Classes, Dialog, Tab, Tabs } from '@blueprintjs/core';
+import { Button, Callout, Classes, Code, Dialog, Tab, Tabs } from '@blueprintjs/core';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
@@ -64,20 +64,19 @@ export const CompactionHistoryDialog = React.memo(function CompactionHistoryDial
   const [historyState] = useQueryManager<string, CompactionHistoryEntry[]>({
     initQuery: datasource,
     processQuery: async datasource => {
-      const resp = await Api.instance.get(
-        `/druid/coordinator/v1/config/compaction/${Api.encodePath(datasource)}/history?count=20`,
-      );
-      return resp.data;
+      try {
+        const resp = await Api.instance.get(
+          `/druid/coordinator/v1/config/compaction/${Api.encodePath(datasource)}/history?count=20`,
+        );
+        return resp.data;
+      } catch (e) {
+        if (e.response?.status === 404) return [];
+        throw e;
+      }
     },
   });
 
-  if (historyState.loading) return <Loader />;
-
   const historyData = historyState.data;
-  if (!historyData) return null;
-
-  console.log(diffIndex);
-
   return (
     <Dialog
       className="compaction-history-dialog"
@@ -87,40 +86,52 @@ export const CompactionHistoryDialog = React.memo(function CompactionHistoryDial
       title={`Compaction history: ${datasource}`}
     >
       <div className={Classes.DIALOG_BODY}>
-        <Tabs animate renderActiveTabPanelOnly vertical defaultSelectedTabId={0}>
-          {historyData.map((historyEntry, i) => (
-            <Tab
-              id={i}
-              key={i}
-              title={historyEntry.auditTime}
-              panelClassName="panel"
-              panel={
-                <>
-                  <ShowValue
-                    jsonValue={JSONBig.stringify(historyEntry.compactionConfig, undefined, 2)}
-                    onDiffWithPrevious={
-                      i < historyData.length - 1 ? () => setDiffIndex(i) : undefined
-                    }
-                    downloadFilename={`compaction-history-${datasource}-version-${historyEntry.auditTime}.json`}
-                  />
-                  {historyEntry.globalConfig && (
-                    <Callout className="global-info">
-                      {formatGlobalConfig(historyEntry.globalConfig)}
-                    </Callout>
-                  )}
-                </>
-              }
-            />
-          ))}
-          <Tabs.Expander />
-        </Tabs>
+        {historyData ? (
+          historyData.length ? (
+            <Tabs animate renderActiveTabPanelOnly vertical defaultSelectedTabId={0}>
+              {historyData.map((historyEntry, i) => (
+                <Tab
+                  id={i}
+                  key={i}
+                  title={historyEntry.auditTime}
+                  panelClassName="panel"
+                  panel={
+                    <>
+                      <ShowValue
+                        jsonValue={JSONBig.stringify(historyEntry.compactionConfig, undefined, 2)}
+                        onDiffWithPrevious={
+                          i < historyData.length - 1 ? () => setDiffIndex(i) : undefined
+                        }
+                        downloadFilename={`compaction-history-${datasource}-version-${historyEntry.auditTime}.json`}
+                      />
+                      {historyEntry.globalConfig && (
+                        <Callout className="global-info">
+                          {formatGlobalConfig(historyEntry.globalConfig)}
+                        </Callout>
+                      )}
+                    </>
+                  }
+                />
+              ))}
+              <Tabs.Expander />
+            </Tabs>
+          ) : (
+            <div>
+              There is no compaction history for <Code>{datasource}</Code>.
+            </div>
+          )
+        ) : historyState.loading ? (
+          <Loader />
+        ) : (
+          <div>{historyState.getErrorMessage()}</div>
+        )}
       </div>
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
           <Button text="Close" onClick={onClose} />
         </div>
       </div>
-      {diffIndex !== -1 && (
+      {diffIndex !== -1 && historyData && (
         <DiffDialog
           title="Compaction config diff"
           versions={historyData.map(s => ({ label: s.auditTime, value: s.compactionConfig }))}
