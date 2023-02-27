@@ -56,7 +56,7 @@ jobs:
       - name: packaging check
         run: |
           ./.github/scripts/setup_generate_license.sh
-          ${MVN} clean install -Prat -Pbundle-contrib-exts --fail-at-end \
+          ${MVN} clean install -Prat --fail-at-end \
           -pl '!benchmarks, !distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C
           ${MVN} install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end \
           -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C
