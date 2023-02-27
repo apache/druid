@@ -5603,6 +5603,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  /**
+   * Same query as {@link org.apache.druid.msq.test.CalciteSelectQueryMSQTest#testArrayAggQueryOnComplexDatatypes()}.
+   * ARRAY_AGG is not supported in MSQ currently, but is supported as sql-native. Once support is added,
+   * the overriding test can be removed and msqCompatible() can be added here instead.
+   */
   @Test
   public void testArrayAggQueryOnComplexDatatypes()
   {
