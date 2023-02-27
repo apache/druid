@@ -14,8 +14,9 @@
 # limitations under the License.
 
 from IPython.display import display, HTML
-from .base_table import BaseTable
 from html import escape
+from .display import DisplayClient
+from .base_table import BaseTable
 
 STYLES = '''
 <style>
@@ -42,6 +43,10 @@ STYLES = '''
   }
 
   .druid-alert {
+    font-weight: bold;
+  }
+
+  .druid-error {
     color: red;
   }
 </style>
@@ -53,15 +58,9 @@ def escape_for_html(s):
     return s.replace('$', '\\$')
 
 def html(s):
-    s =  '<div class="druid">' + escape_for_html(s) + '</div>'
     display(HTML(s))
 
-def html_error(s):
-    s =  '<div class="druid-alert">' + escape_for_html(s.replace('\n', '<br/>')) + '</div>'
-    display(HTML(s))
-
-def styles():
-    display(HTML(STYLES))
+initialized = False
 
 alignments = ['druid-left', 'druid-center', 'druid-right']
 
@@ -90,10 +89,6 @@ class HtmlTable(BaseTable):
         s += self.gen_rows(rows)
         return s + '\n</table>'
 
-    def show(self, rows):
-        self._rows = rows
-        html(self.format())
-
     def gen_header(self, headers):
         if not headers:
             return ''
@@ -120,3 +115,27 @@ class HtmlTable(BaseTable):
         if col >= len(self._align):
             return None
         return self._align[col]
+
+class HtmlDisplayClient(DisplayClient):
+
+    def __init__(self):
+        DisplayClient.__init__(self)
+        global initialized
+        if not initialized:
+            display(HTML(STYLES))
+            initialized = True
+    
+    def text(self, msg):
+        html('<div class="druid">' + escape_for_html(msg) + '</div>')
+
+    def alert(self, msg):
+        html('<div class="druid-alert">' + escape_for_html(msg.replace('\n', '<br/>')) + '</div>')
+
+    def error(self, msg):
+        html('<div class="druid-error">ERROR: ' + escape_for_html(msg.replace('\n', '<br/>')) + '</div>')
+
+    def new_table(self):
+        return HtmlTable()
+    
+    def show_table(self, table):
+        self.text(table.format())

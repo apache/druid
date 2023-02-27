@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .base_table import pad
-from .base_table import BaseTable
+from .display import DisplayClient
+from .base_table import pad, BaseTable
 
 alignments = ['', '^', '>']
 
@@ -131,10 +131,6 @@ class TextTable(BaseTable):
         table_rows = self.formatter(self.compute_def(self._rows))
         return '\n'.join(table_rows)
     
-    def show(self, rows):
-        self._rows = rows
-        print(self.format())
-    
     def format_rows(self, rows, min_width, max_width):
         if not self._col_fmt:
             return self.default_row_format(rows, min_width, max_width)
@@ -163,3 +159,23 @@ class TextTable(BaseTable):
                 new_row.append(fmts[i](row[i]))
             new_rows.append(pad(new_row, max_width, None))
         return new_rows
+
+class TextDisplayClient(DisplayClient):
+
+    def __init__(self):
+        DisplayClient.__init__(self)
+    
+    def text(self, msg):
+        print(msg)
+
+    def alert(self, msg):
+        print("Alert:", msg)
+
+    def error(self, msg):
+        print("ERROR:", msg)
+
+    def new_table(self):
+        return TextTable()
+    
+    def show_table(self, table):
+        print(table.format())

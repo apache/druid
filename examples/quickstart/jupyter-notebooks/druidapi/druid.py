@@ -26,14 +26,21 @@ class DruidClient:
     specialized "clients" that group many of Druid's REST API calls.
     '''
 
-    def __init__(self, router_endpoint):
+    def __init__(self, router_endpoint, display_client=None):
         self.rest_client = DruidRestClient(router_endpoint)
         self.status_client = None
         self.catalog_client = None
         self.sql_client = None
         self.tasks_client = None
         self.datasource_client = None
+        if display_client:
+            self.display_client = display_client
+        else:
+            from .text import TextDisplayClient
+            self.display_client = TextDisplayClient()
+        self.display_client._druid = self
 
+    @property
     def rest(self):
         '''
         Returns the low-level REST client. Useful for debugging and to access REST API
@@ -52,24 +59,27 @@ class DruidClient:
         '''
         self.rest_client.enable_trace(enable)
     
-    def status(self, endpoint=None) -> StatusClient:
+    @property
+    def status(self) -> StatusClient:
+        '''
+        Returns the status client for the Router service.
+        '''
+        if not self.status_client:
+            self.status_client = StatusClient(self.rest_client)
+        return self.status_client
+    
+    def status_for(self, endpoint) -> StatusClient:
         '''
         Returns the status client for a Druid service.
 
         Parameters
         ----------
         endpoint: str
-            The URL for a Druid service. If None, then returns the status client
-            for the Router.
+            The URL for a Druid service.
         '''
-        if not endpoint:
-            if not self.status_client:
-                self.status_client = StatusClient(self.rest_client)
-            return self.status_client
-        else:
-            endpoint_client = DruidRestClient(endpoint)
-            return StatusClient(endpoint_client, True)
+        return StatusClient(DruidRestClient(endpoint), True)
 
+    @property
     def catalog(self) -> CatalogClient:
         '''
         Returns the catalog client to interact with the Druid catalog.
@@ -78,6 +88,7 @@ class DruidClient:
             self.catalog_client = CatalogClient(self.rest_client)
         return self.catalog_client
 
+    @property
     def sql(self) -> QueryClient:
         '''
         Returns the SQL query client to submit interactive or MSQ queries.
@@ -86,6 +97,7 @@ class DruidClient:
             self.sql_client = QueryClient(self)
         return self.sql_client
 
+    @property
     def tasks(self) -> TaskClient:
         '''
         Returns the Overlord tasks client to submit and track tasks.
@@ -94,6 +106,7 @@ class DruidClient:
             self.tasks_client = TaskClient(self.rest_client)
         return self.tasks_client
 
+    @property
     def datasources(self) -> DatasourceClient:
         '''
         Returns the Coordinator datasources client to manipulate datasources.
@@ -103,6 +116,10 @@ class DruidClient:
         if not self.datasource_client:
             self.datasource_client = DatasourceClient(self.rest_client)
         return self.datasource_client
+    
+    @property
+    def display(self):
+        return self.display_client
     
     def close(self):
         self.rest_client.close()

@@ -14,14 +14,12 @@
 # limitations under the License.
 
 import time, requests
-from . import consts, display
-from .consts import ROUTER_BASE
+from . import consts
 from .util import dict_get, split_table_name
 from .error import DruidError, ClientError
 
-REQ_ROUTER_QUERY = ROUTER_BASE
-REQ_ROUTER_SQL = ROUTER_BASE + '/sql'
-REQ_ROUTER_SQL_TASK = REQ_ROUTER_SQL + '/task'
+REQ_SQL = consts.ROUTER_BASE + '/sql'
+REQ_SQL_TASK = REQ_SQL + '/task'
 
 class SqlRequest:
 
@@ -272,22 +270,29 @@ class SqlQueryResult:
         except KeyError:
             self._error = 'Query returned no query ID'
 
+    @property
+    def _druid(self):
+        return self.request.query_client.druid_client
+    
+    @property
     def result_format(self):
         return self.request.result_format()
 
+    @property
     def ok(self):
         '''
         Reports if the query succeeded.
 
-        The query rows and schema are available only if ok() returns True.
+        The query rows and schema are available only if ok is True.
         '''
         return is_response_ok(self.http_response)
 
+    @property
     def error(self):
         '''
         If the query fails, returns the error, if any provided by Druid.
         '''
-        if self.ok():
+        if self.ok:
             return None
         if self._error:
             return self._error
@@ -297,10 +302,11 @@ class SqlQueryResult:
             return None
         return {'error': 'HTTP {}'.format(self.http_response.status_code)}
 
-    def error_msg(self):
-        if self.ok():
+    @property
+    def error_message(self):
+        if self.ok:
             return None
-        err = self.error()
+        err = self.error
         if not err:
             return 'unknown'
         if type(err) is str:
@@ -315,35 +321,40 @@ class SqlQueryResult:
             return msg
         return msg + ': ' + text
 
+    @property
     def id(self):
         '''
         Returns the unique identifier for the query.
         '''
         return self._id
 
+    @property
     def non_null(self):
-        if not self.ok():
+        if not self.ok:
             return None
-        if self.result_format() != consts.SQL_OBJECT:
+        if self.result_format != consts.SQL_OBJECT:
             return None
-        return filter_null_cols(self.rows())
+        return filter_null_cols(self.rows)
 
+    @property
     def as_array(self):
-        if self.result_format() == consts.SQL_OBJECT:
+        if self.result_format == consts.SQL_OBJECT:
             rows = []
-            for obj in self.rows():
+            for obj in self.rows:
                 rows.append([v for v in obj.values()])
             return rows
         else:
-            return self.rows()
+            return self.rows
 
+    @property
     def json(self):
-        if not self.ok():
+        if not self.ok:
             return None
         if not self._json:
             self._json = self.http_response.json()
         return self._json
 
+    @property
     def rows(self):
         '''
         Returns the rows of data for the query.
@@ -352,12 +363,13 @@ class SqlQueryResult:
         attempt to map the format into an array of rows of some sort.
         '''
         if not self._rows:
-            json = self.json()
+            json = self.json
             if not json:
                 return self.http_response.text
-            self._rows = parse_rows(self.result_format(), self.request.context, json)
+            self._rows = parse_rows(self.result_format, self.request.context, json)
         return self._rows
 
+    @property
     def schema(self):
         '''
         Returns the data schema as a list of ColumnSchema objects.
@@ -367,29 +379,39 @@ class SqlQueryResult:
         extract the schema from the query results.
         '''
         if not self._schema:
-            self._schema = parse_schema(self.result_format(), self.request.context, self.json())
+            self._schema = parse_schema(self.result_format, self.request.context, self.json)
         return self._schema
 
-    def show(self, non_null=False):
+    def _display(self, display):
+        return self._druid.display if not display else display
+    
+    def show(self, non_null=False, display=None):
+        display = self._display(display)
+        if not self.ok:
+            display.error(self.error_message)
+            return
         data = None
         if non_null:
-            data = self.non_null()
+            data = self.non_null
         if not data:
-            data = self.as_array()
+            data = self.as_array
         if not data:
-            display.display.show_message('Query returned no results')
+            display.alert('Query returned no results')
             return
-        disp = display.display.table()
-        disp.headers([c.name for c in self.schema()])
-        disp.show(data)
+        display.data_table(data, [c.name for c in self.schema])
 
-    def show_schema(self):
-        disp = display.display.table()
-        disp.headers(['Name', 'SQL Type', 'Druid Type'])
+    def show_schema(self, display=None):
+        display = self._display(display)
+        if not self.ok:
+            display.error(self.error_message)
+            return
         data = []
-        for c in self.schema():
+        for c in self.schema:
             data.append([c.name, c.sql_type, c.druid_type])
-        disp.show(data)
+        if not data:
+            display.alert('Query returned no schema')
+            return
+        display.data_table(data, ['Name', 'SQL Type', 'Druid Type'])
 
 class QueryTaskResult:
     '''
@@ -433,6 +455,7 @@ class QueryTaskResult:
         self._id = self.response_obj['taskId']
         self._state = self.response_obj['state']
 
+    @property
     def ok(self):
         '''
         Reports if the query completed successfully or is still running.
@@ -440,12 +463,17 @@ class QueryTaskResult:
         '''
         return not self._error
 
+    @property
     def id(self):
         return self._id
 
+    def _druid(self):
+        return self._request.query_client.druid_client
+    
     def _tasks(self):
-        return self._request.query_client.druid_client.tasks()
+        return self._druid().tasks
 
+    @property
     def status(self):
         '''
         Polls Druid for an update on the query run status.
@@ -467,6 +495,7 @@ class QueryTaskResult:
             self._error = self._status['status']['errorMsg']
         return self._status
 
+    @property
     def done(self):
         '''
         Reports whether the query is done. The query is done when the Overlord task
@@ -475,12 +504,14 @@ class QueryTaskResult:
         '''
         return self._state == consts.FAILED_STATE or self._state == consts.SUCCESS_STATE
 
+    @property
     def succeeded(self):
         '''
         Reports if the query succeeded.
         '''
         return self._state == consts.SUCCESS_STATE
 
+    @property
     def state(self):
         '''
         Reports the task state from the Overlord task.
@@ -489,10 +520,12 @@ class QueryTaskResult:
         '''
         return self._state
 
+    @property
     def error(self):
         return self._error
 
-    def error_msg(self):
+    @property
+    def error_message(self):
         err = self.error()
         if not err:
             return 'unknown'
@@ -517,12 +550,12 @@ class QueryTaskResult:
 
         Returns True for success, False for failure.
         '''
-        if not self.done():
-            self.status()
-            while not self.done():
+        if not self.done:
+            self.status
+            while not self.done:
                 time.sleep(0.5)
-                self.status()
-        return self.succeeded()
+                self.status
+        return self.succeeded
 
     def check_valid(self):
         if not self._id:
@@ -535,15 +568,16 @@ class QueryTaskResult:
         once this method returns without raising an error.
         '''
         if not self.join():
-            raise DruidError('Query failed: ' + self.error_msg())
+            raise DruidError('Query failed: ' + self.error_message())
 
     def wait(self):
         '''
         Wait for a SELECT query to finish running, then return the rows from the query.
         '''
         self.wait_done()
-        return self.rows()
+        return self.rows
 
+    @property
     def reports(self) -> dict:
         self.check_valid()
         if not self._reports:
@@ -551,15 +585,17 @@ class QueryTaskResult:
             self._reports = self._tasks().task_reports(self._id)
         return self._reports
 
+    @property
     def results(self):
         if not self._results:
             rpts = self.reports()
             self._results = rpts['multiStageQuery']['payload']['results']
         return self._results
 
+    @property
     def schema(self):
         if not self._schema:
-            results = self.results()
+            results = self.results
             sig = results['signature']
             sql_types = results['sqlTypeNames']
             size = len(sig)
@@ -568,26 +604,39 @@ class QueryTaskResult:
                 self._schema.append(ColumnSchema(sig[i]['name'], sql_types[i], sig[i]['type']))
         return self._schema
 
+    @property
     def rows(self):
         if not self._rows:
-            results = self.results()
+            results = self.results
             self._rows = results['results']
         return self._rows
 
-    def show(self, non_null=False):
-        data = self.rows()
+    def _display(self, display):
+        return self._druid().display if not display else display
+    
+    def show(self, non_null=False, display=None):
+        display = self._display(display)
+        if not self.done:
+            display.alert('Task has not finished running')
+            return
+        if not self.succeeded:
+            display.error(self.error_message)
+            return
+        data = self.rows
         if non_null:
             data = filter_null_cols(data)
-        disp = display.display.table()
-        disp.headers([c.name for c in self.schema()])
-        disp.show(data)
-
+        if not data:
+            display.alert('Query returned no {}rows'.format("visible " if non_null else ''))
+            return
+        display.data_table(data, [c.name for c in self.schema])
+ 
 class QueryClient:
 
     def __init__(self, druid, rest_client=None):
         self.druid_client = druid
         self._rest_client = druid.rest_client if not rest_client else rest_client
 
+    @property
     def rest_client(self):
         return self._rest_client
 
@@ -603,7 +652,7 @@ class QueryClient:
             request = self.sql_request(request)
         if not request.sql:
             raise ClientError('No query provided.')
-        if self.rest_client().trace:
+        if self.rest_client.trace:
             print(request.sql)
         if not query_obj:
             query_obj = request.to_request()
@@ -639,7 +688,7 @@ class QueryClient:
         options to return data in the required format.
         '''
         request, query_obj = self._prepare_query(request)
-        r = self.rest_client().post_only_json(REQ_ROUTER_SQL, query_obj, headers=request.headers)
+        r = self.rest_client.post_only_json(REQ_SQL, query_obj, headers=request.headers)
         return SqlQueryResult(request, r)
 
     def sql(self, sql, *args) -> list:
@@ -658,9 +707,9 @@ class QueryClient:
         if len(args) > 0:
             sql = sql.format(*args)
         resp = self.sql_query(sql)
-        if resp.ok():
-            return resp.rows()
-        raise ClientError(resp.error_msg())
+        if resp.ok:
+            return resp.rows
+        raise ClientError(resp.error_message)
 
     def explain_sql(self, query):
         '''
@@ -684,21 +733,6 @@ class QueryClient:
         '''
         return SqlRequest(self, sql)
 
-    def show(self, query):
-        '''
-        Run a query and display the result as a table.
-
-        Parameters
-        ----------
-        query
-            The query as either a string or a SqlRequest object.
-        '''
-        result = self.sql_query(query)
-        if result.ok():
-            result.show()
-        else:
-            display.display.show_error(result.error_msg())
-
     def task(self, query) -> QueryTaskResult:
         '''
         Submit an MSQ query. Returns a QueryTaskResult to track the task.
@@ -709,7 +743,7 @@ class QueryClient:
             The query as either a string or a SqlRequest object.
         '''
         request, query_obj = self._prepare_query(query)
-        r = self.rest_client().post_only_json(REQ_ROUTER_SQL_TASK, query_obj, headers=request.headers)
+        r = self.rest_client.post_only_json(REQ_SQL_TASK, query_obj, headers=request.headers)
         return QueryTaskResult(request, r)
 
     def run_task(self, query):
@@ -722,8 +756,8 @@ class QueryClient:
             The query as either a string or a SqlRequest object.
        '''
         resp = self.task(query)
-        if not resp.ok():
-            raise ClientError(resp.error_msg())
+        if not resp.ok:
+            raise ClientError(resp.error_message)
         resp.wait_done()
 
     def _tables_query(self, schema):
@@ -743,10 +777,7 @@ class QueryClient:
         schema
             The schema to query, `druid` by default.
         '''
-        return self._tables_query(schema).rows()
-
-    def show_tables(self, schema=consts.DRUID_SCHEMA):
-        self._tables_query(schema).show()
+        return self._tables_query(schema).rows
 
     def _schemas_query(self):
         return self.sql_query('''
@@ -756,13 +787,7 @@ class QueryClient:
             ''')
 
     def schemas(self):
-        return self._schemas_query().rows()
-
-    def show_schemas(self):
-        '''
-        Display the list of schemas available in Druid.
-        '''
-        self._schemas_query().show()
+        return self._schemas_query().rows
 
     def _schema_query(self, table_name):
         parts = split_table_name(table_name, consts.DRUID_SCHEMA)
@@ -788,20 +813,8 @@ class QueryClient:
             The name of the table as either "table" or "schema.table".
             If the form is "table", then the 'druid' schema is assumed.
         '''
-        return self._schema_query(table_name).rows()
+        return self._schema_query(table_name).rows
 
-    def describe_table(self, table_name):
-        '''
-        Describe a table by returning the list of columns in the table.
- 
-        Parameters
-        ----------
-        table_name str
-            The name of the table as either "table" or "schema.table".
-            If the form is "table", then the 'druid' schema is assumed.
-        '''
-        self._schema_query(table_name).show()
- 
     def _function_args_query(self, table_name):
         parts = split_table_name(table_name, consts.EXT_SCHEMA)
         return self.sql_query('''
@@ -829,20 +842,7 @@ class QueryClient:
             The name of the table as either "table" or "schema.table".
             If the form is "table", then the 'ext' schema is assumed.
         '''
-        return self._function_args_query(table_name).rows()
-
-    def describe_function(self,  table_name):
-        '''
-        Retrieve the list of parameters for a partial external table defined in
-        the Druid catalog.
-
-        Parameters
-        ----------
-        table_name str
-            The name of the table as either "table" or "schema.table".
-            If the form is "table", then the 'ext' schema is assumed.
-        '''
-        return self._function_args_query(table_name).show()
+        return self._function_args_query(table_name).rows
 
     def wait_until_ready(self, table_name):
         '''
@@ -853,11 +853,10 @@ class QueryClient:
         table_name str
             The name of a datasource in the 'druid' schema.
         '''
-        self.druid_client.datasources().wait_until_ready(table_name)
+        self.druid_client.datasources.wait_until_ready(table_name)
         while True:
             try:
                 self.sql('SELECT 1 FROM "{}" LIMIT 1'.format(table_name));
                 return
             except Exception:
                 time.sleep(0.5)
-

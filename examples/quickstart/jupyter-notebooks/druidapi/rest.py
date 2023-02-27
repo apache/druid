@@ -37,7 +37,6 @@ def check_error(response):
     code = response.status_code
     if code == requests.codes.ok or code == requests.codes.accepted:
         return
-    error = None
     json = None
     try:
         json = response.json()
