@@ -26,7 +26,6 @@ fi
 rm -f cert_db.txt
 touch cert_db.txt
 
-export DOCKER_IP=$(cat /docker_ip)
 export MY_HOSTNAME=$(hostname)
 export MY_IP=$(hostname -i)
 
@@ -63,24 +62,24 @@ EOT
 # Generate a server certificate for this machine
 openssl genrsa -out server.key 4096
 openssl req -new -out server.csr -key server.key -reqexts req_ext -config csr.conf
-openssl x509 -req -days 3650 -in server.csr -CA root.pem -CAkey root.key -set_serial 0x22222222 -out server.pem -sha256 -extfile csr.conf -extensions req_ext
+openssl x509 -req -days 3650 -in server.csr -CA /shared/client_tls/root.pem -CAkey /shared/client_tls/root.key -set_serial 0x22222222 -out server.pem -sha256 -extfile csr.conf -extensions req_ext
 
 # Create a Java keystore containing the generated certificate in PKCS12 format
-openssl pkcs12 -export -in server.pem -inkey server.key -out server.p12 -name druid -CAfile root.pem -caname druid-it-root -password pass:druid123
+openssl pkcs12 -export -in server.pem -inkey server.key -out server.p12 -name druid -CAfile /shared/client_tls/root.pem -caname druid-it-root -password pass:druid123
 
 # Create a Java truststore with the druid test cluster root CA
-keytool -import -alias druid-it-root -keystore truststore.jks -file root.pem -storepass druid123 -noprompt
+keytool -import -alias druid-it-root -keystore /shared/client_tls/truststore.jks -file /shared/client_tls/root.pem -storepass druid123 -noprompt
 
 # Revoke one of the client certs
-openssl ca -revoke /client_tls/revoked_client.pem -config root.cnf -cert root.pem -keyfile root.key
+openssl ca -revoke /shared/client_tls/revoked_client.pem -config root.cnf -cert /shared/client_tls/root.pem -keyfile /shared/client_tls/root.key
 
 # Create the CRL
-openssl ca -gencrl -config root.cnf -cert root.pem -keyfile root.key -out /tls/revocations.crl
+openssl ca -gencrl -config root.cnf -cert /shared/client_tls/root.pem -keyfile /shared/client_tls/root.key -out /tls/revocations.crl
 
 # Generate empty CRLs for the intermediate cert test case
 rm -f cert_db2.txt
 touch cert_db2.txt
-openssl ca -gencrl -config root2.cnf -cert /client_tls/ca_intermediate.pem -keyfile /client_tls/ca_intermediate.key -out /tls/empty-revocations-intermediate.crl
+openssl ca -gencrl -config root2.cnf -cert /shared/client_tls/ca_intermediate.pem -keyfile /shared/client_tls/ca_intermediate.key -out /tls/empty-revocations-intermediate.crl
 
 # Append CRLs
 cat empty-revocations-intermediate.crl >> revocations.crl

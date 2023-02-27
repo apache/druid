@@ -200,6 +200,7 @@ Reference: https://dzone.com/articles/build-docker-image-from-maven
                                 </goals>
                                 <configuration>
                                     <environmentVariables>
+                                        <DOCKER_IP>${env.DOCKER_IP}</DOCKER_IP>
                                         <MYSQL_VERSION>${mysql.version}</MYSQL_VERSION>
                                         <MARIADB_VERSION>${mariadb.version}</MARIADB_VERSION>
                                         <MYSQL_DRIVER_CLASSNAME>com.mysql.jdbc.Driver</MYSQL_DRIVER_CLASSNAME>

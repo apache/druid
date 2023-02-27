@@ -15,21 +15,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-DOCKER_HOST_IP="$(host "$(hostname)" | perl -nle '/has address (.*)/ && print $1')"
+./tls/generate-root-certs.sh
 
-if [ -z "$DOCKER_HOST_IP" ]; then
-    # Mac specific way to get host ip
-    DOCKER_HOST_IP="$(dscacheutil -q host -a name "$(HOSTNAME)" | perl -nle '/ip_address: (.*)/ && print $1' | tail -n1)"
-fi
+mkdir -p client_tls
+rm -f client_tls/*
+cp tls/root.key client_tls/root.key
+cp tls/root.pem client_tls/root.pem
+cp tls/untrusted_root.key client_tls/untrusted_root.key
+cp tls/untrusted_root.pem client_tls/untrusted_root.pem
+cd client_tls
 
-if [ -z "$DOCKER_HOST_IP" ]; then
-  # Another Mac specific way, when the machine isn't able to resolve its own name
-  DOCKER_HOST_IP="$(ifconfig | fgrep 'inet ' | fgrep -v 127.0.0.1 | awk '{print $2}' | tail -n1)"
-fi
-
-if [ -z "$DOCKER_HOST_IP" ]; then
-    >&2 echo "Could not set docker host IP - integration tests can not run"
-    exit 1
-fi
-
-export DOCKER_HOST_IP
+../tls/generate-expired-client-cert.sh
+../tls/generate-good-client-cert.sh
+../tls/generate-incorrect-hostname-client-cert.sh
+../tls/generate-invalid-intermediate-client-cert.sh
+../tls/generate-to-be-revoked-client-cert.sh
+../tls/generate-untrusted-root-client-cert.sh
+../tls/generate-valid-intermediate-client-cert.sh

@@ -109,16 +109,17 @@ function category {
 # of a build environment where we can't inspect Docker directly.
 function show_status {
 	echo "===================================="
-	ls -l target/shared
+	ls -l $SHARED_DIR
 	echo "docker ps -a"
 	docker ps -a
 	# Was: --filter status=exited
 	for id in $(docker ps -a --format "{{.ID}}"); do
 	    echo "===================================="
-	    echo "Logs for Container ID $id"
+	    echo "Logs for Container ID $id, Name - $(docker inspect --format='{{.Name}}' $id)"
 		docker logs $id | tail -n 20
 	done
 	echo "===================================="
+	IFS=$OLDIFS
 }
 
 function build_shared_dir {
@@ -135,6 +136,14 @@ function build_shared_dir {
 	# which runs Docker does not have permission to write into the /shared
 	# directory. Force ownership to allow writing.
 	chmod -R a+rwx $SHARED_DIR
+}
+
+function create_client_certs {
+  # setup client keystore
+  ./tls/generate-client-certs-and-keystores.sh
+  rm -rf $SHARED_DIR/client_tls
+  cp -r client_tls $SHARED_DIR/
+  chmod -R a+rwx $SHARED_DIR/client_tls
 }
 
 # Each test must have a default docker-compose.yaml file which corresponds to using
@@ -188,26 +197,27 @@ case $CMD in
 		category $*
 		echo "Starting cluster $DRUID_INTEGRATION_TEST_GROUP"
 		build_shared_dir
-	    cd $CLUSTER_DIR
+		create_client_certs
+	  cd $CLUSTER_DIR
 		$DOCKER_COMPOSE `docker_file` up -d
 		# Enable the following for debugging
-		#show_status
+		show_status
 		;;
 	"status" )
 		category $*
-	    cd $CLUSTER_DIR
+	  cd $CLUSTER_DIR
 		show_status
 		;;
 	"down" )
 		category $*
 		# Enable the following for debugging
 		#show_status
-	    cd $CLUSTER_DIR
+	  cd $CLUSTER_DIR
 		$DOCKER_COMPOSE `docker_file` $CMD
 		;;
 	"*" )
 		category $*
-	    cd $CLUSTER_DIR
+	  cd $CLUSTER_DIR
 		$DOCKER_COMPOSE `docker_file` $CMD
 		;;
 esac

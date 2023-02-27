@@ -23,7 +23,7 @@
 set -e
 
 # Enable for tracing
-set -x
+#set -x
 
 # Dump the environment for debugging.
 #env

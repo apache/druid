@@ -37,7 +37,10 @@ cd /
 chmod +x launch.sh
 chown druid:druid launch.sh druid.sh
 
-chmod -R a+r /tls/*
+chmod -R a+rwx /tls
+chown -R druid:druid /tls
+
+chmod -R a+rwx /tls/*
 chown -R druid:druid /tls/*
 
 # Convenience script to run Druid for tools.

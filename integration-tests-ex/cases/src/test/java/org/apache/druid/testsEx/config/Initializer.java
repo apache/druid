@@ -269,9 +269,9 @@ public class Initializer
       // previously set in Maven.
       propertyEnvVarBinding("druid.test.config.dockerIp", "DOCKER_IP");
       propertyEnvVarBinding("druid.zk.service.host", "DOCKER_IP");
-      property("druid.client.https.trustStorePath", "client_tls/truststore.jks");
+      property("druid.client.https.trustStorePath", "/shared/client_tls/truststore.jks");
       property("druid.client.https.trustStorePassword", "druid123");
-      property("druid.client.https.keyStorePath", "client_tls/client.jks");
+      property("druid.client.https.keyStorePath", "/shared/client_tls/client.jks");
       property("druid.client.https.certAlias", "druid");
       property("druid.client.https.keyManagerPassword", "druid123");
       property("druid.client.https.keyStorePassword", "druid123");

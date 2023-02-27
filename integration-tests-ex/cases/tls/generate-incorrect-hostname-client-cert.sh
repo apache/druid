@@ -16,8 +16,6 @@
 # limitations under the License.
 
 tls_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=set-docker-host-ip.sh
-source "$tls_dir/set-docker-host-ip.sh"
 
 # Generate a client cert with an incorrect hostname for testing
 cat <<EOT > invalid_hostname_csr.conf
