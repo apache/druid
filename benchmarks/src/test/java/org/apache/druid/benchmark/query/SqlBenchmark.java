@@ -448,7 +448,7 @@ public class SqlBenchmark
     if (stringEncoding.startsWith("front-coded")) {
       String[] split = stringEncoding.split("-");
       int bucketSize = Integer.parseInt(split[2]);
-      encodingStrategy = new StringEncodingStrategy.FrontCoded(bucketSize);
+      encodingStrategy = new StringEncodingStrategy.FrontCoded(bucketSize, null);
     } else {
       encodingStrategy = new StringEncodingStrategy.Utf8();
     }

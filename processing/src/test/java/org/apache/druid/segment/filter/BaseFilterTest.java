@@ -350,7 +350,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
     StringEncodingStrategy[] stringEncoding = new StringEncodingStrategy[]{
         new StringEncodingStrategy.Utf8(),
-        new StringEncodingStrategy.FrontCoded(4)
+        new StringEncodingStrategy.FrontCoded(4, null)
     };
     for (Map.Entry<String, BitmapSerdeFactory> bitmapSerdeFactoryEntry : bitmapSerdeFactories.entrySet()) {
       for (Map.Entry<String, SegmentWriteOutMediumFactory> segmentWriteOutMediumFactoryEntry :

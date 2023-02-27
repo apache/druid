@@ -42,7 +42,8 @@ import java.nio.channels.WritableByteChannel;
  *
  * Front coding is a type of delta encoding for byte arrays, where values are grouped into buckets. The first value of
  * the bucket is written entirely, and remaining values are stored as pairs of an integer which indicates how much
- * of the first byte array of the bucket to use as a prefix, followed by the remaining value bytes after the prefix.
+ * of the first byte array of the bucket to use as a prefix, (or the preceding value of the bucket if using
+ * 'incremental' buckets) followed by the remaining value bytes after the prefix.
  *
  * This writer is designed for use with UTF-8 encoded strings that are written in an order compatible with
  * {@link String#compareTo(String)}.
@@ -58,6 +59,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
   private final byte[][] bucketBuffer;
   private final ByteBuffer getOffsetBuffer;
   private final int div;
+  private final boolean useIncrementalBuckets;
 
   @Nullable
   private byte[] prevObject = null;
@@ -71,10 +73,12 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
   private boolean isClosed = false;
   private boolean hasNulls = false;
 
+
   public FrontCodedIndexedWriter(
       SegmentWriteOutMedium segmentWriteOutMedium,
       ByteOrder byteOrder,
-      int bucketSize
+      int bucketSize,
+      boolean useIncrementalBuckets
   )
   {
     if (Integer.bitCount(bucketSize) != 1 || bucketSize < 1 || bucketSize > 128) {
@@ -87,6 +91,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
     this.bucketBuffer = new byte[bucketSize][];
     this.getOffsetBuffer = ByteBuffer.allocate(Integer.BYTES).order(byteOrder);
     this.div = Integer.numberOfTrailingZeros(bucketSize);
+    this.useIncrementalBuckets = useIncrementalBuckets;
   }
 
   @Override
@@ -119,7 +124,9 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
       int written;
       // write the bucket, growing scratch buffer as necessary
       do {
-        written = writeBucket(scratch, bucketBuffer, bucketSize);
+        written = useIncrementalBuckets
+                  ? writeIncrementalBucket(scratch, bucketBuffer, bucketSize)
+                  : writeBucket(scratch, bucketBuffer, bucketSize);
         if (written < 0) {
           growScratch();
         }
@@ -163,8 +170,14 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
       flush();
     }
     resetScratch();
-    // version 0
-    scratch.put((byte) 0);
+
+    if (useIncrementalBuckets) {
+      // version 1 is incremental buckets
+      scratch.put((byte) 1);
+    } else {
+      // version 0 all values are prefixed on first bucket value
+      scratch.put((byte) 0);
+    }
     scratch.put((byte) bucketSize);
     scratch.put(hasNulls ? NullHandling.IS_NULL_BYTE : NullHandling.IS_NOT_NULL_BYTE);
     VByte.writeInt(scratch, numWritten);
@@ -202,14 +215,16 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
         startOffset = getBucketOffset(bucket - 1);
       }
       long endOffset = getBucketOffset(bucket);
-      int bucketSize = Ints.checkedCast(endOffset - startOffset);
-      if (bucketSize == 0) {
+      int bucketBytesSize = Ints.checkedCast(endOffset - startOffset);
+      if (bucketBytesSize == 0) {
         return null;
       }
-      final ByteBuffer bucketBuffer = ByteBuffer.allocate(bucketSize).order(byteOrder);
+      final ByteBuffer bucketBuffer = ByteBuffer.allocate(bucketBytesSize).order(byteOrder);
       valuesOut.readFully(startOffset, bucketBuffer);
       bucketBuffer.clear();
-      final ByteBuffer valueBuffer = FrontCodedIndexed.getFromBucket(bucketBuffer, relativeIndex);
+      final ByteBuffer valueBuffer = useIncrementalBuckets
+                                     ? FrontCodedIndexed.getFromBucketV1(bucketBuffer, relativeIndex, bucketSize)
+                                     : FrontCodedIndexed.getFromBucketV0(bucketBuffer, relativeIndex, bucketSize);
       final byte[] valueBytes = new byte[valueBuffer.limit() - valueBuffer.position()];
       valueBuffer.get(valueBytes);
       return valueBytes;
@@ -232,7 +247,10 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
     resetScratch();
     int written;
     do {
-      written = writeBucket(scratch, bucketBuffer, remainder == 0 ? bucketSize : remainder);
+      int flushSize = remainder == 0 ? bucketSize : remainder;
+      written = useIncrementalBuckets
+                ? writeIncrementalBucket(scratch, bucketBuffer, flushSize)
+                : writeBucket(scratch, bucketBuffer, flushSize);
       if (written < 0) {
         growScratch();
       }
@@ -298,6 +316,57 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
         }
         VByte.writeInt(buffer, prefixLength);
         rem = writeValue(buffer, suffix);
+        // wasn't enough room, bail out
+        if (rem < 0) {
+          return rem;
+        }
+      }
+      written++;
+    }
+    return written;
+  }
+
+  /**
+   * Write bucket of values to a {@link ByteBuffer}. The first value is written completely, subsequent values are
+   * written with an integer to indicate how much of the preceding value in the bucket is a prefix of the value,
+   * followed by the remaining bytes of the value.
+   *
+   * Uses {@link VByte} encoded integers to indicate prefix length and value length.
+   */
+  public static int writeIncrementalBucket(ByteBuffer buffer, byte[][] values, int numValues)
+  {
+    int written = 0;
+    byte[] prev = null;
+    while (written < numValues) {
+      byte[] next = values[written];
+      if (written == 0) {
+        prev = next;
+        // the first value in the bucket is written completely as it is
+        int rem = writeValue(buffer, prev);
+        // wasn't enough room, bail out
+        if (rem < 0) {
+          return rem;
+        }
+      } else {
+        // all other values must be partitioned into a prefix length and suffix bytes
+        int prefixLength = 0;
+        for (; prefixLength < prev.length; prefixLength++) {
+          final int cmp = StringUtils.compareUtf8UsingJavaStringOrdering(prev[prefixLength], next[prefixLength]);
+          if (cmp != 0) {
+            break;
+          }
+        }
+        // convert to bytes because not every char is a single byte
+        final byte[] suffix = new byte[next.length - prefixLength];
+        System.arraycopy(next, prefixLength, suffix, 0, suffix.length);
+        int rem = buffer.remaining() - VByte.computeIntSize(prefixLength);
+        // wasn't enough room, bail out
+        if (rem < 0) {
+          return rem;
+        }
+        VByte.writeInt(buffer, prefixLength);
+        rem = writeValue(buffer, suffix);
+        prev = next;
         // wasn't enough room, bail out
         if (rem < 0) {
           return rem;

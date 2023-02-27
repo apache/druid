@@ -217,7 +217,7 @@ public class TestIndex
           new IndexSpec(
               null,
               null,
-              new StringEncodingStrategy.FrontCoded(4),
+              new StringEncodingStrategy.FrontCoded(4, null),
               null,
               null,
               null,

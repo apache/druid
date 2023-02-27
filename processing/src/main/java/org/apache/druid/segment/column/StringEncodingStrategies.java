@@ -53,10 +53,12 @@ public class StringEncodingStrategies
       // writing the dictionary itself
       DictionaryWriter<byte[]> writer;
       if (StringEncodingStrategy.FRONT_CODED.equals(encodingStrategy.getType())) {
+        StringEncodingStrategy.FrontCoded strategy = (StringEncodingStrategy.FrontCoded) encodingStrategy;
         writer = new FrontCodedIndexedWriter(
             writeoutMedium,
             IndexIO.BYTE_ORDER,
-            ((StringEncodingStrategy.FrontCoded) encodingStrategy).getBucketSize()
+            strategy.getBucketSize(),
+            strategy.useIncrementalBuckets()
         );
       } else {
         throw new ISE("Unknown encoding strategy: %s", encodingStrategy.getType());
