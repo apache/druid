@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.expression;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -44,13 +45,13 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
+import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerToolbox;
-import org.apache.druid.sql.calcite.planner.SimplePlannerToolbox;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
@@ -79,7 +80,7 @@ import java.util.stream.Collectors;
 class ExpressionTestHelper
 {
   private static final JoinableFactoryWrapper JOINABLE_FACTORY_WRAPPER = CalciteTests.createJoinableFactoryWrapper();
-  private static final PlannerToolbox PLANNER_TOOLBOX = new SimplePlannerToolbox(
+  private static final PlannerToolbox PLANNER_TOOLBOX = new PlannerToolbox(
       CalciteTests.createOperatorTable(),
       CalciteTests.createExprMacroTable(),
       CalciteTests.getJsonMapper(),
@@ -92,7 +93,10 @@ class ExpressionTestHelper
           )
       ),
       JOINABLE_FACTORY_WRAPPER,
-      CatalogResolver.NULL_RESOLVER
+      CatalogResolver.NULL_RESOLVER,
+      "druid",
+      new CalciteRulesManager(ImmutableSet.of()),
+      CalciteTests.TEST_AUTHORIZER_MAPPER
   );
   private static final PlannerContext PLANNER_CONTEXT = PlannerContext.create(
       PLANNER_TOOLBOX,

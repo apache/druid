@@ -20,28 +20,92 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 
-/**
- * Provides the generic planner objects not specific to any one query.
- */
-public interface PlannerToolbox
+public class PlannerToolbox
 {
-  DruidOperatorTable operatorTable();
+  protected final DruidOperatorTable operatorTable;
+  protected final ExprMacroTable macroTable;
+  protected final JoinableFactoryWrapper joinableFactoryWrapper;
+  protected final ObjectMapper jsonMapper;
+  protected final PlannerConfig plannerConfig;
+  protected final DruidSchemaCatalog rootSchema;
+  protected final CatalogResolver catalog;
+  protected final String druidSchemaName;
+  protected final CalciteRulesManager calciteRuleManager;
+  protected final AuthorizerMapper authorizerMapper;
 
-  ExprMacroTable exprMacroTable();
+  public PlannerToolbox(
+      final DruidOperatorTable operatorTable,
+      final ExprMacroTable macroTable,
+      final ObjectMapper jsonMapper,
+      final PlannerConfig plannerConfig,
+      final DruidSchemaCatalog rootSchema,
+      final JoinableFactoryWrapper joinableFactoryWrapper,
+      final CatalogResolver catalog,
+      final String druidSchemaName,
+      final CalciteRulesManager calciteRuleManager,
+      final AuthorizerMapper authorizerMapper
+  )
+  {
+    this.operatorTable = operatorTable;
+    this.macroTable = macroTable;
+    this.jsonMapper = jsonMapper;
+    this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
+    this.rootSchema = rootSchema;
+    this.joinableFactoryWrapper = joinableFactoryWrapper;
+    this.catalog = catalog;
+    this.druidSchemaName = druidSchemaName;
+    this.calciteRuleManager = calciteRuleManager;
+    this.authorizerMapper = authorizerMapper;
+  }
 
-  ObjectMapper jsonMapper();
+  public DruidOperatorTable operatorTable()
+  {
+    return operatorTable;
+  }
 
-  PlannerConfig plannerConfig();
+  public ExprMacroTable exprMacroTable()
+  {
+    return macroTable;
+  }
 
-  DruidSchemaCatalog rootSchema();
+  public ObjectMapper jsonMapper()
+  {
+    return jsonMapper;
+  }
 
-  JoinableFactoryWrapper joinableFactoryWrapper();
+  public DruidSchemaCatalog rootSchema()
+  {
+    return rootSchema;
+  }
 
-  CatalogResolver catalogResolver();
+  public JoinableFactoryWrapper joinableFactoryWrapper()
+  {
+    return joinableFactoryWrapper;
+  }
 
-  String druidSchemaName();
+  public CatalogResolver catalogResolver()
+  {
+    return catalog;
+  }
+
+  public String druidSchemaName()
+  {
+    return druidSchemaName;
+  }
+
+  public CalciteRulesManager calciteRuleManager()
+  {
+    return calciteRuleManager;
+  }
+
+  public PlannerConfig plannerConfig()
+  {
+    return plannerConfig;
+  }
 }

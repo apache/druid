@@ -38,12 +38,6 @@
     <dependencies>
         <dependency>
             <groupId>org.apache.druid</groupId>
-            <artifactId>druid-core</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid</groupId>
             <artifactId>druid-processing</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>
@@ -247,13 +241,6 @@
         </dependency>
         <dependency>
             <groupId>org.apache.druid</groupId>
-            <artifactId>druid-core</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>test</scope>
-            <type>test-jar</type>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid</groupId>
             <artifactId>druid-processing</artifactId>
             <version>${project.parent.version}</version>
             <scope>test</scope>
@@ -272,14 +259,6 @@
             <version>${project.parent.version}</version>
             <type>test-jar</type>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid</groupId>
-            <artifactId>druid-hll</artifactId>
-            <version>${project.parent.version}</version>
-            <!-- Used in tests. Marked as scope "provided" instead of "test", because scope "test" prevents
-                 running using this extension's classpath in an IDE. -->
-            <scope>provided</scope>
         </dependency>
 
     </dependencies>

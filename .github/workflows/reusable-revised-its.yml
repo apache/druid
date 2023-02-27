@@ -37,8 +37,14 @@ on:
         description: 'IT test Category'
         required: true
         type: string
+      mysql_driver:
+        description: 'MySQL driver to use'
+        required: false
+        type: string
+        default: com.mysql.jdbc.Driver
 
 env:
+  MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }} # Used by tests to connect to metadata store directly.
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
 
 jobs:
@@ -50,10 +56,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Setup java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: ${{ inputs.build_jdk }}
+        run: export JAVA_HOME=$JAVA_HOME_${{ inputs.build_jdk }}_X64
 
       - name: Restore Maven repository
         id: maven-restore
@@ -61,16 +64,38 @@ jobs:
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-${{ github.sha }}
-          fail-on-cache-miss: true
 
-      - name: Retrieve cached docker image
+      - name: Restore targets
+        id: targets-restore
         uses: actions/cache/restore@v3
         with:
-          key: druid-container-jdk${{ inputs.build_jdk }}.tar.gz
+          path: ./**/target
+          key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-targets-${{ github.sha }}
+
+      - name: Retrieve cached docker image
+        id: docker-restore
+        uses: actions/cache/restore@v3
+        with:
+          key: druid-container-jdk${{ inputs.build_jdk }}.tar.gz-${{ github.sha }}
           path: |
             ./druid-container-jdk${{ inputs.build_jdk }}.tar.gz
             ./integration-tests-ex/image/target/env.sh
-          fail-on-cache-miss: true
+
+      - name: Maven build
+        if: steps.maven-restore.outputs.cache-hit != 'true' || ( steps.docker-restore.outputs.cache-hit != 'true' && steps.targets-restore.outputs.cache-hit != 'true' )
+        run: |
+          ./it.sh ci
+
+      - name: Create docker image
+        if: steps.docker-restore.outputs.cache-hit != 'true' || steps.maven-restore.outputs.cache-hit != 'true'
+        env:
+          docker-restore: ${{ toJson(steps.docker-restore.outputs) }}
+        run: |
+          ./it.sh image
+          source ./integration-tests-ex/image/target/env.sh
+          docker tag $DRUID_IT_IMAGE_NAME $DRUID_IT_IMAGE_NAME-jdk${{ matrix.jdk }}
+          echo $DRUID_IT_IMAGE_NAME
+          docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ matrix.jdk }}.tar.gz
 
       - name: Load docker image
         run: |

@@ -246,7 +246,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
   }
 
   @Test
-  public void testTemplateSpecWithFormatHappyPath() throws URISyntaxException
+  public void testTemplateSpecWithFormatHappyPath()
   {
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(ImmutableMap.of("type", HttpInputSource.TYPE_KEY))
@@ -288,7 +288,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
   }
 
   @Test
-  public void testTemplateSpecWithFormatAndPassword() throws URISyntaxException
+  public void testTemplateSpecWithFormatAndPassword()
   {
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(ImmutableMap.of(

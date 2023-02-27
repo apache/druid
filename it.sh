@@ -34,25 +34,26 @@ Usage: $0 cmd [category]
   ci
       build Druid and the distribution for CI pipelines
   build
-      build Druid and the distribution
+      Build Druid and the distribution
   dist
-      build the Druid distribution (only)
+      Build the Druid distribution (only)
   tools
-      build druid-it-tools
+      Build druid-it-tools
   image
-      build the test image
+      Build the test image
   up <category>
-      start the cluster for category
+      Start the cluster for category
   down <category>
-      stop the cluster for category
+      Stop the cluster for category
   test <category>
-      start the cluster, run the test for category, and stop the cluster
+      Start the cluster, run the test for category, and stop the cluster
   tail <category>
-      show the last 20 lines of each container log
-  travis <category>
+      Show the last 20 lines of each container log
+  gen
+      Generate docker-compose.yaml files (done automatically on up)
       run one IT in Travis (build dist, image, run test, tail logs)
   github <category>
-      run one IT in Github Workflows (run test, tail logs)
+      Run one IT in Github Workflows (run test, tail logs)
   prune
       prune Docker volumes
 
@@ -92,7 +93,7 @@ function tail_logs
 #    pass into tests when running locally.
 # 3. A file given by the OVERRIDE_ENV environment variable. That is, OVERRIDE_ENV holds
 #    the path to a file of var=value pairs. Historically, this file was created by a
-#    build environment such as Travis. However, it is actually simpler just to use
+#    build environment such as Github Actions. However, it is actually simpler just to use
 #    option 1: just set the values in the environment and let Linux pass them through to
 #    this script.
 # 4. Environment variables of the form "druid_" used to create the Druid config file.
@@ -102,7 +103,7 @@ function tail_logs
 function build_override {
 
 	mkdir -p target
-	OVERRIDE_FILE="override.env"
+	OVERRIDE_FILE="$(pwd)/target/override.env"
 	rm -f "$OVERRIDE_FILE"
 	touch "$OVERRIDE_FILE"
 
@@ -130,8 +131,7 @@ function build_override {
     # environment into the container.
 
     # Reuse the OVERRIDE_ENV variable to pass the full list to Docker compose
-    target_dir=`pwd`
-    export OVERRIDE_ENV="$target_dir/$OVERRIDE_FILE"
+    export OVERRIDE_ENV="$OVERRIDE_FILE"
 }
 
 function prepare_category {
@@ -145,7 +145,6 @@ function prepare_category {
 function prepare_docker {
     cd $DRUID_DEV/integration-tests-ex/cases
     build_override
-	verify_env_vars
 }
 
 function require_env_var {
@@ -178,6 +177,8 @@ function verify_env_vars {
 		    fi
 			;;
 		"S3DeepStorage")
+			require_env_var DRUID_CLOUD_BUCKET
+			require_env_var DRUID_CLOUD_PATH
 			require_env_var AWS_REGION
 			require_env_var AWS_ACCESS_KEY_ID
 			require_env_var AWS_SECRET_ACCESS_KEY
@@ -185,8 +186,14 @@ function verify_env_vars {
 	esac
 }
 
+if [ $# = 0 ]; then
+  usage
+  exit 1
+fi
+
 CMD=$1
 shift
+MAVEN_IGNORE="-P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true"
 
 case $CMD in
   "help" )
@@ -196,7 +203,7 @@ case $CMD in
     mvn -q clean package dependency:go-offline -P dist $MAVEN_IGNORE
     ;;
   "build" )
-    mvn clean package -P dist,skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -T1.0C $*
+    mvn clean package -P dist $MAVEN_IGNORE -T1.0C $*
     ;;
   "dist" )
     mvn package -P dist $MAVEN_IGNORE -pl :distribution
@@ -208,9 +215,17 @@ case $CMD in
     cd $DRUID_DEV/integration-tests-ex/image
     mvn install -P test-image $MAVEN_IGNORE
     ;;
+  "gen")
+    # Generate the docker-compose.yaml files. Mostly for debugging
+    # since the up command does generation implicitly.
+    prepare_category $1
+    prepare_docker
+    ./cluster.sh gen $CATEGORY
+    ;;
   "up" )
     prepare_category $1
     prepare_docker
+    verify_env_vars
     ./cluster.sh up $CATEGORY
     ;;
   "down" )
@@ -228,13 +243,6 @@ case $CMD in
   "tail" )
     prepare_category $1
     tail_logs $CATEGORY
-    ;;
-  "travis" )
-    prepare_category $1
-    $0 dist
-    $0 image
-    $0 test $CATEGORY
-    $0 tail $CATEGORY
     ;;
   "github" )
     prepare_category $1

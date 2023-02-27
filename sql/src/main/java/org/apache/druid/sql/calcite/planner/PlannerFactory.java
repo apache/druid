@@ -61,7 +61,7 @@ public class PlannerFactory implements PlannerToolbox
       .setQuotedCasing(Casing.UNCHANGED)
       .setQuoting(Quoting.DOUBLE_QUOTE)
       .setConformance(DruidConformance.instance())
-      .setParserFactory(new DruidSqlParserImplFactory()) // Custom sql parser factory
+      .setParserFactory(new DruidSqlParserImplFactory()) // Custom SQL parser factory
       .build();
 
   private final DruidSchemaCatalog rootSchema;

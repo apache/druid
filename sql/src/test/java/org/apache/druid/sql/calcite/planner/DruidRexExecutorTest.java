@@ -95,7 +95,10 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
           )
       ),
       CalciteTests.createJoinableFactoryWrapper(),
-      CatalogResolver.NULL_RESOLVER
+      CatalogResolver.NULL_RESOLVER,
+      "druid",
+      new CalciteRulesManager(ImmutableSet.of()),
+      CalciteTests.TEST_AUTHORIZER_MAPPER
   );
   private static final PlannerContext PLANNER_CONTEXT = PlannerContext.create(
       PLANNER_TOOLBOX,

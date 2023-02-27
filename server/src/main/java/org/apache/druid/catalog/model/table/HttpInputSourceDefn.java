@@ -175,8 +175,12 @@ public class HttpInputSourceDefn extends FormattedInputSourceDefn
   @Override
   protected void auditInputSource(Map<String, Object> jsonMap)
   {
-    // A partial table may not include the URI parameter, but it is
-    // needed to serialize the input source.
+    // A partial table may not include the URI parameter. For example, we might
+    // define an HTTP input source "with URIs to be named later." Even though the
+    // input source is partial, we still want to validate the other parameters.
+    // The HttpInputSource will fail if the URIs is not set. So, we have to make
+    // up a fake one just so we can validate the other fields by asking the
+    // input source to deserialize itself from the jsonMap.
     jsonMap.putIfAbsent(URIS_PARAMETER, "http://bogus.com");
   }
 

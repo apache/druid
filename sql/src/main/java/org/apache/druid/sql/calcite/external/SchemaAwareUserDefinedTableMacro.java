@@ -37,6 +37,7 @@ import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlOperandTypeInference;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.expression.AuthorizableOperator;
 
@@ -227,6 +228,16 @@ public abstract class SchemaAwareUserDefinedTableMacro
       Frame frame = writer.startList("(", ")");
       schema.unparse(writer, leftPrec, rightPrec);
       writer.endList(frame);
+    }
+
+    /**
+     * Required by GHA CodeQL even though Calcite doesn't use this
+     * particular method.
+     */
+    @Override
+    public Object clone()
+    {
+      throw new UOE("Not supported");
     }
   }
 

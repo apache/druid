@@ -41,11 +41,20 @@ spec:
         app: {{ include "druid.name" . }}
         release: {{ .Release.Name }}
         component: {{ .Values.overlord.name }}
-      {{- with .Values.overlord.podAnnotations }}
       annotations:
-{{ toYaml . | indent 8 }}
-      {{- end }}
+        druid.k8s.enablePatching: "true"
+        {{- with .Values.overlord.podAnnotations }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.prometheus.enabled }}
+          {{- with .Values.prometheus.annotation }}
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+        {{- end }}
     spec:
+      {{- if .Values.overlord.serviceAccount.create }}
+      serviceAccountName: {{ include "druid.overlord.serviceAccountName" . }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -67,6 +76,11 @@ spec:
             - name: http
               containerPort: {{ .Values.overlord.port }}
               protocol: TCP
+            {{- if .Values.prometheus.enabled }}
+            - name: prometheus
+              containerPort: {{ .Values.prometheus.port }}
+              protocol: TCP
+            {{- end }}
           livenessProbe:
             initialDelaySeconds: 60
             httpGet:

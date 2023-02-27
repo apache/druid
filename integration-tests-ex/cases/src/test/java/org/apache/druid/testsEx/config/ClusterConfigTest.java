@@ -93,8 +93,10 @@ public class ClusterConfigTest
     assertEquals("myRegion", props.get("druid.test.config.cloudRegion"));
     // System property
     assertEquals("sys", props.get("druid.test.config.sys_prop"));
-    // From user override
-    assertEquals("user", props.get("druid.test.config.user_var"));
+    // From user override. Uncomment to test. Requires the following
+    // file ~/druid-it/Test.env, with contents:
+    // druid_user_var=user
+    //assertEquals("user", props.get("druid.test.config.user_var"));
 
     // Test plumbing through the test config
     Properties properties = new Properties();

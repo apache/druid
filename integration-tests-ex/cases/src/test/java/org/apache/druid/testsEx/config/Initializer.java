@@ -275,6 +275,7 @@ public class Initializer
       property("druid.client.https.certAlias", "druid");
       property("druid.client.https.keyManagerPassword", "druid123");
       property("druid.client.https.keyStorePassword", "druid123");
+      propertyEnvVarBinding("druid.metadata.mysql.driver.driverClassName", "MYSQL_DRIVER_CLASSNAME");
 
       // More env var bindings for properties formerly passed in via
       // a generated config file.

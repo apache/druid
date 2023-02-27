@@ -236,10 +236,10 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
               "[\"a\",\"a\",\"b\"]",
               "[7,0]",
               "[1.0,0.0]",
-              "7",
-              "1.0",
-              "7",
-              "1.0"
+              7L,
+              1.0,
+              7L,
+              1.0
           }
       );
     } else {
@@ -264,10 +264,10 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
               "[\"a\",\"a\",\"b\"]",
               "[7,null]",
               "[1.0,null]",
-              "7",
-              "1.0",
-              "7",
-              "1.0"
+              7L,
+              1.0,
+              7L,
+              1.0
           }
       );
     }
@@ -312,10 +312,10 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         "array_concat(array(\"d1\"),array(\"d2\"))",
                         ColumnType.DOUBLE_ARRAY
                     ),
-                    expressionVirtualColumn("v12", "array_offset(array(\"l1\"),0)", ColumnType.LONG_ARRAY),
-                    expressionVirtualColumn("v13", "array_offset(array(\"d1\"),0)", ColumnType.DOUBLE_ARRAY),
-                    expressionVirtualColumn("v14", "array_ordinal(array(\"l1\"),1)", ColumnType.LONG_ARRAY),
-                    expressionVirtualColumn("v15", "array_ordinal(array(\"d1\"),1)", ColumnType.DOUBLE_ARRAY),
+                    expressionVirtualColumn("v12", "array_offset(array(\"l1\"),0)", ColumnType.LONG),
+                    expressionVirtualColumn("v13", "array_offset(array(\"d1\"),0)", ColumnType.DOUBLE),
+                    expressionVirtualColumn("v14", "array_ordinal(array(\"l1\"),1)", ColumnType.LONG),
+                    expressionVirtualColumn("v15", "array_ordinal(array(\"d1\"),1)", ColumnType.DOUBLE),
                     expressionVirtualColumn("v2", "array(1.9,2.2,4.3)", ColumnType.DOUBLE_ARRAY),
                     expressionVirtualColumn("v3", "array_append(\"dim3\",'foo')", ColumnType.STRING_ARRAY),
                     expressionVirtualColumn("v4", "array_prepend('foo',array(\"dim2\"))", ColumnType.STRING_ARRAY),
@@ -355,7 +355,32 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
-        expectedResults
+        expectedResults,
+        RowSignature.builder()
+                    .add("dim1", ColumnType.STRING)
+                    .add("dim2", ColumnType.STRING)
+                    .add("dim3", ColumnType.STRING)
+                    .add("l1", ColumnType.LONG)
+                    .add("l2", ColumnType.LONG)
+                    .add("d1", ColumnType.DOUBLE)
+                    .add("d2", ColumnType.DOUBLE)
+                    .add("EXPR$7", ColumnType.STRING_ARRAY)
+                    .add("EXPR$8", ColumnType.LONG_ARRAY)
+                    .add("EXPR$9", ColumnType.DOUBLE_ARRAY)
+                    .add("EXPR$10", ColumnType.STRING_ARRAY)
+                    .add("EXPR$11", ColumnType.STRING_ARRAY)
+                    .add("EXPR$12", ColumnType.LONG_ARRAY)
+                    .add("EXPR$13", ColumnType.LONG_ARRAY)
+                    .add("EXPR$14", ColumnType.DOUBLE_ARRAY)
+                    .add("EXPR$15", ColumnType.DOUBLE_ARRAY)
+                    .add("EXPR$16", ColumnType.STRING_ARRAY)
+                    .add("EXPR$17", ColumnType.LONG_ARRAY)
+                    .add("EXPR$18", ColumnType.DOUBLE_ARRAY)
+                    .add("EXPR$19", ColumnType.LONG)
+                    .add("EXPR$20", ColumnType.DOUBLE)
+                    .add("EXPR$21", ColumnType.LONG)
+                    .add("EXPR$22", ColumnType.DOUBLE)
+                    .build()
     );
   }
 

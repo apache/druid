@@ -803,7 +803,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         throw new ISE("Unable to get results from the report");
       }
 
-      return Optional.of(new Pair(rowSignature, rows));
+      return Optional.of(new Pair<RowSignature, List<Object[]>>(rowSignature, rows));
     }
   }
 

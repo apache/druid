@@ -26,19 +26,20 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.ProvisionException;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import javax.validation.Validation;
+
 import java.io.IOException;
 import java.util.Properties;
 
@@ -107,13 +108,13 @@ public class FilteredRequestLoggerTest
     private int sqlCount;
 
     @Override
-    public void logNativeQuery(RequestLogLine requestLogLine) throws IOException
+    public void logNativeQuery(RequestLogLine requestLogLine)
     {
       nativeCount++;
     }
 
     @Override
-    public void logSqlQuery(RequestLogLine requestLogLine) throws IOException
+    public void logSqlQuery(RequestLogLine requestLogLine)
     {
       sqlCount++;
     }
@@ -133,7 +134,7 @@ public class FilteredRequestLoggerTest
 
     RequestLogLine nativeRequestLogLine = RequestLogLine.forNative(
         testSegmentMetadataQuery,
-        DateTime.now(), // Not used
+        DateTimes.nowUtc(), // Not used
         null, // Not used
         new QueryStats(ImmutableMap.of("query/time", 1000))
     );
@@ -141,7 +142,7 @@ public class FilteredRequestLoggerTest
     RequestLogLine sqlRequestLogLine = RequestLogLine.forSql(
         "SELECT * FROM foo",
         null,
-        DateTime.now(), // Not used
+        DateTimes.nowUtc(), // Not used
         null,  // Not used
         new QueryStats(ImmutableMap.of("sqlQuery/time", 2000))
     );
@@ -169,7 +170,7 @@ public class FilteredRequestLoggerTest
 
     RequestLogLine nativeRequestLogLine = RequestLogLine.forNative(
         testSegmentMetadataQuery,
-        DateTime.now(), // Not used
+        DateTimes.nowUtc(), // Not used
         null, // Not used
         new QueryStats(ImmutableMap.of("query/time", 10000))
     );
@@ -177,7 +178,7 @@ public class FilteredRequestLoggerTest
     RequestLogLine sqlRequestLogLine = RequestLogLine.forSql(
         "SELECT * FROM foo",
         null,
-        DateTime.now(), // Not used
+        DateTimes.nowUtc(), // Not used
         null,  // Not used
         new QueryStats(ImmutableMap.of("sqlQuery/time", 10000))
     );
