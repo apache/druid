@@ -47,7 +47,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.Callable;
 
 public abstract class AbstractIndexerTest
 {
