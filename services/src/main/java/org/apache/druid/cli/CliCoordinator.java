@@ -83,6 +83,7 @@ import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.KillStalePendingSegments;
 import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
+import org.apache.druid.server.coordinator.duty.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDuty;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
@@ -93,6 +94,7 @@ import org.apache.druid.server.coordinator.duty.KillDatasourceMetadata;
 import org.apache.druid.server.coordinator.duty.KillRules;
 import org.apache.druid.server.coordinator.duty.KillSupervisors;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
+import org.apache.druid.server.coordinator.duty.NewestSegmentFirstPolicy;
 import org.apache.druid.server.http.ClusterResource;
 import org.apache.druid.server.http.CompactionResource;
 import org.apache.druid.server.http.CoordinatorCompactionConfigsResource;
@@ -311,6 +313,9 @@ public class CliCoordinator extends ServerRunnable
                 Predicates.equalTo("true"),
                 KillCompactionConfig.class
             );
+
+            //TODO: make this configurable when there are multiple search policies
+            binder.bind(CompactionSegmentSearchPolicy.class).to(NewestSegmentFirstPolicy.class);
 
             bindAnnouncer(
                 binder,

@@ -94,11 +94,11 @@ public class CompactSegments implements CoordinatorCustomDuty
   @JsonCreator
   public CompactSegments(
       @JacksonInject DruidCoordinatorConfig config,
-      @JacksonInject ObjectMapper objectMapper,
+      @JacksonInject CompactionSegmentSearchPolicy policy,
       @JacksonInject IndexingServiceClient indexingServiceClient
   )
   {
-    this.policy = new NewestSegmentFirstPolicy(objectMapper);
+    this.policy = policy;
     this.indexingServiceClient = indexingServiceClient;
     this.skipLockedIntervals = config.getCompactionSkipLockedIntervals();
     autoCompactionSnapshotPerDataSource.set(new HashMap<>());

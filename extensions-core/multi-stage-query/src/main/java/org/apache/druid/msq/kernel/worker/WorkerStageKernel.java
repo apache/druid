@@ -24,6 +24,7 @@ import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.kernel.ShuffleKind;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
@@ -45,6 +46,7 @@ import java.util.Set;
  */
 public class WorkerStageKernel
 {
+  private static final Logger log = new Logger(WorkerStageKernel.class);
   private final WorkOrder workOrder;
 
   private WorkerStagePhase phase = WorkerStagePhase.NEW;
@@ -212,6 +214,12 @@ public class WorkerStageKernel
   private void transitionTo(final WorkerStagePhase newPhase)
   {
     if (newPhase.canTransitionFrom(phase)) {
+      log.info(
+          "Stage [%d] transitioning from old phase [%s] to new phase [%s]",
+          workOrder.getStageNumber(),
+          phase,
+          newPhase
+      );
       phase = newPhase;
     } else {
       throw new IAE("Cannot transition from [%s] to [%s]", phase, newPhase);
