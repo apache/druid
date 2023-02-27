@@ -249,16 +249,10 @@ public class UnnestColumnValueSelectorCursor implements Cursor
     // while $e_i does not match the filter
     // keep advancing the pointer to the first valid match
     // calling advanceAndUpdate increments the index position so needs a call to matches() again for new match status
-    boolean match = valueMatcher.matches();
-    if (match) {
+    while (true) {
       advanceAndUpdate();
-      match = valueMatcher.matches();
-    }
-    while (!match) {
-      if (!baseCursor.isDone()) {
-        advanceAndUpdate();
-        match = valueMatcher.matches();
-      } else {
+      boolean match = valueMatcher.matches();
+      if (match || baseCursor.isDone()) {
         return;
       }
     }

@@ -283,19 +283,11 @@ public class UnnestDimensionCursor implements Cursor
   @Override
   public void advanceUninterruptibly()
   {
-    if (!baseCursor.isDone()) {
+    while (true) {
+      advanceAndUpdate();
       boolean match = valueMatcher.matches();
-      if (match) {
-        advanceAndUpdate();
-        match = valueMatcher.matches();
-      }
-      while (!match) {
-        if (!baseCursor.isDone()) {
-          advanceAndUpdate();
-          match = valueMatcher.matches();
-        } else {
-          return;
-        }
+      if (match || baseCursor.isDone()) {
+        return;
       }
     }
   }
