@@ -561,7 +561,7 @@ class QueryTaskResult:
         if not self._id:
             raise ClientError('Operation is invalid on a failed query')
 
-    def wait_done(self):
+    def wait_until_done(self):
         '''
         Wait for the task to complete. Raises an error if the task fails.
         A caller can proceed to do something with the successful result
@@ -574,7 +574,7 @@ class QueryTaskResult:
         '''
         Wait for a SELECT query to finish running, then return the rows from the query.
         '''
-        self.wait_done()
+        self.wait_until_done()
         return self.rows
 
     @property
@@ -754,11 +754,11 @@ class QueryClient:
         ----------
         query
             The query as either a string or a SqlRequest object.
-       '''
+        '''
         resp = self.task(query)
         if not resp.ok:
             raise ClientError(resp.error_message)
-        resp.wait_done()
+        resp.wait_until_done()
 
     def _tables_query(self, schema):
         return self.sql_query('''

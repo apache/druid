@@ -78,7 +78,7 @@ to find the `druidapi` library. (This step is temporary until `druidapi` is prop
 First, set a variable to point to the location where you cloned the Druid git repo:
 
 ```python
-druid_dev = "/path/to/Druid-repo`
+druid_dev = '/path/to/Druid-repo'
 ```
 
 Then, add the notebooks directory to Python's module search path:
@@ -96,7 +96,7 @@ Now you can import `druidapi` and create a client as shown in the previous secti
 commands revert to displaying a text (not HTML) format. The steps are similar to those above:
 
 ```python
-druid_dev = "/path/to/Druid-repo`
+druid_dev = '/path/to/Druid-repo'
 import sys
 sys.path.append(drudi_dev + '/examples/quickstart/jupyter-notebooks/')
 import druidapi
@@ -115,12 +115,12 @@ status_client = druid.status
 
 The set of clients is still under construction. The set at present includes the following. The
 set of operations within each client is also partial, and includes only those operations used
-within one of the tutorial notebooks. Contributions welcome to expand the scope. Clients are
+within one of the tutorial notebooks. Contributions are welcome to expand the scope. Clients are
 available as properties on the `druid` object created above.
 
 * `status` - Status operations such as service health, property values, and so on. This client
   is special: it works only with the Router. The Router does not proxy these calls to other nodes.
-  See the note above about how to get status for other nodes.
+  Use the `status_for()` method to get status for other nodes.
 * `datasources` - Operations on datasources such as dropping a datasource.
 * `tasks` - Work with Overlord tasks: status, reports, and more.
 * `sql` - SQL query operations for both the interactive query engine and MSQ.
@@ -138,7 +138,7 @@ This design works well for most Druid clusters:
 * Druid integration test clusters launched via the Druid development `it.sh` command.
 * Druid clusters running under Kubernetes
 
-In all the Docker, Docker Compose and Kubernetes scenaris, the Router's port 8888 must be visible
+In all the Docker, Docker Compose and Kubernetes scenaris, the Router's port (typically 8888) must be visible
 to the machine running `druidapi`, perhaps via port mapping or a proxy.
 
 The Router is then responsible for routing Druid REST requests to the various other Druid nodes,
@@ -164,7 +164,7 @@ status_client.wait_until_ready()
 
 Without this step, your operations may mysteriously fail, and you'll wonder if you did something wrong.
 Some clients retry operations multiple times in case a service is not yet ready. For typical scripts
-against a stable cluster, the above line should be sufficient instead. This step is build into the
+against a stable cluster, the above line should be sufficient instead. This step is built into the
 `jupyter_client()` method to ensure notebooks provide a good exerience.
 
 If your notebook or script uses newer features, you should start by ensuring that the target Druid cluster
@@ -344,11 +344,11 @@ are not available for these other result formats.
 The result can also format the results as a text or HTML table, depending on how you created the client:
 
 ```python
-resp.show
+resp.show()
 ```
 
 In fact, the display client `sql()` method uses the `resp.show()` method internally, which in turn uses the
-`rows()` and `schema()` methods.
+`rows` and `schema` properties.
 
 ### Run a Query and Return Results
 
@@ -359,7 +359,7 @@ in code, just do the following:
 rows = sql_client.sql(sql)
 ```
 
-This form also takes a set of arguments so that you can use Python to parameterize the query:
+This form takes a set of arguments so that you can use Python to parameterize the query:
 
 ```python
 sql = 'SELECT * FROM {}'
@@ -374,6 +374,7 @@ query:
 ```python
 sql = '''
 INSERT INTO myTable ...
+'''
 ```
 
 Then launch an ingestion task:
@@ -391,12 +392,17 @@ task.id
 You can use the tasks client to track the status, or let the task object do it for you:
 
 ```python
-task.wait_done()
+task.wait_until_done()
+```
+
+You can combine the run-and-wait operations into a single call:
+
+```python
+task = sql_client.run_task(sql)
 ```
 
 A quirk of Druid is that MSQ reports task completion as soon as ingestion is done. However, it takes a 
-while for Druid to load the resulting segments. Wait for the table to become ready. Use the following
-to wait for the table to become queryable:
+while for Druid to load the resulting segments, so you must wait for the table to become queryable:
 
 ```python
 sql_client.wait_until_ready('myTable')
@@ -462,7 +468,7 @@ Health:
 
 Ingest data:
 
-* Requests: See the [REST tutorial](api_tutorial.ipynb)
+* Requests: See the REST tutorial.
 * REST client: as the REST tutorial, but use `rest_client.post_json('/druid/v2/sql/task', sql_request)` and
   `rest_client.get_json(f"/druid/indexer/v1/task/{ingestion_taskId}/status")`
 * SQL client: `sql_client.run_task(sql)`, also a form for a full SQL request.
@@ -479,7 +485,7 @@ Query data, where `sql_request` is a properly-formatted `SqlResquest` dictionary
 * REST client: `rest_client.post_json('/druid/v2/sql', sql_request)`
 * SQL Client: `sql_client.show(sql)`, where `sql` is the query text
 
-In general, you have to provide the all the details for the Requests library. The REST client handles the low-level repetitious bits. The Python clients provide methods that encapsulate the specifics of the URLS and return formats.
+In general, you have to provide the all the details for the Requests library. The REST client handles the low-level repetitious bits. The Python clients provide methods that encapsulate the specifics of the URLs and return formats.
 
 ## Constants
 
