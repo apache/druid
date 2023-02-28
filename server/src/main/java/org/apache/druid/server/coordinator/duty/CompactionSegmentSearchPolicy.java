@@ -19,8 +19,6 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.common.base.Suppliers;
-import com.google.common.cache.CacheBuilder;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.SegmentTimeline;

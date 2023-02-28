@@ -75,9 +75,13 @@ public class CompactSegments implements CoordinatorCustomDuty
   static final String TOTAL_COUNT_OF_SEGMENTS_COMPACTED = "segmentCountCompacted";
   static final String TOTAL_INTERVAL_OF_SEGMENTS_COMPACTED = "segmentIntervalCompacted";
 
-  /** Must be synced with org.apache.druid.indexing.common.task.CompactionTask.TYPE. */
+  /**
+   * Must be synced with org.apache.druid.indexing.common.task.CompactionTask.TYPE.
+   */
   public static final String COMPACTION_TASK_TYPE = "compact";
-  /** Must be synced with org.apache.druid.indexing.common.task.Tasks.STORE_COMPACTION_STATE_KEY */
+  /**
+   * Must be synced with org.apache.druid.indexing.common.task.Tasks.STORE_COMPACTION_STATE_KEY
+   */
   public static final String STORE_COMPACTION_STATE_KEY = "storeCompactionState";
 
   private static final Logger LOG = new Logger(CompactSegments.class);
@@ -148,17 +152,21 @@ public class CompactSegments implements CoordinatorCustomDuty
             final ClientCompactionTaskQuery compactionTaskQuery = (ClientCompactionTaskQuery) response.getPayload();
             DataSourceCompactionConfig dataSourceCompactionConfig = compactionConfigs.get(status.getDataSource());
             if (dataSourceCompactionConfig != null && dataSourceCompactionConfig.getGranularitySpec() != null) {
-              Granularity configuredSegmentGranularity = dataSourceCompactionConfig.getGranularitySpec().getSegmentGranularity();
+              Granularity configuredSegmentGranularity = dataSourceCompactionConfig.getGranularitySpec()
+                                                                                   .getSegmentGranularity();
               if (configuredSegmentGranularity != null
                   && compactionTaskQuery.getGranularitySpec() != null
-                  && !configuredSegmentGranularity.equals(compactionTaskQuery.getGranularitySpec().getSegmentGranularity())) {
+                  && !configuredSegmentGranularity.equals(compactionTaskQuery.getGranularitySpec()
+                                                                             .getSegmentGranularity())) {
                 // We will cancel active compaction task if segmentGranularity changes and we will need to
                 // re-compact the interval
-                LOG.info("Canceled task[%s] as task segmentGranularity is [%s] but compaction config "
-                         + "segmentGranularity is [%s]",
-                         status.getId(),
-                         compactionTaskQuery.getGranularitySpec().getSegmentGranularity(),
-                         configuredSegmentGranularity);
+                LOG.info(
+                    "Canceled task[%s] as task segmentGranularity is [%s] but compaction config "
+                    + "segmentGranularity is [%s]",
+                    status.getId(),
+                    compactionTaskQuery.getGranularitySpec().getSegmentGranularity(),
+                    configuredSegmentGranularity
+                );
                 indexingServiceClient.cancelTask(status.getId());
                 continue;
               }
@@ -238,7 +246,7 @@ public class CompactSegments implements CoordinatorCustomDuty
           );
         } else {
           stats.addToGlobalStat(COMPACTION_TASK_COUNT, 0);
-          if (iteratorAndReset.rhs){
+          if (iteratorAndReset.rhs) {
             stats.accumulate(makeStats(currentRunAutoCompactionSnapshotBuilders, iteratorAndReset.lhs));
           }
         }
@@ -305,7 +313,8 @@ public class CompactSegments implements CoordinatorCustomDuty
   static int findMaxNumTaskSlotsUsedByOneCompactionTask(@Nullable ClientCompactionTaskQueryTuningConfig tuningConfig)
   {
     if (isParallelMode(tuningConfig)) {
-      @Nullable Integer maxNumConcurrentSubTasks = tuningConfig.getMaxNumConcurrentSubTasks();
+      @Nullable
+      Integer maxNumConcurrentSubTasks = tuningConfig.getMaxNumConcurrentSubTasks();
       // Max number of task slots used in parallel mode = maxNumConcurrentSubTasks + 1 (supervisor task)
       return (maxNumConcurrentSubTasks == null ? 1 : maxNumConcurrentSubTasks) + 1;
     } else {
@@ -373,7 +382,10 @@ public class CompactSegments implements CoordinatorCustomDuty
             k -> new AutoCompactionSnapshot.Builder(k, AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING)
         );
         snapshotBuilder.incrementBytesCompacted(segmentsToCompact.stream().mapToLong(DataSegment::getSize).sum());
-        snapshotBuilder.incrementIntervalCountCompacted(segmentsToCompact.stream().map(DataSegment::getInterval).distinct().count());
+        snapshotBuilder.incrementIntervalCountCompacted(segmentsToCompact.stream()
+                                                                         .map(DataSegment::getInterval)
+                                                                         .distinct()
+                                                                         .count());
         snapshotBuilder.incrementSegmentCountCompacted(segmentsToCompact.size());
 
         final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
@@ -396,7 +408,8 @@ public class CompactSegments implements CoordinatorCustomDuty
               LOG.warn("Cannot determine segmentGranularity from interval [%s]", interval);
             }
           } else {
-            LOG.warn("segmentsToCompact does not have the same interval. Fallback to not setting segmentGranularity for auto compaction task");
+            LOG.warn(
+                "segmentsToCompact does not have the same interval. Fallback to not setting segmentGranularity for auto compaction task");
           }
         } else {
           segmentGranularityToUse = config.getGranularitySpec().getSegmentGranularity();
@@ -456,7 +469,11 @@ public class CompactSegments implements CoordinatorCustomDuty
             "coordinator-issued",
             segmentsToCompact,
             config.getTaskPriority(),
-            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment(), config.getMetricsSpec() != null),
+            ClientCompactionTaskQueryTuningConfig.from(
+                config.getTuningConfig(),
+                config.getMaxRowsPerSegment(),
+                config.getMetricsSpec() != null
+            ),
             granularitySpec,
             dimensionsSpec,
             config.getMetricsSpec(),
