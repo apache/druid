@@ -70,6 +70,7 @@ import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.utils.CollectionUtils;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -138,42 +139,42 @@ class DruidSqlValidator extends BaseDruidSqlValidator
    */
   // TODO: Ensure the source and target are not the same
   @Override
-  public void validateInsert(SqlInsert insert)
+  public void validateInsert(final SqlInsert insert)
   {
-    DruidSqlIngest ingestNode = (DruidSqlIngest) insert;
+    final DruidSqlIngest ingestNode = (DruidSqlIngest) insert;
     if (insert.isUpsert()) {
       throw new IAE("UPSERT is not supported.");
     }
 
     // SQL-style INSERT INTO dst (a, b, c) is not (yet) supported.
-    String operationName = insert.getOperator().getName();
+    final String operationName = insert.getOperator().getName();
     if (insert.getTargetColumnList() != null) {
       throw new IAE("%s with a target column list is not supported.", operationName);
     }
 
     // The target namespace is both the target table ID and the row type for that table.
     final SqlValidatorNamespace targetNamespace = getNamespace(insert);
-    IdentifierNamespace insertNs = (IdentifierNamespace) targetNamespace;
+    final IdentifierNamespace insertNs = (IdentifierNamespace) targetNamespace;
 
     // The target is a new or existing datasource.
-    DatasourceTable table = validateInsertTarget(targetNamespace, insertNs, operationName);
+    final DatasourceTable table = validateInsertTarget(targetNamespace, insertNs, operationName);
 
     // An existing datasource may have metadata.
-    DatasourceFacade tableMetadata = table == null ? null : table.effectiveMetadata().catalogMetadata();
+    final DatasourceFacade tableMetadata = table == null ? null : table.effectiveMetadata().catalogMetadata();
 
     // Validate segment granularity, which depends on nothing else.
     validateSegmentGranularity(operationName, ingestNode, tableMetadata);
 
     // The source must be a SELECT
-    SqlNode source = insert.getSource();
-    validateInsertSelect(source, operationName);
+    final SqlNode source = insert.getSource();
+    ensureNoOrderBy(source, operationName);
 
     // Convert CLUSTERED BY, or the catalog equivalent, to an ORDER BY clause
-    SqlNodeList catalogClustering = convertCatalogClustering(tableMetadata);
+    final SqlNodeList catalogClustering = convertCatalogClustering(tableMetadata);
     rewriteClusteringToOrderBy(source, ingestNode, catalogClustering);
 
     // Validate the source statement. Validates the ORDER BY pushed down in the above step.
-    // Because of the odd Druid semantics, we can't define the target type: we don't know
+    // Because of the non-standard Druid semantics, we can't define the target type: we don't know
     // the target columns yet, and we can't infer types when they must come from the SELECT.
     // Normally, the target type is known, and is pushed into the SELECT. In Druid, the SELECT
     // usually defines the target types, unless the catalog says otherwise. Since catalog entries
@@ -188,8 +189,8 @@ class DruidSqlValidator extends BaseDruidSqlValidator
       validateQuery(source, scope, unknownType);
     }
 
-    SqlValidatorNamespace sourceNamespace = namespaces.get(source);
-    RelRecordType sourceType = (RelRecordType) sourceNamespace.getRowType();
+    final SqlValidatorNamespace sourceNamespace = namespaces.get(source);
+    final RelRecordType sourceType = (RelRecordType) sourceNamespace.getRowType();
 
     // Validate the __time column
     int timeColumnIndex = sourceType.getFieldNames().indexOf(Columns.TIME_COLUMN);
@@ -204,14 +205,14 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     validateClustering(sourceType, timeColumnIndex, ingestNode, catalogClustering);
 
     // Determine the output (target) schema.
-    RelDataType targetType = validateTargetType(insert, sourceType, tableMetadata);
+    final RelDataType targetType = validateTargetType(insert, sourceType, tableMetadata);
 
     // Set the type for the INSERT/REPLACE node
     setValidatedNodeType(insert, targetType);
 
     // Segment size
-    if (tableMetadata != null) {
-      Integer targetSegmentRows = tableMetadata.targetSegmentRows();
+    if (tableMetadata != null && !validatorContext.queryContextMap().containsKey(CTX_ROWS_PER_SEGMENT)) {
+      final Integer targetSegmentRows = tableMetadata.targetSegmentRows();
       if (targetSegmentRows != null) {
         validatorContext.queryContextMap().put(CTX_ROWS_PER_SEGMENT, targetSegmentRows);
       }
@@ -230,22 +231,22 @@ class DruidSqlValidator extends BaseDruidSqlValidator
   )
   {
     // Get the target table ID
-    SqlIdentifier destId = insertNs.getId();
+    final SqlIdentifier destId = insertNs.getId();
     if (destId.names.isEmpty()) {
       // I don't think this can happen, but include a branch for it just in case.
       throw new IAE("%s requires a target table.", operationName);
     }
 
     // Druid does not support 3+ part names.
-    int n = destId.names.size();
+    final int n = destId.names.size();
     if (n > 2) {
-      throw new IAE("Table name is undefined: %s", destId.toString());
+      throw new IAE("Druid does not support 3+ part names: [%s]", destId);
     }
     String tableName = destId.names.get(n - 1);
 
     // If this is a 2-part name, the first part must be the datasource schema.
     if (n == 2 && !validatorContext.druidSchemaName().equals(destId.names.get(0))) {
-      throw new IAE("Cannot %s into %s because it is not a Druid datasource.",
+      throw new IAE("Cannot %s into [%s] because the table is not in the 'druid' schema",
           operationName,
           destId
       );
@@ -258,7 +259,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
         return target.unwrap(DatasourceTable.class);
       }
       catch (Exception e) {
-        throw new IAE("Cannot %s into %s: it is not a datasource", operationName, destId);
+        throw new IAE("Cannot %s into [%s] because it is not a datasource", operationName, destId);
       }
     }
     catch (CalciteContextException e) {
@@ -270,7 +271,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
         // table already exists, rather than the default "lenient" mode that can
         // create a new table.
         if (validatorContext.catalog().ingestRequiresExistingTable()) {
-          throw new IAE("Cannot %s into %s because it does not exist", operationName, destId);
+          throw new IAE("Cannot %s into [%s] because it does not exist", operationName, destId);
         }
         // New table. Validate the shape of the name.
         IdUtils.validateId(operationName + " dataSource", tableName);
@@ -296,27 +297,38 @@ class DruidSqlValidator extends BaseDruidSqlValidator
       DruidSqlParserUtils.throwIfUnsupportedGranularityInPartitionedBy(ingestionGranularity);
     }
     final Granularity finalGranularity;
-    if (definedGranularity == null && ingestionGranularity == null) {
-      // Neither have a value: error
-      throw new IAE(
-          "%s statements must specify a PARTITIONED BY clause explicitly",
-          operationName
-      );
-    } else if (ingestionGranularity == null) {
-      // The query has no granularity: just apply the catalog granularity.
-      finalGranularity = definedGranularity;
-    } else if (definedGranularity == null) {
+    if (definedGranularity == null) {
       // The catalog has no granularity: apply the query value
-      finalGranularity = ingestionGranularity;
-    } else if (definedGranularity.equals(ingestionGranularity)) {
-      // Both have a setting. They have to be the same.
-      finalGranularity = definedGranularity;
+      if (ingestionGranularity == null) {
+        // Neither have a value: error
+        throw new IAE(
+            "%s statements must specify a PARTITIONED BY clause explicitly",
+            operationName
+        );
+      } else {
+        finalGranularity = ingestionGranularity;
+      }
     } else {
-      throw new IAE(
-          "PARTITIONED BY mismatch. Catalog: [%s], query: [%s]",
-          granularityToSqlString(definedGranularity),
-          granularityToSqlString(ingestionGranularity)
-      );
+      // The catalog has a granularity
+      if (ingestionGranularity == null) {
+        // The query has no granularity: just apply the catalog granularity.
+        finalGranularity = definedGranularity;
+      } else if (definedGranularity.equals(ingestionGranularity)) {
+        // Both have a setting and they are the same. We assume this would
+        // likely occur only when moving to the catalog, and old queries still
+        // contain the PARTITION BY clause.
+        finalGranularity = definedGranularity;
+      } else {
+        // Both have a setting but they are different. Since the user declared
+        // the grain, using a different one is an error. If the user wants to
+        // vary the grain across different (re)ingestions, then, at present, don't
+        // declare the grain in the catalog.
+        throw new IAE(
+            "PARTITIONED BY mismatch. Catalog: [%s], query: [%s]",
+            granularityToSqlString(definedGranularity),
+            granularityToSqlString(ingestionGranularity)
+        );
+      }
     }
 
     // Note: though this is the validator, we cheat a bit and write the target
@@ -334,21 +346,21 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     }
   }
 
-  private String granularityToSqlString(Granularity gran)
+  private String granularityToSqlString(final Granularity gran)
   {
     if (gran == null) {
       return "NULL";
     }
+    // The validation path will only ever see the ALL granularity or
+    // a period granularity. Neither the parser nor catalog can
+    // create a Duration granularity.
     if (Granularities.ALL == gran) {
       return "ALL TIME";
-    }
-    if (!(gran instanceof PeriodGranularity)) {
-      return gran.toString();
     }
     return ((PeriodGranularity) gran).getPeriod().toString();
   }
 
-  private void validateInsertSelect(
+  private void ensureNoOrderBy(
       SqlNode source,
       final String operationName
   )
@@ -365,20 +377,12 @@ class DruidSqlValidator extends BaseDruidSqlValidator
       );
     }
 
+    // Pull the SELECT statement out of the WITH clause
     if (source instanceof SqlWith) {
       source = ((SqlWith) source).getOperandList().get(1);
     }
-    if (source instanceof SqlSelect) {
-      SqlSelect select = (SqlSelect) source;
-      orderByList = select.getOrderList();
-      if (orderByList != null && orderByList.size() != 0) {
-        throw new IAE(
-            "ORDER BY is not supported within %s %s statement, use CLUSTERED BY instead.",
-            statementArticle(operationName),
-            operationName
-        );
-      }
-    } else {
+    // If the child of INSERT or WITH is not SELECT, then the statement is not valid.
+    if (!(source instanceof SqlSelect)) {
       throw new IAE(
           "%s is not supported within %s %s statement.",
           source.getKind(),
@@ -386,9 +390,20 @@ class DruidSqlValidator extends BaseDruidSqlValidator
           operationName
       );
     }
+
+    // Verify that the SELECT has no ORDER BY clause
+    SqlSelect select = (SqlSelect) source;
+    orderByList = select.getOrderList();
+    if (orderByList != null && orderByList.size() != 0) {
+      throw new IAE(
+          "ORDER BY is not supported within %s %s statement, use CLUSTERED BY instead.",
+          statementArticle(operationName),
+          operationName
+      );
+    }
   }
 
-  private String statementArticle(String operationName)
+  private String statementArticle(final String operationName)
   {
     return "INSERT".equals(operationName) ? "an" : "a";
   }
@@ -398,18 +413,18 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     if (tableMetadata == null) {
       return null;
     }
-    List<ClusterKeySpec> keyCols = tableMetadata.clusterKeys();
+    final List<ClusterKeySpec> keyCols = tableMetadata.clusterKeys();
     if (CollectionUtils.isNullOrEmpty(keyCols)) {
       return null;
     }
-    SqlNodeList keyNodes = new SqlNodeList(SqlParserPos.ZERO);
+    final SqlNodeList keyNodes = new SqlNodeList(SqlParserPos.ZERO);
     for (ClusterKeySpec keyCol : keyCols) {
-      SqlIdentifier colIdent = new SqlIdentifier(
+      final SqlIdentifier colIdent = new SqlIdentifier(
           Collections.singletonList(keyCol.expr()),
           null, SqlParserPos.ZERO,
           Collections.singletonList(SqlParserPos.ZERO)
           );
-      SqlNode keyNode;
+      final SqlNode keyNode;
       if (keyCol.desc()) {
         keyNode = SqlStdOperatorTable.DESC.createCall(SqlParserPos.ZERO, colIdent);
       } else {
@@ -418,6 +433,28 @@ class DruidSqlValidator extends BaseDruidSqlValidator
       keyNodes.add(keyNode);
     }
     return keyNodes;
+  }
+
+  // This part is a bit sad. By the time we get here, the validator will have created
+  // the ORDER BY namespace if we had a real ORDER BY. We have to "catch up" and do the
+  // work that registerQuery() should have done. That's kind of OK. But, the orderScopes
+  // variable is private, so we have to play dirty tricks to get at it.
+  //
+  // Warning: this may no longer work if Java forbids access to private fields in a
+  // future release.
+  private static final Field ORDER_SCOPES_FIELD;
+
+  static {
+    try {
+      ORDER_SCOPES_FIELD = FieldUtils.getDeclaredField(
+              SqlValidatorImpl.class,
+              "orderScopes",
+              true
+          );
+    }
+    catch (RuntimeException e) {
+      throw new ISE(e, "SqlValidatorImpl.orderScopes is not accessible");
+    }
   }
 
   /**
@@ -441,17 +478,14 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     while (source instanceof SqlWith) {
       source = ((SqlWith) source).getOperandList().get(1);
     }
-    SqlSelect select = (SqlSelect) source;
+    final SqlSelect select = (SqlSelect) source;
 
-    // This part is a bit sad. By the time we get here, the validator will have created
-    // the ORDER BY namespace if we had a real ORDER BY. We have to "catch up" and do the
-    // work that registerQuery() should have done. That's kind of OK. But, the orderScopes
-    // variable is private, so we have to play dirty tricks to get at it.
     select.setOrderBy(clusteredBy);
-    OrderByScope orderScope = ValidatorShim.newOrderByScope(scopes.get(select), clusteredBy, select);
+    final OrderByScope orderScope = ValidatorShim.newOrderByScope(scopes.get(select), clusteredBy, select);
     try {
       @SuppressWarnings("unchecked")
-      Map<SqlSelect, SqlValidatorScope> orderScopes = (Map<SqlSelect, SqlValidatorScope>) FieldUtils.getDeclaredField(SqlValidatorImpl.class, "orderScopes", true).get(this);
+      final Map<SqlSelect, SqlValidatorScope> orderScopes =
+          (Map<SqlSelect, SqlValidatorScope>) ORDER_SCOPES_FIELD.get(this);
       orderScopes.put(select, orderScope);
     }
     catch (Exception e) {
@@ -459,21 +493,24 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     }
   }
 
-  private void validateTimeColumn(RelRecordType sourceType, int timeColumnIndex)
+  private void validateTimeColumn(
+      final RelRecordType sourceType,
+      final int timeColumnIndex
+  )
   {
-    RelDataTypeField timeCol = sourceType.getFieldList().get(timeColumnIndex);
-    RelDataType timeColType = timeCol.getType();
+    final RelDataTypeField timeCol = sourceType.getFieldList().get(timeColumnIndex);
+    final RelDataType timeColType = timeCol.getType();
     if (timeColType instanceof BasicSqlType) {
-      BasicSqlType timeColSqlType = (BasicSqlType) timeColType;
-      SqlTypeName timeColSqlTypeName = timeColSqlType.getSqlTypeName();
+      final BasicSqlType timeColSqlType = (BasicSqlType) timeColType;
+      final SqlTypeName timeColSqlTypeName = timeColSqlType.getSqlTypeName();
       if (timeColSqlTypeName == SqlTypeName.BIGINT || timeColSqlTypeName == SqlTypeName.TIMESTAMP) {
         return;
       }
     }
     throw new IAE(
-        "Invalid %s column type %s: must be BIGINT or TIMESTAMP",
+        "Column [%s] is being used as the time column. It must be of type BIGINT or TIMESTAMP, got [%s]",
         timeCol.getName(),
-        timeColType.toString()
+        timeColType
     );
   }
 
@@ -513,9 +550,6 @@ class DruidSqlValidator extends BaseDruidSqlValidator
    * <p>
    * Ensure that each id exists. Ensure each column is included only once.
    * For an expression, just ensure it is valid; we don't check for duplicates.
-   * <p>
-   * Once the keys are validated, update the underlying {@code SELECT} statement
-   * to include the {@code CLUSTERED BY} as the {@code ORDER BY} clause.
    */
   private void validateClusteredBy(
       final RelRecordType sourceType,
@@ -530,18 +564,14 @@ class DruidSqlValidator extends BaseDruidSqlValidator
 
     // Process cluster keys
     for (SqlNode clusterKey : clusteredBy) {
-      Pair<Integer, Boolean> key = resolveClusterKey(clusterKey, fieldNames);
+      final Pair<Integer, Boolean> key = resolveClusterKey(clusterKey, fieldNames);
       // If an expression, index is null. Validation was done in the ORDER BY check.
       // Else, do additional MSQ-specific checks.
       if (key != null) {
         int index = key.left;
-        // Can't cluster by __time
-        if (index == timeColumnIndex) {
-          throw new IAE("Do not include %s in the CLUSTERED BY clause: it is managed by PARTITIONED BY", Columns.TIME_COLUMN);
-        }
         // No duplicate references
         if (refs[index]) {
-          throw new IAE("Duplicate CLUSTERED BY key: %s", clusterKey);
+          throw new IAE("Duplicate CLUSTERED BY key: [%s]", clusterKey);
         }
         refs[index] = true;
       }
@@ -568,29 +598,33 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     if (clusterKey instanceof SqlNumericLiteral) {
       // Key is an ordinal: CLUSTERED BY 2
       // Ordinals are 1-based.
-      int ord = ((SqlNumericLiteral) clusterKey).intValue(true);
-      int index = ord - 1;
+      final int ord = ((SqlNumericLiteral) clusterKey).intValue(true);
+      final int index = ord - 1;
 
       // The ordinal has to be in range.
       if (index < 0 || fieldNames.size() <= index) {
-        throw new IAE("CLUSTERED BY ordinal %d is not valid", ord);
+        throw new IAE(
+            "CLUSTERED BY ordinal [%d] should be non-negative and <= the number of fields [%d]",
+            ord,
+            fieldNames.size()
+        );
       }
       return new Pair<>(index, desc);
     } else if (clusterKey instanceof SqlIdentifier) {
       // Key is an identifier: CLUSTERED BY foo
-      SqlIdentifier key = (SqlIdentifier) clusterKey;
+      final SqlIdentifier key = (SqlIdentifier) clusterKey;
 
       // Only key of the form foo are allowed, not foo.bar
       if (!key.isSimple()) {
-        throw new IAE("CLUSTERED BY keys must be a simple name: '%s'", key.toString());
+        throw new IAE("CLUSTERED BY keys must be a simple name with no dots: [%s]", key.toString());
       }
 
       // The name must match an item in the select list
-      String keyName = key.names.get(0);
+      final String keyName = key.names.get(0);
       // Slow linear search. We assume that there are not many cluster keys.
-      int index = fieldNames.indexOf(keyName);
+      final int index = fieldNames.indexOf(keyName);
       if (index == -1) {
-        throw new IAE("CLUSTERED BY key column '%s' is not valid", keyName);
+        throw new IAE("Unknown column [%s] in CLUSTERED BY", keyName);
       }
       return new Pair<>(index, desc);
     } else {
@@ -612,12 +646,12 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     if (clusteredBy.size() != catalogClustering.size()) {
       throw clusterKeyMismatchException(catalogClustering, clusteredBy);
     }
-    List<String> fieldNames = sourceType.getFieldNames();
+    final List<String> fieldNames = sourceType.getFieldNames();
     for (int i = 0; i < clusteredBy.size(); i++) {
-      SqlNode catalogKey = catalogClustering.get(i);
-      SqlNode clusterKey = clusteredBy.get(i);
-      Pair<Integer, Boolean> catalogPair = resolveClusterKey(catalogKey, fieldNames);
-      Pair<Integer, Boolean> queryPair = resolveClusterKey(clusterKey, fieldNames);
+      final SqlNode catalogKey = catalogClustering.get(i);
+      final SqlNode clusterKey = clusteredBy.get(i);
+      final Pair<Integer, Boolean> catalogPair = resolveClusterKey(catalogKey, fieldNames);
+      final Pair<Integer, Boolean> queryPair = resolveClusterKey(clusterKey, fieldNames);
 
       // Cluster keys in the catalog must be field references. If unresolved,
       // we would have gotten an error above. Here we make sure that both
@@ -655,11 +689,14 @@ class DruidSqlValidator extends BaseDruidSqlValidator
   private RelDataType validateTargetType(SqlInsert insert, RelRecordType sourceType, DatasourceFacade tableMetadata)
   {
     final List<RelDataTypeField> sourceFields = sourceType.getFieldList();
-    for (RelDataTypeField sourceField : sourceFields) {
-      String colName = sourceField.getName();
+    for (int i = 0; i < sourceFields.size(); i++) {
+      final RelDataTypeField sourceField = sourceFields.get(i);
       // Check that there are no unnamed columns in the insert.
-      if (UNNAMED_COLUMN_PATTERN.matcher(colName).matches()) {
-        throw new IAE("Expressions must provide an alias to specify the target column: func(X) AS myColumn");
+      if (UNNAMED_COLUMN_PATTERN.matcher(sourceField.getName()).matches()) {
+        throw new IAE(
+            "Expression [%d] must provide an alias to specify the target column: func(X) AS myColumn",
+            i + 1
+        );
       }
     }
     if (tableMetadata == null) {
@@ -668,16 +705,16 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     final boolean isStrict = tableMetadata.isSealed();
     final List<Map.Entry<String, RelDataType>> fields = new ArrayList<>();
     for (RelDataTypeField sourceField : sourceFields) {
-      String colName = sourceField.getName();
-      ColumnFacade definedCol = tableMetadata.column(colName);
+      final String colName = sourceField.getName();
+      final ColumnFacade definedCol = tableMetadata.column(colName);
       if (definedCol == null) {
         // No catalog definition for this column.
         if (isStrict) {
           // Table is strict: cannot add new columns at ingest time.
           throw new IAE(
-              "Target column \"%s\".\"%s\" is not defined",
-              insert.getTargetTable(),
-              colName
+              "Column [%s] is not defined in the target table [%s] strict schema",
+              colName,
+              insert.getTargetTable()
           );
         }
 
@@ -695,24 +732,32 @@ class DruidSqlValidator extends BaseDruidSqlValidator
 
       // Both the column name and type are provided. Use the name and type
       // from the catalog.
-      // TODO: Handle error if type not found
-      String sqlTypeName = definedCol.sqlStorageType();
+      // Note to future readers: this check is preliminary. It works for the
+      // simple column types and has not yet been extended to complex types, aggregates,
+      // types defined in extensions, etc. It may be that SQL
+      // has types that Druid cannot store. This may crop up with types defined in
+      // extensions which are not loaded. Those details are not known at the time
+      // of this code so we are not yet in a position to make the right decision.
+      // This is a task to be revisited when we have more information.
+      final String sqlTypeName = definedCol.sqlStorageType();
       if (sqlTypeName == null) {
         // Don't know the storage type. Just skip this one: Druid types are
-        // fluid so let Druid sort out what to store.
+        // fluid so let Druid sort out what to store. This is probably not the right
+        // answer, but should avoid problems until full type system support is completed.
         fields.add(Pair.of(colName, sourceField.getType()));
         continue;
       }
-      SqlTypeName sqlType = SqlTypeName.get(sqlTypeName);
-      RelDataType targetType = typeFactory.createSqlType(sqlType);
-      fields.add(Pair.of(colName, targetType));
+      fields.add(Pair.of(
+           colName,
+           typeFactory.createSqlType(SqlTypeName.get(sqlTypeName))
+       ));
     }
 
     // Perform the SQL-standard check: that the SELECT column can be
     // converted to the target type. This check is retained to mimic SQL
     // behavior, but doesn't do anything because we enforced exact type
     // matches above.
-    RelDataType targetType = typeFactory.createStructType(fields);
+    final RelDataType targetType = typeFactory.createStructType(fields);
     checkTypeAssignment(sourceType, targetType, insert);
     return targetType;
   }

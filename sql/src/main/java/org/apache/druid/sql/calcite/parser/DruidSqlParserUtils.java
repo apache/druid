@@ -486,15 +486,23 @@ public class DruidSqlParserUtils
    */
   public static void throwIfUnsupportedGranularityInPartitionedBy(Granularity granularity)
   {
+    // Per Cheddar: week grain no longer supported.
     if (!GranularityType.isStandard(granularity)) {
       throw new IAE(
           "The granularity specified in PARTITIONED BY is not supported. "
           + "Please use an equivalent of these granularities: %s.",
           Arrays.stream(GranularityType.values())
-                .filter(granularityType -> !granularityType.equals(GranularityType.NONE))
+                .filter(granularityType ->
+                    !granularityType.equals(GranularityType.NONE) &&
+                    !granularityType.equals(GranularityType.WEEK))
                 .map(Enum::name)
                 .map(StringUtils::toLowerCase)
                 .collect(Collectors.joining(", "))
+      );
+    }
+    if (GranularityType.WEEK.getDefaultGranularity().equals(granularity)) {
+      throw new IAE(
+          "WEEK granularity is no longer supported"
       );
     }
   }

@@ -303,6 +303,30 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  public void testInsertFromExternalWithClause()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO dst\n" +
+             "WITH externalTable AS (\n" +
+             "  SELECT * FROM %s)\n" +
+             "SELECT * FROM externalTable\n" +
+             "PARTITIONED BY ALL TIME", externSql(externalDataSource))
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("dst", externalDataSource.getSignature())
+        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(externalDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("x", "y", "z")
+                .context(PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .expectLogicalPlanFrom("insertFromExternal")
+        .verify();
+  }
+
+  @Test
   public void testInsertFromExternalWithSchema()
   {
     String extern;
@@ -399,7 +423,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                     .put("'P1Y'", Granularities.YEAR)
                     .put("'hour'", Granularities.HOUR)
                     .put("'day'", Granularities.DAY)
-                    .put("'week'", Granularities.WEEK) // Strongly discouraged!
+                    // .put("'week'", Granularities.WEEK) // Disallowed!
                     .put("'month'", Granularities.MONTH)
                     .put("'quarter'", Granularities.QUARTER)
                     .put("'year'", Granularities.YEAR)
@@ -437,6 +461,30 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
       didTest = false;
     });
     didTest = true;
+  }
+
+  @Test
+  public void testWeekGranularityFails()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO druid.dst SELECT __time, dim1 FROM foo PARTITIONED BY 'week'")
+        .expectValidationError(
+            SqlPlanningException.class,
+            "WEEK granularity is no longer supported"
+         )
+        .verify();
+  }
+
+  @Test
+  public void testP1WGranularityFails()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO druid.dst SELECT __time, dim1 FROM foo PARTITIONED BY 'P1W'")
+        .expectValidationError(
+            SqlPlanningException.class,
+            "WEEK granularity is no longer supported"
+         )
+        .verify();
   }
 
   @Test
@@ -1087,7 +1135,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
                     "The granularity specified in PARTITIONED BY is not supported. "
                     + "Please use an equivalent of these granularities: second, minute, five_minute, ten_minute, "
-                    + "fifteen_minute, thirty_minute, hour, six_hour, eight_hour, day, week, month, quarter, year, all."))
+                    + "fifteen_minute, thirty_minute, hour, six_hour, eight_hour, day, month, quarter, year, all."))
             )
         )
         .verify();
