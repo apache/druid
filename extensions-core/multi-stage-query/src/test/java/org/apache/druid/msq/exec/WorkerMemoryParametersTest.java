@@ -21,6 +21,7 @@ package org.apache.druid.msq.exec;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.msq.indexing.error.MSQException;
+import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.NotEnoughMemoryFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
 import org.junit.Assert;
@@ -37,13 +38,16 @@ public class WorkerMemoryParametersTest
     Assert.assertEquals(parameters(3, 2, 48_910_000, 21_900_000, 75_000_000), compute(1_000_000_000, 1, 8, 1, 0));
     Assert.assertEquals(parameters(2, 2, 33_448_460, 14_976_922, 75_000_000), compute(1_000_000_000, 1, 12, 1, 0));
 
-    compute(1_588_044_000, 1, 32, 1, 0);
-
     final MSQException e = Assert.assertThrows(
         MSQException.class,
         () -> compute(1_000_000_000, 1, 32, 1, 0)
     );
     Assert.assertEquals(new NotEnoughMemoryFault(1_588_044_000, 1_000_000_000, 750_000_000, 1, 32), e.getFault());
+
+    final MSQFault fault = Assert.assertThrows(MSQException.class, () -> compute(1_000_000_000, 2, 32, 1, 0))
+                                 .getFault();
+
+    Assert.assertEquals(new NotEnoughMemoryFault(2024045333, 1_000_000_000, 750_000_000, 2, 32), fault);
 
   }
 

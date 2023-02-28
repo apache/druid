@@ -245,7 +245,7 @@ public class WorkerMemoryParameters
         // Not enough memory for even one worker. More of a NotEnoughMemory situation than a TooManyWorkers situation.
         throw new MSQException(
             new NotEnoughMemoryFault(
-                estimateTotalMemoryInJvmFromUsableMemory(
+                calculateSuggestedMinMemoryFromUsableMemory(
                     estimateUsableMemory(
                         numWorkersInJvm,
                         numProcessingThreadsInJvm,
@@ -266,7 +266,7 @@ public class WorkerMemoryParameters
     if (maxNumFramesForSuperSorter < MIN_SUPER_SORTER_FRAMES) {
       throw new MSQException(
           new NotEnoughMemoryFault(
-              estimateTotalMemoryInJvmFromUsableMemory(
+              calculateSuggestedMinMemoryFromUsableMemory(
                   estimateUsableMemory(
                       numWorkersInJvm,
                       (MIN_SUPER_SORTER_FRAMES + BUFFER_BYTES_FOR_ESTIMATION) * LARGE_FRAME_SIZE
@@ -480,10 +480,16 @@ public class WorkerMemoryParameters
 
   }
 
+  /**
+   * Add overheads to the estimated bundle memoery for all the workers. Checkout {@link WorkerMemoryParameters#memoryPerWorker(long, int)}
+   * for the overhead cacluation outside the processing bundles.
+   */
   private static long estimateUsableMemory(final int numWorkersInJvm, final long estimatedTotalBundleMemory)
   {
-    final long estimatedWorkerMemory = numWorkersInJvm * PARTITION_STATS_MEMORY_MAX_BYTES;
-    return estimatedTotalBundleMemory + estimatedWorkerMemory * numWorkersInJvm;
+
+    // Currently, we only add the partition stats overhead since it will be the single largest overhead per worker.
+    final long estimateStatOverHeadPerWorker = PARTITION_STATS_MEMORY_MAX_BYTES;
+    return estimatedTotalBundleMemory + (estimateStatOverHeadPerWorker * numWorkersInJvm);
   }
 
   private static long memoryNeededForInputChannels(final int numInputWorkers)
@@ -494,17 +500,18 @@ public class WorkerMemoryParameters
   }
 
   /**
-   * Amount of heap memory available for our usage. Any computation changes done to this method should also be done in its corresponding method {@link WorkerMemoryParameters#estimateTotalMemoryInJvmFromUsableMemory}
+   * Amount of heap memory available for our usage. Any computation changes done to this method should also be done in its corresponding method {@link WorkerMemoryParameters#calculateSuggestedMinMemoryFromUsableMemory}
    */
   private static long computeUsableMemoryInJvm(final long maxMemory, final long totalLookupFootprint)
   {
+    // since lookups are essentially in memory hashmap's, the object overhead is trivial hence its substracted prior to usable memory calculations.
     return (long) ((maxMemory - totalLookupFootprint) * USABLE_MEMORY_FRACTION);
   }
 
   /**
-   * Estimate amount of heap memory to use in case usable memory is provided. This method is used for bettter exception messages when {@link NotEnoughMemoryFault} is thrown.
+   * Estimate amount of heap memory for the given workload to use in case usable memory is provided. This method is used for better exception messages when {@link NotEnoughMemoryFault} is thrown.
    */
-  private static long estimateTotalMemoryInJvmFromUsableMemory(long usuableMemeory, final long totalLookupFootprint)
+  private static long calculateSuggestedMinMemoryFromUsableMemory(long usuableMemeory, final long totalLookupFootprint)
   {
     return (long) ((usuableMemeory / USABLE_MEMORY_FRACTION) + totalLookupFootprint);
   }
