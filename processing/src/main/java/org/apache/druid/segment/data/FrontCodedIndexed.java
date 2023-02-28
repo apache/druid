@@ -104,6 +104,8 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
   private final int adjustedNumValues;
   private final int adjustIndex;
   private final int bucketSize;
+  private final int[] unwindPrefixLength;
+  private final int[] unwindBufferPosition;
   private final int numBuckets;
   private final int div;
   private final int rem;
@@ -146,9 +148,13 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
       this.getBucketValueFn = FrontCodedIndexed::getFromBucketV0;
       this.readBucketFn = FrontCodedIndexed::readBucketV0;
       this.findInBucketFn = this::findValueInBucketV0;
+      this.unwindPrefixLength = null;
+      this.unwindBufferPosition = null;
     } else {
       // version one uses 'incremental' buckets, where the prefix is computed against the previous value
-      this.getBucketValueFn = FrontCodedIndexed::getFromBucketV1;
+      this.unwindPrefixLength = new int[bucketSize];
+      this.unwindBufferPosition = new int[bucketSize];
+      this.getBucketValueFn = this::getFromBucketV1;
       this.readBucketFn = FrontCodedIndexed::readBucketV1;
       this.findInBucketFn = this::findValueInBucketV1;
     }
@@ -177,7 +183,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     final int bucketIndex = adjustedIndex & rem;
     final int offset = getBucketOffset(bucket);
     buffer.position(offset);
-    return getBucketValueFn.get(buffer, bucketIndex, bucketSize);
+    return getBucketValueFn.get(buffer, bucketIndex);
   }
 
   @Override
@@ -458,7 +464,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
    * <p>
    * This method modifies the position of the buffer.
    */
-  static ByteBuffer getFromBucketV0(ByteBuffer buffer, int offset, int bucketSize)
+  static ByteBuffer getFromBucketV0(ByteBuffer buffer, int offset)
   {
     int prefixPosition;
     if (offset == 0) {
@@ -604,33 +610,110 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     return -(currBucketFirstValueIndex + adjustIndex) + (-(insertionPoint) - 1);
   }
 
-
-  static ByteBuffer getFromBucketV1(ByteBuffer bucket, int offset, int numValues)
+  private ByteBuffer getFromBucketV1(ByteBuffer buffer, int offset)
   {
     // first value is written whole
-    final int length = VByte.readInt(bucket);
-    byte[] prefixBytes = new byte[length];
-    bucket.get(prefixBytes, 0, length);
+    final int length = VByte.readInt(buffer);
     if (offset == 0) {
+      byte[] prefixBytes = new byte[length];
+      buffer.get(prefixBytes, 0, length);
       return ByteBuffer.wrap(prefixBytes);
     }
-    ByteBuffer currentBuffer = ByteBuffer.wrap(prefixBytes);
-    int pos = 1;
-    while (pos < numValues) {
-      final int prefixLength = VByte.readInt(bucket);
-      final int fragmentLength = VByte.readInt(bucket);
-      byte[] nextValueBytes = new byte[prefixLength + fragmentLength];
-      System.arraycopy(prefixBytes, 0, nextValueBytes, 0, prefixLength);
-      bucket.get(nextValueBytes, prefixLength, fragmentLength);
-      final ByteBuffer value = ByteBuffer.wrap(nextValueBytes);
-      if (pos == offset) {
-        return value;
+    int pos = 0;
+    int prefixLength;
+    int fragmentLength;
+    unwindPrefixLength[pos] = 0;
+    unwindBufferPosition[pos] = buffer.position();
+
+    buffer.position(buffer.position() + length);
+    do {
+      prefixLength = VByte.readInt(buffer);
+      if (++pos < offset) {
+        // not there yet, no need to read anything other than the length to skip ahead
+        final int skipLength = VByte.readInt(buffer);
+        unwindPrefixLength[pos] = prefixLength;
+        unwindBufferPosition[pos] = buffer.position();
+        buffer.position(buffer.position() + skipLength);
+      } else {
+        // we've reached our destination
+        fragmentLength = VByte.readInt(buffer);
+        break;
       }
-      prefixBytes = nextValueBytes;
-      currentBuffer = value;
-      pos++;
+    } while (true);
+    final int valueLength = prefixLength + fragmentLength;
+    final byte[] valueBytes = new byte[valueLength];
+    buffer.get(valueBytes, prefixLength, fragmentLength);
+    for (int i = prefixLength - 1; i >= 0;) {
+      pos--;
+      // previous value had a larger prefix than or the same as the value we are looking for
+      // skip it since the fragment doesn't have anything we need
+      if (unwindPrefixLength[pos] >= prefixLength) {
+        continue;
+      }
+      while (i >= unwindPrefixLength[pos]) {
+        valueBytes[i] = buffer.get(unwindBufferPosition[pos] + (i - unwindPrefixLength[pos]));
+        i--;
+      }
     }
-    return currentBuffer;
+    return ByteBuffer.wrap(valueBytes);
+  }
+
+  /**
+   * same as {@link #getFromBucketV1(ByteBuffer, int)} but without re-using prefixLength and buffer position
+   * arrays so has more overhead/garbage creation than the instance method.
+   *
+   * Note: adding the unwindPrefixLength and unwindBufferPosition arrays as arguments and having
+   * {@link #getFromBucketV1(ByteBuffer, int)} call this static method added 5-10ns of overhead compared to having its
+   * own copy of the code, presumably due to the overhead of an additional method call and extra arguments.
+   */
+  static ByteBuffer getFromBucketV1(ByteBuffer buffer, int offset, int bucketSize)
+  {
+    final int[] unwindPrefixLength = new int[bucketSize];
+    final int[] unwindBufferPosition = new int[bucketSize];
+    // first value is written whole
+    final int length = VByte.readInt(buffer);
+    if (offset == 0) {
+      byte[] prefixBytes = new byte[length];
+      buffer.get(prefixBytes, 0, length);
+      return ByteBuffer.wrap(prefixBytes);
+    }
+    int pos = 0;
+    int prefixLength;
+    int fragmentLength;
+    unwindPrefixLength[pos] = 0;
+    unwindBufferPosition[pos] = buffer.position();
+
+    buffer.position(buffer.position() + length);
+    do {
+      prefixLength = VByte.readInt(buffer);
+      if (++pos < offset) {
+        // not there yet, no need to read anything other than the length to skip ahead
+        final int skipLength = VByte.readInt(buffer);
+        unwindPrefixLength[pos] = prefixLength;
+        unwindBufferPosition[pos] = buffer.position();
+        buffer.position(buffer.position() + skipLength);
+      } else {
+        // we've reached our destination
+        fragmentLength = VByte.readInt(buffer);
+        break;
+      }
+    } while (true);
+    final int valueLength = prefixLength + fragmentLength;
+    final byte[] valueBytes = new byte[valueLength];
+    buffer.get(valueBytes, prefixLength, fragmentLength);
+    for (int i = prefixLength - 1; i >= 0;) {
+      pos--;
+      // previous value had a larger prefix than or the same as the value we are looking for
+      // skip it since the fragment doesn't have anything we need
+      if (unwindPrefixLength[pos] >= prefixLength) {
+        continue;
+      }
+      while (i >= unwindPrefixLength[pos]) {
+        valueBytes[i] = buffer.get(unwindBufferPosition[pos] + (i - unwindPrefixLength[pos]));
+        i--;
+      }
+    }
+    return ByteBuffer.wrap(valueBytes);
   }
 
 
@@ -664,7 +747,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
   @FunctionalInterface
   interface GetBucketValue
   {
-    ByteBuffer get(ByteBuffer buffer, int offset, int bucketSize);
+    ByteBuffer get(ByteBuffer buffer, int offset);
   }
 
   @FunctionalInterface

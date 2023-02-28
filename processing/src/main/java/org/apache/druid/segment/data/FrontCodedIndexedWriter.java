@@ -224,7 +224,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
       bucketBuffer.clear();
       final ByteBuffer valueBuffer = useIncrementalBuckets
                                      ? FrontCodedIndexed.getFromBucketV1(bucketBuffer, relativeIndex, bucketSize)
-                                     : FrontCodedIndexed.getFromBucketV0(bucketBuffer, relativeIndex, bucketSize);
+                                     : FrontCodedIndexed.getFromBucketV0(bucketBuffer, relativeIndex);
       final byte[] valueBytes = new byte[valueBuffer.limit() - valueBuffer.position()];
       valueBuffer.get(valueBytes);
       return valueBytes;
