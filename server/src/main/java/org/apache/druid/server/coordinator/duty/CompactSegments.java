@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.ClientCompactionTaskDimensionsSpec;
