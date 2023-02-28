@@ -81,7 +81,7 @@ public class JsonReader extends IntermediateRowParsingReader<String>
         flattenSpec,
         new JSONFlattenerMaker(
             keepNullColumns,
-            inputRowSchema.getDimensionsSpec().useNestedColumnIndexerForSchemaDiscovery()
+            inputRowSchema.getDimensionsSpec().useSchemaDiscovery()
         )
     );
     this.mapper = mapper;
