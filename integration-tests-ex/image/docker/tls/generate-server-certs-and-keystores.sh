@@ -68,7 +68,7 @@ openssl x509 -req -days 3650 -in server.csr -CA /shared/client_tls/root.pem -CAk
 openssl pkcs12 -export -in server.pem -inkey server.key -out server.p12 -name druid -CAfile /shared/client_tls/root.pem -caname druid-it-root -password pass:druid123
 
 # Create a Java truststore with the druid test cluster root CA
-keytool -import -alias druid-it-root -keystore /shared/client_tls/truststore.jks -file /shared/client_tls/root.pem -storepass druid123 -noprompt
+keytool -import -alias druid-it-root -keystore truststore.jks -file /shared/client_tls/root.pem -storepass druid123 -noprompt
 
 # Revoke one of the client certs
 openssl ca -revoke /shared/client_tls/revoked_client.pem -config root.cnf -cert /shared/client_tls/root.pem -keyfile /shared/client_tls/root.key

@@ -16,6 +16,8 @@
 # limitations under the License.
 
 tls_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=set-docker-host-ip.sh
+source "$tls_dir/set-docker-host-ip.sh"
 
 cat <<EOT > expired_csr.conf
 [req]
@@ -39,7 +41,7 @@ subjectAltName = @alt_names
 basicConstraints=CA:FALSE,pathlen:0
 
 [ alt_names ]
-IP.1 = ${DOCKER_IP}
+IP.1 = ${DOCKER_HOST_IP}
 IP.2 = 127.0.0.1
 IP.3 = 172.172.172.1
 IP.4 = ${DOCKER_MACHINE_IP:=127.0.0.1}
@@ -99,7 +101,7 @@ commonName              = supplied
 emailAddress            = optional
 
 [ alt_names ]
-IP.1 = ${DOCKER_IP}
+IP.1 = ${DOCKER_HOST_IP}
 IP.2 = 127.0.0.1
 IP.3 = 172.172.172.1
 IP.4 = ${DOCKER_MACHINE_IP:=127.0.0.1}
