@@ -21,8 +21,11 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.indexing.common.actions.LockListAction;
+import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -37,6 +40,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -137,8 +141,8 @@ public class TombstoneHelperTest
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
 
     Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
-        ImmutableList.of(replaceInterval),
         ImmutableList.of(intervalToDrop),
+        ImmutableList.of(replaceInterval),
         "test",
         replaceGranularity
     );
@@ -171,8 +175,8 @@ public class TombstoneHelperTest
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
 
     Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
-        ImmutableList.of(replaceInterval),
         ImmutableList.of(intervalToDrop),
+        ImmutableList.of(replaceInterval),
         "test",
         replaceGranularity
     );
@@ -207,8 +211,8 @@ public class TombstoneHelperTest
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
 
     Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
-        ImmutableList.of(replaceInterval),
         ImmutableList.of(intervalToDrop),
+        ImmutableList.of(replaceInterval),
         "test",
         replaceGranularity
     );
@@ -236,11 +240,47 @@ public class TombstoneHelperTest
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
 
     Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
-        ImmutableList.of(replaceInterval),
         ImmutableList.of(intervalToDrop),
+        ImmutableList.of(replaceInterval),
         "test",
         replaceGranularity
     );
     Assert.assertEquals(ImmutableSet.of(), tombstoneIntervals);
+  }
+
+  @Test
+  public void testTombstoneSegmentsForReplaceWhenLockRevoked() throws IOException
+  {
+    Interval usedInterval = Intervals.of("2020-02-01/2020-04-01");
+    Interval replaceInterval = Intervals.of("2020-03-01/2020-03-31");
+    Interval intervalToDrop = Intervals.of("2020-03-05/2020-03-07");
+    Granularity replaceGranularity = Granularities.DAY;
+
+    DataSegment existingUsedSegment =
+        DataSegment.builder()
+                   .dataSource("test")
+                   .interval(usedInterval)
+                   .version("oldVersion")
+                   .size(100)
+                   .build();
+    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Mockito.when(taskActionClient.submit(any(RetrieveUsedSegmentsAction.class)))
+           .thenReturn(Collections.singletonList(existingUsedSegment));
+    Mockito.when(taskActionClient.submit(any(LockListAction.class)))
+           .thenReturn(ImmutableList.of());
+
+    TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
+
+    Assert.assertThrows(
+        ISE.class,
+        () -> {
+          tombstoneHelper.computeTombstoneSegmentsForReplace(
+              ImmutableList.of(intervalToDrop),
+              ImmutableList.of(replaceInterval),
+              "test",
+              replaceGranularity
+          );
+        }
+    );
   }
 }

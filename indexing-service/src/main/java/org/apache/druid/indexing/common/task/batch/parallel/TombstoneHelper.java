@@ -132,8 +132,8 @@ public class TombstoneHelper
   ) throws IOException
   {
     Set<Interval> tombstoneIntervals = computeTombstoneIntervalsForReplace(
-        intervalsToReplace,
         intervalsToDrop,
+        intervalsToReplace,
         dataSource,
         replaceGranularity
     );
@@ -177,8 +177,8 @@ public class TombstoneHelper
    * @throws IOException
    */
   public Set<Interval> computeTombstoneIntervalsForReplace(
-      List<Interval> intervalsToReplace,
       List<Interval> intervalsToDrop,
+      List<Interval> intervalsToReplace,
       String dataSource,
       Granularity replaceGranularity
   ) throws IOException
