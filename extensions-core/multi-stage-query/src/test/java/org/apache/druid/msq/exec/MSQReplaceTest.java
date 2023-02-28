@@ -21,6 +21,7 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
@@ -713,6 +714,26 @@ public class MSQReplaceTest extends MSQTestBase
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment)).when(testTaskActionClient).submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
 
+    List<Object[]> expectedResults;
+    if (NullHandling.sqlCompatible()) {
+      expectedResults = ImmutableList.of(
+          new Object[]{946684800000L, "", 1L},
+          new Object[]{946771200000L, "10.1", 1L},
+          new Object[]{946857600000L, "2", 1L},
+          new Object[]{978307200000L, "1", 1L},
+          new Object[]{978393600000L, "def", 1L},
+          new Object[]{978480000000L, "abc", 1L}
+      );
+    } else {
+      expectedResults = ImmutableList.of(
+          new Object[]{946771200000L, "10.1", 1L},
+          new Object[]{946857600000L, "2", 1L},
+          new Object[]{978307200000L, "1", 1L},
+          new Object[]{978393600000L, "def", 1L},
+          new Object[]{978480000000L, "abc", 1L}
+      );
+    }
+
     testIngestQuery().setSql(
                          "REPLACE INTO foo1 "
                          + "OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' and __time < TIMESTAMP '2002-01-01 00:00:00'"
@@ -732,15 +753,7 @@ public class MSQReplaceTest extends MSQTestBase
                              Intervals.of("2001-10-01/P3M")
                          )
                      )
-                     .setExpectedResultRows(
-                         ImmutableList.of(
-                             new Object[]{946771200000L, "10.1", 1L},
-                             new Object[]{946857600000L, "2", 1L},
-                             new Object[]{978307200000L, "1", 1L},
-                             new Object[]{978393600000L, "def", 1L},
-                             new Object[]{978480000000L, "abc", 1L}
-                         )
-                     )
+                     .setExpectedResultRows(expectedResults)
                      .verifyResults();
   }
 
