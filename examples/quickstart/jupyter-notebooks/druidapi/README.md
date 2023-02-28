@@ -22,7 +22,7 @@
 
 `druidapi` is a Python library to interact with all aspects of your
 [Apache Druid](https://druid.apache.org/) cluster. 
-`druidapi` picks up where the venerable [pydruid](https://github.com/druid-io/pydruid) lbrary 
+`druidapi` picks up where the venerable [pydruid](https://github.com/druid-io/pydruid) library 
 left off to include full SQL support and support for many of of Druid APIs. `druidapi` is usable 
 in any Python environment, but is optimized for use in Jupyter, providing a complete interactive
 environment which complements the UI-based Druid console. The primary use of `druidapi` at present
@@ -43,18 +43,18 @@ in that area are welcome.
 
 Dependencies are listed in `requirements.txt`.
 
-`druidapi` works against any version of Druid. Opeations that exploit newer features obviously work
+`druidapi` works against any version of Druid. Operations that exploit newer features obviously work
 only against versions of Druid that support those features.
 
 ## Getting Started
 
-To use `druidapi`, you must first import the library, then connect to your cluster by providing the URL to your Router instance. The way that is done differs a bit between consumers.
+To use `druidapi`, first import the library, then connect to your cluster by providing the URL to your Router instance. The way that is done differs a bit between consumers.
 
 ### From a Tutorial Jupyter Notebook
 
 The tutorial Jupyter notebooks in `examples/quickstart/jupyter-notebooks` reside in the same directory tree
 as this library. We start the library using the Jupyter-oriented API which is able to render tables in
-HTML. First, identify your router endpoint. For a local installation:
+HTML. First, identify your Router endpoint. Use the following for a local installation:
 
 ```python
 router_endpoint = 'http://localhost:8888'

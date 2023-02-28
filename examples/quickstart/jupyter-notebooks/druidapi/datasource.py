@@ -27,7 +27,7 @@ REQ_DS_LOAD_STATUS = REQ_DATASOURCES + '/{}/loadstatus'
 
 class DatasourceClient:
     '''
-    Client for datasource APIs. Prefer to use the SQL to query the
+    Client for datasource APIs. Prefer to use SQL to query the
     INFORMATION_SCHEMA to obtain information.
 
     See https://druid.apache.org/docs/latest/operations/api-reference.html#datasources

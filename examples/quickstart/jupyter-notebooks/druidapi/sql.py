@@ -416,7 +416,7 @@ class SqlQueryResult:
 class QueryTaskResult:
     '''
     Response from an asynchronous MSQ query, which may be an ingestion or a retrieval
-    query. Can monitor task progreess and wait for the task to complete. For a SELECT query,
+    query. Can monitor task progress and wait for the task to complete. For a SELECT query,
     obtains the rows from the task reports. There are no results for an ingestion query,
     just a success/failure status.
 
@@ -459,7 +459,7 @@ class QueryTaskResult:
     def ok(self):
         '''
         Reports if the query completed successfully or is still running.
-        Use suceeded() to check if the task is done and successful.
+        Use succeeded() to check if the task is done and successful.
         '''
         return not self._error
 
@@ -499,7 +499,7 @@ class QueryTaskResult:
     def done(self):
         '''
         Reports whether the query is done. The query is done when the Overlord task
-        which runs the query completes. A completed task is one with a status of either
+        that runs the query completes. A completed task is one with a status of either
         SUCCESS or FAILED.
         '''
         return self._state == consts.FAILED_STATE or self._state == consts.SUCCESS_STATE
@@ -572,7 +572,7 @@ class QueryTaskResult:
 
     def wait(self):
         '''
-        Wait for a SELECT query to finish running, then return the rows from the query.
+        Wait for a SELECT query to finish running, then returns the rows from the query.
         '''
         self.wait_until_done()
         return self.rows
@@ -693,7 +693,7 @@ class QueryClient:
 
     def sql(self, sql, *args) -> list:
         '''
-        Run a SQL query and return the results. Typically used to retieve data as part
+        Run a SQL query and return the results. Typically used to receive data as part
         of another operation, rathre than to display results to the user.
 
         Parameters
@@ -729,13 +729,13 @@ class QueryClient:
 
     def sql_request(self, sql) -> SqlRequest:
         '''
-        Create a SqlRequest object for the given SQL query text.
+        Creates a SqlRequest object for the given SQL query text.
         '''
         return SqlRequest(self, sql)
 
     def task(self, query) -> QueryTaskResult:
         '''
-        Submit an MSQ query. Returns a QueryTaskResult to track the task.
+        Submits an MSQ query. Returns a QueryTaskResult to track the task.
 
         Parameters
         ----------
@@ -748,7 +748,7 @@ class QueryClient:
 
     def run_task(self, query):
         '''
-        Submit an MSQ query and wait for completion. Returns a QueryTaskResult to track the task.
+        Submits an MSQ query and wait for completion. Returns a QueryTaskResult to track the task.
 
         Parameters
         ----------
@@ -770,7 +770,7 @@ class QueryClient:
 
     def tables(self, schema=consts.DRUID_SCHEMA):
         '''
-        Return a list of tables in the given schema.
+        Returns a list of tables in the given schema.
 
         Parameters
         ----------
@@ -804,7 +804,7 @@ class QueryClient:
 
     def table_schema(self, table_name):
         '''
-        Return the schema of a table as an array of dictionaries of the
+        Returns the schema of a table as an array of dictionaries of the
         form {"Position": "<n>", "Name": "<name>", "Type": "<type>"}
  
         Parameters
@@ -831,7 +831,7 @@ class QueryClient:
 
     def function_parameters(self,  table_name):
         '''
-        Retrieve the list of parameters for a partial external table defined in
+        Retruns the list of parameters for a partial external table defined in
         the Druid catalog. Returns the parameters as an array of objects in the
         form {"Position": <n>, "Parameter": "<name>", "Type": "<type>",
               "Optional": True|False}
@@ -846,7 +846,7 @@ class QueryClient:
 
     def wait_until_ready(self, table_name):
         '''
-        Wait for a datasource to be loaded in the cluster, and to become available to SQL.
+        Waits for a datasource to be loaded in the cluster, and to become available to SQL.
 
         Parameters
         ----------

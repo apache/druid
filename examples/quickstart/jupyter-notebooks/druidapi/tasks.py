@@ -43,12 +43,16 @@ class TaskClient:
             Filter list of tasks by task state. Valid options are "running", 
             "complete", "waiting", and "pending". Constants are defined for
             each of these in the `consts` file.
-        table  str, default = None
-            Return tasks for the this one Druid table (datasource).
+
+        table: str, default = None
+            Return tasks for only for one Druid table (datasource).
+
         created_time_interval: str, Default = None
             Return tasks created within the specified interval.
+
         max: int, default = None
             Maximum number of "complete" tasks to return. Only applies when state is set to "complete".
+
         task_type: str, default = None
             Filter tasks by task type.
 
@@ -59,7 +63,7 @@ class TaskClient:
         params = {}
         if state:
             params['state'] = state
-        if table :
+        if table:
             params['datasource'] = table
         if task_type:
             params['type'] = task_type
@@ -80,7 +84,7 @@ class TaskClient:
 
         Returns
         -------
-            The task payload as a Python dictionary.
+        The task payload as a Python dictionary.
 
         Reference
         ---------
@@ -99,8 +103,8 @@ class TaskClient:
 
         Returns
         -------
-            The task status as a Python dictionary. See the `consts` module for a list
-            of status codes.
+        The task status as a Python dictionary. See the `consts` module for a list
+        of status codes.
 
         Reference
         ---------
@@ -119,7 +123,7 @@ class TaskClient:
 
         Returns
         -------
-            The task reports as a Python dictionary.
+        The task reports as a Python dictionary.
 
         Reference
         ---------
@@ -140,11 +144,8 @@ class TaskClient:
 
         Returns
         -------
-            The REST response.
+        The REST response.
 
-        Returns
-        -------
-            The REST response.
         Reference
         ---------
         `POST /druid/indexer/v1/task`
@@ -181,7 +182,7 @@ class TaskClient:
 
         Returns
         -------
-            The REST response.
+        The REST response.
         
         Reference
         ---------

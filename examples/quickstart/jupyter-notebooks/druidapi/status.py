@@ -62,7 +62,7 @@ class StatusClient:
     @property
     def is_healthy(self) -> bool:
         '''
-        Returns `True` if the node is healthy, `False`` otherwise. Check service health
+        Returns `True` if the node is healthy, `False` otherwise. Check service health
         before using other Druid API methods to ensure the server is ready.
 
         See also `wait_until_ready()`.
@@ -119,6 +119,6 @@ class StatusClient:
     @property
     def brokers(self):
         '''
-        Retrieve the list of broker nodes known to this node. Must be called on the Router.
+        Returns the list of broker nodes known to this node. Must be called on the Router.
         '''
         return self.rest_client.get_json(REQ_BROKERS)

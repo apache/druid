@@ -23,7 +23,7 @@ def check_error(response):
     Raises an HttpError from the requests library if the response code is neither
     OK (200) nor Accepted (202).
 
-    Druid's REST API is inconsistent with how it resports errors. Some APIs return
+    Druid's REST API is inconsistent with how it reports errors. Some APIs return
     an error as a JSON object. Others return a text message. Still others return
     nothing at all. With the JSON format, sometimes the error returns an
     'errorMessage' field, other times only a generic 'error' field.
@@ -41,7 +41,7 @@ def check_error(response):
     try:
         json = response.json()
     except Exception:
-        # If we can't get the JSON, raise a Requets error
+        # If we can't get the JSON, raise a Requests error
         response.raise_for_status()
     
     # Druid JSON payload. Try to make sense of the error
@@ -134,7 +134,7 @@ class DruidRestClient:
 
         params: dict, default = None
             Optional map of query variables to send in
-            the URL. Query parameters are the name/values pairs
+            the URL. Query parameters are the name/value pairs
             that appear after the `?` marker.
 
         require_ok: bool, default = True
@@ -178,7 +178,7 @@ class DruidRestClient:
 
     def post_json(self, req, body, args=None, headers=None, params=None) -> requests.Response:
         '''
-        Issues a POST request for the given URL on this node, with a JSON request, returning
+        Issues a POST request for the given URL on this node, with a JSON request. Returns
         the JSON response.
 
         Parameters
