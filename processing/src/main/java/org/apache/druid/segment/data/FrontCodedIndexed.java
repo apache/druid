@@ -21,6 +21,7 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -118,6 +119,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
   private final ReadBucket readBucketFn;
   private final FindInBucket findInBucketFn;
 
+  @SuppressFBWarnings(value = "NP_STORE_INTO_NONNULL_FIELD", justification = "V0 does not use unwindPrefixLength or unwindBufferPosition")
   private FrontCodedIndexed(
       ByteBuffer buffer,
       ByteOrder order,
@@ -148,7 +150,9 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
       this.getBucketValueFn = FrontCodedIndexed::getFromBucketV0;
       this.readBucketFn = FrontCodedIndexed::readBucketV0;
       this.findInBucketFn = this::findValueInBucketV0;
+      //noinspection DataFlowIssue
       this.unwindPrefixLength = null;
+      //noinspection DataFlowIssue
       this.unwindBufferPosition = null;
     } else {
       // version one uses 'incremental' buckets, where the prefix is computed against the previous value
