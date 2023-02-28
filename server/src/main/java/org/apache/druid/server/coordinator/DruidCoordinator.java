@@ -253,7 +253,7 @@ public class DruidCoordinator
     this.factory = factory;
     this.lookupCoordinatorManager = lookupCoordinatorManager;
     this.coordLeaderSelector = coordLeaderSelector;
-    this.compactSegments = initializeCompactSegmentsDuty();
+    this.compactSegments = initializeCompactSegmentsDuty(compactionSegmentSearchPolicy);
     this.segmentStateManager = segmentStateManager;
   }
 
