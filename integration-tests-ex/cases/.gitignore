@@ -1,1 +1,7 @@
 /bin/
+client_tls/
+override.env
+tls/root.key
+tls/root.pem
+tls/untrusted_root.key
+tls/untrusted_root.pem
