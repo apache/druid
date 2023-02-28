@@ -79,7 +79,7 @@ Make sure you meet the following requirements before starting the Jupyter-based 
   ./it.sh up <category>
   ```
 
-  Replace `<catagory>` with one of the available integration test categories. See the integration
+  Replace `<category>` with one of the available integration test categories. See the integration
   test `README.md` for details.
 
 ## Simple Druid API
