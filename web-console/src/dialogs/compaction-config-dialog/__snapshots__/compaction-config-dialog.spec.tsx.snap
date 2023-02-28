@@ -357,6 +357,12 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
       className="bp4-dialog-footer-actions"
     >
       <Blueprint4.Button
+        className="history-button"
+        minimal={true}
+        onClick={[Function]}
+        text="History"
+      />
+      <Blueprint4.Button
         intent="danger"
         onClick={[Function]}
         text="Delete"
@@ -732,6 +738,12 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
     <div
       className="bp4-dialog-footer-actions"
     >
+      <Blueprint4.Button
+        className="history-button"
+        minimal={true}
+        onClick={[Function]}
+        text="History"
+      />
       <Blueprint4.Button
         intent="danger"
         onClick={[Function]}
@@ -1109,6 +1121,12 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
       className="bp4-dialog-footer-actions"
     >
       <Blueprint4.Button
+        className="history-button"
+        minimal={true}
+        onClick={[Function]}
+        text="History"
+      />
+      <Blueprint4.Button
         intent="danger"
         onClick={[Function]}
         text="Delete"
@@ -1484,6 +1502,12 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
     <div
       className="bp4-dialog-footer-actions"
     >
+      <Blueprint4.Button
+        className="history-button"
+        minimal={true}
+        onClick={[Function]}
+        text="History"
+      />
       <Blueprint4.Button
         onClick={[Function]}
         text="Close"
