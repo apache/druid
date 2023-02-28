@@ -56,6 +56,7 @@ IP.2 = ${MY_IP}
 IP.3 = 127.0.0.1
 DNS.1 = ${MY_HOSTNAME}
 DNS.2 = localhost
+DNS.3 = ${DRUID_SERVICE}
 
 EOT
 

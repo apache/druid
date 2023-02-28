@@ -36,3 +36,21 @@ jobs:
       script: ./it.sh github ${{ matrix.it }}
       it: ${{ matrix.it }}
       mysql_driver: com.mysql.jdbc.Driver
+
+  query-it:
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: [ 8 ]
+        it: [ Query, QueryRetry, QueryError ]
+        indexer: [ middleManager ]
+    uses: ./.github/workflows/reusable-revised-its.yml
+    env:
+      OVERRIDE_ENV: cluster/Common/prepopulated-data.env
+    with:
+      build_jdk: ${{ matrix.jdk }}
+      runtime_jdk: ${{ matrix.jdk }}
+      use_indexer: ${{ matrix.indexer }}
+      script: ./it.sh github ${{ matrix.it }}
+      it: ${{ matrix.it }}
+      mysql_driver: com.mysql.jdbc.Driver
