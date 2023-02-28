@@ -256,7 +256,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public void updateStatus(Task task, TaskStatus status)
   {
-    log.info("Updating status %s", status);
+    log.info("Updating task: %s with status %s", task.getId(), status);
     TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
   }
 

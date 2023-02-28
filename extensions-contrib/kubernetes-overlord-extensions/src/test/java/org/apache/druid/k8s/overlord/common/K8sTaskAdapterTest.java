@@ -22,6 +22,7 @@ package org.apache.druid.k8s.overlord.common;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.google.api.client.util.Joiner;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.fabric8.kubernetes.api.model.Container;
@@ -224,7 +225,8 @@ class K8sTaskAdapterTest
     Container container = new ContainerBuilder()
         .withName("container").build();
     adapter.addEnvironmentVariables(container, context, task.toString());
-    assertFalse(container.getEnv().stream().anyMatch(x -> x.getName().equals("druid_monitoring_monitors")));
+    assertFalse(container.getEnv().stream().anyMatch(x -> x.getName().equals("druid_monitoring_monitors")),
+                "Didn't match, envs: " + Joiner.on(',').join(container.getEnv()));
 
     // we have an override, but nothing in the overlord
     config.peonMonitors = jsonMapper.readValue("[\"org.apache.druid.java.util.metrics.JvmMonitor\"]", List.class);
