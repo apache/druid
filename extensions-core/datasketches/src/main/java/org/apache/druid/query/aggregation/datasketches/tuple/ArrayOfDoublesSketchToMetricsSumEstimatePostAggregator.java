@@ -39,11 +39,11 @@ import java.util.Map;
  * Returns a list of estimate values of metrics column from a given {@link ArrayOfDoublesSketch}.
  * The result will be N double values, where N is the number of double values kept in the sketch per key.
  */
-public class ArrayOfDoublesSketchToMetricsEstimatePostAggregator extends ArrayOfDoublesSketchUnaryPostAggregator
+public class ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator extends ArrayOfDoublesSketchUnaryPostAggregator
 {
 
   @JsonCreator
-  public ArrayOfDoublesSketchToMetricsEstimatePostAggregator(
+  public ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator(
       @JsonProperty("name") final String name,
       @JsonProperty("field") final PostAggregator field
   )
@@ -84,7 +84,7 @@ public class ArrayOfDoublesSketchToMetricsEstimatePostAggregator extends ArrayOf
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_TO_METRICS_ESTIMATE_CACHE_TYPE_ID)
+    return new CacheKeyBuilder(AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_TO_METRICS_SUM_ESTIMATE_CACHE_TYPE_ID)
         .appendCacheable(getField())
         .build();
   }

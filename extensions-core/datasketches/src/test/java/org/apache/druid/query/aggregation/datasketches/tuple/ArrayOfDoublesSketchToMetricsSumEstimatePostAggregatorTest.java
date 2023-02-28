@@ -42,19 +42,19 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.Map;
 
-public class ArrayOfDoublesSketchToMetricsEstimatePostAggregatorTest
+public class ArrayOfDoublesSketchToMetricsSumEstimatePostAggregatorTest
 {
   @Test
   public void testSerde() throws JsonProcessingException
   {
-    final PostAggregator there = new ArrayOfDoublesSketchToMetricsEstimatePostAggregator(
+    final PostAggregator there = new ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator(
         "a",
         new ConstantPostAggregator("", 0)
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    ArrayOfDoublesSketchToMetricsEstimatePostAggregator andBackAgain = mapper.readValue(
+    ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        ArrayOfDoublesSketchToMetricsEstimatePostAggregator.class
+        ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);
@@ -64,13 +64,13 @@ public class ArrayOfDoublesSketchToMetricsEstimatePostAggregatorTest
   @Test
   public void testToString()
   {
-    PostAggregator postAgg = new ArrayOfDoublesSketchToMetricsEstimatePostAggregator(
+    PostAggregator postAgg = new ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator(
         "a",
         new ConstantPostAggregator("", 0)
     );
 
     Assert.assertEquals(
-        "ArrayOfDoublesSketchToMetricsEstimatePostAggregator{name='a', field=ConstantPostAggregator{name='', constantValue=0}}",
+        "ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator{name='a', field=ConstantPostAggregator{name='', constantValue=0}}",
         postAgg.toString()
     );
   }
@@ -91,7 +91,7 @@ public class ArrayOfDoublesSketchToMetricsEstimatePostAggregatorTest
     EasyMock.expect(field1.compute(EasyMock.anyObject(Map.class))).andReturn(s1).anyTimes();
     EasyMock.replay(field1);
 
-    final PostAggregator postAgg = new ArrayOfDoublesSketchToMetricsEstimatePostAggregator(
+    final PostAggregator postAgg = new ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator(
         "a",
         field1
     );
@@ -103,7 +103,7 @@ public class ArrayOfDoublesSketchToMetricsEstimatePostAggregatorTest
   @Test
   public void testComparator()
   {
-    final PostAggregator postAgg = new ArrayOfDoublesSketchToMetricsEstimatePostAggregator(
+    final PostAggregator postAgg = new ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator(
         "a",
         new ConstantPostAggregator("", 0)
     );
@@ -114,7 +114,7 @@ public class ArrayOfDoublesSketchToMetricsEstimatePostAggregatorTest
   @Test
   public void testEqualsAndHashCode()
   {
-    EqualsVerifier.forClass(ArrayOfDoublesSketchToMetricsEstimatePostAggregator.class)
+    EqualsVerifier.forClass(ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator.class)
         .withNonnullFields("name", "field")
         .withIgnoredFields("dependentFields")
         .usingGetClass()
@@ -133,7 +133,7 @@ public class ArrayOfDoublesSketchToMetricsEstimatePostAggregatorTest
                 new CountAggregatorFactory("count")
             )
             .postAggregators(
-                new ArrayOfDoublesSketchToMetricsEstimatePostAggregator(
+                new ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator(
                     "a",
                     new ConstantPostAggregator("", 0)
                 )

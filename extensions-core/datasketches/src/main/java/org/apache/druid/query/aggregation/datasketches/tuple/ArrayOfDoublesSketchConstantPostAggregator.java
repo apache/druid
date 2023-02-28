@@ -33,6 +33,7 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -80,7 +81,6 @@ public class ArrayOfDoublesSketchConstantPostAggregator extends ArrayOfDoublesSk
     return this;
   }
 
-  @JsonProperty("value")
   public ArrayOfDoublesSketch getSketchValue()
   {
     return sketchValue;
@@ -91,7 +91,7 @@ public class ArrayOfDoublesSketchConstantPostAggregator extends ArrayOfDoublesSk
   {
     return "ArrayOfDoublesSketchConstantPostAggregator{name='" + this.getName() + "', value='" + value + "'}";
   }
-  
+
   private String getRawSketchValue()
   {
     return value;
@@ -107,14 +107,8 @@ public class ArrayOfDoublesSketchConstantPostAggregator extends ArrayOfDoublesSk
       return false;
     }
     ArrayOfDoublesSketchConstantPostAggregator that = (ArrayOfDoublesSketchConstantPostAggregator) o;
-    if (!this.getSketchValue().equals(that.getSketchValue())) {
-      return false;
-    }
-    if (this.getName() != null ? !this.getName().equals(that.getName()) : that.getName() != null) {
-      return false;
-    }
-
-    if (this.getRawSketchValue() != null ? !this.getRawSketchValue().equals(that.getRawSketchValue()) : that.getRawSketchValue() != null) {
+    if (!(Objects.equals(this.getName(), that.getName()) && Objects.equals(this.value, that.value)
+        && Objects.equals(this.getSketchValue(), that.getSketchValue()))) {
       return false;
     }
     return true;
@@ -123,10 +117,7 @@ public class ArrayOfDoublesSketchConstantPostAggregator extends ArrayOfDoublesSk
   @Override
   public int hashCode()
   {
-    int result = getName() != null ? getName().hashCode() : 0;
-    result = result * (getRawSketchValue() != null ? getRawSketchValue().hashCode() : 0);
-    result = 37 * result + sketchValue.hashCode();
-    return result;
+    return Objects.hash(super.hashCode(), value, sketchValue);
   }
 
   @Override

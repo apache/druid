@@ -52,8 +52,7 @@ public class ArrayOfDoublesSketchModule implements DruidModule
 
   public static final String ARRAY_OF_DOUBLES_SKETCH_TO_BASE64_STRING = "arrayOfDoublesSketchToBase64String";
 
-  public static final String ARRAY_OF_DOUBLES_SKETCH_METRICS_ESTIMATE = "arrayOfDoublesSketchToMetricsSumEstimate";
-
+  public static final String ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE = "arrayOfDoublesSketchToMetricsEstimate";
 
 
   @Override
@@ -110,8 +109,8 @@ public class ArrayOfDoublesSketchModule implements DruidModule
                 "arrayOfDoublesSketchToString"
             ),
             new NamedType(
-                ArrayOfDoublesSketchToMetricsEstimatePostAggregator.class,
-                ARRAY_OF_DOUBLES_SKETCH_METRICS_ESTIMATE
+                ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator.class,
+                ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE
             ),
             new NamedType(
                 ArrayOfDoublesSketchConstantPostAggregator.class,
