@@ -615,9 +615,10 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     // first value is written whole
     final int length = VByte.readInt(buffer);
     if (offset == 0) {
-      byte[] prefixBytes = new byte[length];
-      buffer.get(prefixBytes, 0, length);
-      return ByteBuffer.wrap(prefixBytes);
+      // return first value directly from underlying buffer since it is stored whole
+      final ByteBuffer value = buffer.asReadOnlyBuffer().order(buffer.order());
+      value.limit(value.position() + length);
+      return value;
     }
     int pos = 0;
     int prefixLength;
@@ -637,6 +638,12 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
       } else {
         // we've reached our destination
         fragmentLength = VByte.readInt(buffer);
+        if (prefixLength == 0) {
+          // no prefix, return it directly from the underlying buffer
+          final ByteBuffer value = buffer.asReadOnlyBuffer().order(buffer.order());
+          value.limit(value.position() + fragmentLength);
+          return value;
+        }
         break;
       }
     } while (true);
@@ -673,9 +680,10 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     // first value is written whole
     final int length = VByte.readInt(buffer);
     if (offset == 0) {
-      byte[] prefixBytes = new byte[length];
-      buffer.get(prefixBytes, 0, length);
-      return ByteBuffer.wrap(prefixBytes);
+      // return first value directly from underlying buffer since it is stored whole
+      final ByteBuffer value = buffer.asReadOnlyBuffer().order(buffer.order());
+      value.limit(value.position() + length);
+      return value;
     }
     int pos = 0;
     int prefixLength;
@@ -695,6 +703,12 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
       } else {
         // we've reached our destination
         fragmentLength = VByte.readInt(buffer);
+        if (prefixLength == 0) {
+          // no prefix, return it directly from the underlying buffer
+          final ByteBuffer value = buffer.asReadOnlyBuffer().order(buffer.order());
+          value.limit(value.position() + fragmentLength);
+          return value;
+        }
         break;
       }
     } while (true);

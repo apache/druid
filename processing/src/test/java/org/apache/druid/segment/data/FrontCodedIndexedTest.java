@@ -270,7 +270,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
       final ByteBuffer nextUtf8 = utf8Iterator.next();
       Assert.assertEquals(next, StringUtils.fromUtf8(nextUtf8));
       nextUtf8.position(0);
-      Assert.assertEquals(next, StringUtils.fromUtf8(codedUtf8Indexed.get(ctr)));
+      Assert.assertEquals("mismatch row " + ctr, next, StringUtils.fromUtf8(codedUtf8Indexed.get(ctr)));
       Assert.assertEquals(ctr, codedUtf8Indexed.indexOf(nextUtf8));
       ctr++;
     }
