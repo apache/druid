@@ -49,7 +49,7 @@ public class DimensionsSpec
   private final Map<String, DimensionSchema> dimensionSchemaMap;
   private final boolean includeAllDimensions;
 
-  private final boolean useNestedColumnIndexerForSchemaDiscovery;
+  private final boolean useSchemaDiscovery;
 
   public static final DimensionsSpec EMPTY = new DimensionsSpec(null, null, null, false, null);
 
@@ -89,7 +89,7 @@ public class DimensionsSpec
       @JsonProperty("dimensionExclusions") List<String> dimensionExclusions,
       @Deprecated @JsonProperty("spatialDimensions") List<SpatialDimensionSchema> spatialDimensions,
       @JsonProperty("includeAllDimensions") boolean includeAllDimensions,
-      @JsonProperty("useNestedColumnIndexerForSchemaDiscovery") Boolean useNestedColumnIndexerForSchemaDiscovery
+      @JsonProperty("useSchemaDiscovery") Boolean useSchemaDiscovery
   )
   {
     this.dimensions = dimensions == null
@@ -118,8 +118,8 @@ public class DimensionsSpec
       dimensionSchemaMap.put(newSchema.getName(), newSchema);
     }
     this.includeAllDimensions = includeAllDimensions;
-    this.useNestedColumnIndexerForSchemaDiscovery =
-        useNestedColumnIndexerForSchemaDiscovery != null && useNestedColumnIndexerForSchemaDiscovery;
+    this.useSchemaDiscovery =
+        useSchemaDiscovery != null && useSchemaDiscovery;
   }
 
   @JsonProperty
@@ -141,9 +141,9 @@ public class DimensionsSpec
   }
 
   @JsonProperty
-  public boolean useNestedColumnIndexerForSchemaDiscovery()
+  public boolean useSchemaDiscovery()
   {
-    return useNestedColumnIndexerForSchemaDiscovery;
+    return useSchemaDiscovery;
   }
 
   @Deprecated
@@ -204,7 +204,7 @@ public class DimensionsSpec
         ImmutableList.copyOf(dimensionExclusions),
         null,
         includeAllDimensions,
-        useNestedColumnIndexerForSchemaDiscovery
+        useSchemaDiscovery
     );
   }
 
@@ -215,7 +215,7 @@ public class DimensionsSpec
         ImmutableList.copyOf(Sets.union(dimensionExclusions, dimExs)),
         null,
         includeAllDimensions,
-        useNestedColumnIndexerForSchemaDiscovery
+        useSchemaDiscovery
     );
   }
 
@@ -227,7 +227,7 @@ public class DimensionsSpec
         ImmutableList.copyOf(dimensionExclusions),
         spatials,
         includeAllDimensions,
-        useNestedColumnIndexerForSchemaDiscovery
+        useSchemaDiscovery
     );
   }
 
@@ -267,7 +267,7 @@ public class DimensionsSpec
     }
     DimensionsSpec that = (DimensionsSpec) o;
     return includeAllDimensions == that.includeAllDimensions
-           && useNestedColumnIndexerForSchemaDiscovery == that.useNestedColumnIndexerForSchemaDiscovery
+           && useSchemaDiscovery == that.useSchemaDiscovery
            && Objects.equals(dimensions, that.dimensions)
            && Objects.equals(dimensionExclusions, that.dimensionExclusions);
   }
@@ -279,7 +279,7 @@ public class DimensionsSpec
         dimensions,
         dimensionExclusions,
         includeAllDimensions,
-        useNestedColumnIndexerForSchemaDiscovery
+        useSchemaDiscovery
     );
   }
 
@@ -290,7 +290,7 @@ public class DimensionsSpec
            "dimensions=" + dimensions +
            ", dimensionExclusions=" + dimensionExclusions +
            ", includeAllDimensions=" + includeAllDimensions +
-           ", useNestedColumnIndexerForSchemaDiscovery=" + useNestedColumnIndexerForSchemaDiscovery +
+           ", useSchemaDiscovery=" + useSchemaDiscovery +
            '}';
   }
 
@@ -301,7 +301,7 @@ public class DimensionsSpec
     private List<SpatialDimensionSchema> spatialDimensions;
     private boolean includeAllDimensions;
 
-    private boolean useNestedColumnIndexerForSchemaDiscovery;
+    private boolean useSchemaDiscovery;
 
     public Builder setDimensions(List<DimensionSchema> dimensions)
     {
@@ -334,9 +334,9 @@ public class DimensionsSpec
       return this;
     }
 
-    public Builder setUseNestedColumnIndexerForSchemaDiscovery(boolean useNestedColumnIndexerForSchemaDiscovery)
+    public Builder useSchemaDiscovery(boolean useSchemaDiscovery)
     {
-      this.useNestedColumnIndexerForSchemaDiscovery = useNestedColumnIndexerForSchemaDiscovery;
+      this.useSchemaDiscovery = useSchemaDiscovery;
       return this;
     }
 
@@ -347,7 +347,7 @@ public class DimensionsSpec
           dimensionExclusions,
           spatialDimensions,
           includeAllDimensions,
-          useNestedColumnIndexerForSchemaDiscovery
+          useSchemaDiscovery
       );
     }
   }
