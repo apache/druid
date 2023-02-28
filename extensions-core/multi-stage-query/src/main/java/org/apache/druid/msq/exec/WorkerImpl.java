@@ -331,7 +331,13 @@ public class WorkerImpl implements Worker
         final StageDefinition stageDefinition = kernel.getStageDefinition();
 
         if (kernel.getPhase() == WorkerStagePhase.NEW) {
-          log.debug("New work order: %s", context.jsonMapper().writeValueAsString(kernel.getWorkOrder()));
+
+          log.info("Processing work order for stage [%d]" +
+                   (log.isDebugEnabled()
+                    ? StringUtils.format(
+                       " with payload [%s]",
+                       context.jsonMapper().writeValueAsString(kernel.getWorkOrder())
+                   ) : ""), stageDefinition.getId().getStageNumber());
 
           // Create separate inputChannelFactory per stage, because the list of tasks can grow between stages, and
           // so we need to avoid the memoization in baseInputChannelFactory.
@@ -444,6 +450,7 @@ public class WorkerImpl implements Worker
   @Override
   public void stopGracefully()
   {
+    log.info("Stopping gracefully for taskId [%s]", task.getId());
     kernelManipulationQueue.add(
         kernel -> {
           // stopGracefully() is called when the containing process is terminated, or when the task is canceled.
@@ -520,6 +527,7 @@ public class WorkerImpl implements Worker
   @Override
   public void postWorkOrder(final WorkOrder workOrder)
   {
+    log.info("Got work order for stage [%d]", workOrder.getStageNumber());
     if (task.getWorkerNumber() != workOrder.getWorkerNumber()) {
       throw new ISE("Worker number mismatch: expected [%d]", task.getWorkerNumber());
     }
@@ -569,12 +577,17 @@ public class WorkerImpl implements Worker
   @Override
   public void postCleanupStage(final StageId stageId)
   {
-    log.info("Cleanup order for stage: [%s] received", stageId);
+    log.info("Cleanup order for stage [%s] received", stageId);
     kernelManipulationQueue.add(
         holder -> {
           cleanStageOutput(stageId, true);
           // Mark the stage as FINISHED
-          holder.getStageKernelMap().get(stageId).setStageFinished();
+          WorkerStageKernel stageKernel = holder.getStageKernelMap().get(stageId);
+          if (stageKernel == null) {
+            log.warn("Stage id [%s] non existent. Unable to mark the stage kernel for it as FINISHED", stageId);
+          } else {
+            stageKernel.setStageFinished();
+          }
         }
     );
   }
@@ -582,17 +595,19 @@ public class WorkerImpl implements Worker
   @Override
   public void postFinish()
   {
+    log.info("Finish received for task [%s]", task.getId());
     kernelManipulationQueue.add(KernelHolder::setDone);
   }
 
   @Override
   public ClusterByStatisticsSnapshot fetchStatisticsSnapshot(StageId stageId)
   {
+    log.info("Fetching statistics for stage [%d]", stageId.getStageNumber());
     if (stageKernelMap.get(stageId) == null) {
       throw new ISE("Requested statistics snapshot for non-existent stageId %s.", stageId);
     } else if (stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot() == null) {
       throw new ISE(
-          "Requested statistics snapshot is not generated yet for stageId[%s]",
+          "Requested statistics snapshot is not generated yet for stageId [%s]",
           stageId
       );
     } else {
@@ -603,11 +618,16 @@ public class WorkerImpl implements Worker
   @Override
   public ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(StageId stageId, long timeChunk)
   {
+    log.debug(
+        "Fetching statistics for stage [%d]  with time chunk [%d] ",
+        stageId.getStageNumber(),
+        timeChunk
+    );
     if (stageKernelMap.get(stageId) == null) {
-      throw new ISE("Requested statistics snapshot for non-existent stageId[%s].", stageId);
+      throw new ISE("Requested statistics snapshot for non-existent stageId [%s].", stageId);
     } else if (stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot() == null) {
       throw new ISE(
-          "Requested statistics snapshot is not generated yet for stageId[%s]",
+          "Requested statistics snapshot is not generated yet for stageId [%s]",
           stageId
       );
     } else {
@@ -691,35 +711,22 @@ public class WorkerImpl implements Worker
     final FileOutputChannelFactory fileOutputChannelFactory =
         new FileOutputChannelFactory(fileChannelDirectory, frameSize, intermediateSuperSorterLocalStorageTracker);
 
-    if (MultiStageQueryContext.isComposedIntermediateSuperSorterStorageEnabled(QueryContext.of(task.getContext()))) {
-      if (durableStageStorageEnabled) {
-        return new ComposingOutputChannelFactory(
-            ImmutableList.of(
-                fileOutputChannelFactory,
-                DurableStorageOutputChannelFactory.createStandardImplementation(
-                    task.getControllerTaskId(),
-                    task().getWorkerNumber(),
-                    stageNumber,
-                    task().getId(),
-                    frameSize,
-                    MSQTasks.makeStorageConnector(context.injector()),
-                    tmpDir
-                )
-            ),
-            frameSize
-        );
-      } else {
-        return fileOutputChannelFactory;
-      }
-    } else if (durableStageStorageEnabled) {
-      return DurableStorageOutputChannelFactory.createStandardImplementation(
-          task.getControllerTaskId(),
-          task().getWorkerNumber(),
-          stageNumber,
-          task().getId(),
-          frameSize,
-          MSQTasks.makeStorageConnector(context.injector()),
-          tmpDir
+    if (MultiStageQueryContext.isComposedIntermediateSuperSorterStorageEnabled(QueryContext.of(task.getContext())) &&
+        durableStageStorageEnabled) {
+      return new ComposingOutputChannelFactory(
+          ImmutableList.of(
+              fileOutputChannelFactory,
+              DurableStorageOutputChannelFactory.createStandardImplementation(
+                  task.getControllerTaskId(),
+                  task().getWorkerNumber(),
+                  stageNumber,
+                  task().getId(),
+                  frameSize,
+                  MSQTasks.makeStorageConnector(context.injector()),
+                  tmpDir
+              )
+          ),
+          frameSize
       );
     } else {
       return fileOutputChannelFactory;
@@ -1357,7 +1364,7 @@ public class WorkerImpl implements Worker
       if (taskId.equals(id())) {
         final ConcurrentMap<Integer, ReadableFrameChannel> partitionOutputsForStage = stageOutputs.get(stageId);
         if (partitionOutputsForStage == null) {
-          throw new ISE("Unable to find outputs for stage: [%s]", stageId);
+          throw new ISE("Unable to find outputs for stage [%s]", stageId);
         }
 
         final ReadableFrameChannel myChannel = partitionOutputsForStage.get(partitionNumber);
@@ -1369,7 +1376,7 @@ public class WorkerImpl implements Worker
         } else if (myChannel instanceof ReadableNilFrameChannel) {
           return myChannel;
         } else {
-          throw new ISE("Output for stage: [%s] are stored in an instance of %s which is not "
+          throw new ISE("Output for stage [%s] are stored in an instance of %s which is not "
                         + "supported", stageId, myChannel.getClass());
         }
       } else {

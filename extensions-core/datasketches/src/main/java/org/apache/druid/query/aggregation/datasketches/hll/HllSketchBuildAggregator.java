@@ -73,7 +73,7 @@ public class HllSketchBuildAggregator implements Aggregator
   @Override
   public synchronized Object get()
   {
-    return sketch.copy();
+    return HllSketchHolder.of(sketch.copy());
   }
 
   @Override

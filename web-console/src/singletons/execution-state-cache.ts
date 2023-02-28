@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-import { Execution } from '../druid-models';
-import { DruidError, QueryState } from '../utils';
+import type { Execution } from '../druid-models';
+import type { DruidError, QueryState } from '../utils';
 
 export class ExecutionStateCache {
   private static readonly cache: Record<string, QueryState<Execution, DruidError, Execution>> = {};

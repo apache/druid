@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import type { IconName } from '@blueprintjs/core';
 import {
   Alert,
   AnchorButton,
@@ -27,7 +28,6 @@ import {
   FormGroup,
   H5,
   Icon,
-  IconName,
   InputGroup,
   Intent,
   Menu,
@@ -55,6 +55,20 @@ import {
   PopoverText,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
+import type {
+  DimensionMode,
+  DimensionSpec,
+  DruidFilter,
+  FlattenField,
+  IngestionComboTypeWithExtra,
+  IngestionSpec,
+  InputFormat,
+  IoConfig,
+  MetricSpec,
+  TimestampSpec,
+  Transform,
+  TuningConfig,
+} from '../../druid-models';
 import {
   addTimestampTransform,
   adjustForceGuaranteedRollup,
@@ -64,15 +78,11 @@ import {
   CONSTANT_TIMESTAMP_SPEC,
   CONSTANT_TIMESTAMP_SPEC_FIELDS,
   DIMENSION_SPEC_FIELDS,
-  DimensionMode,
-  DimensionSpec,
-  DruidFilter,
   fillDataSourceNameIfNeeded,
   fillInputFormatIfNeeded,
   FILTER_FIELDS,
   FILTERS_FIELDS,
   FLATTEN_FIELD_FIELDS,
-  FlattenField,
   getDimensionMode,
   getDimensionSpecName,
   getIngestionComboType,
@@ -88,14 +98,10 @@ import {
   getTimestampExpressionFields,
   getTimestampSchema,
   getTuningFormFields,
-  IngestionComboTypeWithExtra,
-  IngestionSpec,
   INPUT_FORMAT_FIELDS,
-  InputFormat,
   inputFormatCanProduceNestedData,
   invalidIoConfig,
   invalidPartitionConfig,
-  IoConfig,
   isDruidSource,
   isEmptyIngestionSpec,
   isStreamingSpec,
@@ -105,7 +111,6 @@ import {
   KNOWN_FILTER_TYPES,
   MAX_INLINE_DATA_LENGTH,
   METRIC_SPEC_FIELDS,
-  MetricSpec,
   normalizeSpec,
   NUMERIC_TIME_FORMATS,
   possibleDruidFormatForValues,
@@ -115,10 +120,7 @@ import {
   STREAMING_INPUT_FORMAT_FIELDS,
   TIME_COLUMN,
   TIMESTAMP_SPEC_FIELDS,
-  TimestampSpec,
-  Transform,
   TRANSFORM_FIELDS,
-  TuningConfig,
   updateIngestionType,
   updateSchemaWithSample,
   upgradeSpec,
@@ -143,13 +145,19 @@ import {
   pluralIfNeeded,
   QueryState,
 } from '../../utils';
-import {
+import type {
   CacheRows,
   ExampleManifest,
+  SampleEntry,
+  SampleHeaderAndRows,
+  SampleResponse,
+  SampleResponseWithExtraInfo,
+  SampleStrategy,
+} from '../../utils/sampler';
+import {
   getCacheRowsFromSampleResponse,
   getProxyOverlordModules,
   headerAndRowsFromSampleResponse,
-  SampleEntry,
   sampleForConnect,
   sampleForExampleManifests,
   sampleForFilter,
@@ -157,10 +165,6 @@ import {
   sampleForSchema,
   sampleForTimestamp,
   sampleForTransform,
-  SampleHeaderAndRows,
-  SampleResponse,
-  SampleResponseWithExtraInfo,
-  SampleStrategy,
 } from '../../utils/sampler';
 
 import { ExamplePicker } from './example-picker/example-picker';
@@ -3253,7 +3257,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             rightIcon={IconNames.CLOUD_UPLOAD}
             intent={Intent.PRIMARY}
             disabled={submitting || Boolean(issueWithSpec)}
-            onClick={this.handleSubmit}
+            onClick={() => void this.handleSubmit()}
           />
         </div>
       </>
