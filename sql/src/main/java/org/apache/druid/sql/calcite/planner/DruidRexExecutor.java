@@ -71,7 +71,10 @@ public class DruidRexExecutor implements RexExecutor
         reducedValues.add(constExp);
       } else {
         final SqlTypeName sqlTypeName = constExp.getType().getSqlTypeName();
-        final Expr expr = Parser.parse(druidExpression.getExpression(), plannerContext.getExprMacroTable());
+        final Expr expr = Parser.parse(
+            druidExpression.getExpression(),
+            plannerContext.getPlannerToolbox().exprMacroTable()
+        );
 
         final ExprEval exprResult = expr.eval(
             InputBindings.forFunction(

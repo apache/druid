@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.partitions.DimensionBasedPartitionsSpec;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.Pair;
@@ -96,6 +97,8 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
         {new SingleDimensionPartitionsSpec(1000, null, null, false)},
         {new SingleDimensionPartitionsSpec(1000, null, "page", false)},
         {new SingleDimensionPartitionsSpec(1000, null, null, true)},
+        {new DimensionRangePartitionsSpec(1000, null, ImmutableList.of("page"), true)},
+        {new DimensionRangePartitionsSpec(1000, null, ImmutableList.of("page", "user"), false)},
 
         //{new HashedPartitionsSpec(null, 3, null)} // this results in a bug where the segments have 0 rows
     };
