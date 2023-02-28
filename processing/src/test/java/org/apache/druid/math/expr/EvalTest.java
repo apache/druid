@@ -519,14 +519,14 @@ public class EvalTest extends InitializedNullHandlingTest
       assertEquals(1L, eval("null || 1", bindings).value());
       assertEquals(1L, eval("1 || null", bindings).value());
       // in sql incompatible mode, null is false, so we return 0
-      assertEquals(NullHandling.defaultLongValue(), eval("null || 0", bindings).value());
-      assertEquals(NullHandling.defaultLongValue(), eval("0 || null", bindings).value());
-      assertEquals(NullHandling.defaultLongValue(), eval("null || null", bindings).value());
+      assertEquals(NullHandling.defaultLongValue(), eval("null || 0", bindings).valueOrDefault());
+      assertEquals(NullHandling.defaultLongValue(), eval("0 || null", bindings).valueOrDefault());
+      assertEquals(NullHandling.defaultLongValue(), eval("null || null", bindings).valueOrDefault());
 
       // in sql incompatible mode, null is false, so we return 0
-      assertEquals(NullHandling.defaultLongValue(), eval("null && 1", bindings).value());
-      assertEquals(NullHandling.defaultLongValue(), eval("1 && null", bindings).value());
-      assertEquals(NullHandling.defaultLongValue(), eval("null && null", bindings).value());
+      assertEquals(NullHandling.defaultLongValue(), eval("null && 1", bindings).valueOrDefault());
+      assertEquals(NullHandling.defaultLongValue(), eval("1 && null", bindings).valueOrDefault());
+      assertEquals(NullHandling.defaultLongValue(), eval("null && null", bindings).valueOrDefault());
       // if either side is false, output is false in both modes
       assertEquals(0L, eval("null && 0", bindings).value());
       assertEquals(0L, eval("0 && null", bindings).value());

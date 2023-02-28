@@ -345,7 +345,6 @@ public abstract class ExprEval<T>
   @Deprecated
   public static ExprEval ofBoolean(boolean value, ExprType type)
   {
-    assert !ExpressionProcessing.useStrictBooleans();
     switch (type) {
       case DOUBLE:
         return ExprEval.of(Evals.asDouble(value));
@@ -561,7 +560,6 @@ public abstract class ExprEval<T>
 
         if (bytes != null) {
           TypeStrategy<?> strategy = type.getStrategy();
-          assert strategy != null;
           ByteBuffer bb = ByteBuffer.wrap(bytes);
           return ofComplex(type, strategy.read(bb));
         }
@@ -668,7 +666,6 @@ public abstract class ExprEval<T>
   @Nullable
   String getCachedStringValue()
   {
-    assert stringValueCached;
     return stringValue;
   }
 
@@ -750,7 +747,6 @@ public abstract class ExprEval<T>
     public final int asInt()
     {
       if (value == null) {
-        assert NullHandling.replaceWithDefault();
         return 0;
       }
       return value.intValue();
@@ -760,7 +756,6 @@ public abstract class ExprEval<T>
     public final long asLong()
     {
       if (value == null) {
-        assert NullHandling.replaceWithDefault();
         return 0L;
       }
       return value.longValue();
@@ -770,7 +765,6 @@ public abstract class ExprEval<T>
     public final double asDouble()
     {
       if (value == null) {
-        assert NullHandling.replaceWithDefault();
         return 0.0;
       }
       return value.doubleValue();
@@ -1010,7 +1004,6 @@ public abstract class ExprEval<T>
     {
       Number number = computeNumber();
       if (number == null) {
-        assert NullHandling.replaceWithDefault();
         return 0;
       }
       return number.intValue();
@@ -1020,7 +1013,6 @@ public abstract class ExprEval<T>
     {
       Number number = computeNumber();
       if (number == null) {
-        assert NullHandling.replaceWithDefault();
         return 0L;
       }
       return number.longValue();
@@ -1030,7 +1022,6 @@ public abstract class ExprEval<T>
     {
       Number number = computeNumber();
       if (number == null) {
-        assert NullHandling.replaceWithDefault();
         return 0.0d;
       }
       return number.doubleValue();
@@ -1081,9 +1072,13 @@ public abstract class ExprEval<T>
           final Number number = computeNumber();
           switch (castTo.getElementType().getType()) {
             case DOUBLE:
-              return ExprEval.ofDoubleArray(value == null ? null : new Object[] {number != null ? number.doubleValue() : null});
+              return ExprEval.ofDoubleArray(
+                  value == null ? null : new Object[] {number == null ? null : number.doubleValue()}
+              );
             case LONG:
-              return ExprEval.ofLongArray(value == null ? null : new Object[] {number != null ? number.longValue() : null});
+              return ExprEval.ofLongArray(
+                  value == null ? null : new Object[] {number == null ? null : number.longValue()}
+              );
             case STRING:
               return ExprEval.ofStringArray(value == null ? null : new Object[] {value});
           }
@@ -1168,7 +1163,6 @@ public abstract class ExprEval<T>
           scalar = computeNumber((String) getScalarValue());
         }
         if (scalar == null) {
-          assert NullHandling.replaceWithDefault();
           return 0;
         }
         return scalar.intValue();
@@ -1187,7 +1181,6 @@ public abstract class ExprEval<T>
           scalar = computeNumber((String) getScalarValue());
         }
         if (scalar == null) {
-          assert NullHandling.replaceWithDefault();
           return 0;
         }
         return scalar.longValue();
@@ -1206,7 +1199,6 @@ public abstract class ExprEval<T>
           scalar = computeNumber((String) getScalarValue());
         }
         if (scalar == null) {
-          assert NullHandling.replaceWithDefault();
           return 0.0;
         }
         return scalar.doubleValue();
@@ -1221,7 +1213,6 @@ public abstract class ExprEval<T>
         if (arrayType.getElementType().isNumeric()) {
           Number scalarValue = (Number) getScalarValue();
           if (scalarValue == null) {
-            assert NullHandling.replaceWithDefault();
             return false;
           }
           return Evals.asBoolean(scalarValue.longValue());
@@ -1294,7 +1285,6 @@ public abstract class ExprEval<T>
     @Nullable
     protected Object getScalarValue()
     {
-      assert value != null && value.length == 1;
       return value[0];
     }
   }

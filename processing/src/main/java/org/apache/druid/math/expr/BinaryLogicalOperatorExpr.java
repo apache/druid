@@ -333,7 +333,7 @@ class BinAndExpr extends BinaryOpExprBase
     ExprEval rightVal;
     // null values can (but not always) appear as string typed
     // so type isn't necessarily string unless value is non-null
-    if (NullHandling.sqlCompatible() || (Types.is(leftVal.type(), ExprType.STRING) && leftVal.value() != null)) {
+    if (NullHandling.sqlCompatible() || (Types.is(leftVal.type(), ExprType.STRING))) {
       // true/null, null/true, null/null -> null
       // false/null, null/false -> false
       if (leftVal.value() == null) {
@@ -409,7 +409,7 @@ class BinOrExpr extends BinaryOpExprBase
     final ExprEval rightVal;
     // null values can (but not always) appear as string typed
     // so type isn't necessarily string unless value is non-null
-    if (NullHandling.sqlCompatible() || (Types.is(leftVal.type(), ExprType.STRING) && leftVal.value() != null)) {
+    if (NullHandling.sqlCompatible() || (Types.is(leftVal.type(), ExprType.STRING))) {
       // true/null, null/true -> true
       // false/null, null/false, null/null -> null
       if (leftVal.value() == null) {

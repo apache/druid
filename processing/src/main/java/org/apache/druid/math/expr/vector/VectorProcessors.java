@@ -271,8 +271,8 @@ public class VectorProcessors
   }
 
   /**
-   * Creates an {@link ExprVectorProcessor} for the 'isnull' function, that produces a "boolean" (long) typed output
-   * vector with values set to 1 if the input value was null or 0 if it was not null.
+   * Creates an {@link ExprVectorProcessor} for the 'isnull' function, that produces a "boolean" typed output
+   * vector (long[]) with values set to 1 if the input value was null or 0 if it was not null.
    *
    * @see org.apache.druid.math.expr.Function.IsNullFunc
    */
@@ -385,8 +385,8 @@ public class VectorProcessors
   }
 
   /**
-   * Creates an {@link ExprVectorProcessor} for the 'isnotnull' function, that produces a "boolean" (long) typed output
-   * vector with values set to 1 if the input value was not null or 0 if it was null.
+   * Creates an {@link ExprVectorProcessor} for the 'isnotnull' function, that produces a "boolean" typed output
+   * vector (long[]) with values set to 1 if the input value was not null or 0 if it was null.
    *
    * @see org.apache.druid.math.expr.Function.IsNotNullFunc
    */

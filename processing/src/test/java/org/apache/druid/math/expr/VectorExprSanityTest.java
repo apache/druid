@@ -45,7 +45,7 @@ import java.util.function.Supplier;
  * randomize inputs to various vector expressions and make sure the results match nonvectorized expressions
  *
  * this is not a replacement for correctness tests, but will ensure that vectorized and non-vectorized expression
- * evaluation is at least self consistent...
+ * evaluation is at least self-consistent...
  */
 public class VectorExprSanityTest extends InitializedNullHandlingTest
 {
