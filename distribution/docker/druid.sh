@@ -40,8 +40,9 @@
 # - DRUID_CONFIG_COMMON -- full path to a file for druid 'common' properties
 # - DRUID_CONFIG_${service} -- full path to a file for druid 'service' properties
 # - DRUID_SINGLE_NODE_CONF -- config to use at runtime. Choose from: {large, medium, micro-quickstart, nano-quickstart, small, xlarge}
-# - DRUID_ADDITIONAL_CONF_DIRS -- full path to a directory containing configuration files needed for extentions and will be copied to the common directory.
-#                                 Useful for Kubernetes. Seperate folders with ':' and end the variable with one
+# - DRUID_ADDITIONAL_CLASSPATH -- a list of paths of folders containing additional configuration files.
+#                                 It is important to ensure that the folders in the mentioned paths exist within the container.
+#                                 Useful for Kubernetes. Seperate folders with a ':' character and end the variable with ':' as well
 
 
 set -e
@@ -200,4 +201,4 @@ then
 fi
 
 
-exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*:$DRUID_ADDITIONAL_CONF_DIR org.apache.druid.cli.Main server $@
+exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*:$DRUID_ADDITIONAL_CLASSPATH org.apache.druid.cli.Main server $@
