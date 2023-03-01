@@ -26,7 +26,7 @@ fi
 rm -f cert_db.txt
 touch cert_db.txt
 
-export MY_HOSTNAME=$(hostname)
+export MY_HOSTNAME=${DRUID_SERVICE}
 export MY_IP=$(hostname -i)
 
 cat <<EOT > csr.conf
@@ -56,7 +56,6 @@ IP.2 = ${MY_IP}
 IP.3 = 127.0.0.1
 DNS.1 = ${MY_HOSTNAME}
 DNS.2 = localhost
-DNS.3 = ${DRUID_SERVICE}
 
 EOT
 

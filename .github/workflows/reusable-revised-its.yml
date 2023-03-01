@@ -42,10 +42,15 @@ on:
         required: false
         type: string
         default: com.mysql.jdbc.Driver
+      OVERRIDE_ENV:
+        description: 'Existing Druid configuration (using Docker) can be overridden or new config vars can be set.'
+        required: false
+        type: string
 
 env:
   MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }} # Used by tests to connect to metadata store directly.
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
+  OVERRIDE_ENV: ${{ inputs.OVERRIDE_ENV }}
 
 jobs:
   test: # Github job that runs a given revised/new IT against retrieved cached druid docker image
