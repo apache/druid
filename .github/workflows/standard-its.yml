@@ -117,10 +117,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Setup java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: 8
+        run: export JAVA_HOME=$JAVA_HOME_8_X64
 
       - name: Restore Maven repository
         id: maven-restore

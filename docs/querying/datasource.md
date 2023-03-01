@@ -233,7 +233,7 @@ FROM
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 Query datasources allow you to issue subqueries. In native queries, they can appear anywhere that accepts a
-`dataSource`. In SQL, they can appear in the following places, always surrounded by parentheses:
+`dataSource` (except underneath a `union`). In SQL, they can appear in the following places, always surrounded by parentheses:
 
 - The FROM clause: `FROM (<subquery>)`.
 - As inputs to a JOIN: `<table-or-subquery-1> t1 INNER JOIN <table-or-subquery-2> t2 ON t1.<col1> = t2.<col2>`.

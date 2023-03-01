@@ -197,7 +197,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
             ioConfig.getAwsAssumedRoleArn(),
             ioConfig.getAwsExternalId()
         ),
-        ioConfig.getRecordsPerFetch(),
+        0, // no records-per-fetch, it is not used
         ioConfig.getFetchDelayMillis(),
         0, // skip starting background fetch, it is not used
         ioConfig.isDeaggregate(),

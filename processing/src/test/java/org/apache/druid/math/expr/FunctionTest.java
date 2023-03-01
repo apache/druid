@@ -139,7 +139,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testStrlen()
   {
     assertExpr("strlen(x)", 3L);
-    assertExpr("strlen(nonexistent)", NullHandling.defaultLongValue());
+    assertExpr("strlen(nonexistent)", null);
   }
 
   @Test
@@ -298,7 +298,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testArrayAppend()
   {
     assertArrayExpr("array_append([1, 2, 3], 4)", new Long[]{1L, 2L, 3L, 4L});
-    assertArrayExpr("array_append([1, 2, 3], 'bar')", new Long[]{1L, 2L, 3L, NullHandling.defaultLongValue()});
+    assertArrayExpr("array_append([1, 2, 3], 'bar')", new Long[]{1L, 2L, 3L, null});
     assertArrayExpr("array_append([], 1)", new String[]{"1"});
     assertArrayExpr("array_append(<LONG>[], 1)", new Long[]{1L});
   }
@@ -317,11 +317,11 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testArraySetAdd()
   {
     assertArrayExpr("array_set_add([1, 2, 3], 4)", new Long[]{1L, 2L, 3L, 4L});
-    assertArrayExpr("array_set_add([1, 2, 3], 'bar')", new Long[]{NullHandling.defaultLongValue(), 1L, 2L, 3L});
+    assertArrayExpr("array_set_add([1, 2, 3], 'bar')", new Long[]{null, 1L, 2L, 3L});
     assertArrayExpr("array_set_add([1, 2, 2], 1)", new Long[]{1L, 2L});
     assertArrayExpr("array_set_add([], 1)", new String[]{"1"});
     assertArrayExpr("array_set_add(<LONG>[], 1)", new Long[]{1L});
-    assertArrayExpr("array_set_add(<LONG>[], null)", new Long[]{NullHandling.defaultLongValue()});
+    assertArrayExpr("array_set_add(<LONG>[], null)", new Long[]{null});
   }
 
   @Test
@@ -392,7 +392,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testArrayPrepend()
   {
     assertArrayExpr("array_prepend(4, [1, 2, 3])", new Long[]{4L, 1L, 2L, 3L});
-    assertArrayExpr("array_prepend('bar', [1, 2, 3])", new Long[]{NullHandling.defaultLongValue(), 1L, 2L, 3L});
+    assertArrayExpr("array_prepend('bar', [1, 2, 3])", new Long[]{null, 1L, 2L, 3L});
     assertArrayExpr("array_prepend(1, [])", new String[]{"1"});
     assertArrayExpr("array_prepend(1, <LONG>[])", new Long[]{1L});
     assertArrayExpr("array_prepend(1, <DOUBLE>[])", new Double[]{1.0});
@@ -797,10 +797,10 @@ public class FunctionTest extends InitializedNullHandlingTest
     // happy path maths
     assertExpr("safe_divide(3, 1)", 3L);
     assertExpr("safe_divide(4.5, 2)", 2.25);
-    assertExpr("safe_divide(3, 0)", NullHandling.defaultLongValue());
-    assertExpr("safe_divide(1, 0.0)", NullHandling.defaultDoubleValue());
+    assertExpr("safe_divide(3, 0)", null);
+    assertExpr("safe_divide(1, 0.0)", null);
     // NaN and Infinity cases
-    assertExpr("safe_divide(NaN, 0.0)", NullHandling.defaultDoubleValue());
+    assertExpr("safe_divide(NaN, 0.0)", null);
     assertExpr("safe_divide(0, NaN)", 0.0);
     assertExpr("safe_divide(0, POSITIVE_INFINITY)", NullHandling.defaultLongValue());
     assertExpr("safe_divide(POSITIVE_INFINITY,0)", NullHandling.defaultLongValue());
