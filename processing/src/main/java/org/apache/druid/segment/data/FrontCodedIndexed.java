@@ -524,7 +524,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     final byte[] prefixBytes = new byte[length];
     bucket.get(prefixBytes, 0, length);
     final ByteBuffer[] bucketBuffers = new ByteBuffer[numValues];
-    bucketBuffers[0] = ByteBuffer.wrap(prefixBytes);
+    bucketBuffers[0] = ByteBuffer.wrap(prefixBytes).order(bucket.order());
     int pos = 1;
     while (pos < numValues) {
       final int prefixLength = VByte.readInt(bucket);
@@ -654,19 +654,17 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     final int valueLength = prefixLength + fragmentLength;
     final byte[] valueBytes = new byte[valueLength];
     buffer.get(valueBytes, prefixLength, fragmentLength);
-    for (int i = prefixLength - 1; i >= 0;) {
-      pos--;
+    for (int i = prefixLength; i > 0;) {
       // previous value had a larger prefix than or the same as the value we are looking for
       // skip it since the fragment doesn't have anything we need
-      if (unwindPrefixLength[pos] >= prefixLength) {
+      if (unwindPrefixLength[--pos] >= i) {
         continue;
       }
-      while (i >= unwindPrefixLength[pos]) {
-        valueBytes[i] = buffer.get(unwindBufferPosition[pos] + (i - unwindPrefixLength[pos]));
-        i--;
-      }
+      buffer.position(unwindBufferPosition[pos]);
+      buffer.get(valueBytes, unwindPrefixLength[pos], i - unwindPrefixLength[pos]);
+      i = unwindPrefixLength[pos];
     }
-    return ByteBuffer.wrap(valueBytes);
+    return ByteBuffer.wrap(valueBytes).order(buffer.order());
   }
 
   /**
@@ -719,19 +717,17 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     final int valueLength = prefixLength + fragmentLength;
     final byte[] valueBytes = new byte[valueLength];
     buffer.get(valueBytes, prefixLength, fragmentLength);
-    for (int i = prefixLength - 1; i >= 0;) {
-      pos--;
+    for (int i = prefixLength; i > 0;) {
       // previous value had a larger prefix than or the same as the value we are looking for
       // skip it since the fragment doesn't have anything we need
-      if (unwindPrefixLength[pos] >= prefixLength) {
+      if (unwindPrefixLength[--pos] >= i) {
         continue;
       }
-      while (i >= unwindPrefixLength[pos]) {
-        valueBytes[i] = buffer.get(unwindBufferPosition[pos] + (i - unwindPrefixLength[pos]));
-        i--;
-      }
+      buffer.position(unwindBufferPosition[pos]);
+      buffer.get(valueBytes, unwindPrefixLength[pos], i - unwindPrefixLength[pos]);
+      i = unwindPrefixLength[pos];
     }
-    return ByteBuffer.wrap(valueBytes);
+    return ByteBuffer.wrap(valueBytes).order(buffer.order());
   }
 
 
@@ -747,7 +743,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     byte[] prefixBytes = new byte[length];
     bucket.get(prefixBytes, 0, length);
     final ByteBuffer[] bucketBuffers = new ByteBuffer[numValues];
-    bucketBuffers[0] = ByteBuffer.wrap(prefixBytes);
+    bucketBuffers[0] = ByteBuffer.wrap(prefixBytes).order(bucket.order());
     int pos = 1;
     while (pos < numValues) {
       final int prefixLength = VByte.readInt(bucket);
@@ -755,7 +751,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
       byte[] nextValueBytes = new byte[prefixLength + fragmentLength];
       System.arraycopy(prefixBytes, 0, nextValueBytes, 0, prefixLength);
       bucket.get(nextValueBytes, prefixLength, fragmentLength);
-      final ByteBuffer value = ByteBuffer.wrap(nextValueBytes);
+      final ByteBuffer value = ByteBuffer.wrap(nextValueBytes).order(bucket.order());
       prefixBytes = nextValueBytes;
       bucketBuffers[pos++] = value;
     }
