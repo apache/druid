@@ -473,7 +473,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     int prefixPosition;
     if (offset == 0) {
       final int length = VByte.readInt(buffer);
-      final ByteBuffer firstValue = buffer.asReadOnlyBuffer().order(buffer.order());
+      final ByteBuffer firstValue = buffer.asReadOnlyBuffer();
       firstValue.limit(firstValue.position() + length);
       return firstValue;
     } else {
@@ -524,7 +524,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     final byte[] prefixBytes = new byte[length];
     bucket.get(prefixBytes, 0, length);
     final ByteBuffer[] bucketBuffers = new ByteBuffer[numValues];
-    bucketBuffers[0] = ByteBuffer.wrap(prefixBytes).order(bucket.order());
+    bucketBuffers[0] = ByteBuffer.wrap(prefixBytes);
     int pos = 1;
     while (pos < numValues) {
       final int prefixLength = VByte.readInt(bucket);
@@ -620,7 +620,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     final int length = VByte.readInt(buffer);
     if (offset == 0) {
       // return first value directly from underlying buffer since it is stored whole
-      final ByteBuffer value = buffer.asReadOnlyBuffer().order(buffer.order());
+      final ByteBuffer value = buffer.asReadOnlyBuffer();
       value.limit(value.position() + length);
       return value;
     }
@@ -644,7 +644,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
         fragmentLength = VByte.readInt(buffer);
         if (prefixLength == 0) {
           // no prefix, return it directly from the underlying buffer
-          final ByteBuffer value = buffer.asReadOnlyBuffer().order(buffer.order());
+          final ByteBuffer value = buffer.asReadOnlyBuffer();
           value.limit(value.position() + fragmentLength);
           return value;
         }
@@ -664,7 +664,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
       buffer.get(valueBytes, unwindPrefixLength[pos], i - unwindPrefixLength[pos]);
       i = unwindPrefixLength[pos];
     }
-    return ByteBuffer.wrap(valueBytes).order(buffer.order());
+    return ByteBuffer.wrap(valueBytes);
   }
 
   /**
@@ -683,7 +683,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     final int length = VByte.readInt(buffer);
     if (offset == 0) {
       // return first value directly from underlying buffer since it is stored whole
-      final ByteBuffer value = buffer.asReadOnlyBuffer().order(buffer.order());
+      final ByteBuffer value = buffer.asReadOnlyBuffer();
       value.limit(value.position() + length);
       return value;
     }
@@ -707,7 +707,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
         fragmentLength = VByte.readInt(buffer);
         if (prefixLength == 0) {
           // no prefix, return it directly from the underlying buffer
-          final ByteBuffer value = buffer.asReadOnlyBuffer().order(buffer.order());
+          final ByteBuffer value = buffer.asReadOnlyBuffer();
           value.limit(value.position() + fragmentLength);
           return value;
         }
@@ -727,7 +727,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
       buffer.get(valueBytes, unwindPrefixLength[pos], i - unwindPrefixLength[pos]);
       i = unwindPrefixLength[pos];
     }
-    return ByteBuffer.wrap(valueBytes).order(buffer.order());
+    return ByteBuffer.wrap(valueBytes);
   }
 
 
@@ -743,7 +743,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     byte[] prefixBytes = new byte[length];
     bucket.get(prefixBytes, 0, length);
     final ByteBuffer[] bucketBuffers = new ByteBuffer[numValues];
-    bucketBuffers[0] = ByteBuffer.wrap(prefixBytes).order(bucket.order());
+    bucketBuffers[0] = ByteBuffer.wrap(prefixBytes);
     int pos = 1;
     while (pos < numValues) {
       final int prefixLength = VByte.readInt(bucket);
@@ -751,7 +751,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
       byte[] nextValueBytes = new byte[prefixLength + fragmentLength];
       System.arraycopy(prefixBytes, 0, nextValueBytes, 0, prefixLength);
       bucket.get(nextValueBytes, prefixLength, fragmentLength);
-      final ByteBuffer value = ByteBuffer.wrap(nextValueBytes).order(bucket.order());
+      final ByteBuffer value = ByteBuffer.wrap(nextValueBytes);
       prefixBytes = nextValueBytes;
       bucketBuffers[pos++] = value;
     }
