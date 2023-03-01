@@ -507,7 +507,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
                 nullVector = new boolean[objectSelector.getMaxVectorSize()];
               }
               longVector[i] = 0L;
-              nullVector[i] = true;
+              nullVector[i] = NullHandling.sqlCompatible();
             } else {
               Long l;
               if (v instanceof Number) {
@@ -525,7 +525,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
                   nullVector = new boolean[objectSelector.getMaxVectorSize()];
                 }
                 longVector[i] = 0L;
-                nullVector[i] = true;
+                nullVector[i] = NullHandling.sqlCompatible();
               }
             }
           }
@@ -570,7 +570,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
                 nullVector = new boolean[objectSelector.getMaxVectorSize()];
               }
               doubleVector[i] = 0.0;
-              nullVector[i] = true;
+              nullVector[i] = NullHandling.sqlCompatible();
             } else {
               Double d;
               if (v instanceof Number) {
@@ -588,7 +588,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
                   nullVector = new boolean[objectSelector.getMaxVectorSize()];
                 }
                 doubleVector[i] = 0.0;
-                nullVector[i] = true;
+                nullVector[i] = NullHandling.sqlCompatible();
               }
             }
           }

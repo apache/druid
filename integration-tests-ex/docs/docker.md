@@ -299,4 +299,3 @@ simple-client-sslcontext
 ```
 
 If more are needed, they should be added during the image build.
-

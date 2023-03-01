@@ -26,9 +26,9 @@ import org.apache.druid.java.util.emitter.core.HttpEmitterConfig;
 import org.apache.druid.java.util.emitter.core.HttpPostEmitter;
 import org.asynchttpclient.AsyncHttpClient;
 
+@SuppressWarnings("unused")
 public class HttpEmitterFactory extends HttpEmitterConfig implements EmitterFactory
 {
-
   @Override
   public Emitter makeEmitter(ObjectMapper objectMapper, AsyncHttpClient httpClient, Lifecycle lifecycle)
   {

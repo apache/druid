@@ -246,9 +246,31 @@ Indexer. To run on Indexer:
 
 * In the environment, `export USE_INDEXER=indexer`. (Use `middleManager`
   otherwise. If the variable is not set, `middleManager` is the default.)
+
+Then, there are two ways to handle indexer-specific configuration: the crude-but-effective
+way and the subtle way.
+
+#### Using Two Docker-Compose Files
+
+The crude way, which involves much copy/paste and results in two files which must be maintained
+in sync:
+
 * The `cluster/<category>/docker-compose.yaml` file should be for the Middle manager. Create
   a separate file called `cluster/<category>/docker-compose-indexer.yaml` to define the
   Indexer-based cluster.
+
+#### Generated Docker-Compose File
+
+The fancy way is to use the `docker-compose.yaml` generation template described elsewhere.
+In that case, the script will automatically generate either the Middle Manager, or the Indexer,
+depending on the environment variable mentioned above.
+
+#### Client Configuration
+
+The client will choose Middle Manager or Indexer automatially if you set the
+`USE_INDEXER` environment variable in your IDE. (When run via the build
+process, the environment variable is already set.)
+
 * The test `src/test/resources/cluster/<category>/docker.yaml` file should contain a conditional
   entry to select define either the Middle Manager or Indexer. Example:
 
@@ -265,3 +287,23 @@ Indexer. To run on Indexer:
 
 Now, the test will run on Indexer if the above environment variable is set, Middle Manager
 otherwise.
+
+#### Disable Individual Tests
+
+You may have a test that can run only on Middle Manager or Indexer. The crude-but-effective
+way to handle this is:
+
+```
+  @Test
+  public void myMMOnlyTest()
+  {
+    if (ClusterConfig.isIndexer()) {
+    	return; // Runs only on MM
+    }
+    // The MM-only test code here
+  }
+```
+
+It would be possible to define an annotation, managed by the `DruidTestRunner`, if this
+becomes something we need to do often.
+

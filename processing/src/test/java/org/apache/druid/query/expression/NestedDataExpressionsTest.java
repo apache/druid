@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
@@ -173,7 +172,7 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
 
     expr = Parser.parse("json_value(nester, '$.y.a', 'LONG')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
-    Assert.assertEquals(NullHandling.defaultLongValue(), eval.value());
+    Assert.assertNull(eval.value());
     Assert.assertEquals(ExpressionType.LONG, eval.type());
 
     expr = Parser.parse("json_value(nester, '$.y.a.b.c[12]')", MACRO_TABLE);

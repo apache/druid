@@ -54,10 +54,7 @@ jobs:
           fetch-depth: 0
 
       - name: setup jdk${{ inputs.jdk }}
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: ${{ inputs.jdk }}
+        run: export JAVA_HOME=$JAVA_HOME_${{ inputs.jdk }}_X64
 
       - name: Restore Maven repository
         id: maven-restore

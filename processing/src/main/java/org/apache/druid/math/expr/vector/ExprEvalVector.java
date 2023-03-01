@@ -19,11 +19,9 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
-import java.lang.reflect.Array;
 
 /**
  * Result of {@link ExprVectorProcessor#evalVector} which wraps the actual evaluated results of the operation over the
@@ -46,15 +44,6 @@ public abstract class ExprEvalVector<T>
   public T values()
   {
     return values;
-  }
-
-  @Nullable
-  public Object get(int index)
-  {
-    if (nulls == null || NullHandling.replaceWithDefault() || !nulls[index]) {
-      return Array.get(values, index);
-    }
-    return null;
   }
 
   @Nullable

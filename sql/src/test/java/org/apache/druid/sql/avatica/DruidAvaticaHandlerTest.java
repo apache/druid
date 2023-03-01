@@ -75,6 +75,7 @@ import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcher;
 import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcherFactory;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -291,6 +292,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>(){}).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())));
             binder.bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
             binder.bind(JoinableFactoryWrapper.class).toInstance(CalciteTests.createJoinableFactoryWrapper());
+            binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
           }
          )
         .build();
@@ -999,7 +1001,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             CalciteTests.getJsonMapper(),
             CalciteTests.DRUID_SCHEMA_NAME,
             new CalciteRulesManager(ImmutableSet.of()),
-            CalciteTests.createJoinableFactoryWrapper()
+            CalciteTests.createJoinableFactoryWrapper(),
+            CatalogResolver.NULL_RESOLVER
         )
     );
   }

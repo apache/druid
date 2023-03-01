@@ -34,7 +34,6 @@ public abstract class BivariateLongFunctionVectorValueProcessor<TLeftInput, TRig
 {
   final ExprVectorProcessor<TLeftInput> left;
   final ExprVectorProcessor<TRightInput> right;
-  final int maxVectorSize;
   final boolean[] outNulls;
   final long[] outValues;
 
@@ -46,7 +45,6 @@ public abstract class BivariateLongFunctionVectorValueProcessor<TLeftInput, TRig
   {
     this.left = left;
     this.right = right;
-    this.maxVectorSize = maxVectorSize;
     this.outValues = new long[maxVectorSize];
     this.outNulls = new boolean[maxVectorSize];
   }

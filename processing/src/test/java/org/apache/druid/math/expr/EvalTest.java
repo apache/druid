@@ -247,18 +247,18 @@ public class EvalTest extends InitializedNullHandlingTest
 
     // test casting arrays to scalars
     assertEquals(1L, ExprEval.ofLongArray(new Long[]{1L}).castTo(ExpressionType.LONG).value());
-    assertEquals(NullHandling.defaultLongValue(), ExprEval.ofLongArray(new Long[]{null}).castTo(ExpressionType.LONG).value());
+    assertEquals(null, ExprEval.ofLongArray(new Long[]{null}).castTo(ExpressionType.LONG).value());
     assertEquals(1.0, ExprEval.ofLongArray(new Long[]{1L}).castTo(ExpressionType.DOUBLE).asDouble(), 0.0);
     assertEquals("1", ExprEval.ofLongArray(new Long[]{1L}).castTo(ExpressionType.STRING).value());
 
     assertEquals(1.1, ExprEval.ofDoubleArray(new Double[]{1.1}).castTo(ExpressionType.DOUBLE).asDouble(), 0.0);
-    assertEquals(NullHandling.defaultDoubleValue(), ExprEval.ofDoubleArray(new Double[]{null}).castTo(ExpressionType.DOUBLE).value());
+    assertEquals(null, ExprEval.ofDoubleArray(new Double[]{null}).castTo(ExpressionType.DOUBLE).value());
     assertEquals(1L, ExprEval.ofDoubleArray(new Double[]{1.1}).castTo(ExpressionType.LONG).value());
     assertEquals("1.1", ExprEval.ofDoubleArray(new Double[]{1.1}).castTo(ExpressionType.STRING).value());
 
     assertEquals("foo", ExprEval.ofStringArray(new String[]{"foo"}).castTo(ExpressionType.STRING).value());
-    assertEquals(NullHandling.defaultLongValue(), ExprEval.ofStringArray(new String[]{"foo"}).castTo(ExpressionType.LONG).value());
-    assertEquals(NullHandling.defaultDoubleValue(), ExprEval.ofStringArray(new String[]{"foo"}).castTo(ExpressionType.DOUBLE).value());
+    assertEquals(null, ExprEval.ofStringArray(new String[]{"foo"}).castTo(ExpressionType.LONG).value());
+    assertEquals(null, ExprEval.ofStringArray(new String[]{"foo"}).castTo(ExpressionType.DOUBLE).value());
     assertEquals("1", ExprEval.ofStringArray(new String[]{"1"}).castTo(ExpressionType.STRING).value());
     assertEquals(1L, ExprEval.ofStringArray(new String[]{"1"}).castTo(ExpressionType.LONG).value());
     assertEquals(1.0, ExprEval.ofStringArray(new String[]{"1"}).castTo(ExpressionType.DOUBLE).value());
@@ -518,17 +518,18 @@ public class EvalTest extends InitializedNullHandlingTest
 
       assertEquals(1L, eval("null || 1", bindings).value());
       assertEquals(1L, eval("1 || null", bindings).value());
-      assertEquals(NullHandling.defaultLongValue(), eval("null || 0", bindings).value());
-      assertEquals(NullHandling.defaultLongValue(), eval("0 || null", bindings).value());
-      // null/null is evaluated as string typed
-      assertEquals(NullHandling.defaultLongValue(), eval("null || null", bindings).value());
+      // in sql incompatible mode, null is false, so we return 0
+      assertEquals(NullHandling.defaultLongValue(), eval("null || 0", bindings).valueOrDefault());
+      assertEquals(NullHandling.defaultLongValue(), eval("0 || null", bindings).valueOrDefault());
+      assertEquals(NullHandling.defaultLongValue(), eval("null || null", bindings).valueOrDefault());
 
-      assertEquals(NullHandling.defaultLongValue(), eval("null && 1", bindings).value());
-      assertEquals(NullHandling.defaultLongValue(), eval("1 && null", bindings).value());
+      // in sql incompatible mode, null is false, so we return 0
+      assertEquals(NullHandling.defaultLongValue(), eval("null && 1", bindings).valueOrDefault());
+      assertEquals(NullHandling.defaultLongValue(), eval("1 && null", bindings).valueOrDefault());
+      assertEquals(NullHandling.defaultLongValue(), eval("null && null", bindings).valueOrDefault());
+      // if either side is false, output is false in both modes
       assertEquals(0L, eval("null && 0", bindings).value());
       assertEquals(0L, eval("0 && null", bindings).value());
-      // null/null is evaluated as string typed
-      assertEquals(NullHandling.defaultLongValue(), eval("null && null", bindings).value());
     }
     finally {
       // reset
@@ -708,6 +709,26 @@ public class EvalTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testValueOrDefault()
+  {
+    ExprEval<?> longNull = ExprEval.ofLong(null);
+    ExprEval<?> doubleNull = ExprEval.ofDouble(null);
+    Assert.assertEquals(NullHandling.sqlCompatible(), longNull.isNumericNull());
+    Assert.assertEquals(NullHandling.sqlCompatible(), doubleNull.isNumericNull());
+    Assert.assertEquals(NullHandling.defaultLongValue(), longNull.valueOrDefault());
+    Assert.assertEquals(NullHandling.defaultDoubleValue(), doubleNull.valueOrDefault());
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(0L, longNull.asLong());
+      Assert.assertEquals(0, longNull.asInt());
+      Assert.assertEquals(0.0, longNull.asDouble(), 0.0);
+
+      Assert.assertEquals(0L, doubleNull.asLong());
+      Assert.assertEquals(0, doubleNull.asInt());
+      Assert.assertEquals(0.0, doubleNull.asDouble(), 0.0);
+    }
+  }
+
+  @Test
   public void testEvalOfType()
   {
     // strings
@@ -831,7 +852,7 @@ public class EvalTest extends InitializedNullHandlingTest
 
     eval = ExprEval.ofType(ExpressionType.LONG_ARRAY, new Object[] {1L, 2L, null, 3L});
     Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {1L, 2L, NullHandling.defaultLongValue(), 3L}, (Object[]) eval.value());
+    Assert.assertArrayEquals(new Object[] {1L, 2L, null, 3L}, (Object[]) eval.value());
 
     // arrays might have to fall back to using 'bestEffortOf', but will cast it to the expected output type
     eval = ExprEval.ofType(ExpressionType.LONG_ARRAY, new Object[] {"1", "2", "3"});
@@ -844,7 +865,7 @@ public class EvalTest extends InitializedNullHandlingTest
 
     eval = ExprEval.ofType(ExpressionType.LONG_ARRAY, new Object[] {"1", "2", "wat", "3"});
     Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {1L, 2L, NullHandling.defaultLongValue(), 3L}, (Object[]) eval.value());
+    Assert.assertArrayEquals(new Object[] {1L, 2L, null, 3L}, (Object[]) eval.value());
 
     eval = ExprEval.ofType(ExpressionType.LONG_ARRAY, new Object[] {1.0, 2.0, 3.0});
     Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
@@ -856,7 +877,7 @@ public class EvalTest extends InitializedNullHandlingTest
 
     eval = ExprEval.ofType(ExpressionType.LONG_ARRAY, new Object[] {1.0, 2.0, null, 3.0});
     Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {1L, 2L, NullHandling.defaultLongValue(), 3L}, (Object[]) eval.value());
+    Assert.assertArrayEquals(new Object[] {1L, 2L, null, 3L}, (Object[]) eval.value());
 
     eval = ExprEval.ofType(ExpressionType.LONG_ARRAY, new Object[] {1.0, 2L, "3", true, false});
     Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
@@ -885,7 +906,7 @@ public class EvalTest extends InitializedNullHandlingTest
 
     eval = ExprEval.ofType(ExpressionType.DOUBLE_ARRAY, new Object[] {"1", "2", "wat", "3"});
     Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {1.0, 2.0, NullHandling.defaultDoubleValue(), 3.0}, (Object[]) eval.value());
+    Assert.assertArrayEquals(new Object[] {1.0, 2.0, null, 3.0}, (Object[]) eval.value());
 
     eval = ExprEval.ofType(ExpressionType.DOUBLE_ARRAY, new Object[] {1L, 2L, 3L});
     Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
@@ -897,7 +918,7 @@ public class EvalTest extends InitializedNullHandlingTest
 
     eval = ExprEval.ofType(ExpressionType.DOUBLE_ARRAY, new Object[] {1L, 2L, null, 3L});
     Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {1.0, 2.0, NullHandling.defaultDoubleValue(), 3.0}, (Object[]) eval.value());
+    Assert.assertArrayEquals(new Object[] {1.0, 2.0, null, 3.0}, (Object[]) eval.value());
 
     eval = ExprEval.ofType(ExpressionType.DOUBLE_ARRAY, new Object[] {1.0, 2L, "3", true, false});
     Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
@@ -934,7 +955,7 @@ public class EvalTest extends InitializedNullHandlingTest
       ExpressionType nestedLongArray = ExpressionTypeFactory.getInstance().ofArray(ExpressionType.LONG_ARRAY);
       final Object[] expectedLongArray = new Object[]{
           new Object[] {1L, 2L, 3L},
-          new Object[] {5L, NullHandling.defaultLongValue(), 9L},
+          new Object[] {5L, null, 9L},
           null,
           new Object[] {2L, 4L, 6L}
       };
@@ -979,7 +1000,7 @@ public class EvalTest extends InitializedNullHandlingTest
       ExpressionType nestedDoubleArray = ExpressionTypeFactory.getInstance().ofArray(ExpressionType.DOUBLE_ARRAY);
       final Object[] expectedDoubleArray = new Object[]{
           new Object[] {1.1, 2.2, 3.3},
-          new Object[] {5.5, NullHandling.defaultDoubleValue(), 9.9},
+          new Object[] {5.5, null, 9.9},
           null,
           new Object[] {2.2, 4.4, 6.6}
       };
@@ -1109,7 +1130,7 @@ public class EvalTest extends InitializedNullHandlingTest
 
     eval = ExprEval.bestEffortOf(new Object[] {null, 1.0, 2.0, 3.0});
     Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {NullHandling.defaultDoubleValue(), 1.0, 2.0, 3.0}, (Object[]) eval.value());
+    Assert.assertArrayEquals(new Object[] {null, 1.0, 2.0, 3.0}, (Object[]) eval.value());
 
     eval = ExprEval.bestEffortOf(new Double[] {1.0, 2.0, 3.0});
     Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());

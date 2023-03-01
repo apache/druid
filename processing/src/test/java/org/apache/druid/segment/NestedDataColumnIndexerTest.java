@@ -543,7 +543,7 @@ public class NestedDataColumnIndexerTest extends InitializedNullHandlingTest
                 new TimestampSpec(TIME_COL, "millis", null),
                 Granularities.NONE,
                 VirtualColumns.EMPTY,
-                DimensionsSpec.builder().setUseNestedColumnIndexerForSchemaDiscovery(true).build(),
+                DimensionsSpec.builder().useSchemaDiscovery(true).build(),
                 new AggregatorFactory[0],
                 false
             )
