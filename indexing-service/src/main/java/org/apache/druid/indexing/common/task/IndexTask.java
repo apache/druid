@@ -952,13 +952,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       Set<DataSegment> tombStones = Collections.emptySet();
       if (getIngestionMode() == IngestionMode.REPLACE) {
         // check whether to generate tombstones...
-        TombstoneHelper tombstoneHelper = new TombstoneHelper(
-            pushed.getSegments(),
-            ingestionSchema.getDataSchema(),
-            toolbox.getTaskActionClient()
-        );
+        TombstoneHelper tombstoneHelper = new TombstoneHelper(toolbox.getTaskActionClient());
 
-        List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals();
+        List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals(
+            pushed.getSegments(),
+            ingestionSchema.getDataSchema()
+        );
         // now find the versions for the tombstone intervals
         Map<Interval, SegmentIdWithShardSpec> tombstonesAndVersions = new HashMap<>();
         for (Interval interval : tombstoneIntervals) {
@@ -970,7 +969,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           tombstonesAndVersions.put(interval, segmentIdWithShardSpec);
         }
 
-        tombStones = tombstoneHelper.computeTombstones(tombstonesAndVersions);
+        tombStones = tombstoneHelper.computeTombstones(ingestionSchema.getDataSchema(), tombstonesAndVersions);
 
 
         log.debugSegments(tombStones, "To publish tombstones");

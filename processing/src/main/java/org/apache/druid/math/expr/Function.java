@@ -131,9 +131,9 @@ public interface Function extends NamedFunction
 
   /**
    * Builds a 'vectorized' function expression processor, that can build vectorized processors for its input values
-   * using {@link Expr#buildVectorized}, for use in vectorized query engines.
+   * using {@link Expr#asVectorProcessor}, for use in vectorized query engines.
    *
-   * @see Expr#buildVectorized(Expr.VectorInputBindingInspector)
+   * @see Expr#asVectorProcessor(Expr.VectorInputBindingInspector)
    * @see ApplyFunction#asVectorProcessor(Expr.VectorInputBindingInspector, Expr, List)
    */
   default <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
@@ -1176,7 +1176,7 @@ public interface Function extends NamedFunction
     {
       if (y == 0) {
         if (x != 0) {
-          return ExprEval.ofLong(NullHandling.defaultLongValue());
+          return ExprEval.ofLong(null);
         }
         return ExprEval.ofLong(0);
       }
@@ -1188,7 +1188,7 @@ public interface Function extends NamedFunction
     {
       if (y == 0 || Double.isNaN(y)) {
         if (x != 0) {
-          return ExprEval.ofDouble(NullHandling.defaultDoubleValue());
+          return ExprEval.ofDouble(null);
         }
         return ExprEval.ofDouble(0);
       }
@@ -2014,7 +2014,7 @@ public interface Function extends NamedFunction
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
       return CastToTypeVectorProcessor.cast(
-          args.get(0).buildVectorized(inspector),
+          args.get(0).asVectorProcessor(inspector),
           ExpressionType.fromString(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()))
       );
     }
@@ -2384,7 +2384,7 @@ public interface Function extends NamedFunction
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final String arg = args.get(0).eval(bindings).asString();
-      return arg == null ? ExprEval.ofLong(NullHandling.defaultLongValue()) : ExprEval.of(arg.length());
+      return arg == null ? ExprEval.ofLong(null) : ExprEval.of(arg.length());
     }
 
     @Override

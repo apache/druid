@@ -175,7 +175,7 @@ class LongExpr extends ConstantExpr<Long>
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return VectorProcessors.constant(value, inspector.getMaxVectorSize());
   }
@@ -214,7 +214,7 @@ class NullLongExpr extends ConstantExpr<Long>
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return VectorProcessors.constant((Long) null, inspector.getMaxVectorSize());
   }
@@ -258,7 +258,7 @@ class DoubleExpr extends ConstantExpr<Double>
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return VectorProcessors.constant(value, inspector.getMaxVectorSize());
   }
@@ -297,7 +297,7 @@ class NullDoubleExpr extends ConstantExpr<Double>
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return VectorProcessors.constant((Double) null, inspector.getMaxVectorSize());
   }
@@ -341,7 +341,7 @@ class StringExpr extends ConstantExpr<String>
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return VectorProcessors.constant(value, inspector.getMaxVectorSize());
   }
