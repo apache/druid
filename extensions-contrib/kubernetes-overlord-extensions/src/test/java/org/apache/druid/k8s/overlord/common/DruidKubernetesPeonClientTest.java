@@ -131,8 +131,8 @@ public class DruidKubernetesPeonClientTest
     Optional<InputStream> stream = peonClient.getPeonLogs(new K8sTaskId("foo"));
     assertFalse(stream.isPresent());
 
-    String logs = peonClient.getJobLogs(new K8sTaskId("foo"));
-    assertTrue(logs.startsWith("No logs found"));
+    Optional<InputStream> logs = peonClient.getJobLogs(new K8sTaskId("foo"));
+    assertFalse(logs.isPresent());
   }
 
   private Job mockJob(boolean active, Timestamp timestamp)

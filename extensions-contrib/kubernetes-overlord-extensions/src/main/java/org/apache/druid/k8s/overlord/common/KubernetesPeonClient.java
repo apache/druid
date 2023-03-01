@@ -44,7 +44,7 @@ public interface KubernetesPeonClient
 
   boolean cleanUpJob(K8sTaskId taskId);
 
-  String getJobLogs(K8sTaskId taskId);
+  Optional<InputStream> getJobLogs(K8sTaskId taskId);
 
   Optional<InputStream> getPeonLogs(K8sTaskId taskId);
 

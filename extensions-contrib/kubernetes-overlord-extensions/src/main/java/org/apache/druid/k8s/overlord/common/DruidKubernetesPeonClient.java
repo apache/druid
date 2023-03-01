@@ -141,19 +141,26 @@ public class DruidKubernetesPeonClient implements KubernetesPeonClient
   }
 
   @Override
-  public String getJobLogs(K8sTaskId taskId)
+  public Optional<InputStream> getJobLogs(K8sTaskId taskId)
   {
     try {
-      return clientApi.executeRequest(client -> client.batch()
-                                                      .v1()
-                                                      .jobs()
-                                                      .inNamespace(namespace)
-                                                      .withName(taskId.getK8sTaskId())
-                                                      .inContainer("main")
-                                                      .getLog(true));
+      return clientApi.executeRequest(client -> {
+        Reader reader = client.batch()
+            .v1()
+            .jobs()
+            .inNamespace(namespace)
+            .withName(taskId.getK8sTaskId())
+            .inContainer("main")
+            .getLogReader();
+        if (reader == null) {
+          return Optional.absent();
+        }
+        return Optional.of(new ReaderInputStream(reader, StandardCharsets.UTF_8));
+      });
     }
     catch (Exception e) {
-      return "No logs found: " + e;
+      log.error(e, "Error streaming logs from task: %s", taskId);
+      return Optional.absent();
     }
   }
 

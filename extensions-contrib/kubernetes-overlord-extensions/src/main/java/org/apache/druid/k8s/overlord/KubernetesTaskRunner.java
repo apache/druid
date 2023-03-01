@@ -214,11 +214,10 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                   // publish task logs
                   Path log = Files.createTempFile(task.getId(), "log");
                   try {
-                    FileUtils.write(
-                        log.toFile(),
-                        client.getJobLogs(new K8sTaskId(task.getId())),
-                        StandardCharsets.UTF_8
-                    );
+                    Optional<InputStream> logStream = client.getJobLogs(new K8sTaskId(task.getId()));
+                    if (logStream.isPresent()) {
+                      FileUtils.copyInputStreamToFile(logStream.get(), log.toFile());
+                    }
                     taskLogPusher.pushTaskLog(task.getId(), log.toFile());
                   }
                   finally {
