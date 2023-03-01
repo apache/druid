@@ -420,8 +420,8 @@ public class BalanceSegmentsTest
     params = new BalanceSegments(stateManager).run(params);
     EasyMock.verify(strategy);
     Assert.assertEquals(1, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
-    Assert.assertEquals(0, peon1.getNumberOfSegmentsInQueue());
-    Assert.assertEquals(1, peon2.getNumberOfSegmentsInQueue());
+    Assert.assertEquals(0, peon1.getNumberOfSegmentsToLoad());
+    Assert.assertEquals(1, peon2.getNumberOfSegmentsToLoad());
   }
 
   @Test

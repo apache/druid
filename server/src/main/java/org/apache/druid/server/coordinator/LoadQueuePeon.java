@@ -53,11 +53,11 @@ public interface LoadQueuePeon
 
   void dropSegment(DataSegment segment, LoadPeonCallback callback);
 
-  long getLoadQueueSize();
+  long getSizeOfSegmentsToLoad();
 
   int getAndResetFailedAssignCount();
 
-  int getNumberOfSegmentsInQueue();
+  int getNumberOfSegmentsToLoad();
 
   /**
    * Tries to cancel the current operation queued for the given segment on this

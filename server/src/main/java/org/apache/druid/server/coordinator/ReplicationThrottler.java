@@ -37,49 +37,49 @@ public class ReplicationThrottler
   private final Set<String> eligibleTiers;
   private final int replicationThrottleLimit;
   private final int maxLifetime;
-  private final int maxTotalReplicasPerRun;
+  private final int maxReplicaAssignmentsInRun;
 
   private final Map<String, Integer> tierToNumAssigned = new HashMap<>();
   private final Map<String, Integer> tierToNumThrottled = new HashMap<>();
 
-  private int totalNumAssignedReplicas;
+  private int totalReplicasAssignedInRun;
 
   /**
-   * Creates a new ReplicationThrottler for use during a single coordiantor run.
+   * Creates a new ReplicationThrottler for use during a single coordinator run.
    *
-   * @param eligibleTiers            Set of tiers eligible for replication.
-   * @param replicationThrottleLimit Maximum number of replicas that can be
-   *                                 actively loading on a tier at any given time.
-   * @param maxLifetime              Number of coordinator runs after which a
-   *                                 replica remaining in the queue is considered
-   *                                 to be stuck and triggers an alert.
-   * @param maxTotalReplicasPerRun   Maximum number of replicas that can be
-   *                                 assigned for loading in a single coordinator run.
+   * @param eligibleTiers              Set of tiers eligible for replication.
+   * @param replicationThrottleLimit   Maximum number of replicas that can be
+   *                                   actively loading on a tier at any given time.
+   * @param maxLifetime                Number of coordinator runs after which a
+   *                                   replica remaining in the queue is considered
+   *                                   to be stuck and triggers an alert.
+   * @param maxReplicaAssignmentsInRun Max number of replicas that can be assigned
+   *                                   for loading in the current coordinator run.
    */
   public ReplicationThrottler(
       Set<String> eligibleTiers,
       int replicationThrottleLimit,
       int maxLifetime,
-      int maxTotalReplicasPerRun
+      int maxReplicaAssignmentsInRun
   )
   {
     this.eligibleTiers = eligibleTiers;
     this.replicationThrottleLimit = replicationThrottleLimit;
     this.maxLifetime = maxLifetime;
-    this.maxTotalReplicasPerRun = maxTotalReplicasPerRun;
-    this.totalNumAssignedReplicas = 0;
+    this.maxReplicaAssignmentsInRun = maxReplicaAssignmentsInRun;
+    this.totalReplicasAssignedInRun = 0;
   }
 
   public boolean canAssignReplica(String tier, int numProcessingSegmentsInTier)
   {
-    return totalNumAssignedReplicas < maxTotalReplicasPerRun
+    return totalReplicasAssignedInRun < maxReplicaAssignmentsInRun
            && numProcessingSegmentsInTier < replicationThrottleLimit
            && eligibleTiers.contains(tier);
   }
 
   public void incrementAssignedReplicas(String tier)
   {
-    ++totalNumAssignedReplicas;
+    ++totalReplicasAssignedInRun;
     tierToNumAssigned.compute(tier, (t, count) -> (count == null) ? 1 : count + 1);
   }
 

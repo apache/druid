@@ -31,16 +31,16 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- *
+ * Encapsulates the state of a DruidServer during a single coordinator run.
  */
 public class ServerHolder implements Comparable<ServerHolder>
 {
   private final ImmutableDruidServer server;
   private final LoadQueuePeon peon;
   private final boolean isDecommissioning;
-  private final int maxSegmentsInLoadQueue;
+  private final int maxAssignmentsInRun;
 
-  private int segmentsQueuedForLoad;
+  private int totalAssignmentsInRun;
   private long sizeOfLoadingSegments;
 
   /**
@@ -59,6 +59,16 @@ public class ServerHolder implements Comparable<ServerHolder>
     this(server, peon, isDecommissioning, 0);
   }
 
+  /**
+   * Creates a new ServerHolder valid for a single coordinator run.
+   *
+   * @param server                 Underlying Druid server
+   * @param peon                   Load queue peon for this server
+   * @param isDecommissioning      Whether the server is decommissioning
+   * @param maxSegmentsInLoadQueue Max number of segments that can be present in
+   *                               the load queue at any point. If this is 0, the
+   *                               load queue can have an unlimited number of segments.
+   */
   public ServerHolder(
       ImmutableDruidServer server,
       LoadQueuePeon peon,
@@ -69,10 +79,18 @@ public class ServerHolder implements Comparable<ServerHolder>
     this.server = server;
     this.peon = peon;
     this.isDecommissioning = isDecommissioning;
-    this.maxSegmentsInLoadQueue = maxSegmentsInLoadQueue;
+
+    this.maxAssignmentsInRun = maxSegmentsInLoadQueue == 0
+                               ? Integer.MAX_VALUE
+                               : maxSegmentsInLoadQueue - peon.getNumberOfSegmentsToLoad();
 
     peon.getSegmentsInQueue().forEach(
-        (segment, action) -> queuedSegments.put(segment, simplify(action))
+        (segment, action) -> {
+          queuedSegments.put(segment, simplify(action));
+          if (isLoadAction(action)) {
+            sizeOfLoadingSegments += segment.getSize();
+          }
+        }
     );
   }
 
@@ -136,7 +154,7 @@ public class ServerHolder implements Comparable<ServerHolder>
     return !isDecommissioning
            && !hasSegmentLoaded(segment.getId())
            && getActionOnSegment(segment) == null
-           && (maxSegmentsInLoadQueue == 0 || maxSegmentsInLoadQueue > segmentsQueuedForLoad)
+           && totalAssignmentsInRun < maxAssignmentsInRun
            && getAvailableSize() >= segment.getSize();
   }
 
@@ -206,12 +224,11 @@ public class ServerHolder implements Comparable<ServerHolder>
       return false;
     }
 
-    final SegmentAction simpleAction = simplify(action);
-    if (simpleAction == SegmentAction.LOAD || action == SegmentAction.MOVE_TO) {
-      ++segmentsQueuedForLoad;
+    if (isLoadAction(action)) {
+      ++totalAssignmentsInRun;
       sizeOfLoadingSegments += segment.getSize();
     }
-    queuedSegments.put(segment, simpleAction);
+    queuedSegments.put(segment, simplify(action));
     return true;
   }
 
@@ -232,11 +249,17 @@ public class ServerHolder implements Comparable<ServerHolder>
     return action == SegmentAction.REPLICATE ? SegmentAction.LOAD : action;
   }
 
+  private boolean isLoadAction(SegmentAction action)
+  {
+    return action == SegmentAction.LOAD
+           || action == SegmentAction.REPLICATE
+           || action == SegmentAction.MOVE_TO;
+  }
+
   private boolean cleanupState(DataSegment segment)
   {
     final SegmentAction action = queuedSegments.remove(segment);
-    if (action == SegmentAction.LOAD || action == SegmentAction.MOVE_TO) {
-      --segmentsQueuedForLoad;
+    if (isLoadAction(action)) {
       sizeOfLoadingSegments -= segment.getSize();
     }
 

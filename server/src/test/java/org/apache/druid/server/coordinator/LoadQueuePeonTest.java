@@ -217,7 +217,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
       );
     }
 
-    Assert.assertEquals(6000, loadQueuePeon.getLoadQueueSize());
+    Assert.assertEquals(6000, loadQueuePeon.getSizeOfSegmentsToLoad());
     Assert.assertEquals(5, loadQueuePeon.getSegmentsToLoad().size());
     Assert.assertEquals(5, loadQueuePeon.getSegmentsToDrop().size());
     Assert.assertEquals(0, loadQueuePeon.getTimedOutSegments().size());
@@ -297,7 +297,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
 
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentLoadedSignal));
     Assert.assertEquals(0, loadQueuePeon.getSegmentsToLoad().size());
-    Assert.assertEquals(0L, loadQueuePeon.getLoadQueueSize());
+    Assert.assertEquals(0L, loadQueuePeon.getSizeOfSegmentsToLoad());
     Assert.assertEquals(0, loadQueuePeon.getTimedOutSegments().size());
 
   }
@@ -374,7 +374,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
     // simulate incompletion of load request since request has timed out
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentLoadedSignal));
     Assert.assertEquals(1, loadQueuePeon.getSegmentsToLoad().size());
-    Assert.assertEquals(1200L, loadQueuePeon.getLoadQueueSize());
+    Assert.assertEquals(1200L, loadQueuePeon.getSizeOfSegmentsToLoad());
     Assert.assertEquals(1, loadQueuePeon.getTimedOutSegments().size());
 
     // simulate completion of load request by historical after time out on coordinator
@@ -382,7 +382,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(delayedSegmentLoadedSignal));
     Assert.assertTrue(timing.forWaiting().awaitLatch(loadRequestRemoveSignal));
     Assert.assertEquals(0, loadQueuePeon.getSegmentsToLoad().size());
-    Assert.assertEquals(0L, loadQueuePeon.getLoadQueueSize());
+    Assert.assertEquals(0L, loadQueuePeon.getSizeOfSegmentsToLoad());
     Assert.assertEquals(0, loadQueuePeon.getTimedOutSegments().size());
 
   }

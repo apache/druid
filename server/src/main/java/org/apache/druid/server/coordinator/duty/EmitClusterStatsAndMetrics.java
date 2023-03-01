@@ -222,7 +222,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
           queuePeon.getSegmentsToLoad().size(),
           queuePeon.getSegmentsToDrop().size(),
           server.getNumSegments(),
-          queuePeon.getLoadQueueSize(),
+          queuePeon.getSizeOfSegmentsToLoad(),
           server.getCurrSize()
       );
       if (log.isDebugEnabled()) {
@@ -251,7 +251,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
 
     // Emit coordinator metrics
     params.getLoadManagementPeons().forEach((serverName, queuePeon) -> {
-      emitMetricForServer("segment/loadQueue/size", serverName, queuePeon.getLoadQueueSize());
+      emitMetricForServer("segment/loadQueue/size", serverName, queuePeon.getSizeOfSegmentsToLoad());
       emitMetricForServer("segment/loadQueue/failed", serverName, queuePeon.getAndResetFailedAssignCount());
       emitMetricForServer("segment/loadQueue/count", serverName, queuePeon.getSegmentsToLoad().size());
       emitMetricForServer("segment/dropQueue/count", serverName, queuePeon.getSegmentsToDrop().size());

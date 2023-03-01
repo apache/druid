@@ -929,8 +929,8 @@ public class LoadRuleTest
     EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Collections.emptySet()).anyTimes();
     EasyMock.expect(mockPeon.getSegmentsInQueue()).andReturn(Collections.emptyMap()).anyTimes();
     EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Collections.emptySet()).anyTimes();
-    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).anyTimes();
-    EasyMock.expect(mockPeon.getNumberOfSegmentsInQueue()).andReturn(0).anyTimes();
+    EasyMock.expect(mockPeon.getSizeOfSegmentsToLoad()).andReturn(0L).anyTimes();
+    EasyMock.expect(mockPeon.getNumberOfSegmentsToLoad()).andReturn(0).anyTimes();
 
     return mockPeon;
   }
@@ -944,7 +944,7 @@ public class LoadRuleTest
     EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Collections.emptySet()).anyTimes();
     EasyMock.expect(mockPeon.getSegmentsInQueue())
             .andReturn(ImmutableMap.of(segment, SegmentAction.LOAD)).anyTimes();
-    EasyMock.expect(mockPeon.getNumberOfSegmentsInQueue()).andReturn(segs.size()).anyTimes();
+    EasyMock.expect(mockPeon.getNumberOfSegmentsToLoad()).andReturn(segs.size()).anyTimes();
 
     EasyMock.expect(mockPeon.getTimedOutSegments())
             .andReturn(slowLoading ? segs : Collections.emptySet()).anyTimes();

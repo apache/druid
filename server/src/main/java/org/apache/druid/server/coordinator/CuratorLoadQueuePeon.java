@@ -166,7 +166,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
   }
 
   @Override
-  public long getLoadQueueSize()
+  public long getSizeOfSegmentsToLoad()
   {
     return queuedSize.get();
   }
@@ -178,7 +178,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
   }
 
   @Override
-  public int getNumberOfSegmentsInQueue()
+  public int getNumberOfSegmentsToLoad()
   {
     return segmentsToLoad.size();
   }

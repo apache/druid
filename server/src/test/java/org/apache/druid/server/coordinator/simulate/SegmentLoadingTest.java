@@ -274,6 +274,44 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   }
 
   @Test
+  public void testMaxSegmentsInNodeLoadingQueue()
+  {
+    // disable balancing, maxSegmentsInNodeLoadingQueue = 5, replicationThrottleLimit = 10
+    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(0, 5, 10);
+
+    final CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(segments)
+                             .withServers(historicalT11)
+                             .withDynamicConfig(dynamicConfig)
+                             .withRules(datasource, Load.on(Tier.T1, 1).forever())
+                             .build();
+
+    startSimulation(sim);
+
+    // Run 1: Only some segments are assigned as load queue size is limited
+    runCoordinatorCycle();
+    verifyValue(Metric.ASSIGNED_COUNT, 5L);
+
+    // Run 2: No more segments are assigned as queue is already full
+    runCoordinatorCycle();
+    verifyValue(Metric.ASSIGNED_COUNT, 0L);
+
+    // Instantly load some of the queued segments on the historical
+    historicalT11.addDataSegment(segments.get(9));
+    historicalT11.addDataSegment(segments.get(8));
+
+    // Run 3: No segments are assigned, extra loads are cancelled
+    runCoordinatorCycle();
+    verifyValue(Metric.ASSIGNED_COUNT, 0L);
+    verifyValue(Metric.CANCELLED_LOADS, 2L);
+
+    // Run 4: Some segments are assigned as load queue is still partially full
+    runCoordinatorCycle();
+    verifyValue(Metric.ASSIGNED_COUNT, 2L);
+  }
+
+  @Test
   public void testFirstReplicaOnTierIsNotThrottled()
   {
     // Disable balancing, infinite load queue size, replicateThrottleLimit = 2

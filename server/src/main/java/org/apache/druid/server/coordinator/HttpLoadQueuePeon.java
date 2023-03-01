@@ -55,8 +55,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -83,20 +83,14 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   private final AtomicLong queuedSize = new AtomicLong(0);
   private final AtomicInteger failedAssignCount = new AtomicInteger(0);
 
-  private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToLoad = new ConcurrentSkipListMap<>(
-      DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
-  );
-  private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToDrop = new ConcurrentSkipListMap<>(
-      DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
-  );
-  private final ConcurrentSkipListSet<DataSegment> segmentsMarkedToDrop = new ConcurrentSkipListSet<>(
-      DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
-  );
+  private final ConcurrentMap<DataSegment, SegmentHolder> segmentsToLoad = new ConcurrentHashMap<>();
+  private final ConcurrentMap<DataSegment, SegmentHolder> segmentsToDrop = new ConcurrentHashMap<>();
+  private final Set<DataSegment> segmentsMarkedToDrop = ConcurrentHashMap.newKeySet();
 
   /**
-   * Segments currently in queue ordered by priority. This includes drop requests
-   * as well. This need not be thread-safe as all operations on it are synchronized
-   * with {@link #lock}.
+   * Segments currently in queue ordered by priority and interval. This includes
+   * drop requests as well. This need not be thread-safe as all operations on it
+   * are synchronized with the {@link #lock}.
    */
   private final Set<SegmentHolder> queuedSegments = new TreeSet<>();
 
@@ -473,7 +467,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   }
 
   @Override
-  public long getLoadQueueSize()
+  public long getSizeOfSegmentsToLoad()
   {
     return queuedSize.get();
   }
@@ -497,7 +491,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   }
 
   @Override
-  public int getNumberOfSegmentsInQueue()
+  public int getNumberOfSegmentsToLoad()
   {
     return segmentsToLoad.size();
   }

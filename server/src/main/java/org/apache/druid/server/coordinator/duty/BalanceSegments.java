@@ -154,7 +154,7 @@ public class BalanceSegments implements CoordinatorDuty
     int numSegments = 0;
     for (ServerHolder sourceHolder : servers) {
       numSegments += sourceHolder.getServer().getNumSegments()
-                     + sourceHolder.getPeon().getNumberOfSegmentsInQueue();
+                     + sourceHolder.getPeon().getNumberOfSegmentsToLoad();
     }
 
     if (numSegments == 0) {

@@ -221,11 +221,11 @@ public class HttpLoadQueuePeonTest
   {
     final DataSegment segment = segments.get(0);
     httpLoadQueuePeon.loadSegment(segment, SegmentAction.REPLICATE, markSegmentProcessed(segment));
-    Assert.assertEquals(1, httpLoadQueuePeon.getNumberOfSegmentsInQueue());
+    Assert.assertEquals(1, httpLoadQueuePeon.getNumberOfSegmentsToLoad());
 
     boolean cancelled = httpLoadQueuePeon.cancelOperation(segment);
     Assert.assertTrue(cancelled);
-    Assert.assertEquals(0, httpLoadQueuePeon.getNumberOfSegmentsInQueue());
+    Assert.assertEquals(0, httpLoadQueuePeon.getNumberOfSegmentsToLoad());
 
     Assert.assertTrue(processedSegments.isEmpty());
   }
