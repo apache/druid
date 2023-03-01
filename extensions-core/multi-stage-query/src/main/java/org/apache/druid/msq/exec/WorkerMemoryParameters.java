@@ -482,7 +482,7 @@ public class WorkerMemoryParameters
 
   /**
    * Add overheads to the estimated bundle memoery for all the workers. Checkout {@link WorkerMemoryParameters#memoryPerWorker(long, int)}
-   * for the overhead cacluation outside the processing bundles.
+   * for the overhead calculation outside the processing bundles.
    */
   private static long estimateUsableMemory(final int numWorkersInJvm, final long estimatedTotalBundleMemory)
   {
@@ -504,7 +504,7 @@ public class WorkerMemoryParameters
    */
   private static long computeUsableMemoryInJvm(final long maxMemory, final long totalLookupFootprint)
   {
-    // since lookups are essentially in memory hashmap's, the object overhead is trivial hence its substracted prior to usable memory calculations.
+    // since lookups are essentially in memory hashmap's, the object overhead is trivial hence its subtracted prior to usable memory calculations.
     return (long) ((maxMemory - totalLookupFootprint) * USABLE_MEMORY_FRACTION);
   }
 
