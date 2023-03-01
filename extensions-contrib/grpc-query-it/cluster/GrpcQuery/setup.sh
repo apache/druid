@@ -1,5 +1,3 @@
-#! /bin/bash
-
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -34,12 +32,11 @@
 #       - grpc-query-<version>-test-proto.jar
 
 #set -x
-set -e
 
-export MODULE_DIR=$(cd $(dirname $0) && pwd)
 EXTENSION_DIR=$MODULE_DIR/target/GrpcQuery/extensions
 mkdir -p $EXTENSION_DIR
 
+# Expand the grpc-query artifact into the extensions directory
 GRPC_QUERY_DIR=$MODULE_DIR/../grpc-query
 cd $EXTENSION_DIR
 tar -xzf $GRPC_QUERY_DIR/target/grpc-query-*.tar.gz
@@ -48,4 +45,6 @@ if [ ! -d $GPRC_EXTN_DIR ]; then
   echo "Something went wrong: grpc-query didn't unpack to ${GPRC_EXTN_DIR}!" 1>&2
   exit 1
 fi
+
+# Add the jar with the Protobuf classes
 cp $GRPC_QUERY_DIR/target/grpc-query-*-test-proto.jar $GPRC_EXTN_DIR

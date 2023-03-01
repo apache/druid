@@ -49,7 +49,7 @@ public class GrpcQueryTestClient
         .setQuery(args[0])
         .setResultFormat(QueryResultFormat.CSV)
         .build();
-    QueryResponse response = client.client.submitQuery(request);
+    QueryResponse response = client.client().submitQuery(request);
     if (response.getStatus() != QueryStatus.OK) {
       System.err.println("Failed: " + response.getStatus().name());
       System.err.println(response.getErrorMessage());

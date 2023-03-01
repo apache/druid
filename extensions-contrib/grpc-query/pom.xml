@@ -267,6 +267,24 @@
               <goal>test-jar</goal>
             </goals>
             <configuration>
+              <classifier>test</classifier>
+              <excludes>
+                <include>org/apache/druid/grpc/proto/**</include>
+              </excludes>
+            </configuration>
+          </execution>
+        </executions>
+       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>test-jar</goal>
+            </goals>
+            <configuration>
               <classifier>test-proto</classifier>
               <includes>
                 <include>org/apache/druid/grpc/proto/**</include>

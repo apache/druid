@@ -97,7 +97,7 @@ public class GrpcQueryTest
         .setResultFormat(QueryResultFormat.CSV)
         .build();
 
-    QueryResponse response = client.client.submitQuery(request);
+    QueryResponse response = client.client().submitQuery(request);
     assertEquals(QueryStatus.OK, response.getStatus());
   }
   /**
@@ -112,7 +112,7 @@ public class GrpcQueryTest
             .setResultFormat(QueryResultFormat.PROTOBUF_INLINE)
             .build();
 
-    QueryResponse response = client.client.submitQuery(request);
+    QueryResponse response = client.client().submitQuery(request);
     GrpcResponseHandler<QueryResult> handler = GrpcResponseHandler.of(QueryResult.class);
     List<QueryResult> queryResults = handler.get(response.getData());
     assertEquals(6, queryResults.size());
@@ -128,7 +128,7 @@ public class GrpcQueryTest
             .setResultFormat(QueryResultFormat.PROTOBUF_INLINE)
             .build();
 
-    QueryResponse response = client.client.submitQuery(request);
+    QueryResponse response = client.client().submitQuery(request);
     GrpcResponseHandler<QueryResult> handler = GrpcResponseHandler.of(QueryResult.class);
     List<QueryResult> queryResults = handler.get(response.getData());
     assertEquals(0, queryResults.size());

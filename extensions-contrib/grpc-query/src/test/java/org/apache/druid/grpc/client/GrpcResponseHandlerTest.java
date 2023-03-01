@@ -22,12 +22,11 @@ package org.apache.druid.grpc.client;
 import com.google.protobuf.ByteString;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
 import org.apache.druid.grpc.proto.TestResults.QueryResult;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -35,14 +34,10 @@ import static org.junit.Assert.assertTrue;
 
 public class GrpcResponseHandlerTest
 {
-  private static List<QueryResult> EXPECTED_RESULTS = new ArrayList<>();
-
-  @BeforeClass
-  public static void setup()
-  {
-    EXPECTED_RESULTS.add(QueryResult.newBuilder().setDim1("test").setCnt(100).build());
-    EXPECTED_RESULTS.add(QueryResult.newBuilder().setDim2("test2").setCnt(100).setM2(200.10).build());
-  }
+  private static List<QueryResult> EXPECTED_RESULTS = Arrays.asList(
+    QueryResult.newBuilder().setDim1("test").setCnt(100).build(),
+    QueryResult.newBuilder().setDim2("test2").setCnt(100).setM2(200.10).build()
+  );
 
   @Test
   public void testEmptyResponse()
@@ -53,7 +48,7 @@ public class GrpcResponseHandlerTest
   }
 
   @Test
-  public void testNonEmptysponse()
+  public void testNonEmptyResponse()
   {
     GrpcResponseHandler<QueryResult> handler = GrpcResponseHandler.of(QueryResult.class);
     QueryResponse queryResponse = getQueryResponse();
@@ -61,7 +56,7 @@ public class GrpcResponseHandlerTest
     assertEquals(2, queryResults.size());
     assertEquals(EXPECTED_RESULTS, queryResults);
   }
-  
+
   private static QueryResponse getQueryResponse()
   {
     try {

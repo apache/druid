@@ -75,7 +75,7 @@ EOF
 
 function tail_logs
 {
-  pushd $TARGET_DIR/target/$CATEGORY/logs > /dev/null
+  pushd $MODULE_DIR/target/$CATEGORY/logs > /dev/null
   ls *.log | while read log;
   do
     echo "----- $CATEGORY/$log -----"
@@ -110,8 +110,8 @@ function tail_logs
 # commands so we have a consistent environment.
 function build_override {
 
-	mkdir -p "$TARGET_DIR/target"
-	OVERRIDE_FILE="$TARGET_DIR/target/override.env"
+	mkdir -p "$MODULE_DIR/target"
+	OVERRIDE_FILE="$MODULE_DIR/target/override.env"
 	rm -f "$OVERRIDE_FILE"
 	touch "$OVERRIDE_FILE"
 
@@ -143,7 +143,7 @@ function build_override {
 }
 
 function reuse_override {
-  OVERRIDE_FILE="$TARGET_DIR/target/override.env"
+  OVERRIDE_FILE="$MODULE_DIR/target/override.env"
   if [ ! -f "$OVERRIDE_FILE" ]; then
       echo "Override file $OVERRIDE_FILE not found: Was an 'up' run?" 1>&2
       exit 1
@@ -172,29 +172,10 @@ function require_env_var {
 # ensures we get useful error messages when we forget to set something, rather than
 # some cryptic use-specific error.
 function verify_env_vars {
-	case $CATEGORY in
-		"AzureDeepStorage")
-			require_env_var AZURE_ACCOUNT
-			require_env_var AZURE_KEY
-			require_env_var AZURE_CONTAINER
-			;;
-		"GcsDeepStorage")
-			require_env_var GOOGLE_BUCKET
-			require_env_var GOOGLE_PREFIX
-			require_env_var GOOGLE_APPLICATION_CREDENTIALS
-			if [ ! -f "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
-				echo "Required file GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS is missing" 1>&2
-				exit 1
-		    fi
-			;;
-		"S3DeepStorage")
-			require_env_var DRUID_CLOUD_BUCKET
-			require_env_var DRUID_CLOUD_PATH
-			require_env_var AWS_REGION
-			require_env_var AWS_ACCESS_KEY_ID
-			require_env_var AWS_SECRET_ACCESS_KEY
-			;;
-	esac
+  VERIFY_SCRIPT="$MODULE_DIR/cluster/$DRUID_INTEGRATION_TEST_GROUP/verify.sh"
+  if [ -f "$VERIFY_SCRIPT" ]; then
+    . "$VERIFY_SCRIPT"
+  fi
 }
 
 if [ $# -eq 0 ]; then
@@ -218,14 +199,14 @@ if [ $# -eq 0 ]; then
   # Don't provide a project path to cluster.sh
   unset IT_MODULE_DIR
   # Generate the override.sh file in the druid-it-cases module
-  TARGET_DIR=$DRUID_DEV/integration-tests-ex/cases
+  MODULE_DIR=$DRUID_DEV/integration-tests-ex/cases
 else
   # The test module is given via the command line argument as a relative path
   MAVEN_PROJECT="$1"
   # Compute the full path to the target module for use by cluster.sh
   export IT_MODULE_DIR="$DRUID_DEV/$1"
   # Write the override.sh file to the target module
-  TARGET_DIR=$IT_MODULE_DIR
+  MODULE_DIR=$IT_MODULE_DIR
   shift
 fi
 IT_CASES_DIR="$DRUID_DEV/integration-tests-ex/cases"

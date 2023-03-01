@@ -144,14 +144,14 @@ function build_shared_dir {
 # Either generate the docker-compose file, or use "static" versions.
 function docker_file {
 
-  # If a template exists, generate the docker-compose.yaml file. Copy over the Common
-  # folder.
-  TEMPLATE_DIR=$MODULE_DIR/templates
-  TEMPLATE_SCRIPT=${DRUID_INTEGRATION_TEST_GROUP}.py
-  if [ -f "$TEMPLATE_DIR/$TEMPLATE_SCRIPT" ]; then
+  # If a template exists, generate the docker-compose.yaml file.
+  # Copy over the Common folder.
+  TEMPLATE_SCRIPT=docker-compose.py
+  if [ -f "$CLUSTER_DIR/$TEMPLATE_SCRIPT" ]; then
+    export PYTHONPATH=$BASE_MODULE_DIR/cluster
     export COMPOSE_DIR=$TARGET_DIR/cluster/$DRUID_INTEGRATION_TEST_GROUP
     mkdir -p $COMPOSE_DIR
-    pushd $TEMPLATE_DIR > /dev/null
+    pushd $CLUSTER_DIR > /dev/null
     python3 $TEMPLATE_SCRIPT
     popd > /dev/null
     cp -r $BASE_MODULE_DIR/cluster/Common $TARGET_DIR/cluster
@@ -206,6 +206,13 @@ function verify_docker_file {
   fi
 }
 
+function run_setup {
+  SETUP_SCRIPT="$CLUSTER_DIR/setup.sh"
+  if [ -f "$SETUP_SCRIPT" ]; then
+    source "$SETUP_SCRIPT"
+  fi
+}
+
 # Determine if docker-compose is available. If not, assume Docker supports
 # the compose subcommand
 set +e
@@ -240,6 +247,7 @@ case $CMD in
     echo "Starting cluster $DRUID_INTEGRATION_TEST_GROUP"
     build_shared_dir
     docker_file
+    run_setup
     cd $COMPOSE_DIR
     $DOCKER_COMPOSE $DOCKER_ARGS up -d
     # Enable the following for debugging

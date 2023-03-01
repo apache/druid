@@ -28,19 +28,23 @@ import org.apache.druid.grpc.proto.QueryGrpc.QueryBlockingStub;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Super-simple test client that connects to a hardcoded (at present)
- * port and allows submitting a rRPC query request and returns the response.
+ * Super-simple test client that connects to a gRPC query endpoint
+ * and allows submitting a rRPC query request and returns the response.
  * The server can be in the same or another process.
  */
 public class TestClient
 {
-  ManagedChannel channel;
-  QueryBlockingStub client;
+  private ManagedChannel channel;
+  private QueryBlockingStub client;
 
   public TestClient()
   {
     // Access a service running on the local machine on port 50051
-    String target = "localhost:50051";
+    this("localhost:50051");
+  }
+
+  public TestClient(String target)
+  {
     // Create a communication channel to the server, known as a Channel. Channels are thread-safe
     // and reusable. It is common to create channels at the beginning of your application and reuse
     // them until the application shuts down.
@@ -50,6 +54,11 @@ public class TestClient
     channel = Grpc.newChannelBuilder(target, InsecureChannelCredentials.create())
         .build();
     client = QueryGrpc.newBlockingStub(channel);
+  }
+
+  public QueryBlockingStub client()
+  {
+    return client;
   }
 
   public void close() throws InterruptedException

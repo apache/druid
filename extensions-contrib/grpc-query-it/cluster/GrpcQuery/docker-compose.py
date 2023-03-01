@@ -13,10 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys, os.path
-lib_dir = os.path.abspath("../../../integration-tests-ex/cases/templates")
-print(lib_dir)
-sys.path.append(lib_dir)
 from template import BaseTemplate, generate
 
-generate(__file__, BaseTemplate())
+class Template(BaseTemplate):
+
+    def define_broker(self) -> dict:
+        service = super().define_broker()
+        self.add_port(service, 50051, 50051)
+
+    def extend_druid_service(self, service):
+        self.add_env(service, 'druid_test_loadList', 'grpc-query')
+
+generate(__file__, Template())
