@@ -31,9 +31,6 @@ set -e
 # Launch Druid within the container.
 cd /
 
-# TODO: enable only for security-related tests?
-/tls/generate-server-certs-and-keystores.sh
-
 # The image contains both the MySQL and MariaDB JDBC drivers.
 # The MySQL driver is selected by the Docker Compose file.
 # Set  druid.metadata.mysql.driver.driverClassName to the preferred

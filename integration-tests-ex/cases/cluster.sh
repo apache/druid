@@ -140,14 +140,6 @@ function build_shared_dir {
   chmod -R a+rwx $SHARED_DIR
 }
 
-function create_client_certs {
-  # setup client keystore
-  ./tls/generate-client-certs-and-keystores.sh
-  rm -rf $SHARED_DIR/client_tls
-  cp -r client_tls $SHARED_DIR/
-  chmod -R a+rwx $SHARED_DIR/client_tls
-}
-
 # Either generate the docker-compose file, or use "static" versions.
 function docker_file {
 
@@ -264,7 +256,6 @@ case $CMD in
     echo "Starting cluster $DRUID_INTEGRATION_TEST_GROUP"
     build_shared_dir
     docker_file
-    create_client_certs
     cd $COMPOSE_DIR
     $DOCKER_COMPOSE $DOCKER_ARGS up -d
     # Enable the following for debugging

@@ -58,7 +58,7 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
   CoordinatorResourceTestClient coordinatorClient;
 
   @Inject
-  SqlTestQueryHelper queryHelper;
+  SqlTestQueryHelper sqlTestQueryHelper;
 
   @Inject
   DataLoaderHelper dataLoaderHelper;
@@ -102,8 +102,8 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
       ITRetryUtil.retryUntilTrue(
           () -> {
             try {
-              queryHelper.testQueriesFromString(
-                  queryHelper.getQueryURL(config.getRouterUrl()),
+              sqlTestQueryHelper.testQueriesFromString(
+                  sqlTestQueryHelper.getQueryURL(config.getRouterUrl()),
                   replaceJoinTemplate(
                       getResourceAsString(BROADCAST_JOIN_METADATA_QUERIES_RESOURCE),
                       BROADCAST_JOIN_DATASOURCE
@@ -120,8 +120,8 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
       );
 
       // now do some queries
-      queryHelper.testQueriesFromString(
-          queryHelper.getQueryURL(config.getRouterUrl()),
+      sqlTestQueryHelper.testQueriesFromString(
+          sqlTestQueryHelper.getQueryURL(config.getRouterUrl()),
           replaceJoinTemplate(getResourceAsString(BROADCAST_JOIN_QUERIES_RESOURCE), BROADCAST_JOIN_DATASOURCE)
       );
     }
@@ -133,8 +133,8 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
       ITRetryUtil.retryUntilTrue(
           () -> {
             try {
-              queryHelper.testQueriesFromString(
-                  queryHelper.getQueryURL(config.getRouterUrl()),
+              sqlTestQueryHelper.testQueriesFromString(
+                  sqlTestQueryHelper.getQueryURL(config.getRouterUrl()),
                   replaceJoinTemplate(
                       getResourceAsString(BROADCAST_JOIN_METADATA_QUERIES_AFTER_DROP_RESOURCE),
                       BROADCAST_JOIN_DATASOURCE

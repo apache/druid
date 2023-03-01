@@ -59,7 +59,6 @@ services:
       - ${SHARED_DIR}:/shared
     env_file:
       - environment-configs/common.env
-      - environment-configs/auth.env
       - environment-configs/overlord.env
       - ${OVERRIDE_ENV}
     environment:
@@ -79,7 +78,6 @@ services:
        - ${SHARED_DIR}:/shared
     env_file:
       - environment-configs/common.env
-      - environment-configs/auth.env
       - environment-configs/coordinator.env
       - ${OVERRIDE_ENV}
     environment:
@@ -99,7 +97,6 @@ services:
        - ${SHARED_DIR}:/shared
     env_file:
       - environment-configs/common.env
-      - environment-configs/auth.env
       - environment-configs/historical.env
       - ${OVERRIDE_ENV}
     environment:
@@ -131,7 +128,6 @@ services:
        - ${SHARED_DIR}:/shared
     env_file:
       - environment-configs/common.env
-      - environment-configs/auth.env
       - environment-configs/middlemanager.env
       - ${OVERRIDE_ENV}
     environment:
@@ -151,7 +147,6 @@ services:
        - ${SHARED_DIR}:/shared
     env_file:
       - environment-configs/common.env
-      - environment-configs/auth.env
       - environment-configs/indexer.env
       - ${OVERRIDE_ENV}
     environment:
@@ -171,7 +166,6 @@ services:
       - ${SHARED_DIR}:/shared
     env_file:
       - environment-configs/common.env
-      - environment-configs/auth.env
       - environment-configs/broker.env
       - ${OVERRIDE_ENV}
     environment:
@@ -191,7 +185,6 @@ services:
       - ${SHARED_DIR}:/shared
     env_file:
       - environment-configs/common.env
-      - environment-configs/auth.env
       - environment-configs/router.env
       - ${OVERRIDE_ENV}
     environment:

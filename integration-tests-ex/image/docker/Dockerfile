@@ -46,8 +46,6 @@ ARG MARIADB_VERSION
 ENV MARIADB_VERSION=$MARIADB_VERSION
 ARG MYSQL_DRIVER_CLASSNAME=com.mysql.jdbc.Driver
 ENV MYSQL_DRIVER_CLASSNAME=$MYSQL_DRIVER_CLASSNAME
-ARG DOCKER_IP=127.0.0.1
-ENV DOCKER_IP=$DOCKER_IP
 
 ENV DRUID_HOME=/usr/local/druid
 
@@ -61,7 +59,6 @@ COPY mariadb-java-client-${MARIADB_VERSION}.jar /tmp/druid/lib/
 COPY test-setup.sh /
 COPY druid.sh /
 COPY launch.sh /
-ADD  tls /tls
 
 # Do the setup tasks. The tasks are done within a script, rather than
 # here, so they are easier to describe and debug. Turn on the "-x" flag

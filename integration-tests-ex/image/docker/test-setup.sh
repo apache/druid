@@ -24,7 +24,7 @@ set -e
 set -u
 
 # Enable for tracing
-set -x
+#set -x
 
 # For debugging: verify environment
 #env
@@ -32,16 +32,10 @@ set -x
 # Druid system user
 adduser --system --group --no-create-home druid
 
-# Adjust ownership of the Druid launch and tls scripts.
+# Adjust ownership of the Druid launch script.
 cd /
 chmod +x launch.sh
 chown druid:druid launch.sh druid.sh
-
-chmod -R a+rwx /tls
-chown -R druid:druid /tls
-
-chmod -R a+rwx /tls/*
-chown -R druid:druid /tls/*
 
 # Convenience script to run Druid for tools.
 # Expands the env vars into the script for stability.
