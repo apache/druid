@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -40,9 +41,11 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
 {
   private final ObjectMapper objectMapper;
   private final long durationMillis;
-  private transient volatile NewestSegmentFirstIterator iterator;
+  @GuardedBy("this")
+  private volatile NewestSegmentFirstIterator iterator;
   // The special value 0 means "not yet initialized".
-  private transient volatile long expirationMillis;
+  @GuardedBy("this")
+  private volatile long expirationMillis;
   private final Clock clock;
 
   @Inject
@@ -61,6 +64,8 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
       Map<String, List<Interval>> skipIntervals
   )
   {
+    // This implementation was inspired by Suppliers.memoizeWithExpiration.
+    // resetIfNeeded and reset can be called from different threads.
     long millis = expirationMillis;
     long now = clock.millis();
     if (millis == 0 || now - millis >= 0) {
@@ -68,7 +73,7 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
         if (millis == expirationMillis) {
           NewestSegmentFirstIterator t = reset(compactionConfigs, dataSources, skipIntervals);
           iterator = t;
-          // reset can be slow
+          // reset can be slow, so use the current time to set the new expiryexpiry
           expirationMillis = clock.millis() + durationMillis;
           return Pair.of(t, true);
         }

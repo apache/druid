@@ -35,6 +35,8 @@ public interface CompactionSegmentSearchPolicy
   /**
    * @return An iterator over the intervals that need to be compacted. The iterator may not be reset on every call.
    * Callers who want to guarantee that the iterator will be reset, should call {@link #reset} instead.
+   *
+   * Implementations SHOULD ensure that calls to this method and {@link #reset} are thread safe.
    */
   Pair<CompactionSegmentIterator, Boolean> resetIfNeeded(
       Map<String, DataSourceCompactionConfig> compactionConfigs,
@@ -44,6 +46,8 @@ public interface CompactionSegmentSearchPolicy
 
   /**
    * Reset the current states of this policy. This method should be called whenever iterating starts.
+   *
+   * Implementations SHOULD ensure that calls to this method and {@link #resetIfNeeded} are thread safe.
    */
   CompactionSegmentIterator reset(
       Map<String, DataSourceCompactionConfig> compactionConfigs,

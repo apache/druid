@@ -280,7 +280,7 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     private static final boolean DEFAULT_COMPACTION_SKIP_LOCKED_INTERVALS = true;
     private static final Duration DEFAULT_COORDINATOR_AUDIT_KILL_PERIOD = new Duration("PT86400s");
     private static final Duration DEFAULT_COORDINATOR_AUTIT_KILL_DURATION_TO_RETAIN = new Duration("PT7776000s");
-    private static final Duration DEFAULT_COMPACTION_SEARCH_POLICY_REFRESH_PERIOD = new Duration("PT5M");
+    private static final Duration DEFAULT_COMPACTION_SEARCH_POLICY_REFRESH_PERIOD = new Duration("PT300s");
 
 
     private Duration coordinatorStartDelay;
