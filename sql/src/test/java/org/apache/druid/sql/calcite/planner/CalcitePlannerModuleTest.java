@@ -45,6 +45,7 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
+import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.Mock;
@@ -112,7 +113,6 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
       @Override
       public void onMatch(RelOptRuleCall call)
       {
-
       }
     };
     injector = Guice.createInjector(
@@ -128,6 +128,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
           binder.bind(Key.get(new TypeLiteral<Set<SqlOperatorConversion>>() {})).toInstance(operatorConversions);
           binder.bind(DruidSchemaCatalog.class).toInstance(rootSchema);
           binder.bind(JoinableFactoryWrapper.class).toInstance(joinableFactoryWrapper);
+          binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
         },
         target,
         binder -> {
@@ -170,16 +171,24 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
   @Test
   public void testExtensionCalciteRule()
   {
-    PlannerContext context = PlannerContext.create(
-        "SELECT 1",
+    PlannerToolbox toolbox = new PlannerToolbox(
         injector.getInstance(DruidOperatorTable.class),
         macroTable,
         new DefaultObjectMapper(),
         injector.getInstance(PlannerConfig.class),
         rootSchema,
+        joinableFactoryWrapper,
+        CatalogResolver.NULL_RESOLVER,
+        "druid",
+        new CalciteRulesManager(ImmutableSet.of()),
+        CalciteTests.TEST_AUTHORIZER_MAPPER
+    );
+    PlannerContext context = PlannerContext.create(
+        toolbox,
+        "SELECT 1",
         null,
         Collections.emptyMap(),
-        joinableFactoryWrapper
+        null
     );
     boolean containsCustomRule = injector.getInstance(CalciteRulesManager.class)
                                          .druidConventionRuleSet(context)

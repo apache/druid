@@ -202,7 +202,6 @@ Reference: https://dzone.com/articles/build-docker-image-from-maven
                                     <environmentVariables>
                                         <MYSQL_VERSION>${mysql.version}</MYSQL_VERSION>
                                         <MARIADB_VERSION>${mariadb.version}</MARIADB_VERSION>
-                                        <MYSQL_DRIVER_CLASSNAME>com.mysql.jdbc.Driver</MYSQL_DRIVER_CLASSNAME>
                                         <MYSQL_IMAGE_VERSION>${mysql.image.version}</MYSQL_IMAGE_VERSION>
                                         <CONFLUENT_VERSION>${confluent-version}</CONFLUENT_VERSION>
                                         <KAFKA_VERSION>${apache.kafka.version}</KAFKA_VERSION>

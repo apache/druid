@@ -65,6 +65,14 @@ exports[`TableCell matches snapshot array short 1`] = `
 </div>
 `;
 
+exports[`TableCell matches snapshot empty string 1`] = `
+<div
+  class="table-cell empty"
+>
+  empty
+</div>
+`;
+
 exports[`TableCell matches snapshot null 1`] = `
 <div
   class="table-cell null"

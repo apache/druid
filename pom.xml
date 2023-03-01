@@ -76,7 +76,7 @@
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>5.4.0</apache.curator.version>
-        <apache.kafka.version>3.3.2</apache.kafka.version>
+        <apache.kafka.version>3.4.0</apache.kafka.version>
         <apache.ranger.version>2.0.0</apache.ranger.version>
         <apache.ranger.gson.version>2.2.4</apache.ranger.gson.version>
         <scala.library.version>2.13.9</scala.library.version>
@@ -141,17 +141,14 @@
     </properties>
 
     <modules>
-        <module>core</module>
+        <module>processing</module>
         <module>indexing-hadoop</module>
         <module>indexing-service</module>
-        <module>processing</module>
         <module>server</module>
         <module>sql</module>
         <module>services</module>
         <module>integration-tests</module>
         <module>benchmarks</module>
-        <module>extendedset</module>
-        <module>hll</module>
         <module>web-console</module>
         <!-- Core cloud functionality -->
         <module>cloud/aws-common</module>
@@ -1461,7 +1458,7 @@
             <plugin>
                 <groupId>pl.project13.maven</groupId>
                 <artifactId>git-commit-id-plugin</artifactId>
-                <version>2.2.5</version>
+                <version>4.9.10</version>
                 <executions>
                     <execution>
                         <goals>
