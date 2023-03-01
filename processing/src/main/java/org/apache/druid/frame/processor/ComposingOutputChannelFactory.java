@@ -60,6 +60,7 @@ public class ComposingOutputChannelFactory implements OutputChannelFactory
   {
     ImmutableList.Builder<Supplier<WritableFrameChannel>> writableFrameChannelSuppliersBuilder = ImmutableList.builder();
     ImmutableList.Builder<Supplier<ReadableFrameChannel>> readableFrameChannelSuppliersBuilder = ImmutableList.builder();
+    ImmutableList.Builder<Supplier<OutputChannel>> outputChannelSupplierBuilder = ImmutableList.builder();
     for (OutputChannelFactory channelFactory : channelFactories) {
       // open channel lazily
       Supplier<OutputChannel> channel =
@@ -71,6 +72,7 @@ public class ComposingOutputChannelFactory implements OutputChannelFactory
               throw new UncheckedIOException(e);
             }
           })::get;
+      outputChannelSupplierBuilder.add(channel);
       writableFrameChannelSuppliersBuilder.add(() -> channel.get().getWritableChannel());
       readableFrameChannelSuppliersBuilder.add(() -> channel.get().getReadableChannelSupplier().get());
     }
@@ -79,6 +81,8 @@ public class ComposingOutputChannelFactory implements OutputChannelFactory
     // it is useful to identify the readable channels to open in the composition while reading the partition data.
     Map<Integer, HashSet<Integer>> partitionToChannelMap = new HashMap<>();
     ComposingWritableFrameChannel writableFrameChannel = new ComposingWritableFrameChannel(
+        outputChannelSupplierBuilder.build(),
+        null,
         writableFrameChannelSuppliersBuilder.build(),
         partitionToChannelMap
     );
@@ -103,6 +107,7 @@ public class ComposingOutputChannelFactory implements OutputChannelFactory
     ImmutableList.Builder<Supplier<WritableFrameChannel>> writableFrameChannelsBuilder = ImmutableList.builder();
     ImmutableList.Builder<Supplier<PartitionedReadableFrameChannel>> readableFrameChannelSuppliersBuilder =
         ImmutableList.builder();
+    ImmutableList.Builder<Supplier<PartitionedOutputChannel>> partitionedOutputChannelSupplierBuilder = ImmutableList.builder();
     for (OutputChannelFactory channelFactory : channelFactories) {
       Supplier<PartitionedOutputChannel> channel =
           Suppliers.memoize(() -> {
@@ -113,6 +118,7 @@ public class ComposingOutputChannelFactory implements OutputChannelFactory
               throw new UncheckedIOException(e);
             }
           })::get;
+      partitionedOutputChannelSupplierBuilder.add(channel);
       writableFrameChannelsBuilder.add(() -> channel.get().getWritableChannel());
       readableFrameChannelSuppliersBuilder.add(() -> channel.get().readOnly().getReadableChannelSupplier().get());
     }
@@ -121,6 +127,8 @@ public class ComposingOutputChannelFactory implements OutputChannelFactory
 
     Map<Integer, HashSet<Integer>> partitionToChannelMap = new HashMap<>();
     ComposingWritableFrameChannel writableFrameChannel = new ComposingWritableFrameChannel(
+        null,
+        partitionedOutputChannelSupplierBuilder.build(),
         writableFrameChannelsBuilder.build(),
         partitionToChannelMap
     );
