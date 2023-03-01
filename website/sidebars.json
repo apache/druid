@@ -229,6 +229,7 @@
       "development/modules",
       "development/javascript",
       "development/build",
+      "development/contributing-to-docs",
       "development/versioning",
       "development/experimental"
     ],
