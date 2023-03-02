@@ -234,7 +234,14 @@ This post aggregator outputs an ArrayOfDoublesSketch as a Base64-encoded string 
 
 ### Estimated metrics values for each column of ArrayOfDoublesSketch
 
-This post aggregator returns a list of estimated sum for each metric value from a given ArrayOfDoublesSketch. The result is _N_ double values, where _N_ is the number of double values kept in the sketch per key.
+For the key-value pairs in the given ArrayOfDoublesSketch, this post aggregator estimates the sum for each set of values across the keys. For example, the post aggregator returns `{3.0, 8.0}` for the following key-value pairs:
+
+```
+Key_1, {1.0, 3.0}
+Key_2, {2.0, 5.0}
+```
+
+The post aggregator returns _N_ double values, where _N_ is the number of values associated with each key.
 
 ```json
 {
