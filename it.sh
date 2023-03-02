@@ -134,12 +134,22 @@ function build_override {
     export OVERRIDE_ENV="$OVERRIDE_FILE"
 }
 
+# Set category level override config here, if required.
+function set_override_env {
+  case $CATEGORY in
+    "Query" | "QueryRetry" | "QueryError" | "HighAvailability")
+      export OVERRIDE_ENV=cluster/Common/prepopulated-data.env
+      ;;
+  esac
+}
+
 function prepare_category {
 	if [ $# -eq 0 ]; then
 		usage 1>&2
 		exit 1
 	fi
 	export CATEGORY=$1
+	set_override_env
 }
 
 function prepare_docker {
