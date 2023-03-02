@@ -122,6 +122,7 @@ Many of Druid's external dependencies can be plugged in as modules. Extensions c
 |`druid.extensions.useExtensionClassloaderFirst`|This is a boolean flag that determines if Druid extensions should prefer loading classes from their own jars rather than jars bundled with Druid. If false, extensions must be compatible with classes provided by any jars bundled with Druid. If true, extensions may depend on conflicting versions.|false|
 |`druid.extensions.hadoopContainerDruidClasspath`|Hadoop Indexing launches hadoop jobs and this configuration provides way to explicitly set the user classpath for the hadoop job. By default this is computed automatically by druid based on the druid process classpath and set of extensions. However, sometimes you might want to be explicit to resolve dependency conflicts between druid and hadoop.|null|
 |`druid.extensions.addExtensionsToHadoopContainer`|Only applicable if `druid.extensions.hadoopContainerDruidClasspath` is provided. If set to true, then extensions specified in the loadList are added to hadoop container classpath. Note that when `druid.extensions.hadoopContainerDruidClasspath` is not provided then extensions are always added to hadoop container classpath.|false|
+|`druid.extensions.path`|An optional array of paths to search for extensions. The `directory` entry acts as the first entry in the search path. Primarily for testing and Docker-based environments.|null (i.e. no additional search path)|
 
 ### Modules
 
@@ -486,7 +487,7 @@ To use graphite as emitter set `druid.emitter=graphite`. For configuration detai
 
 ##### Switching Emitter
 
-To use switching as emitter set `druid.emitter=switching`. 
+To use switching as emitter set `druid.emitter=switching`.
 
 |Property|Description|Default|
 |--------|-----------|-------|
