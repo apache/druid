@@ -85,7 +85,7 @@ Then, add the notebooks directory to Python's module search path:
 
 ```python
 import sys
-sys.path.append(drudi_dev + '/examples/quickstart/jupyter-notebooks/')
+sys.path.append(druid_dev + '/examples/quickstart/jupyter-notebooks/')
 ```
 
 Now you can import `druidapi` and create a client as shown in the previous section.
@@ -98,7 +98,7 @@ commands revert to displaying a text (not HTML) format. The steps are similar to
 ```python
 druid_dev = '/path/to/Druid-repo'
 import sys
-sys.path.append(drudi_dev + '/examples/quickstart/jupyter-notebooks/')
+sys.path.append(druid_dev + '/examples/quickstart/jupyter-notebooks/')
 import druidapi
 druid = druidapi.client(router_endpoint)
 ```
@@ -185,7 +185,7 @@ status_client.properties['druid.extensions.loadList']
 
 ## Display Client
 
-When run in a Jypter notebook, it is often handy to format results for display. A special display
+When run in a Jupyter notebook, it is often handy to format results for display. A special display
 client performs operations _and_ formats them for display as HTML tables within the notebook.
 
 ```python
@@ -479,7 +479,7 @@ List datasources:
 * REST client: `rest_client.get_json('/druid/coordinator/v1/datasources')`
 * Datasources client: `ds_client.names()`
 
-Query data, where `sql_request` is a properly-formatted `SqlResquest` dictionary:
+Query data, where `sql_request` is a properly-formatted `SqlRequest` dictionary:
 
 * Requests: `session.post(druid_host + '/druid/v2/sql', json=sql_request).json()`
 * REST client: `rest_client.post_json('/druid/v2/sql', sql_request)`
