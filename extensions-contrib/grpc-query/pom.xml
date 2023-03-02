@@ -18,6 +18,20 @@
   ~ under the License.
   -->
 
+<!-- This file does a number of tasks which may not be obvious from
+     perusing the file. Tasks include:
+
+     * Build the shaded rRPC jar.
+     * Build the classes in this module.
+     * Generate test Protobuf files.
+     * Create a tar.gz package for this module and the shaded grpc
+       jar.
+     * Create a test jar for use by ITs.
+     * Create a test jar with only the test protobufs for use by the
+       ITs.
+
+     See notes in the file for how the pieces fit together.
+     -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.druid.extensions.contrib</groupId>
@@ -33,6 +47,8 @@
   </parent>
 
   <dependencies>
+    <!-- The shaded gRPC module created by this module, but
+         not listed in the root pom.xml. -->
     <dependency>
       <groupId>org.apache.druid.extensions.contrib</groupId>
       <artifactId>druid-shaded-grpc</artifactId>
@@ -97,6 +113,7 @@
       <artifactId>jsr305</artifactId>
       <scope>provided</scope>
     </dependency>
+    <!-- gRPC uses Netty as its transport layer.  -->
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-buffer</artifactId>
@@ -175,6 +192,8 @@
 
   <build>
     <extensions>
+      <!-- Sets the os.detected.classifier property we will use later to
+           determine which native Protobuf compiler to invoke. -->
       <extension>
         <groupId>kr.motd.maven</groupId>
         <artifactId>os-maven-plugin</artifactId>
@@ -213,7 +232,8 @@
           </execution>
         </executions>
       </plugin>
-      <plugin><!--package all dependencies together-->
+      <!--package all dependencies together-->
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
         <configuration>
@@ -237,6 +257,8 @@
           </execution>
         </executions>
       </plugin>
+      <!-- Compiles the test protobufs. Here "compile" means to translate from .proto format
+           to Java. Java compilation happens later. -->
       <plugin>
         <groupId>org.xolstice.maven.plugins</groupId>
         <artifactId>protobuf-maven-plugin</artifactId>
@@ -248,20 +270,45 @@
         </configuration>
         <executions>
           <execution>
+            <phase>generate-sources</phase>
             <goals>
-              <goal>compile</goal>
-              <goal>compile-custom</goal>
               <goal>test-compile</goal>
-              <goal>test-compile-custom</goal>
             </goals>
           </execution>
         </executions>
       </plugin>
+
+      <!-- Adds the path of the generated Protobuf classes to the build path.
+           Without this, Maven will simply ignore the Protobuf classes generated
+           above. -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>add-source</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-test-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>target/generated-test-sources</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Build a couple of test jars. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
+          <!-- Test jar with everything except the Protobuf classes.
+               For use by grpc-query-it, which really just needs the
+               test client. -->
           <execution>
+            <id>test-jar</id>
             <phase>package</phase>
             <goals>
               <goal>test-jar</goal>
@@ -269,25 +316,29 @@
             <configuration>
               <classifier>test</classifier>
               <excludes>
-                <include>org/apache/druid/grpc/proto/**</include>
+                <exclude>**/proto/*</exclude>
               </excludes>
             </configuration>
           </execution>
-        </executions>
-       </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <executions>
+          <!-- Test jar with only the Protobuf classes. This one is
+               copied into the grpc-query extension on the server when
+               running under Docker compose. This simulates how a user would
+               deploy the extension and Protobuf classes together on a production
+               server. -->
           <execution>
+            <id>proto-jar</id>
             <phase>package</phase>
             <goals>
+              <!-- The test-jar goal says, in essence, "look in the target/test-classes
+                   directory." The Protobuf classes are there because we generated them
+                   into generated-test-sources, and we added that directory to the test
+                   sources build path. -->
               <goal>test-jar</goal>
             </goals>
             <configuration>
               <classifier>test-proto</classifier>
               <includes>
-                <include>org/apache/druid/grpc/proto/**</include>
+                <include>**/proto/*</include>
               </includes>
             </configuration>
           </execution>
@@ -296,6 +347,14 @@
     </plugins>
   </build>
   <profiles>
+    <!-- Profile to build the .tar.gz file for the extension. This file contains both
+         the grpc-query code and the shaded gRPC jar file.
+         This form is needed for the IT. It is also a more convenient way to distribute
+         the extension than the usual "bare jar + pull-deps". We are sure that we're
+         including the same code we will test in our distribution: we don't have to
+         worry about spurious mis-matches. Plus, the shaded jar isn't even available
+         in Maven central, so pull-deps would not work except on a development or
+         build machine. -->
     <profile>
       <id>dist</id>
       <activation>

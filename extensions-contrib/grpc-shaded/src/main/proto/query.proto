@@ -29,9 +29,9 @@ enum QueryResultFormat {
   UNKNOWN_FORMAT = 0;  // Default value. An old server will see this value
                        // (and fail the request) if a new client passes a new format.
   CSV = 1;
-  JSON_OBJECT = 2;
+  // JSON_OBJECT = 2; -- Not yet
   JSON_ARRAY = 3;
-  JSON_OBJECT_LINES = 4;
+  // JSON_OBJECT_LINES = 4; -- Not yet
   JSON_ARRAY_LINES = 5;
 
   // The protobuf formats also require that the protobufMessageName be set in

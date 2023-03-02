@@ -32,6 +32,7 @@ import org.apache.druid.grpc.proto.QueryOuterClass.QueryParameter;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryStatus;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -69,11 +70,11 @@ public class QueryDriver
   /**
    * Internal runtime exception to report request errors.
    */
-  private static class RequestError extends RuntimeException
+  protected static class RequestError extends RE
   {
-    public RequestError(String msg)
+    public RequestError(String msg, Object...args)
     {
-      super(msg);
+      super(msg, args);
     }
   }
 
@@ -342,6 +343,7 @@ public class QueryDriver
     @Override
     public void start() throws IOException
     {
+      formatWriter.writeResponseStart();
     }
 
     @Override
@@ -363,6 +365,7 @@ public class QueryDriver
     @Override
     public void close() throws IOException
     {
+      formatWriter.writeResponseEnd();
       formatWriter.close();
     }
   }
@@ -459,10 +462,10 @@ public class QueryDriver
 
       // TODO: Provide additional writers for the other formats which we
       // want in gRPC.
-      case JSON_OBJECT:
-        throw new UnsupportedOperationException(); // TODO
-      case JSON_OBJECT_LINES:
-        throw new UnsupportedOperationException(); // TODO
+      //case JSON_OBJECT:
+      //  throw new UnsupportedOperationException(); // TODO
+      //case JSON_OBJECT_LINES:
+      //  throw new UnsupportedOperationException(); // TODO
       case PROTOBUF_INLINE:
         try {
           writer = new GrpcResultFormatWriter(
@@ -471,7 +474,10 @@ public class QueryDriver
           );
         }
         catch (ClassNotFoundException e) {
-          throw new RuntimeException(e);
+          throw new RequestError(
+              "The Protobuf class [%s] is not known. Is your protobuf jar on the class path?",
+              request.getProtobufMessageName()
+          );
         }
         break;
       // This is the hard one: encode the results as a Protobuf array.

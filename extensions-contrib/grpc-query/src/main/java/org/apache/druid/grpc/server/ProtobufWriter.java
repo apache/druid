@@ -23,9 +23,11 @@ import com.google.protobuf.Descriptors;
 import com.google.protobuf.GeneratedMessageV3;
 import com.google.protobuf.Message;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.druid.grpc.server.QueryDriver.RequestError;
 import org.apache.druid.sql.http.ResultFormat;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -82,8 +84,11 @@ public class ProtobufWriter implements ResultFormat.Writer
       // we should throw an exception if fieldDescriptor is null
       // this means the .proto fields don't match returned column names
     if (fieldDescriptor == null) {
-      throw new IllegalStateException(
-                String.format("Field %s not found in Protobuf %s", name, message.getClass()));
+      throw new RequestError(
+          "Field [%s] not found in Protobuf [%s]",
+          name,
+          message.getClass()
+      );
     }
     final Method method = methods.computeIfAbsent("setField", k -> {
       try {
@@ -100,7 +105,11 @@ public class ProtobufWriter implements ResultFormat.Writer
       method.invoke(rowBuilder, fieldDescriptor, value);
     }
     catch (IllegalAccessException | InvocationTargetException e) {
-      throw new RuntimeException(e);
+      throw new RequestError(
+          "Could not write value [%s] to field [%s]",
+          value,
+          name
+      );
     }
   }
 

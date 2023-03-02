@@ -120,6 +120,11 @@ format. The response is optimized for gRPC: it contains an error (if the request
 or the result schema and result data as a binary payload. You can query the gRPC endpoint
 with any gRPC client.
 
+Although both Druid SQL and Druid itself support a `float` data type, that type is not
+usable in a Protobuf response object. Internally Druid converts all `float` values to
+`double`. As a result, the Protobuf reponse object supports only the `double` type.
+An attempt to use `float` will lead to a runtime error when processing the query.
+
 ## Implementation Notes
 
 The extension is made up of two projects. Druid uses a different version of Guava than

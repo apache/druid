@@ -41,7 +41,6 @@ import java.util.TimeZone;
 
 public class ProtobufTransformer
 {
-
   @Nullable
   public static Object transform(SqlRowTransformer rowTransformer, Object[] row, int i)
   {
