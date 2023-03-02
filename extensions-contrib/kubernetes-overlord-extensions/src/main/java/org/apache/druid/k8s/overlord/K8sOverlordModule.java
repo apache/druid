@@ -20,17 +20,15 @@
 package org.apache.druid.k8s.overlord;
 
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.multibindings.MapBinder;
-import org.apache.commons.collections4.SetUtils;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
-import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
 import org.apache.druid.indexing.common.tasklogs.FileTaskLogs;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
@@ -41,42 +39,31 @@ import org.apache.druid.tasklogs.TaskLogKiller;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogs;
 
-import java.util.Set;
-
+@LoadScope(roles = NodeRole.OVERLORD_JSON_NAME)
 public class K8sOverlordModule implements DruidModule
 {
-  private Set<NodeRole> nodeRoles;
-
-  @Inject
-  public void setNodeRoles(@Self Set<NodeRole> nodeRoles)
-  {
-    this.nodeRoles = nodeRoles;
-  }
-
   @Override
   public void configure(Binder binder)
   {
-    if (SetUtils.emptyIfNull(nodeRoles).contains(NodeRole.OVERLORD)) {
-      // druid.indexer.runner.type=k8s
-      JsonConfigProvider.bind(binder, IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX, KubernetesTaskRunnerConfig.class);
-      JsonConfigProvider.bind(binder, "druid.indexer.queue", TaskQueueConfig.class);
-      PolyBind.createChoice(
-          binder,
-          "druid.indexer.runner.type",
-          Key.get(TaskRunnerFactory.class),
-          Key.get(KubernetesTaskRunnerFactory.class)
-      );
-      final MapBinder<String, TaskRunnerFactory> biddy = PolyBind.optionBinder(
-          binder,
-          Key.get(TaskRunnerFactory.class)
-      );
+    // druid.indexer.runner.type=k8s
+    JsonConfigProvider.bind(binder, IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX, KubernetesTaskRunnerConfig.class);
+    JsonConfigProvider.bind(binder, "druid.indexer.queue", TaskQueueConfig.class);
+    PolyBind.createChoice(
+        binder,
+        "druid.indexer.runner.type",
+        Key.get(TaskRunnerFactory.class),
+        Key.get(KubernetesTaskRunnerFactory.class)
+    );
+    final MapBinder<String, TaskRunnerFactory> biddy = PolyBind.optionBinder(
+        binder,
+        Key.get(TaskRunnerFactory.class)
+    );
 
-      biddy.addBinding(KubernetesTaskRunnerFactory.TYPE_NAME)
-          .to(KubernetesTaskRunnerFactory.class)
-          .in(LazySingleton.class);
-      binder.bind(KubernetesTaskRunnerFactory.class).in(LazySingleton.class);
-      configureTaskLogs(binder);
-    }
+    biddy.addBinding(KubernetesTaskRunnerFactory.TYPE_NAME)
+        .to(KubernetesTaskRunnerFactory.class)
+        .in(LazySingleton.class);
+    binder.bind(KubernetesTaskRunnerFactory.class).in(LazySingleton.class);
+    configureTaskLogs(binder);
   }
 
   private void configureTaskLogs(Binder binder)
