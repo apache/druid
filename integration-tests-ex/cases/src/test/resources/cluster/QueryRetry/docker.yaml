@@ -14,7 +14,7 @@
 # limitations under the License.
 #-------------------------------------------------------------------------
 
-# Definition of the batch index test cluster.
+# Definition of the query retry test cluster.
 # See https://yaml.org/spec/1.2.2 for more about YAML
 include:
   - /cluster/Common/zk-metastore.yaml
@@ -34,7 +34,7 @@ druid:
       - port: 8888
   historical-for-query-retry-test:
     instances:
-      - port: 8083
+      - port: 8086
   middlemanager:
     instances:
       - port: 8091

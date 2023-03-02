@@ -34,7 +34,7 @@ druid:
       - port: 8888
   historical-for-query-error-test:
     instances:
-      - port: 8083
+      - port: 8086
   middlemanager:
     instances:
       - port: 8091
