@@ -116,7 +116,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
           "s",
           new Object[]{null, "b", "c"},
           "l",
-          new Object[]{1L, NullHandling.defaultLongValue(), 3L},
+          new Object[]{1L, null, 3L},
           "d",
           new Object[]{2.2, 2.2}
       ),
@@ -124,9 +124,9 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
           "s",
           new Object[]{"b", "c"},
           "l",
-          new Object[]{NullHandling.defaultLongValue(), NullHandling.defaultLongValue()},
+          new Object[]{null, null},
           "d",
-          new Object[]{1.1, NullHandling.defaultDoubleValue(), 2.2}
+          new Object[]{1.1, null, 2.2}
       ),
       TestHelper.makeMap("s", new Object[]{"a", "b", "c", "d"}, "l", new Object[]{4L, 2L, 3L}),
       TestHelper.makeMap("s", new Object[]{"d", "b", "c", "a"}, "d", new Object[]{1.1, 2.2}),
@@ -602,14 +602,14 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
       } else {
         Assert.assertEquals(s[1], sElementSelector.getObject());
       }
-      if (l == null || l.length < 1) {
+      if (l == null || l.length < 1 || l[1] == null) {
         Assert.assertTrue(lElementSelector.isNull());
         Assert.assertNull(lElementSelector.getObject());
       } else {
         Assert.assertEquals(l[1], lElementSelector.getLong());
         Assert.assertEquals(l[1], lElementSelector.getObject());
       }
-      if (d == null || d.length < 1) {
+      if (d == null || d.length < 1 || d[1] == null) {
         Assert.assertTrue(dElementSelector.isNull());
         Assert.assertNull(dElementSelector.getObject());
       } else {
@@ -655,14 +655,14 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
         } else {
           Assert.assertEquals(s[1], sElementVector[i]);
         }
-        if (l == null || l.length < 1) {
+        if (l == null || l.length < 1 || l[1] == null) {
           Assert.assertTrue(lElementNulls[i]);
           Assert.assertNull(lElementObjectVector[i]);
         } else {
           Assert.assertEquals(l[1], lElementVector[i]);
           Assert.assertEquals(l[1], lElementObjectVector[i]);
         }
-        if (d == null || d.length < 1) {
+        if (d == null || d.length < 1 || d[1] == null) {
           Assert.assertTrue(dElementNulls[i]);
           Assert.assertNull(dElementObjectVector[i]);
         } else {
@@ -704,12 +704,12 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
         } else {
           Assert.assertEquals(s[1], sElementVector[i]);
         }
-        if (l == null || l.length < 1) {
+        if (l == null || l.length < 1 || l[1] == null) {
           Assert.assertTrue(lElementNulls[i]);
         } else {
           Assert.assertEquals(l[1], lElementVector[i]);
         }
-        if (d == null || d.length < 1) {
+        if (d == null || d.length < 1 || d[1] == null) {
           Assert.assertTrue(dElementNulls[i]);
         } else {
           Assert.assertEquals((Double) d[1], dElementVector[i], 0.0);
@@ -741,10 +741,11 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
       Assert.assertEquals(inputValue, valueSelector.getObject());
       if (ColumnType.LONG.equals(singleType)) {
         Assert.assertEquals(inputValue, valueSelector.getLong());
+        Assert.assertFalse(path + " is not null", valueSelector.isNull());
       } else if (ColumnType.DOUBLE.equals(singleType)) {
         Assert.assertEquals((double) inputValue, valueSelector.getDouble(), 0.0);
+        Assert.assertFalse(path + " is not null", valueSelector.isNull());
       }
-      Assert.assertFalse(valueSelector.isNull());
 
       final String theString = String.valueOf(inputValue);
       Assert.assertEquals(theString, dimSelector.getObject());
@@ -774,7 +775,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
       Assert.assertFalse(dimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
     } else {
       Assert.assertNull(valueSelector.getObject());
-      Assert.assertTrue(valueSelector.isNull());
+      Assert.assertTrue(path, valueSelector.isNull());
 
       Assert.assertEquals(0, dimSelector.getRow().get(0));
       Assert.assertNull(dimSelector.getObject());

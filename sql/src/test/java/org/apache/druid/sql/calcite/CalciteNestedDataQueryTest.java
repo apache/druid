@@ -921,9 +921,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{null, 4L},
-            new Object[]{Arrays.asList(NullHandling.defaultLongValue(), 2L, 9L), 2L},
+            new Object[]{Arrays.asList(null, 2L, 9L), 2L},
             new Object[]{Collections.singletonList(1L), 2L},
-            new Object[]{Arrays.asList(1L, NullHandling.defaultLongValue(), 3L), 2L},
+            new Object[]{Arrays.asList(1L, null, 3L), 2L},
             new Object[]{Arrays.asList(1L, 2L, 3L), 2L},
             new Object[]{Arrays.asList(2L, 3L), 2L}
         ),
@@ -974,7 +974,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{Collections.singletonList(1L), 2L, 2L},
-            new Object[]{Arrays.asList(1L, NullHandling.defaultLongValue(), 3L), 2L, 6L},
+            new Object[]{Arrays.asList(1L, null, 3L), 2L, 6L},
             new Object[]{Arrays.asList(1L, 2L, 3L), 2L, 6L}
         ),
         RowSignature.builder()
@@ -1177,11 +1177,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{null, 4L},
-            new Object[]{Arrays.asList(NullHandling.defaultDoubleValue(), 1.1), 2L},
-            new Object[]{Arrays.asList(NullHandling.defaultDoubleValue(), 2.2, NullHandling.defaultDoubleValue()), 2L},
-            new Object[]{Arrays.asList(1.1, 2.2, NullHandling.defaultDoubleValue()), 2L},
-            new Object[]{Arrays.asList(999.0, NullHandling.defaultDoubleValue(), 5.5), 2L},
-            new Object[]{Arrays.asList(999.0, 5.5, NullHandling.defaultDoubleValue()), 2L}
+            new Object[]{Arrays.asList(null, 1.1), 2L},
+            new Object[]{Arrays.asList(null, 2.2, null), 2L},
+            new Object[]{Arrays.asList(1.1, 2.2, null), 2L},
+            new Object[]{Arrays.asList(999.0, null, 5.5), 2L},
+            new Object[]{Arrays.asList(999.0, 5.5, null), 2L}
         ),
         RowSignature.builder()
                     .add("arrayDoubleNulls", ColumnType.DOUBLE_ARRAY)
@@ -1229,8 +1229,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{Arrays.asList(NullHandling.defaultDoubleValue(), 2.2, NullHandling.defaultDoubleValue()), 2L, 6L},
-            new Object[]{Arrays.asList(1.1, 2.2, NullHandling.defaultDoubleValue()), 2L, 6L}
+            new Object[]{Arrays.asList(null, 2.2, null), 2L, 6L},
+            new Object[]{Arrays.asList(1.1, 2.2, null), 2L, 6L}
         ),
         RowSignature.builder()
                     .add("arrayDoubleNulls", ColumnType.DOUBLE_ARRAY)

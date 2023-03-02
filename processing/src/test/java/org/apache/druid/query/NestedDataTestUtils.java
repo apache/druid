@@ -79,7 +79,7 @@ public class NestedDataTestUtils
 
   public static final DimensionsSpec AUTO_DISCOVERY =
       DimensionsSpec.builder()
-                    .setUseNestedColumnIndexerForSchemaDiscovery(true)
+                    .useSchemaDiscovery(true)
                     .build();
 
   public static final DimensionsSpec TSV_SCHEMA =

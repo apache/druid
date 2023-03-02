@@ -278,7 +278,7 @@ public class ExprEvalTest extends InitializedNullHandlingTest
 
     coerced = ExprEval.coerceListToArray(withNumberNulls, false);
     Assert.assertEquals(ExpressionType.LONG_ARRAY, coerced.lhs);
-    Assert.assertArrayEquals(new Object[]{1L, NullHandling.defaultLongValue(), 3L}, coerced.rhs);
+    Assert.assertArrayEquals(new Object[]{1L, null, 3L}, coerced.rhs);
 
     List<Object> withStringMix = ImmutableList.of(1L, "b", 3L);
     coerced = ExprEval.coerceListToArray(withStringMix, false);
