@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableSet;
 import net.thisptr.jackson.jq.internal.misc.Lists;
 import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.client.indexing.SamplerResponse.SamplerResponseRow;
-import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
@@ -39,11 +38,9 @@ import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
-import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.indexing.seekablestream.RecordSupplierInputSource;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
@@ -60,13 +57,9 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.nested.StructuredData;
-import org.apache.druid.segment.realtime.firehose.InlineFirehoseFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -132,9 +125,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   @Parameterized.Parameters(name = "parserType = {0}, useInputFormatApi={1}")
   public static Iterable<Object[]> constructorFeeder()
   {
-    NestedDataModule.registerHandlersAndSerde();
     OBJECT_MAPPER.registerModules(new SamplerModule().getJacksonModules());
-    OBJECT_MAPPER.registerModules(NestedDataModule.getJacksonModulesList());
     return ImmutableList.of(
         new Object[]{ParserType.STR_JSON, false},
         new Object[]{ParserType.STR_JSON, true},
@@ -182,14 +173,12 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   @Test
   public void testNoDataSchema()
   {
-    final InputSource inputSource = createInputSource(getTestRows(), null);
+    final InputSource inputSource = createInputSource(getTestRows());
     final SamplerResponse response = inputSourceSampler.sample(inputSource, createInputFormat(), null, null);
 
     Assert.assertEquals(6, response.getNumRowsRead());
     Assert.assertEquals(0, response.getNumRowsIndexed());
     Assert.assertEquals(6, response.getData().size());
-    Assert.assertEquals(ImmutableList.of(), response.getLogicalDimensions());
-    Assert.assertEquals(RowSignature.builder().addTimeColumn().build(), response.getLogicalSegmentSchema());
 
     List<SamplerResponseRow> data = response.getData();
 
@@ -252,7 +241,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   @Test
   public void testNoDataSchemaNumRows()
   {
-    final InputSource inputSource = createInputSource(getTestRows(), null);
+    final InputSource inputSource = createInputSource(getTestRows());
     final SamplerResponse response = inputSourceSampler.sample(
         inputSource,
         createInputFormat(),
@@ -263,8 +252,6 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     Assert.assertEquals(3, response.getNumRowsRead());
     Assert.assertEquals(0, response.getNumRowsIndexed());
     Assert.assertEquals(3, response.getData().size());
-    Assert.assertEquals(ImmutableList.of(), response.getLogicalDimensions());
-    Assert.assertEquals(RowSignature.builder().addTimeColumn().build(), response.getLogicalSegmentSchema());
 
     List<SamplerResponseRow> data = response.getData();
 
@@ -303,7 +290,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     final TimestampSpec timestampSpec = new TimestampSpec(null, null, DateTimes.of("1970"));
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(null);
     final DataSchema dataSchema = createDataSchema(timestampSpec, dimensionsSpec, null, null, null);
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
@@ -311,40 +298,6 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     Assert.assertEquals(6, response.getNumRowsRead());
     Assert.assertEquals(6, response.getNumRowsIndexed());
     Assert.assertEquals(6, response.getData().size());
-    Assert.assertEquals(
-        parserType == ParserType.STR_JSON
-        ? ImmutableList.of(
-            new StringDimensionSchema("t"),
-            new StringDimensionSchema("dim1"),
-            new StringDimensionSchema("met1"),
-            new StringDimensionSchema("dim2")
-        )
-        : ImmutableList.of(
-            new StringDimensionSchema("t"),
-            new StringDimensionSchema("dim1"),
-            new StringDimensionSchema("dim2"),
-            new StringDimensionSchema("met1")
-        ),
-        response.getLogicalDimensions()
-    );
-    Assert.assertEquals(
-        parserType == ParserType.STR_JSON
-        ? RowSignature.builder()
-                      .addTimeColumn()
-                      .add("t", ColumnType.STRING)
-                      .add("dim1", ColumnType.STRING)
-                      .add("met1", ColumnType.STRING)
-                      .add("dim2", ColumnType.STRING)
-                      .build()
-        : RowSignature.builder()
-                      .addTimeColumn()
-                      .add("t", ColumnType.STRING)
-                      .add("dim1", ColumnType.STRING)
-                      .add("dim2", ColumnType.STRING)
-                      .add("met1", ColumnType.STRING)
-                      .build(),
-        response.getLogicalSegmentSchema()
-    );
 
     List<SamplerResponseRow> data = response.getData();
 
@@ -446,7 +399,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(null);
     final DataSchema dataSchema = createDataSchema(timestampSpec, dimensionsSpec, null, null, null);
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
@@ -454,36 +407,6 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     Assert.assertEquals(6, response.getNumRowsRead());
     Assert.assertEquals(5, response.getNumRowsIndexed());
     Assert.assertEquals(6, response.getData().size());
-    Assert.assertEquals(
-        parserType == ParserType.STR_JSON
-        ? ImmutableList.of(
-            new StringDimensionSchema("dim1"),
-            new StringDimensionSchema("met1"),
-            new StringDimensionSchema("dim2")
-        )
-        : ImmutableList.of(
-            new StringDimensionSchema("dim1"),
-            new StringDimensionSchema("dim2"),
-            new StringDimensionSchema("met1")
-        ),
-        response.getLogicalDimensions()
-    );
-    Assert.assertEquals(
-        parserType == ParserType.STR_JSON
-        ? RowSignature.builder()
-                      .addTimeColumn()
-                      .add("dim1", ColumnType.STRING)
-                      .add("met1", ColumnType.STRING)
-                      .add("dim2", ColumnType.STRING)
-                      .build()
-        : RowSignature.builder()
-                      .addTimeColumn()
-                      .add("dim1", ColumnType.STRING)
-                      .add("dim2", ColumnType.STRING)
-                      .add("met1", ColumnType.STRING)
-                      .build(),
-        response.getLogicalSegmentSchema()
-    );
 
     List<SamplerResponseRow> data = response.getData();
 
@@ -569,137 +492,6 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testWithTimestampSpecNestedDiscovery() throws IOException
-  {
-
-    final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
-    final DimensionsSpec dimensionsSpec = DimensionsSpec.builder()
-                                                        .useSchemaDiscovery(true)
-                                                        .build();
-    final DataSchema dataSchema = createDataSchema(timestampSpec, dimensionsSpec, null, null, null);
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
-    final InputFormat inputFormat = createInputFormat();
-
-    SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
-
-    Assert.assertEquals(6, response.getNumRowsRead());
-    Assert.assertEquals(5, response.getNumRowsIndexed());
-    Assert.assertEquals(6, response.getData().size());
-    Assert.assertEquals(
-        parserType == ParserType.STR_JSON
-        ? ImmutableList.of(
-            new StringDimensionSchema("dim1"),
-            new LongDimensionSchema("met1"),
-            new StringDimensionSchema("dim2")
-        )
-        : ImmutableList.of(
-            new StringDimensionSchema("dim1"),
-            new StringDimensionSchema("dim2"),
-            new StringDimensionSchema("met1")
-        ),
-        response.getLogicalDimensions()
-    );
-    Assert.assertEquals(
-        parserType == ParserType.STR_JSON
-        ? RowSignature.builder()
-                      .addTimeColumn()
-                      .add("dim1", ColumnType.STRING)
-                      .add("met1", ColumnType.LONG)
-                      .add("dim2", ColumnType.STRING)
-                      .build()
-        : RowSignature.builder()
-                      .addTimeColumn()
-                      .add("dim1", ColumnType.STRING)
-                      .add("dim2", ColumnType.STRING)
-                      .add("met1", ColumnType.STRING)
-                      .build(),
-        response.getLogicalSegmentSchema()
-    );
-
-    List<SamplerResponseRow> data = response.getData();
-
-    assertEqualsSamplerResponseRow(
-        new SamplerResponseRow(
-            getRawColumns().get(0),
-            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
-                .put("__time", 1555934400000L)
-                .put("dim2", StructuredData.wrap(null))
-                .put("dim1", StructuredData.wrap("foo"))
-                .put("met1", StructuredData.wrap(parserType == ParserType.STR_JSON ? 1L : "1"))
-                .build(),
-            null,
-            null
-        ),
-        data.get(0)
-    );
-    assertEqualsSamplerResponseRow(
-        new SamplerResponseRow(
-            getRawColumns().get(1),
-            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
-                .put("__time", 1555934400000L)
-                .put("dim2", StructuredData.wrap(null))
-                .put("dim1", StructuredData.wrap("foo"))
-                .put("met1", StructuredData.wrap(parserType == ParserType.STR_JSON ? 2L : "2"))
-                .build(),
-            null,
-            null
-        ),
-        data.get(1)
-    );
-    assertEqualsSamplerResponseRow(
-        new SamplerResponseRow(
-            getRawColumns().get(2),
-            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
-                .put("__time", 1555934460000L)
-                .put("dim2", StructuredData.wrap(null))
-                .put("dim1", StructuredData.wrap("foo"))
-                .put("met1", StructuredData.wrap(parserType == ParserType.STR_JSON ? 3L : "3"))
-                .build(),
-            null,
-            null
-        ),
-        data.get(2)
-    );
-    assertEqualsSamplerResponseRow(
-        new SamplerResponseRow(
-            getRawColumns().get(3),
-            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
-                .put("__time", 1555934400000L)
-                .put("dim2", StructuredData.wrap(null))
-                .put("dim1", StructuredData.wrap("foo2"))
-                .put("met1", StructuredData.wrap(parserType == ParserType.STR_JSON ? 4L : "4"))
-                .build(),
-            null,
-            null
-        ),
-        data.get(3)
-    );
-    assertEqualsSamplerResponseRow(
-        new SamplerResponseRow(
-            getRawColumns().get(4),
-            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
-                .put("__time", 1555934400000L)
-                .put("dim2", StructuredData.wrap("bar"))
-                .put("dim1", StructuredData.wrap("foo"))
-                .put("met1", StructuredData.wrap(parserType == ParserType.STR_JSON ? 5L : "5"))
-                .build(),
-            null,
-            null
-        ),
-        data.get(4)
-    );
-    assertEqualsSamplerResponseRow(
-        new SamplerResponseRow(
-            getRawColumns().get(5),
-            null,
-            true,
-            getUnparseableTimestampString()
-        ),
-        data.get(5)
-    );
-  }
-
-  @Test
   public void testWithDimensionSpec() throws IOException
   {
     final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
@@ -707,7 +499,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         ImmutableList.of(StringDimensionSchema.create("dim1"), StringDimensionSchema.create("met1"))
     );
     final DataSchema dataSchema = createDataSchema(timestampSpec, dimensionsSpec, null, null, null);
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
@@ -715,21 +507,6 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     Assert.assertEquals(6, response.getNumRowsRead());
     Assert.assertEquals(5, response.getNumRowsIndexed());
     Assert.assertEquals(6, response.getData().size());
-    Assert.assertEquals(
-        ImmutableList.of(
-            new StringDimensionSchema("dim1"),
-            new StringDimensionSchema("met1")
-        ),
-        response.getLogicalDimensions()
-    );
-    Assert.assertEquals(
-        RowSignature.builder()
-                    .addTimeColumn()
-                    .add("dim1", ColumnType.STRING)
-                    .add("met1", ColumnType.STRING)
-                    .build(),
-        response.getLogicalSegmentSchema()
-    );
 
     List<SamplerResponseRow> data = response.getData();
 
@@ -828,7 +605,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         granularitySpec,
         null
     );
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
@@ -836,22 +613,6 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     Assert.assertEquals(6, response.getNumRowsRead());
     Assert.assertEquals(5, response.getNumRowsIndexed());
     Assert.assertEquals(6, response.getData().size());
-    Assert.assertEquals(
-        ImmutableList.of(
-            new StringDimensionSchema("dim1"),
-            new StringDimensionSchema("dim2")
-        ),
-        response.getLogicalDimensions()
-    );
-    Assert.assertEquals(
-        RowSignature.builder()
-                    .addTimeColumn()
-                    .add("dim1", ColumnType.STRING)
-                    .add("dim2", ColumnType.STRING)
-                    .add("met1", ColumnType.LONG)
-                    .build(),
-        response.getLogicalSegmentSchema()
-    );
 
     List<SamplerResponseRow> data = response.getData();
 
@@ -955,7 +716,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         granularitySpec,
         null
     );
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
@@ -963,22 +724,6 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     Assert.assertEquals(6, response.getNumRowsRead());
     Assert.assertEquals(5, response.getNumRowsIndexed());
     Assert.assertEquals(4, response.getData().size());
-    Assert.assertEquals(
-        ImmutableList.of(
-            new StringDimensionSchema("dim1"),
-            new StringDimensionSchema("dim2")
-        ),
-        response.getLogicalDimensions()
-    );
-    Assert.assertEquals(
-        RowSignature.builder()
-                    .addTimeColumn()
-                    .add("dim1", ColumnType.STRING)
-                    .add("dim2", ColumnType.STRING)
-                    .add("met1", ColumnType.LONG)
-                    .build(),
-        response.getLogicalSegmentSchema()
-    );
 
     List<SamplerResponseRow> data = response.getData();
 
@@ -1054,7 +799,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         granularitySpec,
         null
     );
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
@@ -1062,20 +807,6 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     Assert.assertEquals(6, response.getNumRowsRead());
     Assert.assertEquals(5, response.getNumRowsIndexed());
     Assert.assertEquals(3, response.getData().size());
-    Assert.assertEquals(
-        ImmutableList.of(
-            new StringDimensionSchema("dim1")
-        ),
-        response.getLogicalDimensions()
-    );
-    Assert.assertEquals(
-        RowSignature.builder()
-                    .addTimeColumn()
-                    .add("dim1", ColumnType.STRING)
-                    .add("met1", ColumnType.LONG)
-                    .build(),
-        response.getLogicalSegmentSchema()
-    );
 
     List<SamplerResponseRow> data = response.getData();
 
@@ -1139,7 +870,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         granularitySpec,
         transformSpec
     );
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
@@ -1147,22 +878,6 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     Assert.assertEquals(6, response.getNumRowsRead());
     Assert.assertEquals(5, response.getNumRowsIndexed());
     Assert.assertEquals(4, response.getData().size());
-    Assert.assertEquals(
-        ImmutableList.of(
-            new StringDimensionSchema("dim1"),
-            new StringDimensionSchema("dim2")
-        ),
-        response.getLogicalDimensions()
-    );
-    Assert.assertEquals(
-        RowSignature.builder()
-                    .addTimeColumn()
-                    .add("dim1", ColumnType.STRING)
-                    .add("dim2", ColumnType.STRING)
-                    .add("met1", ColumnType.LONG)
-                    .build(),
-        response.getLogicalSegmentSchema()
-    );
 
     List<SamplerResponseRow> data = response.getData();
 
@@ -1244,7 +959,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         granularitySpec,
         transformSpec
     );
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
@@ -1252,20 +967,6 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     Assert.assertEquals(6, response.getNumRowsRead());
     Assert.assertEquals(5, response.getNumRowsIndexed());
     Assert.assertEquals(3, response.getData().size());
-    Assert.assertEquals(
-        ImmutableList.of(
-            new StringDimensionSchema("dim1PlusBar")
-        ),
-        response.getLogicalDimensions()
-    );
-    Assert.assertEquals(
-        RowSignature.builder()
-                    .addTimeColumn()
-                    .add("dim1PlusBar", ColumnType.STRING)
-                    .add("met1", ColumnType.LONG)
-                    .build(),
-        response.getLogicalSegmentSchema()
-    );
 
     List<SamplerResponseRow> data = response.getData();
 
@@ -1326,7 +1027,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         granularitySpec,
         transformSpec
     );
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
@@ -1334,22 +1035,6 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     Assert.assertEquals(5, response.getNumRowsRead());
     Assert.assertEquals(4, response.getNumRowsIndexed());
     Assert.assertEquals(3, response.getData().size());
-    Assert.assertEquals(
-        ImmutableList.of(
-            new StringDimensionSchema("dim1"),
-            new StringDimensionSchema("dim2")
-        ),
-        response.getLogicalDimensions()
-    );
-    Assert.assertEquals(
-        RowSignature.builder()
-                    .addTimeColumn()
-                    .add("dim1", ColumnType.STRING)
-                    .add("dim2", ColumnType.STRING)
-                    .add("met1", ColumnType.LONG)
-                    .build(),
-        response.getLogicalSegmentSchema()
-    );
 
     List<SamplerResponseRow> data = response.getData();
 
@@ -1423,14 +1108,13 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     //
     Map<String, Object> rawColumns4ParseExceptionRow = ImmutableMap.of("t", "2019-04-22T12:00",
                                                                        "dim1", "foo2",
-                                                                       "met1", "invalidNumber"
-    );
+                                                                       "met1", "invalidNumber");
     final List<String> inputTestRows = Lists.newArrayList(getTestRows());
     inputTestRows.add(ParserType.STR_CSV.equals(parserType) ?
                       "2019-04-22T12:00,foo2,,invalidNumber" :
                       OBJECT_MAPPER.writeValueAsString(rawColumns4ParseExceptionRow));
 
-    final InputSource inputSource = createInputSource(inputTestRows, dataSchema);
+    final InputSource inputSource = createInputSource(inputTestRows);
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(inputSource, inputFormat, dataSchema, null);
@@ -1438,20 +1122,6 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     Assert.assertEquals(7, response.getNumRowsRead());
     Assert.assertEquals(5, response.getNumRowsIndexed());
     Assert.assertEquals(4, response.getData().size());
-    Assert.assertEquals(
-        ImmutableList.of(
-            new StringDimensionSchema("dim1PlusBar")
-        ),
-        response.getLogicalDimensions()
-    );
-    Assert.assertEquals(
-        RowSignature.builder()
-                    .addTimeColumn()
-                    .add("dim1PlusBar", ColumnType.STRING)
-                    .add("met1", ColumnType.LONG)
-                    .build(),
-        response.getLogicalSegmentSchema()
-    );
 
     List<SamplerResponseRow> data = response.getData();
 
@@ -1495,8 +1165,8 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     // the last row has parse exception when indexing, check if rawColumns and exception message match the expected
     //
     String indexParseExceptioMessage = ParserType.STR_CSV.equals(parserType)
-                                       ? "Found unparseable columns in row: [SamplerInputRow{row=TransformedInputRow{row=MapBasedInputRow{timestamp=2019-04-22T12:00:00.000Z, event={t=2019-04-22T12:00, dim1=foo2, dim2=null, met1=invalidNumber}, dimensions=[dim1PlusBar]}}}], exceptions: [Unable to parse value[invalidNumber] for field[met1]]"
-                                       : "Found unparseable columns in row: [SamplerInputRow{row=TransformedInputRow{row=MapBasedInputRow{timestamp=2019-04-22T12:00:00.000Z, event={t=2019-04-22T12:00, dim1=foo2, met1=invalidNumber}, dimensions=[dim1PlusBar]}}}], exceptions: [Unable to parse value[invalidNumber] for field[met1]]";
+           ? "Found unparseable columns in row: [SamplerInputRow{row=TransformedInputRow{row=MapBasedInputRow{timestamp=2019-04-22T12:00:00.000Z, event={t=2019-04-22T12:00, dim1=foo2, dim2=null, met1=invalidNumber}, dimensions=[dim1PlusBar]}}}], exceptions: [Unable to parse value[invalidNumber] for field[met1]]"
+           : "Found unparseable columns in row: [SamplerInputRow{row=TransformedInputRow{row=MapBasedInputRow{timestamp=2019-04-22T12:00:00.000Z, event={t=2019-04-22T12:00, dim1=foo2, met1=invalidNumber}, dimensions=[dim1PlusBar]}}}], exceptions: [Unable to parse value[invalidNumber] for field[met1]]";
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             rawColumns4ParseExceptionRow,
@@ -1509,13 +1179,15 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   }
 
   /**
+   *
    * This case tests sampling for multiple json lines in one text block
    * Currently only RecordSupplierInputSource supports this kind of input, see https://github.com/apache/druid/pull/10383 for more information
-   * <p>
+   *
    * This test combines illegal json block and legal json block together to verify:
    * 1. all lines in the illegal json block should not be parsed
    * 2. the illegal json block should not affect the processing of the 2nd record
    * 3. all lines in legal json block should be parsed successfully
+   *
    */
   @Test
   public void testMultipleJsonStringInOneBlock() throws IOException
@@ -1571,20 +1243,6 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     Assert.assertEquals(illegalRows + legalRows, response.getNumRowsRead());
     Assert.assertEquals(legalRows, response.getNumRowsIndexed());
     Assert.assertEquals(illegalRows + 2, response.getData().size());
-    Assert.assertEquals(
-        ImmutableList.of(
-            new StringDimensionSchema("dim1PlusBar")
-        ),
-        response.getLogicalDimensions()
-    );
-    Assert.assertEquals(
-        RowSignature.builder()
-                    .addTimeColumn()
-                    .add("dim1PlusBar", ColumnType.STRING)
-                    .add("met1", ColumnType.LONG)
-                    .build(),
-        response.getLogicalSegmentSchema()
-    );
 
     List<SamplerResponseRow> data = response.getData();
     List<Map<String, Object>> rawColumnList = this.getRawColumns();
@@ -1594,11 +1252,8 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     // first n rows are related to the first json block which fails to parse
     //
     String parseExceptionMessage;
-    if (useInputFormatApi) {
-      parseExceptionMessage = "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6}";
-    } else {
-      parseExceptionMessage = "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6}";
-    }
+    parseExceptionMessage = "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6}";
+
     for (; index < illegalRows; index++) {
       assertEqualsSamplerResponseRow(
           new SamplerResponseRow(
@@ -1691,7 +1346,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         granularitySpec,
         null
     );
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(
@@ -1704,33 +1359,6 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     Assert.assertEquals(4, response.getNumRowsRead());
     Assert.assertEquals(4, response.getNumRowsIndexed());
     Assert.assertEquals(2, response.getData().size());
-    Assert.assertEquals(
-        parserType == ParserType.STR_JSON
-        ? ImmutableList.of(
-            new StringDimensionSchema("dim1")
-        )
-        : ImmutableList.of(
-            new StringDimensionSchema("dim1"),
-            new StringDimensionSchema("dim2")
-        ),
-
-        response.getLogicalDimensions()
-    );
-    Assert.assertEquals(
-        parserType == ParserType.STR_JSON
-        ? RowSignature.builder()
-                      .addTimeColumn()
-                      .add("dim1", ColumnType.STRING)
-                      .add("met1", ColumnType.LONG)
-                      .build()
-        : RowSignature.builder()
-                      .addTimeColumn()
-                      .add("dim1", ColumnType.STRING)
-                      .add("dim2", ColumnType.STRING)
-                      .add("met1", ColumnType.LONG)
-                      .build(),
-        response.getLogicalSegmentSchema()
-    );
 
   }
 
@@ -1753,7 +1381,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         granularitySpec,
         null
     );
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(
@@ -1766,32 +1394,6 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     Assert.assertEquals(4, response.getNumRowsRead());
     Assert.assertEquals(4, response.getNumRowsIndexed());
     Assert.assertEquals(2, response.getData().size());
-    Assert.assertEquals(
-        parserType == ParserType.STR_JSON
-        ? ImmutableList.of(
-            new StringDimensionSchema("dim1")
-        )
-        : ImmutableList.of(
-            new StringDimensionSchema("dim1"),
-            new StringDimensionSchema("dim2")
-        ),
-        response.getLogicalDimensions()
-    );
-    Assert.assertEquals(
-        parserType == ParserType.STR_JSON
-        ? RowSignature.builder()
-                      .addTimeColumn()
-                      .add("dim1", ColumnType.STRING)
-                      .add("met1", ColumnType.LONG)
-                      .build()
-        : RowSignature.builder()
-                      .addTimeColumn()
-                      .add("dim1", ColumnType.STRING)
-                      .add("dim2", ColumnType.STRING)
-                      .add("met1", ColumnType.LONG)
-                      .build(),
-        response.getLogicalSegmentSchema()
-    );
   }
 
   @Test
@@ -1813,7 +1415,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         granularitySpec,
         null
     );
-    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputSource inputSource = createInputSource(getTestRows());
     final InputFormat inputFormat = createInputFormat();
 
     SamplerResponse response = inputSourceSampler.sample(
@@ -1826,22 +1428,6 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     Assert.assertEquals(4, response.getNumRowsRead());
     Assert.assertEquals(4, response.getNumRowsIndexed());
     Assert.assertEquals(2, response.getData().size());
-    Assert.assertEquals(
-        ImmutableList.of(
-            new StringDimensionSchema("dim1"),
-            new StringDimensionSchema("dim2")
-        ),
-        response.getLogicalDimensions()
-    );
-    Assert.assertEquals(
-        RowSignature.builder()
-                    .addTimeColumn()
-                    .add("dim1", ColumnType.STRING)
-                    .add("dim2", ColumnType.STRING)
-                    .add("met1", ColumnType.LONG)
-                    .build(),
-        response.getLogicalSegmentSchema()
-    );
   }
 
   private List<String> getTestRows()
@@ -1940,42 +1526,22 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     return OBJECT_MAPPER.readValue(OBJECT_MAPPER.writeValueAsBytes(parser), Map.class);
   }
 
-  private InputSource createInputSource(List<String> rows, DataSchema dataSchema)
+  private InputSource createInputSource(List<String> rows)
   {
     final String data = String.join("\n", rows);
-    if (useInputFormatApi) {
-      return new InlineInputSource(data);
-    } else {
-      return new FirehoseFactoryToInputSourceAdaptor(
-          new InlineFirehoseFactory(data),
-          createInputRowParser(
-              dataSchema == null ? new TimestampSpec(null, null, null) : dataSchema.getTimestampSpec(),
-              dataSchema == null ? new DimensionsSpec(null) : dataSchema.getDimensionsSpec()
-          )
-      );
-    }
+    return new InlineInputSource(data);
   }
 
   private String getUnparseableTimestampString()
   {
-    if (useInputFormatApi) {
-      return ParserType.STR_CSV.equals(parserType)
-             ? "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, dim2=null, met1=6} (Line: 6)"
-             : "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6} (Line: 6)";
-    } else {
-      return ParserType.STR_CSV.equals(parserType)
-             ? "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, dim2=null, met1=6}"
-             : "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6}";
-    }
+    return ParserType.STR_CSV.equals(parserType)
+           ? "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, dim2=null, met1=6} (Line: 6)"
+           : "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6} (Line: 6)";
   }
 
   private String unparseableTimestampErrorString(Map<String, Object> rawColumns, int line)
   {
-    if (useInputFormatApi) {
-      return StringUtils.format("Timestamp[null] is unparseable! Event: %s (Line: %d)", rawColumns, line);
-    } else {
-      return StringUtils.format("Timestamp[null] is unparseable! Event: %s", rawColumns);
-    }
+    return StringUtils.format("Timestamp[null] is unparseable! Event: %s (Line: %d)", rawColumns, line);
   }
 
   @Nullable
