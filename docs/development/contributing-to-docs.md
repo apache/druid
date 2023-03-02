@@ -36,14 +36,12 @@ Druid docs contributors can open an issue about documentation, or contribute a c
 The open source Druid docs are located here:
 https://druid.apache.org/docs/latest/design/index.html
 
-Some of the Druid docs are incorporated into the Imply docs:
-https://docs.imply.io/latest/apache-druid-doc/
 
-If you need to update a Druid doc, locate and update the doc in the Druid repo, following the instructions below. Once a month, we run a script to update the Imply docs repo with recent updates to the Druid docs.
+If you need to update a Druid doc, locate and update the doc in the Druid repo, following the instructions below.
 
 ## Druid repo branches
 
-The Druid team works on Apache Druid master, and then branches to 0.17, 0.18, etc and 017-iap (which stands for Imply Analytics Platform).
+The Druid team works on the `master` branch and then branches for a release, such as 25.0
 
 See [CONTRIBUTING.md](https://github.com/apache/incubator-druid/blob/master/CONTRIBUTING.md) for instructions on contributing to Apache Druid.
 
@@ -73,7 +71,7 @@ Before you can contribute to the Druid docs for the first time, you must complet
   For ```upstream```, ```push_url = no_push``` means you won’t accidentally push to upstream.
   Make sure to put your github id for {my-git-id}.
   4. ```git config --list --show-origin``` to make sure you’ve got your email configured. If you need to set your email, you can set it per repo or globally. Global instructions [here](https://docs.github.com/en/github-ae@latest/account-and-profile/setting-up-and-managing-your-github-user-account/managing-email-preferences/setting-your-commit-email-address#setting-your-commit-email-address-in-git).
-  5. Docusaurus?
+  5. Install Docusaurus so that you can build the site locally. Run either `npm install` or `yarn install` in the `website` directory.
 
 ## Contributing
 
@@ -108,12 +106,12 @@ Before you can contribute to the Druid docs for the first time, you must complet
   git add my-change.md
   git commit -m "i made some changes"
   ~~~~
-  4. Test changes locally.
+  4. Test changes locally by building the site and navigating to your changes. In `website`, run `docusaurus-start`. By default, this starts the site on `localhost:3000`. 
   5. Push your changes to your fork: ```origin```
   ~~~~
   git push --set-upstream origin my-work
   ~~~~
-  6. Go to GitHub for the Druid repo. It should realize you have a new branch in your fork. Create a pull request from your for ```my-work``` to ```master``` in the Druid repo.
+  6. Go to the Druid repo. GitHub should recognize that you have a new branch in your fork. Create a pull request from your Druid fork and branch to the `master` branch in the Apache Druid repo.
 
 ## Style guide
 
@@ -124,12 +122,12 @@ Before publishing new content or updating an existing topic, audit your document
 * Avoid negative constructions when possible
 * Use clear and direct language
 * Use descriptive headings and titles
-* Avoid using a present participle or gerund as the first word in a heading or title
+* Avoid using a present participle or gerund as the first word in a heading or title. A shortcut for this is to not start with a word that ends in `-ing`. For example, don't use "Configuring Druid." Use "Configure Druid."
 * Use sentence case in document titles and headings
 * Don’t use images of text or code samples
 * Use SVG over PNG if available
 * Provide an equivalent text explanation with each image
-* Use the appropriate text-formatting
+* Use the appropriate text-formatting. For example, make sure code snippets and property names are in code font and UI elements are bold. Additionally, you should generally avoid using bold or italics to emphasize certain words.
 * Put conditional clauses before instructions
 * Avoid gender-specific pronouns, instead use they
 * Use second person — you instead of we
