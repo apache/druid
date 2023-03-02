@@ -17,33 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.kinesis;
+package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.indexing.SamplerResponse;
-import org.apache.druid.client.indexing.SamplerSpec;
-import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.JSONParseSpec;
-import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorIOConfig;
-import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorSpec;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
 import org.apache.druid.indexing.overlord.sampler.SamplerTestUtils;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
+import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -55,45 +55,31 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
+import org.joda.time.DateTime;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.IOException;
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-public class KinesisSamplerSpecTest extends EasyMockSupport
+public class SeekableStreamSamplerSpecTest extends EasyMockSupport
 {
+  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   private static final String STREAM = "sampling";
   private static final String SHARD_ID = "1";
-  private static final DataSchema DATA_SCHEMA = new DataSchema(
-      "test_ds",
-      new TimestampSpec("timestamp", "iso", null),
-      new DimensionsSpec(
-          Arrays.asList(
-              new StringDimensionSchema("dim1"),
-              new StringDimensionSchema("dim1t"),
-              new StringDimensionSchema("dim2"),
-              new LongDimensionSchema("dimLong"),
-              new FloatDimensionSchema("dimFloat")
-          )
-      ),
-      new AggregatorFactory[]{
-          new DoubleSumAggregatorFactory("met1sum", "met1"),
-          new CountAggregatorFactory("rows")
-      },
-      new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
-      null
-  );
+
+  private final SeekableStreamSupervisorSpec supervisorSpec = mock(SeekableStreamSupervisorSpec.class);
 
   static {
     NullHandling.initializeForTests();
   }
 
-  private final KinesisRecordSupplier recordSupplier = mock(KinesisRecordSupplier.class);
+  private final RecordSupplier recordSupplier = mock(RecordSupplier.class);
 
   private static List<OrderedPartitionableRecord<String, String, ByteEntity>> generateRecords(String stream)
   {
@@ -118,118 +104,48 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
   }
 
   @Test(timeout = 10_000L)
-  public void testSample() throws InterruptedException
+  public void testSampleWithInputRowParser() throws Exception
   {
-    KinesisSupervisorSpec supervisorSpec = new KinesisSupervisorSpec(
-        null,
-        DATA_SCHEMA,
-        null,
-        new KinesisSupervisorIOConfig(
-            STREAM,
-            new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            true,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false
-        ),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
-
-    KinesisSamplerSpec samplerSpec = new TestableKinesisSamplerSpec(
-        supervisorSpec,
-        new SamplerConfig(5, null, null, null),
-        new InputSourceSampler(new DefaultObjectMapper()),
-        null
-    );
-
-    runSamplerAndCompareResponse(samplerSpec, true);
-  }
-
-  @Test
-  public void testSampleWithInputRowParser() throws IOException, InterruptedException
-  {
-    ObjectMapper objectMapper = new DefaultObjectMapper();
-    TimestampSpec timestampSpec = new TimestampSpec("timestamp", "iso", null);
-    DimensionsSpec dimensionsSpec = new DimensionsSpec(
-        Arrays.asList(
-            new StringDimensionSchema("dim1"),
-            new StringDimensionSchema("dim1t"),
-            new StringDimensionSchema("dim2"),
-            new LongDimensionSchema("dimLong"),
-            new FloatDimensionSchema("dimFloat")
-        )
-    );
-    InputRowParser parser = new StringInputRowParser(new JSONParseSpec(timestampSpec, dimensionsSpec, JSONPathSpec.DEFAULT, null, null), "UTF8");
-
-    DataSchema dataSchema = new DataSchema(
+    final DataSchema dataSchema = new DataSchema(
         "test_ds",
-        objectMapper.readValue(objectMapper.writeValueAsBytes(parser), Map.class),
+        OBJECT_MAPPER.convertValue(
+            new StringInputRowParser(
+                new JSONParseSpec(
+                    new TimestampSpec("timestamp", "iso", null),
+                    new DimensionsSpec(
+                        Arrays.asList(
+                            new StringDimensionSchema("dim1"),
+                            new StringDimensionSchema("dim1t"),
+                            new StringDimensionSchema("dim2"),
+                            new LongDimensionSchema("dimLong"),
+                            new FloatDimensionSchema("dimFloat")
+                        )
+                    ),
+                    new JSONPathSpec(true, ImmutableList.of()),
+                    ImmutableMap.of(),
+                    false
+                )
+            ),
+            Map.class
+        ),
         new AggregatorFactory[]{
             new DoubleSumAggregatorFactory("met1sum", "met1"),
             new CountAggregatorFactory("rows")
         },
         new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
         null,
-        objectMapper
+        OBJECT_MAPPER
     );
 
-    KinesisSupervisorSpec supervisorSpec = new KinesisSupervisorSpec(
-        null,
-        dataSchema,
-        null,
-        new KinesisSupervisorIOConfig(
-            STREAM,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            true,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false
-        ),
+    final SeekableStreamSupervisorIOConfig supervisorIOConfig = new TestableSeekableStreamSupervisorIOConfig(
+        STREAM,
         null,
         null,
         null,
         null,
         null,
         null,
+        true,
         null,
         null,
         null,
@@ -238,19 +154,10 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
         null
     );
 
-    KinesisSamplerSpec samplerSpec = new TestableKinesisSamplerSpec(
-        supervisorSpec,
-        new SamplerConfig(5, null, null, null),
-        new InputSourceSampler(new DefaultObjectMapper()),
-        null
-    );
-
-    runSamplerAndCompareResponse(samplerSpec, false);
-  }
-
-  private void runSamplerAndCompareResponse(SamplerSpec samplerSpec, boolean useInputFormat) throws InterruptedException
-  {
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).once();
+    EasyMock.expect(supervisorSpec.getDataSchema()).andReturn(dataSchema).once();
+    EasyMock.expect(supervisorSpec.getIoConfig()).andReturn(supervisorIOConfig).once();
+    EasyMock.expect(supervisorSpec.getTuningConfig()).andReturn(null).once();
 
     recordSupplier.assign(ImmutableSet.of(StreamPartition.of(STREAM, SHARD_ID)));
     EasyMock.expectLastCall().once();
@@ -264,6 +171,12 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
     EasyMock.expectLastCall().once();
 
     replayAll();
+
+    SeekableStreamSamplerSpec samplerSpec = new TestableSeekableStreamSamplerSpec(
+        supervisorSpec,
+        new SamplerConfig(5, null, null, null),
+        new InputSourceSampler(new DefaultObjectMapper())
+    );
 
     SamplerResponse response = samplerSpec.sample();
 
@@ -358,7 +271,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
         null,
         null,
         true,
-        "Unable to parse row [unparseable]" + (useInputFormat ? " into JSON" : "")
+        "Unable to parse row [unparseable]"
     ), it.next());
 
     Assert.assertFalse(it.hasNext());
@@ -383,22 +296,59 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
     }
   }
 
-  private class TestableKinesisSamplerSpec extends KinesisSamplerSpec
+  private class TestableSeekableStreamSamplerSpec extends SeekableStreamSamplerSpec
   {
-    private TestableKinesisSamplerSpec(
-        KinesisSupervisorSpec ingestionSpec,
+    private TestableSeekableStreamSamplerSpec(
+        SeekableStreamSupervisorSpec ingestionSpec,
         SamplerConfig samplerConfig,
-        InputSourceSampler inputSourceSampler,
-        AWSCredentialsConfig awsCredentialsConfig
+        InputSourceSampler inputSourceSampler
     )
     {
-      super(ingestionSpec, samplerConfig, inputSourceSampler, awsCredentialsConfig);
+      super(ingestionSpec, samplerConfig, inputSourceSampler);
     }
 
     @Override
-    protected KinesisRecordSupplier createRecordSupplier()
+    protected RecordSupplier createRecordSupplier()
     {
       return recordSupplier;
+    }
+  }
+
+  private static class TestableSeekableStreamSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
+  {
+    private TestableSeekableStreamSupervisorIOConfig(
+        String stream,
+        @Nullable InputFormat inputFormat,
+        Integer replicas,
+        Integer taskCount,
+        Period taskDuration,
+        Period startDelay,
+        Period period,
+        Boolean useEarliestSequenceNumber,
+        Period completionTimeout,
+        Period lateMessageRejectionPeriod,
+        Period earlyMessageRejectionPeriod,
+        @Nullable AutoScalerConfig autoScalerConfig,
+        DateTime lateMessageRejectionStartDateTime,
+        @Nullable IdleConfig idleConfig
+    )
+    {
+      super(
+          stream,
+          inputFormat,
+          replicas,
+          taskCount,
+          taskDuration,
+          startDelay,
+          period,
+          useEarliestSequenceNumber,
+          completionTimeout,
+          lateMessageRejectionPeriod,
+          earlyMessageRejectionPeriod,
+          autoScalerConfig,
+          lateMessageRejectionStartDateTime,
+          idleConfig
+      );
     }
   }
 }
