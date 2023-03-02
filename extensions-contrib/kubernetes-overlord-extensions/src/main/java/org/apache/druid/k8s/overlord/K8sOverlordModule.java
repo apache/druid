@@ -60,8 +60,8 @@ public class K8sOverlordModule implements DruidModule
     );
 
     biddy.addBinding(KubernetesTaskRunnerFactory.TYPE_NAME)
-       .to(KubernetesTaskRunnerFactory.class)
-       .in(LazySingleton.class);
+         .to(KubernetesTaskRunnerFactory.class)
+         .in(LazySingleton.class);
     binder.bind(KubernetesTaskRunnerFactory.class).in(LazySingleton.class);
     configureTaskLogs(binder);
   }
