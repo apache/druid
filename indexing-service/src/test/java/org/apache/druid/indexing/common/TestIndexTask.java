@@ -24,26 +24,27 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.task.RealtimeIndexTask;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.RealtimeIOConfig;
-import org.apache.druid.segment.realtime.FireDepartment;
-import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 
 import java.io.File;
 
 /**
  */
-@JsonTypeName("test_realtime")
-public class TestRealtimeTask extends RealtimeIndexTask
+@JsonTypeName("test_index")
+public class TestIndexTask extends IndexTask
 {
   private final TaskStatus status;
 
   @JsonCreator
-  public TestRealtimeTask(
+  public TestIndexTask(
       @JsonProperty("id") String id,
       @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("dataSource") String dataSource,
@@ -54,13 +55,42 @@ public class TestRealtimeTask extends RealtimeIndexTask
     super(
         id,
         taskResource,
-        new FireDepartment(
+        new IndexIngestionSpec(
             new DataSchema(dataSource, null, new AggregatorFactory[]{}, null, null, mapper),
-            new RealtimeIOConfig(
-                new LocalFirehoseFactory(new File("lol"), "rofl", null),
-                (schema, config, metrics) -> null
+            new IndexTask.IndexIOConfig(
+                null,
+                new LocalInputSource(new File("lol"), "rofl"),
+                new JsonInputFormat(null, null, null, null, null),
+                false,
+                false
             ),
-            null
+
+            new IndexTask.IndexTuningConfig(
+                null,
+                null,
+                null,
+                10,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                new DynamicPartitionsSpec(10000, null),
+                new IndexSpec(),
+                null,
+                3,
+                false,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            )
         ),
         null
     );

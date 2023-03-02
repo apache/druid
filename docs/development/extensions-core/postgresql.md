@@ -87,7 +87,7 @@ In most cases, the configuration options map directly to the [postgres JDBC conn
 
 ### PostgreSQL Firehose
 
-The PostgreSQL extension provides an implementation of an [SqlFirehose](../../ingestion/native-batch-firehose.md) which can be used to ingest data into Druid from a PostgreSQL database.
+The PostgreSQL extension provides an implementation of an [SQL input source](../../ingestion/native-batch-input-source.md) which can be used to ingest data into Druid from a PostgreSQL database.
 
 ```json
 {
@@ -95,22 +95,17 @@ The PostgreSQL extension provides an implementation of an [SqlFirehose](../../in
   "spec": {
     "dataSchema": {
       "dataSource": "some_datasource",
-      "parser": {
-        "parseSpec": {
-          "format": "timeAndDims",
-          "dimensionsSpec": {
-            "dimensionExclusions": [],
-            "dimensions": [
-              "dim1",
-              "dim2",
-              "dim3"
-            ]
-          },
-          "timestampSpec": {
-            "format": "auto",
-            "column": "ts"
-          }
-        }
+      "dimensionsSpec": {
+        "dimensionExclusions": [],
+        "dimensions": [
+          "dim1",
+          "dim2",
+          "dim3"
+        ]
+      },
+      "timestampSpec": {
+        "format": "auto",
+        "column": "ts"
       },
       "metricsSpec": [],
       "granularitySpec": {
@@ -129,7 +124,7 @@ The PostgreSQL extension provides an implementation of an [SqlFirehose](../../in
     },
     "ioConfig": {
       "type": "index_parallel",
-      "firehose": {
+      "inputSource": {
         "type": "sql",
         "database": {
           "type": "postgresql",
@@ -142,6 +137,9 @@ The PostgreSQL extension provides an implementation of an [SqlFirehose](../../in
         "sqls": [
           "SELECT * FROM some_table"
         ]
+      },
+      "inputFormat": {
+        "type": "json"
       }
     },
     "tuningConfig": {
