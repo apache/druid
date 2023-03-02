@@ -61,7 +61,7 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
         flattenSpec,
         new OrcStructFlattenerMaker(
             this.binaryAsString,
-            dimensionsSpec != null && dimensionsSpec.useNestedColumnIndexerForSchemaDiscovery()
+            dimensionsSpec != null && dimensionsSpec.useSchemaDiscovery()
         )
     );
     this.parser = new MapInputRowParser(parseSpec);

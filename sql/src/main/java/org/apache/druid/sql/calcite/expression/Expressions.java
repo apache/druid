@@ -287,7 +287,7 @@ public class Expressions
   {
     final SqlOperator operator = ((RexCall) rexNode).getOperator();
 
-    final SqlOperatorConversion conversion = plannerContext.getOperatorTable()
+    final SqlOperatorConversion conversion = plannerContext.getPlannerToolbox().operatorTable()
                                                            .lookupOperatorConversion(operator);
 
     if (conversion == null) {
@@ -703,7 +703,7 @@ public class Expressions
       return filter;
     } else if (rexNode instanceof RexCall) {
       final SqlOperator operator = ((RexCall) rexNode).getOperator();
-      final SqlOperatorConversion conversion = plannerContext.getOperatorTable().lookupOperatorConversion(operator);
+      final SqlOperatorConversion conversion = plannerContext.getPlannerToolbox().operatorTable().lookupOperatorConversion(operator);
 
       if (conversion == null) {
         return null;
