@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
+import io.fabric8.kubernetes.api.model.PodListBuilder;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
@@ -32,17 +33,16 @@ import io.fabric8.kubernetes.api.model.batch.v1.JobStatus;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientTimeoutException;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -51,7 +51,8 @@ import static org.mockito.Mockito.when;
 public class DruidKubernetesPeonClientTest
 {
 
-  KubernetesClient client;
+  private KubernetesClient client;
+  private KubernetesMockServer server;
 
   @Test
   void testWaitingForAPodToGetReadyThatDoesntExist()
@@ -71,7 +72,7 @@ public class DruidKubernetesPeonClientTest
                                                                          false
     );
     List<Job> currentJobs = peonClient.listAllPeonJobs();
-    assertEquals(0, currentJobs.size());
+    Assertions.assertEquals(0, currentJobs.size());
     Job job = new JobBuilder()
         .withNewMetadata()
         .withName("job_name")
@@ -82,7 +83,7 @@ public class DruidKubernetesPeonClientTest
         .endSpec().build();
     client.batch().v1().jobs().inNamespace("test").create(job);
     currentJobs = peonClient.listAllPeonJobs();
-    assertEquals(1, currentJobs.size());
+    Assertions.assertEquals(1, currentJobs.size());
   }
 
   @Test
@@ -100,7 +101,7 @@ public class DruidKubernetesPeonClientTest
                                                                          false
     );
     List<Pod> pods = peonClient.listPeonPods();
-    assertEquals(1, pods.size());
+    Assertions.assertEquals(1, pods.size());
   }
 
   @Test
@@ -117,8 +118,8 @@ public class DruidKubernetesPeonClientTest
 
     List<Job> jobs = Lists.newArrayList(active, dontKillYet, killThisOne);
     List<Job> toDelete = peonClient.getJobsToCleanup(jobs, 30, TimeUnit.MINUTES);
-    assertEquals(1, toDelete.size()); // should only cleanup one job
-    assertEquals(killThisOne, Iterables.getOnlyElement(toDelete)); // should only cleanup one job
+    Assertions.assertEquals(1, toDelete.size()); // should only cleanup one job
+    Assertions.assertEquals(killThisOne, Iterables.getOnlyElement(toDelete)); // should only cleanup one job
   }
 
   @Test
@@ -129,10 +130,109 @@ public class DruidKubernetesPeonClientTest
         false
     );
     Optional<InputStream> stream = peonClient.getPeonLogs(new K8sTaskId("foo"));
-    assertFalse(stream.isPresent());
+    Assertions.assertFalse(stream.isPresent());
+  }
 
-    Optional<InputStream> logs = peonClient.getJobLogs(new K8sTaskId("foo"));
-    assertFalse(logs.isPresent());
+  @Test
+  void testGetLogReaderForJob()
+  {
+    server.expect().get()
+        .withPath("/apis/batch/v1/namespaces/test/jobs/foo")
+        .andReturn(HttpURLConnection.HTTP_OK, new JobBuilder()
+            .withNewMetadata()
+            .withName("foo")
+            .withUid("uid")
+            .endMetadata()
+            .withNewSpec()
+            .withNewTemplate()
+            .withNewSpec()
+            .addNewContainer()
+            .withName("main")
+            .endContainer()
+            .endSpec()
+            .endTemplate()
+            .endSpec()
+            .build()
+        ).once();
+
+    server.expect().get()
+        .withPath("/api/v1/namespaces/test/pods?labelSelector=controller-uid%3Duid")
+        .andReturn(HttpURLConnection.HTTP_OK, new PodListBuilder()
+            .addNewItem()
+            .withNewMetadata()
+            .withName("foo")
+            .addNewOwnerReference()
+            .withUid("uid")
+            .withController(true)
+            .endOwnerReference()
+            .endMetadata()
+            .withNewSpec()
+            .addNewContainer()
+            .withName("main")
+            .endContainer()
+            .endSpec()
+            .endItem()
+            .build()
+        ).once();
+
+    server.expect().get()
+        .withPath("/api/v1/namespaces/test/pods/foo/log?pretty=false&container=main")
+        .andReturn(HttpURLConnection.HTTP_OK, "data")
+        .once();
+
+    DruidKubernetesPeonClient peonClient = new DruidKubernetesPeonClient(
+        new TestKubernetesClient(client),
+        "test",
+        false
+    );
+
+    Optional<InputStream> logs = peonClient.getPeonLogs(new K8sTaskId("foo"));
+    Assertions.assertTrue(logs.isPresent());
+  }
+
+  @Test
+  void testGetLogReaderForJobWithoutPodReturnsEmptyOptional()
+  {
+    server.expect().get()
+        .withPath("/apis/batch/v1/namespaces/test/jobs/foo")
+        .andReturn(HttpURLConnection.HTTP_OK, new JobBuilder()
+            .withNewMetadata()
+            .withName("foo")
+            .withUid("uid")
+            .endMetadata()
+            .withNewSpec()
+            .withNewTemplate()
+            .withNewSpec()
+            .addNewContainer()
+            .withName("main")
+            .endContainer()
+            .endSpec()
+            .endTemplate()
+            .endSpec()
+            .build()
+        ).once();
+
+    DruidKubernetesPeonClient peonClient = new DruidKubernetesPeonClient(
+        new TestKubernetesClient(client),
+        "test",
+        false
+    );
+
+    Optional<InputStream> logs = peonClient.getPeonLogs(new K8sTaskId("foo"));
+    Assertions.assertFalse(logs.isPresent());
+  }
+
+  @Test
+  void testGetLogReaderForJobWithoutJobReturnsEmptyOptional()
+  {
+    DruidKubernetesPeonClient peonClient = new DruidKubernetesPeonClient(
+        new TestKubernetesClient(client),
+        "test",
+        false
+    );
+
+    Optional<InputStream> logs = peonClient.getPeonLogs(new K8sTaskId("foo"));
+    Assertions.assertFalse(logs.isPresent());
   }
 
   private Job mockJob(boolean active, Timestamp timestamp)

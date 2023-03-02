@@ -68,7 +68,6 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -214,7 +213,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                   // publish task logs
                   Path log = Files.createTempFile(task.getId(), "log");
                   try {
-                    Optional<InputStream> logStream = client.getJobLogs(new K8sTaskId(task.getId()));
+                    Optional<InputStream> logStream = client.getPeonLogs(new K8sTaskId(task.getId()));
                     if (logStream.isPresent()) {
                       FileUtils.copyInputStreamToFile(logStream.get(), log.toFile());
                     }
