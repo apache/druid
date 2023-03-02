@@ -10,7 +10,7 @@
       "dimensions": [],
       "dimensionExclusions": [],
       "spatialDimensions": [],
-      "useNestedColumnIndexerForSchemaDiscovery": true
+      "useSchemaDiscovery": true
     }
   }
 }

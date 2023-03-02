@@ -211,6 +211,8 @@ else
 fi
 IT_CASES_DIR="$DRUID_DEV/integration-tests-ex/cases"
 
+# Added -Dcyclonedx.skip=true to avoid ISO-8859-1 [ERROR]s
+# May be fixed in the future
 MAVEN_IGNORE="-P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -Dcyclonedx.skip=true"
 
 case $CMD in

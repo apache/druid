@@ -191,7 +191,7 @@ public class DruidRexExecutor implements RexExecutor
             // column selector anyway
             literal = constExp;
           } else {
-            literal = rexBuilder.makeLiteral(exprResult.value(), constExp.getType(), true);
+            literal = rexBuilder.makeLiteral(exprResult.valueOrDefault(), constExp.getType(), true);
           }
         }
 

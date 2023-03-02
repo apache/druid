@@ -40,8 +40,6 @@ The [Google Cloud Storage input source](../../ingestion/native-batch-input-sourc
 to read objects directly from Google Cloud Storage. If you use the [Hadoop task](../../ingestion/hadoop.md),
 you can read data from Google Cloud Storage by specifying the paths in your [`inputSpec`](../../ingestion/hadoop.md#inputspec).
 
-Objects can also be read directly from Google Cloud Storage via the [StaticGoogleBlobStoreFirehose](../../ingestion/native-batch-firehose.md#staticgoogleblobstorefirehose)
-
 ### Deep Storage
 
 Deep storage can be written to Google Cloud Storage either via this extension or the [druid-hdfs-storage extension](../extensions-core/hdfs.md).
