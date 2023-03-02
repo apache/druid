@@ -45,7 +45,7 @@ import java.util.function.Supplier;
  * randomize inputs to various vector expressions and make sure the results match nonvectorized expressions
  *
  * this is not a replacement for correctness tests, but will ensure that vectorized and non-vectorized expression
- * evaluation is at least self consistent...
+ * evaluation is at least self-consistent...
  */
 public class VectorExprSanityTest extends InitializedNullHandlingTest
 {
@@ -302,11 +302,12 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   {
     Assert.assertTrue(StringUtils.format("Cannot vectorize %s", expr), parsed.canVectorize(bindings.rhs));
     ExpressionType outputType = parsed.getOutputType(bindings.rhs);
-    ExprEvalVector<?> vectorEval = parsed.buildVectorized(bindings.rhs).evalVector(bindings.rhs);
+    ExprEvalVector<?> vectorEval = parsed.asVectorProcessor(bindings.rhs).evalVector(bindings.rhs);
     // 'null' expressions can have an output type of null, but still evaluate in default mode, so skip type checks
     if (outputType != null) {
       Assert.assertEquals(expr, outputType, vectorEval.getType());
     }
+    final Object[] vectorVals = vectorEval.getObjectVector();
     for (int i = 0; i < VECTOR_SIZE; i++) {
       ExprEval<?> eval = parsed.eval(bindings.lhs[i]);
       // 'null' expressions can have an output type of null, but still evaluate in default mode, so skip type checks
@@ -315,8 +316,8 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
       }
       Assert.assertEquals(
           StringUtils.format("Values do not match for row %s for expression %s", i, expr),
-          eval.value(),
-          vectorEval.get(i)
+          eval.valueOrDefault(),
+          vectorVals[i]
       );
     }
   }

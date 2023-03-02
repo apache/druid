@@ -707,7 +707,7 @@ public class ExpressionsTest extends ExpressionTestBase
                 DruidExpression.ofColumn(ColumnType.STRING, "hexstr")
             )
         ),
-        NullHandling.sqlCompatible() ? null : 0L
+        null
     );
   }
 

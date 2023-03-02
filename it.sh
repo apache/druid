@@ -193,7 +193,9 @@ fi
 
 CMD=$1
 shift
-MAVEN_IGNORE="-P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true"
+# Added -Dcyclonedx.skip=true to avoid ISO-8859-1 [ERROR]s
+# May be fixed in the future
+MAVEN_IGNORE="-P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -Dcyclonedx.skip=true"
 
 case $CMD in
   "help" )

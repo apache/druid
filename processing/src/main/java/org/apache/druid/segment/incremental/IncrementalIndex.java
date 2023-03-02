@@ -242,7 +242,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   private final AtomicLong bytesInMemory = new AtomicLong();
   private final boolean useMaxMemoryEstimates;
 
-  private final boolean useNestedColumnIndexerForSchemaDiscovery;
+  private final boolean useSchemaDiscovery;
 
   // This is modified on add() in a critical section.
   private final ThreadLocal<InputRow> in = new ThreadLocal<>();
@@ -288,8 +288,8 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     this.deserializeComplexMetrics = deserializeComplexMetrics;
     this.preserveExistingMetrics = preserveExistingMetrics;
     this.useMaxMemoryEstimates = useMaxMemoryEstimates;
-    this.useNestedColumnIndexerForSchemaDiscovery = incrementalIndexSchema.getDimensionsSpec()
-                                                                          .useNestedColumnIndexerForSchemaDiscovery();
+    this.useSchemaDiscovery = incrementalIndexSchema.getDimensionsSpec()
+                                                    .useSchemaDiscovery();
 
     this.timeAndMetricsColumnCapabilities = new HashMap<>();
     this.metricDescs = Maps.newLinkedHashMap();
@@ -591,7 +591,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
         } else {
           wasNewDim = true;
           final DimensionHandler<?, ?, ?> handler;
-          if (useNestedColumnIndexerForSchemaDiscovery) {
+          if (useSchemaDiscovery) {
             handler = DimensionHandlerUtils.getHandlerFromCapabilities(
                 dimension,
                 makeDefaultCapabilitiesFromValueType(NestedDataComplexTypeSerde.TYPE),

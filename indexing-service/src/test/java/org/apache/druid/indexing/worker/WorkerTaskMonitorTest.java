@@ -34,7 +34,7 @@ import org.apache.druid.indexing.common.IndexingServiceCondition;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
-import org.apache.druid.indexing.common.TestRealtimeTask;
+import org.apache.druid.indexing.common.TestIndexTask;
 import org.apache.druid.indexing.common.TestTasks;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -146,7 +146,7 @@ public class WorkerTaskMonitorTest
     // Start a task monitor
     workerTaskMonitor = createTaskMonitor();
     TestTasks.registerSubtypes(jsonMapper);
-    jsonMapper.registerSubtypes(new NamedType(TestRealtimeTask.class, "test_realtime"));
+    jsonMapper.registerSubtypes(new NamedType(TestIndexTask.class, "test_index"));
     workerTaskMonitor.start();
 
     task = TestTasks.immediateSuccess("test");
