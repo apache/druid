@@ -110,7 +110,7 @@ public class ExpressionSelectors
       {
         // No need for null check on getObject() since baseSelector impls will never return null.
         ExprEval eval = baseSelector.getObject();
-        return eval.value();
+        return eval.valueOrDefault();
       }
 
       @Override
@@ -196,14 +196,7 @@ public class ExpressionSelectors
       Expr expression
   )
   {
-    return makeExprEvalSelector(columnSelectorFactory, ExpressionPlanner.plan(columnSelectorFactory, expression));
-  }
-
-  public static ColumnValueSelector<ExprEval> makeExprEvalSelector(
-      ColumnSelectorFactory columnSelectorFactory,
-      ExpressionPlan plan
-  )
-  {
+    ExpressionPlan plan = ExpressionPlanner.plan(columnSelectorFactory, expression);
     final RowIdSupplier rowIdSupplier = columnSelectorFactory.getRowIdSupplier();
 
     if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {
@@ -548,6 +541,6 @@ public class ExpressionSelectors
       }
       return Arrays.stream(asArray).collect(Collectors.toList());
     }
-    return eval.value();
+    return eval.valueOrDefault();
   }
 }

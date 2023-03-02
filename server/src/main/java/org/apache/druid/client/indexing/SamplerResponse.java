@@ -22,6 +22,8 @@ package org.apache.druid.client.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.segment.column.RowSignature;
 
 import java.util.List;
 import java.util.Map;
@@ -32,17 +34,27 @@ public class SamplerResponse
 {
   private final int numRowsRead;
   private final int numRowsIndexed;
+
+  private final List<DimensionSchema> logicalDimensions;
+  private final List<DimensionSchema> physicalDimensions;
+  private final RowSignature logicalSegmentSchema;
   private final List<SamplerResponseRow> data;
 
   @JsonCreator
   public SamplerResponse(
       @JsonProperty("numRowsRead") int numRowsRead,
       @JsonProperty("numRowsIndexed") int numRowsIndexed,
+      @JsonProperty("logicalDimensions") List<DimensionSchema> logicalDimensions,
+      @JsonProperty("physicalDimensions") List<DimensionSchema> physicalDimensions,
+      @JsonProperty("logicalSegmentSchema") RowSignature logicalSegmentSchema,
       @JsonProperty("data") List<SamplerResponseRow> data
   )
   {
     this.numRowsRead = numRowsRead;
     this.numRowsIndexed = numRowsIndexed;
+    this.logicalDimensions = logicalDimensions;
+    this.physicalDimensions = physicalDimensions;
+    this.logicalSegmentSchema = logicalSegmentSchema;
     this.data = data;
   }
 
@@ -56,6 +68,24 @@ public class SamplerResponse
   public int getNumRowsIndexed()
   {
     return numRowsIndexed;
+  }
+
+  @JsonProperty
+  public List<DimensionSchema> getLogicalDimensions()
+  {
+    return logicalDimensions;
+  }
+
+  @JsonProperty
+  public List<DimensionSchema> getPhysicalDimensions()
+  {
+    return physicalDimensions;
+  }
+
+  @JsonProperty
+  public RowSignature getLogicalSegmentSchema()
+  {
+    return logicalSegmentSchema;
   }
 
   @JsonProperty
@@ -76,13 +106,36 @@ public class SamplerResponse
     SamplerResponse that = (SamplerResponse) o;
     return getNumRowsRead() == that.getNumRowsRead() &&
            getNumRowsIndexed() == that.getNumRowsIndexed() &&
-           Objects.equals(getData(), that.getData());
+           Objects.equals(logicalDimensions, that.logicalDimensions) &&
+           Objects.equals(physicalDimensions, that.physicalDimensions) &&
+           Objects.equals(logicalSegmentSchema, that.logicalSegmentSchema) &&
+           Objects.equals(data, that.data);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(getNumRowsRead(), getNumRowsIndexed(), getData());
+    return Objects.hash(
+        getNumRowsRead(),
+        getNumRowsIndexed(),
+        logicalDimensions,
+        physicalDimensions,
+        logicalSegmentSchema,
+        data
+    );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "SamplerResponse{" +
+           "numRowsRead=" + numRowsRead +
+           ", numRowsIndexed=" + numRowsIndexed +
+           ", logicalDimensions=" + logicalDimensions +
+           ", physicalDimensions=" + physicalDimensions +
+           ", logicalSegmentSchema=" + logicalSegmentSchema +
+           ", data=" + data +
+           '}';
   }
 
   @JsonInclude(JsonInclude.Include.NON_NULL)

@@ -21,14 +21,12 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertCannotOrderByDescendingFault;
-import org.apache.druid.msq.indexing.error.InsertCannotReplaceExistingSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
 import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
@@ -40,7 +38,6 @@ import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -111,30 +108,6 @@ public class MSQFaultsTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedMSQFault(new InsertCannotOrderByDescendingFault("d1"))
-                     .verifyResults();
-  }
-
-  @Test
-  public void testInsertCannotReplaceExistingSegmentFault()
-  {
-    RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
-                                            .add("dim1", ColumnType.STRING)
-                                            .add("cnt", ColumnType.LONG).build();
-
-    // Create a datasegment which lies partially outside the generated segment
-    DataSegment existingDataSegment = DataSegment.builder()
-                                   .interval(Intervals.of("2001-01-01T/2003-01-04T"))
-                                   .size(50)
-                                   .version("1").dataSource("foo1")
-                                   .build();
-    Mockito.doReturn(ImmutableSet.of(existingDataSegment)).when(testTaskActionClient).submit(isA(RetrieveUsedSegmentsAction.class));
-
-    testIngestQuery().setSql(
-                         "replace into foo1 overwrite where __time >= TIMESTAMP '2000-01-01 00:00:00' and __time < TIMESTAMP '2002-01-03 00:00:00' select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
-                     .setExpectedDataSource("foo1")
-                     .setExpectedRowSignature(rowSignature)
-                     .setExpectedMSQFault(new InsertCannotReplaceExistingSegmentFault(existingDataSegment.getId()))
                      .verifyResults();
   }
 

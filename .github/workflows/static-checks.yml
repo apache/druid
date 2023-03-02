@@ -51,16 +51,12 @@ jobs:
           echo "java_version=${jdk:3}" >> $GITHUB_ENV
 
       - name: setup ${{ matrix.java }}
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: ${{ env.java_version }}
-          cache: 'maven'
+        run: export JAVA_HOME=$JAVA_HOME_${{ env.java_version }}_X64
 
       - name: packaging check
         run: |
           ./.github/scripts/setup_generate_license.sh
-          ${MVN} clean install -Prat -Pbundle-contrib-exts --fail-at-end \
+          ${MVN} clean install -Prat --fail-at-end \
           -pl '!benchmarks, !distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C
           ${MVN} install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end \
           -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C

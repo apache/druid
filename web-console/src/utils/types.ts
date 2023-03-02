@@ -78,6 +78,9 @@ export function dataTypeToIcon(dataType: string): IconName {
     case 'COMPLEX<JSON>':
       return IconNames.DIAGRAM_TREE;
 
+    case 'NULL':
+      return IconNames.CIRCLE;
+
     default:
       if (typeUpper.startsWith('ARRAY')) return IconNames.ARRAY;
       if (typeUpper.startsWith('COMPLEX')) return IconNames.ASTERISK;

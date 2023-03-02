@@ -579,6 +579,7 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
             "java.lang.UnsupportedOperationException: GroupBy v1 does not support dimension selectors with unknown cardinality.",
             t.getMessage()
         );
+        return;
       } else if (vectorize == QueryContexts.Vectorize.FORCE) {
         Throwable t = Assert.assertThrows(
             RuntimeException.class,
@@ -591,20 +592,19 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
         );
         return;
       }
-    } else {
-
-      Sequence<ResultRow> seq = helper.runQueryOnSegmentsObjs(
-          segmentsGenerator.apply(helper, tempFolder, closer),
-          groupQuery
-      );
-
-      List<ResultRow> results = seq.toList();
-      verifyResults(
-          groupQuery.getResultRowSignature(),
-          results,
-          expectedResults
-      );
     }
+
+    Sequence<ResultRow> seq = helper.runQueryOnSegmentsObjs(
+        segmentsGenerator.apply(helper, tempFolder, closer),
+        groupQuery
+    );
+
+    List<ResultRow> results = seq.toList();
+    verifyResults(
+        groupQuery.getResultRowSignature(),
+        results,
+        expectedResults
+    );
   }
 
   private static void verifyResults(RowSignature rowSignature, List<ResultRow> results, List<Object[]> expected)
