@@ -156,6 +156,7 @@ public interface StringEncodingStrategy
     {
       return "FrontCoded{" +
              "bucketSize=" + bucketSize +
+             ", useIncrementalBuckets=" + useIncrementalBuckets +
              '}';
     }
   }
