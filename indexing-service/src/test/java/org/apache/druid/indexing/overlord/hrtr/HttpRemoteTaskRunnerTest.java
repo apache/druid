@@ -58,6 +58,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.coordination.ChangeRequestHttpSyncer;
 import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -70,6 +71,7 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -1668,6 +1670,52 @@ public class HttpRemoteTaskRunnerTest
 
   }
 
+  @Test(timeout = 60_000L)
+  public void testSyncMonitoring_finiteIteration()
+  {
+    TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
+    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
+            .andReturn(druidNodeDiscovery);
+    EasyMock.replay(druidNodeDiscoveryProvider);
+
+    HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
+        TestHelper.makeJsonMapper(),
+        new HttpRemoteTaskRunnerConfig(),
+        EasyMock.createNiceMock(HttpClient.class),
+        DSuppliers.of(new AtomicReference<>(DefaultWorkerBehaviorConfig.defaultConfig())),
+        new NoopProvisioningStrategy<>(),
+        druidNodeDiscoveryProvider,
+        EasyMock.createMock(TaskStorage.class),
+        EasyMock.createNiceMock(CuratorFramework.class),
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
+    )
+    {
+      @Override
+      protected WorkerHolder createWorkerHolder(
+          ObjectMapper smileMapper,
+          HttpClient httpClient,
+          HttpRemoteTaskRunnerConfig config,
+          ScheduledExecutorService workersSyncExec,
+          WorkerHolder.Listener listener,
+          Worker worker,
+          List<TaskAnnouncement> knownAnnouncements
+      )
+      {
+        return createNonSyncingWorkerHolder(worker);
+      }
+    };
+
+    taskRunner.start();
+    taskRunner.addWorker(createWorker("abc"));
+    taskRunner.addWorker(createWorker("xyz"));
+    taskRunner.addWorker(createWorker("lol"));
+    Assert.assertEquals(3, taskRunner.getWorkerSyncerDebugInfo().size());
+    taskRunner.syncMonitoring();
+    Assert.assertEquals(3, taskRunner.getWorkerSyncerDebugInfo().size());
+  }
+
   public static HttpRemoteTaskRunner createTaskRunnerForTestTaskAddedOrUpdated(
       TaskStorage taskStorage,
       List<Object> listenerNotificationsAccumulator
@@ -1728,6 +1776,30 @@ public class HttpRemoteTaskRunnerTest
     }
 
     return taskRunner;
+  }
+
+  private Worker createWorker(String host)
+  {
+    Worker worker = EasyMock.createMock(Worker.class);
+    EasyMock.expect(worker.getHost()).andReturn(host).anyTimes();
+    EasyMock.replay(worker);
+    return worker;
+  }
+
+  private WorkerHolder createNonSyncingWorkerHolder(Worker worker)
+  {
+    ChangeRequestHttpSyncer syncer = EasyMock.createMock(ChangeRequestHttpSyncer.class);
+    EasyMock.expect(syncer.isOK()).andReturn(false).anyTimes();
+    EasyMock.expect(syncer.getDebugInfo()).andReturn(Collections.emptyMap()).anyTimes();
+    WorkerHolder workerHolder = EasyMock.createMock(WorkerHolder.class);
+    EasyMock.expect(workerHolder.getUnderlyingSyncer()).andReturn(syncer).anyTimes();
+    EasyMock.expect(workerHolder.getWorker()).andReturn(worker).anyTimes();
+    workerHolder.start();
+    EasyMock.expectLastCall();
+    workerHolder.stop();
+    EasyMock.expectLastCall();
+    EasyMock.replay(syncer, workerHolder);
+    return workerHolder;
   }
 
   private static WorkerHolder createWorkerHolder(

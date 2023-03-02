@@ -99,7 +99,6 @@ public class TestHelper
     final AnnotationIntrospector introspector = makeAnnotationIntrospector();
     DruidSecondaryModule.setupAnnotationIntrospector(mapper, introspector);
 
-
     mapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
@@ -114,7 +113,6 @@ public class TestHelper
     final ObjectMapper mapper = new DefaultObjectMapper();
     AnnotationIntrospector introspector = makeAnnotationIntrospector();
     DruidSecondaryModule.setupAnnotationIntrospector(mapper, introspector);
-
 
     mapper.setInjectableValues(
         new InjectableValues.Std()
@@ -449,13 +447,20 @@ public class TestHelper
     }
   }
 
-  public static Map<String, Object> createExpectedMap(Object... vals)
+  public static Map<String, Object> makeMap(Object... vals)
+  {
+    return makeMap(true, vals);
+  }
+
+  public static Map<String, Object> makeMap(boolean explicitNulls, Object... vals)
   {
     Preconditions.checkArgument(vals.length % 2 == 0);
 
     Map<String, Object> theVals = new HashMap<>();
     for (int i = 0; i < vals.length; i += 2) {
-      theVals.put(vals[i].toString(), vals[i + 1]);
+      if (explicitNulls || vals[i + 1] != null) {
+        theVals.put(vals[i].toString(), vals[i + 1]);
+      }
     }
     return theVals;
   }

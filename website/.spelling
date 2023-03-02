@@ -1444,6 +1444,7 @@ BUILD_SEGMENTS
 DETERMINE_PARTITIONS
 forceTimeChunkLock
 taskLockTimeout
+index.md
  - ../docs/misc/math-expr.md
 DOUBLE_ARRAY
 DOY
@@ -1964,7 +1965,6 @@ GiB
 1_000_000
 2012-01-01T00
 2GB
-30_000
 524288000L
 5MiB
 8u60
@@ -2054,8 +2054,8 @@ druid_pendingSegments
 druid_rules
 druid_segments
 druid_supervisors
-druid_taskLock
-druid_taskLog
+druid_tasklocks
+druid_tasklogs
 druid_tasks
 DruidQueryRel
 durationToRetain
