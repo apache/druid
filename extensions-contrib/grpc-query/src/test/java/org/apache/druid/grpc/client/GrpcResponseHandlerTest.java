@@ -35,8 +35,8 @@ import static org.junit.Assert.assertTrue;
 public class GrpcResponseHandlerTest
 {
   private static List<QueryResult> EXPECTED_RESULTS = Arrays.asList(
-    QueryResult.newBuilder().setDim1("test").setCnt(100).build(),
-    QueryResult.newBuilder().setDim2("test2").setCnt(100).setM2(200.10).build()
+      QueryResult.newBuilder().setDim1("test").setCnt(100).build(),
+      QueryResult.newBuilder().setDim2("test2").setCnt(100).setM2(200.10).build()
   );
 
   @Test

@@ -18,6 +18,25 @@
   ~ under the License.
   -->
 
+<!-- Build and run the grpc-query integration tests. The ITs must be in a distinct
+     package because they depend on the integration-test-ex/cases module which is
+     built after distribution, so this module must also be built after distribution.
+     To run the tests:
+
+     * Do a full Druid build: it.sh build
+       The full build creates the grpc-query-<version>.tar.gz file which
+       this module uses. It also creates the test protobuf jar which this
+       module also uses.
+     * Build the Docker image: it.sh image
+     * Build and run the ITs here with
+       it.sh test GrpcQuery extensions-contrib/grpc-query-it
+
+     To debug the tests do the following:
+     it.sh up GrpcQuery extensions-contrib/grpc-query-it
+     Then run the tests in an IDE.
+
+     See notes in the file for how the pieces fit together.
+     -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.druid.extensions.contrib</groupId>
@@ -33,7 +52,10 @@
   </parent>
 
   <properties>
+    <!-- Selects which IT to run. This module has only GrpcQuery, but we want
+         to ignore the tests here if the user runs some other category. -->
     <it.category>MustSetACategory</it.category>
+    <!-- The non-Maven scripts need to know where the base scripts reside. -->
     <it.base.dir>../../integration-tests-ex/cases</it.base.dir>
   </properties>
 
@@ -70,6 +92,21 @@
   </dependencies>
 
   <profiles>
+    <!-- The IT profile lives in this project. In practice, the required order of execution is:
+         * Do a build
+         * Build the Druid distribution
+         * Build an image
+         * Start the cluster
+         * Run the IT
+         * Stop the cluster
+         Because of that, the IT profile cannot be activated as part of a full build. Instead,
+         we do the distribution build in one pass, then do the ITs via scripts as a second
+         pass.
+
+         Note that this test requires specialized cluster setup as specified in the setup.sh
+         script called from the `it.sh up` command. That is, cluster setup is done outside of
+         Maven.
+         -->
     <profile>
       <id>IT-GrpcQuery</id>
       <activation>
@@ -79,6 +116,7 @@
         <it.category>GrpcQuery</it.category>
       </properties>
     </profile>
+    <!-- Run the actual IT tests using the one-and-only test category declared above. -->
     <profile>
       <id>docker-tests</id>
       <activation>
@@ -86,6 +124,7 @@
       </activation>
       <build>
         <plugins>
+           <!-- ITs run using Failsafe: the IT variation of surefire. -->
            <plugin>
             <artifactId>maven-failsafe-plugin</artifactId>
             <version>3.0.0-M7</version>
@@ -118,27 +157,6 @@
                 <goals>
                   <goal>verify</goal>
                 </goals>
-              </execution>
-            </executions>
-          </plugin>
-
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>exec-maven-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>start-cluster</id>
-                <phase>pre-integration-test</phase>
-                <goals>
-                  <goal>exec</goal>
-                </goals>
-                <configuration>
-                  <workingDirectory>${project.basedir}</workingDirectory>
-                  <executable>bash</executable>
-                  <arguments>
-                    <argument>setup-test.sh</argument>
-                  </arguments>
-                </configuration>
               </execution>
             </executions>
           </plugin>
@@ -176,6 +194,7 @@
             </ignoredUnusedDeclaredDependencies>
         </configuration>
       </plugin>
+      <!-- ITs do not ship with the product: no reason to run vulnerability checks. -->
       <plugin>
         <groupId>org.owasp</groupId>
         <artifactId>dependency-check-maven</artifactId>

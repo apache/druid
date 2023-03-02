@@ -76,7 +76,7 @@ is possible to use a pre-defined Protobuf message to represent the results of ea
 query. (Protobuf is a compiled format: the solution works only because the set of messages
 are well known. It would not work for the ad-hoc case in which each query has a different
 result set schema.)
----
+
 To be very clear: the application has a fixed set of queries to be sent to Druid via gRPC.
 For each query, there is a fixed Protobuf response format defined by the application.
 No other queries, aside from this well-known set, will be sent to the gRPC endpoint using
@@ -95,6 +95,17 @@ In production, follow the [Druid documentation](https://druid.apache.org/docs/la
 Use the `pull-deps` command to install the `org.apache.druid.extensions.contrib:grpc-query`
 extension.
 
+This extension provides a simpler alternative: it products a bundle named
+`grpc-query-<version>.tar.gz` with the `grpc-query` jar and its required
+dependencies, which include only a shaded rRPC jar file. All other dependencies
+are provided by Druid itself. To install, simply unpack the `tar.gz` file into
+the `extensions` folder:
+
+```bash
+cd $DRUID_HOME/extensions
+tar -xzf /path/to/grpc-query-<version>.tar.gz
+```
+
 To enable the extension, add the following to the load list in
 `_commmon/common.runtime.properties`:
 
@@ -112,6 +123,12 @@ druid.grpcQuery.port=50051
 
 The default port is 50051 (preliminary).
 
+If you use the Protobuf response format, bundle up your Protobuf classes
+into a jar file, and place that jar file in the
+`$DRUID_HOME/extensions/grpc-query` directory. The Protobuf classes will
+appear on the class path and will be available from the `grpc-query`
+extension.
+
 ## Usage
 
 See the `src/main/proto/query.proto` file in the `grpc-shaded` project for the request and
@@ -124,10 +141,11 @@ Although both Druid SQL and Druid itself support a `float` data type, that type 
 usable in a Protobuf response object. Internally Druid converts all `float` values to
 `double`. As a result, the Protobuf reponse object supports only the `double` type.
 An attempt to use `float` will lead to a runtime error when processing the query.
+Use the `double` type instead.
 
 ## Implementation Notes
 
-The extension is made up of two projects. Druid uses a different version of Guava than
+The extension is made up of three projects. Druid uses a different version of Guava than
 does rRPC. To work around this, the `grpc-shade` project creates a shaded jar that includes
 both gRPC and Guava. Since the rRPC compiler generates references to Guava, it turns out we
 must generate Java from the `.proto` files _before_ shading, so the `.proto` files, and
@@ -141,6 +159,10 @@ This project contains several components:
 * Guice modules and associated server initialization code.
 * Netty-based gRPC server.
 * A "driver" that performs the actual query and generates the results.
+
+The `grpc-query-it` project provides integration tests for the extension. These tests
+run using the "new" IT framework as described in the `integration-tests-ex/doc/README.md`
+file.
 
 ## Debugging
 
@@ -220,6 +242,47 @@ the way to debug the Broker in an IDE is the following:
     the class path.
 * Launch the micro-quickstart cluster.
 * Launch the Broker in your IDE.
+
+### Debugging using Integration Tests
+
+Use integration tests to verify the full behavior of the extension, including resolution
+of Protobuf classes, and integration with Druid. To run the integration test:
+
+```bash
+./it.sh build
+./it.sh image
+./it.sh test GrpcQuery extensions-contrib/grpc-query-it
+```
+
+To debug an integration test:
+
+```bash
+./it.sh build
+./it.sh image
+./it.sh up GrpcQuery extensions-contrib/grpc-query-it
+```
+
+Then, run the `GrpcQueryTest` class in `grpc-query-it` in your IDE. When
+done debugging:
+
+```bash
+./it.sh build
+./it.sh image
+./it.sh up GrpcQuery extensions-contrib/grpc-query-it
+```
+
+Note that the `beange, such as after checking out a branch. Since `grpc-query`
+is an extension, to run tests after changes, you need only build that one
+module:
+
+```bash
+mvn clean package -P dist,skip-static-checks,skip-tests -Dmaven.javadoc.skip=true \
+    -Dcyclonedx.skip=true -pl :grpc-query
+```
+
+Then, restart the cluster (`down`, then `up`). The `up` (or `test`) commands
+populate the cluster with your newly rebuilt `grpc-query` extension and test
+Protobuf classes.
 
 ### gRPC Logging
 

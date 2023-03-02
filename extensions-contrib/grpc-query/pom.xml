@@ -18,8 +18,7 @@
   ~ under the License.
   -->
 
-<!-- This file does a number of tasks which may not be obvious from
-     perusing the file. Tasks include:
+<!-- Build the grpc-query, which has a number of nuances:
 
      * Build the shaded rRPC jar.
      * Build the classes in this module.
@@ -201,7 +200,8 @@
       </extension>
     </extensions>
     <plugins>
-      <!-- Build the shaded jar. Done inline here to avoid dependency conflicts in IDEs.
+      <!-- Build the shaded jar using a seprate Maven module.
+           Done inline here to avoid dependency conflicts in IDEs.
            If the project is included in the top-level pom.xml, then the IDE will helpfully
            bring in all that project's dependencies, including a newer version of Guava.
            When we try to run tests, whichever version of Guava is on the command line first
@@ -314,7 +314,7 @@
               <goal>test-jar</goal>
             </goals>
             <configuration>
-              <classifier>test</classifier>
+              <classifier>tests</classifier>
               <excludes>
                 <exclude>**/proto/*</exclude>
               </excludes>
@@ -346,6 +346,7 @@
        </plugin>
     </plugins>
   </build>
+
   <profiles>
     <!-- Profile to build the .tar.gz file for the extension. This file contains both
          the grpc-query code and the shaded gRPC jar file.

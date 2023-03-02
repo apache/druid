@@ -30,7 +30,6 @@ import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryStatus;
-import org.apache.druid.grpc.proto.TestResults.QueryResult;
 import org.apache.druid.testsEx.categories.GrpcQuery;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.codehaus.plexus.util.StringUtils;
@@ -46,6 +45,18 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+/**
+ * Integration test for the rRPC query extension. To run in an IDE,
+ * Launch your cluster as:<pre><code>
+ * ./it.sh build
+ * ./it.sh image
+ * ./it.sh up GrpcQuery extensions-contrib/grpc-query-it
+ * </code></pre>
+ * Run the test in your IDE. Then:
+ * <pre><code>
+ * ./it.sh down GrpcQuery extensions-contrib/grpc-query-it
+ * </code></pre>
+ */
 @RunWith(DruidTestRunner.class)
 @Category(GrpcQuery.class)
 public class GrpcQueryTest
