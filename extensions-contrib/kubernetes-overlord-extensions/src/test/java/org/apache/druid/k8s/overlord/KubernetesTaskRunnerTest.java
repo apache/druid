@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -38,7 +37,6 @@ import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.IndexTask;
@@ -62,17 +60,10 @@ import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.joda.time.Period;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
-import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -90,25 +81,18 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@RunWith(Parameterized.class)
 public class KubernetesTaskRunnerTest
 {
-
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   private TaskQueueConfig taskQueueConfig;
   private StartupLoggingConfig startupLoggingConfig;
   private ObjectMapper jsonMapper;
   private KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig;
-  private TaskStorageDirTracker dirTracker;
+  private TaskConfig taskConfig;
   private TaskLogPusher taskLogPusher;
   private DruidNode node;
 
-  private final boolean useMultipleBaseTaskDirPaths;
-
-
-  public KubernetesTaskRunnerTest(boolean useMultipleBaseTaskDirPaths)
+  public KubernetesTaskRunnerTest()
   {
     TestUtils utils = new TestUtils();
     jsonMapper = utils.getTestObjectMapper();
@@ -119,31 +103,12 @@ public class KubernetesTaskRunnerTest
         new NamedType(ParallelIndexTuningConfig.class, "index_parallel"),
         new NamedType(IndexTask.IndexTuningConfig.class, "index")
     );
-    this.useMultipleBaseTaskDirPaths = useMultipleBaseTaskDirPaths;
-  }
-
-  @Parameterized.Parameters(name = "useMultipleBaseTaskDirPaths = {0}")
-  public static Collection<Object[]> getParameters()
-  {
-    Object[][] parameters = new Object[][]{
-        {false},
-        {true}
-    };
-
-    return Arrays.asList(parameters);
   }
 
   @Before
-  public void setUp() throws IOException
+  public void setUp()
   {
-    List<String> baseTaskDirPaths = ImmutableList.of("src/test/resources");
-    if (useMultipleBaseTaskDirPaths) {
-      baseTaskDirPaths = ImmutableList.of(
-          temporaryFolder.newFolder().toString(),
-          temporaryFolder.newFolder().toString()
-      );
-    }
-    final TaskConfig taskConfig = new TaskConfig(
+    taskConfig = new TaskConfig(
         "src/test/resources",
         "src/test/resources",
         null,
@@ -158,9 +123,8 @@ public class KubernetesTaskRunnerTest
         null,
         null,
         false,
-        baseTaskDirPaths
+        null
     );
-    dirTracker = new TaskStorageDirTracker(taskConfig);
     kubernetesTaskRunnerConfig = new KubernetesTaskRunnerConfig();
     kubernetesTaskRunnerConfig.namespace = "test";
     kubernetesTaskRunnerConfig.javaOptsArray = Collections.singletonList("-Xmx2g");
@@ -213,7 +177,7 @@ public class KubernetesTaskRunnerTest
         taskLogPusher,
         peonClient,
         node,
-        dirTracker
+        taskConfig
     );
     KubernetesTaskRunner spyRunner = spy(taskRunner);
 
@@ -269,7 +233,7 @@ public class KubernetesTaskRunnerTest
         taskLogPusher,
         peonClient,
         node,
-        dirTracker
+        taskConfig
     );
     KubernetesTaskRunner spyRunner = spy(taskRunner);
 
@@ -336,7 +300,7 @@ public class KubernetesTaskRunnerTest
         taskLogPusher,
         peonClient,
         node,
-        dirTracker
+        taskConfig
     );
     KubernetesTaskRunner spyRunner = spy(taskRunner);
     Collection<? extends TaskRunnerWorkItem> workItems = spyRunner.getKnownTasks();
@@ -400,7 +364,7 @@ public class KubernetesTaskRunnerTest
         taskLogPusher,
         peonClient,
         node,
-        dirTracker
+        taskConfig
     );
     KubernetesTaskRunner spyRunner = spy(taskRunner);
     Collection<? extends TaskRunnerWorkItem> workItems = spyRunner.getKnownTasks();
@@ -443,7 +407,7 @@ public class KubernetesTaskRunnerTest
         taskLogPusher,
         peonClient,
         node,
-        dirTracker
+        taskConfig
     );
 
     RunnerTaskState state = taskRunner.getRunnerTaskState("foo");
@@ -473,7 +437,7 @@ public class KubernetesTaskRunnerTest
         taskLogPusher,
         mock(DruidKubernetesPeonClient.class),
         node,
-        dirTracker
+        taskConfig
     ));
   }
 
