@@ -35,12 +35,12 @@ import javax.annotation.Nullable;
 public class ArrayOfDoublesSketchMergeAggregator implements Aggregator
 {
 
-  private final BaseObjectColumnValueSelector<ArrayOfDoublesSketch> selector;
+  private final BaseObjectColumnValueSelector<Object> selector;
   @Nullable
   private ArrayOfDoublesUnion union;
 
   public ArrayOfDoublesSketchMergeAggregator(
-      final BaseObjectColumnValueSelector<ArrayOfDoublesSketch> selector,
+      final BaseObjectColumnValueSelector<Object> selector,
       final int nominalEntries,
       final int numberOfValues
   )
@@ -58,12 +58,20 @@ public class ArrayOfDoublesSketchMergeAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    final ArrayOfDoublesSketch update = selector.getObject();
+    final Object update = selector.getObject();
     if (update == null) {
       return;
     }
+    final ArrayOfDoublesSketch sketch;
+    if (update instanceof ArrayOfDoublesSketch) {
+      sketch = (ArrayOfDoublesSketch) update;
+    } else if (update instanceof String) {
+      sketch = ArrayOfDoublesSketchOperations.deserializeFromBase64EncodedStringSafe((String) update);
+    } else {
+      sketch = null;
+    }
     synchronized (this) {
-      union.union(update);
+      union.union(sketch);
     }
   }
 

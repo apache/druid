@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.datasketches.tuple;
 
 import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Result;
@@ -55,8 +54,8 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
 
   public ArrayOfDoublesSketchAggregationTest(final GroupByQueryConfig config)
   {
-    DruidModule module = new ArrayOfDoublesSketchModule();
-    module.configure(null);
+    ArrayOfDoublesSketchModule module = new ArrayOfDoublesSketchModule();
+    module.registerSerde();
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         module.getJacksonModules(), config, tempFolder);
     tsHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(module.getJacksonModules(), tempFolder);

@@ -91,7 +91,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(final ColumnSelectorFactory metricFactory)
   {
     if (metricColumns == null) { // input is sketches, use merge aggregator
-      final BaseObjectColumnValueSelector<ArrayOfDoublesSketch> selector = metricFactory
+      final BaseObjectColumnValueSelector<Object> selector = metricFactory
           .makeColumnValueSelector(fieldName);
       if (selector instanceof NilColumnValueSelector) {
         return new NoopArrayOfDoublesSketchAggregator(numberOfValues);

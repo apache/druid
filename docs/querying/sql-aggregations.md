@@ -139,6 +139,17 @@ Load the [DataSketches extension](../development/extensions-core/datasketches-ex
 |`DS_QUANTILES_SKETCH(expr, [k])`|Creates a [Quantiles sketch](../development/extensions-core/datasketches-quantiles.md) on the values of `expr`, which can be a regular column or a column containing quantiles sketches. The `k` parameter is described in the Quantiles sketch documentation.<br/><br/>See the [known issue](sql-translation.md#approximations) with this function.|`'0'` (STRING)|
 
 
+### Tuple sketch functions
+
+Load the [DataSketches extension](../development/extensions-core/datasketches-extension.md) to use the following functions.
+
+|Function|Notes|Default|
+|--------|-----|-------|
+|`ARRAY_OF_DOUBLES_SKETCH(expr, [nominalEntries])`|Creates a [Tuple sketch](../development/extensions-core/datasketches-tuple.md) on the values of `expr` which is a column containing Tuple sketches. The `nominalEntries` override parameter is optional and described in the Tuple sketch documentation.
+|`ARRAY_OF_DOUBLES_SKETCH(dimensionColumnExpr, metricColumnExpr..., [nominalEntries])`|Creates a [Tuple sketch](../development/extensions-core/datasketches-tuple.md) on the dimension value of `dimensionColumnExpr` and the metric values contained in the list of `metricColumnExpr` columns. The `nominalEntries` override parameter is optional and described in the Tuple sketch documentation.
+|`ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE(expr)`|Computes approximate sums of the values contained within a [Tuple sketch](../development/extensions-core/datasketches-tuple.md#estimated-metrics-values-for-each-column-of-arrayofdoublessketch) column.
+
+
 ### T-Digest sketch functions
 
 Load the T-Digest extension to use the following functions. See the [T-Digest extension](../development/extensions-contrib/tdigestsketch-quantiles.md) for additional details and for more information on these functions.
