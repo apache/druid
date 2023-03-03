@@ -106,9 +106,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       MVN: mvn --no-snapshot-updates
-      # Added -Dcyclonedx.skip=true to avoid ISO-8859-1 [ERROR]s
-      # May be fixed in the future
-      MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true -Dcyclonedx.skip=true
+      MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
       CONFIG_FILE: k8s_run_config_file.json
       IT_TEST: -Dit.test=ITNestedQueryPushDownTest
       POD_NAME: int-test
