@@ -147,7 +147,7 @@ class IdentifierExpr implements Expr
   }
 
   @Override
-  public ExprVectorProcessor<?> buildVectorized(VectorInputBindingInspector inspector)
+  public ExprVectorProcessor<?> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return VectorProcessors.identifier(inspector, binding);
   }

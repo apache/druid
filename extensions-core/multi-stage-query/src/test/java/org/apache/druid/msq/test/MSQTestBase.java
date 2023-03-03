@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -162,6 +163,7 @@ import org.apache.druid.timeline.PruneLoadSpec;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.easymock.EasyMock;
 import org.hamcrest.Matcher;
 import org.hamcrest.MatcherAssert;
@@ -184,6 +186,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -799,6 +802,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected MSQSpec expectedMSQSpec = null;
     protected MSQTuningConfig expectedTuningConfig = null;
     protected Set<SegmentId> expectedSegments = null;
+    protected Set<Interval> expectedTombstoneIntervals = null;
     protected List<Object[]> expectedResultRows = null;
     protected Matcher<Throwable> expectedValidationErrorMatcher = null;
     protected Matcher<Throwable> expectedExecutionErrorMatcher = null;
@@ -832,6 +836,13 @@ public class MSQTestBase extends BaseCalciteQueryTest
     {
       Preconditions.checkArgument(!expectedSegments.isEmpty(), "Segments cannot be empty");
       this.expectedSegments = expectedSegments;
+      return asBuilder();
+    }
+
+    public Builder setExpectedTombstoneIntervals(Set<Interval> tombstoneIntervals)
+    {
+      Preconditions.checkArgument(!tombstoneIntervals.isEmpty(), "Segments cannot be empty");
+      this.expectedTombstoneIntervals = tombstoneIntervals;
       return asBuilder();
     }
 
@@ -1142,6 +1153,41 @@ public class MSQTestBase extends BaseCalciteQueryTest
             // Checking if the row belongs to the correct segment interval
             Assert.assertTrue(segmentIdVsOutputRowsMap.get(diskSegment).contains(Arrays.asList(row)));
           }
+        }
+        
+        // Assert on the tombstone intervals
+        // Tombstone segments are only published, but since they donot have any data, they are not pushed by the
+        // SegmentGeneratorFrameProcessorFactory. We can get the tombstone segment ids published by taking a set
+        // difference of all the segments published with the segments that are created by the SegmentGeneratorFrameProcessorFactory
+        if (!testTaskActionClient.getPublishedSegments().isEmpty()) {
+          Set<SegmentId> publishedSegmentIds = testTaskActionClient.getPublishedSegments()
+                                                                   .stream()
+                                                                   .map(DataSegment::getId)
+                                                                   .collect(Collectors.toSet());
+          Set<SegmentId> nonEmptySegmentIds = segmentIdVsOutputRowsMap.keySet();
+          Set<SegmentId> tombstoneSegmentIds = Sets.difference(publishedSegmentIds, nonEmptySegmentIds);
+
+          // Generate the expected tombstone segment ids
+          Map<String, Object> tombstoneLoadSpec = new HashMap<>();
+          tombstoneLoadSpec.put("type", DataSegment.TOMBSTONE_LOADSPEC_TYPE);
+          tombstoneLoadSpec.put("path", null); // tombstones do not have any backing file
+          Set<SegmentId> expectedTombstoneSegmentIds = new HashSet<>();
+          if (expectedTombstoneIntervals != null) {
+            expectedTombstoneSegmentIds.addAll(
+                expectedTombstoneIntervals.stream()
+                                          .map(interval -> DataSegment.builder()
+                                                                      .dataSource(expectedDataSource)
+                                                                      .interval(interval)
+                                                                      .version(MSQTestTaskActionClient.VERSION)
+                                                                      .shardSpec(new TombstoneShardSpec())
+                                                                      .loadSpec(tombstoneLoadSpec)
+                                                                      .size(1)
+                                                                      .build())
+                                          .map(DataSegment::getId)
+                                          .collect(Collectors.toSet())
+            );
+          }
+          Assert.assertEquals(expectedTombstoneSegmentIds, tombstoneSegmentIds);
         }
         // assert results
         assertResultsEquals(sql, expectedResultRows, transformedOutputRows);

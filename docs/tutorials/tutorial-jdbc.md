@@ -24,7 +24,7 @@ sidebar_label: JDBC connector
   -->
 
 Redirecting you to the JDBC connector examples...
-
+<head>
 <script>window.location.replace("https://druid.apache.org/docs/latest/querying/sql-jdbc.html#examples")</script>
 </head>
 <a href="https://druid.apache.org/docs/latest/querying/sql-jdbc.html#examples">Click here if you are not redirected.</a>
