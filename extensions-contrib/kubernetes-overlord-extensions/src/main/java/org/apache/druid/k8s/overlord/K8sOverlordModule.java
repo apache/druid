@@ -22,11 +22,13 @@ package org.apache.druid.k8s.overlord;
 import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.multibindings.MapBinder;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
 import org.apache.druid.indexing.common.tasklogs.FileTaskLogs;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
@@ -37,9 +39,9 @@ import org.apache.druid.tasklogs.TaskLogKiller;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogs;
 
+@LoadScope(roles = NodeRole.OVERLORD_JSON_NAME)
 public class K8sOverlordModule implements DruidModule
 {
-
   @Override
   public void configure(Binder binder)
   {
