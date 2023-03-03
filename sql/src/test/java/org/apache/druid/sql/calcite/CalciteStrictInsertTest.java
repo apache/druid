@@ -50,7 +50,7 @@ public class CalciteStrictInsertTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME")
-        .expectValidationError(SqlPlanningException.class, "Cannot INSERT into dst because it does not exist")
+        .expectValidationError(SqlPlanningException.class, "Cannot INSERT into [dst] because it does not exist")
         .verify();
   }
 

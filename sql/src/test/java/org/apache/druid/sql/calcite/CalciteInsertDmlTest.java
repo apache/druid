@@ -235,7 +235,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO INFORMATION_SCHEMA.COLUMNS SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot INSERT into INFORMATION_SCHEMA.COLUMNS because it is not a Druid datasource."
+            "Cannot INSERT into [INFORMATION_SCHEMA.COLUMNS] because the table is not in the 'druid' schema"
         )
         .verify();
   }
@@ -247,7 +247,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO view.aview SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot INSERT into view.aview because it is not a Druid datasource."
+            "Cannot INSERT into [view.aview] because the table is not in the 'druid' schema"
         )
         .verify();
   }
@@ -277,7 +277,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO nonexistent.dst SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot INSERT into nonexistent.dst because it is not a Druid datasource."
+            "Cannot INSERT into [nonexistent.dst] because the table is not in the 'druid' schema"
         )
         .verify();
   }
@@ -563,23 +563,6 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertClusteredByWithTimeOrdinal()
-  {
-    testIngestionQuery()
-        .sql(
-            "INSERT INTO druid.dst\n"
-            + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo\n"
-            + "PARTITIONED BY FLOOR(__time TO DAY)\n"
-            + "CLUSTERED BY 1"
-        )
-        .expectValidationError(
-            SqlPlanningException.class,
-            "Do not include __time in the CLUSTERED BY clause: it is managed by PARTITIONED BY"
-        )
-        .verify();
-  }
-
-  @Test
   public void testInsertClusteredByWithDuplicateOrdinal()
   {
     testIngestionQuery()
@@ -591,7 +574,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         )
         .expectValidationError(
             SqlPlanningException.class,
-            "Duplicate CLUSTERED BY key: 3"
+            "Duplicate CLUSTERED BY key: [3]"
         )
         .verify();
   }
@@ -614,23 +597,6 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertClusteredByWithTime()
-  {
-    testIngestionQuery()
-        .sql(
-            "INSERT INTO druid.dst\n"
-            + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo\n"
-            + "PARTITIONED BY FLOOR(__time TO DAY)\n"
-            + "CLUSTERED BY __time"
-         )
-        .expectValidationError(
-            SqlPlanningException.class,
-            "Do not include __time in the CLUSTERED BY clause: it is managed by PARTITIONED BY"
-         )
-        .verify();
-  }
-
-  @Test
   public void testInsertClusteredByWithCompoundName()
   {
     testIngestionQuery()
@@ -642,7 +608,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
          )
         .expectValidationError(
             SqlPlanningException.class,
-            "CLUSTERED BY keys must be a simple name: 'foo.dim1'"
+            "CLUSTERED BY keys must be a simple name with no dots: [foo.dim1]"
          )
         .verify();
   }
@@ -659,7 +625,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         )
         .expectValidationError(
             SqlPlanningException.class,
-            "Duplicate CLUSTERED BY key: dim1"
+            "Duplicate CLUSTERED BY key: [dim1]"
         )
         .verify();
   }
@@ -676,7 +642,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         )
         .expectValidationError(
             SqlPlanningException.class,
-            "Duplicate CLUSTERED BY key: dim1"
+            "Duplicate CLUSTERED BY key: [dim1]"
         )
         .verify();
   }
@@ -693,7 +659,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         )
         .expectValidationError(
             SqlPlanningException.class,
-            "Duplicate CLUSTERED BY key: 3"
+            "Duplicate CLUSTERED BY key: [3]"
         )
         .verify();
   }
@@ -1070,9 +1036,6 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .verify();
   }
 
-  private static final String UNNAMED_INGESTION_COLUMN_ERROR =
-      "Expressions must provide an alias to specify the target column: func(X) AS myColumn";
-
   @Test
   public void testInsertWithUnnamedColumnInSelectStatement()
   {
@@ -1080,7 +1043,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO t SELECT dim1, dim2 || '-lol' FROM foo PARTITIONED BY ALL")
         .expectValidationError(
             SqlPlanningException.class,
-            UNNAMED_INGESTION_COLUMN_ERROR
+            "Expression [2] must provide an alias to specify the target column: func(X) AS myColumn"
         )
         .verify();
   }
@@ -1092,7 +1055,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO t SELECT __time, dim1 AS EXPR$0 FROM foo PARTITIONED BY ALL")
         .expectValidationError(
             SqlPlanningException.class,
-            UNNAMED_INGESTION_COLUMN_ERROR
+            "Expression [2] must provide an alias to specify the target column: func(X) AS myColumn"
         )
         .verify();
   }
@@ -1106,7 +1069,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
              + "(SELECT __time, LOWER(dim1) FROM foo) PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            UNNAMED_INGESTION_COLUMN_ERROR
+            "Expression [3] must provide an alias to specify the target column: func(X) AS myColumn"
         )
         .verify();
   }
@@ -1119,7 +1082,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
              + "SELECT dim1 AS __time, dim1 FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Invalid __time column type VARCHAR: must be BIGINT or TIMESTAMP"
+            "Column [__time] is being used as the time column. It must be of type BIGINT or TIMESTAMP, got [VARCHAR]"
         )
         .verify();
   }

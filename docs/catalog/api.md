@@ -46,13 +46,24 @@ application.
 * UI-driven, in which you use the Druid Console or similar tool to edit the table metadata
 directly.
 
-The configuration-as-code use case works with entire specs. The UI use case may work with an
-entire spec, or may perform focused "edit" operations. Here it is important to remember that
+There are two ways to perform updates. In the first way, simply overwrite any existing spec.
+Use this for the configuration-as-code use case: whatever is in your code repo is the
+ultimate source of truth.
+
+The other way to perform updates is with "optimistic locking", mostly for use in UI code.
 Druid is a distributed, multi-user system: it could be that multiple users edit the same
-table at the same time. The API to overwrite a table spec provides a version number to allow
-a UI to implement optimistic locking: if the current verion is not the one the UI read, then
-Druid rejects the change. A set of "edit" operations perform focused chagnges that avoid the
-need for optimistic locking: Druid applies the change rather than the UI.
+table at the same time. To avoid accidential overwrites, each UI retrieves the current spec
+along with the version number of that spec. The user applies some set of changes. The UI
+then sends the updated spec, along with the version number, to the server. The server will
+check if the version number in the request matches that of the spec in the metadata store.
+If so, the change is applied atomically. If the versions do not match, the server rejects
+the change as it represents an update to a stale version of the spec. The UI can request
+the latest version, re-apply the changes, and submit again.
+
+For many simple operations, the optimistic locking method is overkill: the user wants to
+apply one task (add a column, drop a column, etc.) Some of these operations have special
+API methods to "edit" a record atomically. Druid, rather than the UI client, applies the
+chanage to avoid conflicts elsewhere in the spec.
 
 All table metadata APIs begin with a common prefix: `/druid/coordinator/v1/catalog`.
 
@@ -79,8 +90,8 @@ Create or update a `TableSpec`.
 Use `overwrite=true` when some other system is the source of truth: you want to force
 the table metadata to match. Otherwise, first read the existing metadata, which provides
 the data version. Apply changes and set `version={n}` to the version retrieved. Druid will
-reject the chagne it other changes have occured since the data was read. The client should
-read the new version, reapply the changes,and submit the change again.
+reject the change it other changes have occurred since the data was read. The client should
+read the new version, reapply the changes, and submit the change again.
 
 ### `DELETE {prefix}/schemas/{schema}/tables/{table}`
 

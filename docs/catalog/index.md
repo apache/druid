@@ -34,11 +34,12 @@ The table metadata feature consists of the main parts:
 
 * A new table in Druid's catalog (also known as the metadata store),
 * A set of new REST APIs to manage table metadata entries,
-* SQL integratoin to put the metadata to work.
+* SQL integration to put the metadata to work.
 
-Table metadata is an experimental feature in this release. We encourage you to try
-it and to provide feedback. However, since the feature is experimental, some parts
-may change based on feedback.
+Table metadata is an "alpha" feature in this release. We encourage you to try
+it and to provide feedback. However, since the feature is new, some parts
+may change based on feedback. The feature will continue to evolve over time.
+See [Limitations](#Limitations) for the current scope of the feature.
 
 In this section, we use the term "table" to refer to both datasources and external
 tables. To SQL, these are both tables, and the table metadata feature treats them
@@ -82,7 +83,8 @@ What columns are needed? What column names will be the most clear to the end
 user? What data type should each column have?
 
 Historically, developers encoded these decisions into Druid ingestion specs.
-With MSQ, that information is encoded into SQL statements. To control changes,
+With the multi-stage query extension (MSQ), that information is encoded into
+SQL statements. To control changes,
 the specs or SQL statements are versioned in Git, subject to reviews when changes
 occur.
 
@@ -269,7 +271,7 @@ from creating segments that don't satisfy our declared table schema.
 We can now query our data. Though it is not obvious in this example, the query experience
 is also guided by table metadata. To see this, suppose that we soon discover that no one
 actually needs the `bytesIn` field: our server doesn't accept `POST` requets and so all
-request are pretty small. To avoid confusing users, we want to remove that column. But,
+requests are pretty small. To avoid confusing users, we want to remove that column. But,
 we've already ingested data. We could throw away the data and start over. Or, we could
 simply "hide" the unwanted column using the
 [hide columns](api.md) API.
@@ -278,7 +280,7 @@ If we now do a `SELECT *` query we find that `bytesIn` is no longer available an
 no longer have to explain to our users to ignore that column. While hiding a column is
 trivial in this case, imagine if you wanted to make that decision after loading a petabyte
 of data. Hiding a column gives you an immediate solution, even if it might take a long
-time to rewrite (compact) all the existign segments to physicaly remove the column.
+time to rewrite (compact) all the existing segments to physically remove the column.
 
 We have to change our MSQ ingest statement also to avoid loading any more of the
 now-unused column. This can happen at any time: MSQ ingest won't fail if we try to ingest
@@ -288,7 +290,7 @@ In a similar way, if we realize that we actually want `httpStatus` to be `BIGINT
 can change the type, again using the [REST API](api.md).
 
 New ingestions will use the new type. Again, it may be costly to change existing data.
-Drill will, however, automatically `CAST` the old `VARCHAR` (string) data to the
+Druid will, however, automatically `CAST` the old `VARCHAR` (string) data to the
 new `BIGINT` type, allow us to make the change immediately.
 
 ## Details
@@ -304,11 +306,13 @@ This is the first version of the catalog feature. A number of limitations are kn
   resulting types are determined by the `SELECT` list, not the table schema. Druid will
   ensure that the actual type is compatible with the declared type, the the actual type
   may still differ from the declared type. Use a `CAST` to ensure the types are as
-  desiried.
+  desired.
 * The present version supports only the S3 cloud data source.
 * Catalog information is used only for MSQ ingestion, but not for classic batch or
   Druid streaming ingestion. Catalog column types are reflected in queries.
 * Catalog store is in an extension. Enable that extension as described above to try
   the catalog feature.
 * Support for roll-up tables and metrics is limited.
-
+* The catalog is currently integrated only with SQL queries and MSQ integestion.
+  Native batch ingestion, streaming ingestion and native queries do not yet make
+  use of the catalog.

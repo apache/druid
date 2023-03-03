@@ -565,6 +565,8 @@ The string constant can also include any of the keywords mentioned above:
 - `ALL TIME`
 - `ALL` - Alias for `ALL TIME`
 
+The `WEEK` granularity is deprecated and not supported in MSQ.
+
 Examples:
 
 ```SQL

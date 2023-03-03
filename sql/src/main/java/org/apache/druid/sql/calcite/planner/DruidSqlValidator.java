@@ -202,7 +202,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     // constraints beyond what was validated for the pushed-down ORDER BY.
     // Though we pushed down clustering above, only now can we validate it after
     // we've determined the SELECT row type.
-    validateClustering(sourceType, timeColumnIndex, ingestNode, catalogClustering);
+    validateClustering(sourceType, ingestNode, catalogClustering);
 
     // Determine the output (target) schema.
     final RelDataType targetType = validateTargetType(insert, sourceType, tableMetadata);
@@ -521,7 +521,6 @@ class DruidSqlValidator extends BaseDruidSqlValidator
    */
   private void validateClustering(
       final RelRecordType sourceType,
-      final int timeColumnIndex,
       final DruidSqlIngest ingestNode,
       final SqlNodeList catalogClustering
   )
@@ -531,11 +530,11 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     // Validate both the catalog and query definitions if present. This ensures
     // that things are sane if we later check that the two are identical.
     if (clusteredBy != null) {
-      validateClusteredBy(sourceType, timeColumnIndex, clusteredBy);
+      validateClusteredBy(sourceType, clusteredBy);
     }
     if (catalogClustering != null) {
       // Catalog defines the key columns. Verify that they are present in the query.
-      validateClusteredBy(sourceType, timeColumnIndex, catalogClustering);
+      validateClusteredBy(sourceType, catalogClustering);
     }
     if (clusteredBy != null && catalogClustering != null) {
       // Both the query and catalog have keys.
@@ -553,7 +552,6 @@ class DruidSqlValidator extends BaseDruidSqlValidator
    */
   private void validateClusteredBy(
       final RelRecordType sourceType,
-      final int timeColumnIndex,
       final SqlNodeList clusteredBy
   )
   {

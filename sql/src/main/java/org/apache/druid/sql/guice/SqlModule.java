@@ -122,9 +122,6 @@ public class SqlModule implements Module
     if (isAvaticaEnabled()) {
       binder.install(new AvaticaModule());
     }
-
-    // Default do-nothing catalog resolver
-    binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
   }
 
   private boolean isEnabled()

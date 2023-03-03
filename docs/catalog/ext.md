@@ -32,13 +32,13 @@ ingestion:
 * "Classic" [batch ingestion](../ingestion/ingestion-spec.md#ioconfig)
 * Streaming ingestion
 
-In each cases, Druid reads from an external source defined by a triple of
+In each case, Druid reads from an external source defined by a triple of
 input source, input format and (with MSQ) input signature. MSQ uses SQL
-to define ingestion, and SQL works with tables. Thus, with MSQ, we call
-the external source an _external table_. Druid external tables are much
+to define ingestion, and SQL works with tables. MSQ refers to
+the external source an an _external table_. Druid external tables are much
 like those of similar systems (such as Hive), except that Druid, as a
 database, never reads the same data twice. This leads to the idea that
-Druid external tables are most often _parameterized_: we provide at least
+Druid external tables are most often _parameterized_: you provide at least
 the names of the files (or objects) to read on each ingestion.
 
 Druid provides three levels of parameterization:
@@ -55,11 +55,11 @@ Druid provides three levels of parameterization:
   this format is less useful for ingestion.)
 
 See [MSQ](../multi-stage-query/reference.md) for how to define an ad-hoc table.
-Here we focus on the use
+This section focuses on the use
 of table metadata in the Druid catalog. An external table is just another kind
 of table in Druid's catalog: you use the same REST API methods to define and
-retrieve information about external tables as you would to wor with datasource
-tables.
+retrieve information about external tables. The catalog API does not differentiate
+between external and datasource tables.
 
 External tables do, however, have a unique set of properties. External tables
 specifications reside in the `ext` schema within Druid.
@@ -71,7 +71,7 @@ An external table has the type `external`, and has two key properties:
 
 ### `description` (String)
 
-The description property hold human-readable text to describe the external table.
+The description property holds human-readable text to describe the external table.
 Druid does not yet use this property, though the intent is that the Druid Console
 will display this text in some useful way.
 
@@ -152,7 +152,7 @@ External tables cannot use Druid aggregate types.
 
 ### Using a Complete Table Specification
 
-Suppose we wish to define an external table for the Wikipedia data, which
+Suppose you want to define an external table for the Wikipedia data, which
 is available on our local system at `$DRUID_HOME/quickstart/tutorial`. Let us assume
 Druid is installed at `/Users/bob/druid`. The data uses
 is compressed JSON. The complete table specification looks like this:
@@ -211,7 +211,7 @@ is compressed JSON. The complete table specification looks like this:
 Let us call the table `wikipedia`. As noted above, the table resides in
 the `ext` schema.
 
-Then, we can ingest the data, into a datasource also named `wikipedia`, using MSQ as follows:
+Then, you can ingest the data, into a datasource also named `wikipedia`, using MSQ as follows:
 
 ```sql
 INSERT INTO wikipedia
@@ -219,16 +219,16 @@ SELECT *
 FROM ext.wikipedia
 ```
 
-The real intestion would do some data transforms such as converting the "TRUE"/"FALSE" fields
-into 1/0 values, parse the date-time field and so on. Here we just focus on the table
+The real ingestion would do some data transforms such as converting the "TRUE"/"FALSE" fields
+into 1/0 values, parse the date-time field and so on. This section focuses on the table
 metadata aspect.
 
 ### Using a Partial Table Specication
 
-As noted, we can omit some of the information from the catalog entry to
-produce a _partial_ table specification. Suppose we have an HTTP input source
+As noted, you can omit some of the information from the catalog entry to
+produce a _partial_ table specification. Suppose you have an HTTP input source
 that provides a set of files: the file contents differ each day, but all have
-the same format and schema. We define our `koala` catalog table as follows:
+the same format and schema. Define the `koala` catalog table as follows:
 
 ```json
 {
@@ -261,8 +261,8 @@ the same format and schema. We define our `koala` catalog table as follows:
 }
 ```
 
-We ingest table using the table name as if it were a function. We provide
-the missing inforation:
+Ingest table using the table name as if it were a function. Provide
+the missing information:
 
 ```sql
 INSERT INTO koalaMetrics
@@ -270,9 +270,9 @@ SELECT *
 FROM TABLE(ext.koalas(uris => 'Dec05.json, Dec06.json'))
 ```
 
-On the other hand, suppose we wanted to define something more like a
+On the other hand, suppose you want to define something more like a
 connection: we provide the location of a web server, and credentials, but
-the web server hosts a variety of files. Suppose we have a `dataHub`
+the web server hosts a variety of files. Suppose you have a `dataHub`
 web site that holds a variety of files.
 
 ```json
@@ -319,7 +319,7 @@ You can use the inline input source ad-hoc by using the `inline` table function.
 
 You can also define an inline input source in the Druid catalog.
 The inline input source cannot be parameterized: you must provide the complete input
-specificataion, format specfication and schema as part of the catlog definition.
+specification, format specification and schema as part of the catalog definition.
 
 ### Local Input Source
 
@@ -366,7 +366,7 @@ SELECT *
 FROM TABLE(ext.dataDir(filter => 'Dec*.csv'))
 ```
 
-Again, in a real intestion, we'd insert expessions to parse the date, etc.
+Again, in a real ingestion, you would insert expressions to parse the date, etc.
 
 ### HTTP Input Source
 
