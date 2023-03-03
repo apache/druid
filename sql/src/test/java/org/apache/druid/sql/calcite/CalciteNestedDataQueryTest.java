@@ -858,6 +858,54 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testJsonValueArrays()
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(arrayString, '$' RETURNING VARCHAR ARRAY), "
+        + "JSON_VALUE(arrayLong, '$' RETURNING BIGINT ARRAY), "
+        + "JSON_VALUE(arrayDouble, '$' RETURNING DOUBLE ARRAY) "
+        + "FROM druid.arrays",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE_ARRAYS)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      new NestedFieldVirtualColumn("arrayString", "$", "v0", ColumnType.STRING_ARRAY),
+                      new NestedFieldVirtualColumn("arrayLong", "$", "v1", ColumnType.LONG_ARRAY),
+                      new NestedFieldVirtualColumn("arrayDouble", "$", "v2", ColumnType.DOUBLE_ARRAY)
+                  )
+                  .columns("v0", "v1", "v2")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null, Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1, 2.2, 3.3)},
+            new Object[]{null, null, null},
+            new Object[]{Arrays.asList("d", "e"), Arrays.asList(1L, 4L), Arrays.asList(2.2, 3.3, 4.0)},
+            new Object[]{Arrays.asList("a", "b"), null, null},
+            new Object[]{Arrays.asList("a", "b"), Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1, 2.2, 3.3)},
+            new Object[]{Arrays.asList("b", "c"), Arrays.asList(1L, 2L, 3L, 4L), Arrays.asList(1.1, 3.3)},
+            new Object[]{Arrays.asList("a", "b", "c"), Arrays.asList(2L, 3L), Arrays.asList(3.3, 4.4, 5.5)},
+            new Object[]{null, Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1, 2.2, 3.3)},
+            new Object[]{null, null, null},
+            new Object[]{Arrays.asList("d", "e"), Arrays.asList(1L, 4L), Arrays.asList(2.2, 3.3, 4.0)},
+            new Object[]{Arrays.asList("a", "b"), null, null},
+            new Object[]{Arrays.asList("a", "b"), Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1, 2.2, 3.3)},
+            new Object[]{Arrays.asList("b", "c"), Arrays.asList(1L, 2L, 3L, 4L), Arrays.asList(1.1, 3.3)},
+            new Object[]{Arrays.asList("a", "b", "c"), Arrays.asList(2L, 3L), Arrays.asList(3.3, 4.4, 5.5)}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING_ARRAY)
+                    .add("EXPR$1", ColumnType.LONG_ARRAY)
+                    .add("EXPR$2", ColumnType.DOUBLE_ARRAY)
+                    .build()
+    );
+  }
+
+  @Test
   public void testGroupByRootSingleTypeArrayLong()
   {
     cannotVectorize();

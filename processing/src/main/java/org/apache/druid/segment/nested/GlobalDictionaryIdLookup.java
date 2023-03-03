@@ -59,11 +59,6 @@ public class GlobalDictionaryIdLookup
     this.arrayLookup.defaultReturnValue(-1);
   }
 
-  public int getSize()
-  {
-    return dictionarySize;
-  }
-
   public void addString(@Nullable String value)
   {
     Preconditions.checkState(

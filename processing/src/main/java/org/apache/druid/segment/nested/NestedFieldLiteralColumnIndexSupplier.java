@@ -83,10 +83,10 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
   private final Supplier<FixedIndexed<Long>> globalLongDictionarySupplier;
   private final Supplier<FixedIndexed<Double>> globalDoubleDictionarySupplier;
 
-  @SuppressWarnings("FieldCanBeLocal")
+  @SuppressWarnings({"FieldCanBeLocal", "unused"})
   @Nullable
   private final GenericIndexed<ImmutableBitmap> arrayElementBitmaps;
-  @SuppressWarnings("FieldCanBeLocal")
+  @SuppressWarnings({"FieldCanBeLocal", "unused"})
   @Nullable
   private final Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier;
 
