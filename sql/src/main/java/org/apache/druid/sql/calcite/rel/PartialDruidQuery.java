@@ -83,8 +83,7 @@ public class PartialDruidQuery
     // WINDOW may be present only together with SCAN.
     WINDOW,
 
-    UNNEST_PROJECT,
-    UNNEST_FILTER
+    UNNEST_PROJECT
   }
 
   private PartialDruidQuery(

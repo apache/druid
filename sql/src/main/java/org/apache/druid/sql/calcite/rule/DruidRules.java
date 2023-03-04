@@ -100,8 +100,8 @@ public class DruidRules
             DruidJoinRule.instance(plannerContext),
             new DruidUnnestDatasourceRule(plannerContext),
             new DruidCorrelateUnnestRule(plannerContext),
-            new DruidFilterUnnestRule(plannerContext),
-            new DruidFilterUnnestRule.DruidProjectOnCorrelate(plannerContext)
+            DruidFilterUnnestRule.instance(),
+            DruidFilterUnnestRule.DruidProjectOnCorrelateRule.instance()
         )
     );
 

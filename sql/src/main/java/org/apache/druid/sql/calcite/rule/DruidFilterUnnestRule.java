@@ -23,15 +23,13 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidUnnestDatasourceRel;
 
 public class DruidFilterUnnestRule extends RelOptRule
 {
+  private static final DruidFilterUnnestRule INSTANCE = new DruidFilterUnnestRule();
 
-  private final PlannerContext plannerContext;
-
-  public DruidFilterUnnestRule(PlannerContext plannerContext)
+  private DruidFilterUnnestRule()
   {
     super(
         operand(
@@ -39,7 +37,11 @@ public class DruidFilterUnnestRule extends RelOptRule
             operand(DruidUnnestDatasourceRel.class, any())
         )
     );
-    this.plannerContext = plannerContext;
+  }
+
+  public static DruidFilterUnnestRule instance()
+  {
+    return INSTANCE;
   }
 
   @Override
@@ -68,9 +70,11 @@ public class DruidFilterUnnestRule extends RelOptRule
   // So we can skip this LogicalProject
   // Extensive unit tests can be found in {@link CalciteArraysQueryTest}
 
-  static class DruidProjectOnCorrelate extends RelOptRule
+  static class DruidProjectOnCorrelateRule extends RelOptRule
   {
-    public DruidProjectOnCorrelate(PlannerContext plannerContext)
+    private static final DruidProjectOnCorrelateRule INSTANCE = new DruidProjectOnCorrelateRule();
+
+    private DruidProjectOnCorrelateRule()
     {
       super(
           operand(
@@ -78,6 +82,11 @@ public class DruidFilterUnnestRule extends RelOptRule
               operand(DruidUnnestDatasourceRel.class, any())
           )
       );
+    }
+
+    public static DruidProjectOnCorrelateRule instance()
+    {
+      return INSTANCE;
     }
 
     @Override
