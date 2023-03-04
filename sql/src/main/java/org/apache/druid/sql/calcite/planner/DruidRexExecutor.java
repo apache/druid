@@ -75,7 +75,10 @@ public class DruidRexExecutor implements RexExecutor
         reducedValues.add(constExp);
       } else {
         final SqlTypeName sqlTypeName = constExp.getType().getSqlTypeName();
-        final Expr expr = Parser.parse(druidExpression.getExpression(), plannerContext.getExprMacroTable());
+        final Expr expr = Parser.parse(
+            druidExpression.getExpression(),
+            plannerContext.getPlannerToolbox().exprMacroTable()
+        );
 
         final ExprEval exprResult = expr.eval(
             InputBindings.forFunction(
@@ -193,7 +196,7 @@ public class DruidRexExecutor implements RexExecutor
             // column selector anyway
             literal = constExp;
           } else {
-            literal = rexBuilder.makeLiteral(exprResult.value(), constExp.getType(), true);
+            literal = rexBuilder.makeLiteral(exprResult.valueOrDefault(), constExp.getType(), true);
           }
         }
 

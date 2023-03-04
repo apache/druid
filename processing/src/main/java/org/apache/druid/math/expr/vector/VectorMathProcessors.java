@@ -266,8 +266,8 @@ public class VectorMathProcessors
         left,
         right,
         () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -278,8 +278,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -290,8 +290,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -302,8 +302,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -323,8 +323,8 @@ public class VectorMathProcessors
         left,
         right,
         () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -335,8 +335,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -347,8 +347,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -359,8 +359,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -380,8 +380,8 @@ public class VectorMathProcessors
         left,
         right,
         () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -392,8 +392,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -404,8 +404,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -416,8 +416,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -437,8 +437,8 @@ public class VectorMathProcessors
         left,
         right,
         () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -449,8 +449,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -461,8 +461,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -473,8 +473,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -494,8 +494,8 @@ public class VectorMathProcessors
         left,
         right,
         () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -506,8 +506,8 @@ public class VectorMathProcessors
           }
         },
         () -> new LongOutLongDoubleInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -518,8 +518,8 @@ public class VectorMathProcessors
           }
         },
         () -> new LongOutDoubleLongInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -530,8 +530,8 @@ public class VectorMathProcessors
           }
         },
         () -> new LongOutDoublesInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -551,8 +551,8 @@ public class VectorMathProcessors
         left,
         right,
         () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -563,8 +563,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -575,8 +575,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -587,8 +587,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -607,7 +607,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new LongOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -618,7 +618,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -638,8 +638,8 @@ public class VectorMathProcessors
         left,
         right,
         () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -650,8 +650,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -662,8 +662,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -674,8 +674,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -700,8 +700,8 @@ public class VectorMathProcessors
     if ((Types.is(leftType, ExprType.LONG) && Types.isNullOr(rightType, ExprType.LONG)) ||
         (leftType == null && Types.is(rightType, ExprType.LONG))) {
       processor = new DoubleOutLongsInFunctionVectorValueProcessor(
-          left.buildVectorized(inspector),
-          right.buildVectorized(inspector),
+          left.asVectorProcessor(inspector),
+          right.asVectorProcessor(inspector),
           inspector.getMaxVectorSize()
       )
       {
@@ -726,8 +726,8 @@ public class VectorMathProcessors
         left,
         right,
         () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -738,8 +738,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -750,8 +750,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -762,8 +762,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -783,8 +783,8 @@ public class VectorMathProcessors
         left,
         right,
         () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -795,8 +795,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -807,8 +807,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -819,8 +819,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -840,8 +840,8 @@ public class VectorMathProcessors
         left,
         right,
         () -> new DoubleOutLongsInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -852,8 +852,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -864,8 +864,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -876,8 +876,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -897,8 +897,8 @@ public class VectorMathProcessors
         left,
         right,
         () -> new DoubleOutLongsInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -909,8 +909,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -921,8 +921,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -933,8 +933,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -954,8 +954,8 @@ public class VectorMathProcessors
         left,
         right,
         () -> new DoubleOutLongsInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -966,8 +966,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -978,8 +978,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -990,8 +990,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1011,8 +1011,8 @@ public class VectorMathProcessors
         left,
         right,
         () -> new DoubleOutLongsInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1023,8 +1023,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1035,8 +1035,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1047,8 +1047,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1068,8 +1068,8 @@ public class VectorMathProcessors
         left,
         right,
         () -> new DoubleOutLongsInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1080,8 +1080,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1092,8 +1092,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1104,8 +1104,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1125,8 +1125,8 @@ public class VectorMathProcessors
         left,
         right,
         () -> new DoubleOutLongsInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1137,8 +1137,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1149,8 +1149,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1161,8 +1161,8 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1181,7 +1181,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1192,7 +1192,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1211,7 +1211,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1222,7 +1222,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1241,7 +1241,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1252,7 +1252,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1271,7 +1271,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1282,7 +1282,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1301,7 +1301,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1312,7 +1312,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1331,7 +1331,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1342,7 +1342,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1361,7 +1361,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1372,7 +1372,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1391,7 +1391,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1402,7 +1402,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1421,7 +1421,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1432,7 +1432,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1451,7 +1451,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1462,7 +1462,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1481,7 +1481,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new LongOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1492,7 +1492,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1511,7 +1511,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1522,7 +1522,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1541,7 +1541,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1552,7 +1552,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1571,7 +1571,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1582,7 +1582,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1601,7 +1601,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1612,7 +1612,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1631,7 +1631,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1642,7 +1642,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1661,7 +1661,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new LongOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1672,7 +1672,7 @@ public class VectorMathProcessors
           }
         },
         () -> new LongOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1691,7 +1691,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1702,7 +1702,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1721,7 +1721,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1732,7 +1732,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1751,7 +1751,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1762,7 +1762,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1781,7 +1781,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1792,7 +1792,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1811,7 +1811,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1822,7 +1822,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1841,7 +1841,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1852,7 +1852,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1871,7 +1871,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1882,7 +1882,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1901,7 +1901,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1912,7 +1912,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1931,7 +1931,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1942,7 +1942,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1961,7 +1961,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1972,7 +1972,7 @@ public class VectorMathProcessors
           }
         },
         () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -1991,7 +1991,7 @@ public class VectorMathProcessors
         inspector,
         arg,
         () -> new LongOutLongInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -2002,7 +2002,7 @@ public class VectorMathProcessors
           }
         },
         () -> new LongOutDoubleInFunctionVectorValueProcessor(
-            arg.buildVectorized(inspector),
+            arg.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -2025,7 +2025,7 @@ public class VectorMathProcessors
     ExprVectorProcessor<?> processor = null;
     if (Types.is(inputType, ExprType.LONG)) {
       processor = new LongOutLongInFunctionVectorValueProcessor(
-          arg.buildVectorized(inspector),
+          arg.asVectorProcessor(inspector),
           inspector.getMaxVectorSize()
       )
       {
@@ -2037,7 +2037,7 @@ public class VectorMathProcessors
       };
     } else if (Types.is(inputType, ExprType.DOUBLE)) {
       processor = new LongOutDoubleInFunctionVectorValueProcessor(
-          arg.buildVectorized(inspector),
+          arg.asVectorProcessor(inspector),
           inspector.getMaxVectorSize()
       )
       {
@@ -2064,7 +2064,7 @@ public class VectorMathProcessors
     ExprVectorProcessor<?> processor = null;
     if (Types.is(inputType, ExprType.LONG)) {
       processor = new DoubleOutLongInFunctionVectorValueProcessor(
-          arg.buildVectorized(inspector),
+          arg.asVectorProcessor(inspector),
           inspector.getMaxVectorSize()
       )
       {
@@ -2076,7 +2076,7 @@ public class VectorMathProcessors
       };
     } else if (Types.is(inputType, ExprType.DOUBLE)) {
       processor = new DoubleOutDoubleInFunctionVectorValueProcessor(
-          arg.buildVectorized(inspector),
+          arg.asVectorProcessor(inspector),
           inspector.getMaxVectorSize()
       )
       {
@@ -2100,8 +2100,8 @@ public class VectorMathProcessors
         left,
         right,
         () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -2112,8 +2112,8 @@ public class VectorMathProcessors
           }
         },
         () -> new LongOutLongDoubleInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -2124,8 +2124,8 @@ public class VectorMathProcessors
           }
         },
         () -> new LongOutDoubleLongInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -2136,8 +2136,8 @@ public class VectorMathProcessors
           }
         },
         () -> new LongOutDoublesInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -2157,8 +2157,8 @@ public class VectorMathProcessors
         left,
         right,
         () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -2169,8 +2169,8 @@ public class VectorMathProcessors
           }
         },
         () -> new LongOutLongDoubleInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -2181,8 +2181,8 @@ public class VectorMathProcessors
           }
         },
         () -> new LongOutDoubleLongInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -2193,8 +2193,8 @@ public class VectorMathProcessors
           }
         },
         () -> new LongOutDoublesInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -2214,8 +2214,8 @@ public class VectorMathProcessors
         left,
         right,
         () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -2226,8 +2226,8 @@ public class VectorMathProcessors
           }
         },
         () -> new LongOutLongDoubleInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -2238,8 +2238,8 @@ public class VectorMathProcessors
           }
         },
         () -> new LongOutDoubleLongInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -2250,8 +2250,8 @@ public class VectorMathProcessors
           }
         },
         () -> new LongOutDoublesInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -2275,8 +2275,8 @@ public class VectorMathProcessors
         left,
         right,
         () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -2287,8 +2287,8 @@ public class VectorMathProcessors
           }
         },
         () -> new LongOutLongDoubleInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -2299,8 +2299,8 @@ public class VectorMathProcessors
           }
         },
         () -> new LongOutDoubleLongInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -2311,8 +2311,8 @@ public class VectorMathProcessors
           }
         },
         () -> new LongOutDoublesInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -2336,8 +2336,8 @@ public class VectorMathProcessors
         left,
         right,
         () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -2348,8 +2348,8 @@ public class VectorMathProcessors
           }
         },
         () -> new LongOutLongDoubleInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -2360,8 +2360,8 @@ public class VectorMathProcessors
           }
         },
         () -> new LongOutDoubleLongInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {
@@ -2372,8 +2372,8 @@ public class VectorMathProcessors
           }
         },
         () -> new LongOutDoublesInFunctionVectorValueProcessor(
-            left.buildVectorized(inspector),
-            right.buildVectorized(inspector),
+            left.asVectorProcessor(inspector),
+            right.asVectorProcessor(inspector),
             inspector.getMaxVectorSize()
         )
         {

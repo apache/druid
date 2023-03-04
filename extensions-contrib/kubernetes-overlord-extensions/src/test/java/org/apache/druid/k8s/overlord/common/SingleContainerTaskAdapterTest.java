@@ -86,7 +86,7 @@ class SingleContainerTaskAdapterTest
                          .jobs()
                          .load(this.getClass()
                                    .getClassLoader()
-                                   .getResourceAsStream("expectedSingleiContainerOutput.yaml"))
+                                   .getResourceAsStream("expectedSingleContainerOutput.yaml"))
                          .get();
     // something is up with jdk 17, where if you compress with jdk < 17 and try and decompress you get different results,
     // this would never happen in real life, but for the jdk 17 tests this is a problem

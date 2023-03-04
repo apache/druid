@@ -26,6 +26,7 @@ import org.apache.druid.guice.annotations.PublicApi;
 @PublicApi
 public class Runnables
 {
+  @SuppressWarnings("unused")
   public static Runnable getNoopRunnable()
   {
     return () -> {};

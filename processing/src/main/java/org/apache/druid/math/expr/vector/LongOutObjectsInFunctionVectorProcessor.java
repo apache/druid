@@ -19,6 +19,7 @@
 
 package org.apache.druid.math.expr.vector;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
@@ -38,7 +39,6 @@ public abstract class LongOutObjectsInFunctionVectorProcessor
     super(
         CastToTypeVectorProcessor.cast(left, inputType),
         CastToTypeVectorProcessor.cast(right, inputType),
-        maxVectorSize,
         new long[maxVectorSize]
     );
     this.outNulls = new boolean[maxVectorSize];
@@ -53,7 +53,7 @@ public abstract class LongOutObjectsInFunctionVectorProcessor
     final Long outVal = processValue(in1[i], in2[i]);
     if (outVal == null) {
       outValues[i] = 0L;
-      outNulls[i] = true;
+      outNulls[i] = NullHandling.sqlCompatible();
     } else {
       outValues[i] = outVal;
       outNulls[i] = false;
@@ -64,7 +64,7 @@ public abstract class LongOutObjectsInFunctionVectorProcessor
   void processNull(int i)
   {
     outValues[i] = 0L;
-    outNulls[i] = true;
+    outNulls[i] = NullHandling.sqlCompatible();
   }
 
   @Override

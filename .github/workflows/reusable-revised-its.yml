@@ -56,10 +56,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Setup java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: ${{ inputs.build_jdk }}
+        run: export JAVA_HOME=$JAVA_HOME_${{ inputs.build_jdk }}_X64
 
       - name: Restore Maven repository
         id: maven-restore
@@ -90,7 +87,7 @@ jobs:
           ./it.sh ci
 
       - name: Create docker image
-        if: steps.docker-restore.outputs.cache-hit != 'true'
+        if: steps.docker-restore.outputs.cache-hit != 'true' || steps.maven-restore.outputs.cache-hit != 'true'
         env:
           docker-restore: ${{ toJson(steps.docker-restore.outputs) }}
         run: |
@@ -98,7 +95,7 @@ jobs:
           source ./integration-tests-ex/image/target/env.sh
           docker tag $DRUID_IT_IMAGE_NAME $DRUID_IT_IMAGE_NAME-jdk${{ matrix.jdk }}
           echo $DRUID_IT_IMAGE_NAME
-          docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ matrix.jdk }}.tar.gz
+          docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ inputs.build_jdk }}.tar.gz
 
       - name: Load docker image
         run: |

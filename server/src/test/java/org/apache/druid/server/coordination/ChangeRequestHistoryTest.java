@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordination;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -163,6 +164,11 @@ public class ChangeRequestHistoryTest
     Future<ChangeRequestsSnapshot> future = history.getRequestsSince(
         ChangeRequestHistory.Counter.ZERO
     );
+
+    Assert.assertFalse(future.isDone());
+
+    // An empty list of changes should not trigger the future to return!
+    history.addChangeRequests(ImmutableList.of());
 
     Assert.assertFalse(future.isDone());
 

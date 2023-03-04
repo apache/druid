@@ -22,7 +22,6 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.Property;
 import org.apache.druid.java.util.common.IAE;
@@ -45,9 +44,7 @@ public class ParallelIndexIngestionSpec extends IngestionSpec<ParallelIndexIOCon
     super(dataSchema, ioConfig, tuningConfig);
 
     if (dataSchema.getParserMap() != null && ioConfig.getInputSource() != null) {
-      if (!(ioConfig.getInputSource() instanceof FirehoseFactoryToInputSourceAdaptor)) {
-        throw new IAE("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
-      }
+      throw new IAE("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
     }
     if (ioConfig.getInputSource() != null && ioConfig.getInputSource().needsFormat()) {
       Checks.checkOneNotNullOrEmpty(

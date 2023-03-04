@@ -21,7 +21,6 @@ package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.net.HostAndPort;
 import org.apache.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;
@@ -132,13 +131,5 @@ public class TaskLocation
   public int hashCode()
   {
     return Objects.hash(host, port, tlsPort);
-  }
-
-  public HostAndPort toHostAndPort()
-  {
-    if (tlsPort >= 0) {
-      return HostAndPort.fromParts(host, tlsPort);
-    }
-    return HostAndPort.fromParts(host, port);
   }
 }

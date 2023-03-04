@@ -6,6 +6,7 @@ target
 *.tar.gz
 *.swp
 *.swo
+*.pyc
 .classpath
 .idea
 .project
