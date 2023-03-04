@@ -60,9 +60,9 @@ import javax.annotation.Nullable;
  * <p>
  * Total 5 advance calls above
  * <p>
- * The allowSet, if available, helps skip over elements that are not in the allowList by moving the cursor to
+ * The filter, if available, helps skip over elements that are not in the allowList by moving the cursor to
  * the next available match. The hashSet is converted into a bitset (during initialization) for efficiency.
- * If allowSet is ['c', 'd'] then the advance moves over to the next available match
+ * If filter is IN ('c', 'd') then the advance moves over to the next available match
  * <p>
  * advance() -> 2 -> 'c'
  * advance() -> 3 -> 'd' (advances base cursor first)
@@ -395,7 +395,7 @@ public class UnnestDimensionCursor implements Cursor
     public int get(int idx)
     {
       // need to get value from the indexed ints
-      // only if it is non null and has at least 1 value
+      // only if it is non-null and has at least 1 value
       if (indexedIntsForCurrentRow != null && indexedIntsForCurrentRow.size() > 0) {
         return indexedIntsForCurrentRow.get(indexForRow);
       }

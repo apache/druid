@@ -256,6 +256,11 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
 
   private PartialDruidQuery updateCorrPartialQueryFromLeft(PartialDruidQuery partialQueryFromLeft)
   {
+    // The DruidCorrelateRule already creates the project and pushes it on the top level
+    // So get select project from partialQuery
+    // The filters are present on the partial query of the left
+    // The group by and having clauses would be on the top level
+    // Same for the sort
     PartialDruidQuery corrQuery = PartialDruidQuery.create(correlateRel);
     corrQuery = corrQuery.withWhereFilter(partialQueryFromLeft.getWhereFilter())
                          .withSelectProject(partialQuery.getSelectProject());

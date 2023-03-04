@@ -52,7 +52,7 @@ import java.util.List;
  * unnestCursor.advance() -> 'e'
  * <p>
  * <p>
- * The allowSet if available helps skip over elements which are not in the allowList by moving the cursor to
+ * The filter if available helps skip over elements which are not in the allowList by moving the cursor to
  * the next available match.
  * <p>
  * The index reference points to the index of each row that the unnest cursor is accessing through currentVal
