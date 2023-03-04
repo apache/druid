@@ -229,15 +229,6 @@ public class DruidQuery
               virtualColumnRegistry
           )
       );
-    } else if (partialQuery.getUnnestFilter() != null) {
-      filter = Preconditions.checkNotNull(
-          computeUnnestFilter(
-              partialQuery,
-              plannerContext,
-              sourceRowSignature,
-              virtualColumnRegistry
-          )
-      );
     } else {
       filter = null;
     }
@@ -346,21 +337,6 @@ public class DruidQuery
   }
 
   @Nullable
-  private static DimFilter computeUnnestFilter(
-      final PartialDruidQuery partialQuery,
-      final PlannerContext plannerContext,
-      final RowSignature rowSignature,
-      final VirtualColumnRegistry virtualColumnRegistry
-  )
-  {
-    final Filter unnestFilter = partialQuery.getUnnestFilter();
-    if (unnestFilter == null) {
-      return null;
-    }
-    return getDimFilter(plannerContext, rowSignature, virtualColumnRegistry, unnestFilter);
-  }
-
-  @Nullable
   private static DimFilter computeHavingFilter(
       final PartialDruidQuery partialQuery,
       final PlannerContext plannerContext,
@@ -378,7 +354,7 @@ public class DruidQuery
   }
 
   @Nonnull
-  private static DimFilter getDimFilter(
+  public static DimFilter getDimFilter(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       @Nullable final VirtualColumnRegistry virtualColumnRegistry,

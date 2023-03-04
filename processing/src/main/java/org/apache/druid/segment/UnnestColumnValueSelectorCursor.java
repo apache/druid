@@ -324,7 +324,7 @@ public class UnnestColumnValueSelectorCursor implements Cursor
 
     // If the first value the index is pointing to does not match the filter
     // advance the index to the first value which will match
-    if (!valueMatcher.matches()) {
+    if (!valueMatcher.matches() && !baseCursor.isDone()) {
       advance();
     }
     needInitialization = false;

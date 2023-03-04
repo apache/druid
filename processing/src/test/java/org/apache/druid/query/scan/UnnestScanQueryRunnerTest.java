@@ -160,7 +160,8 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
               .dataSource(UnnestDataSource.create(
                   new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
                   "vc",
-                  QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+                  QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+                  null
               ))
               .columns(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
               .eternityInterval()
@@ -233,7 +234,8 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
               .dataSource(UnnestDataSource.create(
                   new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
                   "vc",
-                  QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+                  QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+                  null
               ))
               .columns(QueryRunnerTestHelper.MARKET_DIMENSION, QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
               .eternityInterval()

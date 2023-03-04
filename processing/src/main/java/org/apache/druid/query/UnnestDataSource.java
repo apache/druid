@@ -23,11 +23,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.UnnestSegmentReference;
 import org.apache.druid.utils.JvmUtils;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -48,26 +50,30 @@ public class UnnestDataSource implements DataSource
   private final DataSource base;
   private final String column;
   private final String outputName;
+  private final DimFilter outputColumnFilter;
 
   private UnnestDataSource(
       DataSource dataSource,
       String columnName,
-      String outputName
+      String outputName,
+      DimFilter outputColumnFilter
   )
   {
     this.base = dataSource;
     this.column = columnName;
     this.outputName = outputName;
+    this.outputColumnFilter = outputColumnFilter;
   }
 
   @JsonCreator
   public static UnnestDataSource create(
       @JsonProperty("base") DataSource base,
       @JsonProperty("column") String columnName,
-      @JsonProperty("outputName") String outputName
+      @JsonProperty("outputName") String outputName,
+      @Nullable @JsonProperty("outputColumnFilter") DimFilter outputColumnFilter
   )
   {
-    return new UnnestDataSource(base, columnName, outputName);
+    return new UnnestDataSource(base, columnName, outputName, outputColumnFilter);
   }
 
   @JsonProperty("base")
@@ -88,6 +94,11 @@ public class UnnestDataSource implements DataSource
     return outputName;
   }
 
+  @JsonProperty("outputColumnFilter")
+  public DimFilter getOutputColumnFilter()
+  {
+    return outputColumnFilter;
+  }
   @Override
   public Set<String> getTableNames()
   {
@@ -106,7 +117,7 @@ public class UnnestDataSource implements DataSource
     if (children.size() != 1) {
       throw new IAE("Expected [1] child, got [%d]", children.size());
     }
-    return new UnnestDataSource(children.get(0), column, outputName);
+    return new UnnestDataSource(children.get(0), column, outputName, outputColumnFilter);
   }
 
   @Override
@@ -150,7 +161,8 @@ public class UnnestDataSource implements DataSource
                     new UnnestSegmentReference(
                         segmentMapFn.apply(baseSegment),
                         column,
-                        outputName
+                        outputName,
+                        outputColumnFilter
                     );
           }
         }
@@ -161,7 +173,7 @@ public class UnnestDataSource implements DataSource
   @Override
   public DataSource withUpdatedDataSource(DataSource newSource)
   {
-    return new UnnestDataSource(newSource, column, outputName);
+    return new UnnestDataSource(newSource, column, outputName, outputColumnFilter);
   }
 
   @Override
@@ -200,7 +212,7 @@ public class UnnestDataSource implements DataSource
   @Override
   public int hashCode()
   {
-    return Objects.hash(base, column, outputName);
+    return Objects.hash(base, column, outputName, outputColumnFilter);
   }
 
   @Override
@@ -210,6 +222,7 @@ public class UnnestDataSource implements DataSource
            "base=" + base +
            ", column='" + column + '\'' +
            ", outputName='" + outputName + '\'' +
+           ", outputFilter='" + outputColumnFilter + '\'' +
            '}';
   }
 

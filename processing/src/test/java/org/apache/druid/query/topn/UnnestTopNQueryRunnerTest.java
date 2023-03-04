@@ -254,7 +254,8 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
         .dataSource(UnnestDataSource.create(
             new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
             "vc",
-            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+            null
         ))
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
         .virtualColumns(
@@ -340,7 +341,8 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
         .dataSource(UnnestDataSource.create(
             new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
             "vc",
-            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+            null
         ))
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
         .virtualColumns(

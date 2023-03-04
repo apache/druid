@@ -105,7 +105,8 @@ public class QueryRunnerTestHelper
   public static final DataSource UNNEST_DATA_SOURCE = UnnestDataSource.create(
       new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
       QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
-      QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+      QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+      null
   );
 
   public static final Granularity DAY_GRAN = Granularities.DAY;

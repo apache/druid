@@ -33,6 +33,7 @@ import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
+import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
@@ -132,7 +133,13 @@ public class DruidUnnestDatasourceRel extends DruidRel<DruidUnnestDatasourceRel>
             RowSignature.builder().add("inline", ExpressionType.toColumnType(eval.type())).build()
         ),
         "inline",
-        druidQueryRel.getRowType().getFieldNames().get(0)
+        druidQueryRel.getRowType().getFieldNames().get(0),
+        unnestFilter != null ? Filtration.create(DruidQuery.getDimFilter(
+            getPlannerContext(),
+            druidQueryRel.getDruidTable().getRowSignature(),
+            virtualColumnRegistry,
+            unnestFilter
+        )).optimizeFilterOnly(druidQueryRel.getDruidTable().getRowSignature()).getDimFilter() : null
     );
 
     DruidQuery query = druidQueryRel.getPartialDruidQuery().build(

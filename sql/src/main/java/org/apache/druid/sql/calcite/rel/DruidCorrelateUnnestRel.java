@@ -46,6 +46,7 @@ import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
+import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
@@ -73,8 +74,8 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   private final PartialDruidQuery partialQuery;
   private final PlannerConfig plannerConfig;
   private final Correlate correlateRel;
-  private RelNode left;
-  private RelNode right;
+  private final RelNode left;
+  private final RelNode right;
 
   private DruidCorrelateUnnestRel(
       RelOptCluster cluster,
@@ -139,12 +140,21 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     final DruidRel<?> druidQueryRel = (DruidRel<?>) left;
     final DruidQuery leftQuery = Preconditions.checkNotNull((druidQueryRel).toDruidQuery(false), "leftQuery");
     final DataSource leftDataSource;
+    final PartialDruidQuery partialQueryFromLeft = druidQueryRel.getPartialDruidQuery();
+    final PartialDruidQuery corrPartialQuey;
 
-    if (DruidJoinQueryRel.computeLeftRequiresSubquery(druidQueryRel)) {
+    // If there is a LIMIT in the left query
+    // It should be honored before unnest
+    // Create a query data source in that case
+
+    if (partialQueryFromLeft.getSort() != null || partialQueryFromLeft.getSortProject() != null) {
       leftDataSource = new QueryDataSource(leftQuery.getQuery());
+      corrPartialQuey = partialQuery;
     } else {
       leftDataSource = leftQuery.getDataSource();
+      corrPartialQuey = updateCorrPartialQueryFromLeft(partialQueryFromLeft);
     }
+
 
     final DruidUnnestDatasourceRel unnestDatasourceRel = (DruidUnnestDatasourceRel) right;
 
@@ -194,7 +204,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     );
 
     // the unnest project is needed in case of a virtual column
-    // unnest(mv_to_array(dim_1)) is reconciled as unnesting a MVD dim_1 not requiring a virtual column
+    // unnest(mv_to_array(dim_1)) is reconciled as unnesting an MVD dim_1 not requiring a virtual column
     // while unnest(array(dim_2,dim_3)) is understood as unnesting a virtual column which is an array over dim_2 and dim_3 elements
     boolean unnestProjectNeeded = false;
     getPlannerContext().setJoinExpressionVirtualColumnRegistry(virtualColumnRegistry);
@@ -220,14 +230,21 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     // This is necessary to handle the virtual columns on the unnestProject
     // Also create the unnest datasource to be used by the partial query
     PartialDruidQuery partialDruidQuery = unnestProjectNeeded
-                                          ? partialQuery.withUnnestProject(unnestProject)
-                                          : partialQuery;
-    partialDruidQuery = partialDruidQuery.withUnnestFilter(logicalFilter);
+                                          ? corrPartialQuey.withUnnestProject(unnestProject)
+                                          : corrPartialQuey;
     return partialDruidQuery.build(
         UnnestDataSource.create(
             leftDataSource,
             dimOrExpToUnnest,
-            unnestDatasourceRel.getUnnestProject().getRowType().getFieldNames().get(0)
+            unnestDatasourceRel.getUnnestProject().getRowType().getFieldNames().get(0),
+            // Filters from Calcite are received as bound Filters
+            // This piece optimizes multiple bounds to IN filters, Selector Filters etc.
+            logicalFilter != null ? Filtration.create(DruidQuery.getDimFilter(
+                getPlannerContext(),
+                rowSignature,
+                virtualColumnRegistry,
+                logicalFilter
+            )).optimizeFilterOnly(rowSignature).getDimFilter() : null
         ),
         rowSignature,
         getPlannerContext(),
@@ -235,6 +252,21 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
         finalizeAggregations,
         virtualColumnRegistry
     );
+  }
+
+  private PartialDruidQuery updateCorrPartialQueryFromLeft(PartialDruidQuery partialQueryFromLeft)
+  {
+    PartialDruidQuery corrQuery = PartialDruidQuery.create(correlateRel);
+    corrQuery = corrQuery.withWhereFilter(partialQueryFromLeft.getWhereFilter())
+                         .withSelectProject(partialQuery.getSelectProject());
+    if (partialQuery.getAggregate() != null) {
+      corrQuery = corrQuery.withAggregate(partialQuery.getAggregate())
+                           .withHavingFilter(partialQuery.getHavingFilter());
+    }
+    if (partialQuery.getSort() != null || partialQuery.getSortProject() != null) {
+      corrQuery = corrQuery.withSort(partialQuery.getSort());
+    }
+    return corrQuery;
   }
 
   @Override
