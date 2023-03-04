@@ -18,7 +18,7 @@ kind: "Druid"
 metadata:
   name: tiny-cluster
 spec:
-  image: druid/cluster:v1
+  image: apache/druid:25.0.0
   # Optionally specify image for all nodes. Can be specify on nodes also
   # imagePullSecrets:
   # - name: tutu
@@ -132,8 +132,6 @@ spec:
                 port: 8088
                 protocol: TCP
                 targetPort: 8088
-          selector:
-            nodeSpecUniqueStr: druid-tiny-cluster-brokers
           metadata:
             name: broker-%s-service
         - spec:
@@ -181,8 +179,6 @@ spec:
                 port: 8088
                 protocol: TCP
                 targetPort: 8088
-          selector:
-            nodeSpecUniqueStr: druid-tiny-cluster-coordinators
           metadata:
             name: coordinator-%s-service
         - spec:
@@ -229,8 +225,6 @@ spec:
                 port: 8088
                 protocol: TCP
                 targetPort: 8088
-          selector:
-            nodeSpecUniqueStr: druid-tiny-cluster-historicals
           metadata:
             name: historical-%s-service
         - spec:
@@ -273,8 +267,6 @@ spec:
                 port: 8088
                 protocol: TCP
                 targetPort: 8088
-          selector:
-            nodeSpecUniqueStr: druid-tiny-cluster-routers
           metadata:
             name: router-%s-service
         - spec:
@@ -312,8 +304,6 @@ spec:
                 port: 8088
                 protocol: TCP
                 targetPort: 8088
-          selector:
-            nodeSpecUniqueStr: druid-tiny-cluster-middleManagers
           metadata:
             name: middlemanager-%s-service
         - spec:
