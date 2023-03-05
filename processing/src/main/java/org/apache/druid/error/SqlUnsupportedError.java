@@ -19,6 +19,10 @@
 
 package org.apache.druid.error;
 
+import org.apache.druid.query.QueryException;
+
+import java.net.HttpURLConnection;
+
 /**
  * SQL query validation failed, because a SQL statement asked Druid to do
  * something which it does not support. This message indicates that the
@@ -31,26 +35,60 @@ package org.apache.druid.error;
  */
 public class SqlUnsupportedError extends DruidException
 {
-  public SqlUnsupportedError(String msg, Object...args)
+  public SqlUnsupportedError(
+      String code,
+      String message
+  )
   {
-    super(msg, args);
+    this(null, code, message);
   }
 
-  public SqlUnsupportedError(Throwable cause, String msg, Object...args)
+  public SqlUnsupportedError(
+      Throwable cause,
+      String code,
+      String message
+  )
   {
-    super(cause, msg, args);
+    super(
+        cause,
+        ErrorCode.fullCode(ErrorCode.SQL_UNSUPPORTED_GROUP, code),
+        message
+    );
+    // For backward compatibility.
+    // Calcite classes not visible here, so using a string
+    this.legacyClass = "org.apache.calcite.plan.RelOptPlanner$CannotPlanException";
+    this.legacyCode = QueryException.SQL_QUERY_UNSUPPORTED_ERROR_CODE;
   }
 
   @Override
-  public ErrorCategory category()
+  public ErrorAudience audience()
   {
-    return ErrorCategory.SQL_UNSUPPORTED;
+    return ErrorAudience.USER;
   }
 
   @Override
-  public String errorClass()
+  public int httpStatus()
   {
-    // For backward compatibility: using text since class is not visible here.
-    return "org.apache.calcite.plan.RelOptPlanner$CannotPlanException";
+    return HttpURLConnection.HTTP_BAD_REQUEST;
+  }
+
+  public static DruidException unsupportedAggType(String agg, Object type)
+  {
+    return new SqlUnsupportedError(
+            "InvalidAggArg",
+            "${fn} aggregation is not supported for type [${type}]"
+         )
+        .withValue("fn", agg)
+        .withValue("type", type);
+  }
+
+  public static DruidException cannotUseOperator(String op, Throwable cause)
+  {
+    throw new SqlUnsupportedError(
+            "Operator",
+            "Cannot use [${op}]: [${message}]"
+         )
+        .withValue("op", op)
+        .withValue(DruidException.MESSAGE_KEY, cause.getMessage());
   }
 }

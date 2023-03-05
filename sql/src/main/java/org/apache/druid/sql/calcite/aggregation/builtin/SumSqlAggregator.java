@@ -31,7 +31,6 @@ import org.apache.calcite.sql.SqlSplittableAggFunction;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.util.Optionality;
-import org.apache.druid.error.DruidExceptionV1;
 import org.apache.druid.error.SqlUnsupportedError;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -89,7 +88,7 @@ public class SumSqlAggregator extends SimpleSqlAggregator
       case DOUBLE:
         return new DoubleSumAggregatorFactory(name, fieldName, null, macroTable);
       default:
-        throw new SqlUnsupportedError("SUM is not supported for type [%s]", aggregationType);
+        throw SqlUnsupportedError.unsupportedAggType("SUM", aggregationType);
     }
   }
 

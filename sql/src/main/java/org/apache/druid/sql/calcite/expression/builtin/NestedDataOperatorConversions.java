@@ -40,7 +40,6 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeTransforms;
 import org.apache.calcite.sql2rel.SqlRexConvertlet;
-import org.apache.druid.error.DruidExceptionV1;
 import org.apache.druid.error.SqlUnsupportedError;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
@@ -203,10 +202,9 @@ public class NestedDataOperatorConversions
         parts = NestedPathFinder.parseJsonPath(path);
       }
       catch (IllegalArgumentException iae) {
-        throw new SqlUnsupportedError(
-            "Cannot use [%s]: [%s]",
-            call.getOperator().getName(),
-            iae.getMessage()
+        throw SqlUnsupportedError.cannotUseOperator(
+              call.getOperator().getName(),
+              iae
         );
       }
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
@@ -393,10 +391,9 @@ public class NestedDataOperatorConversions
         parts = NestedPathFinder.parseJsonPath(path);
       }
       catch (IllegalArgumentException iae) {
-        throw new SqlUnsupportedError(
-            "Cannot use [%s]: [%s]",
+        throw SqlUnsupportedError.cannotUseOperator(
             call.getOperator().getName(),
-            iae.getMessage()
+            iae
         );
       }
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);

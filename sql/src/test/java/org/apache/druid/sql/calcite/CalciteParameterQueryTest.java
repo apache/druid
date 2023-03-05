@@ -22,7 +22,6 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.error.DruidExceptionV1;
 import org.apache.druid.error.SqlValidationError;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -579,7 +578,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   public void testMissingParameter()
   {
     expectedException.expect(SqlValidationError.class);
-    expectedException.expectMessage("Parameter at position [0] is not bound");
+    expectedException.expectMessage("SQL-Validation-UnboundParameter: index=[1]");
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"
@@ -594,7 +593,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   public void testPartiallyMissingParameter()
   {
     expectedException.expect(SqlValidationError.class);
-    expectedException.expectMessage("Parameter at position [1] is not bound");
+    expectedException.expectMessage("SQL-Validation-UnboundParameter: index=[2]");
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"
@@ -612,7 +611,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
     params.add(null);
     params.add(new SqlParameter(SqlType.INTEGER, 1));
     expectedException.expect(SqlValidationError.class);
-    expectedException.expectMessage("Parameter at position [0] is not bound");
+    expectedException.expectMessage("SQL-Validation-UnboundParameter: index=[1]");
     testQuery(
         "SELECT 1 + ?, dim1 FROM foo LIMIT ?",
         ImmutableList.of(),

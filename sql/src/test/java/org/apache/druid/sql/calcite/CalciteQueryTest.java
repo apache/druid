@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.error.DruidExceptionV1;
+import org.apache.druid.error.SqlUnsupportedError;
 import org.apache.druid.error.SqlValidationError;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
@@ -372,8 +372,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testCannotInsertWithNativeEngine()
   {
     notMsqCompatible();
-    final SqlValidationError e = Assert.assertThrows(
-        SqlValidationError.class,
+    final SqlUnsupportedError e = Assert.assertThrows(
+        SqlUnsupportedError.class,
         () -> testQuery(
             "INSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL",
             ImmutableList.of(),
@@ -384,7 +384,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     MatcherAssert.assertThat(
         e,
         ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.equalTo("Cannot execute INSERT with SQL engine 'native'.")
+            CoreMatchers.equalTo("SQL-Unsupported-UnsupportedEngineOp: op=[INSERT], engine=[native]")
         )
     );
   }
@@ -393,8 +393,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testCannotReplaceWithNativeEngine()
   {
     notMsqCompatible();
-    final SqlValidationError e = Assert.assertThrows(
-        SqlValidationError.class,
+    final SqlUnsupportedError e = Assert.assertThrows(
+        SqlUnsupportedError.class,
         () -> testQuery(
             "REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL",
             ImmutableList.of(),
@@ -405,7 +405,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     MatcherAssert.assertThat(
         e,
         ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.equalTo("Cannot execute REPLACE with SQL engine 'native'.")
+            CoreMatchers.equalTo("SQL-Unsupported-UnsupportedEngineOp: op=[REPLACE], engine=[native]")
         )
     );
   }
@@ -1067,7 +1067,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testStringLatestGroupByWithAlwaysFalseCondition()
   {
     testQuery(
-        "SELECT LATEST(dim4, 10),dim2 FROM numfoo WHERE (dim1 = 'something' AND dim1 IN( 'something else') ) GROUP BY dim2",
+        "SELECT LATEST(dim4, 10), dim2 FROM numfoo WHERE (dim1 = 'something' AND dim1 IN('something else')) GROUP BY dim2",
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                 .dataSource(InlineDataSource.fromIterable(
@@ -1092,7 +1092,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testStringLatestByGroupByWithAlwaysFalseCondition()
   {
     testQuery(
-        "SELECT LATEST_BY(dim4, __time, 10),dim2 FROM numfoo WHERE (dim1 = 'something' AND dim1 IN( 'something else') ) GROUP BY dim2",
+        "SELECT LATEST_BY(dim4, __time, 10), dim2 FROM numfoo WHERE (dim1 = 'something' AND dim1 IN('something else')) GROUP BY dim2",
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                 .dataSource(InlineDataSource.fromIterable(
@@ -2905,7 +2905,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     }
     catch (SqlValidationError e) {
       Assert.assertTrue(
-          e.getMessage().contains("Column count mismatch in UNION ALL")
+          e.toString().contains("Column count mismatch in UNION ALL")
+      );
+      Assert.assertEquals(
+          "SQL-Validation-General",
+          e.errorCode()
       );
       Assert.assertEquals(
           QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
@@ -2981,6 +2985,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testUnionAllTablesWhenMappingIsRequired()
   {
     // Cannot plan this UNION ALL operation, because the column swap would require generating a subquery.
+
     assertQueryIsUnplannable(
         "SELECT\n"
         + "c, COUNT(*)\n"
@@ -3204,7 +3209,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     }
     catch (SqlValidationError e) {
       Assert.assertTrue(
-          e.getMessage().contains("Column count mismatch in UNION ALL")
+          e.toString().contains("Column count mismatch in UNION ALL")
+      );
+      Assert.assertEquals(
+          "SQL-Validation-General",
+          e.errorCode()
       );
       Assert.assertEquals(
           QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
@@ -3230,7 +3239,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     }
     catch (SqlValidationError e) {
       Assert.assertTrue(
-          e.getMessage().contains("Column count mismatch in UNION ALL")
+          e.toString().contains("Column count mismatch in UNION ALL")
+      );
+      Assert.assertEquals(
+          "SQL-Validation-General",
+          e.errorCode()
       );
       Assert.assertEquals(
           QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
@@ -5778,7 +5791,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     }
     catch (SqlValidationError e) {
       Assert.assertTrue(
-          e.getMessage().contains("Cannot use STRING_AGG on complex inputs COMPLEX<hyperUnique>")
+          e.toString().contains("STRING_AGG aggregation is not supported for type [COMPLEX<hyperUnique>]")
+      );
+      Assert.assertEquals(
+          "SQL-Validation-General",
+          e.errorCode()
       );
       Assert.assertEquals(
           QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
@@ -5921,9 +5938,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         expected -> {
           expected.expect(CoreMatchers.instanceOf(SqlValidationError.class));
           expected.expect(ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-              "From line 1, column 38 to line 1, column 67: "
-              + "Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(<TIMESTAMP(3)>, <VARCHAR>)'. "
-              + "Supported form(s): 'TIME_IN_INTERVAL(<TIMESTAMP>, <LITERAL ISO8601 INTERVAL>)'")));
+              "SQL-Validation-General: line=[1], column=[38], " +
+              "message=[Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(<TIMESTAMP(3)>, <VARCHAR>)'. Supported form(s): TIME_IN_INTERVAL(<TIMESTAMP>, <LITERAL ISO8601 INTERVAL>)]"))
+          );
         }
     );
   }
@@ -6069,7 +6086,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       Assert.assertEquals(
           sql,
           "Illegal TIMESTAMP constant [CAST('z2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL]",
-          e.message()
+          e.toString()
       );
     }
     catch (Exception e) {
@@ -11324,7 +11341,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     }
     catch (SqlValidationError e) {
       Assert.assertTrue(
-          e.getMessage().contains("Invalid number of arguments to function 'TIME_EXTRACT'. Was expecting 2 arguments")
+          e.toString().contains("Invalid number of arguments to function 'TIME_EXTRACT'. Was expecting 2 arguments")
+      );
+      Assert.assertEquals(
+          "SQL-Validation-General",
+          e.errorCode()
       );
       Assert.assertEquals(
           QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
@@ -13984,7 +14005,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test(expected = SqlValidationError.class)
+  @Test(expected = SqlUnsupportedError.class)
   public void testStringAggExpressionNonConstantSeparator()
   {
     testQuery(

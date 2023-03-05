@@ -1,38 +1,65 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.error;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Strings;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.commons.text.StringSubstitutor;
 
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Properties;
 
 /**
  * Represents an error condition exposed to the user and/or operator of Druid.
- * Each error category is given by a subclass of this class.
+ * Every error consists of:
+ * <ul>
+ * <li>An error code.</li>
+ * <li>A set of zero or more parameters.</li>
+ * <li>A default error message "template".</li>
+ * </ul>
  * <p>
- * Not needed for purely internal exceptions thrown and caught within Druid itself.
- * There are categories of error that determine the general form of corrective
- * action, and also determine HTTP (or other API) status codes.
+ * The error code is a unique identifier for each and every distinct
+ * kind of error. Codes <i>should</i> follow the pattern of
+ * @{code <Major-group>-<minor-group>-<error>} such as
+ * @{code SQL-VALIDATION-UNKNOWN_COLUMN}.
  * <p>
- * Druid exceptions can contain context. Use the context for details, such as
- * file names, query context variables, symbols, etc. This allows the error
- * message itself to be simple. Context allows consumers to filter out various
- * bits of information that a site does not wish to expose to the user, while
- * still logging the full details. Typical usage:
- * <pre><code>
- * if (something_is_wrong) {
- *   throw new NotFoundException("File not found")
- *       .addContext("File name", theFile.getName())
- *       .addContext("Directory", theFile.getParent());
- * }
- * </code></pre>
+ * The message template is a user-visible explanation for the error.
+ * The message is a template because it contains named placeholders
+ * to fill in with parameters:<br>
+ * "Line ${line}, Column ${column}: Column [${name}] not found"<br>
  * <p>
- * Exceptions are mutable and may not be modified by two thread concurrently.
+ * The parameters are the values to fill in the placeholders in the
+ * template. Each subclass defines the parameters for that error, along
+ * with the required mapping to placeholders.
+ * <p>
+ * With this system, extensions can translate the messages to the needs
+ * of a specific system. For example, if system generates SQL, then telling
+ * the user the line number of the error is just confusing. In that system,
+ * the error could be translated to:<br>
+ * "Field '${name}' is not defined. Check the field list."<br>
+ * <p>
+ * Exceptions are mutable and must not be modified by two threads concurrently.
  * However, it is highly unlikely that such concurrent access would occur: that's
  * not how exceptions work. Exceptions can be exchanged across threads, as long
  * as only one thread at a time mutates the exception.
@@ -53,98 +80,56 @@ import java.util.Map;
  *   try (Reader reader = open(theFile)) {
  *     doTheRead(reader)
  *   } catch (DruidException e) {
- *      throw e.addContext("File name", theFile.getName());
+ *      e.setFileName(theFile.getName());
+ *      throw e;
  *   }
  * }
  * </code></pre>
+ * <p>
+ * Exceptions are not serializable. Instead, exceptions are translated
+ * to some other form when sent over the wire.
  */
 @NotThreadSafe
 public abstract class DruidException extends RuntimeException
 {
-  /**
-   * The context provides additional information about an exception which may
-   * be redacted on a managed system. Provide essential information in the
-   * message itself.
-   */
-  // Linked hash map to preserve order
-  private Map<String, String> context;
+  public static final String SIMPLE_MESSAGE = "${message}";
+  public static final String MESSAGE_KEY = "message";
 
-  /**
-   * Name of the host on which the error occurred, when the error occurred on
-   * a host other than the one to which the original request was sent. For example,
-   * in a query, if the error occurs on a historical, this field names that historical.
-   */
-  private String host;
-
-  /**
-   * Good errors provide a suggestion to resolve the issue. Such suggestions should
-   * focus on a simple Druid installation where the user is also the admin. More
-   * advanced deployments may find such helpful suggestions to be off the mark.
-   * To resolve this conflict, add suggestions separately from the message itself
-   * so each consumer can decide whether to include it or not.
-   */
-  private String suggestion;
+  private final String code;
+  private final String message;
+  protected final Map<String, String> values = new LinkedHashMap<>();
+  protected String legacyCode;
+  protected String legacyClass;
 
   public DruidException(
-      final String msg,
-      @Nullable final Object...args)
+      final String code,
+      final String message
+  )
   {
-    super(StringUtils.format(msg, args));
+    this(null, code, message);
   }
 
   public DruidException(
       final Throwable cause,
-      final String msg,
-      @Nullable final Object...args)
+      final String code,
+      final String message
+  )
   {
-    super(StringUtils.format(msg, args), cause);
+    super(code, cause);
+    this.code = code;
+    this.message = message;
   }
 
-  public DruidException setHost(String host)
+  public DruidException withValue(String key, Object value)
   {
-    this.host = host;
+    values.put(key, Objects.toString(value));
     return this;
   }
 
-  @JsonProperty
-  public String getErrorClass()
+  public DruidException withValues(Map<String, String> values)
   {
-    String errorClass = errorClass();
-    return errorClass == null ? getClass().getName() : errorClass;
-  }
-
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  public String getHost()
-  {
-    return host;
-  }
-
-  public DruidException suggestion(String suggestion)
-  {
-    this.suggestion = suggestion;
+    this.values.putAll(values);
     return this;
-  }
-
-  public String getSuggestion()
-  {
-    return suggestion;
-  }
-
-  public DruidException addContext(String key, String value)
-  {
-    if (context == null) {
-      context = new LinkedHashMap<>();
-    }
-    context.put(key, value);
-    return this;
-  }
-
-  public abstract ErrorCategory category();
-
-  public String errorClass()
-  {
-    return getClass().getName();
   }
 
   /**
@@ -152,83 +137,78 @@ public abstract class DruidException extends RuntimeException
    * map to the same code: the code is more like a category of errors. Error codes
    * must be backward compatible, even if the prior "codes" are awkward.
    */
-  @Nullable
-  @JsonProperty("error")
-  public String getErrorCode()
+  public String errorCode()
   {
-    return category().userText();
+    return code;
   }
 
   public String message()
   {
-    return super.getMessage();
+    return message;
   }
 
-  @JsonProperty("errorMessage")
+  public Map<String, String> values()
+  {
+    return values;
+  }
+
+  // Used primarily when logging an error.
   @Override
   public String getMessage()
   {
-    StringBuilder buf = new StringBuilder();
-    buf.append(super.getMessage());
-    String sep = "; ";
-    if (context != null && context.size() > 0) {
-      for (Map.Entry<String, String> entry : context.entrySet()) {
-        buf.append(sep);
-        sep = ", ";
-        buf.append("\n")
-           .append(entry.getKey())
-           .append(": [")
-           .append(entry.getValue())
-           .append("]");
-      }
+    if (values.isEmpty()) {
+      return code;
     }
-    if (!Strings.isNullOrEmpty(host)) {
-      buf.append(sep).append("Host: ").append(host);
+    List<String> entries = new ArrayList<>();
+    for (Map.Entry<String, String> entry : values.entrySet()) {
+      entries.add(entry.getKey() + "=[" + entry.getValue() + "]");
     }
-    return buf.toString();
+    return code + ": " + String.join(", ", entries);
   }
 
-  public String getDisplayMessage()
+  // For debugging.
+  @Override
+  public String toString()
   {
-    StringBuilder buf = new StringBuilder();
-    String prefix = category().prefix();
-    if (!Strings.isNullOrEmpty(prefix)) {
-      buf.append(prefix).append(" - ");
-    }
-    buf.append(super.getMessage());
-    buf.append("\nError Code: ").append(category().userText());
-    if (context != null && context.size() > 0) {
-      for (Map.Entry<String, String> entry : context.entrySet()) {
-        buf.append("\n")
-           .append(entry.getKey())
-           .append(": ")
-           .append(entry.getValue());
-      }
-    }
-    if (!Strings.isNullOrEmpty(host)) {
-      buf.append("\nHost: ").append(host);
-    }
-    if (!Strings.isNullOrEmpty(suggestion)) {
-      buf.append("\nSuggestion: ").append(suggestion);
-    }
-    return buf.toString();
+    return format(message);
   }
 
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_EMPTY)
-  public Map<String, String> getContext()
+  public String format(String template)
   {
-    return context;
+    StringSubstitutor sub = new StringSubstitutor(values);
+    return sub.replace(template);
   }
 
-  public ErrorResponse toErrorResponse()
+  public String format(Properties catalog)
+  {
+    String template = catalog.getProperty(code);
+    if (template == null) {
+      return toString();
+    } else {
+      return format(template);
+    }
+  }
+
+  public ErrorResponse toErrorResponse(Properties catalog)
   {
     return new ErrorResponse(
-        category().userText(),
-        message(),
-        errorClass(),
-        host,
-        context
+        code,
+        format(catalog),
+        legacyClass,
+        null
     );
+  }
+
+  public abstract ErrorAudience audience();
+  public abstract int httpStatus();
+
+  public MetricCategory metricCategory()
+  {
+    return MetricCategory.FAILED;
+  }
+
+  public String getErrorCode()
+  {
+    return legacyCode;
   }
 }

@@ -22,7 +22,6 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.druid.error.DruidExceptionV1;
 import org.apache.druid.error.SqlUnsupportedError;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -74,7 +73,7 @@ public class MaxSqlAggregator extends SimpleSqlAggregator
       default:
         // This error refers to the Druid type. But, we're in SQL validation.
         // It should refer to the SQL type.
-        throw new SqlUnsupportedError("MAX does not support type [%s]", aggregationType);
+        throw SqlUnsupportedError.unsupportedAggType("MAX", aggregationType);
     }
   }
 }
