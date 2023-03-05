@@ -19,9 +19,19 @@
 
 package org.apache.druid.error;
 
-public enum MetricCategory
+public class ErrorCode
 {
-  INTERRUPTED,
-  TIME_OUT,
-  FAILED
+  public static final String SQL_GROUP = "SQL";
+  public static final String INTERNAL_GROUP = "INTERNAL";
+
+  public static final String SQL_VALIDATION_GROUP = SQL_GROUP + "-Validation";
+  public static final String SQL_PARSE_GROUP = SQL_GROUP + "-Parse";
+  public static final String SQL_UNSUPPORTED_GROUP = SQL_GROUP + "-Unsupported";
+
+  public static final String GENERAL_TAIL = "General";
+
+  public static String fullCode(String base, String tail)
+  {
+    return base + "-" + tail;
+  }
 }

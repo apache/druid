@@ -36,7 +36,6 @@ import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Optionality;
-import org.apache.druid.error.DruidExceptionV1;
 import org.apache.druid.error.SqlUnsupportedError;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
@@ -197,7 +196,7 @@ public class StringSqlAggregator implements SqlAggregator
     {
       RelDataType type = sqlOperatorBinding.getOperandType(0);
       if (type instanceof RowSignatures.ComplexSqlType) {
-        throw new SqlUnsupportedError("Cannot use STRING_AGG on complex input of type [%s]", type);
+        throw SqlUnsupportedError.unsupportedAggType("STRING_AGG", type);
       }
       return Calcites.createSqlTypeWithNullability(
           sqlOperatorBinding.getTypeFactory(),

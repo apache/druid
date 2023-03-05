@@ -19,26 +19,64 @@
 
 package org.apache.druid.error;
 
+import org.apache.druid.java.util.common.logger.Logger;
+
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
-import javax.ws.rs.core.Response.Status;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
+import java.util.Properties;
 
 public class StandardRestExceptionEncoder implements RestExceptionEncoder
 {
   private static final RestExceptionEncoder INSTANCE = new StandardRestExceptionEncoder();
+  private static final Logger LOG = new Logger(StandardRestExceptionEncoder.class);
+
+  private final Properties catalog;
 
   public static RestExceptionEncoder instance()
   {
     return INSTANCE;
   }
 
+  public StandardRestExceptionEncoder()
+  {
+    // Load the default error catalog, if it exists.
+    this.catalog = new Properties();
+    File catalogFile = new File("conf/druid/errors.properties");
+    if (catalogFile.isFile()) {
+      try (Reader reader = new BufferedReader(
+          new InputStreamReader(
+              new FileInputStream(catalogFile),
+              StandardCharsets.UTF_8))) {
+        this.catalog.load(reader);
+        LOG.info(
+            "Loaded [%d] entries from error catalog file [%s]",
+            catalog.size(),
+            catalogFile.getAbsolutePath()
+        );
+      }
+      catch (IOException e) {
+        // Warn about failures, but don't take the server down. We'll run
+        // with standard errors.
+        LOG.error(e, "Failed to load error catalog file [%s]", catalogFile.getAbsolutePath());
+      }
+    }
+  }
+
   @Override
   public ResponseBuilder builder(DruidException e)
   {
     return Response
-      .status(Response.Status.fromStatusCode(e.category().httpStatus()))
-      .entity(e.toErrorResponse())
+      .status(Response.Status.fromStatusCode(e.httpStatus()))
+      .entity(e.toErrorResponse(catalog))
       .type(MediaType.APPLICATION_JSON);
   }
 
@@ -47,27 +85,4 @@ public class StandardRestExceptionEncoder implements RestExceptionEncoder
   {
     return builder(e).build();
   }
-  //
-  //  // Temporary status mapping
-  //  private Status status(DruidExceptionV1 e)
-  //  {
-  //    switch (e.type()) {
-  //      case CONFIG:
-  //      case INTERNAL:
-  //      case NETWORK:
-  //        return Response.Status.INTERNAL_SERVER_ERROR;
-  //      case TIMEOUT:
-  //        return Response.Status.fromStatusCode(504); // No predefined status name
-  //      case NOT_FOUND:
-  //        return Response.Status.NOT_FOUND;
-  //      case RESOURCE:
-  //        return Response.Status.fromStatusCode(429); // No predefined status name
-  //      case USER:
-  //      case UNSUPPORTED:
-  //        return Response.Status.BAD_REQUEST;
-  //      default:
-  //        // Should never occur
-  //        return Response.Status.INTERNAL_SERVER_ERROR;
-  //    }
-  //  }
 }

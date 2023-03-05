@@ -24,8 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.CountingOutputStream;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionV1;
-import org.apache.druid.error.StandardRestExceptionEncoder;
+import org.apache.druid.error.RestExceptionEncoder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -47,6 +46,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -64,10 +64,11 @@ public abstract class QueryResultPusher
   private final QueryResource.QueryMetricCounter counter;
   private final MediaType contentType;
   private final Map<String, String> extraHeaders;
+  private final RestExceptionEncoder exceptionEncoder;
 
-  private StreamingHttpResponseAccumulator accumulator = null;
-  private AsyncContext asyncContext = null;
-  private HttpServletResponse response = null;
+  private StreamingHttpResponseAccumulator accumulator;
+  private AsyncContext asyncContext;
+  private HttpServletResponse response;
 
   public QueryResultPusher(
       HttpServletRequest request,
@@ -77,7 +78,8 @@ public abstract class QueryResultPusher
       QueryResource.QueryMetricCounter counter,
       String queryId,
       MediaType contentType,
-      Map<String, String> extraHeaders
+      Map<String, String> extraHeaders,
+      RestExceptionEncoder exceptionEncoder
   )
   {
     this.request = request;
@@ -88,6 +90,7 @@ public abstract class QueryResultPusher
     this.counter = counter;
     this.contentType = contentType;
     this.extraHeaders = extraHeaders;
+    this.exceptionEncoder = exceptionEncoder;
   }
 
   /**
@@ -319,7 +322,7 @@ public abstract class QueryResultPusher
       return null;
     }
 
-    switch (e.category().metricCategory()) {
+    switch (e.metricCategory()) {
       case INTERRUPTED:
         counter.incrementInterrupted();
         break;
@@ -333,7 +336,7 @@ public abstract class QueryResultPusher
 
     resultsWriter.recordFailure(e);
 
-    final Response.ResponseBuilder bob = StandardRestExceptionEncoder.instance().builder(e);
+    final Response.ResponseBuilder bob = exceptionEncoder.builder(e);
     bob.header(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId);
     for (Map.Entry<String, String> entry : extraHeaders.entrySet()) {
       bob.header(entry.getKey(), entry.getValue());

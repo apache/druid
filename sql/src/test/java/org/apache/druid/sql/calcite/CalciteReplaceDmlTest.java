@@ -22,7 +22,8 @@ package org.apache.druid.sql.calcite;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.error.DruidExceptionV1;
+import org.apache.druid.error.SqlParseError;
+import org.apache.druid.error.SqlUnsupportedError;
 import org.apache.druid.error.SqlValidationError;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -222,7 +223,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO dst OVERWRITE WHERE __time LIKE '20__-02-01' SELECT * FROM foo PARTITIONED BY MONTH")
         .expectValidationError(
             SqlValidationError.class,
-            "Unsupported operation in OVERWRITE WHERE clause: LIKE"
+            "SQL-Validation-OverwriteWhereExpr: expr=[LIKE]"
         )
         .verify();
   }
@@ -234,7 +235,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO dst OVERWRITE WHERE TRUE SELECT * FROM foo PARTITIONED BY MONTH")
         .expectValidationError(
             SqlValidationError.class,
-            "Invalid OVERWRITE WHERE clause"
+            "SQL-Validation-InvalidOverwriteWhere"
         )
         .verify();
   }
@@ -246,7 +247,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO dst OVERWRITE WHERE dim1 > TIMESTAMP '2000-01-05 00:00:00' SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlValidationError.class,
-            "Only __time column is supported in OVERWRITE WHERE clause"
+            "SQL-Validation-OverwriteWhereIsNotTime"
         )
         .verify();
   }
@@ -257,7 +258,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo ORDER BY dim1 PARTITIONED BY ALL TIME")
-        .expectValidationError(SqlValidationError.class, "Cannot have ORDER BY on a REPLACE statement, use CLUSTERED BY instead.")
+        .expectValidationError(SqlValidationError.class, "SQL-Validation-InsertOrderBy: op=[REPLACE]")
         .verify();
   }
 
@@ -268,7 +269,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-05 00:00:00' AND __time <= TIMESTAMP '2000-01-06 00:00:00' SELECT * FROM foo PARTITIONED BY MONTH")
         .expectValidationError(
             SqlValidationError.class,
-            "OVERWRITE WHERE clause contains an interval [2000-01-05T00:00:00.000Z/2000-01-06T00:00:00.001Z] which is not aligned with PARTITIONED BY granularity {type=period, period=P1M, timeZone=UTC, origin=null}"
+            "SQL-Validation-OverwriteUnalignedInterval: interval=[[2000-01-05T00:00:00.000Z/2000-01-06T00:00:00.001Z]], granularity=[{type=period, period=P1M, timeZone=UTC, origin=null}]"
         )
         .verify();
   }
@@ -280,7 +281,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-05 00:00:00' AND __time <= TIMESTAMP '2000-02-05 00:00:00' SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlValidationError.class,
-            "OVERWRITE WHERE clause contains an interval [2000-01-05T00:00:00.000Z/2000-02-05T00:00:00.001Z] which is not aligned with PARTITIONED BY granularity AllGranularity"
+            "SQL-Validation-OverwriteUnalignedInterval: interval=[[2000-01-05T00:00:00.000Z/2000-02-05T00:00:00.001Z]], granularity=[AllGranularity]"
         )
         .verify();
   }
@@ -294,7 +295,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
              + "SELECT * FROM foo PARTITIONED BY MONTH")
         .expectValidationError(
             SqlValidationError.class,
-            "Intervals for replace are empty"
+            "SQL-Validation-OverwriteEmptyIntervals"
         )
         .verify();
   }
@@ -304,7 +305,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-INVALID0:00' AND __time <= TIMESTAMP '2000-02-05 00:00:00' SELECT * FROM foo PARTITIONED BY ALL TIME")
-        .expectValidationError(SqlValidationError.class)
+        .expectValidationError(SqlParseError.class)
         .verify();
   }
 
@@ -383,7 +384,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("REPLACE INTO \"in/valid\" OVERWRITE ALL SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME")
-        .expectValidationError(SqlValidationError.class, "REPLACE dataSource cannot contain the '/' character.")
+        .expectValidationError(SqlValidationError.class, "SQL-Validation-General: message=[REPLACE dataSource cannot contain the '/' character.]")
         .verify();
   }
 
@@ -392,7 +393,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst (foo, bar) OVERWRITE ALL SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME")
-        .expectValidationError(SqlValidationError.class, "REPLACE with a target column list is not supported.")
+        .expectValidationError(SqlUnsupportedError.class, "SQL-Unsupported-InsertList: op=[REPLACE]")
         .verify();
   }
 
@@ -401,7 +402,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo")
-        .expectValidationError(SqlValidationError.class, "REPLACE statements must specify PARTITIONED BY clause explicitly")
+        .expectValidationError(SqlValidationError.class, "SQL-Validation-InsertWithoutPartitionBy: op=[REPLACE]")
         .verify();
   }
 
@@ -410,7 +411,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo CLUSTERED BY dim1")
-        .expectValidationError(SqlValidationError.class, "CLUSTERED BY found before PARTITIONED BY. In Druid, the CLUSTERED BY clause must follow the PARTITIONED BY clause")
+        .expectValidationError(SqlParseError.class, "SQL-Parse-General: message=[CLUSTERED BY found before PARTITIONED BY. In Druid, the CLUSTERED BY clause must follow the PARTITIONED BY clause]")
         .verify();
   }
 
@@ -419,7 +420,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME")
-        .expectValidationError(SqlValidationError.class, "Missing time chunk information in OVERWRITE clause for REPLACE. Use OVERWRITE WHERE <__time based condition> or OVERWRITE ALL to overwrite the entire table.")
+        .expectValidationError(SqlValidationError.class, "SQL-Validation-OverwriteTimeRange")
         .verify();
   }
 
@@ -428,7 +429,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE SELECT * FROM foo PARTITIONED BY ALL TIME")
-        .expectValidationError(SqlValidationError.class, "Missing time chunk information in OVERWRITE clause for REPLACE. Use OVERWRITE WHERE <__time based condition> or OVERWRITE ALL to overwrite the entire table.")
+        .expectValidationError(SqlValidationError.class, "SQL-Validation-OverwriteTimeRange")
         .verify();
   }
 
@@ -439,7 +440,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO INFORMATION_SCHEMA.COLUMNS OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlValidationError.class,
-            "Cannot REPLACE into INFORMATION_SCHEMA.COLUMNS because it is not a Druid datasource."
+            "SQL-Validation-InsertNotDatasource: op=[REPLACE], table=[INFORMATION_SCHEMA.COLUMNS]"
         )
         .verify();
   }
@@ -451,7 +452,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO view.aview OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlValidationError.class,
-            "Cannot REPLACE into view.aview because it is not a Druid datasource."
+            "SQL-Validation-InsertNotDatasource: op=[REPLACE], table=[view.aview]"
         )
         .verify();
   }
@@ -481,7 +482,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO nonexistent.dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlValidationError.class,
-            "Cannot REPLACE into nonexistent.dst because it is not a Druid datasource."
+            "SQL-Validation-InsertNotDatasource: op=[REPLACE], table=[nonexistent.dst]"
         )
         .verify();
   }
@@ -587,9 +588,9 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
       );
       Assert.fail("Exception should be thrown");
     }
-    catch (SqlValidationError e) {
+    catch (SqlParseError e) {
       assertEquals(
-          "Encountered 'invalid_granularity' after PARTITIONED BY. Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR function or TIME_FLOOR function",
+          "SQL-Parse-General: message=[SQL-Parse-InvalidPartitionBy: expr=['invalid_granularity']]",
           e.getMessage()
       );
     }
@@ -771,7 +772,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .context(context)
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
-        .expectValidationError(SqlValidationError.class, "sqlOuterLimit cannot be provided with REPLACE.")
+        .expectValidationError(SqlValidationError.class, "SQL-Validation-InsertContext: param=[sqlOuterLimit], op=[REPLACE]")
         .verify();
   }
 }

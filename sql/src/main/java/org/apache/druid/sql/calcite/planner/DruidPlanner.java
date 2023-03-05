@@ -31,13 +31,11 @@ import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.error.DruidAssertionError;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionV1;
+import org.apache.druid.error.ErrorCode;
 import org.apache.druid.error.SqlParseError;
 import org.apache.druid.error.SqlUnsupportedError;
 import org.apache.druid.error.SqlValidationError;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryException;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -48,6 +46,7 @@ import org.joda.time.DateTimeZone;
 
 import java.io.Closeable;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -174,9 +173,10 @@ public class DruidPlanner implements Closeable
       return new QueryHandler.SelectHandler(handlerContext, query, explain);
     }
     throw new SqlUnsupportedError(
-        "Unsupported SQL statement [%s]",
-        node.getKind()
-    );
+            "Statement",
+            "Unsupported SQL statement [${statement}]"
+         )
+        .withValue("statement", node.getKind());
   }
 
   /**
@@ -339,34 +339,55 @@ public class DruidPlanner implements Closeable
     catch (Exception inner) {
       // Anything else. Should not get here. Anything else should already have
       // been translated to a DruidException unless it is an unexpected exception.
-      return new DruidAssertionError(inner, e.getMessage());
+      return DruidAssertionError.forCause(inner, e.getMessage());
     }
   }
 
   private static DruidException parseValidationMessage(Exception e, boolean unsupported)
   {
+    if (e.getCause() instanceof DruidException) {
+      return (DruidException) e.getCause();
+    }
     // Calcite exception that probably includes a position.
     String msg = e.getMessage();
     Pattern p = Pattern.compile("(?:org\\..*: )From line (\\d+), column (\\d+) to line \\d+, column \\d+: (.*)$");
     Matcher m = p.matcher(msg);
     Exception cause;
     String errorMsg;
+    Map<String, String> values = new LinkedHashMap<>();
     if (m.matches()) {
       cause = null;
-      errorMsg = StringUtils.format("Line [%s], Column [%s]: %s", m.group(1), m.group(2), m.group(3));
+      values.put("line", m.group(1));
+      values.put("column", m.group(2));
+      values.put(DruidException.MESSAGE_KEY, m.group(3));
+      errorMsg = SqlParseError.fullMessage(DruidException.SIMPLE_MESSAGE);
     } else {
       cause = e;
-      errorMsg = msg;
+      values.put(DruidException.MESSAGE_KEY, msg);
+      errorMsg = DruidException.SIMPLE_MESSAGE;
     }
     if (unsupported) {
-      return new SqlUnsupportedError(cause, errorMsg);
+      return new SqlUnsupportedError(
+              cause,
+              ErrorCode.GENERAL_TAIL,
+              DruidException.SIMPLE_MESSAGE
+           )
+          .withValues(values);
     } else {
-      return new SqlValidationError(cause, errorMsg);
+      return new SqlValidationError(
+              e,
+              ErrorCode.GENERAL_TAIL,
+              errorMsg
+           )
+          .withValues(values);
     }
   }
 
   private static DruidException parseParserMessage(Exception e)
   {
+    if (e.getCause() instanceof DruidException) {
+      return (DruidException) e.getCause();
+    }
     // Calcite exception that probably includes a position. The normal parse
     // exception is rather cumbersome. Clean it up a bit.
     final String msg = e.getMessage();
@@ -376,17 +397,23 @@ public class DruidPlanner implements Closeable
     );
     Matcher m = p.matcher(msg);
     if (!m.matches()) {
-      return new SqlParseError(e, msg);
+      return new SqlParseError(
+              e,
+              ErrorCode.GENERAL_TAIL,
+              DruidException.SIMPLE_MESSAGE
+           )
+          .withValue(DruidException.MESSAGE_KEY, e.getMessage());
     }
     Pattern p2 = Pattern.compile("[ .]*\n\\ s+");
     Matcher m2 = p2.matcher(m.group(4).trim());
     String choices = m2.replaceAll(", ");
     return new SqlParseError(
-            "Line [%s], Column [%s]: unexpected token [%s]",
-            m.group(2),
-            m.group(3),
-            m.group(1)
+            "UnexpectedToken",
+            SqlParseError.fullMessage("unexpected token [${token}]\nExpected ${expected}")
          )
-        .suggestion("Expected one of " + choices);
+        .withValue("line", m.group(2))
+        .withValue("column", m.group(3))
+        .withValue("token", m.group(1))
+        .withValue("expected", choices);
   }
 }

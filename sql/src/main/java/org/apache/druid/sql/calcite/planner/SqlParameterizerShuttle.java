@@ -28,7 +28,8 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.SqlShuttle;
 import org.apache.calcite.util.TimestampString;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.SqlValidationError;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -69,11 +70,11 @@ public class SqlParameterizerShuttle extends SqlShuttle
   public SqlNode visit(SqlDynamicParam param)
   {
     if (plannerContext.getParameters().size() <= param.getIndex()) {
-      throw new IAE("Parameter at position [%s] is not bound", param.getIndex());
+      throw unbound(param);
     }
     TypedValue paramBinding = plannerContext.getParameters().get(param.getIndex());
     if (paramBinding == null) {
-      throw new IAE("Parameter at position [%s] is not bound", param.getIndex());
+      throw unbound(param);
     }
     if (paramBinding.value == null) {
       return SqlLiteral.createNull(param.getParserPosition());
@@ -91,7 +92,7 @@ public class SqlParameterizerShuttle extends SqlShuttle
     }
 
     if (typeName == SqlTypeName.ARRAY) {
-      return createArrayLiteral(paramBinding.value);
+      return createArrayLiteral(paramBinding.value, param.getIndex());
     }
     try {
       // This throws ClassCastException for a DATE parameter given as
@@ -105,6 +106,15 @@ public class SqlParameterizerShuttle extends SqlShuttle
     }
   }
 
+  private static DruidException unbound(SqlDynamicParam param)
+  {
+    return new SqlValidationError(
+            "UnboundParameter",
+            "Parameter at position [${index}] is not bound"
+         )
+        .withValue("index", param.getIndex() + 1);
+  }
+
   /**
    * Convert an ARRAY parameter to the equivalent of the ARRAY[a, b, ...]
    * syntax. This is not well-supported in the present version of Calcite,
@@ -112,7 +122,7 @@ public class SqlParameterizerShuttle extends SqlShuttle
    * structure. Supports a limited set of member types. Does not attempt
    * to enforce that all elements have the same type.
    */
-  private SqlNode createArrayLiteral(Object value)
+  private SqlNode createArrayLiteral(Object value, int posn)
   {
     List<?> list;
     if (value instanceof List) {
@@ -123,7 +133,11 @@ public class SqlParameterizerShuttle extends SqlShuttle
     List<SqlNode> args = new ArrayList<>(list.size());
     for (Object element : list) {
       if (element == null) {
-        throw new IAE("An array parameter cannot contain null values");
+        throw new SqlValidationError(
+                "NullParameter",
+                "Parameter [${posn}]: An array parameter cannot contain null values"
+             )
+            .withValue("posn", posn + 1);
       }
       SqlNode node;
       if (element instanceof String) {
@@ -135,10 +149,12 @@ public class SqlParameterizerShuttle extends SqlShuttle
       } else if (element instanceof Boolean) {
         node = SqlLiteral.createBoolean((Boolean) value, SqlParserPos.ZERO);
       } else {
-        throw new IAE(
-            "An array parameter does not allow values of type %s",
-            value.getClass().getSimpleName()
-        );
+        throw new SqlValidationError(
+                "InvalidParameter",
+                "Parameter [${posn}]: An array parameter does not allow values of type[${type}]"
+             )
+            .withValue("posn", posn + 1)
+            .withValue("type", value.getClass().getSimpleName());
       }
       args.add(node);
     }

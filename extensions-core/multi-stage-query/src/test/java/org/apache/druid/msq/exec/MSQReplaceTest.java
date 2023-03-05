@@ -21,8 +21,8 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.error.SqlValidationError;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.SqlValidationError;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;

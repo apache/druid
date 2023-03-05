@@ -19,32 +19,54 @@
 
 package org.apache.druid.error;
 
+import org.apache.druid.query.QueryException;
+
+import java.net.HttpURLConnection;
+
 /**
  * SQL query parse failed.
  */
 public class SqlParseError extends DruidException
 {
-  public SqlParseError(String msg, Object...args)
+  public SqlParseError(
+      String code,
+      String message
+  )
   {
-    super(msg, args);
+    this(null, code, message);
   }
 
-  public SqlParseError(Throwable cause, String msg, Object...args)
+  public SqlParseError(
+      Throwable cause,
+      String code,
+      String message
+  )
   {
-    super(cause, msg, args);
-  }
-
-  @Override
-  public ErrorCategory category()
-  {
-    return ErrorCategory.SQL_PARSE;
-  }
-
-  @Override
-  public String errorClass()
-  {
+    super(
+        cause,
+        ErrorCode.fullCode(ErrorCode.SQL_PARSE_GROUP, code),
+        fullMessage(message)
+    );
+    this.legacyCode = QueryException.SQL_PARSE_FAILED_ERROR_CODE;
     // For backward compatibility.
     // Calcite classes not visible here, so using a string
-    return "org.apache.calcite.sql.parser.SqlParseException";
+    this.legacyClass = "org.apache.calcite.sql.parser.SqlParseException";
+  }
+
+  public static String fullMessage(String message)
+  {
+    return "Line ${line}, column ${column}: " + message;
+  }
+
+  @Override
+  public ErrorAudience audience()
+  {
+    return ErrorAudience.USER;
+  }
+
+  @Override
+  public int httpStatus()
+  {
+    return HttpURLConnection.HTTP_BAD_REQUEST;
   }
 }

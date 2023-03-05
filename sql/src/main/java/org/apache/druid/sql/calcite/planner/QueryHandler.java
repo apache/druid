@@ -55,14 +55,12 @@ import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionV1;
 import org.apache.druid.error.SqlUnsupportedError;
 import org.apache.druid.error.SqlValidationError;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryException;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -204,13 +202,13 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
 
         if (!handlerContext.plannerContext().engineHasFeature(EngineFeature.ALLOW_BINDABLE_PLAN)) {
           throw new SqlValidationError(
-                "Cannot query table%s [%s] with SQL engine [%s]",
-                bindableTables.size() != 1 ? "s" : "",
-                bindableTables.stream()
+                  "WrongEngineForTable",
+                  "Cannot query table(s) [%{tables}] with SQL engine [${engine}]"
+               )
+              .withValue("tables", bindableTables.stream()
                               .map(table -> Joiner.on(".").join(table.getQualifiedName()))
-                              .collect(Collectors.joining(", ")),
-                handlerContext.engine().name()
-          );
+                              .collect(Collectors.joining(", ")))
+              .withValue("engine", handlerContext.engine().name());
         }
 
         return planWithBindableConvention();
@@ -596,15 +594,22 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     String errorMessage = handlerContext.plannerContext().getPlanningError();
     if (null == errorMessage && exception instanceof UnsupportedSQLQueryException) {
       errorMessage = exception.getMessage();
-    } else if (null == errorMessage) {
-      errorMessage = "Please check Broker logs for additional details.";
+    }
+    if (errorMessage == null) {
+      return new SqlUnsupportedError(
+          exception,
+          "Query",
+          "Query not supported. Please check Broker logs for additional details."
+       );
     } else {
       // Planning errors are more like hints: it isn't guaranteed that the planning error is actually what went wrong.
-      errorMessage = "Possible error: " + errorMessage;
+      return new SqlUnsupportedError(
+          exception,
+          "QueryWithReason",
+          "Query not supported. Possible error: ${message}"
+          )
+         .withValue("message", errorMessage);
     }
-    // Finally, add the query itself to error message that user will get.
-    return new SqlUnsupportedError(exception, "Query not supported. %s", errorMessage)
-        .addContext("SQL", handlerContext.plannerContext().getSql());
   }
 
   public static class SelectHandler extends QueryHandler
@@ -631,9 +636,10 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     {
       if (!handlerContext.plannerContext().engineHasFeature(EngineFeature.CAN_SELECT)) {
         throw new SqlValidationError(
-            "Cannot execute SELECT with SQL engine [%s]",
-            handlerContext.engine().name()
-         );
+              "WrongEngineForSelect",
+              "Cannot execute SELECT with SQL engine [${engine}]"
+           )
+          .withValue("engine", handlerContext.engine().name());
       }
       super.validate();
     }

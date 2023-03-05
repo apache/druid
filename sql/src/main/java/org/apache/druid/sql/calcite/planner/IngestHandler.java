@@ -89,10 +89,10 @@ public abstract class IngestHandler extends QueryHandler
       if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
         String opName = sqlNode.getOperator().getName();
         throw new SqlValidationError(
-            "Cannot use ORDER BY on %s [%s] statement, use CLUSTERED BY instead.",
-            "INSERT".equals(opName) ? "an" : "a",
-            opName
-        );
+              "InsertOrderBy",
+              "Cannot use ORDER BY with ${op}, use CLUSTERED BY instead"
+           )
+          .withValue("op", opName);
       }
     }
     if (sqlNode.getClusteredBy() != null) {
@@ -100,7 +100,11 @@ public abstract class IngestHandler extends QueryHandler
     }
 
     if (!query.isA(SqlKind.QUERY)) {
-      throw new SqlValidationError("Cannot execute SQL statement [%s]", query.getKind());
+      throw new SqlValidationError(
+              "Unsupported",
+              "Cannot execute SQL statement [%{op}]"
+           )
+          .withValue("op", query.getKind());
     }
     return query;
   }
@@ -117,9 +121,10 @@ public abstract class IngestHandler extends QueryHandler
   {
     if (ingestNode().getPartitionedBy() == null) {
       throw new SqlValidationError(
-          "[%s] statements must specify PARTITIONED BY clause explicitly",
-          operationName()
-      );
+              "InsertWithoutPartitionBy",
+              "${op} statements must specify the PARTITIONED BY clause explicitly"
+           )
+          .withValue("op", operationName());
     }
     try {
       PlannerContext plannerContext = handlerContext.plannerContext();
@@ -132,19 +137,21 @@ public abstract class IngestHandler extends QueryHandler
     }
     catch (JsonProcessingException e) {
       throw new SqlValidationError(
-              "Invalid partition granularity [%s]",
-              ingestionGranularity
-          );
+              "PartitionGrain",
+              "Invalid partition granularity [${grain}]"
+           )
+          .withValue("grain", ingestionGranularity);
     }
     super.validate();
     // Check if CTX_SQL_OUTER_LIMIT is specified and fail the query if it is. CTX_SQL_OUTER_LIMIT being provided causes
     // the number of rows inserted to be limited which is likely to be confusing and unintended.
     if (handlerContext.queryContextMap().get(PlannerContext.CTX_SQL_OUTER_LIMIT) != null) {
       throw new SqlValidationError(
-              "Context parameter [%s] cannot be provided with [%s]",
-              PlannerContext.CTX_SQL_OUTER_LIMIT,
-              operationName()
-      );
+              "InsertContext",
+              "Context parameter [%{param}] cannot be provided with [${op}]"
+           )
+          .withValue("param", PlannerContext.CTX_SQL_OUTER_LIMIT)
+          .withValue("op", operationName());
     }
     targetDatasource = validateAndGetDataSourceForIngest();
     resourceActions.add(new ResourceAction(new Resource(targetDatasource, ResourceType.DATASOURCE), Action.WRITE));
@@ -167,14 +174,15 @@ public abstract class IngestHandler extends QueryHandler
   {
     final SqlInsert insert = ingestNode();
     if (insert.isUpsert()) {
-      throw new SqlUnsupportedError("UPSERT is not supported.");
+      throw new SqlUnsupportedError("UPSERT", "UPSERT is not supported.");
     }
 
     if (insert.getTargetColumnList() != null) {
       throw new SqlUnsupportedError(
-          "[%s] with a target column list is not supported",
-          operationName()
-      );
+              "InsertList",
+              "[${op}] with a target column list is not supported"
+           )
+          .withValue("op", operationName());
     }
 
     final SqlIdentifier tableIdentifier = (SqlIdentifier) insert.getTargetTable();
@@ -182,7 +190,11 @@ public abstract class IngestHandler extends QueryHandler
 
     if (tableIdentifier.names.isEmpty()) {
       // I don't think this can happen, but include a branch for it just in case.
-      throw new SqlValidationError("[%s] requires a target table", operationName());
+      throw new SqlValidationError(
+              "NoInsertTarget",
+              "[${op}] requires a target table"
+           )
+          .withValue("op", operationName());
     } else if (tableIdentifier.names.size() == 1) {
       // Unqualified name.
       dataSource = Iterables.getOnlyElement(tableIdentifier.names);
@@ -195,10 +207,11 @@ public abstract class IngestHandler extends QueryHandler
         dataSource = tableIdentifier.names.get(1);
       } else {
         throw new SqlValidationError(
-              "Cannot [%s] into [%s] because it is not a Druid datasource.",
-              operationName(),
-              tableIdentifier
-        );
+                "InsertNotDatasource",
+                "Cannot [${op}] into [${table}] because it is not a Druid datasource"
+             )
+            .withValue("op", operationName())
+            .withValue("table", tableIdentifier);
       }
     }
 
@@ -206,7 +219,7 @@ public abstract class IngestHandler extends QueryHandler
       IdUtils.validateId(operationName() + " dataSource", dataSource);
     }
     catch (IllegalArgumentException e) {
-      throw new SqlValidationError(e);
+      throw SqlValidationError.forCause(e);
     }
 
     return dataSource;
@@ -276,9 +289,11 @@ public abstract class IngestHandler extends QueryHandler
     {
       if (!handlerContext.plannerContext().engineHasFeature(EngineFeature.CAN_INSERT)) {
         throw new SqlUnsupportedError(
-            "Cannot execute INSERT with SQL engine '%s'.",
-            handlerContext.engine().name()
-        );
+                "UnsupportedEngineOp",
+                "Cannot execute ${op} with SQL engine [${engine}]"
+             )
+            .withValue("op", "INSERT")
+            .withValue("engine", handlerContext.engine().name());
       }
       super.validate();
     }
@@ -323,14 +338,17 @@ public abstract class IngestHandler extends QueryHandler
     public void validate()
     {
       if (!handlerContext.plannerContext().engineHasFeature(EngineFeature.CAN_REPLACE)) {
-        throw new SqlValidationError(
-            "Cannot execute REPLACE with SQL engine [%s]",
-            handlerContext.engine().name()
-        );
+        throw new SqlUnsupportedError(
+                "UnsupportedEngineOp",
+                "Cannot execute ${op} with SQL engine [${engine}]"
+             )
+            .withValue("op", "REPLACE")
+            .withValue("engine", handlerContext.engine().name());
       }
       SqlNode replaceTimeQuery = sqlNode.getReplaceTimeQuery();
       if (replaceTimeQuery == null) {
         throw new SqlValidationError(
+            "OverwriteTimeRange",
             "Missing time chunk information in OVERWRITE clause for REPLACE. Use "
             + "OVERWRITE WHERE <__time based condition> or OVERWRITE ALL to overwrite the entire table."
         );

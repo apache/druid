@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.error.DruidExceptionV1;
 import org.apache.druid.error.SqlValidationError;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -314,7 +313,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   public void testSelectConstantExpressionEquivalentToNaN()
   {
     expectedException.expectMessage(
-        "'(log10(0) - log10(0))' evaluates to 'NaN' that is not supported in SQL. You can either cast the expression as BIGINT ('CAST((log10(0) - log10(0)) as BIGINT)') or VARCHAR ('CAST((log10(0) - log10(0)) as VARCHAR)') or change the expression itself");
+        "SQL-Unsupported-UnsupportedExpr: expr=[(log10(0) - log10(0))], eval=[NaN]"
+    );
     testQuery(
         "SELECT log10(0) - log10(0), dim1 FROM foo LIMIT 1",
         ImmutableList.of(),
@@ -326,7 +326,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   public void testSelectConstantExpressionEquivalentToInfinity()
   {
     expectedException.expectMessage(
-        "'log10(0)' evaluates to '-Infinity' that is not supported in SQL. You can either cast the expression as BIGINT ('CAST(log10(0) as BIGINT)') or VARCHAR ('CAST(log10(0) as VARCHAR)') or change the expression itself");
+        "SQL-Unsupported-UnsupportedExpr: expr=[log10(0)], eval=[-Infinity]");
     testQuery(
         "SELECT log10(0), dim1 FROM foo LIMIT 1",
         ImmutableList.of(),

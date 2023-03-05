@@ -25,7 +25,6 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rex.RexLiteral;
-import org.apache.druid.error.DruidExceptionV1;
 import org.apache.druid.error.SqlUnsupportedError;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.column.RowSignature;
@@ -131,9 +130,10 @@ public class DruidLogicalValuesRule extends RelOptRule
       case NULL:
         if (!literal.isNull()) {
           throw new SqlUnsupportedError(
-              "Non-null constant [%s] for a NULL literal",
-              literal
-          );
+                  "NonNullConst",
+                  "Non-null constant [${expr}] for a NULL literal"
+               )
+              .withValue("expr", literal);
         }
         return null;
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
@@ -141,10 +141,11 @@ public class DruidLogicalValuesRule extends RelOptRule
       case TIME_WITH_LOCAL_TIME_ZONE:
       default:
         throw new SqlUnsupportedError(
-            "Literal [%s] type [%s] is not supported",
-            literal,
-            literal.getType().getSqlTypeName()
-        );
+                "Literal",
+                "Literal [${expr}] type [${type}] is not supported"
+             )
+            .withValue("expr", literal)
+            .withValue("type", literal.getType().getSqlTypeName());
     }
   }
 }

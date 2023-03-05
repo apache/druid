@@ -19,6 +19,10 @@
 
 package org.apache.druid.error;
 
+import org.apache.druid.query.QueryException;
+
+import java.net.HttpURLConnection;
+
 /**
  * SQL query validation failed, most likely due to a problem in the SQL statement
  * which the user provided.
@@ -28,32 +32,47 @@ package org.apache.druid.error;
  */
 public class SqlValidationError extends DruidException
 {
-  public SqlValidationError(String msg, Object...args)
+  public SqlValidationError(
+      String code,
+      String message
+  )
   {
-    super(msg, args);
+    this(null, code, message);
   }
 
-  public SqlValidationError(Throwable cause, String msg, Object...args)
+  public SqlValidationError(
+      Throwable cause,
+      String code,
+      String message
+  )
   {
-    super(cause, msg, args);
-  }
-
-  public SqlValidationError(Throwable cause)
-  {
-    super(cause, cause.getMessage());
+    super(
+        cause,
+        ErrorCode.fullCode(ErrorCode.SQL_VALIDATION_GROUP, code),
+        message
+    );
+    this.legacyClass = "org.apache.calcite.tools.ValidationException";
+    this.legacyCode = QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE;
   }
 
   @Override
-  public ErrorCategory category()
+  public ErrorAudience audience()
   {
-    return ErrorCategory.SQL_VALIDATION;
+    return ErrorAudience.USER;
   }
 
   @Override
-  public String errorClass()
+  public int httpStatus()
   {
-    // For backward compatibility.
-    // Using string because the class is not visible here.
-    return "org.apache.calcite.tools.ValidationException";
+    return HttpURLConnection.HTTP_BAD_REQUEST;
+  }
+
+  public static DruidException forCause(Throwable e)
+  {
+    return new SqlValidationError(
+            ErrorCode.GENERAL_TAIL,
+            SIMPLE_MESSAGE
+         )
+        .withValue(MESSAGE_KEY, e.getMessage());
   }
 }

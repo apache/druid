@@ -19,26 +19,55 @@
 
 package org.apache.druid.error;
 
+import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.query.QueryException;
+
+import java.net.HttpURLConnection;
+
 public class DruidAssertionError extends DruidException
 {
-  public DruidAssertionError(String msg, Object...args)
+  public DruidAssertionError(
+      String message
+  )
   {
-    super(msg, args);
+    this(null, message);
   }
 
-  public DruidAssertionError(Throwable cause, String msg, Object...args)
+  public DruidAssertionError(
+      Throwable cause,
+      String message
+  )
   {
-    super(cause, msg, args);
+    super(
+        cause,
+        ErrorCode.fullCode(ErrorCode.INTERNAL_GROUP, "AssertionFailed"),
+        message
+    );
+    this.legacyCode = QueryException.UNSUPPORTED_OPERATION_ERROR_CODE;
+    this.legacyClass = UOE.class.getName();
   }
 
-  public DruidAssertionError(Throwable cause)
+  public static DruidException forMessage(String message)
   {
-    super(cause, cause.getMessage());
+    return new DruidAssertionError(SIMPLE_MESSAGE)
+        .withValue(MESSAGE_KEY, message);
+  }
+
+  public static DruidException forCause(Throwable cause, String message)
+  {
+    return new DruidAssertionError(cause, SIMPLE_MESSAGE)
+        .withValue(MESSAGE_KEY, message);
   }
 
   @Override
-  public ErrorCategory category()
+  public ErrorAudience audience()
   {
-    return ErrorCategory.INTERNAL;
+    return ErrorAudience.DRUID_DEVELOPER;
+  }
+
+  @Override
+  public int httpStatus()
+  {
+    return HttpURLConnection.HTTP_INTERNAL_ERROR;
   }
 }

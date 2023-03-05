@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import org.apache.druid.common.exception.SanitizableException;
+import org.apache.druid.error.RestExceptionEncoder;
 import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
@@ -81,6 +82,7 @@ public class SqlResource
   private final ServerConfig serverConfig;
   private final ResponseContextConfig responseContextConfig;
   private final DruidNode selfNode;
+  private final RestExceptionEncoder exceptionEncoder;
 
   @Inject
   SqlResource(
@@ -90,7 +92,8 @@ public class SqlResource
       final SqlLifecycleManager sqlLifecycleManager,
       final ServerConfig serverConfig,
       ResponseContextConfig responseContextConfig,
-      @Self DruidNode selfNode
+      @Self DruidNode selfNode,
+      RestExceptionEncoder exceptionEncoder
   )
   {
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
@@ -100,7 +103,7 @@ public class SqlResource
     this.serverConfig = Preconditions.checkNotNull(serverConfig, "serverConfig");
     this.responseContextConfig = responseContextConfig;
     this.selfNode = selfNode;
-
+    this.exceptionEncoder = exceptionEncoder;
   }
 
   @POST
@@ -208,7 +211,6 @@ public class SqlResource
 
   private class SqlResourceQueryResultPusher extends QueryResultPusher
   {
-
     private final String sqlQueryId;
     private final HttpStatement stmt;
     private final SqlQuery sqlQuery;
@@ -223,13 +225,14 @@ public class SqlResource
     {
       super(
           req,
-          SqlResource.this.jsonMapper,
-          SqlResource.this.responseContextConfig,
-          SqlResource.this.selfNode,
+          jsonMapper,
+          responseContextConfig,
+          selfNode,
           SqlResource.QUERY_METRIC_COUNTER,
           sqlQueryId,
           MediaType.APPLICATION_JSON_TYPE,
-          headers
+          headers,
+          exceptionEncoder
       );
       this.sqlQueryId = sqlQueryId;
       this.stmt = stmt;

@@ -24,7 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
-import org.apache.druid.error.DruidExceptionV1;
+import org.apache.druid.error.SqlParseError;
+import org.apache.druid.error.SqlUnsupportedError;
 import org.apache.druid.error.SqlValidationError;
 import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.java.util.common.ISE;
@@ -63,7 +64,6 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
 import org.junit.Test;
@@ -87,7 +87,6 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class MSQSelectTest extends MSQTestBase
 {
-
   @Parameterized.Parameters(name = "{index}:with context {0}")
   public static Collection<Object[]> data()
   {
@@ -1017,8 +1016,8 @@ public class MSQSelectTest extends MSQTestBase
     testSelectQuery()
         .setSql("select a from ")
         .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(SqlValidationError.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Encountered \"from <EOF>\""))
+            CoreMatchers.instanceOf(SqlParseError.class),
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("SQL-Parse-UnexpectedToken: line=[1], column=[10], token=[from <EOF>],"))
         ))
         .setQueryContext(context)
         .verifyPlanningErrors();
@@ -1034,7 +1033,7 @@ public class MSQSelectTest extends MSQTestBase
             CoreMatchers.allOf(
                 CoreMatchers.instanceOf(SqlValidationError.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                    "Cannot query table INFORMATION_SCHEMA.SCHEMATA with SQL engine 'msq-task'."))
+                    "SQL-Validation-WrongEngineForTable: tables=[INFORMATION_SCHEMA.SCHEMATA], engine=[msq-task]"))
             )
         )
         .verifyPlanningErrors();
@@ -1050,7 +1049,7 @@ public class MSQSelectTest extends MSQTestBase
             CoreMatchers.allOf(
                 CoreMatchers.instanceOf(SqlValidationError.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                    "Cannot query table sys.segments with SQL engine 'msq-task'."))
+                    "SQL-Validation-WrongEngineForTable: tables=[sys.segments], engine=[msq-task]"))
             )
         )
         .verifyPlanningErrors();
@@ -1066,7 +1065,7 @@ public class MSQSelectTest extends MSQTestBase
             CoreMatchers.allOf(
                 CoreMatchers.instanceOf(SqlValidationError.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                    "Cannot query table sys.segments with SQL engine 'msq-task'."))
+                    "SQL-Validation-WrongEngineForTable: tables=[sys.segments], engine=[msq-task]"))
             )
         )
         .verifyPlanningErrors();
@@ -1083,12 +1082,11 @@ public class MSQSelectTest extends MSQTestBase
             CoreMatchers.allOf(
                 CoreMatchers.instanceOf(SqlValidationError.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                    "Cannot query table sys.segments with SQL engine 'msq-task'."))
+                    "SQL-Validation-WrongEngineForTable: tables=[sys.segments], engine=[msq-task]"))
             )
         )
         .verifyPlanningErrors();
   }
-
 
   @Test
   public void testSelectOnUserDefinedSourceContainingWith()
@@ -1394,7 +1392,7 @@ public class MSQSelectTest extends MSQTestBase
         .setSql("select unique_dim1 from foo2 group by unique_dim1")
         .setQueryContext(context)
         .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(UnsupportedSQLQueryException.class),
+            CoreMatchers.instanceOf(SqlUnsupportedError.class),
             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
                 "SQL requires a group-by on a column of type COMPLEX<hyperUnique> that is unsupported"))
         ))

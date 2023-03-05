@@ -638,12 +638,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       Assert.assertEquals(
           sql,
           StringUtils.format("Query not supported. Possible error: %s", expectedError),
-          e.message()
-      );
-      Assert.assertEquals(
-          sql,
-          sql,
-          e.getContext().get("SQL")
+          e.toString()
       );
     }
     catch (Exception e) {

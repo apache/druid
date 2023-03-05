@@ -35,6 +35,7 @@ import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrat
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.error.ErrorResponse;
+import org.apache.druid.error.StandardRestExceptionEncoder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
@@ -310,7 +311,8 @@ public class SqlResourceTest extends CalciteTestBase
         lifecycleManager,
         new ServerConfig(),
         TEST_RESPONSE_CONTEXT_CONFIG,
-        DUMMY_DRUID_NODE
+        DUMMY_DRUID_NODE,
+        StandardRestExceptionEncoder.instance()
     );
   }
 
@@ -1530,7 +1532,8 @@ public class SqlResourceTest extends CalciteTestBase
           }
         },
         TEST_RESPONSE_CONTEXT_CONFIG,
-        DUMMY_DRUID_NODE
+        DUMMY_DRUID_NODE,
+        StandardRestExceptionEncoder.instance()
     );
 
     String errorMessage = "This will be supported in Druid 9999";
@@ -1579,7 +1582,8 @@ public class SqlResourceTest extends CalciteTestBase
           }
         },
         TEST_RESPONSE_CONTEXT_CONFIG,
-        DUMMY_DRUID_NODE
+        DUMMY_DRUID_NODE,
+        StandardRestExceptionEncoder.instance()
     );
 
     String errorMessage = "could not assert";

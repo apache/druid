@@ -26,8 +26,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.annotation.Nullable;
 
-import java.util.Map;
-
 /**
  * Union of the {@link org.apache.druid.query.QueryException} and
  * {@link DruidExceptionV1} fields. Used in tests to deserialize errors which may
@@ -39,22 +37,19 @@ public class ErrorResponse
   private final String code;
   private final String errorClass;
   private final String host;
-  private Map<String, String> context;
 
   @JsonCreator
   public ErrorResponse(
       @JsonProperty("error") @Nullable String errorCode,
       @JsonProperty("errorMessage") @Nullable String errorMessage,
       @JsonProperty("errorClass") @Nullable String errorClass,
-      @JsonProperty("host") @Nullable String host,
-      @JsonProperty("context") @Nullable Map<String, String> context
+      @JsonProperty("host") @Nullable String host
   )
   {
     this.msg = errorMessage;
     this.code = errorCode;
     this.errorClass = errorClass;
     this.host = host;
-    this.context = context;
   }
 
   @Nullable
@@ -83,12 +78,5 @@ public class ErrorResponse
   public String getHost()
   {
     return host;
-  }
-
-  @JsonProperty
-  @JsonInclude(Include.NON_EMPTY)
-  public Map<String, String> getContext()
-  {
-    return context;
   }
 }
