@@ -35,12 +35,9 @@ import java.util.Set;
 /**
  * Tests the WindowOperatorQuery, it would actually be a lot better to run this through some tests that actually
  * validate the operation of queries, but all of the efforts to build out test scaffolding and framework have gone
- * into building things out for SQL query operations.  As such, all of the tests that validating the actual native
- * functionality actually run from the `druid-sql` module instead of this module.  It would be best to de-couple
- * these and have all of the native, query processing tests happen directly here in processing and have the SQL
- * tests only concern themselves with how they plan SQL into Native, but that's a bit big of a nugget to bite off
- * at this point in time, so instead we continue the building of technical debt by making this "test" run lines
- * of code without actually testing much meaningful behavior.
+ * into building things out for SQL query operations.  As such, all of the tests validating the actual native
+ * functionality actually run from the `druid-sql` module instead of this module.  It would be really cool to move
+ * the SQL stuff into the processing module so that it can be handled in the same location here.
  * <p>
  * For now, view CalciteWindowQueryTest for actual tests that validate behavior.
  */

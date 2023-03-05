@@ -170,16 +170,21 @@ public class ClusterConfig
     return new ResolvedConfig(clusterName, resolveIncludes(), configTags);
   }
 
+  public static boolean isIndexer()
+  {
+    return "indexer".equals(System.getenv("USE_INDEXER"));
+  }
+
   /**
    * Create the set of configuration tags for this run. At present, the only options
    * are "middleManager" or "indexer" corresponding to the value of the
-   * {@code DRUID_INTEGRATION_TEST_INDEXER} env var which says whether this cluster has
+   * {@code USE_INDEXER} env var which says whether this cluster has
    * an indexer or middle manager.
    */
   private Set<String> createConfigTags()
   {
     String indexer = "middleManager";
-    String indexerValue = System.getenv("DRUID_INTEGRATION_TEST_INDEXER");
+    String indexerValue = System.getenv("USE_INDEXER");
     if (indexerValue != null) {
       indexer = indexerValue;
     }

@@ -42,10 +42,10 @@ public class OperatorTestHelper
           int index = 0;
 
           @Override
-          public boolean push(RowsAndColumns rac)
+          public Operator.Signal push(RowsAndColumns rac)
           {
             helpers[index++].validate(rac);
-            return true;
+            return Operator.Signal.GO;
           }
         }
     ).withFinalValidation(
@@ -61,10 +61,10 @@ public class OperatorTestHelper
           int index = 0;
 
           @Override
-          public boolean push(RowsAndColumns rac)
+          public Operator.Signal push(RowsAndColumns rac)
           {
             helpers[index++].validate(rac);
-            return index < helpers.length;
+            return index < helpers.length ? Operator.Signal.GO : Operator.Signal.STOP;
           }
         }
     ).withFinalValidation(
@@ -103,7 +103,7 @@ public class OperatorTestHelper
   public OperatorTestHelper runToCompletion(Operator op)
   {
     TestReceiver receiver = this.receiverSupply.get();
-    op.go(receiver);
+    Operator.go(op, receiver);
     Assert.assertTrue(receiver.isCompleted());
     if (finalValidation != null) {
       finalValidation.accept(receiver);
@@ -113,7 +113,7 @@ public class OperatorTestHelper
 
   public interface JustPushMe
   {
-    boolean push(RowsAndColumns rac);
+    Operator.Signal push(RowsAndColumns rac);
   }
 
   public static class TestReceiver implements Operator.Receiver
@@ -129,7 +129,7 @@ public class OperatorTestHelper
     }
 
     @Override
-    public boolean push(RowsAndColumns rac)
+    public Operator.Signal push(RowsAndColumns rac)
     {
       numPushed.incrementAndGet();
       return pushFn.push(rac);

@@ -41,6 +41,9 @@ cd /
 
 # Test-specific way to define extensions. Compose defines two test-specific
 # variables. We combine these to create the final form converted to a property.
+if [ -n "$MYSQL_DRIVER_CLASSNAME" ]; then
+  export druid_metadata_mysql_driver_driverClassName="$MYSQL_DRIVER_CLASSNAME"
+fi
 if [ -n "$druid_extensions_loadList" ]; then
 	echo "Using the provided druid_extensions_loadList=$druid_extensions_loadList"
 else

@@ -263,7 +263,7 @@ The size-based split hint spec affects all splittable input sources except for t
 
 #### Segments Split Hint Spec
 
-The segments split hint spec is used only for [`DruidInputSource`](./native-batch-input-source.md) and legacy `IngestSegmentFirehose`.
+The segments split hint spec is used only for [`DruidInputSource`](./native-batch-input-source.md).
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
@@ -588,7 +588,7 @@ An example of the result is
           "filter": "lineitem.tbl.5"
         },
         "inputFormat": {
-          "format": "tsv",
+          "type": "tsv",
           "delimiter": "|",
           "columns": [
             "l_orderkey",

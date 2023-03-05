@@ -23,6 +23,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -180,15 +181,19 @@ public class VirtualColumnRegistry
     for (Map.Entry<String, ExpressionAndTypeHint> virtualColumn : virtualColumnsByName.entrySet()) {
       final String columnName = virtualColumn.getKey();
 
+      final ColumnType typeHint = virtualColumn.getValue().getTypeHint();
       // this is expensive, maybe someday it could use the typeHint, or the inferred type, but for now use native
       // expression type inference
+      final ColumnCapabilities virtualCapabilities = virtualColumn.getValue().getExpression().toVirtualColumn(
+          columnName,
+          typeHint,
+          macroTable
+      ).capabilities(baseSignature, columnName);
+
+      // fall back to type hint
       builder.add(
           columnName,
-          virtualColumn.getValue().getExpression().toVirtualColumn(
-              columnName,
-              virtualColumn.getValue().getTypeHint(),
-              macroTable
-          ).capabilities(baseSignature, columnName).toColumnType()
+          virtualCapabilities != null ? virtualCapabilities.toColumnType() : typeHint
       );
     }
 

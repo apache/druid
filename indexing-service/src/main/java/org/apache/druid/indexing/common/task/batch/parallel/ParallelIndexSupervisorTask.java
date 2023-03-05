@@ -30,7 +30,6 @@ import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.Union;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.IngestionState;
@@ -122,7 +121,7 @@ import java.util.stream.Collectors;
 
 /**
  * ParallelIndexSupervisorTask is capable of running multiple subTasks for parallel indexing. This is
- * applicable if the input {@link FiniteFirehoseFactory} is splittable. While this task is running, it can submit
+ * applicable if the input {@link InputSource} is splittable. While this task is running, it can submit
  * multiple child tasks to overlords. This task succeeds only when all its child tasks succeed; otherwise it fails.
  *
  * @see ParallelIndexTaskRunner
@@ -241,9 +240,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       checkPartitionsSpecForForceGuaranteedRollup(ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec());
     }
 
-    this.baseInputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
-        ingestionSchema.getDataSchema().getParser()
-    );
+    this.baseInputSource = ingestionSchema.getIOConfig().getNonNullInputSource();
     this.missingIntervalsInOverwriteMode = (getIngestionMode()
                                             != IngestionMode.APPEND)
                                            && ingestionSchema.getDataSchema()
@@ -426,8 +423,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return findInputSegments(
         getDataSource(),
         taskActionClient,
-        intervals,
-        ingestionSchema.getIOConfig().getFirehoseFactory()
+        intervals
     );
   }
 
@@ -1128,12 +1124,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     Set<DataSegment> tombStones = Collections.emptySet();
     if (getIngestionMode() == IngestionMode.REPLACE) {
-      TombstoneHelper tombstoneHelper = new TombstoneHelper(
-          newSegments,
-          ingestionSchema.getDataSchema(),
-          toolbox.getTaskActionClient()
-      );
-      List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals();
+      TombstoneHelper tombstoneHelper = new TombstoneHelper(toolbox.getTaskActionClient());
+      List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals(newSegments, ingestionSchema.getDataSchema());
       if (!tombstoneIntervals.isEmpty()) {
 
         Map<Interval, SegmentIdWithShardSpec> tombstonesAnShards = new HashMap<>();
@@ -1146,7 +1138,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           tombstonesAnShards.put(interval, segmentIdWithShardSpec);
         }
 
-        tombStones = tombstoneHelper.computeTombstones(tombstonesAnShards);
+        tombStones = tombstoneHelper.computeTombstones(ingestionSchema.getDataSchema(), tombstonesAnShards);
         // add tombstones
         newSegments.addAll(tombStones);
 

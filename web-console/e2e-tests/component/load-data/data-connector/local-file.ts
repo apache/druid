@@ -16,11 +16,12 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-chromium';
+import type * as playwright from 'playwright-chromium';
 
 import { setLabeledInput } from '../../../util/playwright';
 
-import { clickApplyButton, DataConnector } from './data-connector';
+import type { DataConnector } from './data-connector';
+import { clickApplyButton } from './data-connector';
 
 /**
  * Local file connector for data loader input data.

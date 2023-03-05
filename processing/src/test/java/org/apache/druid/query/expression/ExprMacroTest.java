@@ -193,8 +193,7 @@ public class ExprMacroTest
   @Test
   public void testIPv4AddressParse()
   {
-    Long nullLong = NullHandling.replaceWithDefault() ? NullHandling.ZERO_LONG : null;
-    assertExpr("ipv4_parse(x)", nullLong);
+    assertExpr("ipv4_parse(x)", null);
     assertExpr("ipv4_parse(ipv4_string)", IPV4_LONG);
     assertExpr("ipv4_parse(ipv4_long)", IPV4_LONG);
     assertExpr("ipv4_parse(ipv4_stringify(ipv4_long))", IPV4_LONG);

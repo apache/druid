@@ -22,6 +22,8 @@ package org.apache.druid.query.operator;
 import org.apache.druid.query.operator.window.Processor;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
+import java.io.Closeable;
+
 /**
  * An Operator that applies a {@link Processor}, see javadoc on that interface for an explanation.
  */
@@ -40,21 +42,24 @@ public class WindowProcessorOperator implements Operator
   }
 
   @Override
-  public void go(Receiver receiver)
+  public Closeable goOrContinue(Closeable continuation, Receiver receiver)
   {
-    child.go(new Receiver()
-    {
-      @Override
-      public boolean push(RowsAndColumns rac)
-      {
-        return receiver.push(windowProcessor.process(rac));
-      }
+    return child.goOrContinue(
+        continuation,
+        new Receiver()
+        {
+          @Override
+          public Signal push(RowsAndColumns rac)
+          {
+            return receiver.push(windowProcessor.process(rac));
+          }
 
-      @Override
-      public void completed()
-      {
-        receiver.completed();
-      }
-    });
+          @Override
+          public void completed()
+          {
+            receiver.completed();
+          }
+        }
+    );
   }
 }

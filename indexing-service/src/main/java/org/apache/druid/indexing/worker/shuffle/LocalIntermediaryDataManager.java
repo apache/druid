@@ -29,6 +29,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.GenericPartitionStat;
@@ -90,7 +91,6 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
   private final long intermediaryPartitionDiscoveryPeriodSec;
   private final long intermediaryPartitionCleanupPeriodSec;
   private final Period intermediaryPartitionTimeout;
-  private final TaskConfig taskConfig;
   private final List<StorageLocation> shuffleDataLocations;
   private final OverlordClient overlordClient;
 
@@ -109,23 +109,26 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
   @MonotonicNonNull
   private ScheduledExecutorService supervisorTaskChecker;
 
+  private final TaskStorageDirTracker dirTracker;
+
   @Inject
   public LocalIntermediaryDataManager(
       WorkerConfig workerConfig,
       TaskConfig taskConfig,
-      OverlordClient overlordClient
+      OverlordClient overlordClient,
+      TaskStorageDirTracker dirTracker
   )
   {
     this.intermediaryPartitionDiscoveryPeriodSec = workerConfig.getIntermediaryPartitionDiscoveryPeriodSec();
     this.intermediaryPartitionCleanupPeriodSec = workerConfig.getIntermediaryPartitionCleanupPeriodSec();
     this.intermediaryPartitionTimeout = workerConfig.getIntermediaryPartitionTimeout();
-    this.taskConfig = taskConfig;
     this.shuffleDataLocations = taskConfig
         .getShuffleDataLocations()
         .stream()
         .map(config -> new StorageLocation(config.getPath(), config.getMaxSize(), config.getFreeSpacePercent()))
         .collect(Collectors.toList());
     this.overlordClient = overlordClient;
+    this.dirTracker = dirTracker;
   }
 
   @Override
@@ -292,7 +295,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
     );
 
     // Create a zipped segment in a temp directory.
-    final File taskTempDir = taskConfig.getTaskTempDir(subTaskId);
+    final File taskTempDir = dirTracker.getTaskTempDir(subTaskId);
     final Closer closer = Closer.create();
     closer.register(() -> {
       try {

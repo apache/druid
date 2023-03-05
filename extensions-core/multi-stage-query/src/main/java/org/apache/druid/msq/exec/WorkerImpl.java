@@ -22,6 +22,7 @@ package org.apache.druid.msq.exec;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.FutureCallback;
@@ -32,6 +33,7 @@ import com.google.common.util.concurrent.SettableFuture;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
+import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableNilFrameChannel;
@@ -41,6 +43,8 @@ import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.frame.processor.BlockingQueueOutputChannelFactory;
 import org.apache.druid.frame.processor.Bouncer;
+import org.apache.druid.frame.processor.ComposingOutputChannelFactory;
+import org.apache.druid.frame.processor.DurableStorageOutputChannelFactory;
 import org.apache.druid.frame.processor.FileOutputChannelFactory;
 import org.apache.druid.frame.processor.FrameChannelMuxer;
 import org.apache.druid.frame.processor.FrameProcessor;
@@ -50,6 +54,7 @@ import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.processor.SuperSorter;
 import org.apache.druid.frame.processor.SuperSorterProgressTracker;
+import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
@@ -102,8 +107,6 @@ import org.apache.druid.msq.kernel.worker.WorkerStageKernel;
 import org.apache.druid.msq.kernel.worker.WorkerStagePhase;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.msq.shuffle.DurableStorageInputChannelFactory;
-import org.apache.druid.msq.shuffle.DurableStorageOutputChannelFactory;
-import org.apache.druid.msq.shuffle.DurableStorageUtils;
 import org.apache.druid.msq.shuffle.WorkerInputChannelFactory;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
@@ -162,6 +165,7 @@ public class WorkerImpl implements Worker
   private final ConcurrentHashMap<StageId, ConcurrentHashMap<Integer, ReadableFrameChannel>> stageOutputs = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<StageId, CounterTracker> stageCounters = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<StageId, WorkerStageKernel> stageKernelMap = new ConcurrentHashMap<>();
+  private final ByteTracker intermediateSuperSorterLocalStorageTracker;
   private final boolean durableStageStorageEnabled;
 
   /**
@@ -186,6 +190,9 @@ public class WorkerImpl implements Worker
     this.context = context;
     this.selfDruidNode = context.selfNode();
     this.processorBouncer = context.processorBouncer();
+    this.intermediateSuperSorterLocalStorageTracker = new ByteTracker(
+        MultiStageQueryContext.getIntermediateSuperSorterStorageMaxLocalBytes(QueryContext.of(task.getContext()))
+    );
     this.durableStageStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(
         QueryContext.of(task.getContext())
     );
@@ -324,7 +331,13 @@ public class WorkerImpl implements Worker
         final StageDefinition stageDefinition = kernel.getStageDefinition();
 
         if (kernel.getPhase() == WorkerStagePhase.NEW) {
-          log.debug("New work order: %s", context.jsonMapper().writeValueAsString(kernel.getWorkOrder()));
+
+          log.info("Processing work order for stage [%d]" +
+                   (log.isDebugEnabled()
+                    ? StringUtils.format(
+                       " with payload [%s]",
+                       context.jsonMapper().writeValueAsString(kernel.getWorkOrder())
+                   ) : ""), stageDefinition.getId().getStageNumber());
 
           // Create separate inputChannelFactory per stage, because the list of tasks can grow between stages, and
           // so we need to avoid the memoization in baseInputChannelFactory.
@@ -437,6 +450,7 @@ public class WorkerImpl implements Worker
   @Override
   public void stopGracefully()
   {
+    log.info("Stopping gracefully for taskId [%s]", task.getId());
     kernelManipulationQueue.add(
         kernel -> {
           // stopGracefully() is called when the containing process is terminated, or when the task is canceled.
@@ -476,7 +490,7 @@ public class WorkerImpl implements Worker
     if (channel instanceof ReadableNilFrameChannel) {
       // Build an empty frame file.
       final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      FrameFileWriter.open(Channels.newChannel(baos), null).close();
+      FrameFileWriter.open(Channels.newChannel(baos), null, ByteTracker.unboundedTracker()).close();
 
       final ByteArrayInputStream in = new ByteArrayInputStream(baos.toByteArray());
 
@@ -513,6 +527,7 @@ public class WorkerImpl implements Worker
   @Override
   public void postWorkOrder(final WorkOrder workOrder)
   {
+    log.info("Got work order for stage [%d]", workOrder.getStageNumber());
     if (task.getWorkerNumber() != workOrder.getWorkerNumber()) {
       throw new ISE("Worker number mismatch: expected [%d]", task.getWorkerNumber());
     }
@@ -562,12 +577,17 @@ public class WorkerImpl implements Worker
   @Override
   public void postCleanupStage(final StageId stageId)
   {
-    log.info("Cleanup order for stage: [%s] received", stageId);
+    log.info("Cleanup order for stage [%s] received", stageId);
     kernelManipulationQueue.add(
         holder -> {
           cleanStageOutput(stageId, true);
           // Mark the stage as FINISHED
-          holder.getStageKernelMap().get(stageId).setStageFinished();
+          WorkerStageKernel stageKernel = holder.getStageKernelMap().get(stageId);
+          if (stageKernel == null) {
+            log.warn("Stage id [%s] non existent. Unable to mark the stage kernel for it as FINISHED", stageId);
+          } else {
+            stageKernel.setStageFinished();
+          }
         }
     );
   }
@@ -575,17 +595,19 @@ public class WorkerImpl implements Worker
   @Override
   public void postFinish()
   {
+    log.info("Finish received for task [%s]", task.getId());
     kernelManipulationQueue.add(KernelHolder::setDone);
   }
 
   @Override
   public ClusterByStatisticsSnapshot fetchStatisticsSnapshot(StageId stageId)
   {
+    log.info("Fetching statistics for stage [%d]", stageId.getStageNumber());
     if (stageKernelMap.get(stageId) == null) {
       throw new ISE("Requested statistics snapshot for non-existent stageId %s.", stageId);
     } else if (stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot() == null) {
       throw new ISE(
-          "Requested statistics snapshot is not generated yet for stageId[%s]",
+          "Requested statistics snapshot is not generated yet for stageId [%s]",
           stageId
       );
     } else {
@@ -596,11 +618,16 @@ public class WorkerImpl implements Worker
   @Override
   public ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(StageId stageId, long timeChunk)
   {
+    log.debug(
+        "Fetching statistics for stage [%d]  with time chunk [%d] ",
+        stageId.getStageNumber(),
+        timeChunk
+    );
     if (stageKernelMap.get(stageId) == null) {
-      throw new ISE("Requested statistics snapshot for non-existent stageId[%s].", stageId);
+      throw new ISE("Requested statistics snapshot for non-existent stageId [%s].", stageId);
     } else if (stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot() == null) {
       throw new ISE(
-          "Requested statistics snapshot is not generated yet for stageId[%s]",
+          "Requested statistics snapshot is not generated yet for stageId [%s]",
           stageId
       );
     } else {
@@ -661,13 +688,48 @@ public class WorkerImpl implements Worker
           stageNumber,
           task().getId(),
           frameSize,
-          MSQTasks.makeStorageConnector(context.injector())
+          MSQTasks.makeStorageConnector(context.injector()),
+          context.tempDir()
       );
     } else {
       final File fileChannelDirectory =
           new File(context.tempDir(), StringUtils.format("output_stage_%06d", stageNumber));
 
-      return new FileOutputChannelFactory(fileChannelDirectory, frameSize);
+      return new FileOutputChannelFactory(fileChannelDirectory, frameSize, null);
+    }
+  }
+
+  private OutputChannelFactory makeSuperSorterIntermediateOutputChannelFactory(
+      final FrameContext frameContext,
+      final int stageNumber,
+      final File tmpDir
+  )
+  {
+    final int frameSize = frameContext.memoryParameters().getLargeFrameSize();
+    final File fileChannelDirectory =
+        new File(tmpDir, StringUtils.format("intermediate_output_stage_%06d", stageNumber));
+    final FileOutputChannelFactory fileOutputChannelFactory =
+        new FileOutputChannelFactory(fileChannelDirectory, frameSize, intermediateSuperSorterLocalStorageTracker);
+
+    if (MultiStageQueryContext.isComposedIntermediateSuperSorterStorageEnabled(QueryContext.of(task.getContext())) &&
+        durableStageStorageEnabled) {
+      return new ComposingOutputChannelFactory(
+          ImmutableList.of(
+              fileOutputChannelFactory,
+              DurableStorageOutputChannelFactory.createStandardImplementation(
+                  task.getControllerTaskId(),
+                  task().getWorkerNumber(),
+                  stageNumber,
+                  task().getId(),
+                  frameSize,
+                  MSQTasks.makeStorageConnector(context.injector()),
+                  tmpDir
+              )
+          ),
+          frameSize
+      );
+    } else {
+      return fileOutputChannelFactory;
     }
   }
 
@@ -871,16 +933,22 @@ public class WorkerImpl implements Worker
           stagePartitionBoundariesFuture = Futures.immediateFuture(kernel.getResultPartitionBoundaries());
         }
 
+        final File sorterTmpDir = new File(context.tempDir(), "super-sort-" + UUID.randomUUID());
+        FileUtils.mkdirp(sorterTmpDir);
+        if (!sorterTmpDir.isDirectory()) {
+          throw new IOException("Cannot create directory: " + sorterTmpDir);
+        }
+
         outputChannelsFuture = superSortOutputChannels(
             workOrder.getStageDefinition(),
             clusterBy,
             workerResultAndOutputChannels.getOutputChannels(),
             stagePartitionBoundariesFuture,
             shuffleOutputChannelFactory,
+            makeSuperSorterIntermediateOutputChannelFactory(frameContext, stageDef.getStageNumber(), sorterTmpDir),
             exec,
             cancellationId,
             frameContext.memoryParameters(),
-            context,
             kernelManipulationQueue,
             counters.sortProgress()
         );
@@ -958,7 +1026,8 @@ public class WorkerImpl implements Worker
                       stageDef.getStageNumber(),
                       task().getId(),
                       frameContext.memoryParameters().getStandardFrameSize(),
-                      MSQTasks.makeStorageConnector(context.injector())
+                      MSQTasks.makeStorageConnector(context.injector()),
+                      context.tempDir()
                   );
               try {
                 durableStorageOutputChannelFactory.createSuccessFile(task.getId());
@@ -1078,10 +1147,10 @@ public class WorkerImpl implements Worker
       final OutputChannels processorOutputChannels,
       final ListenableFuture<ClusterByPartitions> stagePartitionBoundariesFuture,
       final OutputChannelFactory outputChannelFactory,
+      final OutputChannelFactory intermediateOutputChannelFactory,
       final FrameProcessorExecutor exec,
       final String cancellationId,
       final WorkerMemoryParameters memoryParameters,
-      final WorkerContext context,
       final BlockingQueue<Consumer<KernelHolder>> kernelManipulationQueue,
       final SuperSorterProgressTracker superSorterProgressTracker
   ) throws IOException
@@ -1123,21 +1192,14 @@ public class WorkerImpl implements Worker
                                                    .collect(Collectors.toList());
     }
 
-    final File sorterTmpDir = new File(context.tempDir(), "super-sort-" + UUID.randomUUID());
-    FileUtils.mkdirp(sorterTmpDir);
-    if (!sorterTmpDir.isDirectory()) {
-      throw new IOException("Cannot create directory: " + sorterTmpDir);
-    }
-
     final SuperSorter sorter = new SuperSorter(
         channelsToSuperSort,
         stageDefinition.getFrameReader(),
         clusterBy,
         stagePartitionBoundariesFuture,
         exec,
-        sorterTmpDir,
         outputChannelFactory,
-        () -> ArenaMemoryAllocator.createOnHeap(memoryParameters.getLargeFrameSize()),
+        intermediateOutputChannelFactory,
         memoryParameters.getSuperSorterMaxActiveProcessors(),
         memoryParameters.getSuperSorterMaxChannelsPerProcessor(),
         -1,
@@ -1302,7 +1364,7 @@ public class WorkerImpl implements Worker
       if (taskId.equals(id())) {
         final ConcurrentMap<Integer, ReadableFrameChannel> partitionOutputsForStage = stageOutputs.get(stageId);
         if (partitionOutputsForStage == null) {
-          throw new ISE("Unable to find outputs for stage: [%s]", stageId);
+          throw new ISE("Unable to find outputs for stage [%s]", stageId);
         }
 
         final ReadableFrameChannel myChannel = partitionOutputsForStage.get(partitionNumber);
@@ -1314,7 +1376,7 @@ public class WorkerImpl implements Worker
         } else if (myChannel instanceof ReadableNilFrameChannel) {
           return myChannel;
         } else {
-          throw new ISE("Output for stage: [%s] are stored in an instance of %s which is not "
+          throw new ISE("Output for stage [%s] are stored in an instance of %s which is not "
                         + "supported", stageId, myChannel.getClass());
         }
       } else {

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { InputFormat, InputSource } from '../../../druid-models';
+import type { InputFormat, InputSource } from '../../../druid-models';
 
 export interface ExampleInput {
   name: string;

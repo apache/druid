@@ -20,7 +20,8 @@ import { Button, Callout, Code, FormGroup, Intent } from '@blueprintjs/core';
 import React from 'react';
 
 import { ExternalLink, LearnMore } from '../../components';
-import { DimensionMode, getIngestionDocLink, IngestionSpec } from '../../druid-models';
+import type { DimensionMode, IngestionSpec } from '../../druid-models';
+import { getIngestionDocLink } from '../../druid-models';
 import { getLink } from '../../links';
 import { deepGet, deepSet } from '../../utils';
 

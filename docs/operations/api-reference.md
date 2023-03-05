@@ -470,6 +470,18 @@ Returns all automatic compaction configs.
 
 Returns an automatic compaction config of a dataSource.
 
+`GET /druid/coordinator/v1/config/compaction/{dataSource}/history?interval={interval}&count={count}`
+
+Returns the history of the automatic compaction config for a dataSource. Optionally accepts `interval` and  `count`
+query string parameters to filter by interval and limit the number of results respectively. If the dataSource does not
+exist or there is no compaction history for the dataSource, an empty list is returned.
+
+The response contains a list of objects with the following keys:
+* `globalConfig`: A json object containing automatic compaction config that applies to the entire cluster. 
+* `compactionConfig`: A json object containing the automatic compaction config for the datasource.
+* `auditInfo`: A json object that contains information about the change made - like `author`, `comment` and `ip`.
+* `auditTime`: The date and time when the change was made.
+
 `POST /druid/coordinator/v1/config/compaction/taskslots?ratio={someRatio}&max={someMaxSlots}`
 
 Update the capacity for compaction tasks. `ratio` and `max` are used to limit the max number of compaction tasks.

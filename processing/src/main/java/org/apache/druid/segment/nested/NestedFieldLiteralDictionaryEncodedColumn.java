@@ -147,9 +147,10 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
       return StringUtils.fromUtf8Nullable(globalDictionary.get(globalId));
     } else if (globalId < globalDictionary.size() + globalLongDictionary.size()) {
       return String.valueOf(globalLongDictionary.get(globalId - adjustLongId));
-    } else {
+    } else if (globalId < globalDictionary.size() + globalLongDictionary.size() + globalDoubleDictionary.size()) {
       return String.valueOf(globalDoubleDictionary.get(globalId - adjustDoubleId));
     }
+    return null;
   }
 
   @Override

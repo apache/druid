@@ -110,6 +110,7 @@ public class TaskToolboxFactory
   private final ShuffleClient shuffleClient;
   private final TaskLogPusher taskLogPusher;
   private final String attemptId;
+  private final TaskStorageDirTracker dirTracker;
 
   @Inject
   public TaskToolboxFactory(
@@ -150,7 +151,8 @@ public class TaskToolboxFactory
       ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider,
       ShuffleClient shuffleClient,
       TaskLogPusher taskLogPusher,
-      @AttemptId String attemptId
+      @AttemptId String attemptId,
+      TaskStorageDirTracker dirTracker
   )
   {
     this.config = config;
@@ -191,11 +193,12 @@ public class TaskToolboxFactory
     this.shuffleClient = shuffleClient;
     this.taskLogPusher = taskLogPusher;
     this.attemptId = attemptId;
+    this.dirTracker = dirTracker;
   }
 
   public TaskToolbox build(Task task)
   {
-    final File taskWorkDir = config.getTaskWorkDir(task.getId());
+    final File taskWorkDir = dirTracker.getTaskWorkDir(task.getId());
     return new TaskToolbox.Builder()
         .config(config)
         .taskExecutorNode(taskExecutorNode)
@@ -240,6 +243,7 @@ public class TaskToolboxFactory
         .shuffleClient(shuffleClient)
         .taskLogPusher(taskLogPusher)
         .attemptId(attemptId)
+        .dirTracker(dirTracker)
         .build();
   }
 }

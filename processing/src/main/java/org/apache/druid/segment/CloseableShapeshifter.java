@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 
@@ -41,5 +42,5 @@ public interface CloseableShapeshifter extends Closeable
    * through a local implementation of the interface.
    */
   @Nullable
-  <T> T as(Class<T> clazz);
+  <T> T as(@Nonnull Class<T> clazz);
 }

@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
@@ -46,9 +45,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.annotation.Nonnull;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class NestedDataColumnIndexerTest extends InitializedNullHandlingTest
 {
@@ -548,13 +546,12 @@ public class NestedDataColumnIndexerTest extends InitializedNullHandlingTest
                 new TimestampSpec(TIME_COL, "millis", null),
                 Granularities.NONE,
                 VirtualColumns.EMPTY,
-                new DimensionsSpec(Collections.emptyList()),
+                DimensionsSpec.builder().useSchemaDiscovery(true).build(),
                 new AggregatorFactory[0],
                 false
             )
         )
         .setMaxRowCount(1000)
-        .setUseNestedColumnIndexerForSchemaDiscovery(true)
         .build();
     return index;
   }
@@ -565,20 +562,8 @@ public class NestedDataColumnIndexerTest extends InitializedNullHandlingTest
       Object... kv
   )
   {
-    HashMap<String, Object> event = new HashMap<>();
+    final Map<String, Object> event = TestHelper.makeMap(explicitNull, kv);
     event.put("time", timestamp);
-    Preconditions.checkArgument(kv.length % 2 == 0);
-    String currentKey = null;
-    for (int i = 0; i < kv.length; i++) {
-      if (i % 2 == 0) {
-        currentKey = (String) kv[i];
-      } else {
-        if (explicitNull || kv[i] != null) {
-          event.put(currentKey, kv[i]);
-        }
-      }
-    }
-
     return new MapBasedInputRow(timestamp, ImmutableList.copyOf(event.keySet()), event);
   }
 }
