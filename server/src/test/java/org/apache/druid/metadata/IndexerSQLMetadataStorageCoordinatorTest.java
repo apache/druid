@@ -680,9 +680,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
-    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Not updating metadata, " +
-        "existing state[null] in metadata store doesn't match to the new start state[ObjectMetadata{theObject={foo=bar}}]. " +
-        "This usually happens if the input stream is changed within the same supervisor."), result1);
+    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Inconsistent metadata state. This can " +
+        "happen if you update input topic in a spec without changing the supervisor name. " +
+        "Stored state: [null], " +
+        "Target state: [ObjectMetadata{theObject={foo=bar}}]."), result1);
 
     // Should only be tried once.
     Assert.assertEquals(1, metadataUpdateCounter.get());
@@ -782,7 +783,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
     Assert.assertEquals(SegmentPublishResult.fail(
         "org.apache.druid.metadata.RetryTransactionException: Failed to drop some segments. " +
-            "Only [1] could be dropped out of [2]. Trying again"), result1);
+            "Only 1 could be dropped out of 2. Trying again"), result1);
 
     Assert.assertEquals(MAX_SQL_MEATADATA_RETRY_FOR_TEST, segmentTableDropUpdateCounter.get());
 
@@ -809,10 +810,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
-    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Not updating metadata, " +
-        "existing state[ObjectMetadata{theObject={foo=baz}}] in metadata store doesn't match " +
-        "to the new start state[ObjectMetadata{theObject=null}]. " +
-        "This usually happens if the input stream is changed within the same supervisor."), result2);
+    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Inconsistent metadata state. This can " +
+        "happen if you update input topic in a spec without changing the supervisor name. " +
+        "Stored state: [ObjectMetadata{theObject={foo=baz}}], " +
+        "Target state: [ObjectMetadata{theObject=null}]."), result2);
 
     // Should only be tried once per call.
     Assert.assertEquals(2, metadataUpdateCounter.get());
@@ -835,10 +836,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(ImmutableMap.of("foo", "qux")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
-    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Not updating metadata, existing " +
-        "state[ObjectMetadata{theObject={foo=baz}}] in metadata store doesn't match to the new start " +
-        "state[ObjectMetadata{theObject={foo=qux}}]. This usually happens if " +
-        "the input stream is changed within the same supervisor."), result2);
+    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Inconsistent metadata state. This can " +
+        "happen if you update input topic in a spec without changing the supervisor name. " +
+        "Stored state: [ObjectMetadata{theObject={foo=baz}}], " +
+        "Target state: [ObjectMetadata{theObject={foo=qux}}]."), result2);
 
     // Should only be tried once per call.
     Assert.assertEquals(2, metadataUpdateCounter.get());
@@ -2269,7 +2270,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       Assert.assertEquals(new IndexerSQLMetadataStorageCoordinator.DataStoreMetadataUpdateResult(
           true,
           true,
-          "Failed to drop some segments. Only [0] could be dropped out of [1]. Trying again"),
+          "Failed to drop some segments. Only 0 could be dropped out of 1. Trying again"),
           result);
     }
   }

@@ -191,8 +191,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               {
                 final long thisTimeoutNanos = timeoutAtNanos - System.nanoTime();
                 if (hasTimeout && thisTimeoutNanos < 0) {
-                  throw new QueryTimeoutException("Query did not complete within configured timeout period. " +
-                      "You can increase query timeout or tune the performance of query");
+                  throw new QueryTimeoutException();
                 }
 
                 if (currentBatch != null && !currentBatch.isTerminalResult() && !currentBatch.isDrained()) {
@@ -207,8 +206,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
                     }
                   }
                   if (currentBatch == null) {
-                    throw new QueryTimeoutException("Query did not complete within configured timeout period. " +
-                        "You can increase query timeout or tune the performance of query");
+                    throw new QueryTimeoutException();
                   }
 
                   if (cancellationGizmo.isCancelled()) {

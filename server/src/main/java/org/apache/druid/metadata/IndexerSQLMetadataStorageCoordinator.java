@@ -1567,8 +1567,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     if (!startMetadataMatchesExisting) {
       // Not in the desired start state.
       return new DataStoreMetadataUpdateResult(true, false, StringUtils.format(
-          "Not updating metadata, existing state[%s] in metadata store doesn't match to the new start state[%s]." +
-              " This usually happens if the input stream is changed within the same supervisor.",
+          "Inconsistent metadata state. This can happen if you update input topic in a spec without changing " +
+              "the supervisor name. Stored state: [%s], Target state: [%s].",
           oldCommitMetadataFromDb,
           startMetadata
       ));
@@ -1688,7 +1688,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return new DataStoreMetadataUpdateResult(
           true,
           true,
-          "Failed to drop some segments. Only [%s] could be dropped out of [%s]. Trying again",
+          "Failed to drop some segments. Only %d could be dropped out of %d. Trying again",
           numChangedSegments,
           segmentsToDrop.size()
       );
