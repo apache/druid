@@ -576,7 +576,7 @@ This deep storage is used to interface with Cassandra.  Note that the `druid-cas
 #### HDFS input source
 
 You can set the following property to specify permissible protocols for
-the [HDFS input source](../ingestion/native-batch-input-source.md#hdfs-input-source) and the [HDFS firehose](../ingestion/native-batch-firehose.md#hdfsfirehose).
+the [HDFS input source](../ingestion/native-batch-input-source.md#hdfs-input-source).
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
@@ -586,7 +586,7 @@ the [HDFS input source](../ingestion/native-batch-input-source.md#hdfs-input-sou
 #### HTTP input source
 
 You can set the following property to specify permissible protocols for
-the [HTTP input source](../ingestion/native-batch-input-source.md#http-input-source) and the [HTTP firehose](../ingestion/native-batch-firehose.md#httpfirehose).
+the [HTTP input source](../ingestion/native-batch-input-source.md#http-input-source).
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
@@ -599,7 +599,6 @@ the [HTTP input source](../ingestion/native-batch-input-source.md#http-input-sou
 
 You can use the following properties to specify permissible JDBC options for:
 - [SQL input source](../ingestion/native-batch-input-source.md#sql-input-source)
-- [SQL firehose](../ingestion/native-batch-firehose.md#sqlfirehose),
 - [globally cached JDBC lookups](../development/extensions-core/lookups-cached-global.md#jdbc-lookup)
 - [JDBC Data Fetcher for per-lookup caching](../development/extensions-core/druid-lookups.md#data-fetcher-layer).
 
