@@ -20,12 +20,12 @@ import React from 'react';
 
 import { shallow } from '../../utils/shallow-renderer';
 
-import { CompactionDialog } from './compaction-dialog';
+import { CompactionConfigDialog } from './compaction-config-dialog';
 
-describe('CompactionDialog', () => {
+describe('CompactionConfigDialog', () => {
   it('matches snapshot without compactionConfig', () => {
     const compactionDialog = shallow(
-      <CompactionDialog
+      <CompactionConfigDialog
         onClose={() => {}}
         onSave={() => {}}
         onDelete={() => {}}
@@ -38,7 +38,7 @@ describe('CompactionDialog', () => {
 
   it('matches snapshot with compactionConfig (dynamic partitionsSpec)', () => {
     const compactionDialog = shallow(
-      <CompactionDialog
+      <CompactionConfigDialog
         onClose={() => {}}
         onSave={() => {}}
         onDelete={() => {}}
@@ -54,7 +54,7 @@ describe('CompactionDialog', () => {
 
   it('matches snapshot with compactionConfig (hashed partitionsSpec)', () => {
     const compactionDialog = shallow(
-      <CompactionDialog
+      <CompactionConfigDialog
         onClose={() => {}}
         onSave={() => {}}
         onDelete={() => {}}
@@ -70,7 +70,7 @@ describe('CompactionDialog', () => {
 
   it('matches snapshot with compactionConfig (range partitionsSpec)', () => {
     const compactionDialog = shallow(
-      <CompactionDialog
+      <CompactionConfigDialog
         onClose={() => {}}
         onSave={() => {}}
         onDelete={() => {}}

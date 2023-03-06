@@ -121,6 +121,7 @@ public class S3StorageConnector implements StorageConnector
     } else {
       readEnd = this.s3Client.getObjectMetadata(config.getBucket(), objectPath(path)).getInstanceLength();
     }
+    AtomicBoolean isSequenceStreamClosed = new AtomicBoolean(false);
 
     // build a sequence input stream from chunks
     return new SequenceInputStream(new Enumeration<InputStream>()
@@ -128,6 +129,12 @@ public class S3StorageConnector implements StorageConnector
       @Override
       public boolean hasMoreElements()
       {
+        // checking if the stream was already closed. If it was, then don't iterate over the remaining chunks
+        // SequenceInputStream's close method closes all the chunk streams in its close. Since we're opening them
+        // lazily, we don't need to close them.
+        if (isSequenceStreamClosed.get()) {
+          return false;
+        }
         // don't stop until the whole object is downloaded
         return currReadStart.get() < readEnd;
       }
@@ -212,7 +219,15 @@ public class S3StorageConnector implements StorageConnector
           throw new RE(e, StringUtils.format("Unable to find temp file [%s]", outFile));
         }
       }
-    });
+    })
+    {
+      @Override
+      public void close() throws IOException
+      {
+        isSequenceStreamClosed.set(true);
+        super.close();
+      }
+    };
   }
 
   @Override

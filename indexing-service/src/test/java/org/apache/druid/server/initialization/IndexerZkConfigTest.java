@@ -109,7 +109,7 @@ public class IndexerZkConfigTest
             field.getName().substring(1)
         );
         Method method = ZkPathsConfig.class.getDeclaredMethod(getter);
-        Assert.assertEquals(propertyValues.get(property), method.invoke(zkPathsConfig));
+        Assert.assertEquals(propertyValues.getProperty(property), method.invoke(zkPathsConfig));
         ++assertions;
       }
     }
@@ -127,7 +127,7 @@ public class IndexerZkConfigTest
             field.getName().substring(1)
         );
         Method method = IndexerZkConfig.class.getDeclaredMethod(getter);
-        Assert.assertEquals(propertyValues.get(property), method.invoke(indexerZkConfig));
+        Assert.assertEquals(propertyValues.getProperty(property), method.invoke(indexerZkConfig));
         ++assertions;
       }
     }

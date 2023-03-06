@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.exec;
 
+import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import com.google.inject.Injector;
 import it.unimi.dsi.fastutil.ints.IntSet;
@@ -128,6 +129,10 @@ public class WorkerMemoryParameters
    * we use a value somewhat lower than 0.5.
    */
   static final double BROADCAST_JOIN_MEMORY_FRACTION = 0.3;
+  /**
+   * In case {@link NotEnoughMemoryFault} is thrown, a fixed estimation overhead is added when estimating total memory required for the process.
+   */
+  private static final long BUFFER_BYTES_FOR_ESTIMATION = 1000;
 
   private final int superSorterMaxActiveProcessors;
   private final int superSorterMaxChannelsPerProcessor;
@@ -155,12 +160,13 @@ public class WorkerMemoryParameters
    */
   public static WorkerMemoryParameters createProductionInstanceForController(final Injector injector)
   {
+    long totalLookupFootprint = computeTotalLookupFootprint(injector);
     return createInstance(
         Runtime.getRuntime().maxMemory(),
-        computeUsableMemoryInJvm(injector),
         computeNumWorkersInJvm(injector),
         computeNumProcessorsInJvm(injector),
-        0
+        0,
+        totalLookupFootprint
     );
   }
 
@@ -179,13 +185,14 @@ public class WorkerMemoryParameters
         inputStageNumbers.intStream()
                          .map(inputStageNumber -> queryDef.getStageDefinition(inputStageNumber).getMaxWorkerCount())
                          .sum();
+    long totalLookupFootprint = computeTotalLookupFootprint(injector);
 
     return createInstance(
         Runtime.getRuntime().maxMemory(),
-        computeUsableMemoryInJvm(injector),
         computeNumWorkersInJvm(injector),
         computeNumProcessorsInJvm(injector),
-        numInputWorkers
+        numInputWorkers,
+        totalLookupFootprint
     );
   }
 
@@ -200,15 +207,30 @@ public class WorkerMemoryParameters
    *                                  the task capacity.
    * @param numProcessingThreadsInJvm size of the processing thread pool in the JVM.
    * @param numInputWorkers           number of workers across input stages that need to be merged together.
+   * @param totalLookUpFootprint      estimated size of the lookups loaded by the process.
    */
   public static WorkerMemoryParameters createInstance(
       final long maxMemoryInJvm,
-      final long usableMemoryInJvm,
       final int numWorkersInJvm,
       final int numProcessingThreadsInJvm,
-      final int numInputWorkers
+      final int numInputWorkers,
+      final long totalLookUpFootprint
   )
   {
+    Preconditions.checkArgument(maxMemoryInJvm > 0, "Max memory passed: [%s] should be > 0", maxMemoryInJvm);
+    Preconditions.checkArgument(numWorkersInJvm > 0, "Number of workers: [%s] in jvm should be > 0", numWorkersInJvm);
+    Preconditions.checkArgument(
+        numProcessingThreadsInJvm > 0,
+        "Number of processing threads [%s] should be > 0",
+        numProcessingThreadsInJvm
+    );
+    Preconditions.checkArgument(numInputWorkers >= 0, "Number of input workers: [%s] should be >=0", numInputWorkers);
+    Preconditions.checkArgument(
+        totalLookUpFootprint >= 0,
+        "Lookup memory footprint: [%s] should be >= 0",
+        totalLookUpFootprint
+    );
+    final long usableMemoryInJvm = computeUsableMemoryInJvm(maxMemoryInJvm, totalLookUpFootprint);
     final long workerMemory = memoryPerWorker(usableMemoryInJvm, numWorkersInJvm);
     final long bundleMemory = memoryPerBundle(usableMemoryInJvm, numWorkersInJvm, numProcessingThreadsInJvm);
     final long bundleMemoryForInputChannels = memoryNeededForInputChannels(numInputWorkers);
@@ -223,6 +245,12 @@ public class WorkerMemoryParameters
         // Not enough memory for even one worker. More of a NotEnoughMemory situation than a TooManyWorkers situation.
         throw new MSQException(
             new NotEnoughMemoryFault(
+                calculateSuggestedMinMemoryFromUsableMemory(
+                    estimateUsableMemory(
+                        numWorkersInJvm,
+                        numProcessingThreadsInJvm,
+                        PROCESSING_MINIMUM_BYTES + BUFFER_BYTES_FOR_ESTIMATION + bundleMemoryForInputChannels
+                    ), totalLookUpFootprint),
                 maxMemoryInJvm,
                 usableMemoryInJvm,
                 numWorkersInJvm,
@@ -238,6 +266,13 @@ public class WorkerMemoryParameters
     if (maxNumFramesForSuperSorter < MIN_SUPER_SORTER_FRAMES) {
       throw new MSQException(
           new NotEnoughMemoryFault(
+              calculateSuggestedMinMemoryFromUsableMemory(
+                  estimateUsableMemory(
+                      numWorkersInJvm,
+                      (MIN_SUPER_SORTER_FRAMES + BUFFER_BYTES_FOR_ESTIMATION) * LARGE_FRAME_SIZE
+                  ),
+                  totalLookUpFootprint
+              ),
               maxMemoryInJvm,
               usableMemoryInJvm,
               numWorkersInJvm,
@@ -412,7 +447,7 @@ public class WorkerMemoryParameters
   }
 
   /**
-   * Compute the memory allocated to each processing bundle.
+   * Compute the memory allocated to each processing bundle. Any computation changes done to this method should also be done in its corresponding method {@link WorkerMemoryParameters#estimateUsableMemory(int, int, long)}
    */
   private static long memoryPerBundle(
       final long usableMemoryInJvm,
@@ -431,6 +466,32 @@ public class WorkerMemoryParameters
     return memoryForBundles / bundleCount;
   }
 
+  /**
+   * Used for estimating the usable memory for better exception messages when {@link NotEnoughMemoryFault} is thrown.
+   */
+  private static long estimateUsableMemory(
+      final int numWorkersInJvm,
+      final int numProcessingThreadsInJvm,
+      final long estimatedEachBundleMemory
+  )
+  {
+    final int bundleCount = numWorkersInJvm + numProcessingThreadsInJvm;
+    return estimateUsableMemory(numWorkersInJvm, estimatedEachBundleMemory * bundleCount);
+
+  }
+
+  /**
+   * Add overheads to the estimated bundle memoery for all the workers. Checkout {@link WorkerMemoryParameters#memoryPerWorker(long, int)}
+   * for the overhead calculation outside the processing bundles.
+   */
+  private static long estimateUsableMemory(final int numWorkersInJvm, final long estimatedTotalBundleMemory)
+  {
+
+    // Currently, we only add the partition stats overhead since it will be the single largest overhead per worker.
+    final long estimateStatOverHeadPerWorker = PARTITION_STATS_MEMORY_MAX_BYTES;
+    return estimatedTotalBundleMemory + (estimateStatOverHeadPerWorker * numWorkersInJvm);
+  }
+
   private static long memoryNeededForInputChannels(final int numInputWorkers)
   {
     // Workers that read sorted inputs must open all channels at once to do an N-way merge. Calculate memory needs.
@@ -439,11 +500,20 @@ public class WorkerMemoryParameters
   }
 
   /**
-   * Amount of heap memory available for our usage.
+   * Amount of heap memory available for our usage. Any computation changes done to this method should also be done in its corresponding method {@link WorkerMemoryParameters#calculateSuggestedMinMemoryFromUsableMemory}
    */
-  private static long computeUsableMemoryInJvm(final Injector injector)
+  private static long computeUsableMemoryInJvm(final long maxMemory, final long totalLookupFootprint)
   {
-    return (long) ((Runtime.getRuntime().maxMemory() - computeTotalLookupFootprint(injector)) * USABLE_MEMORY_FRACTION);
+    // since lookups are essentially in memory hashmap's, the object overhead is trivial hence its subtracted prior to usable memory calculations.
+    return (long) ((maxMemory - totalLookupFootprint) * USABLE_MEMORY_FRACTION);
+  }
+
+  /**
+   * Estimate amount of heap memory for the given workload to use in case usable memory is provided. This method is used for better exception messages when {@link NotEnoughMemoryFault} is thrown.
+   */
+  private static long calculateSuggestedMinMemoryFromUsableMemory(long usuableMemeory, final long totalLookupFootprint)
+  {
+    return (long) ((usuableMemeory / USABLE_MEMORY_FRACTION) + totalLookupFootprint);
   }
 
   /**

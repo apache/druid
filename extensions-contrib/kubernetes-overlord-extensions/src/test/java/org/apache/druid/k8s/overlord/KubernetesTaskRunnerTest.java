@@ -167,6 +167,7 @@ public class KubernetesTaskRunnerTest
         job,
         PeonPhase.SUCCEEDED
     ));
+    when(peonClient.getPeonLogs(eq(k8sTaskId))).thenReturn(Optional.absent());
     when(peonClient.cleanUpJob(eq(k8sTaskId))).thenReturn(true);
 
     KubernetesTaskRunner taskRunner = new KubernetesTaskRunner(
@@ -223,6 +224,7 @@ public class KubernetesTaskRunnerTest
         job,
         PeonPhase.SUCCEEDED
     ));
+    when(peonClient.getPeonLogs(eq(k8sTaskId))).thenReturn(Optional.absent());
     when(peonClient.cleanUpJob(eq(k8sTaskId))).thenReturn(true);
 
     KubernetesTaskRunner taskRunner = new KubernetesTaskRunner(
@@ -290,6 +292,7 @@ public class KubernetesTaskRunnerTest
         job,
         PeonPhase.SUCCEEDED
     ));
+    when(peonClient.getPeonLogs(eq(k8sTaskId))).thenReturn(Optional.absent());
     when(peonClient.cleanUpJob(eq(k8sTaskId))).thenReturn(true);
 
     KubernetesTaskRunner taskRunner = new KubernetesTaskRunner(
@@ -354,6 +357,7 @@ public class KubernetesTaskRunnerTest
         job,
         PeonPhase.SUCCEEDED
     ));
+    when(peonClient.getPeonLogs(eq(k8sTaskId))).thenReturn(Optional.absent());
     when(peonClient.cleanUpJob(eq(k8sTaskId))).thenReturn(true);
 
     KubernetesTaskRunner taskRunner = new KubernetesTaskRunner(
