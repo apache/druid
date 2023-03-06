@@ -177,6 +177,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
   {
     CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
+                             .withDynamicConfig(createDynamicConfig(5, 0, 10))
                              .withSegments(segments)
                              .withServers(historicalT11)
                              .withRules(datasource, Load.on(Tier.T1, 1).forever())
