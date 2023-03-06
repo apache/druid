@@ -166,7 +166,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                     PeonCommandContext context = new PeonCommandContext(
                         generateCommand(task),
                         javaOpts(task),
-                        new File(taskConfig.getBaseTaskDirPath()),
+                        new File(taskConfig.getBaseTaskDirPaths().get(0)),
                         node.isEnableTlsPort()
                     );
                     Job job = adapter.fromTask(task, context);
