@@ -74,7 +74,9 @@ public class ComposingOutputChannelFactory implements OutputChannelFactory
           })::get;
       outputChannelSupplierBuilder.add(channel);
       writableFrameChannelSuppliersBuilder.add(() -> channel.get().getWritableChannel());
-      readableFrameChannelSuppliersBuilder.add(() -> channel.get().getReadableChannelSupplier().get());
+      // We read the output channel once they have been written to, and therefore it is space efficient and safe to
+      // save their read only copies
+      readableFrameChannelSuppliersBuilder.add(() -> channel.get().readOnly().getReadableChannelSupplier().get());
     }
 
     // the map maintains a mapping of channels which have the data for a given partition.
@@ -120,6 +122,8 @@ public class ComposingOutputChannelFactory implements OutputChannelFactory
           })::get;
       partitionedOutputChannelSupplierBuilder.add(channel);
       writableFrameChannelsBuilder.add(() -> channel.get().getWritableChannel());
+      // We read the output channel once they have been written to, and therefore it is space efficient and safe to
+      // save their read only copies
       readableFrameChannelSuppliersBuilder.add(() -> channel.get().readOnly().getReadableChannelSupplier().get());
     }
     // the map maintains a mapping of channels which have the data for a given partition.
