@@ -24,7 +24,9 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.k8s.overlord.common.MultiContainerTaskAdapter;
+import org.apache.druid.k8s.overlord.common.PodTemplateTaskAdapter;
 import org.apache.druid.k8s.overlord.common.SingleContainerTaskAdapter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
@@ -33,6 +35,9 @@ import org.apache.druid.tasklogs.TaskLogPusher;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.net.URL;
+import java.util.Properties;
 
 public class KubernetesTaskRunnerFactoryTest
 {
@@ -43,6 +48,7 @@ public class KubernetesTaskRunnerFactoryTest
   private TaskLogPusher taskLogPusher;
   private DruidNode druidNode;
   private TaskConfig taskConfig;
+  private Properties properties;
 
   @Before
   public void setup()
@@ -83,6 +89,7 @@ public class KubernetesTaskRunnerFactoryTest
         false,
         ImmutableList.of("/tmp")
     );
+    properties = new Properties();
   }
 
   @Test
@@ -95,7 +102,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskQueueConfig,
         taskLogPusher,
         druidNode,
-        taskConfig
+        taskConfig,
+        properties
     );
 
     KubernetesTaskRunner expectedRunner = factory.build();
@@ -114,7 +122,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskQueueConfig,
         taskLogPusher,
         druidNode,
-        taskConfig
+        taskConfig,
+        properties
     );
 
     KubernetesTaskRunner runner = factory.build();
@@ -135,12 +144,136 @@ public class KubernetesTaskRunnerFactoryTest
         taskQueueConfig,
         taskLogPusher,
         druidNode,
-        taskConfig
+        taskConfig,
+        properties
     );
 
     KubernetesTaskRunner runner = factory.build();
 
     Assert.assertNotNull(runner);
     Assert.assertTrue(runner.adapter instanceof MultiContainerTaskAdapter);
+  }
+
+  @Test
+  public void test_build_withSingleContainerAdapterType_returnsKubernetesTaskRunnerWithSingleContainerTaskAdapter()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.k8s.adapter.type", "singleContainer");
+
+    KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
+        objectMapper,
+        kubernetesTaskRunnerConfig,
+        startupLoggingConfig,
+        taskQueueConfig,
+        taskLogPusher,
+        druidNode,
+        taskConfig,
+        props
+    );
+
+    KubernetesTaskRunner runner = factory.build();
+
+    Assert.assertNotNull(runner);
+    Assert.assertTrue(runner.adapter instanceof SingleContainerTaskAdapter);
+  }
+
+  @Test
+  public void test_build_withSingleContainerAdapterTypeAndSidecarSupport_throwsIAE()
+  {
+    kubernetesTaskRunnerConfig.sidecarSupport = true;
+
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.k8s.adapter.type", "singleContainer");
+
+    KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
+        objectMapper,
+        kubernetesTaskRunnerConfig,
+        startupLoggingConfig,
+        taskQueueConfig,
+        taskLogPusher,
+        druidNode,
+        taskConfig,
+        props
+    );
+
+    Assert.assertThrows(
+        "Only kubernetes pod adapter [multiContainer] can be specified when sidecarSupport is enabled",
+        IAE.class,
+        factory::build
+    );
+  }
+
+  @Test
+  public void test_build_withMultiContainerAdapterType_returnsKubernetesTaskRunnerWithMultiContainerTaskAdapter()
+  {
+    kubernetesTaskRunnerConfig.sidecarSupport = true;
+
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.k8s.adapter.type", "multiContainer");
+
+    KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
+        objectMapper,
+        kubernetesTaskRunnerConfig,
+        startupLoggingConfig,
+        taskQueueConfig,
+        taskLogPusher,
+        druidNode,
+        taskConfig,
+        props
+    );
+
+    KubernetesTaskRunner runner = factory.build();
+
+    Assert.assertNotNull(runner);
+    Assert.assertTrue(runner.adapter instanceof MultiContainerTaskAdapter);
+  }
+
+  @Test
+  public void test_build_withMultiContainerAdapterTypeAndSidecarSupport_returnsKubernetesTaskRunnerWithMultiContainerTaskAdapter()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.k8s.adapter.type", "multiContainer");
+
+    KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
+        objectMapper,
+        kubernetesTaskRunnerConfig,
+        startupLoggingConfig,
+        taskQueueConfig,
+        taskLogPusher,
+        druidNode,
+        taskConfig,
+        props
+    );
+
+    KubernetesTaskRunner runner = factory.build();
+
+    Assert.assertNotNull(runner);
+    Assert.assertTrue(runner.adapter instanceof MultiContainerTaskAdapter);
+  }
+
+  @Test
+  public void test_build_withPodTemplateAdapterType_returnsKubernetesTaskRunnerWithPodTemplateTaskAdapter()
+  {
+    URL url = this.getClass().getClassLoader().getResource("basePodTemplate.yaml");
+
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.k8s.adapter.type", "podTemplate");
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.base", url.getPath());
+
+    KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
+        objectMapper,
+        kubernetesTaskRunnerConfig,
+        startupLoggingConfig,
+        taskQueueConfig,
+        taskLogPusher,
+        druidNode,
+        taskConfig,
+        props
+    );
+
+    KubernetesTaskRunner runner = factory.build();
+
+    Assert.assertNotNull(runner);
+    Assert.assertTrue(runner.adapter instanceof PodTemplateTaskAdapter);
   }
 }
