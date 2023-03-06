@@ -43,6 +43,7 @@ import java.util.concurrent.TimeUnit;
  * Each {@link Firehose} created by this factory spins up and manages one thread for calling {@link Firehose#close()}
  * asynchronously at the specified {@link #shutoffTime}.
  */
+@Deprecated
 public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowParser>
 {
   private static final EmittingLogger log = new EmittingLogger(FirehoseFactory.class);

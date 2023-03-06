@@ -1,7 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`IngestionView matches snapshot 1`] = `
-<Fragment>
+<React.Fragment>
   <t
     customClassName="ingestion-view app-view"
     onDragEnd={null}
@@ -24,64 +24,66 @@ exports[`IngestionView matches snapshot 1`] = `
           localStorageKey="supervisors-refresh-rate"
           onRefresh={[Function]}
         />
-        <Memo(MoreButton)>
-          <Blueprint4.MenuItem
-            active={false}
-            disabled={false}
-            icon="application"
-            multiline={false}
-            onClick={[Function]}
-            popoverProps={Object {}}
-            selected={false}
-            shouldDismissPopover={true}
-            text="View SQL query for table"
-          />
-          <Blueprint4.MenuItem
-            active={false}
-            disabled={false}
-            icon="manually-entered-data"
-            multiline={false}
-            onClick={[Function]}
-            popoverProps={Object {}}
-            selected={false}
-            shouldDismissPopover={true}
-            text="Submit JSON supervisor"
-          />
-          <Blueprint4.MenuItem
-            active={false}
-            disabled={false}
-            icon="play"
-            multiline={false}
-            onClick={[Function]}
-            popoverProps={Object {}}
-            selected={false}
-            shouldDismissPopover={true}
-            text="Resume all supervisors"
-          />
-          <Blueprint4.MenuItem
-            active={false}
-            disabled={false}
-            icon="pause"
-            multiline={false}
-            onClick={[Function]}
-            popoverProps={Object {}}
-            selected={false}
-            shouldDismissPopover={true}
-            text="Suspend all supervisors"
-          />
-          <Blueprint4.MenuItem
-            active={false}
-            disabled={false}
-            icon="cross"
-            intent="danger"
-            multiline={false}
-            onClick={[Function]}
-            popoverProps={Object {}}
-            selected={false}
-            shouldDismissPopover={true}
-            text="Terminate all supervisors"
-          />
-        </Memo(MoreButton)>
+        <React.Fragment>
+          <Memo(MoreButton)>
+            <Blueprint4.MenuItem
+              active={false}
+              disabled={false}
+              icon="application"
+              multiline={false}
+              onClick={[Function]}
+              popoverProps={Object {}}
+              selected={false}
+              shouldDismissPopover={true}
+              text="View SQL query for table"
+            />
+            <Blueprint4.MenuItem
+              active={false}
+              disabled={false}
+              icon="manually-entered-data"
+              multiline={false}
+              onClick={[Function]}
+              popoverProps={Object {}}
+              selected={false}
+              shouldDismissPopover={true}
+              text="Submit JSON supervisor"
+            />
+            <Blueprint4.MenuItem
+              active={false}
+              disabled={false}
+              icon="play"
+              multiline={false}
+              onClick={[Function]}
+              popoverProps={Object {}}
+              selected={false}
+              shouldDismissPopover={true}
+              text="Resume all supervisors"
+            />
+            <Blueprint4.MenuItem
+              active={false}
+              disabled={false}
+              icon="pause"
+              multiline={false}
+              onClick={[Function]}
+              popoverProps={Object {}}
+              selected={false}
+              shouldDismissPopover={true}
+              text="Suspend all supervisors"
+            />
+            <Blueprint4.MenuItem
+              active={false}
+              disabled={false}
+              icon="cross"
+              intent="danger"
+              multiline={false}
+              onClick={[Function]}
+              popoverProps={Object {}}
+              selected={false}
+              shouldDismissPopover={true}
+              text="Terminate all supervisors"
+            />
+          </Memo(MoreButton)>
+        </React.Fragment>
         <Memo(TableColumnSelector)
           columns={
             Array [
@@ -289,9 +291,9 @@ exports[`IngestionView matches snapshot 1`] = `
       <Memo(ViewControlBar)
         label="Tasks"
       >
-        <Component>
+        <Unknown>
           Group by
-        </Component>
+        </Unknown>
         <Blueprint4.ButtonGroup>
           <Blueprint4.Button
             active={true}
@@ -618,5 +620,5 @@ exports[`IngestionView matches snapshot 1`] = `
   >
     <p />
   </Blueprint4.Alert>
-</Fragment>
+</React.Fragment>
 `;

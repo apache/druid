@@ -21,7 +21,7 @@ import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import React from 'react';
 
-import { Execution } from '../../../druid-models';
+import type { Execution } from '../../../druid-models';
 import { downloadQueryResults, formatDurationHybrid, pluralIfNeeded } from '../../../utils';
 
 import './execution-summary-panel.scss';

@@ -137,7 +137,7 @@ You can retrieve status of a query to see if it is still running, completed succ
 <!--HTTP-->
 
 ```
-GET /druid/indexer/v1/task/<taskId>
+GET /druid/indexer/v1/task/<taskId>/status
 ```
 
 <!--curl-->

@@ -39,12 +39,6 @@
   <dependencies>
     <dependency>
       <groupId>org.apache.druid</groupId>
-      <artifactId>druid-core</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.druid</groupId>
       <artifactId>druid-processing</artifactId>
       <version>${project.parent.version}</version>
       <scope>provided</scope>
@@ -99,7 +93,7 @@
     <!-- test -->
     <dependency>
       <groupId>org.apache.druid</groupId>
-      <artifactId>druid-core</artifactId>
+      <artifactId>druid-processing</artifactId>
       <version>${project.parent.version}</version>
       <type>test-jar</type>
       <scope>test</scope>

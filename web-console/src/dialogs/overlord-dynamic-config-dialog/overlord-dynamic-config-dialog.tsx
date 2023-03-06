@@ -21,7 +21,8 @@ import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
 import { AutoForm, ExternalLink, Loader } from '../../components';
-import { OVERLORD_DYNAMIC_CONFIG_FIELDS, OverlordDynamicConfig } from '../../druid-models';
+import type { OverlordDynamicConfig } from '../../druid-models';
+import { OVERLORD_DYNAMIC_CONFIG_FIELDS } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
 import { Api, AppToaster } from '../../singletons';

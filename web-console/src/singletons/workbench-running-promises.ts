@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { QueryResult } from 'druid-query-toolkit';
+import type { QueryResult } from 'druid-query-toolkit';
 
 export interface WorkbenchRunningPromise {
   promise: Promise<QueryResult>;

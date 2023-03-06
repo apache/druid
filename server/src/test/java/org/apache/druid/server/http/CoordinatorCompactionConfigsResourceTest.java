@@ -45,6 +45,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+import java.util.Collection;
 import java.util.concurrent.Callable;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -407,13 +408,14 @@ public class CoordinatorCompactionConfigsResourceTest
   }
 
   @Test
-  public void testGetCompactionConfigHistoryForUnknownDataSourceShouldReturnNotFound()
+  public void testGetCompactionConfigHistoryForUnknownDataSourceShouldReturnEmptyList()
   {
     Response response = coordinatorCompactionConfigsResource.getCompactionConfigHistory(
         DATASOURCE_NOT_EXISTS,
         null,
         null
     );
-    Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    Assert.assertTrue(((Collection) response.getEntity()).isEmpty());
   }
 }
