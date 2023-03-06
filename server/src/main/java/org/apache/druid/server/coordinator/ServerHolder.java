@@ -80,7 +80,7 @@ public class ServerHolder implements Comparable<ServerHolder>
     this.peon = peon;
     this.isDecommissioning = isDecommissioning;
 
-    this.maxAssignmentsInRun = maxSegmentsInLoadQueue == 0
+    this.maxAssignmentsInRun = maxSegmentsInLoadQueue <= 0
                                ? Integer.MAX_VALUE
                                : maxSegmentsInLoadQueue - peon.getNumberOfSegmentsToLoad();
 

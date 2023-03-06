@@ -94,9 +94,11 @@ public class BalanceSegments implements CoordinatorDuty
       return params;
     }
     int maxSegmentsToMove = params.getCoordinatorDynamicConfig().getMaxSegmentsToMove();
-    if (maxSegmentsToMove <= 0) {
+    if (maxSegmentsToMove == 0) {
       log.info("Skipping balance as maxSegmentsToMove is %d.", maxSegmentsToMove);
       return params;
+    } else if (maxSegmentsToMove < 0) {
+      log.info("Auto-calculating maxSegmentsToMove for every tier since configured value is %d.", maxSegmentsToMove);
     }
 
     final CoordinatorStats stats = new CoordinatorStats();
@@ -151,19 +153,10 @@ public class BalanceSegments implements CoordinatorDuty
       return;
     }
 
-    int numSegments = 0;
-    for (ServerHolder sourceHolder : servers) {
-      numSegments += sourceHolder.getServer().getNumSegments()
-                     + sourceHolder.getPeon().getNumberOfSegmentsToLoad();
-    }
-
-    if (numSegments == 0) {
-      log.info("Skipping balance for tier [%s] as there are no loaded or loading segments.", tier);
-      // suppress emit zero stats
+    final int maxSegmentsToMove = calculateMaxSegmentsToMoveInTier(tier, servers, params);
+    if (maxSegmentsToMove <= 0) {
       return;
     }
-
-    final int maxSegmentsToMove = Math.min(params.getCoordinatorDynamicConfig().getMaxSegmentsToMove(), numSegments);
 
     // Prioritize moving segments from decomissioning servers.
     int decommissioningMaxPercentOfMaxSegmentsToMove =
@@ -313,5 +306,37 @@ public class BalanceSegments implements CoordinatorDuty
       log.makeAlert(e, "[%s] : Moving exception", segmentHolder.getSegment().getId()).emit();
       return false;
     }
+  }
+
+  private int calculateMaxSegmentsToMoveInTier(
+      String tier,
+      Set<ServerHolder> serversInTier,
+      DruidCoordinatorRuntimeParams params
+  )
+  {
+    int numSegmentsInTier = 0;
+    for (ServerHolder sourceHolder : serversInTier) {
+      numSegmentsInTier += sourceHolder.getServer().getNumSegments()
+                           + sourceHolder.getPeon().getNumberOfSegmentsToLoad();
+    }
+
+    final int configuredMaxSegmentsToMove =
+        params.getCoordinatorDynamicConfig().getMaxSegmentsToMove();
+    final int calculatedMaxSegmentsToMove;
+    if (configuredMaxSegmentsToMove < 0) {
+      calculatedMaxSegmentsToMove = (int) (numSegmentsInTier / 100.0);
+    } else {
+      calculatedMaxSegmentsToMove = Math.min(configuredMaxSegmentsToMove, numSegmentsInTier);
+    }
+
+    log.info(
+        "Tier [%s]: Number of loaded/loading segments [%d],"
+        + " configured maxSegmentsToMove [%d], calculated maxSegmentsToMove [%d]",
+        tier,
+        numSegmentsInTier,
+        configuredMaxSegmentsToMove,
+        calculatedMaxSegmentsToMove
+    );
+    return calculatedMaxSegmentsToMove;
   }
 }

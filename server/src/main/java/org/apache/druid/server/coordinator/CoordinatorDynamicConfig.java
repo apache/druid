@@ -518,7 +518,7 @@ public class CoordinatorDynamicConfig
         TimeUnit.MINUTES.toMillis(15);
     private static final long DEFAULT_MERGE_BYTES_LIMIT = 524_288_000L;
     private static final int DEFAULT_MERGE_SEGMENTS_LIMIT = 100;
-    private static final int DEFAULT_MAX_SEGMENTS_TO_MOVE = 5;
+    private static final int DEFAULT_MAX_SEGMENTS_TO_MOVE = -1;
     private static final double DEFAULT_PERCENT_OF_SEGMENTS_TO_CONSIDER_PER_MOVE = 100;
     private static final int DEFAULT_REPLICANT_LIFETIME = 15;
     private static final int DEFAULT_REPLICATION_THROTTLE_LIMIT = 10;
