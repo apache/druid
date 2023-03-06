@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import org.apache.druid.data.input.FirehoseFactory;
-import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.SplittableInputSource;
@@ -59,9 +58,7 @@ abstract class InputSourceSplitParallelIndexTaskRunner<T extends Task, R extends
         context
     );
     this.ingestionSchema = ingestionSchema;
-    this.baseInputSource = (SplittableInputSource) ingestionSchema.getIOConfig().getNonNullInputSource(
-        ingestionSchema.getDataSchema().getParser()
-    );
+    this.baseInputSource = (SplittableInputSource) ingestionSchema.getIOConfig().getNonNullInputSource();
   }
 
   @Override
@@ -86,13 +83,8 @@ abstract class InputSourceSplitParallelIndexTaskRunner<T extends Task, R extends
   {
     final FirehoseFactory firehoseFactory;
     final InputSource inputSource;
-    if (baseInputSource instanceof FirehoseFactoryToInputSourceAdaptor) {
-      firehoseFactory = ((FirehoseFactoryToInputSourceAdaptor) baseInputSource).getFirehoseFactory().withSplit(split);
-      inputSource = null;
-    } else {
-      firehoseFactory = null;
-      inputSource = baseInputSource.withSplit(split);
-    }
+    firehoseFactory = null;
+    inputSource = baseInputSource.withSplit(split);
     final ParallelIndexIngestionSpec subTaskIngestionSpec = new ParallelIndexIngestionSpec(
         ingestionSchema.getDataSchema(),
         new ParallelIndexIOConfig(

@@ -903,8 +903,10 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     Map<String, Object> expectedPayload = (Map<String, Object>) expectedReports.get("payload");
     Map<String, Object> actualPayload = (Map<String, Object>) actualReports.get("payload");
     Assert.assertEquals(expectedPayload.get("ingestionState"), actualPayload.get("ingestionState"));
-    Assert.assertEquals(expectedPayload.get("rowStats"), actualPayload.get("rowStats"));
-    Assert.assertEquals(expectedPayload.get("ingestionState"), actualPayload.get("ingestionState"));
+
+    Map<String, Object> expectedTotals = (Map<String, Object>) expectedPayload.get("totals");
+    Map<String, Object> actualTotals = (Map<String, Object>) actualReports.get("totals");
+    Assert.assertEquals(expectedTotals, actualTotals);
 
     List<ParseExceptionReport> expectedParseExceptionReports =
         (List<ParseExceptionReport>) ((Map<String, Object>)
