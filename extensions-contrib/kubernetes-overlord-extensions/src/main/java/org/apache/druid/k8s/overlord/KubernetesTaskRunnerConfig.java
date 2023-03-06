@@ -38,6 +38,7 @@ public class KubernetesTaskRunnerConfig
   @JsonProperty
   public boolean debugJobs = false;
 
+  @Deprecated
   @JsonProperty
   public boolean sidecarSupport = false;
 

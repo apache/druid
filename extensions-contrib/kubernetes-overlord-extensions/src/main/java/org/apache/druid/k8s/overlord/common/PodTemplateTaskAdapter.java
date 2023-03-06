@@ -69,7 +69,7 @@ import java.util.Properties;
  */
 public class PodTemplateTaskAdapter implements TaskAdapter
 {
-  public static String TYPE = "PodTemplate";
+  public static String TYPE = "podTemplate";
 
   private static final Logger log = new Logger(PodTemplateTaskAdapter.class);
   private static final String TASK_PROPERTY = IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX + ".k8s.podTemplate.%s";
