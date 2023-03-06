@@ -82,12 +82,14 @@ public class PartitionedOutputChannel
   }
 
   /**
-   * Returns the writable channel of this pair. The producer writes to this channel.
+   * Returns the writable channel of this pair. The producer writes to this channel. Throws ISE if the output channel is
+   * read only.
    */
   public synchronized WritableFrameChannel getWritableChannel()
   {
     if (writableChannel == null) {
-      throw new ISE("Writable channel is not available");
+      throw new ISE("Writable channel is not available. The output channel might be marked as read-only,"
+                    + " hence no writes are allowed.");
     } else {
       return writableChannel;
     }
@@ -95,11 +97,13 @@ public class PartitionedOutputChannel
 
   /**
    * Returns the memory allocator for the writable channel. The producer uses this to generate frames for the channel.
+   * Throws ISE if the output channel is read only.
    */
   public synchronized MemoryAllocator getFrameMemoryAllocator()
   {
     if (frameMemoryAllocator == null) {
-      throw new ISE("Writable channel is not available");
+      throw new ISE("Frame allocator is not available. The output channel might be marked as read-only,"
+                    + " hence memory allocator is not required.");
     } else {
       return frameMemoryAllocator;
     }
