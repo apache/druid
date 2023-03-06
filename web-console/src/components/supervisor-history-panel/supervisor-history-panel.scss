@@ -18,24 +18,21 @@
 
 @import '../../variables';
 
-.compaction-dialog {
-  &.#{$bp-ns}-dialog {
-    height: 80vh;
+.supervisor-history-panel {
+  position: relative;
+  height: 100%;
+
+  .#{$bp-ns}-tabs {
+    position: relative;
+    height: 100%;
   }
 
-  .legacy-callout {
-    width: auto;
-    margin: 10px 15px 0;
+  .panel {
+    position: relative;
+    width: 100%;
   }
 
-  .form-json-selector {
-    margin: 15px;
-  }
-
-  .content {
-    margin: 0 15px 10px 0;
-    padding: 0 5px 0 15px;
-    flex: 1;
-    overflow: auto;
+  .#{$bp-ns}-tab-list {
+    overflow-y: auto;
   }
 }
