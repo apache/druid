@@ -27,10 +27,11 @@ import {
   compactionConfigHasLegacyInputSegmentSizeBytesSet,
 } from '../../druid-models';
 import { deepDelete, formatBytesCompact } from '../../utils';
+import { CompactionHistoryDialog } from '../compaction-history-dialog/compaction-history-dialog';
 
-import './compaction-dialog.scss';
+import './compaction-config-dialog.scss';
 
-export interface CompactionDialogProps {
+export interface CompactionConfigDialogProps {
   onClose: () => void;
   onSave: (compactionConfig: CompactionConfig) => void | Promise<void>;
   onDelete: () => void;
@@ -38,9 +39,12 @@ export interface CompactionDialogProps {
   compactionConfig: CompactionConfig | undefined;
 }
 
-export const CompactionDialog = React.memo(function CompactionDialog(props: CompactionDialogProps) {
+export const CompactionConfigDialog = React.memo(function CompactionConfigDialog(
+  props: CompactionConfigDialogProps,
+) {
   const { datasource, compactionConfig, onSave, onClose, onDelete } = props;
 
+  const [showHistory, setShowHistory] = useState(false);
   const [currentTab, setCurrentTab] = useState<FormJsonTabs>('form');
   const [currentConfig, setCurrentConfig] = useState<CompactionConfig>(
     compactionConfig || {
@@ -53,9 +57,15 @@ export const CompactionDialog = React.memo(function CompactionDialog(props: Comp
   const issueWithCurrentConfig = AutoForm.issueWithModel(currentConfig, COMPACTION_CONFIG_FIELDS);
   const disableSubmit = Boolean(jsonError || issueWithCurrentConfig);
 
+  if (showHistory) {
+    return (
+      <CompactionHistoryDialog datasource={datasource} onClose={() => setShowHistory(false)} />
+    );
+  }
+
   return (
     <Dialog
-      className="compaction-dialog"
+      className="compaction-config-dialog"
       isOpen
       onClose={onClose}
       canOutsideClickClose={false}
@@ -100,6 +110,12 @@ export const CompactionDialog = React.memo(function CompactionDialog(props: Comp
       </div>
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+          <Button
+            className="history-button"
+            text="History"
+            minimal
+            onClick={() => setShowHistory(true)}
+          />
           {compactionConfig && <Button text="Delete" intent={Intent.DANGER} onClick={onDelete} />}
           <Button text="Close" onClick={onClose} />
           <Button

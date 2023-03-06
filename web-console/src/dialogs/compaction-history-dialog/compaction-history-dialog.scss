@@ -16,15 +16,35 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
-import React from 'react';
+@import '../../variables';
 
-import { ShowHistory } from './show-history';
+.compaction-history-dialog {
+  &.#{$bp-ns}-dialog {
+    width: 70vw;
+    height: 80vh;
+  }
 
-describe('ShowHistory', () => {
-  it('matches snapshot', () => {
-    const showJson = <ShowHistory endpoint="test" downloadFilenamePrefix="test" />;
-    const { container } = render(showJson);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+  .#{$bp-ns}-tabs {
+    position: relative;
+    height: 100%;
+  }
+
+  .panel {
+    position: relative;
+    width: 100%;
+
+    .global-info {
+      position: absolute;
+      bottom: 10px;
+      left: 30px;
+      right: 10px;
+      width: auto;
+      white-space: pre;
+      background: $gray1;
+    }
+  }
+
+  .loader {
+    position: relative;
+  }
+}
