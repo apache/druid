@@ -84,8 +84,6 @@ public class ComposingWritableFrameChannelTest
     composingWritableFrameChannel.write(new FrameWithPartition(Mockito.mock(Frame.class), 2));
     composingWritableFrameChannel.write(new FrameWithPartition(Mockito.mock(Frame.class), 3));
 
-    partitionToChannelMap.get(0);
-
     // Assert the location of the channels where the frames have been written to
     Assert.assertEquals(ImmutableSet.of(0), partitionToChannelMap.get(1));
     Assert.assertEquals(ImmutableSet.of(0), partitionToChannelMap.get(2));
