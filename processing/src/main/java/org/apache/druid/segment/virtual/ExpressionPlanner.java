@@ -142,6 +142,7 @@ public class ExpressionPlanner
                      c -> !definitelyArray.contains(c)
                           && definitelyMultiValued.contains(c)
                           && !analysis.getArrayBindings().contains(c)
+                          && analysis.getScalarBindings().contains(c)
                  )
                  .collect(Collectors.toList());
 

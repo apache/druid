@@ -470,7 +470,12 @@ public class ParserTest extends InitializedNullHandlingTest
   public void testFunctions()
   {
     validateParser("sqrt(x)", "(sqrt [x])", ImmutableList.of("x"));
-    validateParser("if(cond,then,else)", "(if [cond, then, else])", ImmutableList.of("cond", "else", "then"));
+    validateParser("if(cond,then,else)", "(if [cond, then, else])", ImmutableList.of("cond", "else", "then"), Collections.emptySet(), Collections.emptySet());
+    validateParser("case_simple(cond,then,else)", "(case_simple [cond, then, else])", ImmutableList.of("cond", "else", "then"), Collections.emptySet(), Collections.emptySet());
+    validateParser("case_searched(cond,then,else)", "(case_searched [cond, then, else])", ImmutableList.of("cond", "else", "then"), Collections.emptySet(), Collections.emptySet());
+    validateParser("nvl(x, fallback)", "(nvl [x, fallback])", ImmutableList.of("x", "fallback"), Collections.emptySet(), Collections.emptySet());
+    validateParser("nvl(x, 1)", "(nvl [x, 1])", ImmutableList.of("x"), ImmutableSet.of(), Collections.emptySet());
+    validateParser("nvl(x, [1,2,3])", "(nvl [x, [1, 2, 3]])", ImmutableList.of("x"), Collections.emptySet(), ImmutableSet.of());
     validateParser("cast(x, 'STRING')", "(cast [x, STRING])", ImmutableList.of("x"));
     validateParser("cast(x, 'LONG')", "(cast [x, LONG])", ImmutableList.of("x"));
     validateParser("cast(x, 'DOUBLE')", "(cast [x, DOUBLE])", ImmutableList.of("x"));

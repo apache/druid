@@ -246,10 +246,8 @@ public class GreatestExpressionTest extends ExpressionTestBase
   }
 
   @Test
-  public void testInvalidType()
+  public void testBigDecimal()
   {
-    expectException(IllegalArgumentException.class, "Argument 0 has invalid type: INTERVAL_YEAR_MONTH");
-
     testExpression(
         Collections.singletonList(
             testHelper.makeLiteral(
@@ -257,8 +255,8 @@ public class GreatestExpressionTest extends ExpressionTestBase
                 new SqlIntervalQualifier(TimeUnit.YEAR, TimeUnit.MONTH, SqlParserPos.ZERO)
             )
         ),
-        null,
-        null
+        buildExpectedExpression(13),
+        13L
     );
   }
 

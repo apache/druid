@@ -1962,14 +1962,11 @@ public interface Function extends NamedFunction
         ExpressionType castTo = ExpressionType.fromString(
             StringUtils.toUpperCase(args.get(1).getLiteralValue().toString())
         );
-        switch (castTo.getType()) {
-          case ARRAY:
-            return Collections.emptySet();
-          default:
-            return ImmutableSet.of(args.get(0));
+        if (!castTo.getType().isArray()) {
+          return ImmutableSet.of(args.get(0));
         }
       }
-      // unknown cast, can't safely assume either way
+      // either has array inputs or unknown inputs
       return Collections.emptySet();
     }
 
@@ -1980,16 +1977,11 @@ public interface Function extends NamedFunction
         ExpressionType castTo = ExpressionType.fromString(
             StringUtils.toUpperCase(args.get(1).getLiteralValue().toString())
         );
-        switch (castTo.getType()) {
-          case LONG:
-          case DOUBLE:
-          case STRING:
-            return Collections.emptySet();
-          default:
-            return ImmutableSet.of(args.get(0));
+        if (castTo.getType().isArray()) {
+          return ImmutableSet.of(args.get(0));
         }
       }
-      // unknown cast, can't safely assume either way
+      // not an array, or unknown input types
       return Collections.emptySet();
     }
 
@@ -2087,6 +2079,13 @@ public interface Function extends NamedFunction
     {
       return ExpressionTypeConversion.conditional(inspector, args.subList(1, 3));
     }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      // could potentially look for constants in the return positions and examine type...
+      return Collections.emptySet();
+    }
   }
 
   /**
@@ -2133,6 +2132,13 @@ public interface Function extends NamedFunction
       // add else
       results.add(args.get(args.size() - 1));
       return ExpressionTypeConversion.conditional(inspector, results);
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      // could potentially look for constants in the return positions and examine type...
+      return Collections.emptySet();
     }
   }
 
@@ -2181,6 +2187,13 @@ public interface Function extends NamedFunction
       results.add(args.get(args.size() - 1));
       return ExpressionTypeConversion.conditional(inspector, results);
     }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      // could potentially look for constants in the return positions and examine type...
+      return Collections.emptySet();
+    }
   }
 
   class NvlFunc implements Function
@@ -2221,6 +2234,13 @@ public interface Function extends NamedFunction
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
       return VectorProcessors.nvl(inspector, args.get(0), args.get(1));
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      // output is same as input, doesn't matter the type
+      return Collections.emptySet();
     }
   }
 
@@ -2263,6 +2283,13 @@ public interface Function extends NamedFunction
     {
       return VectorProcessors.isNull(inspector, args.get(0));
     }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      // null or not, doesnt matter if the inputs are arrays or scalars
+      return Collections.emptySet();
+    }
   }
 
   class IsNotNullFunc implements Function
@@ -2293,7 +2320,6 @@ public interface Function extends NamedFunction
       return ExpressionType.LONG;
     }
 
-
     @Override
     public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
     {
@@ -2304,6 +2330,13 @@ public interface Function extends NamedFunction
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
       return VectorProcessors.isNotNull(inspector, args.get(0));
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      // null or not, doesnt matter if the inputs are arrays or scalars
+      return Collections.emptySet();
     }
   }
 

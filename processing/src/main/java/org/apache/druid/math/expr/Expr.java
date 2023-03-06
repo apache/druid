@@ -224,7 +224,7 @@ public interface Expr extends Cacheable
         if (argType == null) {
           continue;
         }
-        numeric &= argType.isNumeric();
+        numeric = numeric && argType.isNumeric();
       }
       return numeric;
     }
@@ -265,7 +265,7 @@ public interface Expr extends Cacheable
         if (currentType == null) {
           currentType = argType;
         }
-        allSame &= Objects.equals(argType, currentType);
+        allSame = allSame && Objects.equals(argType, currentType);
       }
       return allSame;
     }
@@ -302,7 +302,7 @@ public interface Expr extends Cacheable
         if (argType == null) {
           continue;
         }
-        scalar &= argType.isPrimitive();
+        scalar = scalar && argType.isPrimitive();
       }
       return scalar;
     }
@@ -330,7 +330,7 @@ public interface Expr extends Cacheable
     {
       boolean canVectorize = true;
       for (Expr arg : args) {
-        canVectorize &= arg.canVectorize(this);
+        canVectorize = canVectorize && arg.canVectorize(this);
       }
       return canVectorize;
     }
@@ -498,7 +498,7 @@ public interface Expr extends Cacheable
     /**
      * Set of {@link IdentifierExpr#binding} which are used as scalar inputs to operators and functions.
      */
-    Set<String> getScalarBindings()
+    public Set<String> getScalarBindings()
     {
       return map(scalarVariables, IdentifierExpr::getBindingIfIdentifier);
     }
