@@ -207,11 +207,9 @@ adding it to the `hiddenColumns` list.
 Example:
 
 ```json
-{
   "properties": {
-    "targetSegmentRows" : 1000000
+    "targetSegmentRows": 1000000
   }
-}
 ```
 
 ### `sealed` (Boolean)
