@@ -128,6 +128,15 @@ function build_shared_dir {
   mkdir -p $SHARED_DIR/kafka
   mkdir -p $SHARED_DIR/resources
   cp $MODULE_DIR/assets/log4j2.xml $SHARED_DIR/resources
+
+  if [ "$CATEGORY" == "Query" ]; then
+    # Query integration tests needs the wikiticker sample data
+    mkdir -p $SHARED_DIR/wikiticker-it
+    cp $MODULE_DIR/../../examples/quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz $SHARED_DIR/wikiticker-it/wikiticker-2015-09-12-sampled.json.gz
+    cp $MODULE_DIR/resources/data/query/wiki-simple-lookup.json $SHARED_DIR/wikiticker-it/wiki-simple-lookup.json
+    cp $MODULE_DIR/resources/data/query/wikipedia.desc $SHARED_DIR/wikiticker-it/wikipedia.desc
+  fi
+
   # Permissions in some build setups are screwed up. See above. The user
   # which runs Docker does not have permission to write into the /shared
   # directory. Force ownership to allow writing.
