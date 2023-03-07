@@ -19,22 +19,29 @@
 
 package org.apache.druid.sql.calcite.rule;
 
+import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Correlate;
-import org.apache.calcite.rel.core.Filter;
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexCorrelVariable;
+import org.apache.calcite.rex.RexFieldAccess;
+import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.tools.RelBuilder;
+import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidCorrelateUnnestRel;
-import org.apache.druid.sql.calcite.rel.DruidQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidRel;
-import org.apache.druid.sql.calcite.rel.DruidUnnestDatasourceRel;
+import org.apache.druid.sql.calcite.rel.DruidRels;
+import org.apache.druid.sql.calcite.rel.DruidUnnestRel;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 
 import java.util.ArrayList;
@@ -44,26 +51,28 @@ import java.util.List;
  * This class creates the rule to abide by for creating correlations during unnest.
  * Typically, Calcite plans the unnest query such as
  * SELECT * from numFoo, unnest(dim3) in the following way:
+ *
+ * <pre>
  * 80:LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{3}])
  *   6:LogicalTableScan(subset=[rel#74:Subset#0.NONE.[]], table=[[druid, numfoo]])
  *   78:Uncollect(subset=[rel#79:Subset#3.NONE.[]])
  *     76:LogicalProject(subset=[rel#77:Subset#2.NONE.[]], EXPR$0=[MV_TO_ARRAY($cor0.dim3)])
  *       7:LogicalValues(subset=[rel#75:Subset#1.NONE.[0]], tuples=[[{ 0 }]])
+ * </pre>
  *
- *  {@link DruidUnnestDatasourceRule} takes care of the Uncollect(last 3 lines) to generate a {@link DruidUnnestDatasourceRel}
- *  thereby reducing the logical plan to:
+ * {@link DruidUnnestRule} takes care of the Uncollect(last 3 lines) to generate a {@link DruidUnnestRel}
+ * thereby reducing the logical plan to:
+ * <pre>
  *        LogicalCorrelate
  *           /       \
  *      DruidRel    DruidUnnestDataSourceRel
- *
- *  This forms the premise of this rule. The goal is to transform the above-mentioned structure in the tree
- *  with a new rel {@link DruidCorrelateUnnestRel} which shall be created here.
- *
+ * </pre>
+ * This forms the premise of this rule. The goal is to transform the above-mentioned structure in the tree
+ * with a new rel {@link DruidCorrelateUnnestRel} which shall be created here.
  */
 public class DruidCorrelateUnnestRule extends RelOptRule
 {
   private final PlannerContext plannerContext;
-  private final boolean enableLeftScanDirect;
 
   public DruidCorrelateUnnestRule(final PlannerContext plannerContext)
   {
@@ -71,107 +80,139 @@ public class DruidCorrelateUnnestRule extends RelOptRule
         operand(
             Correlate.class,
             operand(DruidRel.class, any()),
-            operand(DruidUnnestDatasourceRel.class, any())
+            operand(DruidUnnestRel.class, any())
         )
     );
 
     this.plannerContext = plannerContext;
-    this.enableLeftScanDirect = plannerContext.queryContext().getEnableJoinLeftScanDirect();
   }
 
   @Override
   public boolean matches(RelOptRuleCall call)
   {
-    final DruidRel<?> druidRel = call.rel(1);
-    final DruidRel<?> uncollectRel = call.rel(2);
-
-    return druidRel.getPartialDruidQuery() != null
-           && uncollectRel.getPartialDruidQuery() != null;
+    final DruidRel<?> left = call.rel(1);
+    return left.getPartialDruidQuery() != null;
   }
-
 
   @Override
   public void onMatch(RelOptRuleCall call)
   {
     final Correlate correlate = call.rel(0);
-    final DruidRel<?> druidRel = call.rel(1);
-    DruidUnnestDatasourceRel druidUnnestDatasourceRel = call.rel(2);
+    final DruidRel<?> left = call.rel(1);
+    final DruidUnnestRel right = call.rel(2);
 
+    if (DruidRels.isScanOrProject(left, true)
+        && left.getPartialDruidQuery().getSelectProject() != null
+        && RelOptUtil.InputFinder.bits(right.getUnnestProject().getProjects(), null).isEmpty()) {
+      // Pull left-side Project above the Correlate, so we can eliminate a subquery.
+      final RelNode leftScan = left.getPartialDruidQuery().getScan();
+      final Project leftProject = left.getPartialDruidQuery().getSelectProject();
 
-    final RexBuilder rexBuilder = correlate.getCluster().getRexBuilder();
+      // Rewrite right-side Project on top of leftScan rather than leftProject.
+      final PushCorrelatedFieldAccessPastProject correlatedFieldRewriteShuttle =
+          new PushCorrelatedFieldAccessPastProject(correlate.getCorrelationId(), leftProject);
+      final List<RexNode> newRightProjectExprs =
+          correlatedFieldRewriteShuttle.apply(right.getUnnestProject().getProjects());
 
-    final Filter druidRelFilter;
-    final DruidRel<?> newDruidRelFilter;
-    final List<RexNode> newProjectExprs = new ArrayList<>();
+      // Pull the Project out of the left side of the Correlate.
+      final DruidCorrelateUnnestRel druidCorrelateUnnest = DruidCorrelateUnnestRel.create(
+          correlate.copy(
+              correlate.getTraitSet(),
 
-    final boolean isLeftDirectAccessPossible = enableLeftScanDirect && (druidRel instanceof DruidQueryRel);
+              // Left side: remove Project.
+              left.withPartialQuery(PartialDruidQuery.create(leftScan)),
 
-    if (druidRel.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
-        && (isLeftDirectAccessPossible || druidRel.getPartialDruidQuery().getWhereFilter() == null)) {
-      // Swap the druidRel-side projection above the correlate, so the druidRel side is a simple scan or mapping.
-      // This helps us avoid subqueries.
-      final RelNode leftScan = druidRel.getPartialDruidQuery().getScan();
-      final Project leftProject = druidRel.getPartialDruidQuery().getSelectProject();
-      druidRelFilter = druidRel.getPartialDruidQuery().getWhereFilter();
+              // Right side: use rewritten newRightProjectExprs, pushed past the left Project.
+              right.withUnnestProject(
+                  right.getUnnestProject().copy(
+                      right.getUnnestProject().getTraitSet(),
+                      right.getUnnestProject().getInput(),
+                      newRightProjectExprs,
+                      right.getUnnestProject().getRowType()
+                  )
+              ),
+              correlate.getCorrelationId(),
+              ImmutableBitSet.of(correlatedFieldRewriteShuttle.getRequiredColumns()),
+              correlate.getJoinType()
+          ),
+          plannerContext
+      );
 
-      // Left-side projection expressions rewritten to be on top of the correlate.
-      newProjectExprs.addAll(leftProject.getProjects());
-      newDruidRelFilter = druidRel.withPartialQuery(PartialDruidQuery.create(leftScan));
-    } else {
-      // Leave druidRel as-is. Write input refs that do nothing.
-      for (int i = 0; i < druidRel.getRowType().getFieldCount(); i++) {
-        newProjectExprs.add(rexBuilder.makeInputRef(correlate.getRowType().getFieldList().get(i).getType(), i));
+      // Add right-side input refs to the Project, so it matches the full original Correlate.
+      final RexBuilder rexBuilder = correlate.getCluster().getRexBuilder();
+      final List<RexNode> pulledUpProjects = new ArrayList<>(leftProject.getProjects());
+      for (int i = 0 ; i < right.getRowType().getFieldCount(); i++ ) {
+        pulledUpProjects.add(rexBuilder.makeInputRef(druidCorrelateUnnest, i + leftScan.getRowType().getFieldCount()));
       }
-      newDruidRelFilter = druidRel;
-      druidRelFilter = null;
+
+      // Now push the Project back on top of the Correlate.
+      final RelBuilder relBuilder =
+          call.builder()
+              .push(druidCorrelateUnnest)
+              .project(
+                  RexUtil.fixUp(
+                      rexBuilder,
+                      pulledUpProjects,
+                      RelOptUtil.getFieldTypeList(druidCorrelateUnnest.getRowType())
+                  )
+              );
+
+      final RelNode build = relBuilder.build();
+      call.transformTo(build);
+    } else {
+      call.transformTo(DruidCorrelateUnnestRel.create(correlate, plannerContext));
+    }
+  }
+
+  /**
+   * Shuttle that pushes correlating variable accesses past a Project.
+   */
+  private static class PushCorrelatedFieldAccessPastProject extends RexShuttle
+  {
+    private final CorrelationId correlationId;
+    private final Project project;
+
+    // "Sidecar" return value: computed along with the shuttling.
+    private final IntSet requiredColumns = new IntAVLTreeSet();
+
+    public PushCorrelatedFieldAccessPastProject(
+        final CorrelationId correlationId,
+        final Project project
+    )
+    {
+      this.correlationId = correlationId;
+      this.project = project;
     }
 
-    if (druidUnnestDatasourceRel.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT) {
-      for (final RexNode rexNode : RexUtil.shift(
-          druidUnnestDatasourceRel.getPartialDruidQuery()
-                                  .getSelectProject()
-                                  .getProjects(),
-          newDruidRelFilter.getRowType().getFieldCount()
-      )) {
-        newProjectExprs.add(rexNode);
-      }
-    } else {
-      for (int i = 0; i < druidUnnestDatasourceRel.getRowType().getFieldCount(); i++) {
-        newProjectExprs.add(
-            rexBuilder.makeInputRef(
-                correlate.getRowType()
-                         .getFieldList()
-                         .get(druidRel.getRowType().getFieldCount() + i)
-                         .getType(),
-                newDruidRelFilter.getRowType().getFieldCount() + i
-            )
-        );
-      }
+    public IntSet getRequiredColumns()
+    {
+      return requiredColumns;
     }
 
-    final DruidCorrelateUnnestRel druidCorr = DruidCorrelateUnnestRel.create(
-        correlate.copy(
-            correlate.getTraitSet(),
-            newDruidRelFilter,
-            druidUnnestDatasourceRel,
-            correlate.getCorrelationId(),
-            correlate.getRequiredColumns(),
-            correlate.getJoinType()
-        ),
-        druidRelFilter,
-        plannerContext
-    );
+    @Override
+    public RexNode visitFieldAccess(final RexFieldAccess fieldAccess)
+    {
+      if (fieldAccess.getReferenceExpr() instanceof RexCorrelVariable) {
+        final RexCorrelVariable encounteredCorrelVariable = (RexCorrelVariable) fieldAccess.getReferenceExpr();
+        if (encounteredCorrelVariable.id.equals(correlationId)) {
+          final RexNode projectExpr = project.getProjects().get(fieldAccess.getField().getIndex());
 
+          // Rewrite RexInputRefs as correlation variable accesses.
+          final RexBuilder rexBuilder = project.getCluster().getRexBuilder();
+          final RexNode newCorrel = rexBuilder.makeCorrel(project.getInput().getRowType(), correlationId);
+          return new RexShuttle()
+          {
+            @Override
+            public RexNode visitInputRef(RexInputRef inputRef)
+            {
+              requiredColumns.add(inputRef.getIndex());
+              return project.getCluster().getRexBuilder().makeFieldAccess(newCorrel, inputRef.getIndex());
+            }
+          }.apply(projectExpr);
+        }
+      }
 
-    final RelBuilder relBuilder =
-        call.builder()
-            .push(druidCorr)
-            .project(RexUtil.fixUp(
-                rexBuilder,
-                newProjectExprs,
-                RelOptUtil.getFieldTypeList(druidCorr.getRowType())
-            ));
-
-    call.transformTo(relBuilder.build());
+      return super.visitFieldAccess(fieldAccess);
+    }
   }
 }

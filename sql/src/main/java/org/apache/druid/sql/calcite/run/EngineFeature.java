@@ -23,7 +23,7 @@ import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 /**
- * Arguments to {@link SqlEngine#feature(EngineFeature, PlannerContext)}.
+ * Arguments to {@link SqlEngine#featureAvailable(EngineFeature, PlannerContext)}.
  */
 public enum EngineFeature
 {
@@ -78,5 +78,20 @@ public enum EngineFeature
    * Planner is permitted to use a {@link org.apache.calcite.runtime.Bindable} plan on local resources, instead
    * of {@link QueryMaker}, for SELECT query implementation. Used for system tables and the like.
    */
-  ALLOW_BINDABLE_PLAN
+  ALLOW_BINDABLE_PLAN,
+
+  /**
+   * Queries can use GROUPING SETS.
+   */
+  GROUPING_SETS,
+
+  /**
+   * Queries can use window functions.
+   */
+  WINDOW_FUNCTIONS,
+
+  /**
+   * Queries can use {@link org.apache.calcite.sql.fun.SqlStdOperatorTable#UNNEST}.
+   */
+  UNNEST
 }

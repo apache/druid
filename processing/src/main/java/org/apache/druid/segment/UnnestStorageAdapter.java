@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.google.common.collect.Lists;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -30,13 +31,19 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.filter.AndFilter;
+import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.join.PostJoinCursor;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * This class serves as the Storage Adapter for the Unnest Segment and is responsible for creating the cursors
@@ -46,20 +53,19 @@ import java.util.Objects;
 public class UnnestStorageAdapter implements StorageAdapter
 {
   private final StorageAdapter baseAdapter;
-  private final String dimensionToUnnest;
+  private final VirtualColumn unnestColumn;
   private final String outputColumnName;
   private final LinkedHashSet<String> allowSet;
 
   public UnnestStorageAdapter(
       final StorageAdapter baseAdapter,
-      final String dimension,
-      final String outputColumnName,
+      final VirtualColumn unnestColumn,
       final LinkedHashSet<String> allowSet
   )
   {
     this.baseAdapter = baseAdapter;
-    this.dimensionToUnnest = dimension;
-    this.outputColumnName = outputColumnName;
+    this.unnestColumn = unnestColumn;
+    this.outputColumnName = unnestColumn.getOutputName();
     this.allowSet = allowSet;
   }
 
@@ -73,22 +79,12 @@ public class UnnestStorageAdapter implements StorageAdapter
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
-    Filter updatedFilter;
-    if (allowSet != null && !allowSet.isEmpty()) {
-      final InDimFilter allowListFilters;
-      allowListFilters = new InDimFilter(dimensionToUnnest, allowSet);
-      if (filter != null) {
-        updatedFilter = new AndFilter(Arrays.asList(filter, allowListFilters));
-      } else {
-        updatedFilter = allowListFilters;
-      }
-    } else {
-      updatedFilter = filter;
-    }
+    final Pair<Filter, Filter> filterPair = computeBaseAndPostJoinFilters(filter, virtualColumns);
+
     final Sequence<Cursor> baseCursorSequence = baseAdapter.makeCursors(
-        updatedFilter,
+        filterPair.lhs,
         interval,
-        virtualColumns,
+        VirtualColumns.create(Collections.singletonList(unnestColumn)),
         gran,
         descending,
         queryMetrics
@@ -99,13 +95,16 @@ public class UnnestStorageAdapter implements StorageAdapter
         cursor -> {
           Objects.requireNonNull(cursor);
           Cursor retVal = cursor;
-          ColumnCapabilities capabilities = cursor.getColumnSelectorFactory().getColumnCapabilities(dimensionToUnnest);
+          ColumnCapabilities capabilities = unnestColumn.capabilities(
+              cursor.getColumnSelectorFactory(),
+              unnestColumn.getOutputName()
+          );
           if (capabilities != null) {
             if (capabilities.isDictionaryEncoded().and(capabilities.areDictionaryValuesUnique()).isTrue()) {
               retVal = new UnnestDimensionCursor(
                   retVal,
                   retVal.getColumnSelectorFactory(),
-                  dimensionToUnnest,
+                  unnestColumn,
                   outputColumnName,
                   allowSet
               );
@@ -113,7 +112,7 @@ public class UnnestStorageAdapter implements StorageAdapter
               retVal = new UnnestColumnValueSelectorCursor(
                   retVal,
                   retVal.getColumnSelectorFactory(),
-                  dimensionToUnnest,
+                  unnestColumn,
                   outputColumnName,
                   allowSet
               );
@@ -122,12 +121,16 @@ public class UnnestStorageAdapter implements StorageAdapter
             retVal = new UnnestColumnValueSelectorCursor(
                 retVal,
                 retVal.getColumnSelectorFactory(),
-                dimensionToUnnest,
+                unnestColumn,
                 outputColumnName,
                 allowSet
             );
           }
-          return retVal;
+          return PostJoinCursor.wrap(
+              retVal,
+              virtualColumns,
+              filterPair.rhs
+          );
         }
     );
   }
@@ -162,7 +165,7 @@ public class UnnestStorageAdapter implements StorageAdapter
     if (!outputColumnName.equals(column)) {
       return baseAdapter.getDimensionCardinality(column);
     }
-    return baseAdapter.getDimensionCardinality(dimensionToUnnest);
+    return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
   }
 
   @Override
@@ -181,30 +184,33 @@ public class UnnestStorageAdapter implements StorageAdapter
   @Override
   public Comparable getMinValue(String column)
   {
-    if (!outputColumnName.equals(column)) {
-      return baseAdapter.getMinValue(column);
+    if (outputColumnName.equals(column)) {
+      return null;
     }
-    return baseAdapter.getMinValue(dimensionToUnnest);
+
+    return baseAdapter.getMinValue(column);
   }
 
   @Nullable
   @Override
   public Comparable getMaxValue(String column)
   {
-    if (!outputColumnName.equals(column)) {
-      return baseAdapter.getMaxValue(column);
+    if (outputColumnName.equals(column)) {
+      return null;
     }
-    return baseAdapter.getMaxValue(dimensionToUnnest);
+
+    return baseAdapter.getMaxValue(column);
   }
 
   @Nullable
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    if (!outputColumnName.equals(column)) {
-      return baseAdapter.getColumnCapabilities(column);
+    if (outputColumnName.equals(column)) {
+      return unnestColumn.capabilities(baseAdapter, column);
     }
-    return baseAdapter.getColumnCapabilities(dimensionToUnnest);
+
+    return baseAdapter.getColumnCapabilities(column);
   }
 
   @Override
@@ -226,9 +232,80 @@ public class UnnestStorageAdapter implements StorageAdapter
     return baseAdapter.getMetadata();
   }
 
-  public String getDimensionToUnnest()
+  public VirtualColumn getUnnestColumn()
   {
-    return dimensionToUnnest;
+    return unnestColumn;
+  }
+
+  private Pair<Filter, Filter> computeBaseAndPostJoinFilters(
+      @Nullable final Filter queryFilter,
+      final VirtualColumns queryVirtualColumns
+  )
+  {
+    class FilterSplitter
+    {
+      final List<Filter> preFilters = new ArrayList<>();
+      final List<Filter> postFilters = new ArrayList<>();
+
+      void add(@Nullable final Filter filter)
+      {
+        if (filter == null) {
+          return;
+        }
+
+        final Set<String> requiredColumns = filter.getRequiredColumns();
+
+        if (requiredColumns.contains(outputColumnName)) {
+          postFilters.add(filter);
+        } else {
+          if (queryVirtualColumns.getVirtualColumns().length > 0) {
+            for (String column : requiredColumns) {
+              if (queryVirtualColumns.exists(column)) {
+                postFilters.add(filter);
+                return;
+              }
+            }
+          }
+
+          preFilters.add(filter);
+        }
+      }
+    }
+
+    final FilterSplitter filterSplitter = new FilterSplitter();
+
+    if (allowSet != null && !allowSet.isEmpty()) {
+      final String inputColumn = getUnnestInputIfDirectAccess();
+
+      // Filter on input column if possible (it may be faster); otherwise use output column.
+      filterSplitter.add(new InDimFilter(inputColumn != null ? inputColumn : outputColumnName, allowSet));
+    }
+
+    if (queryFilter instanceof AndFilter) {
+      for (Filter filter : ((AndFilter) queryFilter).getFilters()) {
+        filterSplitter.add(filter);
+      }
+    } else {
+      filterSplitter.add(queryFilter);
+    }
+
+    return Pair.of(
+        Filters.maybeAnd(filterSplitter.preFilters).orElse(null),
+        Filters.maybeAnd(filterSplitter.postFilters).orElse(null)
+    );
+  }
+
+  /**
+   * Returns the input of {@link #unnestColumn}, if it's a direct access; otherwise returns null.
+   */
+  @Nullable
+  private String getUnnestInputIfDirectAccess()
+  {
+    if (unnestColumn instanceof ExpressionVirtualColumn) {
+      return ((ExpressionVirtualColumn) unnestColumn).getParsedExpression().get().getBindingIfIdentifier();
+    } else {
+      return null;
+    }
   }
 }
 

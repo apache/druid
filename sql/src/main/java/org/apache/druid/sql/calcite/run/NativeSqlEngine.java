@@ -93,13 +93,16 @@ public class NativeSqlEngine implements SqlEngine
   }
 
   @Override
-  public boolean feature(EngineFeature feature, PlannerContext plannerContext)
+  public boolean featureAvailable(EngineFeature feature, PlannerContext plannerContext)
   {
     switch (feature) {
       case CAN_SELECT:
       case ALLOW_BINDABLE_PLAN:
       case TIMESERIES_QUERY:
       case TOPN_QUERY:
+      case GROUPING_SETS:
+      case WINDOW_FUNCTIONS:
+      case UNNEST:
         return true;
       case TIME_BOUNDARY_QUERY:
         return plannerContext.queryContext().isTimeBoundaryPlanningEnabled();

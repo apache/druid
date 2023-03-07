@@ -83,6 +83,7 @@ import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.rule.FilterJoinExcludePushToChildRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
+import org.apache.druid.sql.calcite.run.EngineFeature;
 
 import java.util.List;
 import java.util.Set;
@@ -284,7 +285,8 @@ public class CalciteRulesManager
     rules.addAll(ABSTRACT_RELATIONAL_RULES);
 
     if (!plannerConfig.isUseApproximateCountDistinct()) {
-      if (plannerConfig.isUseGroupingSetForExactDistinct()) {
+      if (plannerConfig.isUseGroupingSetForExactDistinct()
+          && plannerContext.featureAvailable(EngineFeature.GROUPING_SETS)) {
         rules.add(AggregateExpandDistinctAggregatesRule.INSTANCE);
       } else {
         rules.add(AggregateExpandDistinctAggregatesRule.JOIN);

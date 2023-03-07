@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
@@ -32,10 +33,13 @@ import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.utils.CloseableUtils;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -82,26 +86,22 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     INCREMENTAL_INDEX_STORAGE_ADAPTER = new IncrementalIndexStorageAdapter(INCREMENTAL_INDEX);
     UNNEST_STORAGE_ADAPTER = new UnnestStorageAdapter(
         INCREMENTAL_INDEX_STORAGE_ADAPTER,
-        COLUMNNAME,
-        OUTPUT_COLUMN_NAME,
+        new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME, "\"" + COLUMNNAME + "\"", null, ExprMacroTable.nil()),
         null
     );
     UNNEST_STORAGE_ADAPTER1 = new UnnestStorageAdapter(
         INCREMENTAL_INDEX_STORAGE_ADAPTER,
-        COLUMNNAME,
-        OUTPUT_COLUMN_NAME,
+        new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME, "\"" + COLUMNNAME + "\"", null, ExprMacroTable.nil()),
         IGNORE_SET
     );
     UNNEST_STORAGE_ADAPTER2 = new UnnestStorageAdapter(
         UNNEST_STORAGE_ADAPTER,
-        COLUMNNAME,
-        OUTPUT_COLUMN_NAME1,
+        new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME1, "\"" + COLUMNNAME +"\"", null, ExprMacroTable.nil()),
         null
     );
     UNNEST_STORAGE_ADAPTER3 = new UnnestStorageAdapter(
         UNNEST_STORAGE_ADAPTER1,
-        COLUMNNAME,
-        OUTPUT_COLUMN_NAME1,
+        new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME1, "\"" + COLUMNNAME + "\"", null, ExprMacroTable.nil()),
         IGNORE_SET
     );
     ADAPTERS = ImmutableList.of(
@@ -143,7 +143,8 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
           adapter.getColumnCapabilities(colName).toColumnType(),
           INCREMENTAL_INDEX_STORAGE_ADAPTER.getColumnCapabilities(colName).toColumnType()
       );
-      Assert.assertEquals(((UnnestStorageAdapter) adapter).getDimensionToUnnest(), colName);
+
+      assertColumnReadsIdentifier(((UnnestStorageAdapter) adapter).getUnnestColumn(), colName);
     }
   }
 
@@ -173,7 +174,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       ColumnCapabilities capabilities = adapter.getColumnCapabilities(columnsInTable.get(i));
       Assert.assertEquals(capabilities.getType(), valueTypes.get(i));
     }
-    Assert.assertEquals(adapter.getDimensionToUnnest(), colName);
+    assertColumnReadsIdentifier(adapter.getUnnestColumn(), colName);
 
   }
 
@@ -312,13 +313,13 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         null
     );
     UnnestStorageAdapter adapter = UNNEST_STORAGE_ADAPTER3;
-    Assert.assertEquals(adapter.getDimensionToUnnest(), columnName);
+    assertColumnReadsIdentifier(adapter.getUnnestColumn(), columnName);
     Assert.assertEquals(
         adapter.getColumnCapabilities(OUTPUT_COLUMN_NAME).isDictionaryEncoded(),
         ColumnCapabilities.Capable.TRUE
     );
-    Assert.assertEquals(adapter.getMaxValue(columnName), adapter.getMaxValue(OUTPUT_COLUMN_NAME));
-    Assert.assertEquals(adapter.getMinValue(columnName), adapter.getMinValue(OUTPUT_COLUMN_NAME));
+    Assert.assertNull(adapter.getMaxValue(OUTPUT_COLUMN_NAME));
+    Assert.assertNull(adapter.getMinValue(OUTPUT_COLUMN_NAME));
 
     cursorSequence.accumulate(null, (accumulated, cursor) -> {
       ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
@@ -364,13 +365,13 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         null
     );
     UnnestStorageAdapter adapter = UNNEST_STORAGE_ADAPTER1;
-    Assert.assertEquals(adapter.getDimensionToUnnest(), columnName);
+    assertColumnReadsIdentifier(adapter.getUnnestColumn(), columnName);
     Assert.assertEquals(
         adapter.getColumnCapabilities(OUTPUT_COLUMN_NAME).isDictionaryEncoded(),
         ColumnCapabilities.Capable.TRUE
     );
-    Assert.assertEquals(adapter.getMaxValue(columnName), adapter.getMaxValue(OUTPUT_COLUMN_NAME));
-    Assert.assertEquals(adapter.getMinValue(columnName), adapter.getMinValue(OUTPUT_COLUMN_NAME));
+    Assert.assertNull(adapter.getMaxValue(OUTPUT_COLUMN_NAME));
+    Assert.assertNull(adapter.getMinValue(OUTPUT_COLUMN_NAME));
 
     cursorSequence.accumulate(null, (accumulated, cursor) -> {
       ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
@@ -395,5 +396,11 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       Assert.assertEquals(count, 3);
       return null;
     });
+  }
+
+  private static void assertColumnReadsIdentifier(final VirtualColumn column, final String identifier)
+  {
+    MatcherAssert.assertThat(column, CoreMatchers.instanceOf(ExpressionVirtualColumn.class));
+    Assert.assertEquals("\"" + identifier + "\"", ((ExpressionVirtualColumn) column).getExpression());
   }
 }

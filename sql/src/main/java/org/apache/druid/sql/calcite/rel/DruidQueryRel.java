@@ -22,22 +22,24 @@ package org.apache.druid.sql.calcite.rel;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Preconditions;
 import org.apache.calcite.plan.Convention;
+import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.logical.LogicalTableScan;
-import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.sql.calcite.external.ExternalTableScan;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.DruidTable;
+import org.apache.druid.sql.calcite.table.InlineTable;
 
 import javax.annotation.Nullable;
-
 import java.util.Set;
 
 /**
@@ -106,19 +108,19 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   /**
    * Create a DruidQueryRel representing a full scan of inline, literal values.
    */
-  public static DruidQueryRel scanValues(
-      final LogicalValues valuesRel,
-      final DruidTable druidTable,
+  public static DruidQueryRel scanConstantRel(
+      final RelNode rel,
+      final InlineDataSource dataSource,
       final PlannerContext plannerContext
   )
   {
     return new DruidQueryRel(
-        valuesRel.getCluster(),
-        valuesRel.getTraitSet(), // the traitSet of valuesRel should be kept
+        rel.getCluster(),
+        rel.getTraitSet().replace(Convention.NONE), // keep traitSet of input rel, except for convention
         null,
-        druidTable,
+        new InlineTable(dataSource),
         plannerContext,
-        PartialDruidQuery.create(valuesRel)
+        PartialDruidQuery.create(rel)
     );
   }
 

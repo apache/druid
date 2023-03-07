@@ -186,10 +186,9 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
       throw new RuntimeException(e);
     }
 
-    return super.explainTerms(pw)
-                .input("innerQuery", sourceRel)
-                .item("query", queryString)
-                .item("signature", druidQuery.getOutputRowSignature());
+    return pw.input("innerQuery", sourceRel)
+             .item("query", queryString)
+             .item("signature", druidQuery.getOutputRowSignature());
   }
 
   @Override

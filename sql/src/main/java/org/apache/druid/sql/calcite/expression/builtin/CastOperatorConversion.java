@@ -76,6 +76,8 @@ public class CastOperatorConversion implements SqlOperatorConversion
       builder.put(type, ExprType.LONG);
     }
 
+    builder.put(SqlTypeName.ARRAY, ExprType.ARRAY);
+
     EXPRESSION_TYPES = builder.build();
   }
 
