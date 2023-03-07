@@ -3009,7 +3009,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     // Generates 2 native queries with 2 different values of vectorize
     cannotVectorize();
     testQuery(
-        "SELECT d3 FROM (select * from druid.numfoo where dim2 IN ('a','b','ab','abc') LIMIT 2), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
+        "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where dim2 IN ('a','b','ab','abc') LIMIT 2",
+//        "SELECT d3 FROM (select * from druid.numfoo where dim2 IN ('a','b','ab','abc') LIMIT 2), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(

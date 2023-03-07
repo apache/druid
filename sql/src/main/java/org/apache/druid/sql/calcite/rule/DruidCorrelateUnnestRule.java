@@ -101,8 +101,9 @@ public class DruidCorrelateUnnestRule extends RelOptRule
     final RexBuilder rexBuilder = correlate.getCluster().getRexBuilder();
 
     final Filter druidRelFilter;
-    final DruidRel<?> newDruidRelFilter;
+    final DruidRel<?> newDruidRel;
     final List<RexNode> newProjectExprs = new ArrayList<>();
+    final List<RexNode> newWheres = new ArrayList<>();
 
     final boolean isLeftDirectAccessPossible = enableLeftScanDirect && (druidRel instanceof DruidQueryRel);
 
@@ -116,14 +117,14 @@ public class DruidCorrelateUnnestRule extends RelOptRule
 
       // Left-side projection expressions rewritten to be on top of the correlate.
       newProjectExprs.addAll(leftProject.getProjects());
-      newDruidRelFilter = druidRel.withPartialQuery(PartialDruidQuery.create(leftScan));
+      newDruidRel = druidRel.withPartialQuery(PartialDruidQuery.create(leftScan));
     } else {
       // Leave druidRel as-is. Write input refs that do nothing.
       for (int i = 0; i < druidRel.getRowType().getFieldCount(); i++) {
         newProjectExprs.add(rexBuilder.makeInputRef(correlate.getRowType().getFieldList().get(i).getType(), i));
       }
-      newDruidRelFilter = druidRel;
-      druidRelFilter = null;
+      newDruidRel = druidRel;
+      druidRelFilter = druidRel.getPartialDruidQuery().getWhereFilter();
     }
 
     if (druidUnnestDatasourceRel.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT) {
@@ -131,7 +132,7 @@ public class DruidCorrelateUnnestRule extends RelOptRule
           druidUnnestDatasourceRel.getPartialDruidQuery()
                                   .getSelectProject()
                                   .getProjects(),
-          newDruidRelFilter.getRowType().getFieldCount()
+          newDruidRel.getRowType().getFieldCount()
       )) {
         newProjectExprs.add(rexNode);
       }
@@ -143,7 +144,7 @@ public class DruidCorrelateUnnestRule extends RelOptRule
                          .getFieldList()
                          .get(druidRel.getRowType().getFieldCount() + i)
                          .getType(),
-                newDruidRelFilter.getRowType().getFieldCount() + i
+                newDruidRel.getRowType().getFieldCount() + i
             )
         );
       }
@@ -152,7 +153,7 @@ public class DruidCorrelateUnnestRule extends RelOptRule
     final DruidCorrelateUnnestRel druidCorr = DruidCorrelateUnnestRel.create(
         correlate.copy(
             correlate.getTraitSet(),
-            newDruidRelFilter,
+            newDruidRel,
             druidUnnestDatasourceRel,
             correlate.getCorrelationId(),
             correlate.getRequiredColumns(),

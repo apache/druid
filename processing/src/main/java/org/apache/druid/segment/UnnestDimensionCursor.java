@@ -20,9 +20,11 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Predicate;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.dimension.LegacyDimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -30,11 +32,13 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.segment.data.SingleIndexedInt;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * The cursor to help unnest MVDs with dictionary encoding.
@@ -327,6 +331,199 @@ public class UnnestDimensionCursor implements Cursor
   @Nullable
   private void initialize()
   {
+    /*
+    for i=0 to baseColFactory.makeDimSelector.getValueCardinality()
+        match each item with the filter and populate bitset if there's a match
+     */
+
+    AtomicInteger idRef = new AtomicInteger();
+    ValueMatcher myMatcher = allowFilter.makeMatcher(new ColumnSelectorFactory()
+    {
+      @Override
+      public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
+      {
+        if (!outputName.equals(dimensionSpec.getDimension())) {
+          throw new ISE("Asked for bad dimension[%s]", dimensionSpec);
+        }
+        return new DimensionSelector()
+        {
+          private final IndexedInts myInts = new IndexedInts()
+          {
+            @Override
+            public int size()
+            {
+              return 1;
+            }
+
+            @Override
+            public int get(int index)
+            {
+              return 1;
+            }
+
+            @Override
+            public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+            {
+
+            }
+          };
+          @Override
+          public IndexedInts getRow()
+          {
+            return myInts;
+          }
+
+          @Override
+          public ValueMatcher makeValueMatcher(@Nullable String value)
+          {
+            // Handle value is null
+            return new ValueMatcher()
+            {
+              @Override
+              public boolean matches()
+              {
+                 return value.equals(lookupName(1));
+              }
+
+              @Override
+              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+              {
+
+              }
+            };
+          }
+
+          @Override
+          public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+          {
+            return new ValueMatcher()
+            {
+              @Override
+              public boolean matches()
+              {
+                return predicate.apply(lookupName(1));
+              }
+
+              @Override
+              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+              {
+
+              }
+            }
+          }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+
+          }
+
+          @Nullable
+          @Override
+          public Object getObject()
+          {
+            return null;
+          }
+
+          @Override
+          public Class<?> classOfObject()
+          {
+            return null;
+          }
+
+          @Override
+          public int getValueCardinality()
+          {
+            return dimSelector.getValueCardinality();
+          }
+
+          @Nullable
+          @Override
+          public String lookupName(int id)
+          {
+            return dimSelector.lookupName(idRef.get());
+          }
+
+          @Override
+          public boolean nameLookupPossibleInAdvance()
+          {
+            return dimSelector.nameLookupPossibleInAdvance();
+          }
+
+          @Nullable
+          @Override
+          public IdLookup idLookup()
+          {
+            return dimSelector.idLookup();
+          }
+        }
+      }
+
+      @Override
+      public ColumnValueSelector makeColumnValueSelector(String columnName)
+      {
+        return new ColumnValueSelector()
+        {
+          @Override
+          public double getDouble()
+          {
+            return Double.parseDouble(dimSelector.lookupName(idRef.get()));
+          }
+
+          @Override
+          public float getFloat()
+          {
+            return 0;
+          }
+
+          @Override
+          public long getLong()
+          {
+            return 0;
+          }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+
+          }
+
+          @Override
+          public boolean isNull()
+          {
+            return false;
+          }
+
+          @Nullable
+          @Override
+          public Object getObject()
+          {
+            return null;
+          }
+
+          @Override
+          public Class classOfObject()
+          {
+            return null;
+          }
+        }
+      }
+
+      @Nullable
+      @Override
+      public ColumnCapabilities getColumnCapabilities(String column)
+      {
+
+      }
+    });
+
+    for (int i = 0; i < dimSelector.getValueCardinality(); ++i) {
+      idRef.set(i);
+      if (myMatcher.matches()) {
+        bitSet.set(i, true);
+      }
+    }
+
     indexForRow = 0;
     if (allowFilter != null) {
       this.valueMatcher = allowFilter.makeMatcher(this.getColumnSelectorFactory());
