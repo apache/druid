@@ -55,8 +55,7 @@ public class ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator extends Arra
   public double[] compute(final Map<String, Object> combinedAggregators)
   {
     final ArrayOfDoublesSketch sketch = (ArrayOfDoublesSketch) getField().compute(combinedAggregators);
-    if (sketch == null)
-    {
+    if (sketch == null) {
       return null;
     }
     final SummaryStatistics[] stats = new SummaryStatistics[sketch.getNumValues()];

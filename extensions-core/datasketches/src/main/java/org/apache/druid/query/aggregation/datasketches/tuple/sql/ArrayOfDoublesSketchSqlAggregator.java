@@ -30,6 +30,7 @@ import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
+import org.apache.calcite.util.Optionality;
 import org.apache.datasketches.Util;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -51,7 +52,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.apache.calcite.util.Optionality;
 
 public class ArrayOfDoublesSketchSqlAggregator implements SqlAggregator
 {
