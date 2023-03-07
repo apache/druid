@@ -72,11 +72,6 @@
         </dependency>
         <dependency>
             <groupId>it.unimi.dsi</groupId>
-            <artifactId>fastutil</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>it.unimi.dsi</groupId>
             <artifactId>fastutil-core</artifactId>
             <scope>provided</scope>
         </dependency>
@@ -92,11 +87,6 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.hamcrest</groupId>
-            <artifactId>hamcrest-core</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

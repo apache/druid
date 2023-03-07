@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import com.google.common.collect.Iterators;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.prepare.CalciteCatalogReader;
@@ -31,7 +32,6 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
-import org.apache.curator.shaded.com.google.common.collect.Iterators;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.security.ResourceAction;

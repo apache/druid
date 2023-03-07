@@ -80,7 +80,6 @@
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-core</artifactId>
-            <version>${aws.sdk.version}</version>
         </dependency>
         <dependency>
             <groupId>commons-codec</groupId>
@@ -89,35 +88,6 @@
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-s3</artifactId>
-            <version>${aws.sdk.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>druid-orc-extensions</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>provided</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>javax.servlet</groupId>
-                    <artifactId>servlet-api</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.squareup.okhttp</groupId>
-                    <artifactId>okhttp</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>druid-parquet-extensions</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>druid-avro-extensions</artifactId>
-            <version>${project.parent.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -128,49 +98,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>druid-s3-extensions</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>druid-kinesis-indexing-service</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>druid-azure-extensions</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>druid-google-extensions</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>druid-hdfs-storage</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>provided</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>aws-java-sdk-bundle</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-datasketches</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>druid-histogram</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -197,12 +125,6 @@
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>mysql-metadata-storage</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-kafka-indexing-service</artifactId>
             <version>${project.parent.version}</version>
             <exclusions>
@@ -216,18 +138,6 @@
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-basic-security</artifactId>
             <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>druid-lookups-cached-global</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>druid-testing-tools</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
@@ -274,11 +184,6 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka-clients</artifactId>
-            <version>${apache.kafka.version}</version>
-        </dependency>
-        <dependency>
             <groupId>javax.ws.rs</groupId>
             <artifactId>jsr311-api</artifactId>
         </dependency>
@@ -301,11 +206,6 @@
         <dependency>
             <groupId>javax.validation</groupId>
             <artifactId>validation-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.google.code.findbugs</groupId>
@@ -334,66 +234,16 @@
             <artifactId>docker-java-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-transport-native-kqueue</artifactId>
-            <classifier>osx-x86_64</classifier>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-transport-native-kqueue</artifactId>
-            <classifier>osx-aarch_64</classifier>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-servlet</artifactId>
-            <version>${jetty.version}</version>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-server</artifactId>
-            <version>${jetty.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.inject.extensions</groupId>
             <artifactId>guice-servlet</artifactId>
-            <version>${guice.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.confluent</groupId>
-            <artifactId>kafka-schema-registry-client</artifactId>
-            <version>5.5.1</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-log4j12</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.apache.avro</groupId>
-                    <artifactId>avro</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.fasterxml.jackson.core</groupId>
-                    <artifactId>jackson-databind</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>javax.ws.rs</groupId>
-                    <artifactId>javax.ws.rs-api</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>javax.ws.rs</groupId>
-                    <artifactId>javax.ws.rs-api</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>javax.ws.rs</groupId>
-                    <artifactId>jsr311-api</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>jakarta.ws.rs</groupId>
-                    <artifactId>jakarta.ws.rs-api</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.confluent</groupId>
@@ -409,11 +259,6 @@
         <!-- Tests -->
         <dependency>
             <groupId>org.apache.calcite.avatica</groupId>
-            <artifactId>avatica</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.calcite.avatica</groupId>
             <artifactId>avatica-core</artifactId>
             <scope>test</scope>
         </dependency>
@@ -422,15 +267,8 @@
             <artifactId>testng</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.github.os72</groupId>
-            <artifactId>protobuf-dynamic</artifactId>
-            <version>0.9.3</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-sts</artifactId>
-            <version>${aws.sdk.version}</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
@@ -548,6 +386,16 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+              <!-- Tool gets confused about whether protobuf is used or not. -->
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-dependency-plugin</artifactId>
+              <configuration>
+                   <usedDependencies>
+                      <dependency>com.google.protobuf:protobuf-java</dependency>
+                   </usedDependencies>
+              </configuration>
             </plugin>
     </plugins>
     </build>

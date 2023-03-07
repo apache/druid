@@ -41,13 +41,6 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.druid</groupId>
-      <artifactId>druid-server</artifactId>
-      <version>${project.parent.version}</version>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.apache.ambari</groupId>
       <artifactId>ambari-metrics-common</artifactId>
       <version>2.7.0.0.0</version>
@@ -117,18 +110,6 @@
     <dependency>
       <groupId>pl.pragmatists</groupId>
       <artifactId>JUnitParams</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-core-asl</artifactId>
-      <version>${codehaus.jackson.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-mapper-asl</artifactId>
-      <version>${codehaus.jackson.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
