@@ -65,7 +65,7 @@ public class ComposingWritableFrameChannelTest
         2
     );
 
-    Map<Integer, HashSet<Integer>> partitionToChannelMap = new HashMap();
+    Map<Integer, HashSet<Integer>> partitionToChannelMap = new HashMap<>();
 
     ComposingWritableFrameChannel composingWritableFrameChannel = new ComposingWritableFrameChannel(
         ImmutableList.of(
@@ -90,7 +90,7 @@ public class ComposingWritableFrameChannelTest
     Assert.assertEquals(ImmutableSet.of(1), partitionToChannelMap.get(3));
 
     // Test if the older channel has been converted to read only
-    Assert.assertThrows(ISE.class, () -> outputChannel1.getWritableChannel());
+    Assert.assertThrows(ISE.class, outputChannel1::getWritableChannel);
   }
 
   static class LimitedWritableFrameChannel implements WritableFrameChannel
@@ -104,7 +104,7 @@ public class ComposingWritableFrameChannelTest
     }
 
     @Override
-    public void write(FrameWithPartition frameWithPartition) throws IOException
+    public void write(FrameWithPartition frameWithPartition)
     {
       if (curFrame >= maxFrames) {
         throw new ResourceLimitExceededException("Cannot write more frames to the channel");
@@ -113,13 +113,13 @@ public class ComposingWritableFrameChannelTest
     }
 
     @Override
-    public void fail(@Nullable Throwable cause) throws IOException
+    public void fail(@Nullable Throwable cause)
     {
 
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
 
     }
