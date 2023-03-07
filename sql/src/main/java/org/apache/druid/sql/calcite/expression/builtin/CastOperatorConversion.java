@@ -99,7 +99,6 @@ public class CastOperatorConversion implements SqlOperatorConversion
       final DruidExpression typeCastExpression;
 
       if (fromExpressionType.equals(toExpressionType)) {
-        // Ignore casts for simple extractions since it is ok in many cases.
         typeCastExpression = operandExpression;
       } else {
         // Ignore casts for simple extractions (use Function.identity) since it is ok in many cases.
