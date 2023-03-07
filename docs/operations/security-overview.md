@@ -275,16 +275,16 @@ Cluster to client:
 
 ## Reporting security issues
 
-The Apache Druid team takes security very seriously. If you have found a potential security issue in Druid, such as a way to bypass the security mechanisms described above, we encourage you to report this problem at [security@apache.org](mailto:security@apache.org). This is a private mailing list. Please send one plain-text email for each vulnerability you are reporting.
+The Apache Druid team takes security very seriously. If you find a potential security issue in Druid, such as a way to bypass the security mechanisms described earlier, please report this problem to [security@apache.org](mailto:security@apache.org). This is a private mailing list. Please send one plain text email for each vulnerability you are reporting.
 
 ### Vulnerability handling
 
-A summary of the vulnerability handling process is:
+The following list summarizes the vulnerability handling process:
 
 * The reporter reports the vulnerability privately to [security@apache.org](mailto:security@apache.org)
-* You will receive a response that we have received the report and will investigate the issue.
+* The reporter receives a response that the Druid team has received the report and will investigate the issue.
 * The Druid project security team works privately with the reporter to resolve the vulnerability.
-* The Druid project creates a new release of the package the vulnerabilty affects to deliver its fix.
-* The Druid project publicly announces the vulnerability and describes how to apply the fix.
+* The Druid team delivers the fix by creating a new release of the package that the vulnerability affects.
+* The Druid team publicly announces the vulnerability and describes how to apply the fix.
 
 Committers should read a [more detailed description of the process](https://www.apache.org/security/committers.html). Reporters of security vulnerabilities may also find it useful.
