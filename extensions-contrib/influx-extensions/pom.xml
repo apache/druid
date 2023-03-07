@@ -33,12 +33,6 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <properties>
-  </properties>
-
-  <repositories>
-  </repositories>
-
   <dependencies>
     <dependency>
       <groupId>org.apache.druid</groupId>
@@ -111,6 +105,16 @@
             </goals>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <configuration>
+             <!-- tool gets confused about whether this is used or not. -->
+             <usedDependencies>
+                <dependency>org.hamcrest:hamcrest-core</dependency>
+             </usedDependencies>
+        </configuration>
       </plugin>
     </plugins>
   </build>

@@ -48,12 +48,6 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.druid</groupId>
-      <artifactId>druid-aws-common</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
       <groupId>com.google.code.findbugs</groupId>
       <artifactId>jsr305</artifactId>
       <scope>provided</scope>
@@ -81,7 +75,6 @@
     <dependency>
       <groupId>com.google.apis</groupId>
       <artifactId>google-api-services-compute</artifactId>
-      <version>${com.google.apis.compute.version}</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -99,11 +92,7 @@
       <artifactId>google-api-client</artifactId>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>org.apache.curator</groupId>
-      <artifactId>curator-client</artifactId>
-      <scope>provided</scope>
-    </dependency>
+
     <!-- Tests -->
     <dependency>
       <groupId>junit</groupId>

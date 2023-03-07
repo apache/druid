@@ -103,14 +103,6 @@
 
         <dependency>
             <groupId>org.apache.druid</groupId>
-            <artifactId>druid-server</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>test</scope>
-            <type>test-jar</type>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.druid</groupId>
             <artifactId>druid-sql</artifactId>
             <version>${project.parent.version}</version>
             <scope>test</scope>

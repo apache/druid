@@ -42,15 +42,8 @@
       <artifactId>commons-net</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.openjdk.jmh</groupId>
-      <artifactId>jmh-generator-annprocess</artifactId>
-      <version>${jmh.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
-      <version>4.0.2</version>
     </dependency>
     <dependency>
       <groupId>org.apache.druid</groupId>
@@ -99,11 +92,6 @@
       <artifactId>druid-sql</artifactId>
       <version>${project.parent.version}</version>
       <type>test-jar</type>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.calcite</groupId>
-      <artifactId>calcite-core</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.github.wnameless</groupId>
@@ -165,7 +153,6 @@
     <dependency>
       <groupId>com.github.seancfoley</groupId>
       <artifactId>ipaddress</artifactId>
-      <version>5.3.4</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
