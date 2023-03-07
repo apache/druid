@@ -51,6 +51,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import org.apache.calcite.util.Optionality;
 
 public class ArrayOfDoublesSketchSqlAggregator implements SqlAggregator
 {
@@ -170,8 +171,6 @@ public class ArrayOfDoublesSketchSqlAggregator implements SqlAggregator
 
   private static class ArrayOfDoublesSqlAggFunction extends SqlAggFunction
   {
-    private static final String SIGNATURE = "'" + NAME + "(expr, nominalEntries)'\n";
-
     ArrayOfDoublesSqlAggFunction()
     {
       super(
@@ -183,7 +182,8 @@ public class ArrayOfDoublesSketchSqlAggregator implements SqlAggregator
           OperandTypes.VARIADIC,
           SqlFunctionCategory.USER_DEFINED_FUNCTION,
           false,
-          false
+          false,
+          Optionality.FORBIDDEN
       );
     }
   }
