@@ -30,12 +30,10 @@ public class BitmapSerdeFactoryTest
   public void testSerialization() throws Exception
   {
     ObjectMapper mapper = new DefaultObjectMapper();
-    Assert.assertEquals("{\"type\":\"roaring\",\"compressRunOnSerialization\":true}", mapper.writeValueAsString(RoaringBitmapSerdeFactory.getInstance()));
-    Assert.assertEquals("{\"type\":\"roaring\",\"compressRunOnSerialization\":false}", mapper.writeValueAsString(RoaringBitmapSerdeFactory.getInstance()));
-    Assert.assertEquals("{\"type\":\"roaring\",\"compressRunOnSerialization\":true}", mapper.writeValueAsString(RoaringBitmapSerdeFactory.getInstance()));
+    Assert.assertEquals("{\"type\":\"roaring\"}", mapper.writeValueAsString(RoaringBitmapSerdeFactory.getInstance()));
     Assert.assertEquals("{\"type\":\"concise\"}", mapper.writeValueAsString(new ConciseBitmapSerdeFactory()));
     Assert.assertEquals("{\"type\":\"concise\"}", mapper.writeValueAsString(BitmapSerde.createLegacyFactory()));
-    Assert.assertEquals("{\"type\":\"roaring\",\"compressRunOnSerialization\":true}", mapper.writeValueAsString(new BitmapSerde.DefaultBitmapSerdeFactory()));
+    Assert.assertEquals("{\"type\":\"roaring\"}", mapper.writeValueAsString(new BitmapSerde.DefaultBitmapSerdeFactory()));
     Assert.assertEquals("{\"type\":\"concise\"}", mapper.writeValueAsString(new BitmapSerde.LegacyBitmapSerdeFactory()));
   }
 
