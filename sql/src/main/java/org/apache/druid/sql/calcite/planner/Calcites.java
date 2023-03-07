@@ -160,7 +160,7 @@ public class Calcites
       return ColumnType.DOUBLE;
     } else if (isLongType(sqlTypeName)) {
       return ColumnType.LONG;
-    } else if (SqlTypeName.CHAR_TYPES.contains(sqlTypeName)) {
+    } else if (isStringType(sqlTypeName)) {
       return ColumnType.STRING;
     } else if (SqlTypeName.OTHER == sqlTypeName) {
       if (type instanceof RowSignatures.ComplexSqlType) {
@@ -178,6 +178,12 @@ public class Calcites
     }
   }
 
+  public static boolean isStringType(SqlTypeName sqlTypeName)
+  {
+    return SqlTypeName.CHAR_TYPES.contains(sqlTypeName) ||
+           SqlTypeName.INTERVAL_TYPES.contains(sqlTypeName);
+  }
+
   public static boolean isDoubleType(SqlTypeName sqlTypeName)
   {
     return SqlTypeName.FRACTIONAL_TYPES.contains(sqlTypeName) || SqlTypeName.APPROX_TYPES.contains(sqlTypeName);
@@ -188,9 +194,7 @@ public class Calcites
     return SqlTypeName.TIMESTAMP == sqlTypeName ||
            SqlTypeName.DATE == sqlTypeName ||
            SqlTypeName.BOOLEAN == sqlTypeName ||
-           SqlTypeName.INT_TYPES.contains(sqlTypeName) ||
-           SqlTypeName.DAY_INTERVAL_TYPES.contains(sqlTypeName) ||
-           SqlTypeName.YEAR_INTERVAL_TYPES.contains(sqlTypeName);
+           SqlTypeName.INT_TYPES.contains(sqlTypeName);
   }
 
   public static StringComparator getStringComparatorForRelDataType(RelDataType dataType)

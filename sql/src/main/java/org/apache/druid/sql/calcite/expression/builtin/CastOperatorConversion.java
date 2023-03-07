@@ -28,6 +28,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -99,6 +100,9 @@ public class CastOperatorConversion implements SqlOperatorConversion
       final DruidExpression typeCastExpression;
 
       if (fromExpressionType.equals(toExpressionType)) {
+        typeCastExpression = operandExpression;
+      } else if (SqlTypeName.INTERVAL_TYPES.contains(fromType) && toExpressionType.is(ExprType.LONG)) {
+        // intervals can be longs without an explicit cast
         typeCastExpression = operandExpression;
       } else {
         // Ignore casts for simple extractions (use Function.identity) since it is ok in many cases.
