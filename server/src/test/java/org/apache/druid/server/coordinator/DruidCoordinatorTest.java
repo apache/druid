@@ -616,26 +616,25 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null
     );
 
-    DruidCoordinator.DutiesRunnable duty = c.new DutiesRunnable(Collections.emptyList(), 0, "TEST");
     // before initialization
     Assert.assertEquals(0, c.getCachedBalancerThreadNumber());
     Assert.assertNull(c.getBalancerExec());
 
     // first initialization
-    duty.initBalancerExecutor();
+    c.initBalancerExecutor();
     Assert.assertEquals(5, c.getCachedBalancerThreadNumber());
     ListeningExecutorService firstExec = c.getBalancerExec();
     Assert.assertNotNull(firstExec);
 
     // second initialization, expect no changes as cachedBalancerThreadNumber is not changed
-    duty.initBalancerExecutor();
+    c.initBalancerExecutor();
     Assert.assertEquals(5, c.getCachedBalancerThreadNumber());
     ListeningExecutorService secondExec = c.getBalancerExec();
     Assert.assertNotNull(secondExec);
     Assert.assertSame(firstExec, secondExec);
 
     // third initialization, expect executor recreated as cachedBalancerThreadNumber is changed to 10
-    duty.initBalancerExecutor();
+    c.initBalancerExecutor();
     Assert.assertEquals(10, c.getCachedBalancerThreadNumber());
     ListeningExecutorService thirdExec = c.getBalancerExec();
     Assert.assertNotNull(thirdExec);

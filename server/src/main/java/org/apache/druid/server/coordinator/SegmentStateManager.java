@@ -225,8 +225,7 @@ public class SegmentStateManager
   private boolean canLoadReplica(String tier, ReplicationThrottler throttler)
   {
     final TierLoadingState tierState = currentlyReplicatingSegments.get(tier);
-    return tierState == null
-           || throttler.canAssignReplica(tier, tierState.getNumProcessingSegments());
+    return tierState == null || throttler.canAssignReplica(tier);
   }
 
 }

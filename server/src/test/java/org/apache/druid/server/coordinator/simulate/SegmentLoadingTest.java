@@ -351,6 +351,36 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   }
 
   @Test
+  public void testImmediateLoadingDoesNotViolateThrottleLimit()
+  {
+    // Disable balancing, infinite load queue size, replicationThrottleLimit = 2
+    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(0, 0, 2);
+
+    // historicals = 2(in T1), segments = 10*1day
+    // replicas = 2(on T1), immediate segment loading
+    final CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(segments)
+                             .withServers(historicalT11, historicalT12)
+                             .withRules(datasource, Load.on(Tier.T1, 2).forever())
+                             .withImmediateSegmentLoading(true)
+                             .withDynamicConfig(dynamicConfig)
+                             .build();
+
+    // Put the first replica of all the segments on histT11
+    segments.forEach(historicalT11::addDataSegment);
+
+    startSimulation(sim);
+    runCoordinatorCycle();
+
+    // Verify that number of replicas does not exceed the replicationThrottleLimit
+    verifyValue(Metric.ASSIGNED_COUNT, 2L);
+
+    Assert.assertEquals(10, historicalT11.getTotalSegments());
+    Assert.assertEquals(2, historicalT12.getTotalSegments());
+  }
+
+  @Test
   public void testLoadOfFullyReplicatedSegmentGetsCancelled()
   {
     // disable balancing, unlimited load queue, replicationThrottleLimit = 10

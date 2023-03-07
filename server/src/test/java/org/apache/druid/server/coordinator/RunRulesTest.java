@@ -1439,8 +1439,6 @@ public class RunRulesTest
   private void mockCoordinator()
   {
     EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(createCoordinatorDynamicConfig()).anyTimes();
-    coordinator.markSegmentAsUnused(EasyMock.anyObject());
-    EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator, segmentsMetadataManager);
   }
 

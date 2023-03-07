@@ -70,10 +70,10 @@ public class ReplicationThrottler
     this.totalReplicasAssignedInRun = 0;
   }
 
-  public boolean canAssignReplica(String tier, int numProcessingSegmentsInTier)
+  public boolean canAssignReplica(String tier)
   {
     return totalReplicasAssignedInRun < maxReplicaAssignmentsInRun
-           && numProcessingSegmentsInTier < replicationThrottleLimit
+           && tierToNumAssigned.computeIfAbsent(tier, t -> 0) < replicationThrottleLimit
            && eligibleTiers.contains(tier);
   }
 

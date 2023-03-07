@@ -77,6 +77,7 @@ import org.apache.druid.server.initialization.jetty.ServiceUnavailableException;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.zookeeper.Op;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
@@ -401,12 +402,6 @@ public class DruidCoordinator
     log.info("Successfully marked [%d] segments of datasource [%s] as unused", updatedCount, datasource);
   }
 
-  public void markSegmentAsUnused(DataSegment segment)
-  {
-    log.debug("Marking segment[%s] as unused", segment.getId());
-    segmentsMetadataManager.markSegmentAsUnused(segment.getId());
-  }
-
   public String getCurrentLeader()
   {
     return coordLeaderSelector.getCurrentLeader();
@@ -641,9 +636,40 @@ public class DruidCoordinator
     }
   }
 
+  @VisibleForTesting
+  protected void initBalancerExecutor()
+  {
+    final int currentNumber = getDynamicConfigs().getBalancerComputeThreads();
+    final String threadNameFormat = "coordinator-cost-balancer-%s";
+    // fist time initialization
+    if (balancerExec == null) {
+      balancerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+          currentNumber,
+          threadNameFormat
+      ));
+      cachedBalancerThreadNumber = currentNumber;
+      return;
+    }
+
+    if (cachedBalancerThreadNumber != currentNumber) {
+      log.info(
+          "balancerComputeThreads has been changed from [%s] to [%s], recreating the thread pool.",
+          cachedBalancerThreadNumber,
+          currentNumber
+      );
+      balancerExec.shutdownNow();
+      balancerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+          currentNumber,
+          threadNameFormat
+      ));
+      cachedBalancerThreadNumber = currentNumber;
+    }
+  }
+
   private List<CoordinatorDuty> makeHistoricalManagementDuties()
   {
     return ImmutableList.of(
+        new CreateBalancerStrategy(),
         new LogUsedSegments(),
         new UpdateCoordinatorStateAndPrepareCluster(),
         new RunRules(segmentStateManager),
@@ -741,36 +767,6 @@ public class DruidCoordinator
       this.dutiesRunnableAlias = alias;
     }
 
-    @VisibleForTesting
-    protected void initBalancerExecutor()
-    {
-      final int currentNumber = getDynamicConfigs().getBalancerComputeThreads();
-      final String threadNameFormat = "coordinator-cost-balancer-%s";
-      // fist time initialization
-      if (balancerExec == null) {
-        balancerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(
-            currentNumber,
-            threadNameFormat
-        ));
-        cachedBalancerThreadNumber = currentNumber;
-        return;
-      }
-
-      if (cachedBalancerThreadNumber != currentNumber) {
-        log.info(
-            "balancerComputeThreads has been changed from [%s] to [%s], recreating the thread pool.",
-            cachedBalancerThreadNumber,
-            currentNumber
-        );
-        balancerExec.shutdownNow();
-        balancerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(
-            currentNumber,
-            threadNameFormat
-        ));
-        cachedBalancerThreadNumber = currentNumber;
-      }
-    }
-
     @Override
     public void run()
     {
@@ -798,9 +794,6 @@ public class DruidCoordinator
           }
         }
 
-        initBalancerExecutor();
-        BalancerStrategy balancerStrategy = factory.createBalancerStrategy(balancerExec);
-
         // Do coordinator stuff.
         DataSourcesSnapshot dataSourcesSnapshot = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments();
 
@@ -813,7 +806,6 @@ public class DruidCoordinator
                 .withDynamicConfigs(getDynamicConfigs())
                 .withCompactionConfig(getCompactionConfig())
                 .withEmitter(emitter)
-                .withBalancerStrategy(balancerStrategy)
                 .build();
 
         boolean coordinationPaused = getDynamicConfigs().getPauseCoordination();
@@ -965,6 +957,23 @@ public class DruidCoordinator
         LoadQueuePeon peon = loadManagementPeons.remove(name);
         peon.stop();
       }
+    }
+  }
+
+  /**
+   * Creates a balancer strategy used for loading/balancing segments.
+   */
+  private class CreateBalancerStrategy implements CoordinatorDuty
+  {
+    @Nullable
+    @Override
+    public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
+    {
+      initBalancerExecutor();
+      BalancerStrategy balancerStrategy = factory.createBalancerStrategy(balancerExec);
+      log.info("Created balancer strategy [%s].", balancerStrategy.getClass().getSimpleName());
+
+      return params.buildFromExisting().withBalancerStrategy(balancerStrategy).build();
     }
   }
 }
