@@ -56,7 +56,6 @@ import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -130,7 +129,7 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                                              "tuplesketch_dim2",
                                                              "dim2",
                                                              null,
-                                                             Arrays.asList("m1"),
+                                                             ImmutableList.of("m1"),
                                                              1
                                                          ),
                                                          new LongSumAggregatorFactory("m1", "m1")
@@ -208,14 +207,14 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                                              "a2",
                                                              "dim2",
                                                              null,
-                                                             Arrays.asList("m1"),
+                                                             ImmutableList.of("m1"),
                                                              null
                           ),
                           new ArrayOfDoublesSketchAggregatorFactory(
                                                              "a3",
                                                              "dim2",
                                                              256,
-                                                             Arrays.asList("m1"),
+                                                             ImmutableList.of("m1"),
                                                              null
                           )
                       )
