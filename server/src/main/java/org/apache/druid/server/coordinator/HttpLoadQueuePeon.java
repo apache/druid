@@ -462,7 +462,9 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   public Map<DataSegment, SegmentAction> getSegmentsInQueue()
   {
     final Map<DataSegment, SegmentAction> segmentsInQueue = new HashMap<>();
-    queuedSegments.forEach(s -> segmentsInQueue.put(s.getSegment(), s.getAction()));
+    synchronized (lock) {
+      queuedSegments.forEach(s -> segmentsInQueue.put(s.getSegment(), s.getAction()));
+    }
     return segmentsInQueue;
   }
 
