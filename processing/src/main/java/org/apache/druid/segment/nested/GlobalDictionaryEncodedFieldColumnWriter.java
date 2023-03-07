@@ -224,6 +224,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
       bitmapIndexWriter.write(
           indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeImmutableBitmap(bitmap)
       );
+      bitmap.clear(); // Reclaim memory
     }
 
     final Serializer fieldSerializer = new Serializer()
