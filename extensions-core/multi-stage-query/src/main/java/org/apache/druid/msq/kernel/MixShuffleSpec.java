@@ -21,11 +21,6 @@ package org.apache.druid.msq.kernel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import org.apache.druid.frame.key.ClusterBy;
-import org.apache.druid.frame.key.ClusterByPartitions;
-import org.apache.druid.java.util.common.Either;
-import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
-
-import javax.annotation.Nullable;
 
 /**
  * Shuffle spec that generates a single, unsorted partition.
@@ -65,24 +60,9 @@ public class MixShuffleSpec implements ShuffleSpec
   }
 
   @Override
-  public boolean needsStatistics()
-  {
-    return false;
-  }
-
-  @Override
   public int partitionCount()
   {
     return 1;
-  }
-
-  @Override
-  public Either<Long, ClusterByPartitions> generatePartitionsForGlobalSort(
-      @Nullable ClusterByStatisticsCollector collector,
-      int maxNumPartitions
-  )
-  {
-    throw new IllegalStateException("Not a global sort");
   }
 
   @Override

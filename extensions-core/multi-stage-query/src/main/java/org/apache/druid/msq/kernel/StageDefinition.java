@@ -135,7 +135,7 @@ public class StageDefinition
     this.maxInputBytesPerWorker = maxInputBytesPerWorker == null ?
                                   Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER : maxInputBytesPerWorker;
 
-    if (shuffleSpec != null && shuffleSpec.needsStatistics() && shuffleSpec.clusterBy().getColumns().isEmpty()) {
+    if (mustGatherResultKeyStatistics() && shuffleSpec.clusterBy().getColumns().isEmpty()) {
       throw new IAE("Cannot shuffle with spec [%s] and nil clusterBy", shuffleSpec);
     }
 
@@ -319,7 +319,9 @@ public class StageDefinition
    */
   public boolean mustGatherResultKeyStatistics()
   {
-    return shuffleSpec != null && shuffleSpec.needsStatistics();
+    return shuffleSpec != null
+           && shuffleSpec.kind() == ShuffleKind.GLOBAL_SORT
+           && ((GlobalSortShuffleSpec) shuffleSpec).mustGatherResultKeyStatistics();
   }
 
   public Either<Long, ClusterByPartitions> generatePartitionBoundariesForShuffle(
@@ -339,7 +341,7 @@ public class StageDefinition
     } else if (!mustGatherResultKeyStatistics() && collector != null) {
       throw new ISE("Statistics gathered, but not required for stage[%d]", getStageNumber());
     } else {
-      return shuffleSpec.generatePartitionsForGlobalSort(collector, MAX_PARTITIONS);
+      return ((GlobalSortShuffleSpec) shuffleSpec).generatePartitionsForGlobalSort(collector, MAX_PARTITIONS);
     }
   }
 

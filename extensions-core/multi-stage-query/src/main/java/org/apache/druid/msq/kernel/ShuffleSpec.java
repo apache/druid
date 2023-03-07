@@ -22,11 +22,6 @@ package org.apache.druid.msq.kernel;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.frame.key.ClusterBy;
-import org.apache.druid.frame.key.ClusterByPartitions;
-import org.apache.druid.java.util.common.Either;
-import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
-
-import javax.annotation.Nullable;
 
 /**
  * Describes how outputs of a stage are shuffled. Property of {@link StageDefinition}.
@@ -45,6 +40,9 @@ public interface ShuffleSpec
 {
   /**
    * The nature of this shuffle: hash vs. range based partitioning; whether the data are sorted or not.
+   *
+   * If this method returns {@link ShuffleKind#GLOBAL_SORT}, then this spec is also an instance of
+   * {@link GlobalSortShuffleSpec}, and additional methods are available.
    */
   ShuffleKind kind();
 
@@ -53,8 +51,8 @@ public interface ShuffleSpec
    *
    * If {@link #kind()} is {@link ShuffleKind#HASH}, data are partitioned using a hash of this key, but not sorted.
    *
-   * If {@link #kind()} is {@link ShuffleKind#HASH_LOCAL_SORT}, data are partitioned using a hash of this key, and sorted
-   * within each partition.
+   * If {@link #kind()} is {@link ShuffleKind#HASH_LOCAL_SORT}, data are partitioned using a hash of this key, and
+   * sorted within each partition.
    *
    * If {@link #kind()} is {@link ShuffleKind#GLOBAL_SORT}, data are partitioned using ranges of this key, and are
    * sorted within each partition; therefore, the data are also globally sorted.
@@ -67,36 +65,12 @@ public interface ShuffleSpec
   boolean doesAggregate();
 
   /**
-   * Whether {@link #generatePartitionsForGlobalSort} needs a nonnull collector.
-   */
-  boolean needsStatistics();
-
-  /**
    * Number of partitions, if known.
    *
    * Partition count is always known if {@link #kind()} is {@link ShuffleKind#MIX}, {@link ShuffleKind#HASH}, or
-   * {@link ShuffleKind#HASH_LOCAL_SORT}. It is sometimes known if the kind is {@link ShuffleKind#GLOBAL_SORT}: in
-   * particular, it is known if {@link GlobalSortMaxCountShuffleSpec} is used.
+   * {@link ShuffleKind#HASH_LOCAL_SORT}. It is not known if {@link #kind()} is {@link ShuffleKind#GLOBAL_SORT}.
    *
-   * @throws IllegalStateException if number of partitions is not known ahead of time
+   * @throws IllegalStateException if kind is {@link ShuffleKind#GLOBAL_SORT}
    */
   int partitionCount();
-
-  /**
-   * Generates a set of partitions based on the provided statistics.
-   *
-   * Only valid if {@link #kind()} is {@link ShuffleKind#GLOBAL_SORT}. Otherwise, throws {@link IllegalStateException}.
-   *
-   * @param collector        must be nonnull if {@link #needsStatistics()} is true; ignored otherwise
-   * @param maxNumPartitions maximum number of partitions to generate
-   *
-   * @return either the partition assignment, or (as an error) a number of partitions, greater than maxNumPartitions,
-   * that would be expected to be created
-   *
-   * @throws IllegalStateException if {@link #kind()} is not {@link ShuffleKind#GLOBAL_SORT}.
-   */
-  Either<Long, ClusterByPartitions> generatePartitionsForGlobalSort(
-      @Nullable ClusterByStatisticsCollector collector,
-      int maxNumPartitions
-  );
 }

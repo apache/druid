@@ -27,6 +27,7 @@ import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 
 import javax.annotation.Nullable;
@@ -35,7 +36,7 @@ import java.util.Objects;
 /**
  * Shuffle spec that generates up to a certain number of output partitions. Commonly used for shuffles between stages.
  */
-public class GlobalSortMaxCountShuffleSpec implements ShuffleSpec
+public class GlobalSortMaxCountShuffleSpec implements GlobalSortShuffleSpec
 {
   public static final String TYPE = "maxCount";
 
@@ -83,7 +84,7 @@ public class GlobalSortMaxCountShuffleSpec implements ShuffleSpec
   }
 
   @Override
-  public boolean needsStatistics()
+  public boolean mustGatherResultKeyStatistics()
   {
     return maxPartitions > 1 || clusterBy.getBucketByCount() > 0;
   }
@@ -94,7 +95,7 @@ public class GlobalSortMaxCountShuffleSpec implements ShuffleSpec
       final int maxNumPartitions
   )
   {
-    if (!needsStatistics()) {
+    if (!mustGatherResultKeyStatistics()) {
       return Either.value(ClusterByPartitions.oneUniversalPartition());
     } else if (maxPartitions > maxNumPartitions) {
       return Either.error((long) maxPartitions);
@@ -118,12 +119,7 @@ public class GlobalSortMaxCountShuffleSpec implements ShuffleSpec
   @Override
   public int partitionCount()
   {
-    if (maxPartitions == 1) {
-      return maxPartitions;
-    } else {
-      // Number of actual partitions may be less than maxPartitions.
-      throw new IllegalStateException("Number of partitions not known.");
-    }
+    throw new ISE("Number of partitions not known for [%s].", kind());
   }
 
   @JsonProperty("partitions")

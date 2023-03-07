@@ -27,6 +27,7 @@ import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 
 import javax.annotation.Nullable;
@@ -37,7 +38,7 @@ import java.util.Objects;
  * to a particular {@link #targetSize}. Commonly used when generating segments, which we want to have a certain number
  * of rows per segment.
  */
-public class GlobalSortTargetSizeShuffleSpec implements ShuffleSpec
+public class GlobalSortTargetSizeShuffleSpec implements GlobalSortShuffleSpec
 {
   public static final String TYPE = "targetSize";
 
@@ -76,7 +77,7 @@ public class GlobalSortTargetSizeShuffleSpec implements ShuffleSpec
   }
 
   @Override
-  public boolean needsStatistics()
+  public boolean mustGatherResultKeyStatistics()
   {
     return true;
   }
@@ -84,7 +85,7 @@ public class GlobalSortTargetSizeShuffleSpec implements ShuffleSpec
   @Override
   public int partitionCount()
   {
-    throw new IllegalStateException("Number of partitions not known for target-size shuffle.");
+    throw new ISE("Number of partitions not known for [%s].", kind());
   }
 
   @Override

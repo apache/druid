@@ -22,12 +22,7 @@ package org.apache.druid.msq.kernel;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.frame.key.ClusterBy;
-import org.apache.druid.frame.key.ClusterByPartitions;
-import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
-
-import javax.annotation.Nullable;
 
 public class HashShuffleSpec implements ShuffleSpec
 {
@@ -47,7 +42,7 @@ public class HashShuffleSpec implements ShuffleSpec
 
     if (clusterBy.getBucketByCount() > 0) {
       // Only GlobalSortTargetSizeShuffleSpec supports bucket-by.
-      throw new IAE("Cannot bucket with %s partitioning", TYPE);
+      throw new IAE("Cannot bucket with %s partitioning (clusterBy = %s)", TYPE, clusterBy);
     }
   }
 
@@ -68,21 +63,6 @@ public class HashShuffleSpec implements ShuffleSpec
   public boolean doesAggregate()
   {
     return false;
-  }
-
-  @Override
-  public boolean needsStatistics()
-  {
-    return false;
-  }
-
-  @Override
-  public Either<Long, ClusterByPartitions> generatePartitionsForGlobalSort(
-      @Nullable ClusterByStatisticsCollector collector,
-      int maxNumPartitions
-  )
-  {
-    throw new IllegalStateException("Not a global sort");
   }
 
   @Override

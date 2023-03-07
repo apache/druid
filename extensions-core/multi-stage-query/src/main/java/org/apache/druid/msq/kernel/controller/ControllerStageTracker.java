@@ -43,6 +43,7 @@ import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.input.stage.ReadablePartitions;
 import org.apache.druid.msq.input.stage.StageInputSlice;
+import org.apache.druid.msq.kernel.GlobalSortShuffleSpec;
 import org.apache.druid.msq.kernel.ShuffleKind;
 import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
@@ -862,11 +863,12 @@ class ControllerStageTracker
     if (stageDef.doesShuffle()) {
       final ShuffleSpec shuffleSpec = stageDef.getShuffleSpec();
 
-      if (shuffleSpec.needsStatistics() && !allPartialKeyInformationFetched()) {
-        throw new ISE("Cannot generate result partitions without all worker key statistics");
-      }
-
       if (shuffleSpec.kind() == ShuffleKind.GLOBAL_SORT) {
+        if (((GlobalSortShuffleSpec) shuffleSpec).mustGatherResultKeyStatistics()
+            && !allPartialKeyInformationFetched()) {
+          throw new ISE("Cannot generate result partitions without all worker key statistics");
+        }
+
         final Either<Long, ClusterByPartitions> maybeResultPartitionBoundaries =
             stageDef.generatePartitionBoundariesForShuffle(null);
 
