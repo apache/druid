@@ -73,11 +73,11 @@ exports[`IndexSpecDialog matches snapshot with indexSpec 1`] = `
           Object {
             "defaultValue": "longs",
             "info": <React.Fragment>
-              Encoding format for long-typed columns. Applies regardless of whether they are dimensions or metrics.
+              Encoding format for long-typed columns. Applies regardless of whether they are dimensions or metrics. 
               <Unknown>
                 auto
               </Unknown>
-               encodes the values using offset or lookup table depending on column cardinality, and store them with variable size.
+               encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. 
               <Unknown>
                 longs
               </Unknown>
@@ -107,7 +107,7 @@ exports[`IndexSpecDialog matches snapshot with indexSpec 1`] = `
           Object {
             "defaultValue": "lz4",
             "info": <React.Fragment>
-              Compression format to use for nested column raw data.
+              Compression format to use for nested column raw data. 
             </React.Fragment>,
             "label": "JSON compression",
             "name": "jsonCompression",
