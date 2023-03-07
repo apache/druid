@@ -871,6 +871,8 @@ public class DruidQuery
    * <p>
    * Necessary because some combinations are unsafe, mainly because they would lead to the creation of too many
    * time-granular buckets during query processing.
+   *
+   * @see Granularity#getIterable(Interval) the problematic method call we are trying to avoid
    */
   private static boolean canUseQueryGranularity(
       final DataSource dataSource,
