@@ -1751,8 +1751,7 @@ public class ExpressionsTest extends ExpressionTestBase
             (args) -> "(" + args.get(0).getExpression() + " - " + args.get(1).getExpression() + ")",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.LONG, "t"),
-                // RexNode type of "interval day to minute" is not converted to druid long... yet
-                DruidExpression.ofLiteral(null, "90060000")
+                DruidExpression.ofLiteral(ColumnType.LONG, "90060000")
             )
         ),
         DateTimes.of("2000-02-03T04:05:06").minus(period).getMillis()
@@ -1779,8 +1778,7 @@ public class ExpressionsTest extends ExpressionTestBase
             DruidExpression.functionCall("timestamp_shift"),
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.LONG, "t"),
-                // RexNode type "interval year to month" is not reported as ColumnType.STRING
-                DruidExpression.ofLiteral(null, DruidExpression.stringLiteral("P13M")),
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.stringLiteral("P13M")),
                 DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(-1)),
                 DruidExpression.ofStringLiteral("UTC")
             )

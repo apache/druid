@@ -188,7 +188,9 @@ public class Calcites
     return SqlTypeName.TIMESTAMP == sqlTypeName ||
            SqlTypeName.DATE == sqlTypeName ||
            SqlTypeName.BOOLEAN == sqlTypeName ||
-           SqlTypeName.INT_TYPES.contains(sqlTypeName);
+           SqlTypeName.INT_TYPES.contains(sqlTypeName) ||
+           SqlTypeName.DAY_INTERVAL_TYPES.contains(sqlTypeName) ||
+           SqlTypeName.YEAR_INTERVAL_TYPES.contains(sqlTypeName);
   }
 
   public static StringComparator getStringComparatorForRelDataType(RelDataType dataType)
