@@ -48,6 +48,13 @@ public class ArrayOfDoublesSketchModule implements DruidModule
   public static final ColumnType BUILD_TYPE = ColumnType.ofComplex(ARRAY_OF_DOUBLES_SKETCH_BUILD_AGG);
   public static final ColumnType MERGE_TYPE = ColumnType.ofComplex(ARRAY_OF_DOUBLES_SKETCH_MERGE_AGG);
 
+  public static final String ARRAY_OF_DOUBLES_SKETCH_CONSTANT = "arrayOfDoublesSketchConstant";
+
+  public static final String ARRAY_OF_DOUBLES_SKETCH_TO_BASE64_STRING = "arrayOfDoublesSketchToBase64String";
+
+  public static final String ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE = "arrayOfDoublesSketchToMetricsSumEstimate";
+
+
   @Override
   public void configure(final Binder binder)
   {
@@ -100,6 +107,18 @@ public class ArrayOfDoublesSketchModule implements DruidModule
             new NamedType(
                 ArrayOfDoublesSketchToStringPostAggregator.class,
                 "arrayOfDoublesSketchToString"
+            ),
+            new NamedType(
+                ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator.class,
+                ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE
+            ),
+            new NamedType(
+                ArrayOfDoublesSketchConstantPostAggregator.class,
+                ARRAY_OF_DOUBLES_SKETCH_CONSTANT
+            ),
+            new NamedType(
+                ArrayOfDoublesSketchToBase64StringPostAggregator.class,
+                ARRAY_OF_DOUBLES_SKETCH_TO_BASE64_STRING
             )
         ).addSerializer(ArrayOfDoublesSketch.class, new ArrayOfDoublesSketchJsonSerializer())
     );

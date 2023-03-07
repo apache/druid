@@ -22,7 +22,6 @@ package org.apache.druid.data.input;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
@@ -34,7 +33,10 @@ import java.io.IOException;
  * FirehoseFactory creates a {@link Firehose} which is an interface holding onto the stream of incoming data.
  * It currently provides two methods for creating a {@link Firehose} and their default implementations call each other
  * for the backward compatibility.  Implementations of this interface must implement one of these methods.
+ *
+ * This class is deprecated in favor of {@link InputSource}
  */
+@Deprecated
 @ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public interface FirehoseFactory<T extends InputRowParser>
@@ -62,9 +64,6 @@ public interface FirehoseFactory<T extends InputRowParser>
    * If this method returns null, then any attempt to call hasMore(), nextRow() and close() on the return
    * value will throw a surprising NPE.   Throwing IOException on connection failure or runtime exception on
    * invalid configuration is preferred over returning null.
-   * <p/>
-   * Some fire hoses like {@link PrefetchableTextFilesFirehoseFactory} may use a temporary
-   * directory to cache data in it.
    *
    * @param parser             an input row parser
    * @param temporaryDirectory a directory where temporary files are stored
@@ -72,18 +71,6 @@ public interface FirehoseFactory<T extends InputRowParser>
   default Firehose connect(T parser, @Nullable File temporaryDirectory) throws IOException, ParseException
   {
     return connect(parser);
-  }
-
-  /**
-   * Initialization method that connects up the firehose. This method is intended for use by the sampler, and allows
-   * implementors to return a more efficient firehose, knowing that only a small number of rows will be read.
-   *
-   * @param parser             an input row parser
-   * @param temporaryDirectory a directory where temporary files are stored
-   */
-  default Firehose connectForSampler(T parser, @Nullable File temporaryDirectory) throws IOException, ParseException
-  {
-    return connect(parser, temporaryDirectory);
   }
 
   @SuppressWarnings("unused")
