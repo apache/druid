@@ -607,8 +607,9 @@ The following table lists the context parameters for the MSQ task engine:
 
 ## Joins
 
-Joins in multi-stage queries use one of two algorithms, based on the value of `sqlJoinAlgorithm`. It is not possible to
-mix different join algorithms for different joins that appear in the same query.
+Joins in multi-stage queries use one of two algorithms, based on the [context parameter](#context-parameters)
+`sqlJoinAlgorithm`. This context parameter applies to the entire SQL statement, so it is not possible to mix different
+join algorithms in the same query.
 
 ### Broadcast
 
