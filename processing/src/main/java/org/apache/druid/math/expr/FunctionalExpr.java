@@ -90,9 +90,9 @@ class LambdaExpr implements Expr
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return expr.buildVectorized(inspector);
+    return expr.asVectorProcessor(inspector);
   }
 
   @Override
@@ -190,7 +190,7 @@ class FunctionExpr implements Expr
   }
 
   @Override
-  public ExprVectorProcessor<?> buildVectorized(VectorInputBindingInspector inspector)
+  public ExprVectorProcessor<?> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return function.asVectorProcessor(inspector, args);
   }
@@ -313,7 +313,7 @@ class ApplyFunctionExpr implements Expr
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return function.asVectorProcessor(inspector, lambdaExpr, argsExpr);
   }

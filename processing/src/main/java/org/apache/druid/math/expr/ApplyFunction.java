@@ -57,9 +57,9 @@ public interface ApplyFunction extends NamedFunction
 
   /**
    * Builds a 'vectorized' function expression processor, that can build vectorized processors for its input values
-   * using {@link Expr#buildVectorized}, for use in vectorized query engines.
+   * using {@link Expr#asVectorProcessor}, for use in vectorized query engines.
    *
-   * @see Expr#buildVectorized(Expr.VectorInputBindingInspector)
+   * @see Expr#asVectorProcessor(Expr.VectorInputBindingInspector)
    * @see Function#asVectorProcessor(Expr.VectorInputBindingInspector, List)
    */
   default <T> ExprVectorProcessor<T> asVectorProcessor(

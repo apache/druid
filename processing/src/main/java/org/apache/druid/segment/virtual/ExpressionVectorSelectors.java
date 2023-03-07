@@ -79,11 +79,11 @@ public class ExpressionVectorSelectors
     if (plan.isConstant()) {
       return ConstantVectorSelectors.vectorValueSelector(
           factory.getReadableVectorInspector(),
-          (Number) plan.getExpression().eval(InputBindings.nilBindings()).value()
+          (Number) plan.getExpression().eval(InputBindings.nilBindings()).valueOrDefault()
       );
     }
     final Expr.VectorInputBinding bindings = createVectorBindings(plan.getAnalysis(), factory);
-    final ExprVectorProcessor<?> processor = plan.getExpression().buildVectorized(bindings);
+    final ExprVectorProcessor<?> processor = plan.getExpression().asVectorProcessor(bindings);
     return new ExpressionVectorValueSelector(processor, bindings);
   }
 
@@ -98,12 +98,12 @@ public class ExpressionVectorSelectors
     if (plan.isConstant()) {
       return ConstantVectorSelectors.vectorObjectSelector(
           factory.getReadableVectorInspector(),
-          plan.getExpression().eval(InputBindings.nilBindings()).value()
+          plan.getExpression().eval(InputBindings.nilBindings()).valueOrDefault()
       );
     }
 
     final Expr.VectorInputBinding bindings = createVectorBindings(plan.getAnalysis(), factory);
-    final ExprVectorProcessor<?> processor = plan.getExpression().buildVectorized(bindings);
+    final ExprVectorProcessor<?> processor = plan.getExpression().asVectorProcessor(bindings);
     return new ExpressionVectorObjectSelector(processor, bindings);
   }
 

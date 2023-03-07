@@ -85,7 +85,7 @@ public class ParquetAvroHadoopInputRowParser implements InputRowParser<GenericRe
             false,
             this.binaryAsString,
             this.extractUnionsByType,
-            dimensionsSpec != null && dimensionsSpec.useNestedColumnIndexerForSchemaDiscovery()
+            dimensionsSpec != null && dimensionsSpec.useSchemaDiscovery()
         )
     );
   }
