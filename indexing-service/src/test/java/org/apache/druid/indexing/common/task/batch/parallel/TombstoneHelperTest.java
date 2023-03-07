@@ -147,7 +147,7 @@ public class TombstoneHelperTest
         replaceGranularity
     );
     Assert.assertEquals(
-        ImmutableSet.of(Intervals.of("2020-03-05/2020-03-06"), Intervals.of("2020-03-06/2020-03-07")),
+        ImmutableSet.of(Intervals.of("2020-03-05/2020-03-07")),
         tombstoneIntervals
     );
   }
@@ -183,8 +183,7 @@ public class TombstoneHelperTest
     Assert.assertEquals(
         ImmutableSet.of(
             Intervals.of("2020-03-01/2020-04-01"),
-            Intervals.of("2020-07-01/2020-08-01"),
-            Intervals.of("2020-08-01/2020-09-01")
+            Intervals.of("2020-07-01/2020-09-01")
         ),
         tombstoneIntervals
     );
