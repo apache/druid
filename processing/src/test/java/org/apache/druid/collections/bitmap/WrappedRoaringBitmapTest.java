@@ -54,7 +54,7 @@ public class WrappedRoaringBitmapTest
   }
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     bitmap = (WrappedRoaringBitmap) RoaringBitmapFactory.INSTANCE.makeEmptyMutableBitmap();
     for (int i = 0; i < cardinality; i++) {
