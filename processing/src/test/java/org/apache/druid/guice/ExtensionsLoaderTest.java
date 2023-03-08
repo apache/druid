@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import com.google.inject.Injector;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -268,7 +269,7 @@ public class ExtensionsLoaderTest
     final File extensionsDir2 = temporaryFolder.newFolder();
     String extn2 = "extension2";
     File extn2Dir = new File(extensionsDir2, extn2);
-    extn2Dir.mkdir();
+    FileUtils.mkdirp(extn2Dir);
 
     final ExtensionsConfig config = ExtensionsConfig.builder()
         .directory(extensionsDir1.getAbsolutePath())
@@ -292,10 +293,10 @@ public class ExtensionsLoaderTest
     // For fun, mix up the order
     String extn1 = "extension1";
     File extn1Dir = new File(extensionsDir2, extn1);
-    extn1Dir.mkdir();
+    FileUtils.mkdirp(extn1Dir);
     String extn2 = "extension2";
     File extn2Dir = new File(extensionsDir1, extn2);
-    extn2Dir.mkdir();
+    FileUtils.mkdirp(extn2Dir);
 
     final List<File> expectedFileList = Arrays.asList(extn1Dir, extn2Dir);
 

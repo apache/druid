@@ -29,7 +29,8 @@ set -e
 
 export BASE_MODULE_DIR=$(cd $(dirname $0) && pwd)
 
-# The location of the tests, if different than the
+# The location of the tests, which may be different than
+# the location of this file.
 export MODULE_DIR=${IT_MODULE_DIR:-$BASE_MODULE_DIR}
 
 function usage {

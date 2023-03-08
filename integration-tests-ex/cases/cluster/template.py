@@ -60,10 +60,6 @@ def generate(template_path, template):
     target_dir = module_dir.joinpath("target")
     os.makedirs(target_dir, exist_ok=True)
     target_file = target_dir.joinpath('cluster', cluster, 'docker-compose.yaml')
-    # Uncomment the following for debugging
-    #print("template_path:", template_path)
-    #print("module_dir:", module_dir)
-    #print("target_file:", target_file)
 
     # Defer back to the template class to create the output into the docker-compose.yaml file.
     with target_file.open("w") as f:
