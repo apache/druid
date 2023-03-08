@@ -38,7 +38,8 @@ import it.unimi.dsi.fastutil.longs.LongSortedSet;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.allocation.MemoryAllocator;
+import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
+import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.PartitionedReadableFrameChannel;
@@ -47,6 +48,7 @@ import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.file.FrameFile;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartitions;
+import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.IAE;
@@ -118,7 +120,7 @@ public class SuperSorter
 
   private final List<ReadableFrameChannel> inputChannels;
   private final FrameReader frameReader;
-  private final ClusterBy clusterBy;
+  private final List<KeyColumn> sortKey;
   private final ListenableFuture<ClusterByPartitions> outputPartitionsFuture;
   private final FrameProcessorExecutor exec;
   private final OutputChannelFactory outputChannelFactory;
@@ -185,7 +187,7 @@ public class SuperSorter
    *                                         {@link ClusterBy#getColumns()}, or else sorting will not produce correct
    *                                         output.
    * @param frameReader                      frame reader for the input channels
-   * @param clusterBy                        desired sorting order
+   * @param sortKey                          desired sorting order
    * @param outputPartitionsFuture           a future that resolves to the desired output partitions. Sorting will block
    *                                         prior to writing out final outputs until this future resolves. However, the
    *                                         sorter will be able to read all inputs even if this future is unresolved.
@@ -208,7 +210,7 @@ public class SuperSorter
   public SuperSorter(
       final List<ReadableFrameChannel> inputChannels,
       final FrameReader frameReader,
-      final ClusterBy clusterBy,
+      final List<KeyColumn> sortKey,
       final ListenableFuture<ClusterByPartitions> outputPartitionsFuture,
       final FrameProcessorExecutor exec,
       final OutputChannelFactory outputChannelFactory,
@@ -222,7 +224,7 @@ public class SuperSorter
   {
     this.inputChannels = inputChannels;
     this.frameReader = frameReader;
-    this.clusterBy = clusterBy;
+    this.sortKey = sortKey;
     this.outputPartitionsFuture = outputPartitionsFuture;
     this.exec = exec;
     this.outputChannelFactory = outputChannelFactory;
@@ -593,22 +595,22 @@ public class SuperSorter
   {
     try {
       final WritableFrameChannel writableChannel;
-      final MemoryAllocator frameAllocator;
+      final MemoryAllocatorFactory frameAllocatorFactory;
       String levelAndRankKey = mergerOutputFileName(level, rank);
 
       if (totalMergingLevels != UNKNOWN_LEVEL && level == totalMergingLevels - 1) {
         final int intRank = Ints.checkedCast(rank);
         final OutputChannel outputChannel = outputChannelFactory.openChannel(intRank);
         outputChannels.set(intRank, outputChannel.readOnly());
+        frameAllocatorFactory = new SingleMemoryAllocatorFactory(outputChannel.getFrameMemoryAllocator());
         writableChannel = outputChannel.getWritableChannel();
-        frameAllocator = outputChannel.getFrameMemoryAllocator();
       } else {
         PartitionedOutputChannel partitionedOutputChannel = intermediateOutputChannelFactory.openPartitionedChannel(
             levelAndRankKey,
             true
         );
         writableChannel = partitionedOutputChannel.getWritableChannel();
-        frameAllocator = partitionedOutputChannel.getFrameMemoryAllocator();
+        frameAllocatorFactory = new SingleMemoryAllocatorFactory(partitionedOutputChannel.getFrameMemoryAllocator());
         levelAndRankToReadableChannelMap.put(levelAndRankKey, partitionedOutputChannel);
       }
 
@@ -619,12 +621,12 @@ public class SuperSorter
               writableChannel,
               FrameWriters.makeFrameWriterFactory(
                   FrameType.ROW_BASED, // Row-based frames are generally preferred as inputs to mergers
-                  frameAllocator,
+                  frameAllocatorFactory,
                   frameReader.signature(),
                   // No sortColumns, because FrameChannelMerger generates frames that are sorted all on its own
                   Collections.emptyList()
               ),
-              clusterBy,
+              sortKey,
               partitions,
               rowLimit
           );
@@ -829,7 +831,6 @@ public class SuperSorter
   {
     return StringUtils.format("merged.%d.%d", level, rank);
   }
-
 
   /**
    * Returns a string encapsulating the current state of this object.
