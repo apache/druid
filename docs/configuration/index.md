@@ -123,6 +123,7 @@ Many of Druid's external dependencies can be plugged in as modules. Extensions c
 |`druid.extensions.hadoopContainerDruidClasspath`|Hadoop Indexing launches hadoop jobs and this configuration provides way to explicitly set the user classpath for the hadoop job. By default this is computed automatically by druid based on the druid process classpath and set of extensions. However, sometimes you might want to be explicit to resolve dependency conflicts between druid and hadoop.|null|
 |`druid.extensions.addExtensionsToHadoopContainer`|Only applicable if `druid.extensions.hadoopContainerDruidClasspath` is provided. If set to true, then extensions specified in the loadList are added to hadoop container classpath. Note that when `druid.extensions.hadoopContainerDruidClasspath` is not provided then extensions are always added to hadoop container classpath.|false|
 |`druid.extensions.path`|An optional array of paths to search for extensions. The `directory` entry acts as the first entry in the search path. Primarily for testing and Docker-based environments.|null (i.e. no additional search path)|
+|`druid.extensions.path`|An optional array of directories to search for extensions. The `directory` entry acts as the first entry in the search path. Primarily for testing and Docker-based environments.|null (i.e. no additional search path)|
 
 ### Modules
 
