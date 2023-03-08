@@ -169,6 +169,10 @@ public class CalciteTests
     };
   }
 
+  /**
+   * Regular user does not have access to external resources. If you need that,
+   * use {@link #SUPER_USER_AUTH_RESULT}.
+   */
   public static final AuthenticationResult REGULAR_USER_AUTH_RESULT = new AuthenticationResult(
       AuthConfig.ALLOW_ALL_NAME,
       AuthConfig.ALLOW_ALL_NAME,
@@ -460,7 +464,6 @@ public class CalciteTests
     @Override
     public void registerListener(Listener listener)
     {
-
     }
   }
 

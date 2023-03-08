@@ -35,6 +35,7 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
+import org.apache.druid.sql.calcite.planner.DruidSqlValidator.ValidatorContext;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.joda.time.DateTimeZone;
 
@@ -53,6 +54,10 @@ import java.util.function.Function;
  * lifecycle defined as:
  * <p>
  * start --> validate [--> prepare] --> plan
+ * <p>
+ * Druid supports a variety of statements. Each statement (or statement family)
+ * has a "handler" for that statement type. To add a new statement, add a new
+ * handler (which might reuse one of the existing base handlers.)
  */
 public class DruidPlanner implements Closeable
 {
@@ -107,7 +112,7 @@ public class DruidPlanner implements Closeable
   )
   {
     this.frameworkConfig = frameworkConfig;
-    this.planner = new CalcitePlanner(frameworkConfig);
+    this.planner = new CalcitePlanner(frameworkConfig, new ValidatorContextImpl());
     this.plannerContext = plannerContext;
     this.engine = engine;
     this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
@@ -137,7 +142,7 @@ public class DruidPlanner implements Closeable
       plannerContext.setResourceActions(handler.resourceActions());
     }
     catch (RuntimeException e) {
-      throw new ValidationException(e);
+      throw new ValidationException(e.getMessage(), e);
     }
 
     state = State.VALIDATED;
@@ -162,9 +167,9 @@ public class DruidPlanner implements Closeable
     }
 
     if (query.isA(SqlKind.QUERY)) {
-      return new QueryHandler.SelectHandler(handlerContext, query, explain);
+      return new SelectHandler(handlerContext, query, explain);
     }
-    throw new ValidationException(StringUtils.format("Cannot execute [%s].", node.getKind()));
+    throw new ValidationException(StringUtils.format("Druid does not support [%s].", node.getKind()));
   }
 
   /**
@@ -291,7 +296,7 @@ public class DruidPlanner implements Closeable
     @Override
     public ObjectMapper jsonMapper()
     {
-      return plannerContext.getJsonMapper();
+      return plannerContext.getPlannerToolbox().jsonMapper();
     }
 
     @Override
@@ -301,9 +306,42 @@ public class DruidPlanner implements Closeable
     }
 
     @Override
+    public CatalogResolver catalog()
+    {
+      return plannerContext.getPlannerToolbox().catalogResolver();
+    }
+
+    @Override
     public PlannerHook hook()
     {
       return hook;
+    }
+  }
+
+  public class ValidatorContextImpl implements ValidatorContext
+  {
+    @Override
+    public Map<String, Object> queryContextMap()
+    {
+      return plannerContext.queryContextMap();
+    }
+
+    @Override
+    public CatalogResolver catalog()
+    {
+      return plannerContext.getPlannerToolbox().catalogResolver();
+    }
+
+    @Override
+    public String druidSchemaName()
+    {
+      return plannerContext.getPlannerToolbox().druidSchemaName();
+    }
+
+    @Override
+    public ObjectMapper jsonMapper()
+    {
+      return plannerContext.getPlannerToolbox().jsonMapper();
     }
   }
 }
