@@ -219,7 +219,7 @@ public class ObjectFlatteners
     JsonProvider getJsonProvider();
     /**
      * List all "root" fields. If
-     * {@link org.apache.druid.data.input.impl.DimensionsSpec#useNestedColumnIndexerForSchemaDiscovery} is false, this
+     * {@link org.apache.druid.data.input.impl.DimensionsSpec#useSchemaDiscovery} is false, this
      * method should filter fields to include only fields that contain primitive and lists of primitive values
      */
     Iterable<String> discoverRootFields(T obj);

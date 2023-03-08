@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -57,14 +56,11 @@ public class MSQFaultSerdeTest
     assertFaultSerde(new InsertCannotAllocateSegmentFault("the datasource", Intervals.ETERNITY));
     assertFaultSerde(new InsertCannotBeEmptyFault("the datasource"));
     assertFaultSerde(new InsertCannotOrderByDescendingFault("the column"));
-    assertFaultSerde(
-        new InsertCannotReplaceExistingSegmentFault(SegmentId.of("the datasource", Intervals.ETERNITY, "v1", 1))
-    );
     assertFaultSerde(InsertLockPreemptedFault.INSTANCE);
     assertFaultSerde(InsertTimeNullFault.INSTANCE);
     assertFaultSerde(new InsertTimeOutOfBoundsFault(Intervals.ETERNITY));
     assertFaultSerde(new InvalidNullByteFault("the column"));
-    assertFaultSerde(new NotEnoughMemoryFault(1000, 900, 1, 2));
+    assertFaultSerde(new NotEnoughMemoryFault(1000, 1000, 900, 1, 2));
     assertFaultSerde(QueryNotSupportedFault.INSTANCE);
     assertFaultSerde(new RowTooLargeFault(1000));
     assertFaultSerde(new TaskStartTimeoutFault(10));

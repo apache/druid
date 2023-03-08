@@ -70,7 +70,7 @@ final class BinPlusExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     ExpressionType type = ExpressionTypeConversion.operator(
         left.getOutputType(inspector),
@@ -116,7 +116,7 @@ final class BinMinusExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return VectorMathProcessors.minus(inspector, left, right);
   }
@@ -155,7 +155,7 @@ final class BinMulExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return VectorMathProcessors.multiply(inspector, left, right);
   }
@@ -194,7 +194,7 @@ final class BinDivExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return VectorMathProcessors.divide(inspector, left, right);
   }
@@ -233,7 +233,7 @@ class BinPowExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return VectorMathProcessors.power(inspector, left, right);
   }
@@ -272,7 +272,7 @@ class BinModuloExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return VectorMathProcessors.modulo(inspector, left, right);
   }

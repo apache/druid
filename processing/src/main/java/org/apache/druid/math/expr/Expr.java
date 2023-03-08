@@ -164,7 +164,7 @@ public interface Expr extends Cacheable
 
   /**
    * Check if an expression can be 'vectorized', for a given set of inputs. If this method returns true,
-   * {@link #buildVectorized} is expected to produce a {@link ExprVectorProcessor} which can evaluate values in batches
+   * {@link #asVectorProcessor} is expected to produce a {@link ExprVectorProcessor} which can evaluate values in batches
    * to use with vectorized query engines.
    *
    * @param inspector
@@ -180,7 +180,7 @@ public interface Expr extends Cacheable
    *
    * @param inspector
    */
-  default <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  default <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     throw Exprs.cannotVectorize(this);
   }
@@ -345,7 +345,7 @@ public interface Expr extends Cacheable
   }
 
   /**
-   * {@link InputBindingInspector} + vectorizations stuff for {@link #buildVectorized}
+   * {@link InputBindingInspector} + vectorizations stuff for {@link #asVectorProcessor}
    */
   interface VectorInputBindingInspector extends InputBindingInspector
   {

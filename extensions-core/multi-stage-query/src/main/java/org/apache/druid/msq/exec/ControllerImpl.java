@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.FutureCallback;
@@ -62,12 +61,11 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.MarkSegmentsAsUnusedAction;
-import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
-import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -103,7 +101,6 @@ import org.apache.druid.msq.indexing.error.FaultsExceededChecker;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertCannotOrderByDescendingFault;
-import org.apache.druid.msq.indexing.error.InsertCannotReplaceExistingSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFault;
 import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
@@ -1247,48 +1244,33 @@ public class ControllerImpl implements Controller
   /**
    * Publish the list of segments. Additionally, if {@link DataSourceMSQDestination#isReplaceTimeChunks()},
    * also drop all other segments within the replacement intervals.
-   * <p>
-   * If any existing segments cannot be dropped because their intervals are not wholly contained within the
-   * replacement parameter, throws a {@link MSQException} with {@link InsertCannotReplaceExistingSegmentFault}.
    */
   private void publishAllSegments(final Set<DataSegment> segments) throws IOException
   {
     final DataSourceMSQDestination destination =
         (DataSourceMSQDestination) task.getQuerySpec().getDestination();
-    final Set<DataSegment> segmentsToDrop;
+    final Set<DataSegment> segmentsWithTombstones = new HashSet<>(segments);
 
     if (destination.isReplaceTimeChunks()) {
       final List<Interval> intervalsToDrop = findIntervalsToDrop(Preconditions.checkNotNull(segments, "segments"));
 
-      if (intervalsToDrop.isEmpty()) {
-        segmentsToDrop = null;
-      } else {
-        // Determine which segments to drop as part of the replace operation. This is safe because, in the case where we
-        // are doing a replace, the isReady method (which runs prior to the task starting) acquires an exclusive lock.
-        segmentsToDrop =
-            ImmutableSet.copyOf(
-                context.taskActionClient().submit(
-                    new RetrieveUsedSegmentsAction(
-                        task.getDataSource(),
-                        null,
-                        intervalsToDrop,
-                        Segments.ONLY_VISIBLE
-                    )
-                )
-            );
-
-        // Validate that there are no segments that partially overlap the intervals-to-drop. Otherwise, the replace
-        // may be incomplete.
-        for (final DataSegment segmentToDrop : segmentsToDrop) {
-          if (destination.getReplaceTimeChunks()
-                         .stream()
-                         .noneMatch(interval -> interval.contains(segmentToDrop.getInterval()))) {
-            throw new MSQException(new InsertCannotReplaceExistingSegmentFault(segmentToDrop.getId()));
-          }
+      if (!intervalsToDrop.isEmpty()) {
+        TombstoneHelper tombstoneHelper = new TombstoneHelper(context.taskActionClient());
+        try {
+          Set<DataSegment> tombstones = tombstoneHelper.computeTombstoneSegmentsForReplace(
+              intervalsToDrop,
+              destination.getReplaceTimeChunks(),
+              task.getDataSource(),
+              destination.getSegmentGranularity()
+          );
+          segmentsWithTombstones.addAll(tombstones);
+        }
+        catch (IllegalStateException e) {
+          throw new MSQException(e, InsertLockPreemptedFault.instance());
         }
       }
 
-      if (segments.isEmpty()) {
+      if (segmentsWithTombstones.isEmpty()) {
         // Nothing to publish, only drop. We already validated that the intervalsToDrop do not have any
         // partially-overlapping segments, so it's safe to drop them as intervals instead of as specific segments.
         for (final Interval interval : intervalsToDrop) {
@@ -1298,7 +1280,7 @@ public class ControllerImpl implements Controller
       } else {
         performSegmentPublish(
             context.taskActionClient(),
-            SegmentTransactionalInsertAction.overwriteAction(null, segmentsToDrop, segments)
+            SegmentTransactionalInsertAction.overwriteAction(null, null, segmentsWithTombstones)
         );
       }
     } else if (!segments.isEmpty()) {
@@ -2632,6 +2614,7 @@ public class ControllerImpl implements Controller
     }
     return mergeMode;
   }
+
 
   /**
    * Interface used by {@link #contactWorkersForStage}.

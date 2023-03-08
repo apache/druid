@@ -20,15 +20,23 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
+import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -43,28 +51,15 @@ import java.util.Set;
 public class TombstoneHelper
 {
 
-  private final DataSchema dataSchema;
   private final TaskActionClient taskActionClient;
-  private final Collection<DataSegment> pushedSegments;
 
-  public TombstoneHelper(
-      Collection<DataSegment> pushedSegments,
-      DataSchema dataSchema,
-      TaskActionClient taskActionClient
-  )
+  public TombstoneHelper(TaskActionClient taskActionClient)
   {
 
-    Preconditions.checkNotNull(pushedSegments, "pushedSegments");
-    Preconditions.checkNotNull(dataSchema, "dataSchema");
-    Preconditions.checkNotNull(taskActionClient, "taskActionClient");
-
-    this.dataSchema = dataSchema;
-    this.taskActionClient = taskActionClient;
-    this.pushedSegments = pushedSegments;
+    this.taskActionClient = Preconditions.checkNotNull(taskActionClient, "taskActionClient");
   }
 
-
-  private List<Interval> getCondensedPushedSegmentsIntervals()
+  private List<Interval> getCondensedPushedSegmentsIntervals(Collection<DataSegment> pushedSegments)
   {
     List<Interval> pushedSegmentsIntervals = new ArrayList<>();
     for (DataSegment pushedSegment : pushedSegments) {
@@ -73,7 +68,10 @@ public class TombstoneHelper
     return JodaUtils.condenseIntervals(pushedSegmentsIntervals);
   }
 
-  public Set<DataSegment> computeTombstones(Map<Interval, SegmentIdWithShardSpec> tombstoneIntervalsAndVersions)
+  public Set<DataSegment> computeTombstones(
+      DataSchema dataSchema,
+      Map<Interval, SegmentIdWithShardSpec> tombstoneIntervalsAndVersions
+  )
   {
     Set<DataSegment> retVal = new HashSet<>();
     String dataSource = dataSchema.getDataSource();
@@ -91,12 +89,16 @@ public class TombstoneHelper
     return retVal;
   }
 
-  public List<Interval> computeTombstoneIntervals() throws IOException
+  public List<Interval> computeTombstoneIntervals(Collection<DataSegment> pushedSegments, DataSchema dataSchema)
+      throws IOException
   {
     List<Interval> retVal = new ArrayList<>();
     GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
-    List<Interval> pushedSegmentsIntervals = getCondensedPushedSegmentsIntervals();
-    List<Interval> intervalsForUsedSegments = getCondensedUsedIntervals();
+    List<Interval> pushedSegmentsIntervals = getCondensedPushedSegmentsIntervals(pushedSegments);
+    List<Interval> intervalsForUsedSegments = getCondensedUsedIntervals(
+        dataSchema.getGranularitySpec().inputIntervals(),
+        dataSchema.getDataSource()
+    );
     for (Interval timeChunkInterval : granularitySpec.sortedBucketIntervals()) {
       // is it an empty time chunk?
       boolean isEmpty = true;
@@ -122,10 +124,113 @@ public class TombstoneHelper
     return retVal;
   }
 
-  private DataSegment createTombstoneForTimeChunkInterval(String dataSource, String version, ShardSpec shardSpec, Interval timeChunkInterval)
+  public Set<DataSegment> computeTombstoneSegmentsForReplace(
+      List<Interval> intervalsToDrop,
+      List<Interval> intervalsToReplace,
+      String dataSource,
+      Granularity replaceGranularity
+  ) throws IOException
   {
+    Set<Interval> tombstoneIntervals = computeTombstoneIntervalsForReplace(
+        intervalsToDrop,
+        intervalsToReplace,
+        dataSource,
+        replaceGranularity
+    );
 
+    final List<TaskLock> locks = taskActionClient.submit(new LockListAction());
 
+    Set<DataSegment> tombstones = new HashSet<>();
+    for (Interval tombstoneInterval : tombstoneIntervals) {
+      String version = null;
+      for (final TaskLock lock : locks) {
+        if (lock.getInterval().contains(tombstoneInterval)) {
+          version = lock.getVersion();
+        }
+      }
+
+      if (version == null) {
+        // Unable to fetch the version number of the segment
+        throw new ISE("Unable to fetch the version of the segments in use. The lock for the task might "
+                      + "have been revoked");
+      }
+
+      DataSegment tombstone = createTombstoneForTimeChunkInterval(
+          dataSource,
+          version,
+          new TombstoneShardSpec(),
+          tombstoneInterval
+      );
+      tombstones.add(tombstone);
+    }
+    return tombstones;
+  }
+
+  /**
+   * @param intervalsToDrop Empty intervals in the query that need to be dropped. They should be aligned with the
+   *                        replaceGranularity
+   * @param intervalsToReplace Intervals in the query which are eligible for replacement with new data.
+   *                           They should be aligned with the replaceGranularity
+   * @param dataSource Datasource on which the replace is to be performed
+   * @param replaceGranularity Granularity of the replace query
+   * @return Intervals computed for the tombstones
+   * @throws IOException
+   */
+  public Set<Interval> computeTombstoneIntervalsForReplace(
+      List<Interval> intervalsToDrop,
+      List<Interval> intervalsToReplace,
+      String dataSource,
+      Granularity replaceGranularity
+  ) throws IOException
+  {
+    Set<Interval> retVal = new HashSet<>();
+    List<Interval> usedIntervals = getCondensedUsedIntervals(intervalsToReplace, dataSource);
+
+    for (Interval intervalToDrop : intervalsToDrop) {
+      for (Interval usedInterval : usedIntervals) {
+
+        // Overlap will always be finite (not starting from -Inf or ending at +Inf) and lesser than or
+        // equal to the size of the usedInterval
+        Interval overlap = intervalToDrop.overlap(usedInterval);
+
+        // No overlap of the dropped segment with the used interval due to which we donot need to generate any tombstone
+        if (overlap == null) {
+          continue;
+        }
+
+        // Overlap might not be aligned with the granularity if the used interval is not aligned with the granularity
+        // However when fetching from the iterator, the first interval is found using the bucketStart, which
+        // ensures that the interval is "rounded down" to the first timestamp that aligns with the granularity
+        // Also, the interval would always be contained inside the "intervalToDrop" because the original REPLACE
+        // is aligned by the granularity, and by extension all the elements inside the intervals to drop would
+        // also be aligned by the same granularity (since intervalsToDrop = replaceIntervals - publishIntervals, and
+        // the right-hand side is always aligned)
+        //
+        // For example, if the replace granularity is DAY, intervalsToReplace are 20/02/2023 - 24/02/2023 (always
+        // aligned with the replaceGranularity), intervalsToDrop are 22/02/2023 - 24/02/2023 (they must also be aligned with the replaceGranularity)
+        // If the relevant usedIntervals for the datasource are from 22/02/2023 01:00:00 - 23/02/2023 02:00:00, then
+        // the overlap would be 22/02/2023 01:00:00 - 23/02/2023 02:00:00. When iterating over the overlap we will get
+        // the intervals from 22/02/2023 - 23/02/2023, and 23/02/2023 - 24/02/2023
+        IntervalsByGranularity intervalsToDropByGranularity = new IntervalsByGranularity(
+            ImmutableList.of(overlap),
+            replaceGranularity
+        );
+
+        // Helps in deduplication if required. Since all the intervals are uniformly granular, there should be no
+        // no overlap post deduplication
+        retVal.addAll(Sets.newHashSet(intervalsToDropByGranularity.granularityIntervalsIterator()));
+      }
+    }
+    return retVal;
+  }
+
+  public DataSegment createTombstoneForTimeChunkInterval(
+      String dataSource,
+      String version,
+      ShardSpec shardSpec,
+      Interval timeChunkInterval
+  )
+  {
     // and the loadSpec is different too:
     Map<String, Object> tombstoneLoadSpec = new HashMap<>();
     // since loadspec comes from prototype it is guaranteed to be non-null
@@ -147,22 +252,28 @@ public class TombstoneHelper
 
   }
 
-
   /**
    * Helper method to prune required tombstones. Only tombstones that cover used intervals will be created
    * since those that not cover used intervals will be redundant.
+   *
+   * @param inputIntervals   Intervals corresponding to the task
+   * @param dataSource       Datasource corresponding to the task
    * @return Intervals corresponding to used segments that overlap with any of the spec's input intervals
    * @throws IOException If used segments cannot be retrieved
    */
-  public List<Interval> getCondensedUsedIntervals() throws IOException
+  private List<Interval> getCondensedUsedIntervals(
+      List<Interval> inputIntervals,
+      String dataSource
+  ) throws IOException
   {
     List<Interval> retVal = new ArrayList<>();
 
-    List<Interval> condensedInputIntervals = JodaUtils.condenseIntervals(dataSchema.getGranularitySpec().inputIntervals());
+    List<Interval> condensedInputIntervals = JodaUtils.condenseIntervals(inputIntervals);
     if (!condensedInputIntervals.isEmpty()) {
       Collection<DataSegment> usedSegmentsInInputInterval =
           taskActionClient.submit(new RetrieveUsedSegmentsAction(
-              dataSchema.getDataSource(), null,
+              dataSource,
+              null,
               condensedInputIntervals,
               Segments.ONLY_VISIBLE
           ));

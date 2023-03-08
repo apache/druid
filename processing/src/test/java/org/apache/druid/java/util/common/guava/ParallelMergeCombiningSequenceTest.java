@@ -511,7 +511,8 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(someSize));
     input.add(blockingSequence(someSize, 400, 500, 1, 500, true));
     expectedException.expect(QueryTimeoutException.class);
-    expectedException.expectMessage("Sequence iterator timed out waiting for data");
+    expectedException.expectMessage("Query did not complete within configured timeout period. " +
+        "You can increase query timeout or tune the performance of query");
 
     assertException(
         input,
@@ -533,7 +534,8 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(someSize));
 
     expectedException.expect(QueryTimeoutException.class);
-    expectedException.expectMessage("Sequence iterator timed out");
+    expectedException.expectMessage("Query did not complete within configured timeout period. " +
+        "You can increase query timeout or tune the performance of query");
     assertException(input, 8, 64, 1000, 500);
   }
 
