@@ -248,6 +248,128 @@ public class TombstoneHelperTest
   }
 
   @Test
+  public void testTombstoneIntervalsCreatedForReplaceWhenDataLiesOnLeft() throws IOException
+  {
+    Interval usedInterval = Intervals.of("2020-01-01/2020-12-31");
+    Interval replaceInterval = Intervals.of("2020-01-01/2020-12-31");
+    Interval intervalToDrop = Intervals.of("2020-02-01/2020-12-31");
+    Granularity replaceGranularity = Granularities.DAY;
+
+    DataSegment existingUsedSegment =
+        DataSegment.builder()
+                   .dataSource("test")
+                   .interval(usedInterval)
+                   .version("oldVersion")
+                   .size(100)
+                   .build();
+    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Mockito.when(taskActionClient.submit(any(TaskAction.class)))
+           .thenReturn(Collections.singletonList(existingUsedSegment));
+    TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
+
+    Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
+        ImmutableList.of(intervalToDrop),
+        ImmutableList.of(replaceInterval),
+        "test",
+        replaceGranularity
+    );
+    Assert.assertEquals(ImmutableSet.of(Intervals.of("2020-02-01/2020-12-31")), tombstoneIntervals);
+  }
+
+  @Test
+  public void testTombstoneIntervalsCreatedForReplaceWhenDataLiesOnRight() throws IOException
+  {
+    Interval usedInterval = Intervals.of("2020-01-01/2020-12-31");
+    Interval replaceInterval = Intervals.of("2020-01-01/2020-12-31");
+    Interval intervalToDrop = Intervals.of("2020-01-01/2020-11-30");
+    Granularity replaceGranularity = Granularities.DAY;
+
+    DataSegment existingUsedSegment =
+        DataSegment.builder()
+                   .dataSource("test")
+                   .interval(usedInterval)
+                   .version("oldVersion")
+                   .size(100)
+                   .build();
+    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Mockito.when(taskActionClient.submit(any(TaskAction.class)))
+           .thenReturn(Collections.singletonList(existingUsedSegment));
+    TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
+
+    Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
+        ImmutableList.of(intervalToDrop),
+        ImmutableList.of(replaceInterval),
+        "test",
+        replaceGranularity
+    );
+    Assert.assertEquals(ImmutableSet.of(Intervals.of("2020-01-01/2020-11-30")), tombstoneIntervals);
+  }
+
+  @Test
+  public void testTombstoneIntervalsCreatedForReplaceWhenDataLiesInMiddle() throws IOException
+  {
+    Interval usedInterval = Intervals.of("2020-01-01/2020-12-31");
+    Interval replaceInterval = Intervals.of("2020-01-01/2020-12-31");
+    List<Interval> intervalsToDrop = ImmutableList.of(
+        Intervals.of("2020-01-01/2020-11-30"),
+        Intervals.of("2020-12-05/2020-12-30")
+    );
+    Granularity replaceGranularity = Granularities.DAY;
+
+    DataSegment existingUsedSegment =
+        DataSegment.builder()
+                   .dataSource("test")
+                   .interval(usedInterval)
+                   .version("oldVersion")
+                   .size(100)
+                   .build();
+    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Mockito.when(taskActionClient.submit(any(TaskAction.class)))
+           .thenReturn(Collections.singletonList(existingUsedSegment));
+    TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
+
+    Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
+        intervalsToDrop,
+        ImmutableList.of(replaceInterval),
+        "test",
+        replaceGranularity
+    );
+    Assert.assertEquals(
+        ImmutableSet.of(Intervals.of("2020-01-01/2020-11-30"), Intervals.of("2020-12-05/2020-12-30")),
+        tombstoneIntervals
+    );
+  }
+
+  @Test
+  public void testTombstoneIntervalsCreatedForReplaceWhenExistingGranularityIsEternity() throws IOException
+  {
+    Interval usedInterval = Intervals.ETERNITY;
+    Interval replaceInterval = Intervals.ETERNITY;
+    List<Interval> intervalsToDrop = ImmutableList.of(Intervals.of("2020-01-01/2020-11-30"));
+    Granularity replaceGranularity = Granularities.DAY;
+
+    DataSegment existingUsedSegment =
+        DataSegment.builder()
+                   .dataSource("test")
+                   .interval(usedInterval)
+                   .version("oldVersion")
+                   .size(100)
+                   .build();
+    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Mockito.when(taskActionClient.submit(any(TaskAction.class)))
+           .thenReturn(Collections.singletonList(existingUsedSegment));
+    TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
+
+    Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
+        intervalsToDrop,
+        ImmutableList.of(replaceInterval),
+        "test",
+        replaceGranularity
+    );
+    Assert.assertEquals(ImmutableSet.of(Intervals.of("2020-01-01/2020-11-30")), tombstoneIntervals);
+  }
+
+  @Test
   public void testTombstoneSegmentsForReplaceWhenLockRevoked() throws IOException
   {
     Interval usedInterval = Intervals.of("2020-02-01/2020-04-01");
