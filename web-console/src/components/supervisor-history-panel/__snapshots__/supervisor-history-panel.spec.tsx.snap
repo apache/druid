@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`ShowHistory matches snapshot 1`] = `
+exports[`SupervisorHistoryPanel matches snapshot 1`] = `
 <div
   class="loader"
 >

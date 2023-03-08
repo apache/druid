@@ -822,25 +822,24 @@ public class WorkerImpl implements Worker
         continue;
       }
       output.close();
-
-      // One caveat with this approach is that in case of a worker crash, while the MM/Indexer systems will delete their
-      // temp directories where intermediate results were stored, it won't be the case for the external storage.
-      // Therefore, the logic for cleaning the stage output in case of a worker/machine crash has to be external.
-      // We currently take care of this in the controller.
-      if (durableStageStorageEnabled && removeDurableStorageFiles) {
-        final String folderName = DurableStorageUtils.getTaskIdOutputsFolderName(
-            task.getControllerTaskId(),
-            stageId.getStageNumber(),
-            task.getWorkerNumber(),
-            task.getId()
-        );
-        try {
-          MSQTasks.makeStorageConnector(context.injector()).deleteRecursively(folderName);
-        }
-        catch (Exception e) {
-          // If an error is thrown while cleaning up a file, log it and try to continue with the cleanup
-          log.warn(e, "Error while cleaning up folder at path " + folderName);
-        }
+    }
+    // One caveat with this approach is that in case of a worker crash, while the MM/Indexer systems will delete their
+    // temp directories where intermediate results were stored, it won't be the case for the external storage.
+    // Therefore, the logic for cleaning the stage output in case of a worker/machine crash has to be external.
+    // We currently take care of this in the controller.
+    if (durableStageStorageEnabled && removeDurableStorageFiles) {
+      final String folderName = DurableStorageUtils.getTaskIdOutputsFolderName(
+          task.getControllerTaskId(),
+          stageId.getStageNumber(),
+          task.getWorkerNumber(),
+          task.getId()
+      );
+      try {
+        MSQTasks.makeStorageConnector(context.injector()).deleteRecursively(folderName);
+      }
+      catch (Exception e) {
+        // If an error is thrown while cleaning up a file, log it and try to continue with the cleanup
+        log.warn(e, "Error while cleaning up folder at path " + folderName);
       }
     }
   }
