@@ -147,7 +147,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     for (NamedType namedType : taskSubtypes) {
       String taskType = namedType.getName();
       Optional<PodTemplate> template = loadPodTemplate(taskType, properties);
-      template.map(podTemplate -> podTemplateMap.put(taskType, podTemplate));
+      template.ifPresent(podTemplate -> podTemplateMap.put(taskType, podTemplate));
     }
     return podTemplateMap;
   }
