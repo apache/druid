@@ -76,7 +76,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
@@ -147,7 +146,6 @@ import java.util.stream.Stream;
 @RunWith(Parameterized.class)
 public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 {
-  private static final Logger log = new Logger(KafkaIndexTaskTest.class);
   private static final long POLL_RETRY_MS = 100;
   private static final Iterable<Header> SAMPLE_HEADERS = ImmutableList.of(new Header()
   {
