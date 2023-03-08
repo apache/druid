@@ -132,7 +132,7 @@ public class FrameProcessorExecutorTest
           awaitStyle
       );
 
-      final FrameChannelMuxer muxer = new FrameChannelMuxer(
+      final FrameChannelMixer muxer = new FrameChannelMixer(
           ImmutableList.of(memoryChannel1.readable(), memoryChannel2.readable()),
           new WritableFrameFileChannel(
               FrameFileWriter.open(
