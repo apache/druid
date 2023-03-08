@@ -211,7 +211,7 @@ public class TombstoneHelper
         // the overlap would be 22/02/2023 01:00:00 - 23/02/2023 02:00:00. When iterating over the overlap we will get
         // the intervals from 22/02/2023 - 23/02/2023, and 23/02/2023 - 24/02/2023
 
-        // If the end is aligned, then we donot alter it, else we align the end by geting the earliest time later
+        // If the end is aligned, then we do not alter it, else we align the end by geting the earliest time later
         // than the overlap's end which aligns with the replace granularity. Using the above-mentioned logic for the
         // start time, we can also argue that the rounded up end would be contained in the intervalToDrop
         DateTime alignedIntervalEnd;
