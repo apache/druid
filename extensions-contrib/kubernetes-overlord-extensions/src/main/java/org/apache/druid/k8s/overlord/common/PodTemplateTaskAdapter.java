@@ -168,7 +168,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     }
   }
 
-  private Collection<EnvVar> getEnv(Task task)
+  private Collection<EnvVar> getEnv()
   {
     return ImmutableList.of(
         new EnvVarBuilder()
