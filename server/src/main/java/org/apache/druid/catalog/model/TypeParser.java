@@ -140,6 +140,16 @@ public class TypeParser
     return new TypeParser(type).parse();
   }
 
+  /**
+   * Validates the type.
+   */
+  public static void validate (String type)
+  {
+    // Parse the type. If the type is not valid, this throws an exception.
+    // Because this is only a validation, we ignore the return value.
+    parse(type);
+  }
+
   private ParsedType parse()
   {
     Token token = parseToken();

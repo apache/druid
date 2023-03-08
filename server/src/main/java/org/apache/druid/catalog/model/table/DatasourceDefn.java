@@ -143,11 +143,11 @@ public class DatasourceDefn extends TableDefn
     if (Columns.isTimeColumn(spec.name()) && spec.sqlType() != null) {
       ParsedType type = TypeParser.parse(spec.sqlType());
       if (type.kind() != ParsedType.Kind.TIME) {
-        throw new IAE(StringUtils.format(
-            "%s column must have no SQL type or SQL type %s",
-            Columns.TIME_COLUMN,
+        throw new IAE(
+            "External column [%s] of type [%s] is not allowed. Must be %s",
+            spec.name(),
+            spec.sqlType(),
             Columns.TIMESTAMP
-            )
         );
       }
     }
