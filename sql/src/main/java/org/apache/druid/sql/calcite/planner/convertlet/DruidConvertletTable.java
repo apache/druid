@@ -33,6 +33,7 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeTransforms;
+import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql2rel.SqlRexConvertlet;
 import org.apache.calcite.sql2rel.SqlRexConvertletTable;
 import org.apache.calcite.sql2rel.StandardConvertletTable;
@@ -166,6 +167,9 @@ public class DruidConvertletTable implements SqlRexConvertletTable
   {
     private static final CoalesceToNvlConvertletFactory INSTANCE = new CoalesceToNvlConvertletFactory();
 
+    /**
+     * Adapted from {@link org.apache.calcite.sql.fun.SqlCoalesceFunction#rewriteCall(SqlValidator, SqlCall)}
+     */
     @Override
     public SqlRexConvertlet createConvertlet(PlannerContext plannerContext)
     {
@@ -184,8 +188,6 @@ public class DruidConvertletTable implements SqlRexConvertletTable
 
         SqlNodeList whenList = new SqlNodeList(pos);
         SqlNodeList thenList = new SqlNodeList(pos);
-
-        // todo: optimize when know operand is not null.
 
         for (SqlNode operand : Util.skipLast(call.getOperandList())) {
           whenList.add(SqlStdOperatorTable.IS_NOT_NULL.createCall(pos, operand));
