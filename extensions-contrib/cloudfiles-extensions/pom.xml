@@ -51,6 +51,7 @@
         <dependency>
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
+            <version>${guice.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>aopalliance</groupId>
@@ -62,7 +63,13 @@
         <dependency>
             <groupId>com.google.inject.extensions</groupId>
             <artifactId>guice-multibindings</artifactId>
+            <version>${guice.version}</version>
             <!--$NO-MVN-MAN-VER$ -->
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -136,10 +143,6 @@
             <artifactId>rackspace-cloudfiles-uk</artifactId>
             <version>${jclouds.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.module</groupId>
-            <artifactId>jackson-module-guice</artifactId>
-        </dependency>
 
         <!-- Tests -->
         <dependency>
@@ -150,6 +153,12 @@
         <dependency>
             <groupId>org.easymock</groupId>
             <artifactId>easymock</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-server</artifactId>
+            <version>${project.parent.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

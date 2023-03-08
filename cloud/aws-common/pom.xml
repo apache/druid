@@ -95,19 +95,4 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
-    <build>
-        <plugins>
-             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <configuration>
-                     <!-- tool gets confused on this item. -->
-                     <usedDependencies>
-                        <dependency>com.amazonaws:aws-java-sdk-sts</dependency>
-                     </usedDependencies>
-                </configuration>
-              </plugin>
-        </plugins>
-    </build>
 </project>

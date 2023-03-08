@@ -175,6 +175,11 @@
         </dependency>
         <dependency>
             <groupId>it.unimi.dsi</groupId>
+            <artifactId>fastutil</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>it.unimi.dsi</groupId>
             <artifactId>fastutil-core</artifactId>
             <scope>provided</scope>
         </dependency>
@@ -300,6 +305,11 @@
                         </exclusion>
                     </exclusions>
                 </dependency>
+                <dependency>
+                    <groupId>org.apache.hadoop</groupId>
+                    <artifactId>hadoop-hdfs-client</artifactId>
+                    <scope>runtime</scope>
+                </dependency>
                 <!--
                 for native batch indexing with Orc files, we require a small number of classes provided by hadoop-common and
                 hadoop-mapreduce-client-core. However, both of these jars have a very large set of dependencies, the majority of
@@ -311,6 +321,7 @@
                 <dependency>
                     <groupId>org.apache.hadoop</groupId>
                     <artifactId>hadoop-common</artifactId>
+                    <version>${hadoop.compile.version}</version>
                     <scope>compile</scope>
                     <exclusions>
                         <exclusion>

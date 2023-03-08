@@ -117,6 +117,15 @@
       <artifactId>guava</artifactId>
       <version>${shade.guava.version}</version>
     </dependency>
+    <!-- explicitly include perfmark dependency of grpc we exclude from the shaded jar
+    Note: we could use promoteTransitiveDependencies=true in the shade plugin, but that promotes all
+    transitive dependencies as well, which unnecessarily pollutes the final pom -->
+    <dependency>
+      <groupId>io.perfmark</groupId>
+      <artifactId>perfmark-api</artifactId>
+      <version>0.23.0</version>
+      <scope>runtime</scope>
+    </dependency>
     <dependency>
       <groupId>joda-time</groupId>
       <artifactId>joda-time</artifactId>
@@ -125,6 +134,11 @@
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>

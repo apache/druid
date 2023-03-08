@@ -45,6 +45,15 @@
             <artifactId>druid-integration-tests</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
+        <!-- See https://maven.apache.org/plugins/maven-jar-plugin/examples/create-test-jar.html -->
+        <dependency>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-integration-tests</artifactId>
+            <version>${project.parent.version}</version>
+            <classifier>tests</classifier>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-processing</artifactId>
@@ -134,10 +143,12 @@
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-core</artifactId>
+            <version>${aws.sdk.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.api-client</groupId>
             <artifactId>google-api-client</artifactId>
+            <version>${com.google.apis.client.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -177,11 +188,13 @@
         <dependency>
             <groupId>com.google.http-client</groupId>
             <artifactId>google-http-client</artifactId>
+            <version>${com.google.apis.client.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.google.http-client</groupId>
             <artifactId>google-http-client-jackson2</artifactId>
+            <version>${com.google.apis.client.version}</version>
             <scope>provided</scope>
         </dependency>
         <!-- Tests can choose either the MySQL or MariaDB driver. -->
@@ -189,6 +202,12 @@
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>${mysql.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mariadb.jdbc</groupId>
+            <artifactId>mariadb-java-client</artifactId>
+            <version>${mariadb.version}</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
@@ -201,9 +220,34 @@
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-azure-extensions</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-s3</artifactId>
+            <version>${aws.sdk.version}</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-s3-extensions</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-hdfs-storage</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.amazonaws</groupId>
+                    <artifactId>aws-java-sdk-bundle</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
@@ -211,10 +255,12 @@
             <version>${project.parent.version}</version>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>org.apache.calcite.avatica</groupId>
-            <artifactId>avatica-core</artifactId>
-        </dependency>
+         <dependency>
+             <groupId>org.apache.druid</groupId>
+             <artifactId>druid-gcp-common</artifactId>
+             <version>${project.parent.version}</version>
+             <scope>provided</scope>
+         </dependency>
 
         <dependency>
             <groupId>org.apache.druid</groupId>
@@ -268,6 +314,7 @@
         <dependency>
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-client</artifactId>
+            <version>5.4.0</version>
         </dependency>
     </dependencies>
 

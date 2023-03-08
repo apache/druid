@@ -66,6 +66,12 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>org.apache.druid</groupId>
+      <artifactId>druid-indexing-hadoop</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>com.twitter.elephantbird</groupId>
       <artifactId>elephant-bird-core</artifactId>
       <version>${elephantbird.version}</version>
@@ -79,6 +85,12 @@
           <groupId>com.hadoop.gplcompression</groupId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.twitter.elephantbird</groupId>
+      <artifactId>elephant-bird-hadoop-compat</artifactId>
+      <version>${elephantbird.version}</version>
+      <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -104,6 +116,12 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
+      <groupId>com.twitter</groupId>
+      <artifactId>scrooge-core_2.11</artifactId>
+      <version>${scrooge.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
@@ -125,6 +143,18 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
           <scope>provided</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-client</artifactId>
+          <version>${hadoop.compile.version}</version>
+          <scope>provided</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>org.apache.avro</groupId>
+              <artifactId>avro</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
       </dependencies>
     </profile>

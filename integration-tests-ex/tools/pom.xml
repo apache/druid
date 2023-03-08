@@ -63,6 +63,27 @@
 
 		<!-- Test Dependencies -->
 		<dependency>
+			<groupId>org.apache.druid</groupId>
+			<artifactId>druid-processing</artifactId>
+			<version>${project.parent.version}</version>
+			<type>test-jar</type>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.druid</groupId>
+			<artifactId>druid-server</artifactId>
+			<version>${project.parent.version}</version>
+			<scope>test</scope>
+			<type>test-jar</type>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.druid</groupId>
+			<artifactId>druid-sql</artifactId>
+			<version>${project.parent.version}</version>
+			<type>test-jar</type>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
 			<groupId>com.google.code.findbugs</groupId>
 			<artifactId>jsr305</artifactId>
 			<scope>provided</scope>
@@ -85,6 +106,11 @@
 		<dependency>
 			<groupId>org.eclipse.jetty</groupId>
 			<artifactId>jetty-servlet</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>joda-time</groupId>
+			<artifactId>joda-time</artifactId>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>

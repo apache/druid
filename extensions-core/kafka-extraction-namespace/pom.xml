@@ -77,6 +77,11 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
+      <groupId>joda-time</groupId>
+      <artifactId>joda-time</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>com.google.inject</groupId>
       <artifactId>guice</artifactId>
       <scope>provided</scope>
@@ -117,6 +122,12 @@
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka_2.13</artifactId>
       <version>${apache.kafka.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>mx4j</groupId>
+      <artifactId>mx4j-tools</artifactId>
+      <version>3.0.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
