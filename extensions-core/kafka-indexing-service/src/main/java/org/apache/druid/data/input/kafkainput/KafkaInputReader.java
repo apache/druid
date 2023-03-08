@@ -89,6 +89,34 @@ public class KafkaInputReader implements InputEntityReader
   public CloseableIterator<InputRow> read() throws IOException
   {
     final KafkaRecordEntity record = source.getEntity();
+    final Map<String, Object> mergedHeaderMap = extractHeader(record);
+
+    // Ignore tombstone records that have null values.
+    if (record.getRecord().value() != null) {
+      return buildBlendedRows(valueParser, mergedHeaderMap);
+    } else {
+      final List<InputRow> rows = Collections.singletonList(buildRowWithoutValuePayload(mergedHeaderMap));
+      return CloseableIterators.withEmptyBaggage(rows.iterator());
+    }
+  }
+
+  @Override
+  public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException
+  {
+    final KafkaRecordEntity record = source.getEntity();
+    final Map<String, Object> mergedHeaderMap = extractHeader(record);
+    if (record.getRecord().value() != null) {
+      return buildBlendedRowsSample(valueParser, mergedHeaderMap);
+    } else {
+      final List<InputRowListPlusRawValues> rows = Collections.singletonList(
+          InputRowListPlusRawValues.of(buildRowWithoutValuePayload(mergedHeaderMap), mergedHeaderMap)
+      );
+      return CloseableIterators.withEmptyBaggage(rows.iterator());
+    }
+  }
+
+  private Map<String, Object> extractHeader(KafkaRecordEntity record) throws IOException
+  {
     final Map<String, Object> mergedHeaderMap = new HashMap<>();
     if (headerParserSupplier != null) {
       KafkaHeaderReader headerParser = headerParserSupplier.apply(record);
@@ -123,19 +151,7 @@ public class KafkaInputReader implements InputEntityReader
         );
       }
     }
-
-    // Ignore tombstone records that have null values.
-    if (record.getRecord().value() != null) {
-      return buildBlendedRows(valueParser, mergedHeaderMap);
-    } else {
-      return buildRowsWithoutValuePayload(mergedHeaderMap);
-    }
-  }
-
-  @Override
-  public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException
-  {
-    return read().map(row -> InputRowListPlusRawValues.of(row, ((MapBasedInputRow) row).getEvent()));
+    return mergedHeaderMap;
   }
 
   private List<String> getFinalDimensionList(Set<String> newDimensions)
@@ -185,15 +201,59 @@ public class KafkaInputReader implements InputEntityReader
     );
   }
 
-  private CloseableIterator<InputRow> buildRowsWithoutValuePayload(Map<String, Object> headerKeyList)
+  private CloseableIterator<InputRowListPlusRawValues> buildBlendedRowsSample(
+      InputEntityReader valueParser,
+      Map<String, Object> headerKeyList
+  ) throws IOException
   {
-    final InputRow row = new MapBasedInputRow(
+    return valueParser.sample().map(
+        rowAndValues -> {
+          if (rowAndValues.getParseException() != null) {
+            return rowAndValues;
+          }
+          List<InputRow> newInputRows = Lists.newArrayListWithCapacity(rowAndValues.getInputRows().size());
+          List<Map<String, Object>> newRawRows = Lists.newArrayListWithCapacity(rowAndValues.getRawValues().size());
+          for (InputRow r : rowAndValues.getInputRows()) {
+            final MapBasedInputRow valueRow;
+            try {
+              valueRow = (MapBasedInputRow) r;
+            }
+            catch (ClassCastException e) {
+              throw new ParseException(
+                  null,
+                  "Unsupported input format in valueFormat. KafkaInputFormat only supports input format that return MapBasedInputRow rows"
+              );
+            }
+
+            final Map<String, Object> event = buildBlendedEventMap(valueRow.getEvent(), headerKeyList);
+            final HashSet<String> newDimensions = new HashSet<>(valueRow.getDimensions());
+            newDimensions.addAll(headerKeyList.keySet());
+            // Remove the dummy timestamp added in KafkaInputFormat
+            newDimensions.remove(KafkaInputFormat.DEFAULT_AUTO_TIMESTAMP_STRING);
+
+            newRawRows.add(event);
+            if (rowAndValues.getParseException() == null) {
+              newInputRows.add(
+                  new MapBasedInputRow(
+                      inputRowSchema.getTimestampSpec().extractTimestamp(event),
+                      getFinalDimensionList(newDimensions),
+                      event
+                  )
+              );
+            }
+          }
+          return InputRowListPlusRawValues.ofList(newRawRows, newInputRows, rowAndValues.getParseException());
+        }
+    );
+  }
+
+  private InputRow buildRowWithoutValuePayload(Map<String, Object> headerKeyList)
+  {
+    return new MapBasedInputRow(
         inputRowSchema.getTimestampSpec().extractTimestamp(headerKeyList),
         getFinalDimensionList(headerKeyList.keySet()),
         headerKeyList
     );
-    final List<InputRow> rows = Collections.singletonList(row);
-    return CloseableIterators.withEmptyBaggage(rows.iterator());
   }
 
   /**
