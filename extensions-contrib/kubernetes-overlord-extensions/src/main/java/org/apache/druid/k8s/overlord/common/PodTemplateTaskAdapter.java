@@ -107,7 +107,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
         .endMetadata()
         .editSpec()
         .editFirstContainer()
-        .addAllToEnv(getEnv(task))
+        .addAllToEnv(getEnv())
         .endContainer()
         .endSpec()
         .endTemplate()
