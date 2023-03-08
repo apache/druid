@@ -645,7 +645,8 @@ public class QueryResourceTest
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     ((StreamingOutput) response.getEntity()).write(baos);
     QueryTimeoutException ex = jsonMapper.readValue(baos.toByteArray(), QueryTimeoutException.class);
-    Assert.assertEquals("Query Timed Out!", ex.getMessage());
+    Assert.assertEquals("Query did not complete within configured timeout period. You can " +
+        "increase query timeout or tune the performance of query.", ex.getMessage());
     Assert.assertEquals(QueryException.QUERY_TIMEOUT_ERROR_CODE, ex.getErrorCode());
     Assert.assertEquals(1, timeoutQueryResource.getTimedOutQueryCount());
 

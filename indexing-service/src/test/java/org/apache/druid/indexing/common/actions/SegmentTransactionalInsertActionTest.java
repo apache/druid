@@ -183,7 +183,14 @@ public class SegmentTransactionalInsertActionTest
         actionTestKit.getTaskActionToolbox()
     );
 
-    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Aborting transaction!"), result);
+    Assert.assertEquals(
+        SegmentPublishResult.fail(
+          "java.lang.RuntimeException: Inconsistent metadata state. " +
+          "This can happen if you update input topic in a spec without changing the supervisor name. " +
+          "Stored state: [null], Target state: [ObjectMetadata{theObject=[1]}]."
+        ),
+        result
+    );
   }
 
   @Test
@@ -203,7 +210,13 @@ public class SegmentTransactionalInsertActionTest
         actionTestKit.getTaskActionToolbox()
     );
 
-    Assert.assertEquals(SegmentPublishResult.fail("org.apache.druid.metadata.RetryTransactionException: Aborting transaction!"), result);
+    Assert.assertEquals(
+        SegmentPublishResult.fail(
+            "org.apache.druid.metadata.RetryTransactionException: " +
+            "Failed to drop some segments. Only 0 could be dropped out of 1. Trying again"
+        ),
+        result
+    );
   }
 
   @Test

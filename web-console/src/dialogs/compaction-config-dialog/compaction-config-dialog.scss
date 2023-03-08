@@ -18,21 +18,35 @@
 
 @import '../../variables';
 
-.show-history {
-  position: relative;
-  height: 100%;
-
-  .#{$bp-ns}-tabs {
-    position: relative;
-    height: 100%;
+.compaction-config-dialog {
+  &.#{$bp-ns}-dialog {
+    height: 80vh;
   }
 
-  .panel {
-    position: relative;
-    width: 100%;
+  .legacy-callout {
+    width: auto;
+    margin: 10px 15px 0;
   }
 
-  .#{$bp-ns}-tab-list {
-    overflow-y: auto;
+  .form-json-selector {
+    margin: 15px;
+  }
+
+  .#{$bp-ns}-dialog-footer-actions {
+    position: relative;
+
+    .history-button {
+      position: absolute;
+      top: 0;
+      left: 0;
+      margin: 0;
+    }
+  }
+
+  .content {
+    margin: 0 15px 10px 0;
+    padding: 0 5px 0 15px;
+    flex: 1;
+    overflow: auto;
   }
 }
