@@ -359,7 +359,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
   {
     final List<String> command = new ArrayList<>();
     command.add("/peon.sh");
-    command.add(new File(taskConfig.getBaseTaskDirPath()).toString());
+    command.add(new File(taskConfig.getBaseTaskDirPaths().get(0));
     command.add("1"); // the attemptId is always 1, we never run the task twice on the same pod.
 
     String nodeType = task.getNodeType();
