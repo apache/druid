@@ -1922,7 +1922,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     private final boolean canRetry;
     @Nullable private final String errorMsg;
 
-    public static DataStoreMetadataUpdateResult SUCCESS = new DataStoreMetadataUpdateResult(false, false, null);
+    public static final DataStoreMetadataUpdateResult SUCCESS = new DataStoreMetadataUpdateResult(false, false, null);
 
     DataStoreMetadataUpdateResult(boolean failed, boolean canRetry, @Nullable String errorMsg, Object... errorFormatArgs)
     {
