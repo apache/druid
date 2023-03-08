@@ -58,7 +58,6 @@ public class DruidCatalogReader extends CalciteCatalogReader
   )
   {
     super(rootSchema, defaultSchema, typeFactory, config);
-    // TODO Auto-generated constructor stub
   }
 
   @Override

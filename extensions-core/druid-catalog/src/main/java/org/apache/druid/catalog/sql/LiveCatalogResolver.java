@@ -42,7 +42,6 @@ import javax.inject.Inject;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 public class LiveCatalogResolver implements CatalogResolver
@@ -151,9 +150,7 @@ public class LiveCatalogResolver implements CatalogResolver
   {
     Set<String> physicalCols = new HashSet<>();
     final RowSignature physicalSchema = dsMetadata.rowSignature();
-    for (Entry<String, ColumnType> entry : physicalSchema.entries()) {
-      physicalCols.add(entry.getKey());
-    }
+    physicalCols.addAll(physicalSchema.getColumnNames());
 
     // Merge columns. All catalog-defined columns come first,
     // in the order defined in the catalog.
