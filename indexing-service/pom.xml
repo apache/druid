@@ -194,11 +194,6 @@
             <artifactId>jackson-jq</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.codehaus.jackson</groupId>
-            <artifactId>jackson-core-asl</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-collections4</artifactId>
             <scope>provided</scope>
@@ -314,6 +309,23 @@
             <properties>
                 <hadoop-task-libs>org.apache.hadoop:hadoop-client:${hadoop.compile.version}</hadoop-task-libs>
             </properties>
+            <build>
+                <plugins>
+                   <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <configuration>
+                         <!-- tool gets confused between these two items. -->
+                         <usedDependencies>
+                            <dependency>org.hamcrest:hamcrest-core</dependency>
+                            <dependency>javax.servlet:servlet-api</dependency>
+                            <dependency>org.apache.hadoop:hadoop-client</dependency>
+                            <dependency>org.apache.hadoop:hadoop-yarn-common</dependency>
+                         </usedDependencies>
+                     </configuration>
+                  </plugin>
+                </plugins>
+            </build>
         </profile>
         <profile>
             <id>hadoop3</id>
