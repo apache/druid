@@ -2812,6 +2812,16 @@ libraries:
 
 ---
 
+name: com.rabbitmq stream-client
+license_category: binary
+version: 0.9
+module: extensions-contrib/rabbit-stream-indexing-service
+license_name: Apache License version 2.0
+libraries:
+  - com.rabbitmq: stream-client
+
+---
+
 name: swagger-annotations
 version: 1.6.0
 license_category: binary
