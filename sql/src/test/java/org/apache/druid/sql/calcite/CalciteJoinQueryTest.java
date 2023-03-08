@@ -69,6 +69,7 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
@@ -2815,9 +2816,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ColumnType.STRING))
-                .columns("__time", "_v0")
-                .filters(new SelectorDimFilter("v0", "10.1", null))
+                .columns("__time", "v0")
                 .context(queryContext)
                 .build()
         ),
@@ -3854,18 +3853,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         )
                     )
                 )
-                .setLimitSpec(
-                    new DefaultLimitSpec(
-                        ImmutableList.of(
-                            new OrderByColumnSpec(
-                                "d0",
-                                OrderByColumnSpec.Direction.ASCENDING,
-                                StringComparators.NUMERIC
-                            )
-                        ),
-                        Integer.MAX_VALUE
-                    )
-                )
+                .setLimitSpec(NoopLimitSpec.instance())
                 .setContext(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
@@ -4074,18 +4062,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .setGranularity(Granularities.ALL)
                 .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
                 .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                .setLimitSpec(
-                    new DefaultLimitSpec(
-                        ImmutableList.of(
-                            new OrderByColumnSpec(
-                                "d0",
-                                OrderByColumnSpec.Direction.ASCENDING,
-                                StringComparators.LEXICOGRAPHIC
-                            )
-                        ),
-                        Integer.MAX_VALUE
-                    )
-                )
+                .setLimitSpec(NoopLimitSpec.instance())
                 .setContext(queryContext)
                 .build()
         ),
@@ -4196,18 +4173,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .setGranularity(Granularities.ALL)
                 .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
                 .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                .setLimitSpec(
-                    new DefaultLimitSpec(
-                        ImmutableList.of(
-                            new OrderByColumnSpec(
-                                "d0",
-                                OrderByColumnSpec.Direction.ASCENDING,
-                                StringComparators.LEXICOGRAPHIC
-                            )
-                        ),
-                        Integer.MAX_VALUE
-                    )
-                )
+                .setLimitSpec(NoopLimitSpec.instance())
                 .setContext(queryContext)
                 .build()
         ),

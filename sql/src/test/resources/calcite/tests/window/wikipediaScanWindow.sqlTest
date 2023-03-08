@@ -1,0 +1,23 @@
+type: "operatorValidation"
+
+sql: |
+  SELECT
+    __time,
+    "user",
+    page,
+    LAG(page, 1) OVER (PARTITION BY "user" ORDER BY __time) as priorPage
+  FROM wikipedia
+
+expectedOperators:
+  - { type: "naiveSort", columns: [ { column: "user", direction: "ASC" }, { column: "__time", direction: "ASC" } ]}
+  - { type: "naivePartition",  partitionColumns: [ "user" ] }
+  - type: "window"
+    processor:
+      type: "offset"
+      inputColumn: page
+      outputColumn: w0
+      offset: -1
+
+# Not correct: there should actually be results here. Therefore, currently, this test only verifies that the
+# query is planned as expected, not that the results are correct.
+expectedResults: []

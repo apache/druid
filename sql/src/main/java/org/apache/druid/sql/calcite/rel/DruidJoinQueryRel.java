@@ -57,7 +57,6 @@ import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -125,7 +124,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   {
     return new DruidJoinQueryRel(
         getCluster(),
-        getTraitSet().plusAll(newQueryBuilder.getRelTraits()),
+        newQueryBuilder.getTraitSet(getConvention()),
         joinRel,
         leftFilter,
         newQueryBuilder,
@@ -137,7 +136,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   public DruidQuery toDruidQuery(final boolean finalizeAggregations)
   {
     final DruidRel<?> leftDruidRel = (DruidRel<?>) left;
-    final DruidQuery leftQuery = Preconditions.checkNotNull((leftDruidRel).toDruidQuery(false), "leftQuery");
+    final DruidQuery leftQuery = Preconditions.checkNotNull(leftDruidRel.toDruidQuery(false), "leftQuery");
     final RowSignature leftSignature = leftQuery.getOutputRowSignature();
     final DataSource leftDataSource;
 
