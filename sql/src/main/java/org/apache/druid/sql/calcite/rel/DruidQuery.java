@@ -1493,7 +1493,7 @@ public class DruidQuery
         // Cannot handle this ordering.
         // Scan cannot ORDER BY non-concrete datasources on _any_ column.
         plannerContext.setPlanningError(
-            "SQL query requires order by on non-concrete datasource, which is not supported.",
+            "SQL query requires order by on non-concrete datasource [%s], which is not supported.",
             dataSource
         );
         return null;

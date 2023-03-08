@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite.rel;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.rel.RelCollation;
@@ -68,6 +67,7 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 
@@ -147,7 +147,7 @@ public class Windowing
       sortColumns.addAll(group.getOrdering());
 
       // Add sorting and partitioning if needed.
-      if (!sortMatches(ImmutableList.copyOf(priorSortColumns), ImmutableList.copyOf(sortColumns))) {
+      if (!sortMatches(priorSortColumns, sortColumns)) {
         // Sort order needs to change. Resort and repartition.
         ops.add(new NaiveSortOperatorFactory(new ArrayList<>(sortColumns)));
         ops.add(new NaivePartitioningOperatorFactory(group.getPartitionColumns()));
@@ -221,9 +221,6 @@ public class Windowing
         throw new ISE("No processors from Window[%s], why was this code called?", window);
       }
 
-      // The ordering required for partitioning is actually not important for the semantics.  However, it *is*
-      // important that it be consistent across the query.  Because if the incoming data is sorted descending
-      // and we try to partition on an ascending sort, we will think the data is not sorted correctly
       ops.add(new WindowOperatorFactory(
           processors.size() == 1 ?
           processors.get(0) : new ComposingProcessor(processors.toArray(new Processor[0]))
@@ -449,7 +446,7 @@ public class Windowing
     final LinkedHashSet<ColumnWithDirection> retVal = new LinkedHashSet<>();
 
     for (RelFieldCollation fieldCollation : collation.getFieldCollations()) {
-      ColumnWithDirection.Direction direction = null;
+      ColumnWithDirection.Direction direction;
 
       switch (fieldCollation.getDirection()) {
         case ASCENDING:
@@ -461,18 +458,18 @@ public class Windowing
         case STRICTLY_DESCENDING:
           direction = ColumnWithDirection.Direction.DESC;
           break;
+
+        default:
+          // Not a useful direction. Return whatever we've come up with so far.
+          return retVal;
       }
 
-      if (direction != null) {
-        final ColumnWithDirection columnWithDirection = new ColumnWithDirection(
-            sourceRowSignature.getColumnName(fieldCollation.getFieldIndex()),
-            direction
-        );
+      final ColumnWithDirection columnWithDirection = new ColumnWithDirection(
+          sourceRowSignature.getColumnName(fieldCollation.getFieldIndex()),
+          direction
+      );
 
-        retVal.add(columnWithDirection);
-      } else {
-        break;
-      }
+      retVal.add(columnWithDirection);
     }
 
     return retVal;
@@ -483,10 +480,19 @@ public class Windowing
    * by currentSort.)
    */
   private static boolean sortMatches(
-      final List<ColumnWithDirection> priorSort,
-      final List<ColumnWithDirection> currentSort
+      final Iterable<ColumnWithDirection> priorSort,
+      final Iterable<ColumnWithDirection> currentSort
   )
   {
-    return currentSort.size() <= priorSort.size() && currentSort.equals(priorSort.subList(0, currentSort.size()));
+    final Iterator<ColumnWithDirection> priorIterator = priorSort.iterator();
+    final Iterator<ColumnWithDirection> currentIterator = currentSort.iterator();
+
+    while (currentIterator.hasNext()) {
+      if (!priorIterator.hasNext() || !currentIterator.next().equals(priorIterator.next())) {
+        return false;
+      }
+    }
+
+    return true;
   }
 }
