@@ -154,6 +154,13 @@
     </dependency>
     <dependency>
       <groupId>org.apache.druid</groupId>
+      <artifactId>druid-server</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+      <type>test-jar</type>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid</groupId>
       <artifactId>druid-sql</artifactId>
       <version>${project.parent.version}</version>
       <type>test-jar</type>
@@ -173,6 +180,17 @@
             </goals>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <configuration>
+             <!-- tool gets confused between these two items. -->
+             <usedDependencies>
+                <dependency>org.hamcrest:hamcrest-core</dependency>
+                <dependency>org.apache.druid:druid-server</dependency>
+             </usedDependencies>
+        </configuration>
       </plugin>
     </plugins>
   </build>
