@@ -245,7 +245,7 @@ public class ExtensionsLoader
           if (!found) {
             throw new ISE(
                 "Extension [%s] specified in \"druid.extensions.loadList\" not found in the extension path",
-                extensionDir.getAbsolutePath()
+                extensionsPath.stream().map(f -> f.getAbsolutePath()).collect(Collectors.joining(";"))
             );
           }
         }

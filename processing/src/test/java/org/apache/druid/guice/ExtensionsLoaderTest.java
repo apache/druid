@@ -173,11 +173,24 @@ public class ExtensionsLoaderTest
   }
 
   @Test
+  public void testGetExtensionFilesToLoad_non_exist_extensions_dir_no_extensions() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder();
+    Assert.assertTrue("could not create missing folder", !tmpDir.exists() || tmpDir.delete());
+    final ExtensionsConfig config = ExtensionsConfig.builder()
+        .directory(tmpDir.getAbsolutePath())
+        .build();
+    final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
+    extnLoader.getExtensionFilesToLoad();
+  }
+
+  @Test
   public void testGetExtensionFilesToLoad_non_exist_extensions_dir() throws IOException
   {
     final File tmpDir = temporaryFolder.newFolder();
     Assert.assertTrue("could not create missing folder", !tmpDir.exists() || tmpDir.delete());
     final ExtensionsConfig config = ExtensionsConfig.builder()
+        .loadList(Collections.singletonList("foo"))
         .directory(tmpDir.getAbsolutePath())
         .build();
     final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
@@ -189,6 +202,7 @@ public class ExtensionsLoaderTest
   {
     final File extensionsDir = temporaryFolder.newFile();
     final ExtensionsConfig config = ExtensionsConfig.builder()
+        .loadList(Collections.singletonList("foo"))
         .directory(extensionsDir.getAbsolutePath())
         .build();
     final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
