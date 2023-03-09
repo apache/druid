@@ -70,12 +70,11 @@ public class CaseOperatorConversion implements SqlOperatorConversion
     // this conversion won't help if the condition expression is only part of then expression, like if the input
     // expression to coalesce was an expression itself, but this is better than nothing
     if (druidExpressions.size() == 3) {
-      final DruidExpression conditionExpression = druidExpressions.get(0);
+      final DruidExpression condition = druidExpressions.get(0);
       final DruidExpression thenExpression = druidExpressions.get(1);
       final DruidExpression elseExpression = druidExpressions.get(2);
-      final String condition = conditionExpression.getExpression();
       final String thenNotNull = StringUtils.format("notnull(%s)", thenExpression.getExpression());
-      if (condition.equals(thenNotNull)) {
+      if (condition.getExpression().equals(thenNotNull)) {
         return DruidExpression.ofFunctionCall(
             Calcites.getColumnTypeForRelDataType(
                 rexNode.getType()),
