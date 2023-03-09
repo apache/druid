@@ -36,6 +36,7 @@ import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
@@ -420,7 +421,8 @@ public class DruidQuery
         partialQuery,
         plannerContext,
         rowSignature,
-        virtualColumnRegistry
+        virtualColumnRegistry,
+        rexBuilder.getTypeFactory()
     );
 
     final Subtotals subtotals = computeSubtotals(
@@ -469,6 +471,7 @@ public class DruidQuery
    * @param plannerContext        planner context
    * @param rowSignature          source row signature
    * @param virtualColumnRegistry re-usable virtual column references
+   * @param typeFactory           factory for SQL types
    * @return dimensions
    * @throws CannotBuildQueryException if dimensions cannot be computed
    */
@@ -476,7 +479,8 @@ public class DruidQuery
       final PartialDruidQuery partialQuery,
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
-      final VirtualColumnRegistry virtualColumnRegistry
+      final VirtualColumnRegistry virtualColumnRegistry,
+      final RelDataTypeFactory typeFactory
   )
   {
     final Aggregate aggregate = Preconditions.checkNotNull(partialQuery.getAggregate());
@@ -488,6 +492,7 @@ public class DruidQuery
     for (int i : aggregate.getGroupSet()) {
       // Dimension might need to create virtual columns. Avoid giving it a name that would lead to colliding columns.
       final RexNode rexNode = Expressions.fromFieldAccess(
+          typeFactory,
           rowSignature,
           partialQuery.getSelectProject(),
           i
