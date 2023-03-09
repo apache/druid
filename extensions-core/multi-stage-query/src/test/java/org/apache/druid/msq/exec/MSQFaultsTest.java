@@ -59,22 +59,28 @@ public class MSQFaultsTest extends MSQTestBase
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
-                                            .add("cnt", ColumnType.LONG).build();
+                                            .add("cnt", ColumnType.LONG)
+                                            .build();
 
     // If there is some problem allocating the segment,task action client will return a null value.
     Mockito.doReturn(null).when(testTaskActionClient).submit(isA(SegmentAllocateAction.class));
 
-    testIngestQuery().setSql(
-                         "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null and __time >= TIMESTAMP '2000-01-02 00:00:00' and __time < TIMESTAMP '2000-01-03 00:00:00' group by 1, 2 PARTITIONED by day clustered by dim1")
-                     .setExpectedDataSource("foo1")
-                     .setExpectedRowSignature(rowSignature)
-                     .setExpectedMSQFault(
-                         new InsertCannotAllocateSegmentFault(
-                             "foo1",
-                             Intervals.of("2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z")
-                         )
-                     )
-                     .verifyResults();
+    testIngestQuery()
+        .setSql("insert into foo1\n" + "select  __time, dim1 , count(*) as cnt\n"
+              + "from foo\n"
+              + "where dim1 is not null and __time >= TIMESTAMP '2000-01-02 00:00:00' and __time < TIMESTAMP '2000-01-03 00:00:00'\n"
+              + "group by 1, 2\n"
+              + "PARTITIONED by day\n"
+              + "clustered by dim1")
+        .setExpectedDataSource("foo1")
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedMSQFault(
+             new InsertCannotAllocateSegmentFault(
+                 "foo1",
+                 Intervals.of("2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z")
+             )
+         )
+        .verifyResults();
   }
 
   @Test
@@ -83,15 +89,22 @@ public class MSQFaultsTest extends MSQTestBase
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
-                                            .add("cnt", ColumnType.LONG).build();
+                                            .add("cnt", ColumnType.LONG)
+                                            .build();
 
     //Insert with a condition which results in 0 rows being inserted
-    testIngestQuery().setSql(
-                         "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null and __time < TIMESTAMP '1971-01-01 00:00:00' group by 1, 2 PARTITIONED by day clustered by dim1")
-                     .setExpectedDataSource("foo1")
-                     .setExpectedRowSignature(rowSignature)
-                     .setExpectedMSQFault(new InsertCannotBeEmptyFault("foo1"))
-                     .verifyResults();
+    testIngestQuery()
+        .setSql("insert into foo1\n"
+              + "select  __time, dim1 , count(*) as cnt\n"
+              + "from foo\n" + "where dim1 is not null and __time < TIMESTAMP '1971-01-01 00:00:00'\n"
+              + "group by 1, 2\n"
+              + "PARTITIONED by day\n"
+              + "clustered by dim1"
+        )
+       .setExpectedDataSource("foo1")
+       .setExpectedRowSignature(rowSignature)
+       .setExpectedMSQFault(new InsertCannotBeEmptyFault("foo1"))
+       .verifyResults();
   }
 
   @Test
@@ -100,15 +113,20 @@ public class MSQFaultsTest extends MSQTestBase
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
-                                            .add("cnt", ColumnType.LONG).build();
+                                            .add("cnt", ColumnType.LONG)
+                                            .build();
 
     // Add an DESC clustered by column, which should not be allowed
-    testIngestQuery().setSql(
-                         "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null and __time < TIMESTAMP '2000-01-02 00:00:00' group by 1, 2 PARTITIONED by day clustered by dim1 DESC")
-                     .setExpectedDataSource("foo1")
-                     .setExpectedRowSignature(rowSignature)
-                     .setExpectedMSQFault(new InsertCannotOrderByDescendingFault("d1"))
-                     .verifyResults();
+    testIngestQuery()
+        .setSql("insert into foo1\n"
+              + "select  __time, dim1 , count(*) as cnt\n"
+              + "from foo\n"
+              + "where dim1 is not null and __time < TIMESTAMP '2000-01-02 00:00:00'\n"
+              + "group by 1, 2 PARTITIONED by day clustered by dim1 DESC")
+       .setExpectedDataSource("foo1")
+       .setExpectedRowSignature(rowSignature)
+       .setExpectedMSQFault(new InsertCannotOrderByDescendingFault("d1"))
+       .verifyResults();
   }
 
   @Test
@@ -117,16 +135,21 @@ public class MSQFaultsTest extends MSQTestBase
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
-                                            .add("cnt", ColumnType.LONG).build();
+                                            .add("cnt", ColumnType.LONG)
+                                            .build();
 
     // Add a REPLACE statement which replaces a different partition than the ones which rows are present for. The generated
     // partition will be outside the replace interval which should throw an InsertTimeOutOfBoundsFault.
-    testIngestQuery().setSql(
-                         "replace into foo1 overwrite where __time >= TIMESTAMP '2002-01-02 00:00:00' and __time < TIMESTAMP '2002-01-03 00:00:00' select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
-                     .setExpectedDataSource("foo1")
-                     .setExpectedRowSignature(rowSignature)
-                     .setExpectedMSQFault(new InsertTimeOutOfBoundsFault(Intervals.of("2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z")))
-                     .verifyResults();
+    testIngestQuery()
+        .setSql("replace into foo1\n"
+              + "overwrite where __time >= TIMESTAMP '2002-01-02 00:00:00' and __time < TIMESTAMP '2002-01-03 00:00:00'\n"
+              + "select  __time, dim1 , count(*) as cnt\n"
+              + "from foo\n"
+              + "where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
+       .setExpectedDataSource("foo1")
+       .setExpectedRowSignature(rowSignature)
+       .setExpectedMSQFault(new InsertTimeOutOfBoundsFault(Intervals.of("2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z")))
+       .verifyResults();
   }
 
   @Test
@@ -144,7 +167,7 @@ public class MSQFaultsTest extends MSQTestBase
             + "SELECT TIME_PARSE(dim1) AS __time, dim1 as cnt\n"
             + "FROM foo\n"
             + "PARTITIONED BY DAY\n"
-            + "CLUSTERED BY dim1")
+            + "CLUSTERED BY cnt")
         .setExpectedDataSource("foo1")
         .setExpectedRowSignature(rowSignature)
         .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.of("2000-01-01T/P1M"), "test", 0)))
@@ -168,27 +191,30 @@ public class MSQFaultsTest extends MSQTestBase
     File file = MSQTestFileUtils.generateTemporaryNdJsonFile(temporaryFolder, 30000, 1);
     String filePathAsJson = queryFramework().queryJsonMapper().writeValueAsString(file.getAbsolutePath());
 
-    testIngestQuery().setSql(" insert into foo1 SELECT\n"
-                             + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time\n"
-                             + "FROM TABLE(\n"
-                             + "  EXTERN(\n"
-                             + "    '{ \"files\": [" + filePathAsJson + "],\"type\":\"local\"}',\n"
-                             + "    '{\"type\": \"json\"}',\n"
-                             + "    '[{\"name\": \"timestamp\",\"type\":\"string\"}]'\n"
-                             + "  )\n"
-                             + ") PARTITIONED by day")
-                     .setExpectedDataSource("foo1")
-                     .setExpectedRowSignature(rowSignature)
-                     .setQueryContext(context)
-                     .setExpectedMSQFault(new TooManyPartitionsFault(25000))
-                     .verifyResults();
+    testIngestQuery()
+        .setSql(" insert into foo1 SELECT\n"
+              + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time\n"
+              + "FROM TABLE(\n"
+              + "  EXTERN(\n"
+              + "    '{ \"files\": [" + filePathAsJson + "],\"type\":\"local\"}',\n"
+              + "    '{\"type\": \"json\"}',\n"
+              + "    '[{\"name\": \"timestamp\",\"type\":\"string\"}]'\n"
+              + "  )\n"
+              + ") PARTITIONED by day")
+       .setExpectedDataSource("foo1")
+       .setExpectedRowSignature(rowSignature)
+       .setQueryContext(context)
+       .setExpectedMSQFault(new TooManyPartitionsFault(25000))
+       .verifyResults();
 
   }
 
   @Test
   public void testInsertWithUnsupportedColumnType()
   {
-    RowSignature dummyRowSignature = RowSignature.builder().add("__time", ColumnType.LONG).build();
+    RowSignature dummyRowSignature = RowSignature.builder()
+        .add("__time", ColumnType.LONG)
+        .build();
 
     testIngestQuery()
         .setSql(StringUtils.format(
@@ -213,7 +239,9 @@ public class MSQFaultsTest extends MSQTestBase
   @Test
   public void testInsertWithManyColumns()
   {
-    RowSignature dummyRowSignature = RowSignature.builder().add("__time", ColumnType.LONG).build();
+    RowSignature dummyRowSignature = RowSignature.builder()
+        .add("__time", ColumnType.LONG)
+        .build();
 
     final int numColumns = 2000;
 
@@ -251,7 +279,9 @@ public class MSQFaultsTest extends MSQTestBase
   @Test
   public void testInsertWithHugeClusteringKeys()
   {
-    RowSignature dummyRowSignature = RowSignature.builder().add("__time", ColumnType.LONG).build();
+    RowSignature dummyRowSignature = RowSignature.builder()
+        .add("__time", ColumnType.LONG)
+        .build();
 
     final int numColumns = 1700;
 
@@ -294,7 +324,9 @@ public class MSQFaultsTest extends MSQTestBase
   @Test
   public void testTooManyInputFiles() throws IOException
   {
-    RowSignature dummyRowSignature = RowSignature.builder().add("__time", ColumnType.LONG).build();
+    RowSignature dummyRowSignature = RowSignature.builder()
+        .add("__time", ColumnType.LONG)
+        .build();
 
     final int numFiles = 20000;
 

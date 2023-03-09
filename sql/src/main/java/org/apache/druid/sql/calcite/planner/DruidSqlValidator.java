@@ -191,7 +191,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     validateClustering(sourceType, ingestNode);
 
     // Determine the output (target) schema.
-    final RelDataType targetType = validateTargetType(insert, sourceType);
+    final RelDataType targetType = validateTargetType(sourceType);
 
     // Set the type for the INSERT/REPLACE node
     setValidatedNodeType(insert, targetType);
@@ -535,7 +535,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
    * catalog. If the table is strict, only column names from the catalog can be
    * used.
    */
-  private RelDataType validateTargetType(SqlInsert insert, RelRecordType sourceType)
+  private RelDataType validateTargetType(RelRecordType sourceType)
   {
     final List<RelDataTypeField> sourceFields = sourceType.getFieldList();
     for (int i = 0; i < sourceFields.size(); i++) {

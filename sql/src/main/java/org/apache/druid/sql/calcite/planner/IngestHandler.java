@@ -25,7 +25,6 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.SqlExplain;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -41,7 +40,6 @@ import java.util.List;
 public abstract class IngestHandler extends QueryHandler
 {
   private SqlNode validatedQueryNode;
-  private RelDataType targetType;
 
   IngestHandler(
       final HandlerContext handlerContext,
@@ -75,9 +73,6 @@ public abstract class IngestHandler extends QueryHandler
     DruidSqlIngest ingestNode = ingestNode();
     DruidSqlIngest validatedNode = (DruidSqlIngest) validate(ingestNode);
     validatedQueryNode = validatedNode.getSource();
-    CalcitePlanner planner = handlerContext.planner();
-    final SqlValidator validator = planner.getValidator();
-    targetType = validator.getValidatedNodeType(validatedNode);
   }
 
   @Override
@@ -126,12 +121,8 @@ public abstract class IngestHandler extends QueryHandler
         SqlExplain explain
     )
     {
-      super(
-          handlerContext,
-          sqlNode,
-          convertQuery(sqlNode),
-          explain);
-      this.sqlNode = sqlNode;
+      super(handlerContext, explain);
+      this.sqlNode = insertNode;
       handlerContext.hook().captureInsert(insertNode);
     }
 
@@ -168,13 +159,8 @@ public abstract class IngestHandler extends QueryHandler
         SqlExplain explain
     )
     {
-      super(
-          handlerContext,
-          sqlNode,
-          convertQuery(sqlNode),
-          explain
-      );
-      this.sqlNode = sqlNode;
+      super(handlerContext, explain);
+      this.sqlNode = replaceNode;
       handlerContext.hook().captureInsert(replaceNode);
     }
 

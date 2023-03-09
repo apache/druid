@@ -59,7 +59,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-
 @RunWith(Parameterized.class)
 public class MSQInsertTest extends MSQTestBase
 {
@@ -83,7 +82,6 @@ public class MSQInsertTest extends MSQTestBase
   @Parameterized.Parameter(1)
   public Map<String, Object> context;
 
-
   @Test
   public void testInsertOnFoo1()
   {
@@ -92,44 +90,40 @@ public class MSQInsertTest extends MSQTestBase
     long[] expectedArray = createExpectedFrameArray(expectedCounterRows, 1);
 
     RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
-                                            .add("dim1", ColumnType.STRING)
-                                            .add("cnt", ColumnType.LONG).build();
+        .add("__time", ColumnType.LONG)
+        .add("dim1", ColumnType.STRING)
+        .add("cnt", ColumnType.LONG).build();
 
-    testIngestQuery().setSql(
-                         "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
-                     .setExpectedDataSource("foo1")
-                     .setQueryContext(context)
-                     .setExpectedRowSignature(rowSignature)
-                     .setExpectedSegment(expectedFooSegments())
-                     .setExpectedResultRows(expectedRows)
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().totalFiles(1),
-                         0, 0, "input0"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(expectedCounterRows).frames(1),
-                         0, 0, "shuffle"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(expectedCounterRows).frames(1),
-                         1, 0, "input0"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(expectedArray).frames(expectedArray),
-                         1, 0, "shuffle"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(expectedArray).frames(expectedArray),
-                         2, 0, "input0"
-                     )
-                     .verifyResults();
-
+    testIngestQuery()
+        .setSql(
+            "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1"
+         )
+        .setExpectedDataSource("foo1")
+        .setQueryContext(context)
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedSegment(expectedFooSegments())
+        .setExpectedResultRows(expectedRows)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1), 0, 0, "input0"
+         )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(expectedCounterRows).frames(1), 0, 0, "shuffle"
+         )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(expectedCounterRows).frames(1), 1, 0, "input0"
+         )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(expectedArray).frames(expectedArray), 1, 0, "shuffle"
+         )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(expectedArray).frames(expectedArray), 2, 0, "input0"
+         )
+        .verifyResults();
   }
 
   @Test
@@ -139,75 +133,79 @@ public class MSQInsertTest extends MSQTestBase
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
-                                            .add("cnt", ColumnType.LONG)
-                                            .build();
+        .add("__time", ColumnType.LONG)
+        .add("cnt", ColumnType.LONG)
+        .build();
 
-    testIngestQuery().setSql(" insert into foo1 SELECT\n"
-                             + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
-                             + "  count(*) as cnt\n"
-                             + "FROM TABLE(\n"
-                             + "  EXTERN(\n"
-                             + "    '{ \"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
-                             + "    '{\"type\": \"json\"}',\n"
-                             + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
-                             + "  )\n"
-                             + ") group by 1  PARTITIONED by day ")
-                     .setExpectedDataSource("foo1")
-                     .setExpectedRowSignature(rowSignature)
-                     .setQueryContext(context)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
-                         "foo1",
-                         Intervals.of("2016-06-27/P1D"),
-                         "test",
-                         0
-                     )))
-                     .setExpectedResultRows(ImmutableList.of(new Object[]{1466985600000L, 20L}))
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1),
-                         0, 0, "input0"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(1).frames(1),
-                         0, 0, "shuffle"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(1).frames(1),
-                         1, 0, "input0"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(1).frames(1),
-                         1, 0, "shuffle"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(1).frames(1),
-                         2, 0, "input0"
-                     )
-                     .verifyResults();
-
+    testIngestQuery()
+        .setSql(" insert into foo1 SELECT\n"
+              + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
+              + "  count(*) as cnt\n"
+              + "FROM TABLE(\n"
+              + "  EXTERN(\n"
+              + "    '{\"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
+              + "    '{\"type\": \"json\"}',\n"
+              + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
+              + "  )\n"
+              + ") group by 1  PARTITIONED by day ")
+        .setExpectedDataSource("foo1")
+        .setExpectedRowSignature(rowSignature)
+        .setQueryContext(context)
+        .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+            "foo1",
+            Intervals.of("2016-06-27/P1D"),
+            "test",
+            0)))
+        .setExpectedResultRows(ImmutableList.of(new Object[] {1466985600000L, 20L}))
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1),
+            0, 0, "input0")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(1).frames(1),
+            0, 0, "shuffle")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(1).frames(1),
+            1, 0, "input0")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(1).frames(1),
+            1, 0, "shuffle")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(1).frames(1),
+            2, 0, "input0")
+        .verifyResults();
   }
 
   @Test
   public void testInsertOnFoo1WithTimeFunction()
   {
+    // Signature of actual segment rows
     RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
-                                            .add("dim1", ColumnType.STRING)
-                                            .add("cnt", ColumnType.LONG).build();
+        .add("__time", ColumnType.LONG)
+        .add("dim1", ColumnType.STRING)
+        .add("cnt", ColumnType.LONG)
+        .build();
 
-    testIngestQuery().setSql(
-                         "insert into foo1 select  floor(__time to day) as __time , dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
-                     .setExpectedDataSource("foo1")
-                     .setExpectedRowSignature(rowSignature)
-                     .setQueryContext(context)
-                     .setExpectedSegment(expectedFooSegments())
-                     .setExpectedResultRows(expectedFooRows())
-                     .verifyResults();
+    testIngestQuery()
+        .setSql(
+             "insert into foo1\n" +
+             "select  floor(__time to day) as __time, dim1 , count(*) as cnt\n" +
+             "from foo\n" +
+             "where dim1 is not null\n" +
+             "group by 1, 2\n" +
+             "PARTITIONED by day\n" +
+             "clustered by dim1"
+         )
+        .setExpectedDataSource("foo1")
+        .setExpectedRowSignature(rowSignature)
+        .setQueryContext(context)
+        .setExpectedSegment(expectedFooSegments())
+        .setExpectedResultRows(expectedFooRows())
+        .verifyResults();
 
   }
 
@@ -219,143 +217,128 @@ public class MSQInsertTest extends MSQTestBase
     long[] expectedArray = createExpectedFrameArray(expectedCounterRows, 1);
 
     RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
-                                            .add("dim1", ColumnType.STRING)
-                                            .add("cnt", ColumnType.LONG).build();
+        .add("__time", ColumnType.LONG)
+        .add("dim1", ColumnType.STRING)
+        .add("cnt", ColumnType.LONG)
+        .build();
     Map<String, Object> context = ImmutableMap.<String, Object>builder()
-                                              .putAll(DEFAULT_MSQ_CONTEXT)
-                                              .put(
-                                                  MultiStageQueryContext.CTX_CLUSTER_STATISTICS_MERGE_MODE,
-                                                  ClusterStatisticsMergeMode.SEQUENTIAL.toString()
-                                              )
-                                              .build();
+        .putAll(DEFAULT_MSQ_CONTEXT)
+        .put(
+            MultiStageQueryContext.CTX_CLUSTER_STATISTICS_MERGE_MODE,
+            ClusterStatisticsMergeMode.SEQUENTIAL.toString()
+         )
+        .build();
 
     testIngestQuery().setSql(
-                         "insert into foo1 select  floor(__time to day) as __time , dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
-                     .setQueryContext(context)
-                     .setExpectedDataSource("foo1")
-                     .setExpectedRowSignature(rowSignature)
-                     .setQueryContext(MSQInsertTest.this.context)
-                     .setExpectedSegment(expectedFooSegments())
-                     .setExpectedResultRows(expectedRows)
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().totalFiles(1),
-                         0, 0, "input0"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(expectedCounterRows).frames(1),
-                         0, 0, "shuffle"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(expectedCounterRows).frames(1),
-                         1, 0, "input0"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(expectedArray).frames(expectedArray),
-                         1, 0, "shuffle"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(expectedArray).frames(expectedArray),
-                         2, 0, "input0"
-                     )
-                     .verifyResults();
-
+        "insert into foo1 select  floor(__time to day) as __time , dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
+        .setQueryContext(context)
+        .setExpectedDataSource("foo1")
+        .setExpectedRowSignature(rowSignature)
+        .setQueryContext(MSQInsertTest.this.context)
+        .setExpectedSegment(expectedFooSegments())
+        .setExpectedResultRows(expectedRows)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1), 0, 0, "input0")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(expectedCounterRows).frames(1), 0, 0, "shuffle")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(expectedCounterRows).frames(1), 1, 0, "input0")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(expectedArray).frames(expectedArray), 1, 0, "shuffle")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(expectedArray).frames(expectedArray), 2, 0, "input0")
+        .verifyResults();
   }
 
   @Test
   public void testInsertOnFoo1WithMultiValueDim()
   {
     RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
-                                            .add("dim3", ColumnType.STRING).build();
+        .add("__time", ColumnType.LONG)
+        .add("dim3", ColumnType.STRING).build();
 
     testIngestQuery().setSql(
-                         "INSERT INTO foo1 SELECT dim3 FROM foo WHERE dim3 IS NOT NULL PARTITIONED BY ALL TIME")
-                     .setExpectedDataSource("foo1")
-                     .setExpectedRowSignature(rowSignature)
-                     .setQueryContext(context)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
-                     .setExpectedResultRows(expectedMultiValueFooRows())
-                     .verifyResults();
+        "INSERT INTO foo1 SELECT dim3 FROM foo WHERE dim3 IS NOT NULL PARTITIONED BY ALL TIME")
+        .setExpectedDataSource("foo1")
+        .setExpectedRowSignature(rowSignature)
+        .setQueryContext(context)
+        .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+        .setExpectedResultRows(expectedMultiValueFooRows())
+        .verifyResults();
   }
 
   @Test
   public void testInsertOnFoo1WithMultiValueDimGroupBy()
   {
     RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
-                                            .add("dim3", ColumnType.STRING).build();
+        .add("__time", ColumnType.LONG)
+        .add("dim3", ColumnType.STRING).build();
 
     testIngestQuery().setSql(
-                         "INSERT INTO foo1 SELECT dim3 FROM foo WHERE dim3 IS NOT NULL GROUP BY 1 PARTITIONED BY ALL TIME")
-                     .setExpectedDataSource("foo1")
-                     .setExpectedRowSignature(rowSignature)
-                     .setQueryContext(context)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
-                     .setExpectedResultRows(expectedMultiValueFooRowsGroupBy())
-                     .verifyResults();
+        "INSERT INTO foo1 SELECT dim3 FROM foo WHERE dim3 IS NOT NULL GROUP BY 1 PARTITIONED BY ALL TIME")
+        .setExpectedDataSource("foo1")
+        .setExpectedRowSignature(rowSignature)
+        .setQueryContext(context)
+        .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+        .setExpectedResultRows(expectedMultiValueFooRowsGroupBy())
+        .verifyResults();
   }
 
   @Test
   public void testInsertOnFoo1WithMultiValueMeasureGroupBy()
   {
     testIngestQuery().setSql(
-                         "INSERT INTO foo1 SELECT count(dim3) FROM foo WHERE dim3 IS NOT NULL GROUP BY 1 PARTITIONED BY ALL TIME")
-                     .setExpectedDataSource("foo1")
-                     .setQueryContext(context)
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "Aggregate expression is illegal in GROUP BY clause"))
-                     ))
-                     .verifyPlanningErrors();
+        "INSERT INTO foo1 SELECT count(dim3) FROM foo WHERE dim3 IS NOT NULL GROUP BY 1 PARTITIONED BY ALL TIME")
+        .setExpectedDataSource("foo1")
+        .setQueryContext(context)
+        .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
+            CoreMatchers.instanceOf(SqlPlanningException.class),
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                 "Aggregate expression is illegal in GROUP BY clause"))
+         ))
+        .verifyPlanningErrors();
   }
-
 
   @Test
   public void testInsertOnFoo1WithMultiValueToArrayGroupBy()
   {
     RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
-                                            .add("dim3", ColumnType.STRING).build();
+        .add("__time", ColumnType.LONG)
+        .add("dim3", ColumnType.STRING).build();
 
     testIngestQuery().setSql(
-                         "INSERT INTO foo1 SELECT MV_TO_ARRAY(dim3) AS dim3 FROM foo GROUP BY 1 PARTITIONED BY ALL TIME")
-                     .setExpectedDataSource("foo1")
-                     .setExpectedRowSignature(rowSignature)
-                     .setQueryContext(context)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
-                     .setExpectedResultRows(expectedMultiValueFooRowsToArray())
-                     .verifyResults();
+        "INSERT INTO foo1 SELECT MV_TO_ARRAY(dim3) AS dim3 FROM foo GROUP BY 1 PARTITIONED BY ALL TIME")
+        .setExpectedDataSource("foo1")
+        .setExpectedRowSignature(rowSignature)
+        .setQueryContext(context)
+        .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+        .setExpectedResultRows(expectedMultiValueFooRowsToArray())
+        .verifyResults();
   }
 
   @Test
   public void testInsertOnFoo1WithMultiValueDimGroupByWithoutGroupByEnable()
   {
     Map<String, Object> localContext = ImmutableMap.<String, Object>builder()
-                                                   .putAll(context)
-                                                   .put("groupByEnableMultiValueUnnesting", false)
-                                                   .build();
-
+        .putAll(context)
+        .put("groupByEnableMultiValueUnnesting", false)
+        .build();
 
     testIngestQuery().setSql(
-                         "INSERT INTO foo1 SELECT dim3, count(*) AS cnt1 FROM foo GROUP BY dim3 PARTITIONED BY ALL TIME")
-                     .setQueryContext(localContext)
-                     .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(ISE.class),
-                         ThrowableMessageMatcher.hasMessage(!FAULT_TOLERANCE.equals(contextName)
-                                                            ? CoreMatchers.containsString(
-                             "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false.")
-                                                            :
-                                                            CoreMatchers.containsString("exceeded max relaunch count")
-                         )
-                     ))
-                     .verifyExecutionError();
+        "INSERT INTO foo1 SELECT dim3, count(*) AS cnt1 FROM foo GROUP BY dim3 PARTITIONED BY ALL TIME")
+        .setQueryContext(localContext)
+        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
+            CoreMatchers.instanceOf(ISE.class),
+            ThrowableMessageMatcher.hasMessage(!FAULT_TOLERANCE.equals(contextName)
+                ? CoreMatchers.containsString(
+                    "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false.")
+                : CoreMatchers.containsString("exceeded max relaunch count"))))
+        .verifyExecutionError();
   }
 
   @Test
@@ -366,48 +349,38 @@ public class MSQInsertTest extends MSQTestBase
     long[] expectedArray = createExpectedFrameArray(expectedCounterRows, 1);
 
     RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
-                                            .add("dim1", ColumnType.STRING)
-                                            .add("cnt", ColumnType.LONG).build();
+        .add("__time", ColumnType.LONG)
+        .add("dim1", ColumnType.STRING)
+        .add("cnt", ColumnType.LONG).build();
 
     testIngestQuery().setSql(
-                         "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
-                     .setExpectedDataSource("foo1")
-                     .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context)
-                                                                                .putAll(ROLLUP_CONTEXT_PARAMS)
-                                                                                .build())
-                     .setExpectedRollUp(true)
-                     .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
-                     .setExpectedRowSignature(rowSignature)
-                     .setExpectedSegment(expectedFooSegments())
-                     .setExpectedResultRows(expectedRows)
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().totalFiles(1),
-                         0, 0, "input0"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(expectedCounterRows).frames(1),
-                         0, 0, "shuffle"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(expectedCounterRows).frames(1),
-                         1, 0, "input0"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(expectedArray).frames(expectedArray),
-                         1, 0, "shuffle"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(expectedArray).frames(expectedArray),
-                         2, 0, "input0"
-                     )
-                     .verifyResults();
-
+        "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
+        .setExpectedDataSource("foo1")
+        .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context)
+            .putAll(ROLLUP_CONTEXT_PARAMS)
+            .build())
+        .setExpectedRollUp(true)
+        .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedSegment(expectedFooSegments())
+        .setExpectedResultRows(expectedRows)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
+            0, 0, "input0")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(expectedCounterRows).frames(1), 0, 0, "shuffle")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(expectedCounterRows).frames(1), 1, 0, "input0")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(expectedArray).frames(expectedArray), 1, 0, "shuffle")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(expectedArray).frames(expectedArray), 2, 0, "input0")
+        .verifyResults();
   }
 
   @Test
@@ -418,97 +391,82 @@ public class MSQInsertTest extends MSQTestBase
     long[] expectedArray = createExpectedFrameArray(expectedCounterRows, 1);
 
     RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
-                                            .add("dim1", ColumnType.STRING)
-                                            .add("cnt", ColumnType.LONG).build();
+        .add("__time", ColumnType.LONG)
+        .add("dim1", ColumnType.STRING)
+        .add("cnt", ColumnType.LONG).build();
 
     testIngestQuery().setSql(
-                         "insert into foo1 select  floor(__time to day) as __time , dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
-                     .setExpectedDataSource("foo1")
-                     .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context).putAll(
-                         ROLLUP_CONTEXT_PARAMS).build())
-                     .setExpectedRollUp(true)
-                     .setExpectedQueryGranularity(Granularities.DAY)
-                     .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
-                     .setExpectedRowSignature(rowSignature)
-                     .setExpectedSegment(expectedFooSegments())
-                     .setExpectedResultRows(expectedRows)
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().totalFiles(1),
-                         0, 0, "input0"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(expectedCounterRows).frames(1),
-                         0, 0, "shuffle"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(expectedCounterRows).frames(1),
-                         1, 0, "input0"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(expectedArray).frames(expectedArray),
-                         1, 0, "shuffle"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(expectedArray).frames(expectedArray),
-                         2, 0, "input0"
-                     )
-                     .verifyResults();
-
+        "insert into foo1 select  floor(__time to day) as __time , dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
+        .setExpectedDataSource("foo1")
+        .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context).putAll(
+            ROLLUP_CONTEXT_PARAMS).build())
+        .setExpectedRollUp(true)
+        .setExpectedQueryGranularity(Granularities.DAY)
+        .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedSegment(expectedFooSegments())
+        .setExpectedResultRows(expectedRows)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1), 0, 0, "input0")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(expectedCounterRows).frames(1), 0, 0, "shuffle")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(expectedCounterRows).frames(1), 1, 0, "input0")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(expectedArray).frames(expectedArray), 1, 0, "shuffle")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(expectedArray).frames(expectedArray), 2, 0, "input0")
+        .verifyResults();
   }
 
   @Test
   public void testRollUpOnFoo1WithTimeFunctionComplexCol()
   {
     RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
-                                            .add("dim1", ColumnType.STRING)
-                                            .add("cnt", new ColumnType(ValueType.COMPLEX, "hyperUnique", null))
-                                            .build();
-
+        .add("__time", ColumnType.LONG)
+        .add("dim1", ColumnType.STRING)
+        .add("cnt", new ColumnType(ValueType.COMPLEX, "hyperUnique", null))
+        .build();
 
     testIngestQuery().setSql(
-                         "insert into foo1 select  floor(__time to day) as __time , dim1 , count(distinct m1) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
-                     .setExpectedDataSource("foo1")
-                     .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context).putAll(
-                         ROLLUP_CONTEXT_PARAMS).build())
-                     .setExpectedRollUp(true)
-                     .setExpectedQueryGranularity(Granularities.DAY)
-                     .addExpectedAggregatorFactory(new HyperUniquesAggregatorFactory("cnt", "cnt", false, true))
-                     .setExpectedRowSignature(rowSignature)
-                     .setExpectedSegment(expectedFooSegments())
-                     .setExpectedResultRows(expectedFooRowsWithAggregatedComplexColumn())
-                     .verifyResults();
-
+        "insert into foo1 select  floor(__time to day) as __time , dim1 , count(distinct m1) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
+        .setExpectedDataSource("foo1")
+        .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context).putAll(
+            ROLLUP_CONTEXT_PARAMS).build())
+        .setExpectedRollUp(true)
+        .setExpectedQueryGranularity(Granularities.DAY)
+        .addExpectedAggregatorFactory(new HyperUniquesAggregatorFactory("cnt", "cnt", false, true))
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedSegment(expectedFooSegments())
+        .setExpectedResultRows(expectedFooRowsWithAggregatedComplexColumn())
+        .verifyResults();
   }
-
 
   @Test
   public void testRollUpOnFoo1ComplexCol()
   {
     RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
-                                            .add("dim1", ColumnType.STRING)
-                                            .add("cnt", new ColumnType(ValueType.COMPLEX, "hyperUnique", null))
-                                            .build();
+        .add("__time", ColumnType.LONG)
+        .add("dim1", ColumnType.STRING)
+        .add("cnt", new ColumnType(ValueType.COMPLEX, "hyperUnique", null))
+        .build();
 
     testIngestQuery().setSql(
-                         "insert into foo1 select  __time , dim1 , count(distinct m1) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
-                     .setExpectedDataSource("foo1")
-                     .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context).putAll(
-                         ROLLUP_CONTEXT_PARAMS).build())
-                     .setExpectedRollUp(true)
-                     .addExpectedAggregatorFactory(new HyperUniquesAggregatorFactory("cnt", "cnt", false, true))
-                     .setExpectedRowSignature(rowSignature)
-                     .setExpectedSegment(expectedFooSegments())
-                     .setExpectedResultRows(expectedFooRowsWithAggregatedComplexColumn())
-                     .verifyResults();
-
+        "insert into foo1 select  __time , dim1 , count(distinct m1) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
+        .setExpectedDataSource("foo1")
+        .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context).putAll(
+            ROLLUP_CONTEXT_PARAMS).build())
+        .setExpectedRollUp(true)
+        .addExpectedAggregatorFactory(new HyperUniquesAggregatorFactory("cnt", "cnt", false, true))
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedSegment(expectedFooSegments())
+        .setExpectedResultRows(expectedFooRowsWithAggregatedComplexColumn())
+        .verifyResults();
   }
 
   @Test
@@ -518,59 +476,49 @@ public class MSQInsertTest extends MSQTestBase
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
-                                            .add("cnt", ColumnType.LONG)
-                                            .build();
+        .add("__time", ColumnType.LONG)
+        .add("cnt", ColumnType.LONG)
+        .build();
 
     testIngestQuery().setSql(" insert into foo1 SELECT\n"
-                             + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
-                             + "  count(*) as cnt\n"
-                             + "FROM TABLE(\n"
-                             + "  EXTERN(\n"
-                             + "    '{ \"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
-                             + "    '{\"type\": \"json\"}',\n"
-                             + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
-                             + "  )\n"
-                             + ") group by 1  PARTITIONED by day ")
-                     .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context).putAll(
-                         ROLLUP_CONTEXT_PARAMS).build())
-                     .setExpectedRollUp(true)
-                     .setExpectedDataSource("foo1")
-                     .setExpectedRowSignature(rowSignature)
-                     .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
-                         "foo1",
-                         Intervals.of("2016-06-27/P1D"),
-                         "test",
-                         0
-                     )))
-                     .setExpectedResultRows(ImmutableList.of(new Object[]{1466985600000L, 20L}))
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1),
-                         0, 0, "input0"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(1).frames(1),
-                         0, 0, "shuffle"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(1).frames(1),
-                         1, 0, "input0"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(1).frames(1),
-                         1, 0, "shuffle"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(1).frames(1),
-                         2, 0, "input0"
-                     )
-                     .verifyResults();
+        + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
+        + "  count(*) as cnt\n"
+        + "FROM TABLE(\n"
+        + "  EXTERN(\n"
+        + "    '{\"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
+        + "    '{\"type\": \"json\"}',\n"
+        + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
+        + "  )\n"
+        + ") group by 1  PARTITIONED by day ")
+        .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context).putAll(
+            ROLLUP_CONTEXT_PARAMS).build())
+        .setExpectedRollUp(true)
+        .setExpectedDataSource("foo1")
+        .setExpectedRowSignature(rowSignature)
+        .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
+        .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+            "foo1",
+            Intervals.of("2016-06-27/P1D"),
+            "test",
+            0)))
+        .setExpectedResultRows(ImmutableList.of(new Object[] {1466985600000L, 20L}))
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1),
+            0, 0, "input0")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(1).frames(1), 0, 0, "shuffle")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(1).frames(1), 1, 0, "input0")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(1).frames(1), 1, 0, "shuffle")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(1).frames(1), 2, 0, "input0")
+        .verifyResults();
   }
 
   @Test()
@@ -580,94 +528,81 @@ public class MSQInsertTest extends MSQTestBase
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
-                                            .add("namespace", ColumnType.STRING)
-                                            .add("cnt", ColumnType.LONG)
-                                            .build();
+        .add("__time", ColumnType.LONG)
+        .add("namespace", ColumnType.STRING)
+        .add("cnt", ColumnType.LONG)
+        .build();
 
     testIngestQuery().setSql(" insert into foo1 SELECT\n"
-                             + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
-                             + " namespace , count(*) as cnt\n"
-                             + "FROM TABLE(\n"
-                             + "  EXTERN(\n"
-                             + "    '{ \"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
-                             + "    '{\"type\": \"json\"}',\n"
-                             + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"namespace\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
-                             + "  )\n"
-                             + ") group by 1,2  PARTITIONED by day ")
-                     .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context).putAll(
-                         ROLLUP_CONTEXT_PARAMS).build())
-                     .setExpectedRollUp(true)
-                     .setExpectedDataSource("foo1")
-                     .setExpectedRowSignature(rowSignature)
-                     .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
-                         "foo1",
-                         Intervals.of("2016-06-27/P1D"),
-                         "test",
-                         0
-                     )))
-                     .setExpectedResultRows(ImmutableList.of(
-                         new Object[]{1466985600000L, "Benutzer Diskussion", 2L},
-                         new Object[]{1466985600000L, "File", 1L},
-                         new Object[]{1466985600000L, "Kategoria", 1L},
-                         new Object[]{1466985600000L, "Main", 14L},
-                         new Object[]{1466985600000L, "Wikipedia", 1L},
-                         new Object[]{1466985600000L, "Википедия", 1L}
-                     ))
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1),
-                         0, 0, "input0"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(6).frames(1),
-                         0, 0, "shuffle"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(6).frames(1),
-                         1, 0, "input0"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(6).frames(1),
-                         1, 0, "shuffle"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotMatcher
-                             .with().rows(6).frames(1),
-                         2, 0, "input0"
-                     )
-                     .verifyResults();
-
+        + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
+        + " namespace , count(*) as cnt\n"
+        + "FROM TABLE(\n"
+        + "  EXTERN(\n"
+        + "    '{\"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
+        + "    '{\"type\": \"json\"}',\n"
+        + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"namespace\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
+        + "  )\n"
+        + ") group by 1,2  PARTITIONED by day ")
+        .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context).putAll(
+            ROLLUP_CONTEXT_PARAMS).build())
+        .setExpectedRollUp(true)
+        .setExpectedDataSource("foo1")
+        .setExpectedRowSignature(rowSignature)
+        .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
+        .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+            "foo1",
+            Intervals.of("2016-06-27/P1D"),
+            "test",
+            0)))
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[] {1466985600000L, "Benutzer Diskussion", 2L},
+            new Object[] {1466985600000L, "File", 1L},
+            new Object[] {1466985600000L, "Kategoria", 1L},
+            new Object[] {1466985600000L, "Main", 14L},
+            new Object[] {1466985600000L, "Wikipedia", 1L},
+            new Object[] {1466985600000L, "Википедия", 1L}))
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1),
+            0, 0, "input0")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1), 0, 0, "shuffle")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1), 1, 0, "input0")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1), 1, 0, "shuffle")
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1), 2, 0, "input0")
+        .verifyResults();
   }
 
   @Test
   public void testInsertWrongTypeTimestamp()
   {
-    final RowSignature rowSignature =
-        RowSignature.builder()
-                    .add("__time", ColumnType.LONG)
-                    .add("dim1", ColumnType.STRING)
-                    .build();
+    final RowSignature rowSignature = RowSignature.builder()
+        .add("__time", ColumnType.LONG)
+        .add("dim1", ColumnType.STRING)
+        .build();
 
     testIngestQuery()
         .setSql(
             "INSERT INTO foo1\n"
-            + "SELECT dim1 AS __time, cnt\n"
-            + "FROM foo\n"
-            + "PARTITIONED BY DAY\n"
-            + "CLUSTERED BY dim1")
+                + "SELECT dim1 AS __time, cnt\n"
+                + "FROM foo\n"
+                + "PARTITIONED BY DAY\n"
+                + "CLUSTERED BY dim1")
         .setExpectedDataSource("foo1")
         .setExpectedRowSignature(rowSignature)
         .setQueryContext(context)
         .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
             CoreMatchers.instanceOf(SqlPlanningException.class),
             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Field \"__time\" must be of type TIMESTAMP"))
-        ))
+                "Column [__time] is being used as the time column. It must be of type BIGINT or TIMESTAMP, got [VARCHAR]"))
+         ))
         .verifyPlanningErrors();
   }
 
@@ -675,37 +610,35 @@ public class MSQInsertTest extends MSQTestBase
   public void testIncorrectInsertQuery()
   {
     testIngestQuery().setSql(
-                         "insert into foo1 select  __time, dim1 , count(*) as cnt from foo  where dim1 is not null group by 1, 2 clustered by dim1")
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                             "CLUSTERED BY found before PARTITIONED BY. In Druid, the CLUSTERED BY clause must follow the PARTITIONED BY clause"))
-                     ))
-                     .verifyPlanningErrors();
+        "insert into foo1 select  __time, dim1 , count(*) as cnt from foo  where dim1 is not null group by 1, 2 clustered by dim1")
+        .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
+            CoreMatchers.instanceOf(SqlPlanningException.class),
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
+                  "INSERT statements must specify a PARTITIONED BY clause explicitly"))
+         ))
+        .verifyPlanningErrors();
   }
-
 
   @Test
   public void testInsertRestrictedColumns()
   {
     RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
-                                            .add("namespace", ColumnType.STRING)
-                                            .add("__bucket", ColumnType.LONG)
-                                            .build();
-
+        .add("__time", ColumnType.LONG)
+        .add("namespace", ColumnType.STRING)
+        .add("__bucket", ColumnType.LONG)
+        .build();
 
     testIngestQuery()
         .setSql(" insert into foo1 SELECT\n"
-                + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
-                + " namespace, __bucket\n"
-                + "FROM TABLE(\n"
-                + "  EXTERN(\n"
-                + "    '{ \"files\": [\"ignored\"],\"type\":\"local\"}',\n"
-                + "    '{\"type\": \"json\"}',\n"
-                + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"namespace\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}, {\"name\": \"__bucket\", \"type\": \"string\"}]'\n"
-                + "  )\n"
-                + ") PARTITIONED by day")
+            + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
+            + " namespace, __bucket\n"
+            + "FROM TABLE(\n"
+            + "  EXTERN(\n"
+            + "    '{\"files\": [\"ignored\"],\"type\":\"local\"}',\n"
+            + "    '{\"type\": \"json\"}',\n"
+            + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"namespace\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}, {\"name\": \"__bucket\", \"type\": \"string\"}]'\n"
+            + "  )\n"
+            + ") PARTITIONED by day")
         .setExpectedDataSource("foo1")
         .setExpectedRowSignature(rowSignature)
         .setQueryContext(context)
@@ -717,21 +650,18 @@ public class MSQInsertTest extends MSQTestBase
   public void testInsertQueryWithInvalidSubtaskCount()
   {
     Map<String, Object> localContext = ImmutableMap.<String, Object>builder()
-                                                   .putAll(context)
-                                                   .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 1)
-                                                   .build();
+        .putAll(context)
+        .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 1)
+        .build();
     testIngestQuery().setSql(
-                         "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
-                     .setQueryContext(localContext)
-                     .setExpectedExecutionErrorMatcher(
-                         ThrowableMessageMatcher.hasMessage(
-                             CoreMatchers.startsWith(
-                                 MultiStageQueryContext.CTX_MAX_NUM_TASKS
-                                 + " cannot be less than 2 since at least 1 controller and 1 worker is necessary."
-                             )
-                         )
-                     )
-                     .verifyExecutionError();
+        "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
+        .setQueryContext(localContext)
+        .setExpectedExecutionErrorMatcher(
+            ThrowableMessageMatcher.hasMessage(
+                CoreMatchers.startsWith(
+                    MultiStageQueryContext.CTX_MAX_NUM_TASKS
+                        + " cannot be less than 2 since at least 1 controller and 1 worker is necessary.")))
+        .verifyExecutionError();
   }
 
   @Test
@@ -743,59 +673,56 @@ public class MSQInsertTest extends MSQTestBase
     Mockito.doReturn(500).when(workerMemoryParameters).getLargeFrameSize();
 
     testIngestQuery().setSql(" insert into foo1 SELECT\n"
-                             + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
-                             + "  count(*) as cnt\n"
-                             + "FROM TABLE(\n"
-                             + "  EXTERN(\n"
-                             + "    '{ \"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
-                             + "    '{\"type\": \"json\"}',\n"
-                             + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
-                             + "  )\n"
-                             + ") group by 1  PARTITIONED by day ")
-                     .setExpectedDataSource("foo")
-                     .setQueryContext(context)
-                     .setExpectedMSQFault(new RowTooLargeFault(500))
-                     .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(ISE.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "Row too large to add to frame"))
-                     ))
-                     .verifyExecutionError();
+        + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
+        + "  count(*) as cnt\n"
+        + "FROM TABLE(\n"
+        + "  EXTERN(\n"
+        + "    '{\"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
+        + "    '{\"type\": \"json\"}',\n"
+        + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
+        + "  )\n"
+        + ") group by 1  PARTITIONED by day ")
+        .setExpectedDataSource("foo")
+        .setQueryContext(context)
+        .setExpectedMSQFault(new RowTooLargeFault(500))
+        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
+            CoreMatchers.instanceOf(ISE.class),
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                "Row too large to add to frame"))))
+        .verifyExecutionError();
   }
 
   @Test
   public void testInsertLimitWithPeriodGranularityThrowsException()
   {
     testIngestQuery().setSql(" INSERT INTO foo "
-                             + "SELECT __time, m1 "
-                             + "FROM foo "
-                             + "LIMIT 50 "
-                             + "PARTITIONED BY MONTH")
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""))
-                     ))
-                     .setQueryContext(context)
-                     .verifyPlanningErrors();
+        + "SELECT __time, m1 "
+        + "FROM foo "
+        + "LIMIT 50 "
+        + "PARTITIONED BY MONTH")
+        .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
+            CoreMatchers.instanceOf(SqlPlanningException.class),
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""))))
+        .setQueryContext(context)
+        .verifyPlanningErrors();
   }
 
   @Test
   public void testInsertOffsetThrowsException()
   {
     testIngestQuery().setSql(" INSERT INTO foo "
-                             + "SELECT __time, m1 "
-                             + "FROM foo "
-                             + "LIMIT 50 "
-                             + "OFFSET 10"
-                             + "PARTITIONED BY ALL TIME")
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "INSERT and REPLACE queries cannot have an OFFSET"))
-                     ))
-                     .setQueryContext(context)
-                     .verifyPlanningErrors();
+        + "SELECT __time, m1 "
+        + "FROM foo "
+        + "LIMIT 50 "
+        + "OFFSET 10"
+        + "PARTITIONED BY ALL TIME")
+        .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
+            CoreMatchers.instanceOf(SqlPlanningException.class),
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                "INSERT and REPLACE queries cannot have an OFFSET"))))
+        .setQueryContext(context)
+        .verifyPlanningErrors();
   }
 
   @Nonnull
@@ -803,15 +730,14 @@ public class MSQInsertTest extends MSQTestBase
   {
     List<Object[]> expectedRows = new ArrayList<>();
     if (!useDefault) {
-      expectedRows.add(new Object[]{946684800000L, "", 1L});
+      expectedRows.add(new Object[] {946684800000L, "", 1L });
     }
     expectedRows.addAll(ImmutableList.of(
-        new Object[]{946771200000L, "10.1", 1L},
-        new Object[]{946857600000L, "2", 1L},
-        new Object[]{978307200000L, "1", 1L},
-        new Object[]{978393600000L, "def", 1L},
-        new Object[]{978480000000L, "abc", 1L}
-    ));
+        new Object[] {946771200000L, "10.1", 1L},
+        new Object[] {946857600000L, "2", 1L},
+        new Object[] {978307200000L, "1", 1L},
+        new Object[] {978393600000L, "def", 1L},
+        new Object[] {978480000000L, "abc", 1L}));
     return expectedRows;
   }
 
@@ -822,15 +748,14 @@ public class MSQInsertTest extends MSQTestBase
     HyperLogLogCollector hyperLogLogCollector = HyperLogLogCollector.makeLatestCollector();
     hyperLogLogCollector.add(fn.hashInt(1).asBytes());
     if (!useDefault) {
-      expectedRows.add(new Object[]{946684800000L, "", hyperLogLogCollector.estimateCardinalityRound()});
+      expectedRows.add(new Object[] {946684800000L, "", hyperLogLogCollector.estimateCardinalityRound()});
     }
     expectedRows.addAll(ImmutableList.of(
-        new Object[]{946771200000L, "10.1", hyperLogLogCollector.estimateCardinalityRound()},
-        new Object[]{946857600000L, "2", hyperLogLogCollector.estimateCardinalityRound()},
-        new Object[]{978307200000L, "1", hyperLogLogCollector.estimateCardinalityRound()},
-        new Object[]{978393600000L, "def", hyperLogLogCollector.estimateCardinalityRound()},
-        new Object[]{978480000000L, "abc", hyperLogLogCollector.estimateCardinalityRound()}
-    ));
+        new Object[] {946771200000L, "10.1", hyperLogLogCollector.estimateCardinalityRound()},
+        new Object[] {946857600000L, "2", hyperLogLogCollector.estimateCardinalityRound()},
+        new Object[] {978307200000L, "1", hyperLogLogCollector.estimateCardinalityRound()},
+        new Object[] {978393600000L, "def", hyperLogLogCollector.estimateCardinalityRound()},
+        new Object[] {978480000000L, "abc", hyperLogLogCollector.estimateCardinalityRound()}));
     return expectedRows;
   }
 
@@ -839,15 +764,14 @@ public class MSQInsertTest extends MSQTestBase
   {
     List<Object[]> expectedRows = new ArrayList<>();
     if (!useDefault) {
-      expectedRows.add(new Object[]{0L, ""});
+      expectedRows.add(new Object[] {0L, ""});
     }
 
     expectedRows.addAll(
         ImmutableList.of(
-            new Object[]{0L, ImmutableList.of("a", "b")},
-            new Object[]{0L, ImmutableList.of("b", "c")},
-            new Object[]{0L, "d"}
-        ));
+            new Object[] {0L, ImmutableList.of("a", "b")},
+            new Object[] {0L, ImmutableList.of("b", "c")},
+            new Object[] {0L, "d"}));
     return expectedRows;
   }
 
@@ -855,16 +779,15 @@ public class MSQInsertTest extends MSQTestBase
   private List<Object[]> expectedMultiValueFooRowsToArray()
   {
     List<Object[]> expectedRows = new ArrayList<>();
-    expectedRows.add(new Object[]{0L, null});
+    expectedRows.add(new Object[] {0L, null});
     if (!useDefault) {
-      expectedRows.add(new Object[]{0L, ""});
+      expectedRows.add(new Object[] {0L, ""});
     }
 
     expectedRows.addAll(ImmutableList.of(
-        new Object[]{0L, ImmutableList.of("a", "b")},
-        new Object[]{0L, ImmutableList.of("b", "c")},
-        new Object[]{0L, "d"}
-    ));
+        new Object[] {0L, ImmutableList.of("a", "b")},
+        new Object[] {0L, ImmutableList.of("b", "c")},
+        new Object[] {0L, "d"}));
     return expectedRows;
   }
 
@@ -873,14 +796,13 @@ public class MSQInsertTest extends MSQTestBase
   {
     List<Object[]> expectedRows = new ArrayList<>();
     if (!useDefault) {
-      expectedRows.add(new Object[]{0L, ""});
+      expectedRows.add(new Object[] {0L, ""});
     }
     expectedRows.addAll(ImmutableList.of(
-        new Object[]{0L, "a"},
-        new Object[]{0L, "b"},
-        new Object[]{0L, "c"},
-        new Object[]{0L, "d"}
-    ));
+        new Object[] {0L, "a"},
+        new Object[] {0L, "b"},
+        new Object[] {0L, "c"},
+        new Object[] {0L, "d"}));
     return expectedRows;
   }
 
@@ -898,8 +820,7 @@ public class MSQInsertTest extends MSQTestBase
             SegmentId.of("foo1", Intervals.of("2000-01-03T/P1D"), "test", 0),
             SegmentId.of("foo1", Intervals.of("2001-01-01T/P1D"), "test", 0),
             SegmentId.of("foo1", Intervals.of("2001-01-02T/P1D"), "test", 0),
-            SegmentId.of("foo1", Intervals.of("2001-01-03T/P1D"), "test", 0)
-        ));
+            SegmentId.of("foo1", Intervals.of("2001-01-03T/P1D"), "test", 0)));
 
     return expectedSegments;
   }
