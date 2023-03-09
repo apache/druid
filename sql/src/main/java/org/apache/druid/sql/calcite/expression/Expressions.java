@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.expression;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
+import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexCall;
@@ -78,6 +79,30 @@ public class Expressions
   private Expressions()
   {
     // No instantiation.
+  }
+
+  /**
+   * Old method used to translate a field access, possibly through a projection, to an underlying Druid dataSource.
+   *
+   * This exists to provide API compatibility to extensions, but is deprecated because there is a 4 argument version
+   * that should be used instead.  Call sites should have access to a RexBuilder instance that they can get the
+   * typeFactory from.
+   *
+   * @param rowSignature row signature of underlying Druid dataSource
+   * @param project      projection, or null
+   * @param fieldNumber  number of the field to access
+   *
+   * @return row expression
+   */
+  @Deprecated
+  public static RexNode fromFieldAccess(
+      final RowSignature rowSignature,
+      @Nullable final Project project,
+      final int fieldNumber
+  )
+  {
+    //noinspection VariableNotUsedInsideIf
+    return fromFieldAccess(project == null ? new JavaTypeFactoryImpl() : null, rowSignature, project, fieldNumber);
   }
 
   /**
