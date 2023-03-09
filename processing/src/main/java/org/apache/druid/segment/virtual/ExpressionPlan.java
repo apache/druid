@@ -168,7 +168,9 @@ public class ExpressionPlan
           "Accumulator cannot be implicitly transformed, if it is an ARRAY or multi-valued type it must"
           + " be used explicitly as such"
       );
-      return Parser.foldUnappliedBindings(expression, analysis, unappliedInputs, accumulatorId);
+      final Expr folded = Parser.foldUnappliedBindings(expression, analysis, unappliedInputs, accumulatorId);
+      Parser.validateExpr(folded, folded.analyzeInputs());
+      return folded;
     }
     return getExpression();
   }
