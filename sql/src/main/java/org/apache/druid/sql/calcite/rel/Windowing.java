@@ -22,6 +22,8 @@ package org.apache.druid.sql.calcite.rel;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import org.apache.calcite.rel.RelCollation;
+import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
@@ -32,6 +34,7 @@ import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexWindowBound;
+import org.apache.calcite.util.mapping.Mappings;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryException;
@@ -65,6 +68,7 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 
@@ -111,7 +115,7 @@ public class Windowing
   public static Windowing fromCalciteStuff(
       final PartialDruidQuery partialQuery,
       final PlannerContext plannerContext,
-      final RowSignature rowSignature,
+      final RowSignature sourceRowSignature,
       final RexBuilder rexBuilder
   )
   {
@@ -119,31 +123,45 @@ public class Windowing
 
     ArrayList<OperatorFactory> ops = new ArrayList<>();
 
-    final List<String> expectedOutputColumns = new ArrayList<>(rowSignature.getColumnNames());
-    final String outputNamePrefix = Calcites.findUnusedPrefixForDigits("w", rowSignature.getColumnNames());
+    final List<String> windowOutputColumns = new ArrayList<>(sourceRowSignature.getColumnNames());
+    final String outputNamePrefix = Calcites.findUnusedPrefixForDigits("w", sourceRowSignature.getColumnNames());
     int outputNameCounter = 0;
+
+    // Track prior partition columns and sort columns group-to-group, so we only insert sorts and repartitions if
+    // we really need to.
+    List<String> priorPartitionColumns = null;
+    LinkedHashSet<ColumnWithDirection> priorSortColumns = new LinkedHashSet<>();
+
+    final RelCollation priorCollation = partialQuery.getScan().getTraitSet().getTrait(RelCollationTraitDef.INSTANCE);
+    if (priorCollation != null) {
+      // Populate initial priorSortColumns using collation of the input to the window operation. Allows us to skip
+      // the initial sort operator if the rows were already in the desired order.
+      priorSortColumns = computeSortColumnsFromRelCollation(priorCollation, sourceRowSignature);
+    }
+
     for (int i = 0; i < window.groups.size(); ++i) {
-      final WindowGroup group = new WindowGroup(window, window.groups.get(i), rowSignature);
+      final WindowGroup group = new WindowGroup(window, window.groups.get(i), sourceRowSignature);
 
-      if (i > 0) {
-        LinkedHashSet<ColumnWithDirection> sortColumns = new LinkedHashSet<>();
-        for (String partitionColumn : group.getPartitionColumns()) {
-          sortColumns.add(ColumnWithDirection.ascending(partitionColumn));
-        }
-        sortColumns.addAll(group.getOrdering());
+      final LinkedHashSet<ColumnWithDirection> sortColumns = new LinkedHashSet<>();
+      for (String partitionColumn : group.getPartitionColumns()) {
+        sortColumns.add(ColumnWithDirection.ascending(partitionColumn));
+      }
+      sortColumns.addAll(group.getOrdering());
 
+      // Add sorting and partitioning if needed.
+      if (!sortMatches(priorSortColumns, sortColumns)) {
+        // Sort order needs to change. Resort and repartition.
         ops.add(new NaiveSortOperatorFactory(new ArrayList<>(sortColumns)));
+        ops.add(new NaivePartitioningOperatorFactory(group.getPartitionColumns()));
+        priorSortColumns = sortColumns;
+        priorPartitionColumns = group.getPartitionColumns();
+      } else if (!group.getPartitionColumns().equals(priorPartitionColumns)) {
+        // Sort order doesn't need to change, but partitioning does. Only repartition.
+        ops.add(new NaivePartitioningOperatorFactory(group.getPartitionColumns()));
+        priorPartitionColumns = group.getPartitionColumns();
       }
 
-      // Presently, the order by keys are not validated to ensure that the incoming query has pre-sorted the data
-      // as required by the window query.  This should be done.  In order to do it, we will need to know what the
-      // sub-query that we are running against actually looks like in order to then validate that the data will
-      // come back in the order expected.  Unfortunately, the way that the queries are re-written to DruidRels
-      // loses all the context of sub-queries, making it not possible to validate this without changing how the
-      // various Druid rules work (i.e. a very large blast radius change).  For now, it is easy enough to validate
-      // this when we build the native query, so we validate it there.
-
-      // Aggregations.
+      // Add aggregations.
       final List<AggregateCall> aggregateCalls = group.getAggregateCalls();
 
       final List<Processor> processors = new ArrayList<>();
@@ -151,13 +169,13 @@ public class Windowing
 
       for (AggregateCall aggregateCall : aggregateCalls) {
         final String aggName = outputNamePrefix + outputNameCounter++;
-        expectedOutputColumns.add(aggName);
+        windowOutputColumns.add(aggName);
 
         ProcessorMaker maker = KNOWN_WINDOW_FNS.get(aggregateCall.getAggregation().getName());
         if (maker == null) {
           final Aggregation aggregation = GroupByRules.translateAggregateCall(
               plannerContext,
-              rowSignature,
+              sourceRowSignature,
               null,
               rexBuilder,
               partialQuery.getSelectProject(),
@@ -182,7 +200,7 @@ public class Windowing
               new WindowAggregate(
                   aggName,
                   aggregateCall,
-                  rowSignature,
+                  sourceRowSignature,
                   plannerContext,
                   partialQuery.getSelectProject(),
                   window.constants,
@@ -206,20 +224,37 @@ public class Windowing
         throw new ISE("No processors from Window[%s], why was this code called?", window);
       }
 
-      // The ordering required for partitioning is actually not important for the semantics.  However, it *is*
-      // important that it be consistent across the query.  Because if the incoming data is sorted descending
-      // and we try to partition on an ascending sort, we will think the data is not sorted correctly
-      ops.add(new NaivePartitioningOperatorFactory(group.getPartitionColumns()));
       ops.add(new WindowOperatorFactory(
           processors.size() == 1 ?
           processors.get(0) : new ComposingProcessor(processors.toArray(new Processor[0]))
       ));
     }
 
-    return new Windowing(
-        RowSignatures.fromRelDataType(expectedOutputColumns, window.getRowType()),
-        ops
-    );
+    // Apply windowProject, if present.
+    if (partialQuery.getWindowProject() != null) {
+      // We know windowProject is a mapping due to the isMapping() check in DruidRules. Check for null anyway,
+      // as defensive programming.
+      final Mappings.TargetMapping mapping = Preconditions.checkNotNull(
+          partialQuery.getWindowProject().getMapping(),
+          "mapping for windowProject[%s]", partialQuery.getWindowProject()
+      );
+
+      final List<String> windowProjectOutputColumns = new ArrayList<>();
+      for (int i = 0; i < mapping.size(); i++) {
+        windowProjectOutputColumns.add(windowOutputColumns.get(mapping.getSourceOpt(i)));
+      }
+
+      return new Windowing(
+          RowSignatures.fromRelDataType(windowProjectOutputColumns, partialQuery.getWindowProject().getRowType()),
+          ops
+      );
+    } else {
+      // No windowProject.
+      return new Windowing(
+          RowSignatures.fromRelDataType(windowOutputColumns, window.getRowType()),
+          ops
+      );
+    }
   }
 
   private final RowSignature signature;
@@ -399,5 +434,69 @@ public class Windowing
     {
       return ((Number) getConstantArgument(argPosition).getValue()).intValue();
     }
+  }
+
+  /**
+   * Return a list of {@link ColumnWithDirection} corresponding to a {@link RelCollation}.
+   *
+   * @param collation          collation
+   * @param sourceRowSignature signature of the collated rows
+   */
+  private static LinkedHashSet<ColumnWithDirection> computeSortColumnsFromRelCollation(
+      final RelCollation collation,
+      final RowSignature sourceRowSignature
+  )
+  {
+    final LinkedHashSet<ColumnWithDirection> retVal = new LinkedHashSet<>();
+
+    for (RelFieldCollation fieldCollation : collation.getFieldCollations()) {
+      final ColumnWithDirection.Direction direction;
+
+      switch (fieldCollation.getDirection()) {
+        case ASCENDING:
+        case STRICTLY_ASCENDING:
+          direction = ColumnWithDirection.Direction.ASC;
+          break;
+
+        case DESCENDING:
+        case STRICTLY_DESCENDING:
+          direction = ColumnWithDirection.Direction.DESC;
+          break;
+
+        default:
+          // Not a useful direction. Return whatever we've come up with so far.
+          return retVal;
+      }
+
+      final ColumnWithDirection columnWithDirection = new ColumnWithDirection(
+          sourceRowSignature.getColumnName(fieldCollation.getFieldIndex()),
+          direction
+      );
+
+      retVal.add(columnWithDirection);
+    }
+
+    return retVal;
+  }
+
+  /**
+   * Whether currentSort is a prefix of priorSort. (i.e., whether data sorted by priorSort is *also* sorted
+   * by currentSort.)
+   */
+  private static boolean sortMatches(
+      final Iterable<ColumnWithDirection> priorSort,
+      final Iterable<ColumnWithDirection> currentSort
+  )
+  {
+    final Iterator<ColumnWithDirection> priorIterator = priorSort.iterator();
+    final Iterator<ColumnWithDirection> currentIterator = currentSort.iterator();
+
+    while (currentIterator.hasNext()) {
+      if (!priorIterator.hasNext() || !currentIterator.next().equals(priorIterator.next())) {
+        return false;
+      }
+    }
+
+    return true;
   }
 }
