@@ -113,7 +113,7 @@ public class ComposingWritableFrameChannelTest
     }
 
     @Override
-    public void write(Frame frame) throws IOException
+    public void write(Frame frame)
     {
     }
 
