@@ -85,39 +85,25 @@ public interface StringEncodingStrategy
   class FrontCoded implements StringEncodingStrategy
   {
     public static final int DEFAULT_BUCKET_SIZE = 4;
-    public static final boolean DEFAULT_USE_INCREMENTAL_BUCKETS = true;
 
     @JsonProperty
     private final int bucketSize;
 
-    @JsonProperty
-    private final boolean useIncrementalBuckets;
-
     @JsonCreator
     public FrontCoded(
-        @JsonProperty("bucketSize") @Nullable Integer bucketSize,
-        @JsonProperty("useIncrementalBuckets") @Nullable Boolean useIncrementalBuckets
+        @JsonProperty("bucketSize") @Nullable Integer bucketSize
     )
     {
       this.bucketSize = bucketSize == null ? DEFAULT_BUCKET_SIZE : bucketSize;
       if (Integer.bitCount(this.bucketSize) != 1) {
         throw new ISE("bucketSize must be a power of two but was[%,d]", bucketSize);
       }
-      this.useIncrementalBuckets = useIncrementalBuckets == null
-                                   ? DEFAULT_USE_INCREMENTAL_BUCKETS
-                                   : useIncrementalBuckets;
     }
 
     @JsonProperty
     public int getBucketSize()
     {
       return bucketSize;
-    }
-
-    @JsonProperty
-    public boolean useIncrementalBuckets()
-    {
-      return useIncrementalBuckets;
     }
 
     @Override
@@ -156,7 +142,6 @@ public interface StringEncodingStrategy
     {
       return "FrontCoded{" +
              "bucketSize=" + bucketSize +
-             ", useIncrementalBuckets=" + useIncrementalBuckets +
              '}';
     }
   }

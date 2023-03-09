@@ -54,7 +54,7 @@ public class MSQTuningConfigTest
         new IndexSpec(
             null,
             null,
-            new StringEncodingStrategy.FrontCoded(null, null),
+            new StringEncodingStrategy.FrontCoded(null),
             null,
             null,
             null,

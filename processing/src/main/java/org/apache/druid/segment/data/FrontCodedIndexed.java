@@ -280,7 +280,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
 
     if (comparison > 0) {
       // value preceedes bucket, so bail out
-      return -(bucketIndexBase + adjustIndex) - 1;
+      return ~(bucketIndexBase + adjustIndex);
     }
 
     buffer.position(firstOffset + firstLength);
@@ -460,7 +460,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
       }
     }
     // (-(insertion point) - 1)
-    return -(currBucketFirstValueIndex + adjustIndex) + (-(insertionPoint) - 1);
+    return -(currBucketFirstValueIndex + adjustIndex) + (~insertionPoint);
   }
 
   /**
@@ -611,7 +611,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
       }
     }
     // (-(insertion point) - 1)
-    return -(currBucketFirstValueIndex + adjustIndex) + (-(insertionPoint) - 1);
+    return -(currBucketFirstValueIndex + adjustIndex) + (~insertionPoint);
   }
 
   private ByteBuffer getFromBucketV1(ByteBuffer buffer, int offset)
