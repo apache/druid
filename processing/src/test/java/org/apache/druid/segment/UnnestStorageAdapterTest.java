@@ -96,7 +96,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     );
     UNNEST_STORAGE_ADAPTER2 = new UnnestStorageAdapter(
         UNNEST_STORAGE_ADAPTER,
-        new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME1, "\"" + COLUMNNAME +"\"", null, ExprMacroTable.nil()),
+        new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME1, "\"" + COLUMNNAME + "\"", null, ExprMacroTable.nil()),
         null
     );
     UNNEST_STORAGE_ADAPTER3 = new UnnestStorageAdapter(
