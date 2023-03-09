@@ -376,8 +376,8 @@ public class TombstoneHelperTest
     Interval usedInterval = Intervals.ETERNITY;
     Interval replaceInterval = Intervals.ETERNITY;
     List<Interval> intervalsToDrop = ImmutableList.of(
-        new Interval(JodaUtils.MIN_INSTANT, 10000),
-        new Interval(100000, JodaUtils.MAX_INSTANT)
+        Intervals.utc(JodaUtils.MIN_INSTANT, 10000),
+        Intervals.utc(100000, JodaUtils.MAX_INSTANT)
     );
     Granularity replaceGranularity = Granularities.DAY;
 

@@ -26,6 +26,7 @@ import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -229,7 +230,7 @@ public class TombstoneHelper
           alignedIntervalEnd = replaceGranularity.bucketEnd(overlap.getEnd());
         }
         long alignedIntervalEndMillis = Math.min(alignedIntervalEnd.getMillis(), JodaUtils.MAX_INSTANT);
-        Interval alignedTombstoneInterval = new Interval(alignedIntervalStartMillis, alignedIntervalEndMillis);
+        Interval alignedTombstoneInterval = Intervals.utc(alignedIntervalStartMillis, alignedIntervalEndMillis);
 
         retVal.add(alignedTombstoneInterval);
       }
