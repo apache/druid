@@ -49,6 +49,7 @@ import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
@@ -1901,7 +1902,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ),
         expected -> {
           expected.expect(IAE.class);
-          expected.expectMessage("Cannot create a nested array type [ARRAY<ARRAY<LONG>>], 'druid.expressions.allowNestedArrays' must be set to true");
+          expected.expectMessage(
+              "Cannot create a nested array type [ARRAY<ARRAY<LONG>>], 'druid.expressions.allowNestedArrays' must be set to true");
         }
     );
   }
@@ -2816,12 +2818,12 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
     testQuery(
-        "SELECT dim1, MV_TO_ARRAY(dim3), STRING_TO_ARRAY(dim1, U&'\\005C.') AS dim1_split, dim1_split_unnest, dim3_unnest || 'xx' AS dim3_unnest\n"
+        "SELECT dim1, MV_TO_ARRAY(dim3), STRING_TO_ARRAY(dim1, U&'\\005C.') AS dim1_split, dim1_split_unnest, dim3_unnest || 'xx'\n"
         + "FROM\n"
         + "  druid.numfoo,\n"
         + "  UNNEST(STRING_TO_ARRAY(dim1, U&'\\005C.')) as t2 (dim1_split_unnest),\n"
         + "  UNNEST(MV_TO_ARRAY(dim3)) as t3 (dim3_unnest)"
-        + "WHERE t2.dim1_split_unnest IN ('1', '2')",
+        + "WHERE dim1_split_unnest IN ('1', '2') AND dim3_unnest LIKE '_'",
         QUERY_CONTEXT_UNNEST,
         ImmutableList.of(
             Druids.newScanQueryBuilder()
@@ -2862,7 +2864,10 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                           ColumnType.STRING
                       )
                   )
-                  .filters(in("j0.unnest", ImmutableList.of("1", "2"), null))
+                  .filters(and(
+                      in("j0.unnest", ImmutableList.of("1", "2"), null),
+                      new LikeDimFilter("_j0.unnest", "_", null, null)
+                  ))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .legacy(false)
                   .context(QUERY_CONTEXT_UNNEST)
@@ -2872,8 +2877,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"10.1", ImmutableList.of("b", "c"), ImmutableList.of("10", "1"), "1", "bxx"},
             new Object[]{"10.1", ImmutableList.of("b", "c"), ImmutableList.of("10", "1"), "1", "cxx"},
-            new Object[]{"2", ImmutableList.of("d"), ImmutableList.of("2"), "2", "dxx"},
-            new Object[]{"1", null, ImmutableList.of("1"), "1", "xx"}
+            new Object[]{"2", ImmutableList.of("d"), ImmutableList.of("2"), "2", "dxx"}
         )
     );
   }
@@ -3022,6 +3026,44 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testUnnestWithGroupByHaving()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "SELECT d3, COUNT(*) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) AS unnested(d3) GROUP BY d3 HAVING COUNT(*) = 1",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(UnnestDataSource.create(
+                            new TableDataSource(CalciteTests.DATASOURCE3),
+                            expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                            null
+                        ))
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setContext(QUERY_CONTEXT_UNNEST)
+                        .setDimensions(new DefaultDimensionSpec("j0.unnest", "_d0", ColumnType.STRING))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .setHavingSpec(new DimFilterHavingSpec(selector("a0", "1", null), true))
+                        .setContext(QUERY_CONTEXT_UNNEST)
+                        .build()
+        ),
+        useDefault ?
+        ImmutableList.of(
+            new Object[]{"a", 1L},
+            new Object[]{"c", 1L},
+            new Object[]{"d", 1L}
+        ) :
+        ImmutableList.of(
+            new Object[]{"", 1L},
+            new Object[]{"a", 1L},
+            new Object[]{"c", 1L},
+            new Object[]{"d", 1L}
+        )
+    );
+  }
 
   @Test
   public void testUnnestWithLimit()
@@ -3212,9 +3254,9 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         "SELECT d3 FROM\n"
         + "  druid.numfoo t,\n"
         + "  UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)\n"
-        + "WHERE t.dim2='a'"
+        + "WHERE t.dim2='a'\n"
         + "AND t.dim1 <> 'foo'\n"
-        + "AND (unnested.d3 <> 'b' OR unnested.d3 IN ('a', 'c') OR unnested.d3 LIKE 'd%')",
+        + "AND (unnested.d3 IN ('a', 'c') OR unnested.d3 LIKE '_')",
         QUERY_CONTEXT_UNNEST,
         ImmutableList.of(
             Druids.newScanQueryBuilder()
@@ -3230,8 +3272,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                           selector("dim2", "a", null),
                           not(selector("dim1", "foo", null)),
                           or(
-                              not(selector("j0.unnest", "b", null)),
-                              new LikeDimFilter("j0.unnest", "d%", null, null),
+                              new LikeDimFilter("j0.unnest", "_", null, null),
                               in("j0.unnest", ImmutableList.of("a", "c"), null)
                           )
                       )
@@ -3243,7 +3284,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"a"},
-            new Object[]{""}
+            new Object[]{"b"}
         )
     );
   }

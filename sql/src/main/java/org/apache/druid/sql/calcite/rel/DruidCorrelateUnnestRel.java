@@ -31,7 +31,6 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.Correlate;
 import org.apache.calcite.rel.core.CorrelationId;
-import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexCall;
@@ -50,7 +49,6 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringToArrayOperatorConversion;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
@@ -74,11 +72,10 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__correlate_unnest__");
   private static final String BASE_UNNEST_OUTPUT_COLUMN = "unnest";
 
-  private final PartialDruidQuery partialQuery;
-  private final PlannerConfig plannerConfig;
   private final Correlate correlateRel;
   private final RelNode left;
   private final RelNode right;
+  private final PartialDruidQuery partialQuery;
 
   private DruidCorrelateUnnestRel(
       RelOptCluster cluster,
@@ -93,7 +90,6 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     this.partialQuery = partialQuery;
     this.left = correlateRel.getLeft();
     this.right = correlateRel.getRight();
-    this.plannerConfig = plannerContext.getPlannerConfig();
   }
 
   /**
@@ -272,15 +268,10 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   @Override
   public RelOptCost computeSelfCost(final RelOptPlanner planner, final RelMetadataQuery mq)
   {
-    double cost;
+    double cost = partialQuery.estimateCost();
 
     if (computeLeftRequiresSubquery(DruidJoinQueryRel.getSomeDruidChild(left))) {
-      cost = CostEstimates.COST_SUBQUERY;
-    } else {
-      cost = partialQuery.estimateCost();
-      if (correlateRel.getJoinType() == JoinRelType.INNER && plannerConfig.isComputeInnerJoinCostAsFilter()) {
-        cost *= CostEstimates.MULTIPLIER_FILTER;
-      }
+      cost += CostEstimates.COST_SUBQUERY;
     }
 
     return planner.getCostFactory().makeCost(cost, 0, 0);

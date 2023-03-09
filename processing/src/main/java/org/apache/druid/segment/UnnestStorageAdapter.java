@@ -19,19 +19,26 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.QueryMetrics;
+import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.filter.AndFilter;
+import org.apache.druid.segment.filter.BoundFilter;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.filter.LikeFilter;
+import org.apache.druid.segment.filter.NotFilter;
+import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.join.PostJoinCursor;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
@@ -79,7 +86,15 @@ public class UnnestStorageAdapter implements StorageAdapter
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
-    final Pair<Filter, Filter> filterPair = computeBaseAndPostJoinFilters(filter, virtualColumns);
+    final String inputColumn = getUnnestInputIfDirectAccess();
+    final Pair<Filter, Filter> filterPair = computeBaseAndPostCorrelateFilters(
+        filter,
+        virtualColumns,
+        inputColumn,
+        inputColumn == null || virtualColumns.exists(inputColumn)
+        ? null
+        : baseAdapter.getColumnCapabilities(inputColumn)
+    );
 
     final Sequence<Cursor> baseCursorSequence = baseAdapter.makeCursors(
         filterPair.lhs,
@@ -237,9 +252,21 @@ public class UnnestStorageAdapter implements StorageAdapter
     return unnestColumn;
   }
 
-  private Pair<Filter, Filter> computeBaseAndPostJoinFilters(
+  /**
+   * Split queryFilter into pre- and post-correlate filters.
+   *
+   * @param queryFilter            query filter passed to makeCursors
+   * @param queryVirtualColumns    query virtual columns passed to makeCursors
+   * @param inputColumn            input column to unnest if it's a direct access; otherwise null
+   * @param inputColumnCapabilites input column capabilities if known; otherwise null
+   *
+   * @return pair of pre- and post-correlate filters
+   */
+  private Pair<Filter, Filter> computeBaseAndPostCorrelateFilters(
       @Nullable final Filter queryFilter,
-      final VirtualColumns queryVirtualColumns
+      final VirtualColumns queryVirtualColumns,
+      @Nullable final String inputColumn,
+      @Nullable final ColumnCapabilities inputColumnCapabilites
   )
   {
     class FilterSplitter
@@ -255,18 +282,25 @@ public class UnnestStorageAdapter implements StorageAdapter
 
         final Set<String> requiredColumns = filter.getRequiredColumns();
 
-        if (requiredColumns.contains(outputColumnName)) {
-          postFilters.add(filter);
-        } else {
-          if (queryVirtualColumns.getVirtualColumns().length > 0) {
-            for (String column : requiredColumns) {
-              if (queryVirtualColumns.exists(column)) {
-                postFilters.add(filter);
-                return;
-              }
+        // Run filter post-correlate if it refers to any virtual columns.
+        if (queryVirtualColumns.getVirtualColumns().length > 0) {
+          for (String column : requiredColumns) {
+            if (queryVirtualColumns.exists(column)) {
+              postFilters.add(filter);
+              return;
             }
           }
+        }
 
+        if (requiredColumns.contains(outputColumnName)) {
+          // Try to move filter pre-correlate if possible.
+          final Filter newFilter = rewriteFilterOnUnnestColumnIfPossible(filter, inputColumn, inputColumnCapabilites);
+          if (newFilter != null) {
+            preFilters.add(newFilter);
+          } else {
+            postFilters.add(filter);
+          }
+        } else {
           preFilters.add(filter);
         }
       }
@@ -275,8 +309,6 @@ public class UnnestStorageAdapter implements StorageAdapter
     final FilterSplitter filterSplitter = new FilterSplitter();
 
     if (allowSet != null && !allowSet.isEmpty()) {
-      final String inputColumn = getUnnestInputIfDirectAccess();
-
       // Filter on input column if possible (it may be faster); otherwise use output column.
       filterSplitter.add(new InDimFilter(inputColumn != null ? inputColumn : outputColumnName, allowSet));
     }
@@ -307,5 +339,54 @@ public class UnnestStorageAdapter implements StorageAdapter
       return null;
     }
   }
-}
 
+  /**
+   * Rewrites a filter on {@link #outputColumnName} to operate on the input column from
+   * {@link #getUnnestInputIfDirectAccess()}, if possible.
+   */
+  @Nullable
+  private Filter rewriteFilterOnUnnestColumnIfPossible(
+      final Filter filter,
+      @Nullable final String inputColumn,
+      @Nullable final ColumnCapabilities inputColumnCapabilities
+  )
+  {
+    // Only doing this for multi-value strings (not array types) at the moment.
+    if (inputColumn == null
+        || inputColumnCapabilities == null
+        || inputColumnCapabilities.getType() != ValueType.STRING) {
+      return null;
+    }
+
+    if (filterMapsOverMultiValueStrings(filter)) {
+      return filter.rewriteRequiredColumns(ImmutableMap.of(outputColumnName, inputColumn));
+    } else {
+      return null;
+    }
+  }
+
+  /**
+   * Requirement for {@link #rewriteFilterOnUnnestColumnIfPossible}: filter must support rewrites and also must map
+   * over multi-value strings. (Rather than treat them as arrays.) There isn't a method on the Filter interface that
+   * tells us this, so resort to instanceof.
+   */
+  private static boolean filterMapsOverMultiValueStrings(final Filter filter)
+  {
+    if (filter instanceof BooleanFilter) {
+      for (Filter child : ((BooleanFilter) filter).getFilters()) {
+        if (!filterMapsOverMultiValueStrings(child)) {
+          return false;
+        }
+      }
+
+      return true;
+    } else if (filter instanceof NotFilter) {
+      return filterMapsOverMultiValueStrings(((NotFilter) filter).getBaseFilter());
+    } else {
+      return filter instanceof SelectorFilter
+             || filter instanceof InDimFilter
+             || filter instanceof LikeFilter
+             || filter instanceof BoundFilter;
+    }
+  }
+}
