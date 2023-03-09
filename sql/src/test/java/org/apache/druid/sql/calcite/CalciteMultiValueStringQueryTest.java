@@ -2014,6 +2014,4 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
 
     );
   }
-
-
 }

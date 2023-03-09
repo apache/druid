@@ -29,10 +29,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
-import org.apache.druid.query.filter.FalseDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -136,9 +134,10 @@ public class CaseOperatorConversion implements SqlOperatorConversion
 
         if (call.getOperands().get(2) instanceof RexLiteral) {
           if (call.getOperands().get(2).isAlwaysTrue()) {
-            elseFilter = TrueDimFilter.instance();
+            return new OrDimFilter(thenFilter, isNull);
           } else {
-            elseFilter = FalseDimFilter.instance();
+            // else is always false, we can leave it out
+            return thenFilter;
           }
         } else if (call.getOperands().get(2) instanceof RexCall) {
           RexCall elseCall = (RexCall) call.getOperands().get(2);
