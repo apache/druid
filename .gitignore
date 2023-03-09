@@ -30,3 +30,4 @@ integration-tests/gen-scripts/
 *.hprof
 **/.ipynb_checkpoints/
 helm/druid/charts
+*.pyc

@@ -48,7 +48,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -66,6 +66,8 @@ public class PlannerContext
   // Query context keys
   public static final String CTX_SQL_CURRENT_TIMESTAMP = "sqlCurrentTimestamp";
   public static final String CTX_SQL_TIME_ZONE = "sqlTimeZone";
+  public static final String CTX_SQL_JOIN_ALGORITHM = "sqlJoinAlgorithm";
+  private static final JoinAlgorithm DEFAULT_SQL_JOIN_ALGORITHM = JoinAlgorithm.BROADCAST;
 
   /**
    * Undocumented context key, used internally, to allow the web console to
@@ -174,6 +176,42 @@ public class PlannerContext
     );
   }
 
+  /**
+   * Returns the join algorithm specified in a query context.
+   */
+  public static JoinAlgorithm getJoinAlgorithm(QueryContext queryContext)
+  {
+    return getJoinAlgorithmFromContextValue(queryContext.get(CTX_SQL_JOIN_ALGORITHM));
+  }
+
+  /**
+   * Returns the join algorithm specified in a query context.
+   */
+  public static JoinAlgorithm getJoinAlgorithm(Map<String, Object> queryContext)
+  {
+    return getJoinAlgorithmFromContextValue(queryContext.get(CTX_SQL_JOIN_ALGORITHM));
+  }
+
+  private static JoinAlgorithm getJoinAlgorithmFromContextValue(final Object object)
+  {
+    final String s = QueryContexts.getAsString(
+        CTX_SQL_JOIN_ALGORITHM,
+        object,
+        DEFAULT_SQL_JOIN_ALGORITHM.toString()
+    );
+
+    try {
+      return JoinAlgorithm.fromString(s);
+    }
+    catch (IllegalArgumentException e) {
+      throw QueryContexts.badValueException(
+          CTX_SQL_JOIN_ALGORITHM,
+          StringUtils.format("one of %s", Arrays.toString(JoinAlgorithm.values())),
+          object
+      );
+    }
+  }
+
   public PlannerToolbox getPlannerToolbox()
   {
     return plannerToolbox;
@@ -248,6 +286,11 @@ public class PlannerContext
   public AuthenticationResult getAuthenticationResult()
   {
     return Preconditions.checkNotNull(authenticationResult, "Authentication result not available");
+  }
+
+  public JoinAlgorithm getJoinAlgorithm()
+  {
+    return getJoinAlgorithm(queryContext);
   }
 
   public String getSql()
