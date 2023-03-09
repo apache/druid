@@ -299,21 +299,23 @@ public class InformationSchema extends AbstractSchema
                                 @Override
                                 public Object[] apply(final String functionName)
                                 {
-                                  if (getView(subSchema, functionName) != null) {
-                                    return new Object[]{
-                                        CATALOG_NAME, // TABLE_CATALOG
-                                        schemaName, // TABLE_SCHEMA
-                                        functionName, // TABLE_NAME
-                                        "VIEW", // TABLE_TYPE
-                                        INFO_FALSE, // IS_JOINABLE
-                                        INFO_FALSE // IS_BROADCAST
-                                    };
-                                  } else if (TableId.EXTERNAL_SCHEMA.equals(schemaName)) {
+                                  // External table check first, since otherwise it will
+                                  // look like a view.
+                                  if (TableId.EXTERNAL_SCHEMA.equals(schemaName)) {
                                     return new Object[]{
                                         CATALOG_NAME, // TABLE_CATALOG
                                         schemaName, // TABLE_SCHEMA
                                         functionName, // TABLE_NAME
                                         "EXTERNAL", // TABLE_TYPE
+                                        INFO_FALSE, // IS_JOINABLE
+                                        INFO_FALSE // IS_BROADCAST
+                                    };
+                                  } else if (getView(subSchema, functionName) != null) {
+                                    return new Object[]{
+                                        CATALOG_NAME, // TABLE_CATALOG
+                                        schemaName, // TABLE_SCHEMA
+                                        functionName, // TABLE_NAME
+                                        "VIEW", // TABLE_TYPE
                                         INFO_FALSE, // IS_JOINABLE
                                         INFO_FALSE // IS_BROADCAST
                                     };

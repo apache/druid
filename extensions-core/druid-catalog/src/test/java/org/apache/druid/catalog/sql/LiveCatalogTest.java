@@ -99,13 +99,13 @@ public class LiveCatalogTest
     }
     table = builder
         .column("dsa", null)
-        .column("dsb", Columns.VARCHAR)
-        .column("dsc", Columns.BIGINT)
+        .column("dsb", Columns.STRING)
+        .column("dsc", Columns.LONG)
         .column("dsd", Columns.FLOAT)
         .column("dse", Columns.DOUBLE)
         .column("newa", null)
-        .column("newb", Columns.VARCHAR)
-        .column("newc", Columns.BIGINT)
+        .column("newb", Columns.STRING)
+        .column("newc", Columns.LONG)
         .column("newd", Columns.FLOAT)
         .column("newe", Columns.DOUBLE)
         .hiddenColumns(Arrays.asList("dsf", "dsg"))

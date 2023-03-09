@@ -66,8 +66,8 @@ public class MSQCatalogInsertTest extends MSQTestBase
 
     TableMetadata spec = TableBuilder.datasource("simpleTypes", "P1D")
         .timeColumn()
-        .column("string_col", Columns.VARCHAR)
-        .column("long_col", Columns.BIGINT)
+        .column("string_col", Columns.STRING)
+        .column("long_col", Columns.LONG)
         .column("float_col", Columns.FLOAT)
         .column("double_col", Columns.DOUBLE)
         .build();

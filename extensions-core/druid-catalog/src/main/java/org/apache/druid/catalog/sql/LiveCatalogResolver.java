@@ -128,7 +128,7 @@ public class LiveCatalogResolver implements CatalogResolver
 
   private EffectiveColumnMetadata columnFromCatalog(ColumnSpec col, ColumnType physicalType)
   {
-    ColumnType type = Columns.druidType(col.sqlType());
+    ColumnType type = Columns.druidType(col);
     if (type != null) {
       // Use the type that the user provided.
     } else if (physicalType == null) {

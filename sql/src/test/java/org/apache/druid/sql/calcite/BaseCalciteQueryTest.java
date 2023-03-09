@@ -908,7 +908,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     for (int i = 0; i < results.size(); i++) {
       Assert.assertArrayEquals(
-          StringUtils.format("result #%d: %s", i + 1, sql),
+          StringUtils.format("%s - result #%d: ", sql, i + 1),
           expectedResults.get(i),
           results.get(i)
       );

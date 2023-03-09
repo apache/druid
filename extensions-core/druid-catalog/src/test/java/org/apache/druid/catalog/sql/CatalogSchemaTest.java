@@ -34,6 +34,7 @@ import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.Builder;
 import org.junit.ClassRule;
@@ -68,12 +69,13 @@ public class CatalogSchemaTest extends BaseCalciteQueryTest
         new Object[] {"druid", "druid", "foo", "TABLE", "NO", "NO"},
         new Object[] {"druid", "druid", "foo2", "TABLE", "NO", "NO"},
         new Object[] {"druid", "druid", "foo4", "TABLE", "NO", "NO"},
+        new Object[] {"druid", "druid", "forbiddenDatasource", "TABLE", "NO", "NO"},
         new Object[] {"druid", "druid", "lotsocolumns", "TABLE", "NO", "NO"},
         new Object[] {"druid", "druid", "numfoo", "TABLE", "NO", "NO"},
         new Object[] {"druid", "druid", "some_datasource", "TABLE", "NO", "NO"},
         new Object[] {"druid", "druid", "somexdatasource", "TABLE", "NO", "NO"},
-        new Object[] {"druid", "druid", "test_with_cols", "TABLE", "YES", "NO"},
-        new Object[] {"druid", "druid", "test_without_cols", "TABLE", "YES", "NO"},
+        new Object[] {"druid", "druid", "test_with_cols", "TABLE", "NO", "NO"},
+        new Object[] {"druid", "druid", "test_without_cols", "TABLE", "NO", "NO"},
         new Object[] {"druid", "druid", "visits", "TABLE", "NO", "NO"},
         new Object[] {"druid", "druid", "wikipedia", "TABLE", "NO", "NO"}
     };
@@ -84,6 +86,7 @@ public class CatalogSchemaTest extends BaseCalciteQueryTest
           "WHERE TABLE_SCHEMA = 'druid'\n" +
           "ORDER BY TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME"
        )
+      .authResult(CalciteTests.SUPER_USER_AUTH_RESULT)
       .expectedResults(Arrays.asList(expected))
       .run();
   }
@@ -109,6 +112,7 @@ public class CatalogSchemaTest extends BaseCalciteQueryTest
           "FROM INFORMATION_SCHEMA.SCHEMATA\n" +
           "ORDER BY CATALOG_NAME, SCHEMA_NAME"
        )
+      .authResult(CalciteTests.SUPER_USER_AUTH_RESULT)
       .expectedResults(Arrays.asList(expected))
       .run();
   }
@@ -122,7 +126,7 @@ public class CatalogSchemaTest extends BaseCalciteQueryTest
   public void testTablesExternal()
   {
     Object[][] expected = new Object[][] {
-        new Object[] {"druid", "ext", "test_inline", "TABLE", "NO", "NO"}
+        new Object[] {"druid", "ext", "test_inline", "EXTERNAL", "NO", "NO"}
     };
     testBuilder()
       .sql(
@@ -131,6 +135,7 @@ public class CatalogSchemaTest extends BaseCalciteQueryTest
           "WHERE TABLE_SCHEMA = 'ext'\n" +
           "ORDER BY TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME"
        )
+      .authResult(CalciteTests.SUPER_USER_AUTH_RESULT)
       .expectedResults(Arrays.asList(expected))
       .run();
   }
@@ -142,10 +147,10 @@ public class CatalogSchemaTest extends BaseCalciteQueryTest
   public void testColumnsExternal()
   {
     Object[][] expected = new Object[][] {
-        new Object[] {"druid", "ext", "test_inline", "w", "0", "", "YES", "VARCHAR", null, null, null, null, null, null, "UTF-16LE", "UTF-16LE$en_US$primary", 12L},
-        new Object[] {"druid", "ext", "test_inline", "x", "1", "", "NO", "BIGINT", null, null, "19", "10", "0", null, null, null, -5L},
-        new Object[] {"druid", "ext", "test_inline", "y", "2", "", "NO", "FLOAT", null, null, "15", "10", "-2147483648", null, null, null, 6L},
-        new Object[] {"druid", "ext", "test_inline", "z", "3", "", "NO", "DOUBLE", null, null, "15", "10", "-2147483648", null, null, null, 8L}
+        new Object[] {"druid", "ext", "test_inline", "w", 1L, "", "YES", "VARCHAR", null, null, null, null, null, null, "UTF-16LE", "UTF-16LE$en_US$primary", 12L},
+        new Object[] {"druid", "ext", "test_inline", "x", 2L, "", "NO", "BIGINT", null, null, 19L, 10L, 0L, null, null, null, -5L},
+        new Object[] {"druid", "ext", "test_inline", "y", 3L, "", "NO", "FLOAT", null, null, 15L, 10L, -2147483648L, null, null, null, 6L},
+        new Object[] {"druid", "ext", "test_inline", "z", 4L, "", "NO", "DOUBLE", null, null, 15L, 10L, -2147483648L, null, null, null, 8L}
     };
     testBuilder()
       .sql(
@@ -154,23 +159,24 @@ public class CatalogSchemaTest extends BaseCalciteQueryTest
           "WHERE TABLE_SCHEMA = 'ext'\n" +
           "ORDER BY TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, ORDINAL_POSITION"
        )
+      .authResult(CalciteTests.SUPER_USER_AUTH_RESULT)
       .expectedResults(Arrays.asList(expected))
       .run();
   }
 
   /**
    * Verify that the columns of a "no-data", catalog-defined datasource appear in the
-   * COLUMNS table. With the catalog, a column exists wither or not it has data.
+   * COLUMNS table. With the catalog, a column exists whether or not it has data.
    */
   @Test
   public void testColumnsNewDSWithCols()
   {
     Object[][] expected = new Object[][] {
-        new Object[] {"druid", "druid", "test_with_cols", "__time", "0", "", "NO", "TIMESTAMP", null, null, null, null, null, "3", null, null, 93L},
-        new Object[] {"druid", "druid", "test_with_cols", "a", "1", "", "YES", "VARCHAR", null, null, null, null, null, null, "UTF-16LE", "UTF-16LE$en_US$primary", 12L},
-        new Object[] {"druid", "druid", "test_with_cols", "b", "2", "", "NO", "BIGINT", null, null, "19", "10", "0", null, null, null, -5L},
-        new Object[] {"druid", "druid", "test_with_cols", "c", "3", "", "NO", "FLOAT", null, null, "15", "10", "-2147483648", null, null, null, 6L},
-        new Object[] {"druid", "druid", "test_with_cols", "d", "4", "", "NO", "DOUBLE", null, null, "15", "10", "-2147483648", null, null, null, 8L}
+        new Object[] {"druid", "druid", "test_with_cols", "__time", 1L, "", "NO", "TIMESTAMP", null, null, null, null, null, 3L, null, null, 93L},
+        new Object[] {"druid", "druid", "test_with_cols", "a", 2L, "", "YES", "VARCHAR", null, null, null, null, null, null, "UTF-16LE", "UTF-16LE$en_US$primary", 12L},
+        new Object[] {"druid", "druid", "test_with_cols", "b", 3L, "", "NO", "BIGINT", null, null, 19L, 10L, 0L, null, null, null, -5L},
+        new Object[] {"druid", "druid", "test_with_cols", "c", 4L, "", "NO", "FLOAT", null, null, 15L, 10L, -2147483648L, null, null, null, 6L},
+        new Object[] {"druid", "druid", "test_with_cols", "d", 5L, "", "NO", "DOUBLE", null, null, 15L, 10L, -2147483648L, null, null, null, 8L}
     };
     testBuilder()
       .sql(
@@ -179,6 +185,7 @@ public class CatalogSchemaTest extends BaseCalciteQueryTest
           "WHERE TABLE_NAME = 'test_with_cols'\n" +
           "ORDER BY TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, ORDINAL_POSITION"
        )
+      .authResult(CalciteTests.SUPER_USER_AUTH_RESULT)
       .expectedResults(Arrays.asList(expected))
       .run();
   }
@@ -192,7 +199,7 @@ public class CatalogSchemaTest extends BaseCalciteQueryTest
     // When defined in the catalog, a table at least has a
     // time column, even if not explicitly defined.
     Object[][] expected = new Object[][] {
-        new Object[] {"druid", "druid", "test_without_cols", "__time", "0", "", "NO", "TIMESTAMP", null, null, null, null, null, "3", null, null, 93L}
+        new Object[] {"druid", "druid", "test_without_cols", "__time", 1L, "", "NO", "TIMESTAMP", null, null, null, null, null, 3L, null, null, 93L}
     };
     testBuilder()
       .sql(
@@ -201,6 +208,7 @@ public class CatalogSchemaTest extends BaseCalciteQueryTest
           "WHERE TABLE_NAME = 'test_without_cols'\n" +
           "ORDER BY TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, ORDINAL_POSITION"
        )
+      .authResult(CalciteTests.SUPER_USER_AUTH_RESULT)
       .expectedResults(Arrays.asList(expected))
       .run();
   }
@@ -215,15 +223,15 @@ public class CatalogSchemaTest extends BaseCalciteQueryTest
   public void testColumnsExistingDS()
   {
     Object[][] expected = new Object[][] {
-        new Object[] {"druid", "druid", "foo", "__time", "0", "", "NO", "TIMESTAMP", null, null, null, null, null, "3", null, null, 93L},
-        new Object[] {"druid", "druid", "foo", "extra1", "1", "", "YES", "VARCHAR", null, null, null, null, null, null, "UTF-16LE", "UTF-16LE$en_US$primary", 12L},
-        new Object[] {"druid", "druid", "foo", "dim2", "2", "", "YES", "VARCHAR", null, null, null, null, null, null, "UTF-16LE", "UTF-16LE$en_US$primary", 12L},
-        new Object[] {"druid", "druid", "foo", "dim1", "3", "", "YES", "VARCHAR", null, null, null, null, null, null, "UTF-16LE", "UTF-16LE$en_US$primary", 12L},
-        new Object[] {"druid", "druid", "foo", "cnt", "4", "", "NO", "BIGINT", null, null, "19", "10", "0", null, null, null, -5L},
-        new Object[] {"druid", "druid", "foo", "m1", "5", "", "NO", "DOUBLE", null, null, "15", "10", "-2147483648", null, null, null, 8L},
-        new Object[] {"druid", "druid", "foo", "extra2", "6", "", "NO", "BIGINT", null, null, "19", "10", "0", null, null, null, -5L},
-        new Object[] {"druid", "druid", "foo", "extra3", "7", "", "YES", "VARCHAR", null, null, null, null, null, null, "UTF-16LE", "UTF-16LE$en_US$primary", 12L},
-        new Object[] {"druid", "druid", "foo", "m2", "8", "", "NO", "DOUBLE", null, null, "15", "10", "-2147483648", null, null, null, 8L}
+        new Object[] {"druid", "druid", "foo", "__time", 1L, "", "NO", "TIMESTAMP", null, null, null, null, null, 3L, null, null, 93L},
+        new Object[] {"druid", "druid", "foo", "extra1", 2L, "", "YES", "VARCHAR", null, null, null, null, null, null, "UTF-16LE", "UTF-16LE$en_US$primary", 12L},
+        new Object[] {"druid", "druid", "foo", "dim2", 3L, "", "YES", "VARCHAR", null, null, null, null, null, null, "UTF-16LE", "UTF-16LE$en_US$primary", 12L},
+        new Object[] {"druid", "druid", "foo", "dim1", 4L, "", "YES", "VARCHAR", null, null, null, null, null, null, "UTF-16LE", "UTF-16LE$en_US$primary", 12L},
+        new Object[] {"druid", "druid", "foo", "cnt", 5L, "", "NO", "BIGINT", null, null, 19L, 10L, 0L, null, null, null, -5L},
+        new Object[] {"druid", "druid", "foo", "m1", 6L, "", "NO", "DOUBLE", null, null, 15L, 10L, -2147483648L, null, null, null, 8L},
+        new Object[] {"druid", "druid", "foo", "extra2", 7L, "", "NO", "BIGINT", null, null, 19L, 10L, 0L, null, null, null, -5L},
+        new Object[] {"druid", "druid", "foo", "extra3", 8L, "", "YES", "VARCHAR", null, null, null, null, null, null, "UTF-16LE", "UTF-16LE$en_US$primary", 12L},
+        new Object[] {"druid", "druid", "foo", "m2", 9L, "", "NO", "DOUBLE", null, null, 15L, 10L, -2147483648L, null, null, null, 8L}
     };
     testBuilder()
       .sql(
@@ -232,6 +240,7 @@ public class CatalogSchemaTest extends BaseCalciteQueryTest
           "WHERE TABLE_NAME = 'foo'\n" +
           "ORDER BY TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, ORDINAL_POSITION"
        )
+      .authResult(CalciteTests.SUPER_USER_AUTH_RESULT)
       .expectedResults(Arrays.asList(expected))
       .run();
   }
@@ -269,8 +278,8 @@ public class CatalogSchemaTest extends BaseCalciteQueryTest
     TableMetadata table = TableBuilder.external("test_inline")
         .inputSource(toMap(jsonMapper, new InlineInputSource("a,b,1\nc,d,2")))
         .inputFormat(BaseExternTableTest.CSV_FORMAT)
-        .column("w", Columns.VARCHAR)
-        .column("x", Columns.BIGINT)
+        .column("w", Columns.STRING)
+        .column("x", Columns.LONG)
         .column("y", Columns.FLOAT)
         .column("z", Columns.DOUBLE)
         .build();
@@ -301,8 +310,8 @@ public class CatalogSchemaTest extends BaseCalciteQueryTest
   {
     TableMetadata spec = TableBuilder.datasource("test_with_cols", "PT1H")
         .timeColumn()
-        .column("a", Columns.VARCHAR)
-        .column("b", Columns.BIGINT)
+        .column("a", Columns.STRING)
+        .column("b", Columns.LONG)
         .column("c", Columns.FLOAT)
         .column("d", Columns.DOUBLE)
         .build();
@@ -322,8 +331,8 @@ public class CatalogSchemaTest extends BaseCalciteQueryTest
         .column("dim1", null)
         .column("cnt", null)
         .column("m1", Columns.DOUBLE)
-        .column("extra2", Columns.BIGINT)
-        .column("extra3", Columns.VARCHAR)
+        .column("extra2", Columns.LONG)
+        .column("extra3", Columns.STRING)
         .hiddenColumns(Arrays.asList("dim3", "unique_dim1"))
         .sealed(true)
         .build();

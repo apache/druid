@@ -401,7 +401,7 @@ public class EditorTest
     // Add a column
     cmd = new UpdateColumns(
         Collections.singletonList(
-            new ColumnSpec("d", Columns.VARCHAR, null)
+            new ColumnSpec("d", Columns.STRING, null)
          )
     );
     TableMetadata revised = doEdit(tableName, cmd);
@@ -411,14 +411,14 @@ public class EditorTest
     );
     ColumnSpec colD = revised.spec().columns().get(3);
     assertEquals("d", colD.name());
-    assertEquals(Columns.VARCHAR, colD.sqlType());
+    assertEquals(Columns.STRING, colD.dataType());
 
     // Update a column
     cmd = new UpdateColumns(
         Collections.singletonList(
             new ColumnSpec(
                 "a",
-                Columns.BIGINT,
+                Columns.LONG,
                 ImmutableMap.of("foo", "bar")
             )
          )
@@ -430,13 +430,13 @@ public class EditorTest
     );
     ColumnSpec colA = revised.spec().columns().get(0);
     assertEquals("a", colA.name());
-    assertEquals(Columns.BIGINT, colA.sqlType());
+    assertEquals(Columns.LONG, colA.dataType());
     assertEquals(ImmutableMap.of("foo", "bar"), colA.properties());
 
     // Duplicates
     UpdateColumns cmd2 = new UpdateColumns(
         Arrays.asList(
-            new ColumnSpec("e", Columns.VARCHAR, null),
+            new ColumnSpec("e", Columns.STRING, null),
             new ColumnSpec("e", null, null)
          )
     );
@@ -445,7 +445,7 @@ public class EditorTest
     // Valid time column type
     cmd = new UpdateColumns(
         Collections.singletonList(
-            new ColumnSpec(Columns.TIME_COLUMN, Columns.TIMESTAMP, null)
+            new ColumnSpec(Columns.TIME_COLUMN, Columns.LONG, null)
          )
     );
     revised = doEdit(tableName, cmd);

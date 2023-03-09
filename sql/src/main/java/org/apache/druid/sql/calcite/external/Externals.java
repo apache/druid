@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite.external;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import org.apache.calcite.avatica.SqlType;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.FunctionParameter;
@@ -211,7 +210,7 @@ public class Externals
     final List<ColumnSpec> columns = new ArrayList<>();
     for (int i = 0; i < schema.size(); i += 2) {
       final String name = convertName((SqlIdentifier) schema.get(i));
-      final String sqlType = convertType(name, (SqlDataTypeSpec) schema.get(i + 1));
+      final String sqlType = convertSqlToDruidType(name, (SqlDataTypeSpec) schema.get(i + 1));
       columns.add(new ColumnSpec(name, sqlType, null));
     }
     return columns;
@@ -233,14 +232,14 @@ public class Externals
   }
 
   /**
-   * Define the SQL input column type from a type provided in the
+   * Define the Druid input column type from a type provided in the
    * EXTEND clause. Calcite allows any form of type. But, Druid
    * requires only the Druid supported types (and their aliases.)
    * <p>
    * Druid has its own rules for nullability. We ignore any nullability
    * clause in the EXTEND list.
    */
-  private static String convertType(String name, SqlDataTypeSpec dataType)
+  private static String convertSqlToDruidType(String name, SqlDataTypeSpec dataType)
   {
     SqlTypeNameSpec spec = dataType.getTypeNameSpec();
     if (spec == null) {
@@ -255,17 +254,17 @@ public class Externals
       throw unsupportedType(name, dataType);
     }
     if (SqlTypeName.CHAR_TYPES.contains(type)) {
-      return SqlTypeName.VARCHAR.name();
+      return Columns.STRING;
     }
     if (SqlTypeName.INT_TYPES.contains(type)) {
-      return SqlTypeName.BIGINT.name();
+      return Columns.LONG;
     }
     switch (type) {
       case DOUBLE:
-        return SqlType.DOUBLE.name();
+        return Columns.DOUBLE;
       case FLOAT:
       case REAL:
-        return SqlType.FLOAT.name();
+        return Columns.FLOAT;
       default:
         throw unsupportedType(name, dataType);
     }
@@ -319,30 +318,34 @@ public class Externals
     );
   }
 
-  public static RelDataType toSqlType(String columnType)
+  public static RelDataType toSqlType(ColumnSpec col)
   {
     final RelDataTypeFactory typeFactory = DruidTypeSystem.TYPE_FACTORY;
+    if (Columns.isTimeColumn(col.name())) {
+      return Calcites.createSqlType(typeFactory, SqlTypeName.TIMESTAMP);
+    }
+    String columnType = col.dataType();
     if (columnType == null) {
       return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.ANY, true);
     }
     // Nullability here is of an input source: we assume all input source columns
     // are nullable independent of Druid's null-vs-defaults setting.
-    switch (StringUtils.toUpperCase(columnType)) {
-      case Columns.TIMESTAMP:
-        return Calcites.createSqlType(typeFactory, SqlTypeName.TIMESTAMP);
-      case Columns.VARCHAR:
+    columnType = StringUtils.toUpperCase(columnType);
+    if (Columns.STRING.equals(columnType)) {
         return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.VARCHAR, true);
-      case Columns.BIGINT:
-        return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.BIGINT, true);
-      case Columns.FLOAT:
-        return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.FLOAT, true);
-      case Columns.DOUBLE:
-        return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, true);
-      default:
-        // This is a bit of a punt for now since the catalog only understands simple types
-        // at present.
-        return RowSignatures.makeComplexType(typeFactory, ColumnType.UNKNOWN_COMPLEX, true);
     }
+    if (Columns.LONG.equals(columnType)) {
+        return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.BIGINT, true);
+    }
+    if (Columns.FLOAT.equals(columnType)) {
+        return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.FLOAT, true);
+    }
+    if (Columns.DOUBLE.equals(columnType)) {
+        return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, true);
+    }
+    // This is a bit of a punt for now since the catalog only understands simple types
+    // at present.
+    return RowSignatures.makeComplexType(typeFactory, ColumnType.UNKNOWN_COMPLEX, true);
   }
 
   public static RelDataType toRelDataType(ResolvedTable externalTable)
@@ -352,7 +355,7 @@ public class Externals
     for (ColumnSpec col : externalTable.spec().columns()) {
       // No special handling of __time: this is an external table and such tables
       // cannot have the same naming restrictions as Druid datasources.
-      builder.add(col.name(), toSqlType(col.sqlType()));
+      builder.add(col.name(), toSqlType(col));
     }
 
     return builder.build();

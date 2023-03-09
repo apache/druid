@@ -185,7 +185,6 @@ Omit this property unless you have a special need: Druid will use its default.
 
 Example:
 
-
 ```json
 {
   "type" : "datasource",
@@ -238,23 +237,23 @@ Example:
 
 As noted above, columns are optional. When provided, they appear as a list under the
 `columns` property of a datasource. Not all columns need be declared. Each column is a JSON
-object with three fields: `name`, `sqlType` and `properties`. Example:
+object with three fields: `name`, `dataType` and `properties`. Example:
 
 ```json
 {
   "type" : "datasource",
   "columns" : [ {
     "name" : "__time",
-    "sqlType" : "TIMESTAMP"
+    "dataType" : "LONG"
   }, {
     "name" : "host",
-    "sqlType" : "VARCHAR",
+    "dataType" : "STRING",
     "properties" : {
       "description" : "The web server host"
     }
   }, {
     "name" : "bytesSent",
-    "sqlType" : "BIGINT",
+    "dataType" : "LONG",
     "properties" : {
       "description" : "Number of response bytes sent"
     }
@@ -262,24 +261,10 @@ object with three fields: `name`, `sqlType` and `properties`. Example:
 }
 ```
 
-Names must follow Druid's usual naming rules. Column types are given using SQL (not Druid)
+Names must follow Druid's usual naming rules. Column types are given using Druid
 types. That is:
 
-| SQL Type | Druid Type |
-| -------- | ---------- |
-| `TIMESTAMP` | `long` |
-| `VARCHAR` | `string` |
-| `BIGINT`  | `long` |
-| `FLOAT` | `float` |
-| `DOUBLE` | `double` |
-
-The use of other SQL types will result in an error. For example, if you use the SQL types
-`INT` or `INTEGER`, you'll get an error because Druid does not support a 4-byte integral
-type.
-
-Future versions will define measure types (as suggesed in the example above.)
-
-If you define the `__time` column, it must be of type `TIMESTAMP`. (The time column always
+If you define the `__time` column, it must be of type `LONG`. (The time column always
 exists in segments. The metadata definition is optional.)
 
 ## Changing Properties or Columns

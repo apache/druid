@@ -207,8 +207,8 @@ public class TableManagerTest
         DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
     );
     List<ColumnSpec> cols = Arrays.asList(
-        new ColumnSpec("a", Columns.VARCHAR, null),
-        new ColumnSpec("b", Columns.BIGINT, null)
+        new ColumnSpec("a", Columns.STRING, null),
+        new ColumnSpec("b", Columns.LONG, null)
     );
     ColumnSpec colC = new ColumnSpec("c", Columns.DOUBLE, null);
 

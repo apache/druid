@@ -427,6 +427,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
                                                   .add("ceil_m2", ColumnType.DOUBLE)
                                                   .build();
     testIngestionQuery()
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .sql(
             "INSERT INTO dst\n"
             + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo\n"
@@ -476,6 +477,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
                                                   .add("ceil_m2", ColumnType.DOUBLE)
                                                   .build();
     testIngestionQuery()
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .sql(
             "INSERT INTO druid.clusterBy\n"
             + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo"
@@ -526,6 +528,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
                                                   .add("ceil_m2", ColumnType.DOUBLE)
                                                   .build();
     testIngestionQuery()
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .sql(
             "INSERT INTO druid.clusterBy\n"
             + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo\n"
@@ -629,6 +632,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
                     .build()
     );
     testIngestionQuery()
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .sql(sql)
         .expectTarget("dst", targetRowSignature)
         .expectResources(Externals.externalRead(tableName), dataSourceWrite("dst"))
@@ -726,7 +730,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
          )
         .expectValidationError(
             SqlPlanningException.class,
-            "Catalog definition for the local input source already contains column definitions"
+            "Catalog definition for the [local] input source already contains column definitions"
          )
         .verify();
   }
@@ -796,9 +800,9 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
     TableMetadata table = TableBuilder.external("inline")
         .inputSource(toMap(jsonMapper, new InlineInputSource("a,b,1\nc,d,2")))
         .inputFormat(BaseExternTableTest.CSV_FORMAT)
-        .column("x", "VARCHAR")
-        .column("y", "VARCHAR")
-        .column("z", "BIGINT")
+        .column("x", Columns.STRING)
+        .column("y", Columns.STRING)
+        .column("z", Columns.LONG)
         .build();
     storage.tables().create(table);
   }
@@ -856,8 +860,8 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
         .column("dim1", null)
         .column("cnt", null)
         .column("m1", Columns.DOUBLE)
-        .column("extra2", Columns.BIGINT)
-        .column("extra3", Columns.VARCHAR)
+        .column("extra2", Columns.LONG)
+        .column("extra3", Columns.STRING)
         .hiddenColumns(Arrays.asList("dim3", "unique_dim1"))
         .sealed(true)
         .build();
@@ -874,9 +878,9 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
     spec = TableBuilder.external("localBaseDirWithSchema")
         .inputSource(ImmutableMap.of("type", LocalInputSource.TYPE_KEY, "baseDir", "/tmp"))
         .inputFormat(ImmutableMap.of("type", CsvInputFormat.TYPE_KEY))
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.VARCHAR)
-        .column("z", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.STRING)
+        .column("z", Columns.LONG)
         .build();
     createTableMetadata(spec);
 
@@ -886,9 +890,9 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
             "files", Collections.singletonList("/tmp/foo.csv"))
          )
         .inputFormat(ImmutableMap.of("type", CsvInputFormat.TYPE_KEY))
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.VARCHAR)
-        .column("z", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.STRING)
+        .column("z", Columns.LONG)
         .build();
     createTableMetadata(spec);
   }

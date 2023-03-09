@@ -30,8 +30,6 @@ import org.apache.druid.catalog.model.ModelProperties.GranularityPropertyDefn;
 import org.apache.druid.catalog.model.ModelProperties.StringListPropertyDefn;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefn;
-import org.apache.druid.catalog.model.TypeParser;
-import org.apache.druid.catalog.model.TypeParser.ParsedType;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 
@@ -140,16 +138,8 @@ public class DatasourceDefn extends TableDefn
   protected void validateColumn(ColumnSpec spec)
   {
     super.validateColumn(spec);
-    if (Columns.isTimeColumn(spec.name()) && spec.sqlType() != null) {
-      ParsedType type = TypeParser.parse(spec.sqlType());
-      if (type.kind() != ParsedType.Kind.TIME) {
-        throw new IAE(
-            "External column [%s] of type [%s] is not allowed. Must be %s",
-            spec.name(),
-            spec.sqlType(),
-            Columns.TIMESTAMP
-        );
-      }
+    if (Columns.isTimeColumn(spec.name()) && spec.dataType() != null) {
+      // Validate type in next PR
     }
   }
 

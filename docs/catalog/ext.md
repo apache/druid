@@ -130,7 +130,7 @@ you either provide an entire `InputFormat` spec, or none at all.
 
 The set of external table columns can be provided in the table specification
 in the catalog entry, or at run time. To provide columns in the table
-specification, provide both a name and a SQL type:
+specification, provide both a name and a Druid type:
 
 ```json
 {
@@ -140,21 +140,19 @@ specification, provide both a name and a SQL type:
   },
   "columns" : [ {
     "name" : "timetamp",
-    "sqlType" : "VARCHAR"
+    "dataType" : "STRING"
   }, {
     "name" : "sendBytes",
-    "sqlType" : "BIGINT"
+    "dataType" : "LONG"
   } ]
 }
 ```
 
-External tables cannot use Druid aggregate types.
-
 ### Using a Complete Table Specification
 
 Suppose you want to define an external table for the Wikipedia data, which
-is available on our local system at `$DRUID_HOME/quickstart/tutorial`. Let us assume
-Druid is installed at `/Users/bob/druid`. The data uses
+is available on our local system at `$DRUID_HOME/quickstart/tutorial`. Assume
+Druid is installed at `/Users/bob/druid` and that the data used
 is compressed JSON. The complete table specification looks like this:
 
 ```json
@@ -176,40 +174,40 @@ is compressed JSON. The complete table specification looks like this:
   },
   "columns" : [ {
     "name" : "timetamp",
-    "sqlType" : "VARCHAR"
+    "dataType" : "STRING"
   }, {
     "name" : "page",
-    "sqlType" : "VARCHAR"
+    "dataType" : "STRING"
   }, {
     "name" : "language",
-    "sqlType" : "VARCHAR"
+    "dataType" : "STRING"
   }, {
     "name" : "unpatrolled",
-    "sqlType" : "VARCHAR"
+    "dataType" : "STRING"
   }, {
     "name" : "newPage",
-    "sqlType" : "VARCHAR"
+    "dataType" : "STRING"
   }, {
     "name" : "robot",
-    "sqlType" : "VARCHAR"
+    "dataType" : "STRING"
   }, {
     "name" : "namespace",
-    "sqlType" : "BIGINT"
+    "dataType" : "LONG"
   }, ... {
     "name" : "added",
-    "sqlType" : "VARCHAR"
+    "dataType" : "STRING"
   }, {
     "name" : "deleted",
-    "sqlType" : "BIGINT"
+    "dataType" : "LONG"
   }, {
     "name" : "delta",
-    "sqlType" : "BIGINT"
+    "dataType" : "LONG"
   } ]
 }
 ```
 
-Let us call the table `wikipedia`. As noted above, the table resides in
-the `ext` schema.
+You can use the above to create an external table called `wikipedia`.
+As noted above, the table resides in the `ext` schema.
 
 Then, you can ingest the data, into a datasource also named `wikipedia`, using MSQ as follows:
 
@@ -250,13 +248,13 @@ the same format and schema. Define the `koala` catalog table as follows:
   },
   "columns" : [ {
     "name" : "timetamp",
-    "sqlType" : "VARCHAR"
+    "dataType" : "STRING"
   }, {
     "name" : "metric",
-    "sqlType" : "VARCHAR"
+    "dataType" : "STRING"
   }, {
     "name" : "value",
-    "sqlType" : "BIGINT"
+    "dataType" : "LONG"
   } ]
 }
 ```
@@ -399,13 +397,13 @@ schema, leaving only the details of the URI to be given at runtime:
   },
   "columns" : [ {
     "name" : "timetamp",
-    "sqlType" : "VARCHAR"
+    "dataType" : "STRING"
   }, {
     "name" : "metric",
-    "sqlType" : "VARCHAR"
+    "dataType" : "STRING"
   }, {
     "name" : "value",
-    "sqlType" : "BIGINT"
+    "dataType" : "LONG"
   } ]
 }
 ```

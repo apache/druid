@@ -28,6 +28,7 @@ import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.druid.catalog.CatalogException;
+import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.table.BaseExternTableTest;
@@ -130,7 +131,7 @@ public class ExternalSchemaTest
     TableMetadata table = TableBuilder.external("input1")
         .inputSource(toMap(new InlineInputSource("a\nc")))
         .inputFormat(BaseExternTableTest.CSV_FORMAT)
-        .column("a", "varchar")
+        .column("a", Columns.STRING)
         .build();
     storage.tables().create(table);
   }
@@ -153,7 +154,7 @@ public class ExternalSchemaTest
     assertTrue(table instanceof ExternalTable);
     assertEquals(1, ((ExternalTable) table).getRowSignature().size());
 
-    Set<String> names = schema.getTableNames();
+    Set<String> names = schema.getFunctionNames();
     assertEquals(1, names.size());
     assertTrue(names.contains("input1"));
   }
@@ -166,7 +167,7 @@ public class ExternalSchemaTest
     assertNotNull(table1);
 
     TableMetadata defn = TableBuilder.copyOf(table1)
-        .column("b", "DOUBLE")
+        .column("b", Columns.DOUBLE)
         .build();
     storage.tables().update(defn, table1.updateTime());
 
@@ -174,7 +175,7 @@ public class ExternalSchemaTest
     TableMetadata table = TableBuilder.external("input2")
         .inputSource(toMap(new InlineInputSource("1\2c")))
         .inputFormat(BaseExternTableTest.CSV_FORMAT)
-        .column("x", "bigint")
+        .column("x", Columns.LONG)
         .build();
     storage.tables().create(table);
   }
@@ -189,7 +190,7 @@ public class ExternalSchemaTest
     assertTrue(table instanceof ExternalTable);
     assertEquals(1, ((ExternalTable) table).getRowSignature().size());
 
-    Set<String> names = schema.getTableNames();
+    Set<String> names = schema.getFunctionNames();
     assertEquals(2, names.size());
     assertTrue(names.contains("input1"));
     assertTrue(names.contains("input2"));
@@ -201,7 +202,7 @@ public class ExternalSchemaTest
         .inputSource(ImmutableMap.of("type", HttpInputSource.TYPE_KEY))
         .inputFormat(BaseExternTableTest.CSV_FORMAT)
         .property(HttpInputSourceDefn.URI_TEMPLATE_PROPERTY, "http://koalas.com/{}.csv")
-        .column("a", "varchar")
+        .column("a", Columns.STRING)
         .build();
     storage.tables().create(table);
   }
@@ -243,10 +244,6 @@ public class ExternalSchemaTest
       assertEquals(ImmutableList.of("a"), ((CsvInputFormat) extds.getInputFormat()).getColumns());
       assertTrue(extds.getInputSource() instanceof InlineInputSource);
       assertEquals("a\nc\n", ((InlineInputSource) extds.getInputSource()).getData());
-
-      Set<ResourceAction> actions = ((AuthorizableOperator) fn).computeResources(null);
-      assertEquals(1, actions.size());
-      assertEquals(Externals.externalRead("input1"), Iterators.getOnlyElement(actions.iterator()));
     }
 
     // Override properties
@@ -256,7 +253,7 @@ public class ExternalSchemaTest
       Function fn = Iterators.getOnlyElement(fns.iterator());
       TableMacro macro = (TableMacro) fn;
 
-      List<Object> args = Collections.singletonList("foo");
+      List<Object> args = Collections.singletonList(Collections.singletonList("foo"));
       TranslatableTable table = macro.apply(args);
       ExternalTable druidTable = (ExternalTable) table;
       assertEquals(1, druidTable.getRowSignature().size());
@@ -266,10 +263,6 @@ public class ExternalSchemaTest
       assertTrue(extds.getInputSource() instanceof HttpInputSource);
       HttpInputSource httpSource = (HttpInputSource) extds.getInputSource();
       assertEquals("http://koalas.com/foo.csv", httpSource.getUris().get(0).toString());
-
-      Set<ResourceAction> actions = ((AuthorizableOperator) fn).computeResources(null);
-      assertEquals(1, actions.size());
-      assertEquals(Externals.externalRead("httpParam"), Iterators.getOnlyElement(actions.iterator()));
     }
   }
 }

@@ -74,7 +74,7 @@ public class CatalogCacheTest
     // Create entries with no listener.
     TableMetadata table1 = TableBuilder.datasource("table1", "P1D")
         .timeColumn()
-        .column("a", Columns.VARCHAR)
+        .column("a", Columns.STRING)
         .build();
     storage.validate(table1);
     storage.tables().create(table1);
@@ -100,8 +100,8 @@ public class CatalogCacheTest
     // Add a table: cache is updated.
     TableMetadata table2 = TableBuilder.datasource("table2", "P1D")
         .timeColumn()
-        .column("dim", Columns.VARCHAR)
-        .column("measure", Columns.BIGINT)
+        .column("dim", Columns.STRING)
+        .column("measure", Columns.LONG)
         .build();
     storage.validate(table2);
     storage.tables().create(table2);
@@ -122,8 +122,8 @@ public class CatalogCacheTest
     // Add a third table: both caches updated.
     TableMetadata table3 = TableBuilder.datasource("table3", "PT1H")
         .timeColumn()
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
     storage.validate(table3);
     storage.tables().create(table3);

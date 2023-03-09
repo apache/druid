@@ -117,8 +117,8 @@ public class CatalogQueryTest extends BaseCalciteQueryTest
         .column("dim1", null)
         .column("cnt", null)
         .column("m1", Columns.DOUBLE)
-        .column("extra2", Columns.BIGINT)
-        .column("extra3", Columns.VARCHAR)
+        .column("extra2", Columns.LONG)
+        .column("extra3", Columns.STRING)
         .hiddenColumns(Arrays.asList("dim3", "unique_dim1"))
         .build();
     createTableMetadata(spec);
