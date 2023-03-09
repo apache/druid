@@ -146,7 +146,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     }
 
     if (computeLeftRequiresSubquery(leftDruidRel)) {
-      // Left side is doing more than projection: generate a subquery.
+      // Left side is doing more than simple scan: generate a subquery.
       leftDataSource = new QueryDataSource(leftQuery.getQuery());
       leftDataSourceSignature = leftQuery.getOutputRowSignature();
     } else {

@@ -93,5 +93,14 @@ public enum EngineFeature
   /**
    * Queries can use {@link org.apache.calcite.sql.fun.SqlStdOperatorTable#UNNEST}.
    */
-  UNNEST
+  UNNEST,
+
+  /**
+   * Planner is permitted to use {@link org.apache.druid.sql.calcite.planner.JoinAlgorithm#BROADCAST} with RIGHT
+   * and FULL join. Not guaranteed to produce correct results in either the native or MSQ engines, but we allow
+   * it in native for two reasons: legacy (the docs caution against it, but it's always been allowed), and the fact
+   * that it actually *does* generate correct results in native when the join is processed on the Broker. It is much
+   * less likely that MSQ will plan in such a way that generates correct results.
+   */
+  ALLOW_BROADCAST_RIGHTY_JOIN;
 }

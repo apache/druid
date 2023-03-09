@@ -31,6 +31,7 @@ import org.apache.druid.msq.indexing.error.NotEnoughMemoryFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
 import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollectorImpl;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
@@ -51,7 +52,7 @@ import java.util.Objects;
  * entirely on server configuration; this makes the calculation robust to different queries running simultaneously in
  * the same JVM.
  *
- * Then, we split up the resources for each bundle in two different ways: one assuming it'll be used for a
+ * Within each bundle, we split up memory in two different ways: one assuming it'll be used for a
  * {@link org.apache.druid.frame.processor.SuperSorter}, and one assuming it'll be used for a regular
  * processor. Callers can then use whichever set of allocations makes sense. (We assume no single bundle
  * will be used for both purposes.)
@@ -166,6 +167,7 @@ public class WorkerMemoryParameters
         computeNumWorkersInJvm(injector),
         computeNumProcessorsInJvm(injector),
         0,
+        0,
         totalLookupFootprint
     );
   }
@@ -179,19 +181,27 @@ public class WorkerMemoryParameters
       final int stageNumber
   )
   {
-    final IntSet inputStageNumbers =
-        InputSpecs.getStageNumbers(queryDef.getStageDefinition(stageNumber).getInputSpecs());
+    final StageDefinition stageDef = queryDef.getStageDefinition(stageNumber);
+    final IntSet inputStageNumbers = InputSpecs.getStageNumbers(stageDef.getInputSpecs());
     final int numInputWorkers =
         inputStageNumbers.intStream()
                          .map(inputStageNumber -> queryDef.getStageDefinition(inputStageNumber).getMaxWorkerCount())
                          .sum();
     long totalLookupFootprint = computeTotalLookupFootprint(injector);
 
+    final int numHashOutputPartitions;
+    if (stageDef.doesShuffle() && stageDef.getShuffleSpec().kind().isHash()) {
+      numHashOutputPartitions = stageDef.getShuffleSpec().partitionCount();
+    } else {
+      numHashOutputPartitions = 0;
+    }
+
     return createInstance(
         Runtime.getRuntime().maxMemory(),
         computeNumWorkersInJvm(injector),
         computeNumProcessorsInJvm(injector),
         numInputWorkers,
+        numHashOutputPartitions,
         totalLookupFootprint
     );
   }
@@ -206,15 +216,18 @@ public class WorkerMemoryParameters
    * @param numWorkersInJvm           number of workers that can run concurrently in this JVM. Generally equal to
    *                                  the task capacity.
    * @param numProcessingThreadsInJvm size of the processing thread pool in the JVM.
-   * @param numInputWorkers           number of workers across input stages that need to be merged together.
-   * @param totalLookUpFootprint      estimated size of the lookups loaded by the process.
+   * @param numInputWorkers           total number of workers across all input stages.
+   * @param numHashOutputPartitions   total number of output partitions, if using hash partitioning; zero if not using
+   *                                  hash partitioning.
+   * @param totalLookupFootprint      estimated size of the lookups loaded by the process.
    */
   public static WorkerMemoryParameters createInstance(
       final long maxMemoryInJvm,
       final int numWorkersInJvm,
       final int numProcessingThreadsInJvm,
       final int numInputWorkers,
-      final long totalLookUpFootprint
+      final int numHashOutputPartitions,
+      final long totalLookupFootprint
   )
   {
     Preconditions.checkArgument(maxMemoryInJvm > 0, "Max memory passed: [%s] should be > 0", maxMemoryInJvm);
@@ -226,18 +239,25 @@ public class WorkerMemoryParameters
     );
     Preconditions.checkArgument(numInputWorkers >= 0, "Number of input workers: [%s] should be >=0", numInputWorkers);
     Preconditions.checkArgument(
-        totalLookUpFootprint >= 0,
+        totalLookupFootprint >= 0,
         "Lookup memory footprint: [%s] should be >= 0",
-        totalLookUpFootprint
+        totalLookupFootprint
     );
-    final long usableMemoryInJvm = computeUsableMemoryInJvm(maxMemoryInJvm, totalLookUpFootprint);
+    final long usableMemoryInJvm = computeUsableMemoryInJvm(maxMemoryInJvm, totalLookupFootprint);
     final long workerMemory = memoryPerWorker(usableMemoryInJvm, numWorkersInJvm);
     final long bundleMemory = memoryPerBundle(usableMemoryInJvm, numWorkersInJvm, numProcessingThreadsInJvm);
     final long bundleMemoryForInputChannels = memoryNeededForInputChannels(numInputWorkers);
-    final long bundleMemoryForProcessing = bundleMemory - bundleMemoryForInputChannels;
+    final long bundleMemoryForHashPartitioning = memoryNeededForHashPartitioning(numHashOutputPartitions);
+    final long bundleMemoryForProcessing =
+        bundleMemory - bundleMemoryForInputChannels - bundleMemoryForHashPartitioning;
 
     if (bundleMemoryForProcessing < PROCESSING_MINIMUM_BYTES) {
-      final int maxWorkers = computeMaxWorkers(usableMemoryInJvm, numWorkersInJvm, numProcessingThreadsInJvm);
+      final int maxWorkers = computeMaxWorkers(
+          usableMemoryInJvm,
+          numWorkersInJvm,
+          numProcessingThreadsInJvm,
+          numHashOutputPartitions
+      );
 
       if (maxWorkers > 0) {
         throw new MSQException(new TooManyWorkersFault(numInputWorkers, Math.min(Limits.MAX_WORKERS, maxWorkers)));
@@ -250,7 +270,7 @@ public class WorkerMemoryParameters
                         numWorkersInJvm,
                         numProcessingThreadsInJvm,
                         PROCESSING_MINIMUM_BYTES + BUFFER_BYTES_FOR_ESTIMATION + bundleMemoryForInputChannels
-                    ), totalLookUpFootprint),
+                    ), totalLookupFootprint),
                 maxMemoryInJvm,
                 usableMemoryInJvm,
                 numWorkersInJvm,
@@ -271,7 +291,7 @@ public class WorkerMemoryParameters
                       numWorkersInJvm,
                       (MIN_SUPER_SORTER_FRAMES + BUFFER_BYTES_FOR_ESTIMATION) * LARGE_FRAME_SIZE
                   ),
-                  totalLookUpFootprint
+                  totalLookupFootprint
               ),
               maxMemoryInJvm,
               usableMemoryInJvm,
@@ -393,13 +413,19 @@ public class WorkerMemoryParameters
   static int computeMaxWorkers(
       final long usableMemoryInJvm,
       final int numWorkersInJvm,
-      final int numProcessingThreadsInJvm
+      final int numProcessingThreadsInJvm,
+      final int numHashOutputPartitions
   )
   {
     final long bundleMemory = memoryPerBundle(usableMemoryInJvm, numWorkersInJvm, numProcessingThreadsInJvm);
 
-    // Inverse of memoryNeededForInputChannels.
-    return Math.max(0, Ints.checkedCast((bundleMemory - PROCESSING_MINIMUM_BYTES) / STANDARD_FRAME_SIZE - 1));
+    // Compute number of workers that gives us PROCESSING_MINIMUM_BYTES of memory per bundle, while accounting for
+    // memoryNeededForInputChannels + memoryNeededForHashPartitioning.
+    final int isHashing = numHashOutputPartitions > 0 ? 1 : 0;
+    return Math.max(
+        0,
+        Ints.checkedCast((bundleMemory - PROCESSING_MINIMUM_BYTES) / ((long) STANDARD_FRAME_SIZE * (1 + isHashing)) - 1)
+    );
   }
 
   /**
@@ -499,17 +525,29 @@ public class WorkerMemoryParameters
     return (long) STANDARD_FRAME_SIZE * (numInputWorkers + 1);
   }
 
-  /**
-   * Amount of heap memory available for our usage. Any computation changes done to this method should also be done in its corresponding method {@link WorkerMemoryParameters#calculateSuggestedMinMemoryFromUsableMemory}
-   */
-  private static long computeUsableMemoryInJvm(final long maxMemory, final long totalLookupFootprint)
+  private static long memoryNeededForHashPartitioning(final int numOutputPartitions)
   {
-    // since lookups are essentially in memory hashmap's, the object overhead is trivial hence its subtracted prior to usable memory calculations.
-    return (long) ((maxMemory - totalLookupFootprint) * USABLE_MEMORY_FRACTION);
+    // One standard frame for each processor output.
+    // May be zero, since numOutputPartitions is zero if not using hash partitioning.
+    return (long) STANDARD_FRAME_SIZE * numOutputPartitions;
   }
 
   /**
-   * Estimate amount of heap memory for the given workload to use in case usable memory is provided. This method is used for better exception messages when {@link NotEnoughMemoryFault} is thrown.
+   * Amount of heap memory available for our usage. Any computation changes done to this method should also be done in
+   * its corresponding method {@link WorkerMemoryParameters#calculateSuggestedMinMemoryFromUsableMemory}
+   */
+  private static long computeUsableMemoryInJvm(final long maxMemory, final long totalLookupFootprint)
+  {
+    // Always report at least one byte, to simplify the math in createInstance.
+    return Math.max(
+        1,
+        (long) ((maxMemory - totalLookupFootprint) * USABLE_MEMORY_FRACTION)
+    );
+  }
+
+  /**
+   * Estimate amount of heap memory for the given workload to use in case usable memory is provided. This method is used
+   * for better exception messages when {@link NotEnoughMemoryFault} is thrown.
    */
   private static long calculateSuggestedMinMemoryFromUsableMemory(long usuableMemeory, final long totalLookupFootprint)
   {

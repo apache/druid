@@ -44,6 +44,7 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import org.mockito.quality.Strictness;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -71,6 +72,38 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
   public void tearDown()
   {
     fieldWriter.close();
+  }
+
+  @Test
+  public void test_isNull_null()
+  {
+    writeToMemory(Collections.singletonList(null));
+    Assert.assertTrue(new StringFieldReader(false).isNull(memory, MEMORY_POSITION));
+    Assert.assertTrue(new StringFieldReader(true).isNull(memory, MEMORY_POSITION));
+  }
+
+  @Test
+  public void test_isNull_aValue()
+  {
+    writeToMemory(Collections.singletonList("foo"));
+    Assert.assertFalse(new StringFieldReader(false).isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(new StringFieldReader(true).isNull(memory, MEMORY_POSITION));
+  }
+
+  @Test
+  public void test_isNull_multiString()
+  {
+    writeToMemory(ImmutableList.of("foo", "bar"));
+    Assert.assertFalse(new StringFieldReader(false).isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(new StringFieldReader(true).isNull(memory, MEMORY_POSITION));
+  }
+
+  @Test
+  public void test_isNull_multiStringIncludingNulls()
+  {
+    writeToMemory(Arrays.asList(null, "bar"));
+    Assert.assertFalse(new StringFieldReader(false).isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(new StringFieldReader(true).isNull(memory, MEMORY_POSITION));
   }
 
   @Test

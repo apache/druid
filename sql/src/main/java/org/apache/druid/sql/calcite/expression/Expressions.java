@@ -21,8 +21,8 @@ package org.apache.druid.sql.calcite.expression;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
@@ -80,6 +80,7 @@ public class Expressions
   /**
    * Translate a field access, possibly through a projection, to an underlying Druid dataSource.
    *
+   * @param typeFactory  factory for creating SQL types
    * @param rowSignature row signature of underlying Druid dataSource
    * @param project      projection, or null
    * @param fieldNumber  number of the field to access
@@ -87,19 +88,14 @@ public class Expressions
    * @return row expression
    */
   public static RexNode fromFieldAccess(
+      final RelDataTypeFactory typeFactory,
       final RowSignature rowSignature,
       @Nullable final Project project,
       final int fieldNumber
   )
   {
     if (project == null) {
-      // Gian doesn't think the factory impl matters here, he's likely correct.  But, upon reading what this is doing,
-      // we are re-building the list of things in the RelDataType for every single call to `fromFieldAccess`.
-      // `fromFieldAccess` is called pretty regularly in pretty low-level areas of the code, so it would make sense
-      // that we are perhaps re-creating the exact same object over and over and over and over again and wasting CPU
-      // cycles.  It would likely be good to refactor the code such that we ensure we only ever compute the thing
-      // once and then reuse it.
-      return RexInputRef.of(fieldNumber, RowSignatures.toRelDataType(rowSignature, new JavaTypeFactoryImpl()));
+      return RexInputRef.of(fieldNumber, RowSignatures.toRelDataType(rowSignature, typeFactory));
     } else {
       return project.getProjects().get(fieldNumber);
     }

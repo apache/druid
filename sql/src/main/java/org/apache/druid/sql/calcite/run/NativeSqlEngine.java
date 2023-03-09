@@ -28,11 +28,13 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
+import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 
@@ -78,6 +80,7 @@ public class NativeSqlEngine implements SqlEngine
   public void validateContext(Map<String, Object> queryContext) throws ValidationException
   {
     SqlEngines.validateNoSpecialContextKeys(queryContext, SYSTEM_CONTEXT_PARAMETERS);
+    validateJoinAlgorithm(queryContext);
   }
 
   @Override
@@ -103,6 +106,7 @@ public class NativeSqlEngine implements SqlEngine
       case GROUPING_SETS:
       case WINDOW_FUNCTIONS:
       case UNNEST:
+      case ALLOW_BROADCAST_RIGHTY_JOIN:
         return true;
       case TIME_BOUNDARY_QUERY:
         return plannerContext.queryContext().isTimeBoundaryPlanningEnabled();
@@ -136,5 +140,24 @@ public class NativeSqlEngine implements SqlEngine
   )
   {
     throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Validates that {@link PlannerContext#CTX_SQL_JOIN_ALGORITHM} is {@link JoinAlgorithm#BROADCAST}. This is the
+   * only join algorithm supported by native queries.
+   */
+  private static void validateJoinAlgorithm(final Map<String, Object> queryContext) throws ValidationException
+  {
+    final JoinAlgorithm joinAlgorithm = PlannerContext.getJoinAlgorithm(queryContext);
+
+    if (joinAlgorithm != JoinAlgorithm.BROADCAST) {
+      throw new ValidationException(
+          StringUtils.format(
+              "Join algorithm [%s] is not supported by engine [%s]",
+              joinAlgorithm,
+              NAME
+          )
+      );
+    }
   }
 }

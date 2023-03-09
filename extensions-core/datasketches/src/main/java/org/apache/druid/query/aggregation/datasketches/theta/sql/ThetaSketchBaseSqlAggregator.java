@@ -73,6 +73,7 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
     // Don't use Aggregations.getArgumentsForSimpleAggregator, since it won't let us use direct column access
     // for string columns.
     final RexNode columnRexNode = Expressions.fromFieldAccess(
+        rexBuilder.getTypeFactory(),
         rowSignature,
         project,
         aggregateCall.getArgList().get(0)
@@ -86,6 +87,7 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
     final int sketchSize;
     if (aggregateCall.getArgList().size() >= 2) {
       final RexNode sketchSizeArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(1)
