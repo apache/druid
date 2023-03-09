@@ -133,7 +133,7 @@ public class BitwiseSqlAggregator implements SqlAggregator
     final List<DruidExpression> arguments = aggregateCall
         .getArgList()
         .stream()
-        .map(i -> Expressions.fromFieldAccess(rowSignature, project, i))
+        .map(i -> Expressions.fromFieldAccess(rexBuilder.getTypeFactory(), rowSignature, project, i))
         .map(rexNode -> Expressions.toDruidExpression(plannerContext, rowSignature, rexNode))
         .collect(Collectors.toList());
 
