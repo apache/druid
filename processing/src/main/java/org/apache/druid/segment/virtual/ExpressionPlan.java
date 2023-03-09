@@ -150,7 +150,7 @@ public class ExpressionPlan
       Parser.validateExpr(applied, applied.analyzeInputs());
       return applied;
     }
-    return expression;
+    return getExpression();
   }
 
   /**
@@ -170,7 +170,7 @@ public class ExpressionPlan
       );
       return Parser.foldUnappliedBindings(expression, analysis, unappliedInputs, accumulatorId);
     }
-    return expression;
+    return getExpression();
   }
 
   /**
