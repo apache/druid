@@ -1247,25 +1247,28 @@ http://<OVERLORD_IP>:<port>/druid/indexer/v1/worker/history?count=<n>
 ##### Worker select strategy
 
 The select strategy controls how Druid assigns tasks to MiddleManagers.
+Tasks can be assigend in an effort to diftribute work equaly (`equalDistribution`, `equalDistributionWithCategorySpec`)
+or to fill as much capacity as possible on the smallest set of MiddleManagers (`fillCapacity`, `fillCapacityWithCategorySpec`).
 
 ###### `equalDistribution`
 
-Tasks are assigned to the MiddleManager with the most free slots at the time the task begins running. This is useful if
-you want work evenly distributed across your MiddleManagers.
+Tasks are assigned to the MiddleManager with the most free slots at the time the task begins running.
+This will evenly distribute work across your MiddleManagers.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`type`|`equalDistribution`.|required; must be `equalDistribution`|
+|`type`|`equalDistribution`|required; must be `equalDistribution`|
 |`affinityConfig`|[Affinity config](#affinity) object|null (no affinity)|
 
 ###### `equalDistributionWithCategorySpec`
 
-This strategy is a variant of `equalDistribution`, which support `workerCategorySpec` field rather than `affinityConfig`. By specifying `workerCategorySpec`, you can assign tasks to run on different categories of MiddleManagers based on the tasks' **taskType** and **dataSource name**.
+This strategy is a variant of `equalDistribution`, which support `workerCategorySpec` field rather than `affinityConfig`.
+By specifying `workerCategorySpec`, you can assign tasks to run on different categories of MiddleManagers based on the tasks' **type** and **dataSource**.
 This strategy can't work with `AutoScaler` since the behavior is undefined.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`type`|`equalDistributionWithCategorySpec`.|required; must be `equalDistributionWithCategorySpec`|
+|`type`|`equalDistributionWithCategorySpec`|required; must be `equalDistributionWithCategorySpec`|
 |`workerCategorySpec`|[Worker Category Spec](#workercategoryspec) object|null (no worker category spec)|
 
 Example: for tasks of type "index_kafka" default to running on middle managers of category `c1`, except tasks writing to datasource "ds1" which should run on middle managers of category `c2`.
@@ -1373,14 +1376,14 @@ Amazon's EC2 together with Google's GCE are currently the only supported autosca
 
 EC2's autoscaler properties are:
 
-| Property           | Description                                                                                                                                                                                                        |Default|
-|--------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------|
-| `type`             | `ec2`                                                                                                                                                                                                               |0|
-| `minNumWorkers`    | The minimum number of workers that can be in the cluster at any given time.                                                                                                                                        |0|
-| `maxNumWorkers`    | The maximum number of workers that can be in the cluster at any given time.                                                                                                                                        |0|
-| `availabilityZone` | What availability zone to run in.                                                                                                                                                                                  |none|
-| `nodeData`         | A JSON object that describes how to launch new nodes.                                                                                                                                                              |none; required|
-| `userData`         | A JSON object that describes how to configure new nodes. If you have set druid.indexer.autoscale.workerVersion, this must have a versionReplacementString. Otherwise, a versionReplacementString is not necessary. |none; optional|
+| Property                     | Description                                                                                                                                                                                                        |Default|
+|------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------|
+| `type`                       | `ec2`                                                                                                                                                                                                              |0|
+| `minNumWorkers`              | The minimum number of workers that can be in the cluster at any given time.                                                                                                                                        |0|
+| `maxNumWorkers`              | The maximum number of workers that can be in the cluster at any given time.                                                                                                                                        |0|
+| `envConfig.availabilityZone` | What Amazon availability zone to run in.                                                                                                                                                                           |none|
+| `envConfig.nodeData`         | A JSON object that describes how to launch new nodes.                                                                                                                                                              |none; required|
+| `envConfig.userData`         | A JSON object that describes how to configure new nodes. If you have set druid.indexer.autoscale.workerVersion, this must have a versionReplacementString. Otherwise, a versionReplacementString is not necessary. |none; optional|
 
 For GCE's properties, please refer to the [gce-extensions](../development/extensions-contrib/gce-extensions.md).
 
