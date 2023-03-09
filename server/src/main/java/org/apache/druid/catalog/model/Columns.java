@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.List;
 import java.util.Map;
@@ -34,41 +35,41 @@ public class Columns
 {
   public static final String TIME_COLUMN = "__time";
 
-  public static final String VARCHAR = "VARCHAR";
-  public static final String BIGINT = "BIGINT";
-  public static final String FLOAT = "FLOAT";
-  public static final String DOUBLE = "DOUBLE";
-  public static final String TIMESTAMP = "TIMESTAMP";
+  public static final String STRING = ValueType.STRING.name();
+  public static final String LONG = ValueType.LONG.name();
+  public static final String FLOAT = ValueType.FLOAT.name();
+  public static final String DOUBLE = ValueType.DOUBLE.name();
+
+  public static final String SQL_VARCHAR = "VARCHAR";
+  public static final String SQL_BIGINT = "BIGINT";
+  public static final String SQL_FLOAT = "FLOAT";
+  public static final String SQL_DOUBLE = "DOUBLE";
+  public static final String SQL_TIMESTAMP = "TIMESTAMP";
+
 
   public static final Set<String> NUMERIC_TYPES =
-      ImmutableSet.of(BIGINT, FLOAT, DOUBLE);
+      ImmutableSet.of(LONG, FLOAT, DOUBLE);
   public static final Set<String> SCALAR_TYPES =
-      ImmutableSet.of(TIMESTAMP, VARCHAR, BIGINT, FLOAT, DOUBLE);
+      ImmutableSet.of(STRING, LONG, FLOAT, DOUBLE);
 
-  public static final Map<String, ColumnType> SQL_TO_DRUID_TYPES =
+  public static final Map<String, ColumnType> NAME_TO_DRUID_TYPES =
       new ImmutableMap.Builder<String, ColumnType>()
-        .put(TIMESTAMP, ColumnType.LONG)
-        .put(BIGINT, ColumnType.LONG)
+        .put(LONG, ColumnType.LONG)
         .put(FLOAT, ColumnType.FLOAT)
         .put(DOUBLE, ColumnType.DOUBLE)
-        .put(VARCHAR, ColumnType.STRING)
+        .put(STRING, ColumnType.STRING)
         .build();
 
   public static final Map<ColumnType, String> DRUID_TO_SQL_TYPES =
       new ImmutableMap.Builder<ColumnType, String>()
-      .put(ColumnType.LONG, BIGINT)
-      .put(ColumnType.FLOAT, FLOAT)
-      .put(ColumnType.DOUBLE, DOUBLE)
-      .put(ColumnType.STRING, VARCHAR)
+      .put(ColumnType.LONG, SQL_BIGINT)
+      .put(ColumnType.FLOAT, SQL_FLOAT)
+      .put(ColumnType.DOUBLE, SQL_DOUBLE)
+      .put(ColumnType.STRING, SQL_VARCHAR)
       .build();
 
   private Columns()
   {
-  }
-
-  public static boolean isTimestamp(String type)
-  {
-    return TIMESTAMP.equalsIgnoreCase(type.trim());
   }
 
   public static boolean isScalar(String type)
@@ -76,12 +77,25 @@ public class Columns
     return SCALAR_TYPES.contains(StringUtils.toUpperCase(type.trim()));
   }
 
-  public static ColumnType druidType(String sqlType)
+  public static ColumnType druidType(ColumnSpec spec)
   {
-    if (sqlType == null) {
+    if (isTimeColumn(spec.name())) {
+      return ColumnType.LONG;
+    }
+    String dataType = spec.dataType();
+    if (dataType == null) {
       return null;
     }
-    return SQL_TO_DRUID_TYPES.get(StringUtils.toUpperCase(sqlType));
+    return NAME_TO_DRUID_TYPES.get(StringUtils.toUpperCase(dataType));
+  }
+
+  public static String sqlType(ColumnSpec spec)
+  {
+    if (isTimeColumn(spec.name())) {
+      return SQL_TIMESTAMP;
+    }
+    ColumnType druidType = druidType(spec);
+    return druidType == null ? null : DRUID_TO_SQL_TYPES.get(druidType);
   }
 
   public static void validateScalarColumn(String name, String type)
@@ -90,7 +104,7 @@ public class Columns
       return;
     }
     if (!Columns.isScalar(type)) {
-      throw new IAE("Not a supported SQL type: " + type);
+      throw new IAE("Not a supported Druid type: " + type);
     }
   }
 
@@ -103,10 +117,7 @@ public class Columns
   {
     RowSignature.Builder builder = RowSignature.builder();
     for (ColumnSpec col : columns) {
-      ColumnType druidType = null;
-      if (col.sqlType() != null) {
-        druidType = Columns.SQL_TO_DRUID_TYPES.get(StringUtils.toUpperCase(col.sqlType()));
-      }
+      ColumnType druidType = druidType(col);
       if (druidType == null) {
         druidType = ColumnType.STRING;
       }

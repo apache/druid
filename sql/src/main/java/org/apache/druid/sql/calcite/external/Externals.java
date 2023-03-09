@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite.external;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import org.apache.calcite.avatica.SqlType;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.FunctionParameter;
@@ -36,6 +35,7 @@ import org.apache.calcite.sql.type.SqlOperandCountRanges;
 import org.apache.calcite.sql.type.SqlOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.table.ExternalTableSpec;
 import org.apache.druid.catalog.model.table.TableFunction;
 import org.apache.druid.java.util.common.IAE;
@@ -96,7 +96,7 @@ public class Externals
           );
           break;
         default:
-          throw new ISE("Undefined parameter type: %s", paramDefn.type().sqlName());
+          throw new ISE("Undefined parameter type: [%s]", paramDefn.type().sqlName());
       }
       params.add(new FunctionParameterImpl(
           i,
@@ -198,13 +198,13 @@ public class Externals
    * list of column specs. The schema itself comes from the
    * Druid-specific EXTEND syntax added to the parser.
    */
-  public static List<ColumnSpec> convertColumns(SqlNodeList schema)
+  public static List<ColumnSpec> convertSqlToDruidColumns(SqlNodeList schema)
   {
     final List<ColumnSpec> columns = new ArrayList<>();
     for (int i = 0; i < schema.size(); i += 2) {
       final String name = convertName((SqlIdentifier) schema.get(i));
-      final String sqlType = convertType(name, (SqlDataTypeSpec) schema.get(i + 1));
-      columns.add(new ColumnSpec(name, sqlType, null));
+      final String druidType = convertSqlToDruidType(name, (SqlDataTypeSpec) schema.get(i + 1));
+      columns.add(new ColumnSpec(name, druidType, null));
     }
     return columns;
   }
@@ -218,7 +218,7 @@ public class Externals
   {
     if (!ident.isSimple()) {
       throw new IAE(StringUtils.format(
-          "Column [%s] must have a simple name",
+          "Column [%s] must have a simple name with no dots",
           ident));
     }
     return ident.getSimple();
@@ -232,7 +232,7 @@ public class Externals
    * Druid has its own rules for nullability. We ignore any nullability
    * clause in the EXTEND list.
    */
-  private static String convertType(String name, SqlDataTypeSpec dataType)
+  private static String convertSqlToDruidType(String name, SqlDataTypeSpec dataType)
   {
     SqlTypeNameSpec spec = dataType.getTypeNameSpec();
     if (spec == null) {
@@ -242,22 +242,23 @@ public class Externals
     if (typeName == null || !typeName.isSimple()) {
       throw unsupportedType(name, dataType);
     }
+    // No special __time conversion here: this is for an external table.
     SqlTypeName type = SqlTypeName.get(typeName.getSimple());
     if (type == null) {
       throw unsupportedType(name, dataType);
     }
     if (SqlTypeName.CHAR_TYPES.contains(type)) {
-      return SqlTypeName.VARCHAR.name();
+      return Columns.STRING;
     }
     if (SqlTypeName.INT_TYPES.contains(type)) {
-      return SqlTypeName.BIGINT.name();
+      return Columns.LONG;
     }
     switch (type) {
       case DOUBLE:
-        return SqlType.DOUBLE.name();
+        return Columns.DOUBLE;
       case FLOAT:
       case REAL:
-        return SqlType.FLOAT.name();
+        return Columns.FLOAT;
       default:
         throw unsupportedType(name, dataType);
     }

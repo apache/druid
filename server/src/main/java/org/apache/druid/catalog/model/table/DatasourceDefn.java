@@ -148,7 +148,7 @@ public class DatasourceDefn extends TableDefn
   protected void validateColumn(ColumnSpec spec)
   {
     super.validateColumn(spec);
-    if (Columns.isTimeColumn(spec.name()) && spec.sqlType() != null) {
+    if (Columns.isTimeColumn(spec.name()) && spec.dataType() != null) {
       // Validate type in next PR
     }
   }

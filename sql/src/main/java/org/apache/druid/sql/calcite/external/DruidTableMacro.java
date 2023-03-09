@@ -87,7 +87,7 @@ public class DruidTableMacro implements ExtendedTableMacro
     final ExternalTableSpec externSpec = fn.apply(
         name,
         Externals.convertArguments(fn, arguments),
-        schema == null ? null : Externals.convertColumns(schema),
+        schema == null ? null : Externals.convertSqlToDruidColumns(schema),
         jsonMapper
     );
     return Externals.buildExternalTable(externSpec, jsonMapper);

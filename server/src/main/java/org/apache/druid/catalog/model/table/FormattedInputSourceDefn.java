@@ -108,7 +108,7 @@ public abstract class FormattedInputSourceDefn extends BaseInputSourceDefn
           toAdd.add(prop);
         } else if (existing.type() != prop.type()) {
           throw new ISE(
-              "Format %s, property %s of class %s conflicts with another format property of class %s",
+              "Format [%s], property [%s] of class [%s] conflicts with another format property of class [%s]",
               format.typeValue(),
               prop.name(),
               prop.type().sqlName(),
@@ -130,7 +130,7 @@ public abstract class FormattedInputSourceDefn extends BaseInputSourceDefn
     final InputFormatDefn formatDefn = formats.get(formatTag);
     if (formatDefn == null) {
       throw new IAE(
-          "Format type [%s] for property %s is not valid",
+          "Format type [%s] for property [%s] is not valid",
           formatTag,
           InputFormat.TYPE_PROPERTY
       );

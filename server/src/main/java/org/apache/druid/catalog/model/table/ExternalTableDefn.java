@@ -206,6 +206,11 @@ public class ExternalTableDefn extends TableDefn
   public static final String TABLE_TYPE = "extern";
 
   /**
+   * Column type for external tables.
+   */
+  public static final String EXTERNAL_COLUMN_TYPE = "extern";
+
+  /**
    * Property which holds the input source specification as serialized as JSON.
    */
   public static final String SOURCE_PROPERTY = "source";

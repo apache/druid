@@ -39,8 +39,8 @@ public class BaseExternTableTest
 {
   public static final Map<String, Object> CSV_FORMAT = ImmutableMap.of("type", CsvInputFormat.TYPE_KEY);
   protected static final List<ColumnSpec> COLUMNS = Arrays.asList(
-      new ColumnSpec("x", Columns.VARCHAR, null),
-      new ColumnSpec("y", Columns.BIGINT, null)
+      new ColumnSpec("x", Columns.STRING, null),
+      new ColumnSpec("y", Columns.LONG, null)
   );
 
   protected final ObjectMapper mapper = DefaultObjectMapper.INSTANCE;

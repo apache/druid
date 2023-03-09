@@ -67,4 +67,22 @@ public class CatalogListenerResource
     listener.updated(event);
     return Response.status(Response.Status.ACCEPTED).build();
   }
+
+  @POST
+  @Path("flush")
+  @ResourceFilters(ConfigResourceFilter.class)
+  public Response flush()
+  {
+    listener.flush();
+    return Response.status(Response.Status.ACCEPTED).build();
+  }
+
+  @POST
+  @Path("resync")
+  @ResourceFilters(ConfigResourceFilter.class)
+  public Response resync()
+  {
+    listener.resync();
+    return Response.status(Response.Status.ACCEPTED).build();
+  }
 }
