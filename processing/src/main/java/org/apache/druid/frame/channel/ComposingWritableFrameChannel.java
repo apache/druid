@@ -118,7 +118,14 @@ public class ComposingWritableFrameChannel implements WritableFrameChannel
   {
     if (currentIndex < writableChannelSuppliers.size()) {
       writableChannelSuppliers.get(currentIndex).get().close();
+      currentIndex = writableChannelSuppliers.size();
     }
+  }
+
+  @Override
+  public boolean isClosed()
+  {
+    return currentIndex == writableChannelSuppliers.size();
   }
 
   @Override

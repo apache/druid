@@ -5607,7 +5607,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testArrayAggQueryOnComplexDatatypes()
   {
     cannotVectorize();
-    msqCompatible();
     testQuery(
         "SELECT ARRAY_AGG(unique_dim1) FROM druid.foo",
         ImmutableList.of(

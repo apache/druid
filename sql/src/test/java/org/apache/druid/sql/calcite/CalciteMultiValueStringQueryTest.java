@@ -29,8 +29,10 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.AndDimFilter;
+import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
+import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -39,6 +41,7 @@ import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
 import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -1845,6 +1848,89 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     testQueryThrows(
         "SELECT MV_TO_ARRAY(Array[1,2]) FROM druid.numfoo",
         exception -> exception.expect(RuntimeException.class)
+    );
+  }
+
+  @Test
+  public void testMultiValueStringOverlapFilterCoalesceNvl()
+  {
+    testQuery(
+        "SELECT COALESCE(dim3, 'other') FROM druid.numfoo "
+        + "WHERE MV_OVERLAP(COALESCE(MV_TO_ARRAY(dim3), ARRAY['other']), ARRAY['a', 'b', 'other']) OR "
+        + "MV_OVERLAP(NVL(MV_TO_ARRAY(dim3), ARRAY['other']), ARRAY['a', 'b', 'other']) LIMIT 5",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .eternityInterval()
+                .virtualColumns(
+                    new ExpressionVirtualColumn(
+                        "v0",
+                        "case_searched(notnull(\"dim3\"),\"dim3\",'other')",
+                        ColumnType.STRING,
+                        queryFramework().macroTable()
+                    )
+                )
+                .filters(
+                    new OrDimFilter(
+                        new ExpressionDimFilter(
+                            "case_searched(notnull(mv_to_array(\"dim3\")),array_overlap(mv_to_array(\"dim3\"),array('a','b','other')),1)",
+                            null,
+                            queryFramework().macroTable()
+                        ),
+                        new ExpressionDimFilter(
+                            "case_searched(notnull(mv_to_array(\"dim3\")),array_overlap(mv_to_array(\"dim3\"),array('a','b','other')),1)",
+                            null,
+                            queryFramework().macroTable()
+                        )
+                    )
+                )
+                .columns("v0")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(5)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"},
+            new Object[]{"[\"b\",\"c\"]"},
+            new Object[]{"other"},
+            new Object[]{"other"},
+            new Object[]{"other"}
+        )
+        : ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"},
+            new Object[]{"[\"b\",\"c\"]"},
+            new Object[]{"other"},
+            new Object[]{"other"}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringOverlapFilterInconsistentUsage()
+  {
+    testQueryThrows(
+        "SELECT COALESCE(dim3, 'other') FROM druid.numfoo "
+        + "WHERE MV_OVERLAP(COALESCE(dim3, ARRAY['other']), ARRAY['a', 'b', 'other']) LIMIT 5",
+        e -> {
+          e.expect(SqlPlanningException.class);
+          e.expectMessage("Illegal mixing of types in CASE or COALESCE statement");
+        }
+
+    );
+  }
+
+  @Test
+  public void testMultiValueStringOverlapFilterInconsistentUsage2()
+  {
+    testQueryThrows(
+        "SELECT COALESCE(dim3, 'other') FROM druid.numfoo "
+        + "WHERE MV_OVERLAP(COALESCE(dim3, 'other'), ARRAY['a', 'b', 'other']) LIMIT 5",
+        e -> {
+          e.expect(RuntimeException.class);
+          e.expectMessage("Invalid expression: (case_searched [(notnull [dim3]), (array_overlap [dim3, [a, b, other]]), 1]); [dim3] used as both scalar and array variables");
+        }
     );
   }
 }

@@ -233,7 +233,7 @@ FROM
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 Query datasources allow you to issue subqueries. In native queries, they can appear anywhere that accepts a
-`dataSource`. In SQL, they can appear in the following places, always surrounded by parentheses:
+`dataSource` (except underneath a `union`). In SQL, they can appear in the following places, always surrounded by parentheses:
 
 - The FROM clause: `FROM (<subquery>)`.
 - As inputs to a JOIN: `<table-or-subquery-1> t1 INNER JOIN <table-or-subquery-2> t2 ON t1.<col1> = t2.<col2>`.
@@ -289,10 +289,10 @@ GROUP BY
 Join datasources allow you to do a SQL-style join of two datasources. Stacking joins on top of each other allows
 you to join arbitrarily many datasources.
 
-In Druid {{DRUIDVERSION}}, joins are implemented with a broadcast hash-join algorithm. This means that all datasources
-other than the leftmost "base" datasource must fit in memory. It also means that the join condition must be an equality. This
-feature is intended mainly to allow joining regular Druid tables with [lookup](#lookup), [inline](#inline), and
-[query](#query) datasources.
+In Druid {{DRUIDVERSION}}, joins in native queries are implemented with a broadcast hash-join algorithm. This means
+that all datasources other than the leftmost "base" datasource must fit in memory. It also means that the join condition
+must be an equality. This feature is intended mainly to allow joining regular Druid tables with [lookup](#lookup),
+[inline](#inline), and [query](#query) datasources.
 
 Refer to the [Query execution](query-execution.md#join) page for more details on how queries are executed when you
 use join datasources.
@@ -362,13 +362,11 @@ Also, as a result of this, comma joins should be avoided.
 Joins are an area of active development in Druid. The following features are missing today but may appear in
 future versions:
 
-- Reordering of predicates and filters (pushing up and/or pushing down) to get the most performant plan.
+- Reordering of join operations to get the most performant plan.
 - Preloaded dimension tables that are wider than lookups (i.e. supporting more than a single key and single value).
-- RIGHT OUTER and FULL OUTER joins. Currently, they are partially implemented. Queries will run but results will not
-always be correct.
+- RIGHT OUTER and FULL OUTER joins in the native query engine. Currently, they are partially implemented. Queries run
+  but results are not always correct.
 - Performance-related optimizations as mentioned in the [previous section](#join-performance).
-- Join algorithms other than broadcast hash-joins.
-- Join condition on a column compared to a constant value.
 - Join conditions on a column containing a multi-value dimension.
 
 ### `unnest`

@@ -118,7 +118,7 @@ public class DruidUnnestDatasourceRel extends DruidRel<DruidUnnestDatasourceRel>
     // with the input column being called "inline" in the native query
     UnnestDataSource dataSource = UnnestDataSource.create(
         InlineDataSource.fromIterable(
-            Collections.singletonList(new Object[]{eval.value()}),
+            Collections.singletonList(new Object[]{eval.valueOrDefault()}),
             RowSignature.builder().add("inline", ExpressionType.toColumnType(eval.type())).build()
         ),
         "inline",

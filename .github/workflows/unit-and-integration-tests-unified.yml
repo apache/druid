@@ -65,8 +65,6 @@ jobs:
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-${{ matrix.jdk }}-${{ github.sha }}
-          restore-keys: |
-            maven-${{ runner.os }}-${{ matrix.jdk }}
 
       - name: Cache targets
         id: target
@@ -75,8 +73,6 @@ jobs:
           path: |
             ./**/target
           key: maven-${{ runner.os }}-${{ matrix.jdk }}-targets-${{ github.sha }}
-          restore-keys: |
-            maven-${{ runner.os }}-${{ matrix.jdk }}-targets
 
       - name: Cache image
         id: docker_container
@@ -86,8 +82,6 @@ jobs:
           path: |
             ./druid-container-jdk${{ matrix.jdk }}.tar.gz
             ./integration-tests-ex/image/target/env.sh
-          restore-keys: |
-            druid-container-jdk${{ matrix.jdk }}.tar.gz-
 
       - name: Maven build
         id: maven_build
@@ -123,13 +117,12 @@ jobs:
       fail-fast: false
       matrix:
         jdk: [11, 17]
-        sql_compatibility: [ false, true ]
     name: unit tests (jdk${{ matrix.jdk }}, sql-compat=${{ matrix.sql_compatibility }})
     uses: ./.github/workflows/unit-tests.yml
     needs: unit-tests
     with:
       jdk: ${{ matrix.jdk }}
-      sql_compatibility: ${{ matrix.sql_compatibility }}
+      sql_compatibility: true
 
   standard-its:
     needs: unit-tests

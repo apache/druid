@@ -103,6 +103,6 @@ public class MSQDurableStorageModule implements DruidModule
 
   private boolean isDurableShuffleStorageEnabled()
   {
-    return Boolean.parseBoolean((String) properties.getOrDefault(MSQ_INTERMEDIATE_STORAGE_ENABLED, "false"));
+    return Boolean.parseBoolean(properties.getProperty(MSQ_INTERMEDIATE_STORAGE_ENABLED, "false"));
   }
 }

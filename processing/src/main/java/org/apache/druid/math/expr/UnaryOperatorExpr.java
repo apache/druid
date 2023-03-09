@@ -147,7 +147,7 @@ class UnaryMinusExpr extends UnaryExpr
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return VectorMathProcessors.negate(inspector, expr);
   }
@@ -203,7 +203,7 @@ class UnaryNotExpr extends UnaryExpr
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return VectorProcessors.not(inspector, expr);
   }

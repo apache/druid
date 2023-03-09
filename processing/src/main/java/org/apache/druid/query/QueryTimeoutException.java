@@ -36,7 +36,8 @@ import javax.annotation.Nullable;
 public class QueryTimeoutException extends QueryException
 {
   private static final String ERROR_CLASS = QueryTimeoutException.class.getName();
-  public static final String ERROR_MESSAGE = "Query Timed Out!";
+  public static final String ERROR_MESSAGE = "Query did not complete within configured timeout period. " +
+      "You can increase query timeout or tune the performance of query.";
   public static final int STATUS_CODE = 504;
 
   @JsonCreator
