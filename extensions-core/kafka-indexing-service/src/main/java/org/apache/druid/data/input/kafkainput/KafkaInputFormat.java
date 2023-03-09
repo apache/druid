@@ -81,7 +81,13 @@ public class KafkaInputFormat implements InputFormat
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    SettableByteEntity<KafkaRecordEntity> settableByteEntitySource = (SettableByteEntity<KafkaRecordEntity>) source;
+    final SettableByteEntity<KafkaRecordEntity> settableByteEntitySource;
+    if (source instanceof SettableByteEntity) {
+      settableByteEntitySource = (SettableByteEntity<KafkaRecordEntity>) source;
+    } else {
+      settableByteEntitySource = new SettableByteEntity<>();
+      settableByteEntitySource.setEntity((KafkaRecordEntity) source);
+    }
     InputRowSchema newInputRowSchema = new InputRowSchema(
         dummyTimestampSpec,
         inputRowSchema.getDimensionsSpec(),

@@ -147,6 +147,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     // It should be honored before unnest
     // Create a query data source in that case
 
+
     if (partialQueryFromLeft.getSort() != null || partialQueryFromLeft.getSortProject() != null) {
       leftDataSource = new QueryDataSource(leftQuery.getQuery());
       corrPartialQuey = partialQuery;
@@ -366,7 +367,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   {
     double cost;
 
-    if (DruidJoinQueryRel.computeLeftRequiresSubquery(DruidJoinQueryRel.getSomeDruidChild(left))) {
+    if (DruidJoinQueryRel.computeLeftRequiresSubquery(getPlannerContext(), DruidJoinQueryRel.getSomeDruidChild(left))) {
       cost = CostEstimates.COST_SUBQUERY;
     } else {
       cost = partialQuery.estimateCost();

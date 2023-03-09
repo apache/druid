@@ -207,7 +207,7 @@ public abstract class QueryResultPusher
       resultsWriter.recordFailure(e);
 
       // This case is always a failure because the error happened mid-stream of sending results back.  Therefore,
-      // we do not believe that the response stream was actually useable
+      // we do not believe that the response stream was actually usable
       counter.incrementFailed();
       return null;
     }

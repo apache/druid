@@ -29,3 +29,4 @@ integration-tests/gen-scripts/
 /bin/
 *.hprof
 **/.ipynb_checkpoints/
+*.pyc

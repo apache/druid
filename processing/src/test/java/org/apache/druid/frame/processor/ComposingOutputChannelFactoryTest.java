@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.WritableFrameChannel;
-import org.apache.druid.storage.local.LocalFileStorageConnector;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -39,23 +38,18 @@ public class ComposingOutputChannelFactoryTest extends OutputChannelFactoryTest
 
   public ComposingOutputChannelFactoryTest() throws IOException
   {
-    super(new ComposingOutputChannelFactory(
-        ImmutableList.of(
-            // TODO : currently hardcoded 256k since it allows one frame to be written to each factory
-            // nicer to do that automatically
-            new FileOutputChannelFactory(folder.newFolder(), 100, new ByteTracker(256_000)),
-            new DurableStorageOutputChannelFactory(
-                "0",
-                0,
-                0,
-                "0",
-                100,
-                new LocalFileStorageConnector(folder.newFolder()),
-                folder.newFolder()
-            )
+    super(
+        new ComposingOutputChannelFactory(
+            ImmutableList.of(
+                // TODO : currently hardcoded 256k since it allows one frame to be written to each factory
+                // nicer to do that automatically
+                new FileOutputChannelFactory(folder.newFolder(), 100, new ByteTracker(256_000)),
+                new FileOutputChannelFactory(folder.newFolder(), 100, new ByteTracker(256_000))
+            ),
+            100
         ),
         100
-    ), 100);
+    );
   }
 
   @Test

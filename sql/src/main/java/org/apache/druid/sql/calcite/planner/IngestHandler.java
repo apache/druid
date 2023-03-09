@@ -257,12 +257,6 @@ public abstract class IngestHandler extends QueryHandler
     }
 
     @Override
-    public SqlNode sqlNode()
-    {
-      return sqlNode;
-    }
-
-    @Override
     protected DruidSqlIngest ingestNode()
     {
       return sqlNode;
@@ -302,12 +296,6 @@ public abstract class IngestHandler extends QueryHandler
           explain
       );
       this.sqlNode = sqlNode;
-    }
-
-    @Override
-    public SqlNode sqlNode()
-    {
-      return sqlNode;
     }
 
     @Override
