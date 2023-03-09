@@ -133,6 +133,7 @@ public class ExpressionPlan
    */
   public Expr getExpression()
   {
+    Parser.validateExpr(expression, analysis);
     return expression;
   }
 
@@ -145,7 +146,9 @@ public class ExpressionPlan
   public Expr getAppliedExpression()
   {
     if (is(Trait.NEEDS_APPLIED)) {
-      return Parser.applyUnappliedBindings(expression, analysis, unappliedInputs);
+      final Expr applied = Parser.applyUnappliedBindings(expression, analysis, unappliedInputs);
+      Parser.validateExpr(applied, applied.analyzeInputs());
+      return applied;
     }
     return expression;
   }

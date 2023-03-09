@@ -82,10 +82,12 @@ import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
+import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
+import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -3903,12 +3905,58 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testCoalesceColumnsFilter()
+  {
+    msqCompatible();
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT COALESCE(dim2, dim1), COUNT(*) FROM druid.foo WHERE COALESCE(dim2, dim1) IN ('a', 'abc') GROUP BY COALESCE(dim2, dim1)\n",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "nvl(\"dim2\",\"dim1\")",
+                                ColumnType.STRING
+                            )
+                        )
+                        .setDimFilter(
+                            new OrDimFilter(
+                                new AndDimFilter(
+                                    selector("dim1", "a", null),
+                                    selector("dim2", null, null)
+                                ),
+                                new AndDimFilter(
+                                    selector("dim1", "abc", null),
+                                    selector("dim2", null, null)
+                                ),
+                                new InDimFilter(
+                                    "dim2",
+                                    ImmutableSet.of("a", "abc")
+                                )
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a", 2L},
+            new Object[]{"abc", 2L}
+        )
+    );
+  }
+
+  @Test
   public void testCoalesceMoreColumns()
   {
     msqCompatible();
-    // Doesn't conform to the SQL standard, but it's how we do it.
-    // This example is used in the sql.md doc.
-
     // Cannot vectorize due to virtual columns.
     cannotVectorize();
 

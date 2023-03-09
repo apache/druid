@@ -729,8 +729,7 @@ public class DruidQuery
     final boolean forceExpressionVirtualColumns =
         plannerContext.getPlannerConfig().isForceExpressionVirtualColumns();
     virtualColumnRegistry.visitAllSubExpressions((expression) -> {
-      if (!forceExpressionVirtualColumns
-          && expression.getType() == DruidExpression.NodeType.SPECIALIZED) {
+      if (!forceExpressionVirtualColumns && expression.getType() == DruidExpression.NodeType.SPECIALIZED) {
         // add the expression to the top level of the registry as a standalone virtual column
         final String name = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             expression,
