@@ -19,6 +19,7 @@
 
 {{- if .Values.broker.ingress.enabled -}}
 {{- $fullName := include "druid.broker.fullname" . -}}
+{{- $svcPort := .Values.broker.port -}}
 {{- $ingressPath := .Values.broker.ingress.path -}}
 {{- $ingressPathType := .Values.broker.ingress.pathType | default "ImplementationSpecific" -}}
 {{- $apiIsStable := eq (include "capabilities.ingress.isStable" .) "true" -}}
@@ -70,10 +71,10 @@ spec:
               service:
                 name: {{ $fullName }}
                 port:
-                  number: 80
+                  number: {{ $svcPort }}
             {{- else }}
               serviceName: {{ $fullName }}
-              servicePort: http
+              servicePort: {{ $svcPort }}
             {{- end }}
   {{- end }}
 {{- end }}

@@ -19,6 +19,7 @@
 
 {{- if .Values.coordinator.ingress.enabled -}}
 {{- $fullName := include "druid.coordinator.fullname" . -}}
+{{- $svcPort := .Values.coordinator.port -}}
 {{- $ingressPath := .Values.coordinator.ingress.path -}}
 {{- $ingressPathType := .Values.coordinator.ingress.pathType | default "ImplementationSpecific" -}}
 {{- $apiIsStable := eq (include "capabilities.ingress.isStable" .) "true" -}}
@@ -70,10 +71,10 @@ spec:
               service:
                 name: {{ $fullName }}
                 port:
-                  number: 80
+                  number: {{ $svcPort }}
             {{- else }}
               serviceName: {{ $fullName }}
-              servicePort: http
+              servicePort: {{ $svcPort }}
             {{- end }}
   {{- end }}
 {{- end }}

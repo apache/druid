@@ -19,6 +19,7 @@
 
 {{- if .Values.router.ingress.enabled -}}
 {{- $fullName := include "druid.router.fullname" . -}}
+{{- $svcPort := .Values.router.port -}}
 {{- $ingressPath := .Values.router.ingress.path -}}
 {{- $ingressPathType := .Values.router.ingress.pathType | default "ImplementationSpecific" -}}
 {{- $apiIsStable := eq (include "capabilities.ingress.isStable" .) "true" -}}
@@ -70,10 +71,10 @@ spec:
               service:
                 name: {{ $fullName }}
                 port:
-                  number: 80
+                  number: {{ $svcPort }}
             {{- else }}
               serviceName: {{ $fullName }}
-              servicePort: http
+              servicePort: {{ $svcPort }}
             {{- end }}
   {{- end }}
 {{- end }}
