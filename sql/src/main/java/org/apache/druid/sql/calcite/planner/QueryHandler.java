@@ -74,7 +74,6 @@ import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.utils.Throwables;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -487,6 +486,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     RelNode parameterized = possiblyLimitedRoot.rel.accept(
         new RelParameterizerShuttle(plannerContext)
     );
+    QueryValidations.validateLogicalQueryForDruid(handlerContext.plannerContext(), parameterized);
     CalcitePlanner planner = handlerContext.planner();
     final DruidRel<?> druidRel = (DruidRel<?>) planner.transform(
         CalciteRulesManager.DRUID_CONVENTION_RULES,

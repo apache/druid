@@ -67,6 +67,12 @@ public class FloatFieldReader implements FieldReader
   }
 
   @Override
+  public boolean isNull(Memory memory, long position)
+  {
+    return memory.getByte(position) == FloatFieldWriter.NULL_BYTE;
+  }
+
+  @Override
   public boolean isComparable()
   {
     return true;

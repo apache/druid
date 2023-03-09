@@ -82,10 +82,12 @@ import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
+import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
+import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -3877,7 +3879,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "case_searched(notnull(\"dim2\"),\"dim2\",\"dim1\")",
+                                "nvl(\"dim2\",\"dim1\")",
                                 ColumnType.STRING
                             )
                         )
@@ -3898,6 +3900,109 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"10.1", 1L},
             new Object[]{"a", 2L},
             new Object[]{"abc", 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testCoalesceColumnsFilter()
+  {
+    msqCompatible();
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT COALESCE(dim2, dim1), COUNT(*) FROM druid.foo WHERE COALESCE(dim2, dim1) IN ('a', 'abc') GROUP BY COALESCE(dim2, dim1)\n",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "nvl(\"dim2\",\"dim1\")",
+                                ColumnType.STRING
+                            )
+                        )
+                        .setDimFilter(
+                            new OrDimFilter(
+                                new AndDimFilter(
+                                    selector("dim1", "a", null),
+                                    selector("dim2", null, null)
+                                ),
+                                new AndDimFilter(
+                                    selector("dim1", "abc", null),
+                                    selector("dim2", null, null)
+                                ),
+                                new InDimFilter(
+                                    "dim2",
+                                    ImmutableSet.of("a", "abc")
+                                )
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a", 2L},
+            new Object[]{"abc", 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testCoalesceMoreColumns()
+  {
+    msqCompatible();
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT COALESCE(dim2, dim1), COALESCE(dim2, dim3, dim1), COUNT(*) FROM druid.foo GROUP BY COALESCE(dim2, dim1), COALESCE(dim2, dim3, dim1)\n",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "nvl(\"dim2\",\"dim1\")",
+                                ColumnType.STRING
+                            ),
+                            expressionVirtualColumn(
+                                "v1",
+                                "case_searched(notnull(\"dim2\"),\"dim2\",notnull(\"dim3\"),\"dim3\",\"dim1\")",
+                                ColumnType.STRING
+                            )
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.STRING),
+                                new DefaultDimensionSpec("v1", "d1", ColumnType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
+            new Object[]{"10.1", "b", 1L},
+            new Object[]{"10.1", "c", 1L},
+            new Object[]{"2", "d", 1L},
+            new Object[]{"a", "a", 3L},
+            new Object[]{"abc", "abc", 2L}
+        ) :
+        ImmutableList.of(
+            new Object[]{"", "", 1L},
+            new Object[]{"10.1", "b", 1L},
+            new Object[]{"10.1", "c", 1L},
+            new Object[]{"a", "a", 3L},
+            new Object[]{"abc", "abc", 2L}
         )
     );
   }
@@ -5607,7 +5712,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testArrayAggQueryOnComplexDatatypes()
   {
     cannotVectorize();
-    msqCompatible();
     testQuery(
         "SELECT ARRAY_AGG(unique_dim1) FROM druid.foo",
         ImmutableList.of(
@@ -10528,7 +10632,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                "nvl(\"dim2\",'')",
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(
@@ -10579,9 +10683,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     requireMergeBuffers(3);
 
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT dim2, gran, SUM(cnt), GROUPING(gran, dim2)\n"
         + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x\n"
@@ -10594,7 +10695,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                "nvl(\"dim2\",'')",
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(
@@ -10746,7 +10847,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                "nvl(\"dim2\",'')",
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(
@@ -10789,9 +10890,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByRollupDifferentOrder()
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     // Like "testGroupByRollup", but the ROLLUP exprs are in the reverse order.
     testQuery(
         "SELECT dim2, gran, SUM(cnt)\n"
@@ -10810,7 +10908,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             ),
                             expressionVirtualColumn(
                                 "v1",
-                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                "nvl(\"dim2\",'')",
                                 ColumnType.STRING
                             )
                         )
@@ -10862,7 +10960,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                "nvl(\"dim2\",'')",
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(
@@ -10923,7 +11021,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                "nvl(\"dim2\",'')",
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(
@@ -10985,7 +11083,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                "nvl(\"dim2\",'')",
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(
@@ -11025,9 +11123,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupingSetsWithOrderByDimension()
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT dim2, gran, SUM(cnt)\n"
         + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x\n"
@@ -11041,7 +11136,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                "nvl(\"dim2\",'')",
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(
@@ -11114,7 +11209,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                "nvl(\"dim2\",'')",
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(
@@ -11183,7 +11278,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                "nvl(\"dim2\",'')",
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(
@@ -12472,8 +12567,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testNvlColumns()
   {
     msqCompatible();
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
 
     testQuery(
         "SELECT NVL(dim2, dim1), COUNT(*) FROM druid.foo GROUP BY NVL(dim2, dim1)\n",
@@ -12485,7 +12578,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "case_searched(notnull(\"dim2\"),\"dim2\",\"dim1\")",
+                                "nvl(\"dim2\",\"dim1\")",
                                 ColumnType.STRING
                             )
                         )
@@ -12927,9 +13020,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupingSetsWithLimit()
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT dim2, gran, SUM(cnt)\n"
         + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x\n"
@@ -12942,7 +13032,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                "nvl(\"dim2\",'')",
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(
@@ -13009,7 +13099,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                "nvl(\"dim2\",'')",
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(

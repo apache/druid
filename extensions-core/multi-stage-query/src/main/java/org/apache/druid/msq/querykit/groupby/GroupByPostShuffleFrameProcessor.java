@@ -22,12 +22,9 @@ package org.apache.druid.msq.querykit.groupby;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
-import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.processor.FrameRowTooLargeException;
@@ -35,7 +32,6 @@ import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
-import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -68,10 +64,8 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
   private final GroupByQuery query;
   private final ReadableFrameChannel inputChannel;
   private final WritableFrameChannel outputChannel;
-  private final MemoryAllocator allocator;
+  private final FrameWriterFactory frameWriterFactory;
   private final FrameReader frameReader;
-  private final RowSignature resultSignature;
-  private final ClusterBy clusterBy;
   private final ColumnSelectorFactory columnSelectorFactoryForFrameWriter;
   private final Comparator<ResultRow> compareFn;
   private final BinaryOperator<ResultRow> mergeFn;
@@ -90,10 +84,8 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
       final GroupByStrategySelector strategySelector,
       final ReadableFrameChannel inputChannel,
       final WritableFrameChannel outputChannel,
+      final FrameWriterFactory frameWriterFactory,
       final FrameReader frameReader,
-      final RowSignature resultSignature,
-      final ClusterBy clusterBy,
-      final MemoryAllocator allocator,
       final ObjectMapper jsonMapper
   )
   {
@@ -101,9 +93,7 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
     this.inputChannel = inputChannel;
     this.outputChannel = outputChannel;
     this.frameReader = frameReader;
-    this.resultSignature = resultSignature;
-    this.clusterBy = clusterBy;
-    this.allocator = allocator;
+    this.frameWriterFactory = frameWriterFactory;
     this.compareFn = strategySelector.strategize(query).createResultComparator(query);
     this.mergeFn = strategySelector.strategize(query).createMergeFn(query);
     this.finalizeFn = makeFinalizeFn(query);
@@ -249,10 +239,10 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
         outputRow = null;
         return true;
       } else {
-        throw new FrameRowTooLargeException(allocator.capacity());
+        throw new FrameRowTooLargeException(frameWriterFactory.allocatorCapacity());
       }
     } else {
-      throw new FrameRowTooLargeException(allocator.capacity());
+      throw new FrameRowTooLargeException(frameWriterFactory.allocatorCapacity());
     }
   }
 
@@ -269,8 +259,6 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
   private void setUpFrameWriterIfNeeded()
   {
     if (frameWriter == null) {
-      final FrameWriterFactory frameWriterFactory =
-          FrameWriters.makeFrameWriterFactory(FrameType.ROW_BASED, allocator, resultSignature, clusterBy.getColumns());
       frameWriter = frameWriterFactory.newFrameWriter(columnSelectorFactoryForFrameWriter);
     }
   }

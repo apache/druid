@@ -126,8 +126,12 @@ public abstract class IngestHandler extends QueryHandler
         SqlExplain explain
     )
     {
-      super(handlerContext, explain);
-      this.sqlNode = insertNode;
+      super(
+          handlerContext,
+          sqlNode,
+          convertQuery(sqlNode),
+          explain);
+      this.sqlNode = sqlNode;
       handlerContext.hook().captureInsert(insertNode);
     }
 
@@ -164,8 +168,13 @@ public abstract class IngestHandler extends QueryHandler
         SqlExplain explain
     )
     {
-      super(handlerContext, explain);
-      this.sqlNode = replaceNode;
+      super(
+          handlerContext,
+          sqlNode,
+          convertQuery(sqlNode),
+          explain
+      );
+      this.sqlNode = sqlNode;
       handlerContext.hook().captureInsert(replaceNode);
     }
 

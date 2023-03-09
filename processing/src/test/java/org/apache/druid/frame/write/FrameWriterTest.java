@@ -26,10 +26,12 @@ import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.allocation.MemoryAllocator;
+import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.frame.key.KeyTestUtils;
 import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.frame.key.RowKeyComparator;
-import org.apache.druid.frame.key.SortColumn;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.frame.segment.FrameStorageAdapter;
@@ -79,14 +81,14 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   @Nullable
   private final FrameType inputFrameType;
   private final FrameType outputFrameType;
-  private final FrameWriterTestData.Sortedness sortedness;
+  private final KeyOrder sortedness;
 
   private MemoryAllocator allocator;
 
   public FrameWriterTest(
       @Nullable final FrameType inputFrameType,
       final FrameType outputFrameType,
-      final FrameWriterTestData.Sortedness sortedness
+      final KeyOrder sortedness
   )
   {
     this.inputFrameType = inputFrameType;
@@ -107,9 +109,9 @@ public class FrameWriterTest extends InitializedNullHandlingTest
 
     for (final FrameType inputFrameType : inputFrameTypes) {
       for (final FrameType outputFrameType : FrameType.values()) {
-        for (final FrameWriterTestData.Sortedness sortedness : FrameWriterTestData.Sortedness.values()) {
+        for (final KeyOrder sortedness : KeyOrder.values()) {
           // Only do sortedness tests for row-based frames. (Columnar frames cannot be sorted.)
-          if (sortedness == FrameWriterTestData.Sortedness.UNSORTED || outputFrameType == FrameType.ROW_BASED) {
+          if (sortedness == KeyOrder.NONE || outputFrameType == FrameType.ROW_BASED) {
             constructors.add(new Object[]{inputFrameType, outputFrameType, sortedness});
           }
         }
@@ -165,7 +167,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   public void test_complex()
   {
     // Complex types can't be sorted, so skip the sortedness tests.
-    Assume.assumeThat(sortedness, CoreMatchers.is(FrameWriterTestData.Sortedness.UNSORTED));
+    Assume.assumeThat(sortedness, CoreMatchers.is(KeyOrder.NONE));
     testWithDataset(FrameWriterTestData.TEST_COMPLEX);
   }
 
@@ -300,14 +302,14 @@ public class FrameWriterTest extends InitializedNullHandlingTest
       final List<String> sortColumnNames
   )
   {
-    final List<SortColumn> sortColumns = computeSortColumns(sortColumnNames);
+    final List<KeyColumn> keyColumns = computeSortColumns(sortColumnNames);
 
-    if (sortColumns.isEmpty()) {
+    if (keyColumns.isEmpty()) {
       return rows;
     }
 
-    final RowSignature keySignature = KeyTestUtils.createKeySignature(sortColumns, signature);
-    final Comparator<RowKey> keyComparator = RowKeyComparator.create(sortColumns);
+    final RowSignature keySignature = KeyTestUtils.createKeySignature(keyColumns, signature);
+    final Comparator<RowKey> keyComparator = RowKeyComparator.create(keyColumns);
 
     return Sequences.sort(
         rows,
@@ -338,18 +340,18 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   }
 
   /**
-   * Converts the provided column names into {@link SortColumn} according to the current {@link #sortedness}
+   * Converts the provided column names into {@link KeyColumn} according to the current {@link #sortedness}
    * parameter.
    */
-  private List<SortColumn> computeSortColumns(final List<String> sortColumnNames)
+  private List<KeyColumn> computeSortColumns(final List<String> sortColumnNames)
   {
-    if (sortedness == FrameWriterTestData.Sortedness.UNSORTED) {
+    if (sortedness == KeyOrder.NONE) {
       return Collections.emptyList();
     } else {
       return sortColumnNames.stream()
                             .map(
                                 columnName ->
-                                    new SortColumn(columnName, sortedness == FrameWriterTestData.Sortedness.DESCENDING)
+                                    new KeyColumn(columnName, sortedness)
                             )
                             .collect(Collectors.toList());
     }
@@ -357,7 +359,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
 
   private <T> void testWithDataset(final FrameWriterTestData.Dataset<T> dataset)
   {
-    final List<T> data = dataset.getData(FrameWriterTestData.Sortedness.UNSORTED);
+    final List<T> data = dataset.getData(KeyOrder.NONE);
     final RowSignature signature = RowSignature.builder().add("x", dataset.getType()).build();
     final Sequence<List<Object>> rowSequence = rows(data);
     final Pair<Frame, Integer> writeResult = writeFrame(rowSequence, signature, signature.getColumnNames());
@@ -375,7 +377,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
       final MemoryAllocator allocator,
       final Sequence<List<Object>> rows,
       final RowSignature signature,
-      final List<SortColumn> sortColumns
+      final List<KeyColumn> keyColumns
   )
   {
     final Segment inputSegment;
@@ -410,16 +412,22 @@ public class FrameWriterTest extends InitializedNullHandlingTest
                            null,
                            (retVal, cursor) -> {
                              int numRows = 0;
-                             final FrameWriter frameWriter =
-                                 FrameWriters.makeFrameWriterFactory(outputFrameType, allocator, signature, sortColumns)
-                                             .newFrameWriter(cursor.getColumnSelectorFactory());
+                             final FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
+                                 outputFrameType,
+                                 new SingleMemoryAllocatorFactory(allocator),
+                                 signature,
+                                 keyColumns
+                             );
 
-                             while (!cursor.isDone() && frameWriter.addSelection()) {
-                               numRows++;
-                               cursor.advance();
+                             try (final FrameWriter frameWriter =
+                                      frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
+                               while (!cursor.isDone() && frameWriter.addSelection()) {
+                                 numRows++;
+                                 cursor.advance();
+                               }
+
+                               return Pair.of(Frame.wrap(frameWriter.toByteArray()), numRows);
                              }
-
-                             return Pair.of(Frame.wrap(frameWriter.toByteArray()), numRows);
                            }
                        );
   }
@@ -469,7 +477,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
     final int rowSize = datasets.size();
     final List<Iterator<?>> iterators =
         datasets.stream()
-                .map(dataset -> dataset.getData(FrameWriterTestData.Sortedness.UNSORTED).iterator())
+                .map(dataset -> dataset.getData(KeyOrder.NONE).iterator())
                 .collect(Collectors.toList());
 
     while (iterators.stream().anyMatch(Iterator::hasNext)) {

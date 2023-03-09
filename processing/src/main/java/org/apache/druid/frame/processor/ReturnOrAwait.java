@@ -19,7 +19,6 @@
 
 package org.apache.druid.frame.processor;
 
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
 import org.apache.druid.java.util.common.IAE;
@@ -203,13 +202,7 @@ public class ReturnOrAwait<T>
     } else if (count == 1) {
       return RANGE_SET_ONE;
     } else {
-      final IntSet retVal = new IntOpenHashSet();
-
-      for (int i = 0; i < count; i++) {
-        retVal.add(i);
-      }
-
-      return retVal;
+      return IntSets.fromTo(0, count);
     }
   }
 }
