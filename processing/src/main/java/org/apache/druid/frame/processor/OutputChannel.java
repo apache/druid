@@ -207,7 +207,7 @@ public class OutputChannel
   /**
    * Whether {@link #getReadableChannel()} is ready to use.
    */
-  public boolean isReadableChannelReady()
+  public synchronized boolean isReadableChannelReady()
   {
     return readableChannelUsableWhileWriting || writableChannel == null || writableChannel.isClosed();
   }
