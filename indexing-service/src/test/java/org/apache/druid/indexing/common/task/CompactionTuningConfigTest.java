@@ -79,7 +79,7 @@ public class CompactionTuningConfigTest
         null,
         new DynamicPartitionsSpec(100, 100L),
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.UNCOMPRESSED,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -121,7 +121,7 @@ public class CompactionTuningConfigTest
         null,
         new DynamicPartitionsSpec(100, 100L),
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.UNCOMPRESSED,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -164,7 +164,7 @@ public class CompactionTuningConfigTest
         null,
         new DynamicPartitionsSpec(100, 100L),
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.UNCOMPRESSED,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS

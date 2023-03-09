@@ -247,7 +247,7 @@ public class ParallelIndexSupervisorTaskTest
           null,
           new HashedPartitionsSpec(null, 10, null),
           new IndexSpec(
-              new RoaringBitmapSerdeFactory(true),
+              RoaringBitmapSerdeFactory.getInstance(),
               CompressionStrategy.UNCOMPRESSED,
               CompressionStrategy.LZF,
               LongEncodingStrategy.LONGS
@@ -319,7 +319,7 @@ public class ParallelIndexSupervisorTaskTest
           null,
           new HashedPartitionsSpec(null, 10, null),
           new IndexSpec(
-              new RoaringBitmapSerdeFactory(true),
+              RoaringBitmapSerdeFactory.getInstance(),
               CompressionStrategy.UNCOMPRESSED,
               CompressionStrategy.LZF,
               LongEncodingStrategy.LONGS
