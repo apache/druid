@@ -22,11 +22,11 @@ package org.apache.druid.frame.key;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Test;
 
-public class SortColumnTest
+public class KeyColumnTest
 {
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(SortColumn.class).usingGetClass().verify();
+    EqualsVerifier.forClass(KeyColumn.class).usingGetClass().verify();
   }
 }
