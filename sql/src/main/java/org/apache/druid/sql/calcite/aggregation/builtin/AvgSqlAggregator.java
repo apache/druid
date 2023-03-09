@@ -70,6 +70,7 @@ public class AvgSqlAggregator implements SqlAggregator
   {
 
     final List<DruidExpression> arguments = Aggregations.getArgumentsForSimpleAggregator(
+        rexBuilder,
         plannerContext,
         rowSignature,
         aggregateCall,
@@ -108,6 +109,7 @@ public class AvgSqlAggregator implements SqlAggregator
       fieldName = arg.getDirectColumn();
     } else {
       final RexNode resolutionArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           Iterables.getOnlyElement(aggregateCall.getArgList())
