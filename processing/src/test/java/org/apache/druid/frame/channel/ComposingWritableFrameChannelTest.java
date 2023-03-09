@@ -113,6 +113,11 @@ public class ComposingWritableFrameChannelTest
     }
 
     @Override
+    public void write(Frame frame) throws IOException
+    {
+    }
+
+    @Override
     public void fail(@Nullable Throwable cause)
     {
 
@@ -122,6 +127,12 @@ public class ComposingWritableFrameChannelTest
     public void close()
     {
 
+    }
+
+    @Override
+    public boolean isClosed()
+    {
+      return false;
     }
 
     @Override
