@@ -17,33 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.frame.processor;
+package org.apache.druid.frame.allocation;
 
-import org.apache.druid.storage.local.LocalFileStorageConnector;
-import org.junit.ClassRule;
-import org.junit.rules.TemporaryFolder;
-
-import java.io.IOException;
-
-public class DurableStorageOutputChannelFactoryTest extends OutputChannelFactoryTest
+/**
+ * Creates {@link ArenaMemoryAllocator} on each call to {@link #newAllocator()}.
+ */
+public class ArenaMemoryAllocatorFactory implements MemoryAllocatorFactory
 {
-  @ClassRule
-  public static TemporaryFolder folder = new TemporaryFolder();
+  private final int capacity;
 
-  public DurableStorageOutputChannelFactoryTest()
-      throws IOException
+  public ArenaMemoryAllocatorFactory(final int capacity)
   {
-    super(
-        new DurableStorageOutputChannelFactory(
-            "0",
-            0,
-            0,
-            "0",
-            100,
-            new LocalFileStorageConnector(folder.newFolder()),
-            folder.newFolder()
-        ),
-        100
-    );
+    this.capacity = capacity;
+  }
+
+  @Override
+  public MemoryAllocator newAllocator()
+  {
+    return ArenaMemoryAllocator.createOnHeap(capacity);
+  }
+
+  @Override
+  public long allocatorCapacity()
+  {
+    return capacity;
   }
 }
