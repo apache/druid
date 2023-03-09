@@ -28,6 +28,7 @@ import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Window;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
@@ -87,25 +88,26 @@ public class Windowing
 {
   private static final ImmutableMap<String, ProcessorMaker> KNOWN_WINDOW_FNS = ImmutableMap
       .<String, ProcessorMaker>builder()
-      .put("LAG", (agg) -> new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), -agg.getConstantInt(1)))
-      .put("LEAD", (agg) -> new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), agg.getConstantInt(1)))
-      .put("FIRST_VALUE", (agg) -> new WindowFirstProcessor(agg.getColumn(0), agg.getOutputName()))
-      .put("LAST_VALUE", (agg) -> new WindowLastProcessor(agg.getColumn(0), agg.getOutputName()))
-      .put(
-          "CUME_DIST",
-          (agg) -> new WindowCumeDistProcessor(agg.getGroup().getOrderingColumNames(), agg.getOutputName())
-      )
-      .put(
-          "DENSE_RANK",
-          (agg) -> new WindowDenseRankProcessor(agg.getGroup().getOrderingColumNames(), agg.getOutputName())
-      )
-      .put("NTILE", (agg) -> new WindowPercentileProcessor(agg.getOutputName(), agg.getConstantInt(0)))
-      .put(
-          "PERCENT_RANK",
-          (agg) -> new WindowRankProcessor(agg.getGroup().getOrderingColumNames(), agg.getOutputName(), true)
-      )
-      .put("RANK", (agg) -> new WindowRankProcessor(agg.getGroup().getOrderingColumNames(), agg.getOutputName(), false))
-      .put("ROW_NUMBER", (agg) -> new WindowRowNumberProcessor(agg.getOutputName()))
+      .put("LAG", (agg, typeFactory) ->
+          new WindowOffsetProcessor(agg.getColumn(typeFactory, 0), agg.getOutputName(), -agg.getConstantInt(1)))
+      .put("LEAD", (agg, typeFactory) ->
+          new WindowOffsetProcessor(agg.getColumn(typeFactory, 0), agg.getOutputName(), agg.getConstantInt(1)))
+      .put("FIRST_VALUE", (agg, typeFactory) ->
+          new WindowFirstProcessor(agg.getColumn(typeFactory, 0), agg.getOutputName()))
+      .put("LAST_VALUE", (agg, typeFactory) ->
+          new WindowLastProcessor(agg.getColumn(typeFactory, 0), agg.getOutputName()))
+      .put("CUME_DIST", (agg, typeFactory) ->
+          new WindowCumeDistProcessor(agg.getGroup().getOrderingColumNames(), agg.getOutputName()))
+      .put("DENSE_RANK", (agg, typeFactory) ->
+          new WindowDenseRankProcessor(agg.getGroup().getOrderingColumNames(), agg.getOutputName()))
+      .put("NTILE", (agg, typeFactory) ->
+          new WindowPercentileProcessor(agg.getOutputName(), agg.getConstantInt(0)))
+      .put("PERCENT_RANK", (agg, typeFactory) ->
+          new WindowRankProcessor(agg.getGroup().getOrderingColumNames(), agg.getOutputName(), true))
+      .put("RANK", (agg, typeFactory) ->
+          new WindowRankProcessor(agg.getGroup().getOrderingColumNames(), agg.getOutputName(), false))
+      .put("ROW_NUMBER", (agg, typeFactory) ->
+          new WindowRowNumberProcessor(agg.getOutputName()))
       .build();
   private final List<OperatorFactory> ops;
 
@@ -203,7 +205,8 @@ public class Windowing
                   partialQuery.getSelectProject(),
                   window.constants,
                   group
-              )
+              ),
+              rexBuilder.getTypeFactory()
           ));
         }
       }
@@ -277,7 +280,7 @@ public class Windowing
 
   private interface ProcessorMaker
   {
-    Processor make(WindowAggregate agg);
+    Processor make(WindowAggregate agg, RelDataTypeFactory typeFactory);
   }
 
   private static class WindowGroup
@@ -411,9 +414,10 @@ public class Windowing
       return group;
     }
 
-    public String getColumn(int argPosition)
+    public String getColumn(final RelDataTypeFactory typeFactory, int argPosition)
     {
-      RexNode columnArgument = Expressions.fromFieldAccess(sig, project, call.getArgList().get(argPosition));
+      final RexNode columnArgument =
+          Expressions.fromFieldAccess(typeFactory, sig, project, call.getArgList().get(argPosition));
       final DruidExpression expression = Expressions.toDruidExpression(context, sig, columnArgument);
       if (expression == null) {
         throw new ISE("Couldn't get an expression from columnArgument[%s]", columnArgument);
