@@ -20,4 +20,4 @@ expectedOperators:
 
 # Not correct: there should actually be results for this query. But when the query runs, at the time I write this, it
 # does not return any results at all. Therefore, we leave expectedResults empty and mark the test as a failingTest.
-expectedResults: [ "to be added later, when fixing this test" ]
+expectedResults: [ [ "to be added later, when fixing this test" ] ]
