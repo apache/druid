@@ -332,16 +332,16 @@ public class Externals
     // are nullable independent of Druid's null-vs-defaults setting.
     columnType = StringUtils.toUpperCase(columnType);
     if (Columns.STRING.equals(columnType)) {
-        return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.VARCHAR, true);
+      return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.VARCHAR, true);
     }
     if (Columns.LONG.equals(columnType)) {
-        return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.BIGINT, true);
+      return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.BIGINT, true);
     }
     if (Columns.FLOAT.equals(columnType)) {
-        return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.FLOAT, true);
+      return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.FLOAT, true);
     }
     if (Columns.DOUBLE.equals(columnType)) {
-        return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, true);
+      return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, true);
     }
     // This is a bit of a punt for now since the catalog only understands simple types
     // at present.

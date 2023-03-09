@@ -27,7 +27,6 @@ import com.google.common.base.Strings;
 import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 
