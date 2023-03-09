@@ -1,6 +1,7 @@
 ---
 id: index
-title: "Ingestion"
+sidebar_label: Overview
+title: "Ingestion overview"
 ---
 
 <!--

@@ -39,32 +39,15 @@
     ],
     "Ingestion": [
       "ingestion/index",
-      "ingestion/data-formats",
-      "ingestion/data-model",
-      "ingestion/rollup",
-      "ingestion/partitioning",
-      "ingestion/ingestion-spec",
-      "ingestion/schema-design",
       {
         "type": "subcategory",
-        "label": "Stream ingestion",
+        "label": "Prepare your data",
         "ids": [
-          "development/extensions-core/kafka-ingestion",
-          "development/extensions-core/kafka-supervisor-reference",
-          "development/extensions-core/kafka-supervisor-operations",
-          "development/extensions-core/kinesis-ingestion",
-          "ingestion/standalone-realtime"
-        ]
-      },
-      {
-        "type": "subcategory",
-        "label": "Batch ingestion",
-        "ids": [
-          "ingestion/native-batch",
-          "ingestion/native-batch-input-sources",
-          "ingestion/migrate-from-firehose",
-          "ingestion/native-batch-firehose",
-          "ingestion/hadoop"
+          "ingestion/data-formats",
+          "ingestion/data-model",
+          "ingestion/rollup",
+          "ingestion/partitioning",
+          "ingestion/ingestion-spec"
         ]
       },
       {
@@ -78,6 +61,28 @@
           "multi-stage-query/examples",
           "multi-stage-query/reference",
           "multi-stage-query/known-issues"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "Stream ingestion",
+        "ids": [
+          "development/extensions-core/kafka-ingestion",
+          "development/extensions-core/kafka-supervisor-reference",
+          "development/extensions-core/kafka-supervisor-operations",
+          "development/extensions-core/kinesis-ingestion",
+          "ingestion/standalone-realtime"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "Legacy batch ingestion",
+        "ids": [
+          "ingestion/native-batch",
+          "ingestion/native-batch-input-sources",
+          "ingestion/migrate-from-firehose",
+          "ingestion/native-batch-firehose",
+          "ingestion/hadoop"
         ]
       },
       "ingestion/tasks",

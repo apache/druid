@@ -1,7 +1,7 @@
 ---
 id: hadoop
 title: "Hadoop-based ingestion"
-sidebar_label: "Hadoop-based"
+sidebar_label: "Hadoop-based ingestion"
 ---
 
 <!--
