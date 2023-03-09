@@ -82,17 +82,6 @@ export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
 
   // AffinityConfig
   {
-    name: 'selectStrategy.affinityConfig.strong',
-    type: 'boolean',
-    defaultValue: false,
-    defined: c =>
-      oneOf(
-        deepGet(c, 'selectStrategy.type') ?? 'equalDistribution',
-        'equalDistribution',
-        'fillCapacity',
-      ),
-  },
-  {
     name: 'selectStrategy.affinityConfig.affinity',
     type: 'json',
     placeholder: `{"datasource1":["host1:port","host2:port"], "datasource2":["host3:port"]}`,
@@ -103,12 +92,23 @@ export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
         'fillCapacity',
       ),
   },
+  {
+    name: 'selectStrategy.affinityConfig.strong',
+    type: 'boolean',
+    defaultValue: false,
+    defined: c =>
+      oneOf(
+        deepGet(c, 'selectStrategy.type') ?? 'equalDistribution',
+        'equalDistribution',
+        'fillCapacity',
+      ),
+  },
 
   // WorkerCategorySpec
   {
-    name: 'selectStrategy.workerCategorySpec.strong',
-    type: 'boolean',
-    defaultValue: false,
+    name: 'selectStrategy.workerCategorySpec.categoryMap',
+    type: 'json',
+    defaultValue: '{}',
     defined: c =>
       oneOf(
         deepGet(c, 'selectStrategy.type'),
@@ -117,9 +117,9 @@ export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
       ),
   },
   {
-    name: 'selectStrategy.workerCategorySpec.categoryMap',
-    type: 'json',
-    defaultValue: '{}',
+    name: 'selectStrategy.workerCategorySpec.strong',
+    type: 'boolean',
+    defaultValue: false,
     defined: c =>
       oneOf(
         deepGet(c, 'selectStrategy.type'),
@@ -133,38 +133,69 @@ export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
     label: 'Auto scaler type',
     type: 'string',
     suggestions: [undefined, 'ec2', 'gce'],
+    defined: c =>
+      oneOf(
+        deepGet(c, 'selectStrategy.type'),
+        'fillCapacity',
+        // 'fillCapacityWithCategorySpec',
+        'javascript',
+      ),
   },
   {
     name: 'autoScaler.minNumWorkers',
+    label: 'Auto scaler min workers',
     type: 'number',
     defaultValue: 0,
     defined: c => oneOf(deepGet(c, 'autoScaler.type'), 'ec2', 'gce'),
   },
   {
     name: 'autoScaler.maxNumWorkers',
+    label: 'Auto scaler max workers',
     type: 'number',
     defaultValue: 0,
     defined: c => oneOf(deepGet(c, 'autoScaler.type'), 'ec2', 'gce'),
   },
 
+  // EC2
+  {
+    name: 'autoScaler.envConfig.availabilityZone',
+    label: 'Auto scaler availability zone',
+    type: 'string',
+    defined: c => deepGet(c, 'autoScaler.type') === 'ec2',
+  },
+  {
+    name: 'autoScaler.envConfig.nodeData',
+    label: 'Auto scaler node data',
+    type: 'json',
+    defined: c => deepGet(c, 'autoScaler.type') === 'ec2',
+    required: true,
+    info: 'A JSON object that describes how to launch new nodes.',
+  },
+  {
+    name: 'autoScaler.envConfig.userData',
+    label: 'Auto scaler user data',
+    type: 'json',
+    defined: c => deepGet(c, 'autoScaler.type') === 'ec2',
+  },
+
   // GCE
   {
-    name: 'autoScaler.numInstances',
+    name: 'autoScaler.envConfig.numInstances',
     type: 'number',
     defined: c => deepGet(c, 'autoScaler.type') === 'gce',
   },
   {
-    name: 'autoScaler.projectId',
+    name: 'autoScaler.envConfig.projectId',
     type: 'string',
     defined: c => deepGet(c, 'autoScaler.type') === 'gce',
   },
   {
-    name: 'autoScaler.zoneName',
+    name: 'autoScaler.envConfig.zoneName',
     type: 'string',
     defined: c => deepGet(c, 'autoScaler.type') === 'gce',
   },
   {
-    name: 'autoScaler.managedInstanceGroupName',
+    name: 'autoScaler.envConfig.managedInstanceGroupName',
     type: 'string',
     defined: c => deepGet(c, 'autoScaler.type') === 'gce',
   },
