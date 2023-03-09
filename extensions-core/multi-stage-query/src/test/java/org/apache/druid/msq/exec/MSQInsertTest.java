@@ -128,6 +128,11 @@ public class MSQInsertTest extends MSQTestBase
                              .with().rows(expectedArray).frames(expectedArray),
                          2, 0, "input0"
                      )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRows(Arrays.stream(expectedArray).sum()),
+                         2, 0
+                     )
                      .verifyResults();
 
   }
@@ -187,6 +192,11 @@ public class MSQInsertTest extends MSQTestBase
                          CounterSnapshotMatcher
                              .with().rows(1).frames(1),
                          2, 0, "input0"
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRows(1),
+                         2, 0
                      )
                      .verifyResults();
 
@@ -262,6 +272,11 @@ public class MSQInsertTest extends MSQTestBase
                          CounterSnapshotMatcher
                              .with().rows(expectedArray).frames(expectedArray),
                          2, 0, "input0"
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRows(Arrays.stream(expectedArray).sum()),
+                         2, 0
                      )
                      .verifyResults();
 
@@ -406,6 +421,11 @@ public class MSQInsertTest extends MSQTestBase
                              .with().rows(expectedArray).frames(expectedArray),
                          2, 0, "input0"
                      )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRows(Arrays.stream(expectedArray).sum()),
+                         2, 0
+                     )
                      .verifyResults();
 
   }
@@ -457,6 +477,11 @@ public class MSQInsertTest extends MSQTestBase
                          CounterSnapshotMatcher
                              .with().rows(expectedArray).frames(expectedArray),
                          2, 0, "input0"
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRows(Arrays.stream(expectedArray).sum()),
+                         2, 0
                      )
                      .verifyResults();
 
@@ -570,6 +595,11 @@ public class MSQInsertTest extends MSQTestBase
                              .with().rows(1).frames(1),
                          2, 0, "input0"
                      )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRows(1),
+                         2, 0
+                     )
                      .verifyResults();
   }
 
@@ -639,6 +669,11 @@ public class MSQInsertTest extends MSQTestBase
                          CounterSnapshotMatcher
                              .with().rows(6).frames(1),
                          2, 0, "input0"
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRows(6),
+                         2, 0
                      )
                      .verifyResults();
 

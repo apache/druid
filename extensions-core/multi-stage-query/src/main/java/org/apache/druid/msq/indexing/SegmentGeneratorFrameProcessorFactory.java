@@ -185,7 +185,8 @@ public class SegmentGeneratorFrameProcessorFactory
               columnMappings,
               dataSchema.getDimensionsSpec().getDimensionNames(),
               appenderator,
-              segmentIdWithShardSpec
+              segmentIdWithShardSpec,
+              counters
           );
         }
     );
