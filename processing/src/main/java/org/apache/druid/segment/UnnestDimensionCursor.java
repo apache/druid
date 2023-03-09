@@ -24,20 +24,16 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.dimension.LegacyDimensionSpec;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.data.IndexedInts;
-import org.apache.druid.segment.data.SingleIndexedInt;
-import org.apache.druid.segment.filter.AndFilter;
-import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.util.BitSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -93,7 +89,7 @@ public class UnnestDimensionCursor implements Cursor
   private IndexedInts indexedIntsForCurrentRow;
   private boolean needInitialization;
   private SingleIndexInts indexIntsForRow;
-  private ValueMatcher valueMatcher;
+  private BitSet matchBitSet;
 
   public UnnestDimensionCursor(
       Cursor cursor,
@@ -111,6 +107,7 @@ public class UnnestDimensionCursor implements Cursor
     this.outputName = outputColumnName;
     this.needInitialization = true;
     this.allowFilter = allowFilter;
+    this.matchBitSet = new BitSet();
   }
 
   @Override
@@ -206,10 +203,8 @@ public class UnnestDimensionCursor implements Cursor
           @Override
           public int getValueCardinality()
           {
-            if (allowFilter instanceof InDimFilter) {
-              return ((InDimFilter) allowFilter).getValues().size();
-            } else if (allowFilter instanceof AndFilter) {
-              return ((AndFilter) allowFilter).getFilters().size();
+            if (!matchBitSet.isEmpty()) {
+              return matchBitSet.cardinality();
             }
             return dimSelector.getValueCardinality();
           }
@@ -287,13 +282,9 @@ public class UnnestDimensionCursor implements Cursor
   @Override
   public void advanceUninterruptibly()
   {
-    while (true) {
+    do {
       advanceAndUpdate();
-      boolean match = valueMatcher.matches();
-      if (match || baseCursor.isDone()) {
-        return;
-      }
-    }
+    } while (matchAndProceed());
   }
 
   @Override
@@ -302,6 +293,10 @@ public class UnnestDimensionCursor implements Cursor
     if (needInitialization && !baseCursor.isDone()) {
       initialize();
     }
+    // If the filter does not match any dimensions
+    // No need to move cursor and do extra work
+    if (allowFilter != null && matchBitSet.isEmpty())
+      return true;
     return baseCursor.isDone();
   }
 
@@ -323,6 +318,29 @@ public class UnnestDimensionCursor implements Cursor
   }
 
   /**
+   * This advances the unnest cursor in cases where an allowList is specified
+   * and the current value at the unnest cursor is not in the allowList.
+   * The cursor in such cases is moved till the next match is found.
+   *
+   * @return a boolean to indicate whether to stay or move cursor
+   */
+  private boolean matchAndProceed()
+  {
+    boolean matchStatus;
+    if ((allowFilter == null) && matchBitSet.isEmpty()) {
+      matchStatus = true;
+    } else {
+      if (indexedIntsForCurrentRow==null || indexedIntsForCurrentRow.size() == 0) {
+        matchStatus = false;
+      }
+      else {
+        matchStatus = matchBitSet.get(indexedIntsForCurrentRow.get(indexForRow));
+      }
+    }
+    return !baseCursor.isDone() && !matchStatus;
+  }
+
+  /**
    * This initializes the unnest cursor and creates data structures
    * to start iterating over the values to be unnested.
    * This would also create a bitset for dictonary encoded columns to
@@ -336,53 +354,30 @@ public class UnnestDimensionCursor implements Cursor
         match each item with the filter and populate bitset if there's a match
      */
 
-    AtomicInteger idRef = new AtomicInteger();
-    ValueMatcher myMatcher = allowFilter.makeMatcher(new ColumnSelectorFactory()
-    {
-      @Override
-      public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
+    if (allowFilter != null) {
+      AtomicInteger idRef = new AtomicInteger();
+      ValueMatcher myMatcher = allowFilter.makeMatcher(new ColumnSelectorFactory()
       {
-        if (!outputName.equals(dimensionSpec.getDimension())) {
-          throw new ISE("Asked for bad dimension[%s]", dimensionSpec);
-        }
-        return new DimensionSelector()
+        @Override
+        public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
         {
-          private final IndexedInts myInts = new IndexedInts()
-          {
-            @Override
-            public int size()
-            {
-              return 1;
-            }
-
-            @Override
-            public int get(int index)
-            {
-              return 1;
-            }
-
-            @Override
-            public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-            {
-
-            }
-          };
-          @Override
-          public IndexedInts getRow()
-          {
-            return myInts;
+          if (!outputName.equals(dimensionSpec.getDimension())) {
+            throw new ISE("Asked for bad dimension[%s]", dimensionSpec);
           }
-
-          @Override
-          public ValueMatcher makeValueMatcher(@Nullable String value)
+          return new DimensionSelector()
           {
-            // Handle value is null
-            return new ValueMatcher()
+            private final IndexedInts myInts = new IndexedInts()
             {
               @Override
-              public boolean matches()
+              public int size()
               {
-                 return value.equals(lookupName(1));
+                return 1;
+              }
+
+              @Override
+              public int get(int index)
+              {
+                return 1;
               }
 
               @Override
@@ -391,152 +386,175 @@ public class UnnestDimensionCursor implements Cursor
 
               }
             };
-          }
 
-          @Override
-          public ValueMatcher makeValueMatcher(Predicate<String> predicate)
-          {
-            return new ValueMatcher()
+            @Override
+            public IndexedInts getRow()
             {
-              @Override
-              public boolean matches()
-              {
-                return predicate.apply(lookupName(1));
-              }
-
-              @Override
-              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-              {
-
-              }
+              return myInts;
             }
-          }
 
-          @Override
-          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-          {
+            @Override
+            public ValueMatcher makeValueMatcher(@Nullable String value)
+            {
+              // Handle value is null
+              return new ValueMatcher()
+              {
+                @Override
+                public boolean matches()
+                {
+                  return value.equals(lookupName(1));
+                }
 
-          }
+                @Override
+                public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+                {
 
-          @Nullable
-          @Override
-          public Object getObject()
-          {
-            return null;
-          }
+                }
+              };
+            }
 
-          @Override
-          public Class<?> classOfObject()
-          {
-            return null;
-          }
+            @Override
+            public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+            {
+              return new ValueMatcher()
+              {
+                @Override
+                public boolean matches()
+                {
+                  return predicate.apply(lookupName(1));
+                }
 
-          @Override
-          public int getValueCardinality()
-          {
-            return dimSelector.getValueCardinality();
-          }
+                @Override
+                public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+                {
 
-          @Nullable
-          @Override
-          public String lookupName(int id)
-          {
-            return dimSelector.lookupName(idRef.get());
-          }
+                }
+              };
+            }
 
-          @Override
-          public boolean nameLookupPossibleInAdvance()
-          {
-            return dimSelector.nameLookupPossibleInAdvance();
-          }
+            @Override
+            public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+            {
 
-          @Nullable
-          @Override
-          public IdLookup idLookup()
-          {
-            return dimSelector.idLookup();
-          }
+            }
+
+            @Nullable
+            @Override
+            public Object getObject()
+            {
+              return null;
+            }
+
+            @Override
+            public Class<?> classOfObject()
+            {
+              return null;
+            }
+
+            @Override
+            public int getValueCardinality()
+            {
+              return dimSelector.getValueCardinality();
+            }
+
+            @Nullable
+            @Override
+            public String lookupName(int id)
+            {
+              return dimSelector.lookupName(idRef.get());
+            }
+
+            @Override
+            public boolean nameLookupPossibleInAdvance()
+            {
+              return dimSelector.nameLookupPossibleInAdvance();
+            }
+
+            @Nullable
+            @Override
+            public IdLookup idLookup()
+            {
+              return dimSelector.idLookup();
+            }
+          };
         }
-      }
 
-      @Override
-      public ColumnValueSelector makeColumnValueSelector(String columnName)
-      {
-        return new ColumnValueSelector()
+        @Override
+        public ColumnValueSelector makeColumnValueSelector(String columnName)
         {
-          @Override
-          public double getDouble()
+          return new ColumnValueSelector()
           {
-            return Double.parseDouble(dimSelector.lookupName(idRef.get()));
-          }
+            @Override
+            public double getDouble()
+            {
+              return Double.parseDouble(dimSelector.lookupName(idRef.get()));
+            }
 
-          @Override
-          public float getFloat()
-          {
-            return 0;
-          }
+            @Override
+            public float getFloat()
+            {
+              return 0;
+            }
 
-          @Override
-          public long getLong()
-          {
-            return 0;
-          }
+            @Override
+            public long getLong()
+            {
+              return 0;
+            }
 
-          @Override
-          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-          {
+            @Override
+            public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+            {
 
-          }
+            }
 
-          @Override
-          public boolean isNull()
-          {
-            return false;
-          }
+            @Override
+            public boolean isNull()
+            {
+              return false;
+            }
 
-          @Nullable
-          @Override
-          public Object getObject()
-          {
-            return null;
-          }
+            @Nullable
+            @Override
+            public Object getObject()
+            {
+              return null;
+            }
 
-          @Override
-          public Class classOfObject()
-          {
-            return null;
-          }
+            @Override
+            public Class classOfObject()
+            {
+              return null;
+            }
+          };
         }
-      }
 
-      @Nullable
-      @Override
-      public ColumnCapabilities getColumnCapabilities(String column)
-      {
+        @Nullable
+        @Override
+        public ColumnCapabilities getColumnCapabilities(String column)
+        {
+          return getColumnSelectorFactory().getColumnCapabilities(column);
+        }
+      });
 
-      }
-    });
-
-    for (int i = 0; i < dimSelector.getValueCardinality(); ++i) {
-      idRef.set(i);
-      if (myMatcher.matches()) {
-        bitSet.set(i, true);
+      for (int i = 0; i < dimSelector.getValueCardinality(); ++i) {
+        idRef.set(i);
+        if (myMatcher.matches()) {
+          matchBitSet.set(i);
+        }
       }
     }
 
     indexForRow = 0;
-    if (allowFilter != null) {
-      this.valueMatcher = allowFilter.makeMatcher(this.getColumnSelectorFactory());
-    } else {
-      this.valueMatcher = BooleanValueMatcher.of(true);
-    }
     this.indexIntsForRow = new SingleIndexInts();
 
     if (dimSelector.getObject() != null) {
       this.indexedIntsForCurrentRow = dimSelector.getRow();
     }
-    if (!valueMatcher.matches() && !baseCursor.isDone()) {
-      advance();
+    if (!matchBitSet.isEmpty()) {
+      if (!matchBitSet.get(indexedIntsForCurrentRow.get(indexForRow))) {
+        advance();
+      }
     }
     needInitialization = false;
   }

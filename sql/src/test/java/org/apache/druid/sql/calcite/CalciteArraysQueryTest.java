@@ -3009,8 +3009,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     // Generates 2 native queries with 2 different values of vectorize
     cannotVectorize();
     testQuery(
-        "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where dim2 IN ('a','b','ab','abc') LIMIT 2",
-//        "SELECT d3 FROM (select * from druid.numfoo where dim2 IN ('a','b','ab','abc') LIMIT 2), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
+        "SELECT d3 FROM (select * from druid.numfoo where dim2 IN ('a','b','ab','abc') LIMIT 2), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
@@ -3451,7 +3450,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                       "EXPR$0",
                       new InDimFilter("EXPR$0", ImmutableList.of("1.0", "2.0"), null)
                   ))
-                .virtualColumns(expressionVirtualColumn(
+                  .virtualColumns(expressionVirtualColumn(
                       "v0",
                       "array(\"dim2\",\"dim4\")",
                       ColumnType.STRING_ARRAY
@@ -3600,7 +3599,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             new Object[]{"c"},
             new Object[]{"d"},
             new Object[]{""},
-            new Object[]{""},
             new Object[]{""}
         ) :
         ImmutableList.of(
@@ -3608,7 +3606,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             new Object[]{"c"},
             new Object[]{"d"},
             new Object[]{""},
-            new Object[]{null},
             new Object[]{null}
         )
     );
