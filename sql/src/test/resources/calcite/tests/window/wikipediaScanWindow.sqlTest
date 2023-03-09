@@ -1,4 +1,4 @@
-type: "operatorValidation"
+type: "failingTest"
 
 sql: |
   SELECT
@@ -18,6 +18,6 @@ expectedOperators:
       outputColumn: w0
       offset: -1
 
-# Not correct: there should actually be results here. Therefore, currently, this test only verifies that the
-# query is planned as expected, not that the results are correct.
+# Not correct: there should actually be results for this query. But when the query runs, at the time I write this, it
+# does not return any results at all. Therefore, we leave expectedResults empty and mark the test as a failingTest.
 expectedResults: []
