@@ -64,7 +64,6 @@ public class SegmentGenerationProgressCounter implements QueryCounter
     }
 
     @JsonProperty(value = "rowsProcessed")
-    @JsonInclude(JsonInclude.Include.NON_NULL)
     public long getRowsProcessed()
     {
       return rowsProcessed;
