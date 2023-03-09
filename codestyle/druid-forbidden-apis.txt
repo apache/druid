@@ -41,7 +41,6 @@ java.util.HashSet#<init>(int, float) @ Use com.google.collect.Sets#newHashSetWit
 java.util.LinkedHashSet#<init>(int) @ Use com.google.collect.Sets#newLinkedHashSatWithExpectedSize(int) instead
 java.util.LinkedHashSet#<init>(int, float) @ Use com.google.collect.Sets#newLinkedHashSatWithExpectedSize(int) instead
 java.util.LinkedList @ Use ArrayList or ArrayDeque instead
-java.util.Properties#get(java.lang.Object) @ Properties#get method does not check the default map for values. Use Properties#getProperty() instead.
 java.util.Properties#getOrDefault(java.lang.Object,java.lang.Object) @ Properties#getOrDefault method does not check the default map for values. Use Properties#getProperty() instead.
 java.util.Random#<init>() @ Use ThreadLocalRandom.current() or the constructor with a seed (the latter in tests only!)
 java.lang.Math#random() @ Use ThreadLocalRandom.current()
