@@ -105,11 +105,12 @@ public class DruidUnnestRule extends RelOptRule
     final Uncollect uncollectRel = call.rel(0);
     final Project projectRel = call.rel(1);
 
-    if (RexUtil.isConstant(projectRel.getProjects().get(0))) {
+    final RexNode exprToUnnest = projectRel.getProjects().get(0);
+    if (RexUtil.isConstant(exprToUnnest)) {
       // Constant expression: transform to DruidQueryRel on an inline datasource.
       final InlineDataSource inlineDataSource = toInlineDataSource(
           uncollectRel,
-          projectRel.getProjects().get(0),
+          exprToUnnest,
           plannerContext
       );
 
@@ -126,7 +127,9 @@ public class DruidUnnestRule extends RelOptRule
       // Transform to DruidUnnestRel, a holder for an unnest of a correlated variable.
       call.transformTo(
           DruidUnnestRel.create(
-              (Uncollect) uncollectRel.copy(uncollectRel.getTraitSet(), projectRel),
+              uncollectRel.getCluster(),
+              uncollectRel.getTraitSet(),
+              exprToUnnest,
               plannerContext
           )
       );

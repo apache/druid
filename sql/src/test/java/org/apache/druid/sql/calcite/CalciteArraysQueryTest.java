@@ -45,6 +45,7 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -3213,7 +3214,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         + "  UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)\n"
         + "WHERE t.dim2='a'"
         + "AND t.dim1 <> 'foo'\n"
-        + "AND unnested.d3 <> 'b'",
+        + "AND (unnested.d3 <> 'b' OR unnested.d3 IN ('a', 'c') OR unnested.d3 LIKE 'd%')",
         QUERY_CONTEXT_UNNEST,
         ImmutableList.of(
             Druids.newScanQueryBuilder()
@@ -3228,7 +3229,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                       and(
                           selector("dim2", "a", null),
                           not(selector("dim1", "foo", null)),
-                          not(selector("j0.unnest", "b", null))
+                          or(
+                              not(selector("j0.unnest", "b", null)),
+                              new LikeDimFilter("j0.unnest", "d%", null, null),
+                              in("j0.unnest", ImmutableList.of("a", "c"), null)
+                          )
                       )
                   )
                   .legacy(false)

@@ -19,24 +19,26 @@
 
 package org.apache.druid.sql.calcite.rel;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
-import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Uncollect;
+import org.apache.calcite.rel.logical.LogicalProject;
+import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexShuttle;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.query.TableDataSource;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Set;
 
 /**
- * Captures the unnest (i.e. {@link Uncollect}) part of a correlated unnesting join.
+ * Captures an unnest expression for a correlated join. Derived from an {@link Uncollect}.
  *
  * This rel cannot be executed directly. It is a holder of information for {@link DruidCorrelateUnnestRel}.
  *
@@ -47,58 +49,68 @@ import java.util.Set;
  */
 public class DruidUnnestRel extends DruidRel<DruidUnnestRel>
 {
-  private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__unnest__");
+  private static final String FIELD_NAME = "UNNEST";
 
   /**
-   * An {@link Uncollect} on top of a {@link Project} that generates an expression to be unnested. The underlying
-   * {@link Project} is not expected to reference any bits of its input; instead it references either a constant or
-   * a correlation variable through a {@link org.apache.calcite.rex.RexFieldAccess}.
+   * Expression to be unnested. May be constant or may reference a correlation variable through a
+   * {@link org.apache.calcite.rex.RexFieldAccess}.
    */
-  private final Uncollect uncollect;
+  private final RexNode inputRexNode;
 
   private DruidUnnestRel(
       final RelOptCluster cluster,
       final RelTraitSet traits,
-      final Uncollect uncollect,
+      final RexNode inputRexNode,
       final PlannerContext plannerContext
   )
   {
     super(cluster, traits, plannerContext);
-    this.uncollect = uncollect;
-
-    if (!(uncollect.getInputs().get(0) instanceof Project)) {
-      // Validate that the Uncollect reads from a Project.
-      throw new ISE(
-          "Uncollect must reference Project, but child was [%s]",
-          uncollect.getInputs().get(0)
-      );
-    }
+    this.inputRexNode = inputRexNode;
   }
 
-  public static DruidUnnestRel create(final Uncollect uncollect, final PlannerContext plannerContext)
+  public static DruidUnnestRel create(
+      final RelOptCluster cluster,
+      final RelTraitSet traits,
+      final RexNode unnestRexNode,
+      final PlannerContext plannerContext
+  )
   {
+    if (!RelOptUtil.InputFinder.bits(unnestRexNode).isEmpty()) {
+      throw new ISE("Expression must not include field references");
+    }
+
     return new DruidUnnestRel(
-        uncollect.getCluster(),
-        uncollect.getTraitSet(),
-        uncollect,
+        cluster,
+        traits,
+        unnestRexNode,
         plannerContext
     );
   }
 
-  /**
-   * Uncollect (unnest) operation that references the {@link #getUnnestProject()}.
-   */
-  public Uncollect getUncollect()
+  @Override
+  @SuppressWarnings("ObjectEquality")
+  public RelNode accept(RexShuttle shuttle)
   {
-    return uncollect;
+    final RexNode newInputRexNode = shuttle.apply(inputRexNode);
+
+    if (newInputRexNode == inputRexNode) {
+      return this;
+    } else {
+      return new DruidUnnestRel(
+          getCluster(),
+          getTraitSet(),
+          newInputRexNode,
+          getPlannerContext()
+      );
+    }
   }
 
   /**
-   * Project that generates the expression to be unnested.
+   * Expression to be unnested.
    */
-  public Project getUnnestProject()
+  public RexNode getInputRexNode()
   {
-    return (Project) uncollect.getInputs().get(0);
+    return inputRexNode;
   }
 
   @Override
@@ -114,17 +126,14 @@ public class DruidUnnestRel extends DruidRel<DruidUnnestRel>
   }
 
   /**
-   * Returns a new rel with the {@link #getUnnestProject()} replaced.
+   * Returns a new rel with a new input. The output type is unchanged.
    */
-  public DruidUnnestRel withUnnestProject(final Project newUnnestProject)
+  public DruidUnnestRel withUnnestRexNode(final RexNode newInputRexNode)
   {
     return new DruidUnnestRel(
         getCluster(),
         getTraitSet(),
-        (Uncollect) uncollect.copy(
-            uncollect.getTraitSet(),
-            newUnnestProject
-        ),
+        newInputRexNode,
         getPlannerContext()
     );
   }
@@ -139,18 +148,8 @@ public class DruidUnnestRel extends DruidRel<DruidUnnestRel>
   @Override
   public DruidQuery toDruidQueryForExplaining()
   {
-    return PartialDruidQuery
-        .create(uncollect)
-        .build(
-            DUMMY_DATA_SOURCE,
-            RowSignatures.fromRelDataType(
-                uncollect.getRowType().getFieldNames(),
-                uncollect.getRowType()
-            ),
-            getPlannerContext(),
-            getCluster().getRexBuilder(),
-            false
-        );
+    // DruidUnnestRel is a holder for info for DruidCorrelateUnnestRel. It cannot be executed on its own.
+    throw new CannotBuildQueryException("Cannot execute UNNEST directly");
   }
 
   @Nullable
@@ -160,7 +159,7 @@ public class DruidUnnestRel extends DruidRel<DruidUnnestRel>
     return new DruidUnnestRel(
         getCluster(),
         getTraitSet().replace(DruidConvention.instance()),
-        uncollect,
+        inputRexNode,
         getPlannerContext()
     );
   }
@@ -168,20 +167,7 @@ public class DruidUnnestRel extends DruidRel<DruidUnnestRel>
   @Override
   public RelWriter explainTerms(RelWriter pw)
   {
-    final String queryString;
-    final DruidQuery druidQuery = toDruidQueryForExplaining();
-
-    try {
-      queryString = getPlannerContext().getJsonMapper().writeValueAsString(druidQuery.getQuery());
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
-
-    return pw.item("unnestProject", getUnnestProject())
-             .item("uncollect", getUncollect())
-             .item("query", queryString)
-             .item("signature", druidQuery.getOutputRowSignature());
+    return pw.item("expr", inputRexNode);
   }
 
   @Override
@@ -193,6 +179,13 @@ public class DruidUnnestRel extends DruidRel<DruidUnnestRel>
   @Override
   protected RelDataType deriveRowType()
   {
-    return uncollect.getRowType();
+    return Uncollect.deriveUncollectRowType(
+        LogicalProject.create(
+            LogicalValues.createOneRow(getCluster()),
+            Collections.singletonList(inputRexNode),
+            Collections.singletonList(FIELD_NAME)
+        ),
+        false
+    );
   }
 }

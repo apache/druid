@@ -19,9 +19,6 @@
 
 package org.apache.druid.sql.calcite.rel;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.calcite.rel.RelWriter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
@@ -96,21 +93,6 @@ public class DruidRels
       return druidRel.withPartialQuery(
           PartialDruidQuery.create(druidRel.getPartialDruidQuery().getScan())
       ).toDruidQuery(false).getOutputRowSignature();
-    }
-  }
-
-  /**
-   * Return a JSON representation of a query suitable for implementing {@link DruidRel#explainTerms(RelWriter)}.
-   */
-  public static String toQueryStringForExplaining(final DruidRel<?> rel, final ObjectMapper mapper)
-  {
-    final DruidQuery druidQuery = rel.toDruidQueryForExplaining();
-
-    try {
-      return mapper.writeValueAsString(druidQuery.getQuery());
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
     }
   }
 }

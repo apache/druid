@@ -103,18 +103,18 @@ public class DruidCorrelateUnnestRule extends RelOptRule
 
     if (DruidRels.isScanOrProject(left, true)
         && left.getPartialDruidQuery().getSelectProject() != null
-        && RelOptUtil.InputFinder.bits(right.getUnnestProject().getProjects(), null).isEmpty()) {
+        && RelOptUtil.InputFinder.bits(right.getInputRexNode()).isEmpty()) {
       // Pull left-side Project above the Correlate, so we can eliminate a subquery.
       final RelNode leftScan = left.getPartialDruidQuery().getScan();
       final Project leftProject = left.getPartialDruidQuery().getSelectProject();
 
-      // Rewrite right-side Project on top of leftScan rather than leftProject.
+      // Rewrite right-side expression on top of leftScan rather than leftProject.
+      final CorrelationId newCorrelationId = correlate.getCluster().createCorrel();
       final PushCorrelatedFieldAccessPastProject correlatedFieldRewriteShuttle =
-          new PushCorrelatedFieldAccessPastProject(correlate.getCorrelationId(), leftProject);
-      final List<RexNode> newRightProjectExprs =
-          correlatedFieldRewriteShuttle.apply(right.getUnnestProject().getProjects());
+          new PushCorrelatedFieldAccessPastProject(correlate.getCorrelationId(), newCorrelationId, leftProject);
+      final RexNode newUnnestRexNode = correlatedFieldRewriteShuttle.apply(right.getInputRexNode());
 
-      // Pull the Project out of the left side of the Correlate.
+      // Build the new Correlate rel and a DruidCorrelateUnnestRel wrapper.
       final DruidCorrelateUnnestRel druidCorrelateUnnest = DruidCorrelateUnnestRel.create(
           correlate.copy(
               correlate.getTraitSet(),
@@ -122,16 +122,9 @@ public class DruidCorrelateUnnestRule extends RelOptRule
               // Left side: remove Project.
               left.withPartialQuery(PartialDruidQuery.create(leftScan)),
 
-              // Right side: use rewritten newRightProjectExprs, pushed past the left Project.
-              right.withUnnestProject(
-                  right.getUnnestProject().copy(
-                      right.getUnnestProject().getTraitSet(),
-                      right.getUnnestProject().getInput(),
-                      newRightProjectExprs,
-                      right.getUnnestProject().getRowType()
-                  )
-              ),
-              correlate.getCorrelationId(),
+              // Right side: use rewritten newUnnestRexNode, pushed past the left Project.
+              right.withUnnestRexNode(newUnnestRexNode),
+              newCorrelationId,
               ImmutableBitSet.of(correlatedFieldRewriteShuttle.getRequiredColumns()),
               correlate.getJoinType()
           ),
@@ -141,7 +134,7 @@ public class DruidCorrelateUnnestRule extends RelOptRule
       // Add right-side input refs to the Project, so it matches the full original Correlate.
       final RexBuilder rexBuilder = correlate.getCluster().getRexBuilder();
       final List<RexNode> pulledUpProjects = new ArrayList<>(leftProject.getProjects());
-      for (int i = 0 ; i < right.getRowType().getFieldCount(); i++ ) {
+      for (int i = 0; i < right.getRowType().getFieldCount(); i++) {
         pulledUpProjects.add(rexBuilder.makeInputRef(druidCorrelateUnnest, i + leftScan.getRowType().getFieldCount()));
       }
 
@@ -170,6 +163,7 @@ public class DruidCorrelateUnnestRule extends RelOptRule
   private static class PushCorrelatedFieldAccessPastProject extends RexShuttle
   {
     private final CorrelationId correlationId;
+    private final CorrelationId newCorrelationId;
     private final Project project;
 
     // "Sidecar" return value: computed along with the shuttling.
@@ -177,10 +171,12 @@ public class DruidCorrelateUnnestRule extends RelOptRule
 
     public PushCorrelatedFieldAccessPastProject(
         final CorrelationId correlationId,
+        final CorrelationId newCorrelationId,
         final Project project
     )
     {
       this.correlationId = correlationId;
+      this.newCorrelationId = newCorrelationId;
       this.project = project;
     }
 
@@ -199,7 +195,7 @@ public class DruidCorrelateUnnestRule extends RelOptRule
 
           // Rewrite RexInputRefs as correlation variable accesses.
           final RexBuilder rexBuilder = project.getCluster().getRexBuilder();
-          final RexNode newCorrel = rexBuilder.makeCorrel(project.getInput().getRowType(), correlationId);
+          final RexNode newCorrel = rexBuilder.makeCorrel(project.getInput().getRowType(), newCorrelationId);
           return new RexShuttle()
           {
             @Override

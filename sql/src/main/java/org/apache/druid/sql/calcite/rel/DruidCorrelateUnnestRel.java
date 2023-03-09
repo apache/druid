@@ -163,7 +163,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     );
 
     if (expressionToUnnest == null) {
-      throw new CannotBuildQueryException(unnestDatasourceRel.getUnnestProject(), rexNodeToUnnest);
+      throw new CannotBuildQueryException(unnestDatasourceRel, unnestDatasourceRel.getInputRexNode());
     }
 
     // Final output row signature.
@@ -369,7 +369,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     // variable. This is the expression to unnest.
     final RexNode rexNodeToUnnest =
         new CorrelatedFieldAccessToInputRef(correlate.getCorrelationId())
-            .apply(unnestDatasourceRel.getUnnestProject().getProjects().get(0));
+            .apply(unnestDatasourceRel.getInputRexNode());
 
     // Unwrap MV_TO_ARRAY if present.
     return unwrapMvToArray(rexNodeToUnnest);
