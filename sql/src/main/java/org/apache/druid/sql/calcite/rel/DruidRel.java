@@ -106,6 +106,13 @@ public abstract class DruidRel<T extends DruidRel<?>> extends AbstractRelNode
     throw new UnsupportedOperationException();
   }
 
+  @Override
+  protected Object clone() throws CloneNotSupportedException
+  {
+    // RelNode implements Cloneable, but our class of rels is not cloned, so does not need to implement clone().
+    throw new UnsupportedOperationException();
+  }
+
   /**
    * Returns a copy of this rel with the {@link DruidConvention} trait.
    */
