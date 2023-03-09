@@ -450,7 +450,7 @@ public class Windowing
     final LinkedHashSet<ColumnWithDirection> retVal = new LinkedHashSet<>();
 
     for (RelFieldCollation fieldCollation : collation.getFieldCollations()) {
-      ColumnWithDirection.Direction direction;
+      final ColumnWithDirection.Direction direction;
 
       switch (fieldCollation.getDirection()) {
         case ASCENDING:
