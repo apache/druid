@@ -41,7 +41,7 @@ import java.util.List;
  */
 public class ListCursor implements Cursor
 {
-  List<Object> baseList;
+  private final List<Object> baseList;
   private int index;
 
   public ListCursor(List<Object> inputList)
@@ -62,19 +62,19 @@ public class ListCursor implements Cursor
           @Override
           public IndexedInts getRow()
           {
-            return null;
+            throw new UnsupportedOperationException();
           }
 
           @Override
           public ValueMatcher makeValueMatcher(@Nullable String value)
           {
-            return null;
+            throw new UnsupportedOperationException();
           }
 
           @Override
           public ValueMatcher makeValueMatcher(Predicate<String> predicate)
           {
-            return null;
+            throw new UnsupportedOperationException();
           }
 
           @Override
@@ -96,20 +96,20 @@ public class ListCursor implements Cursor
           @Override
           public Class<?> classOfObject()
           {
-            return null;
+            return Object.class;
           }
 
           @Override
           public int getValueCardinality()
           {
-            return 0;
+            return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
           }
 
           @Nullable
           @Override
           public String lookupName(int id)
           {
-            return null;
+            throw new UnsupportedOperationException();
           }
 
           @Override
@@ -175,7 +175,7 @@ public class ListCursor implements Cursor
           @Override
           public Class classOfObject()
           {
-            return null;
+            return Object.class;
           }
         };
       }
@@ -192,7 +192,7 @@ public class ListCursor implements Cursor
   @Override
   public DateTime getTime()
   {
-    return null;
+    throw new UnsupportedOperationException();
   }
 
   @Override

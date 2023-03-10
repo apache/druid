@@ -193,7 +193,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       if (!bindableTables.isEmpty()) {
         // Consider BINDABLE convention when necessary. Used for metadata tables.
 
-        if (!handlerContext.plannerContext().engineHasFeature(EngineFeature.ALLOW_BINDABLE_PLAN)) {
+        if (!handlerContext.plannerContext().featureAvailable(EngineFeature.ALLOW_BINDABLE_PLAN)) {
           throw new ValidationException(
               StringUtils.format(
                   "Cannot query table%s %s with SQL engine '%s'.",

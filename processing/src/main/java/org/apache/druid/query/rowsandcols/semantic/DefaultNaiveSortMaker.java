@@ -97,7 +97,9 @@ public class DefaultNaiveSortMaker implements NaiveSortMaker
       }
 
       final int numColsToCompare = index;
-      Arrays.quickSort(
+
+      // Use stable sort, so peer rows retain original order.
+      Arrays.mergeSort(
           0,
           rac.numRows(),
           (k1, k2) -> {

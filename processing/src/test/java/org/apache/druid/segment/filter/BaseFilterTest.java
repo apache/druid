@@ -299,7 +299,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
     final Map<String, BitmapSerdeFactory> bitmapSerdeFactories = ImmutableMap.of(
         "concise", new ConciseBitmapSerdeFactory(),
-        "roaring", new RoaringBitmapSerdeFactory(true)
+        "roaring", RoaringBitmapSerdeFactory.getInstance()
     );
 
     final Map<String, SegmentWriteOutMediumFactory> segmentWriteOutMediumFactories = ImmutableMap.of(

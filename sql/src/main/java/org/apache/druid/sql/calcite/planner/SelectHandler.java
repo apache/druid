@@ -47,7 +47,7 @@ public class SelectHandler extends QueryHandler
   @Override
   public void validate() throws ValidationException
   {
-    if (!handlerContext.plannerContext().engineHasFeature(EngineFeature.CAN_SELECT)) {
+    if (!handlerContext.plannerContext().featureAvailable(EngineFeature.CAN_SELECT)) {
       throw new ValidationException(StringUtils.format(
           "Cannot execute SELECT with SQL engine '%s'.",
           handlerContext.engine().name())

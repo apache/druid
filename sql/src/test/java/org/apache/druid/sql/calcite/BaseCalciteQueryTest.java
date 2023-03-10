@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.DruidInjectorBuilder;
@@ -79,8 +80,6 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.sql.PreparedStatement;
-import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -894,16 +893,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   }
 
-  public Set<ResourceAction> analyzeResources(
-      final SqlStatementFactory sqlStatementFactory,
-      final SqlQueryPlus query
-  )
-  {
-    PreparedStatement stmt = sqlStatementFactory.preparedStatement(query);
-    stmt.prepare();
-    return stmt.allResources();
-  }
-
   public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
   {
     for (int i = 0; i < results.size(); i++) {
@@ -1231,35 +1220,53 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     PrintStream out = System.out;
     out.println("-- Actual results --");
     for (int rowIndex = 0; rowIndex < results.size(); rowIndex++) {
-      Object[] row = results.get(rowIndex);
-      out.print("new Object[] {");
-      for (int colIndex = 0; colIndex < row.length; colIndex++) {
-        Object col = row[colIndex];
-        if (colIndex > 0) {
-          out.print(", ");
-        }
-        if (col == null) {
-          out.print("null");
-        } else if (col instanceof String) {
-          out.print("\"");
-          out.print(col);
-          out.print("\"");
-        } else if (col instanceof Long) {
-          out.print(col);
-          out.print("L");
-        } else if (col instanceof Double) {
-          out.print(col);
-          out.print("D");
-        } else {
-          out.print(col);
-        }
-      }
-      out.print("}");
+      printArray(results.get(rowIndex), out);
       if (rowIndex < results.size() - 1) {
         out.print(",");
       }
       out.println();
     }
     out.println("----");
+  }
+
+  private static void printArray(final Object[] array, final PrintStream out)
+  {
+    printArrayImpl(array, out, "new Object[]{", "}");
+  }
+
+  private static void printList(final List<?> list, final PrintStream out)
+  {
+    printArrayImpl(list.toArray(new Object[0]), out, "ImmutableList.of(", ")");
+  }
+
+  private static void printArrayImpl(final Object[] array, final PrintStream out, final String pre, final String post)
+  {
+    out.print(pre);
+    for (int colIndex = 0; colIndex < array.length; colIndex++) {
+      Object col = array[colIndex];
+      if (colIndex > 0) {
+        out.print(", ");
+      }
+      if (col == null) {
+        out.print("null");
+      } else if (col instanceof String) {
+        out.print("\"");
+        out.print(StringEscapeUtils.escapeJava((String) col));
+        out.print("\"");
+      } else if (col instanceof Long) {
+        out.print(col);
+        out.print("L");
+      } else if (col instanceof Double) {
+        out.print(col);
+        out.print("D");
+      } else if (col instanceof Object[]) {
+        printArray(array, out);
+      } else if (col instanceof List) {
+        printList((List<?>) col, out);
+      } else {
+        out.print(col);
+      }
+    }
+    out.print(post);
   }
 }
