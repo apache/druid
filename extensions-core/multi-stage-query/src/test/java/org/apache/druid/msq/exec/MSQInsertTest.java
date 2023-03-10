@@ -27,6 +27,7 @@ import com.google.common.hash.Hashing;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.indexing.error.ColumnNameRestrictedFault;
 import org.apache.druid.msq.indexing.error.RowTooLargeFault;
@@ -36,6 +37,7 @@ import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -647,15 +649,23 @@ public class MSQInsertTest extends MSQTestBase
   @Test
   public void testRollUpOnFoo1PostAggShouldFail()
   {
+    Map<String, Object> localContext = ImmutableMap.<String, Object>builder()
+                                                   .putAll(context)
+                                                   .put(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false)
+                                                   .put(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false)
+                                                   .build();
     testIngestQuery().setSql(
                          "insert into foo1 select  __time , dim1 , count(dim2)/count(dim1) as ratio from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
                      .setExpectedDataSource("foo1")
-                     .setQueryContext(ROLLUP_CONTEXT)
+                     .setQueryContext(localContext)
                      .setExpectedRollUp(true)
                      .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
                          CoreMatchers.instanceOf(ISE.class),
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "Unable to run the statement in roll up mode. Please try disabling the rollup mode. Check SQL-based ingestion docs for instructions."))
+                             StringUtils.format(
+                                 "Cannot use aggregator [%s] with input fields [%s] in the rollup mode. It might be using a post aggregator. Please check the native plan to figure out more information about the aggregator. You can disable the rollup mode or use a different aggregator. Please refer to SQL-based ingestion docs for more details.",
+                                 "a0",
+                                 "[dim2]")))
                      ))
                      .verifyExecutionError();
   }
@@ -685,12 +695,14 @@ public class MSQInsertTest extends MSQTestBase
     testIngestQuery().setSql(
                          "insert into foo1 select  __time , dim1 , count(dim2)/count(dim1) as ratio from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
                      .setExpectedDataSource("foo1")
+                     .setQueryContext(context)
                      .setExpectedRollUp(false)
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedSegment(expectedFooSegments())
                      .setExpectedResultRows(expectedRows)
                      .verifyResults();
   }
+
   @Test
   public void testInsertWrongTypeTimestamp()
   {

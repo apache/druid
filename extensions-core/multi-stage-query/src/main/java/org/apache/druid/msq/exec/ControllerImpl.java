@@ -1844,7 +1844,10 @@ public class ControllerImpl implements Controller
         List<String> outputColumns = columnMappings.getOutputColumnsForQueryColumn(aggregatorFactory.getName());
         if (outputColumns == null || outputColumns.size() != 1) {
           throw new ISE(
-              "Unable to run the statement in roll up mode. Please try disabling the rollup mode. Check SQL-based ingestion docs for instructions.");
+              "Cannot use aggregator [%s] with input fields [%s] in the rollup mode. It might be using a post aggregator. Please check the native plan to figure out more information about the aggregator. You can disable the rollup mode or use a different aggregator. Please refer to SQL-based ingestion docs for more details.",
+              aggregatorFactory.getName(),
+              aggregatorFactory.requiredFields()
+          );
         }
 
         String outputColumn = Iterables.getOnlyElement(outputColumns);
