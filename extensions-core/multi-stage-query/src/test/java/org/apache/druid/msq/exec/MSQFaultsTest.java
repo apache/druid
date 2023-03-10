@@ -66,7 +66,8 @@ public class MSQFaultsTest extends MSQTestBase
     Mockito.doReturn(null).when(testTaskActionClient).submit(isA(SegmentAllocateAction.class));
 
     testIngestQuery()
-        .setSql("insert into foo1\n" + "select  __time, dim1 , count(*) as cnt\n"
+        .setSql("insert into foo1\n"
+              + "select  __time, dim1, count(*) as cnt\n"
               + "from foo\n"
               + "where dim1 is not null and __time >= TIMESTAMP '2000-01-02 00:00:00' and __time < TIMESTAMP '2000-01-03 00:00:00'\n"
               + "group by 1, 2\n"
@@ -95,7 +96,7 @@ public class MSQFaultsTest extends MSQTestBase
     //Insert with a condition which results in 0 rows being inserted
     testIngestQuery()
         .setSql("insert into foo1\n"
-              + "select  __time, dim1 , count(*) as cnt\n"
+              + "select  __time, dim1, count(*) as cnt\n"
               + "from foo\n" + "where dim1 is not null and __time < TIMESTAMP '1971-01-01 00:00:00'\n"
               + "group by 1, 2\n"
               + "PARTITIONED by day\n"
@@ -167,7 +168,11 @@ public class MSQFaultsTest extends MSQTestBase
             + "SELECT TIME_PARSE(dim1) AS __time, dim1 as cnt\n"
             + "FROM foo\n"
             + "PARTITIONED BY DAY\n"
-            + "CLUSTERED BY cnt")
+            // Note the reference to an input column. Ideally, CLUSTERED BY references
+            // only output columns, since those also exist at compaction time. But,
+            // early versions of MSQ allowed referencing input columns and we can't
+            // break existing uses.
+            + "CLUSTERED BY dim1")
         .setExpectedDataSource("foo1")
         .setExpectedRowSignature(rowSignature)
         .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.of("2000-01-01T/P1M"), "test", 0)))

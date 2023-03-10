@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -563,23 +564,6 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertClusteredByWithDuplicateOrdinal()
-  {
-    testIngestionQuery()
-        .sql(
-            "INSERT INTO druid.dst\n"
-            + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo\n"
-            + "PARTITIONED BY FLOOR(__time TO DAY)\n"
-            + "CLUSTERED BY 3, 2, 3"
-        )
-        .expectValidationError(
-            SqlPlanningException.class,
-            "Duplicate CLUSTERED BY key: [3]"
-        )
-        .verify();
-  }
-
-  @Test
   public void testInsertClusteredByWithInvalidName()
   {
     testIngestionQuery()
@@ -596,71 +580,189 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .verify();
   }
 
+  /**
+   * Test if CLUSTERED BY can reference an input source column by qualified
+   * name. This should not work. However, early versions of MSQ did support
+   * this form an it we cannot change existing behavior.
+   */
   @Test
   public void testInsertClusteredByWithCompoundName()
   {
+    RowSignature targetRowSignature = RowSignature.builder()
+                                                  .add("__time", ColumnType.LONG)
+                                                  .add("floor_m1", ColumnType.FLOAT)
+                                                  .add("dim1", ColumnType.STRING)
+                                                  .add("ceil_m2", ColumnType.DOUBLE)
+                                                  .build();
     testIngestionQuery()
-        .sql(
-            "INSERT INTO druid.dst\n"
-            + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo\n"
-            + "PARTITIONED BY FLOOR(__time TO DAY)\n"
-            + "CLUSTERED BY foo.dim1"
+        .sql("INSERT INTO druid.dst\n"
+           + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2\n"
+           + "FROM foo\n"
+           + "PARTITIONED BY FLOOR(__time TO DAY)\n"
+           + "CLUSTERED BY foo.dim1"
          )
-        .expectValidationError(
-            SqlPlanningException.class,
-            "CLUSTERED BY keys must be a simple name with no dots: [foo.dim1]"
-         )
+        .expectTarget("dst", targetRowSignature)
+        .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource("foo")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time", "dim1", "v0", "v1")
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT),
+                    expressionVirtualColumn("v1", "ceil(\"m2\")", ColumnType.DOUBLE)
+                )
+                .orderBy(
+                    ImmutableList.of(
+                        new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)
+                    )
+                )
+                .context(queryContextWithGranularity(Granularities.DAY))
+                .build()
+        )
         .verify();
   }
 
+  /**
+   * Test if CLUSTERED BY can reference an input source column by qualified
+   * name when the column is not projected. The resulting error is not a validation
+   * error (sadly), so we can't use the normal failure validation.
+   */
+  @Test
+  public void testInsertClusteredByWithInputColumn()
+  {
+    RowSignature targetRowSignature = RowSignature.builder()
+                                                  .add("__time", ColumnType.LONG)
+                                                  .add("floor_m1", ColumnType.FLOAT)
+                                                  .add("dim1", ColumnType.STRING)
+                                                  .add("ceil_m2", ColumnType.DOUBLE)
+                                                  .build();
+    try {
+      testIngestionQuery()
+          .sql("INSERT INTO druid.dst\n"
+             + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2\n"
+             + "FROM foo\n"
+             + "PARTITIONED BY FLOOR(__time TO DAY)\n"
+             + "CLUSTERED BY foo.dim2"
+           )
+          .expectTarget("dst", targetRowSignature)
+          .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+          .expectQuery(
+              newScanQueryBuilder()
+                  .dataSource("foo")
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("__time", "dim1", "v0", "v1")
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT),
+                      expressionVirtualColumn("v1", "ceil(\"m2\")", ColumnType.DOUBLE)
+                  )
+                  .orderBy(
+                      ImmutableList.of(
+                          new ScanQuery.OrderBy("dim2", ScanQuery.Order.ASCENDING)
+                      )
+                  )
+                  .context(queryContextWithGranularity(Granularities.DAY))
+                  .build()
+          )
+          .verify();
+      Assert.fail("Exception should be thrown");
+    }
+    catch (IAE e) {
+      Assert.assertEquals(
+          "Column [dim2] from 'orderBy' must also appear in 'columns'.",
+          e.getMessage()
+      );
+    }
+    finally {
+      didTest = true;
+    }
+  }
+
+  /**
+   * The Calcite rewrite rules are smart enough to remove duplicate CLUSTERED BY keys.
+   */
   @Test
   public void testInsertClusteredByWithDuplicateName()
   {
+    RowSignature targetRowSignature = RowSignature
+        .builder()
+        .add("__time", ColumnType.LONG)
+        .add("floor_m1", ColumnType.FLOAT)
+        .add("dim1", ColumnType.STRING)
+        .add("ceil_m2", ColumnType.DOUBLE)
+        .build();
+
     testIngestionQuery()
-        .sql(
-            "INSERT INTO druid.dst\n"
-            + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo\n"
-            + "PARTITIONED BY FLOOR(__time TO DAY)\n"
-            + "CLUSTERED BY dim1, floor_m1, dim1"
+        .sql("INSERT INTO druid.dst\n"
+           + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2\n"
+           + "FROM foo\n"
+           + "PARTITIONED BY FLOOR(__time TO DAY)\n"
+           + "CLUSTERED BY dim1, floor_m1, dim1"
         )
-        .expectValidationError(
-            SqlPlanningException.class,
-            "Duplicate CLUSTERED BY key: [dim1]"
-        )
+        .expectTarget("dst", targetRowSignature)
+        .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource("foo")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time", "dim1", "v0", "v1")
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT),
+                    expressionVirtualColumn("v1", "ceil(\"m2\")", ColumnType.DOUBLE)
+                )
+                .orderBy(
+                    ImmutableList.of(
+                        new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING),
+                        new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING)
+                    )
+                )
+                .context(queryContextWithGranularity(Granularities.DAY))
+                .build()
+         )
         .verify();
   }
 
-  @Test
-  public void testInsertClusteredByWithDuplicateOrdinalAndName()
-  {
-    testIngestionQuery()
-        .sql(
-            "INSERT INTO druid.dst\n"
-            + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo\n"
-            + "PARTITIONED BY FLOOR(__time TO DAY)\n"
-            + "CLUSTERED BY 3, 2, dim1"
-        )
-        .expectValidationError(
-            SqlPlanningException.class,
-            "Duplicate CLUSTERED BY key: [dim1]"
-        )
-        .verify();
-  }
-
+  /**
+   * The Calcite rewrite rules are smart enough to remove duplicate CLUSTERED BY keys.
+   */
   @Test
   public void testInsertClusteredByWithDuplicateNameAndOrdinal()
   {
+    RowSignature targetRowSignature = RowSignature
+        .builder()
+        .add("__time", ColumnType.LONG)
+        .add("floor_m1", ColumnType.FLOAT)
+        .add("dim1", ColumnType.STRING)
+        .add("ceil_m2", ColumnType.DOUBLE)
+        .build();
+
     testIngestionQuery()
-        .sql(
-            "INSERT INTO druid.dst\n"
-            + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo\n"
-            + "PARTITIONED BY FLOOR(__time TO DAY)\n"
-            + "CLUSTERED BY dim1, 2, 3"
+        .sql("INSERT INTO druid.dst\n"
+           + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2\n"
+           + "FROM foo\n"
+           + "PARTITIONED BY FLOOR(__time TO DAY)\n"
+           + "CLUSTERED BY dim1, 2, 3"
         )
-        .expectValidationError(
-            SqlPlanningException.class,
-            "Duplicate CLUSTERED BY key: [3]"
-        )
+        .expectTarget("dst", targetRowSignature)
+        .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource("foo")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time", "dim1", "v0", "v1")
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT),
+                    expressionVirtualColumn("v1", "ceil(\"m2\")", ColumnType.DOUBLE)
+                )
+                .orderBy(
+                    ImmutableList.of(
+                        new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING),
+                        new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING)
+                    )
+                )
+                .context(queryContextWithGranularity(Granularities.DAY))
+                .build()
+         )
         .verify();
   }
 

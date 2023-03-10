@@ -28,17 +28,14 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rel.type.RelRecordType;
 import org.apache.calcite.runtime.CalciteContextException;
-import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
-import org.apache.calcite.sql.SqlNumericLiteral;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlWith;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.IdentifierNamespace;
@@ -50,7 +47,6 @@ import org.apache.calcite.sql.validate.SqlValidatorNamespace;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
 import org.apache.calcite.sql.validate.ValidatorShim;
-import org.apache.calcite.util.Pair;
 import org.apache.commons.lang.reflect.FieldUtils;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.common.utils.IdUtils;
@@ -156,7 +152,11 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     final SqlNode source = insert.getSource();
     ensureNoOrderBy(source, operationName);
 
-    // Convert CLUSTERED BY, or the catalog equivalent, to an ORDER BY clause
+    // Convert CLUSTERED BY to an ORDER BY clause
+    // Note that by so doing, we allow CLUSTERED BY to reference input columns,
+    // including those not in the output. Doing so causes issues with compaction
+    // (Compaction can't reference input columns that no longer exist), but early
+    // versions of MSQ supported this feature and we cannot remove it.
     rewriteClusteringToOrderBy(source, ingestNode);
 
     // Validate the source statement. Validates the ORDER BY pushed down in the above step.
@@ -183,12 +183,6 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     if (timeColumnIndex != -1) {
       validateTimeColumn(sourceType, timeColumnIndex);
     }
-
-    // Validate clustering against the SELECT row type. Clustering has additional
-    // constraints beyond what was validated for the pushed-down ORDER BY.
-    // Though we pushed down clustering above, only now can we validate it after
-    // we've determined the SELECT row type.
-    validateClustering(sourceType, ingestNode);
 
     // Determine the output (target) schema.
     final RelDataType targetType = validateTargetType(sourceType);
@@ -415,111 +409,6 @@ class DruidSqlValidator extends BaseDruidSqlValidator
         timeCol.getName(),
         timeColType
     );
-  }
-
-  /**
-   * Verify clustering which can come from the query, the catalog or both. If both,
-   * the two must match. In either case, the cluster keys must be present in the SELECT
-   * clause. The {@code __time} column cannot be included.
-   */
-  private void validateClustering(
-      final RelRecordType sourceType,
-      final DruidSqlIngest ingestNode
-  )
-  {
-    final SqlNodeList clusteredBy = ingestNode.getClusteredBy();
-    if (clusteredBy != null) {
-      validateClusteredBy(sourceType, clusteredBy);
-    }
-  }
-
-  /**
-   * Validate the CLUSTERED BY list. Members can be any of the following:
-   * <p>
-   * {@code CLUSTERED BY [<ordinal> | <id> | <expr>] DESC?}
-   * <p>
-   * Ensure that each id exists. Ensure each column is included only once.
-   * For an expression, just ensure it is valid; we don't check for duplicates.
-   */
-  private void validateClusteredBy(
-      final RelRecordType sourceType,
-      final SqlNodeList clusteredBy
-  )
-  {
-    // Keep track of fields which have been referenced.
-    final List<String> fieldNames = sourceType.getFieldNames();
-    final int fieldCount = fieldNames.size();
-    final boolean[] refs = new boolean[fieldCount];
-
-    // Process cluster keys
-    for (SqlNode clusterKey : clusteredBy) {
-      final Pair<Integer, Boolean> key = resolveClusterKey(clusterKey, fieldNames);
-      // If an expression, index is null. Validation was done in the ORDER BY check.
-      // Else, do additional MSQ-specific checks.
-      if (key != null) {
-        int index = key.left;
-        // No duplicate references
-        if (refs[index]) {
-          throw new IAE("Duplicate CLUSTERED BY key: [%s]", clusterKey);
-        }
-        refs[index] = true;
-      }
-    }
-  }
-
-  private Pair<Integer, Boolean> resolveClusterKey(SqlNode clusterKey, final List<String> fieldNames)
-  {
-    boolean desc = false;
-
-    // Check if the key is compound: only occurs for DESC. The ASC
-    // case is abstracted away by the parser.
-    if (clusterKey instanceof SqlBasicCall) {
-      SqlBasicCall basicCall = (SqlBasicCall) clusterKey;
-      if (basicCall.getOperator() == SqlStdOperatorTable.DESC) {
-        // Cluster key is compound: CLUSTERED BY foo DESC
-        // We check only the first element
-        clusterKey = ((SqlBasicCall) clusterKey).getOperandList().get(0);
-        desc = true;
-      }
-    }
-
-    // We now have the actual key. Handle the three cases.
-    if (clusterKey instanceof SqlNumericLiteral) {
-      // Key is an ordinal: CLUSTERED BY 2
-      // Ordinals are 1-based.
-      final int ord = ((SqlNumericLiteral) clusterKey).intValue(true);
-      final int index = ord - 1;
-
-      // The ordinal has to be in range.
-      if (index < 0 || fieldNames.size() <= index) {
-        throw new IAE(
-            "CLUSTERED BY ordinal [%d] should be non-negative and <= the number of fields [%d]",
-            ord,
-            fieldNames.size()
-        );
-      }
-      return new Pair<>(index, desc);
-    } else if (clusterKey instanceof SqlIdentifier) {
-      // Key is an identifier: CLUSTERED BY foo
-      final SqlIdentifier key = (SqlIdentifier) clusterKey;
-
-      // Only key of the form foo are allowed, not foo.bar
-      if (!key.isSimple()) {
-        throw new IAE("CLUSTERED BY keys must be a simple name with no dots: [%s]", key.toString());
-      }
-
-      // The name must match an item in the select list
-      final String keyName = key.names.get(0);
-      // Slow linear search. We assume that there are not many cluster keys.
-      final int index = fieldNames.indexOf(keyName);
-      if (index == -1) {
-        throw new IAE("Unknown column [%s] in CLUSTERED BY", keyName);
-      }
-      return new Pair<>(index, desc);
-    } else {
-      // Key is an expression: CLUSTERED BY CEIL(m2)
-      return null;
-    }
   }
 
   /**
