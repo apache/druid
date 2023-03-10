@@ -110,7 +110,7 @@ public abstract class DruidRel<T extends DruidRel<?>> extends AbstractRelNode
   protected Object clone() throws CloneNotSupportedException
   {
     // RelNode implements Cloneable, but our class of rels is not cloned, so does not need to implement clone().
-    throw new UnsupportedOperationException();
+    throw new CloneNotSupportedException();
   }
 
   /**
