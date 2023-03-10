@@ -19,16 +19,15 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
+import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.collections.bitmap.WrappedImmutableRoaringBitmap;
 import org.apache.druid.extendedset.intset.EmptyIntIterator;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.data.ReadableOffset;
-import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.roaringbitmap.IntIterator;
 
 import java.util.Arrays;
@@ -39,7 +38,6 @@ import java.util.HashSet;
 public class BitmapOffset extends Offset
 {
   private static final int INVALID_VALUE = -1;
-  private static final BitmapFactory ROARING_BITMAP_FACTORY = new RoaringBitmapSerdeFactory(false).getBitmapFactory();
 
   /**
    * Currently the default stops are not consciously optimized for the goals described in {@link #factorizeFullness}.
@@ -133,12 +131,12 @@ public class BitmapOffset extends Offset
   {
     ImmutableBitmap roaringBitmap = bitmapIndex;
     if (!(bitmapIndex instanceof WrappedImmutableRoaringBitmap)) {
-      final MutableBitmap bitmap = ROARING_BITMAP_FACTORY.makeEmptyMutableBitmap();
+      final MutableBitmap bitmap = RoaringBitmapFactory.INSTANCE.makeEmptyMutableBitmap();
       final IntIterator iterator = bitmapIndex.iterator();
       while (iterator.hasNext()) {
         bitmap.add(iterator.next());
       }
-      roaringBitmap = ROARING_BITMAP_FACTORY.makeImmutableBitmap(bitmap);
+      roaringBitmap = RoaringBitmapFactory.INSTANCE.makeImmutableBitmap(bitmap);
     }
     return ((WrappedImmutableRoaringBitmap) roaringBitmap).getBitmap().getReverseIntIterator();
   }

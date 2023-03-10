@@ -90,6 +90,7 @@ public abstract class CompressedBigDecimalSqlAggregatorBase implements SqlAggreg
         plannerContext,
         rowSignature,
         Expressions.fromFieldAccess(
+            rexBuilder.getTypeFactory(),
             rowSignature,
             project,
             aggregateCall.getArgList().get(0)
@@ -114,6 +115,7 @@ public abstract class CompressedBigDecimalSqlAggregatorBase implements SqlAggreg
 
     if (aggregateCall.getArgList().size() >= 2) {
       RexNode sizeArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(1)
@@ -127,6 +129,7 @@ public abstract class CompressedBigDecimalSqlAggregatorBase implements SqlAggreg
 
     if (aggregateCall.getArgList().size() >= 3) {
       RexNode scaleArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(2)
@@ -139,6 +142,7 @@ public abstract class CompressedBigDecimalSqlAggregatorBase implements SqlAggreg
 
     if (aggregateCall.getArgList().size() >= 4) {
       RexNode useStrictNumberParsingArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(3)
