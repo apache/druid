@@ -112,7 +112,7 @@ exports[`HistoryDialog matches snapshot 1`] = `
               role="tabpanel"
             >
               <div
-                class="show-json"
+                class="show-value"
               >
                 <div
                   class="top-actions"

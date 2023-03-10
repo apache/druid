@@ -99,7 +99,7 @@ export class DatasourcesOverview {
   private async openCompactionConfigurationDialog(datasourceName: string): Promise<void> {
     await this.openEditActions(datasourceName);
     await this.clickMenuItem('Edit compaction configuration');
-    await this.page.waitForSelector('div.compaction-dialog');
+    await this.page.waitForSelector('div.compaction-config-dialog');
   }
 
   private async clickMenuItem(text: string): Promise<void> {

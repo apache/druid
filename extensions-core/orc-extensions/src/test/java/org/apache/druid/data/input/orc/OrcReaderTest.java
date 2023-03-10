@@ -432,7 +432,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
     );
     final InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("ts", "millis", null),
-        DimensionsSpec.builder().setUseNestedColumnIndexerForSchemaDiscovery(true).build(),
+        DimensionsSpec.builder().useSchemaDiscovery(true).build(),
         ColumnsFilter.all(),
         null
     );

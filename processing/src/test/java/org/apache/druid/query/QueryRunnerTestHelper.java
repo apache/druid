@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.js.JavaScriptConfig;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
@@ -66,6 +67,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -104,8 +106,12 @@ public class QueryRunnerTestHelper
 
   public static final DataSource UNNEST_DATA_SOURCE = UnnestDataSource.create(
       new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
-      QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
-      QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+      new ExpressionVirtualColumn(
+          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+          "\"" + QueryRunnerTestHelper.PLACEMENTISH_DIMENSION + "\"",
+          null,
+          ExprMacroTable.nil()
+      ),
       null
   );
 

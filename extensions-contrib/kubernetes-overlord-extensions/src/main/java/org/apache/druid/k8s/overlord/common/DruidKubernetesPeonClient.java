@@ -141,23 +141,6 @@ public class DruidKubernetesPeonClient implements KubernetesPeonClient
   }
 
   @Override
-  public String getJobLogs(K8sTaskId taskId)
-  {
-    try {
-      return clientApi.executeRequest(client -> client.batch()
-                                                      .v1()
-                                                      .jobs()
-                                                      .inNamespace(namespace)
-                                                      .withName(taskId.getK8sTaskId())
-                                                      .inContainer("main")
-                                                      .getLog(true));
-    }
-    catch (Exception e) {
-      return "No logs found: " + e;
-    }
-  }
-
-  @Override
   public Optional<InputStream> getPeonLogs(K8sTaskId taskId)
   {
     KubernetesClient k8sClient = clientApi.getClient();

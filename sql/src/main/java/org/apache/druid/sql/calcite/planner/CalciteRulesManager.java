@@ -46,13 +46,18 @@ import org.apache.calcite.rel.rules.AggregateValuesRule;
 import org.apache.calcite.rel.rules.CalcRemoveRule;
 import org.apache.calcite.rel.rules.ExchangeRemoveConstantKeysRule;
 import org.apache.calcite.rel.rules.FilterAggregateTransposeRule;
+import org.apache.calcite.rel.rules.FilterJoinRule;
 import org.apache.calcite.rel.rules.FilterMergeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.FilterTableScanRule;
 import org.apache.calcite.rel.rules.IntersectToDistinctRule;
+import org.apache.calcite.rel.rules.JoinCommuteRule;
 import org.apache.calcite.rel.rules.JoinPushExpressionsRule;
+import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
 import org.apache.calcite.rel.rules.MatchRule;
 import org.apache.calcite.rel.rules.ProjectFilterTransposeRule;
+import org.apache.calcite.rel.rules.ProjectJoinRemoveRule;
+import org.apache.calcite.rel.rules.ProjectJoinTransposeRule;
 import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.ProjectRemoveRule;
 import org.apache.calcite.rel.rules.ProjectTableScanRule;
@@ -83,6 +88,7 @@ import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.rule.FilterJoinExcludePushToChildRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
+import org.apache.druid.sql.calcite.run.EngineFeature;
 
 import java.util.List;
 import java.util.Set;
@@ -98,7 +104,7 @@ public class CalciteRulesManager
   // Calcite 1.23.0 fixes this issue by not consider expression as reduced if this case happens. However, while
   // we are still using Calcite 1.21.0, a workaround is to limit the number of pattern matches to avoid infinite loop.
   private static final String HEP_DEFAULT_MATCH_LIMIT_CONFIG_STRING = "druid.sql.planner.hepMatchLimit";
-  private final int HEP_DEFAULT_MATCH_LIMIT = Integer.valueOf(
+  private static final int HEP_DEFAULT_MATCH_LIMIT = Integer.parseInt(
       System.getProperty(HEP_DEFAULT_MATCH_LIMIT_CONFIG_STRING, "1200")
   );
 
@@ -108,9 +114,10 @@ public class CalciteRulesManager
   // 2) AggregateReduceFunctionsRule (it'll be added back for the Bindable rule set, but we don't want it for Druid
   //    rules since it expands AVG, STDDEV, VAR, etc, and we have aggregators specifically designed for those
   //    functions).
-  // 3) JoinCommuteRule (we don't support reordering joins yet).
-  // 4) JoinPushThroughJoinRule (we don't support reordering joins yet).
-  private final List<RelOptRule> BASE_RULES =
+  // 3) FilterJoinRule.FILTER_ON_JOIN, which is part of FANCY_JOIN_RULES.
+  // 3) JoinCommuteRule, which is part of FANCY_JOIN_RULES.
+  // 4) JoinPushThroughJoinRule, which is part of FANCY_JOIN_RULES.
+  private static final List<RelOptRule> BASE_RULES =
       ImmutableList.of(
           AggregateStarTableRule.INSTANCE,
           AggregateStarTableRule.INSTANCE2,
@@ -133,7 +140,7 @@ public class CalciteRulesManager
       );
 
   // Rules for scanning via Bindable, embedded directly in RelOptUtil's registerDefaultRules.
-  private final List<RelOptRule> DEFAULT_BINDABLE_RULES =
+  private static final List<RelOptRule> DEFAULT_BINDABLE_RULES =
       ImmutableList.of(
           Bindables.BINDABLE_TABLE_SCAN_RULE,
           ProjectTableScanRule.INSTANCE,
@@ -145,7 +152,7 @@ public class CalciteRulesManager
   // 1) ReduceExpressionsRule.JOIN_INSTANCE
   //    Removed by https://github.com/apache/druid/pull/9941 due to issue in https://github.com/apache/druid/issues/9942
   //    TODO: Re-enable when https://github.com/apache/druid/issues/9942 is fixed
-  private final List<RelOptRule> REDUCTION_RULES =
+  private static final List<RelOptRule> REDUCTION_RULES =
       ImmutableList.of(
           ReduceExpressionsRule.PROJECT_INSTANCE,
           ReduceExpressionsRule.FILTER_INSTANCE,
@@ -161,7 +168,7 @@ public class CalciteRulesManager
   // Omit DateRangeRules due to https://issues.apache.org/jira/browse/CALCITE-1601
   // Omit UnionMergeRule since it isn't very effective given how Druid unions currently operate and is potentially
   // expensive in terms of planning time.
-  private final List<RelOptRule> ABSTRACT_RULES =
+  private static final List<RelOptRule> ABSTRACT_RULES =
       ImmutableList.of(
           AggregateProjectPullUpConstantsRule.INSTANCE2,
           UnionPullUpConstantsRule.INSTANCE,
@@ -185,11 +192,9 @@ public class CalciteRulesManager
   // 1) AggregateMergeRule (it causes testDoubleNestedGroupBy2 to fail)
   // 2) SemiJoinRule.PROJECT and SemiJoinRule.JOIN (we don't need to detect semi-joins, because they are handled
   //    fine as-is by DruidJoinRule).
-  // 3) JoinCommuteRule (we don't support reordering joins yet).
-  // 4) FilterJoinRule.FILTER_ON_JOIN and FilterJoinRule.JOIN
-  //    Removed by https://github.com/apache/druid/pull/9773 due to issue in https://github.com/apache/druid/issues/9843
-  //    TODO: Re-enable when https://github.com/apache/druid/issues/9843 is fixed
-  private final List<RelOptRule> ABSTRACT_RELATIONAL_RULES =
+  // 3) JoinCommuteRule, which is part of FANCY_JOIN_RULES instead.
+  // 4) FilterJoinRule.FILTER_ON_JOIN and FilterJoinRule.JOIN, which are part of FANCY_JOIN_RULES instead.
+  private static final List<RelOptRule> ABSTRACT_RELATIONAL_RULES =
       ImmutableList.of(
           AbstractConverter.ExpandConversionRule.INSTANCE,
           AggregateRemoveRule.INSTANCE,
@@ -199,6 +204,25 @@ public class CalciteRulesManager
           AggregateProjectMergeRule.INSTANCE,
           CalcRemoveRule.INSTANCE,
           SortRemoveRule.INSTANCE
+      );
+
+  // Rules that are enabled when we consider join algorithms that require subqueries for all inputs.
+  //
+  // Native queries only support broadcast hash joins, and they do not require a subquery for the "base" (leftmost)
+  // input. In fact, we really strongly *don't* want to do a subquery for the base input, as that forces materialization
+  // of the base input on the Broker. The way we structure native queries causes challenges for the planner when it
+  // comes to avoiding subqueries, such as those described in https://github.com/apache/druid/issues/9843. To work
+  // around this, we omit the join-related rules in this list when planning queries that use broadcast joins.
+  private static final List<RelOptRule> FANCY_JOIN_RULES =
+      ImmutableList.of(
+          ProjectJoinTransposeRule.INSTANCE,
+          ProjectJoinRemoveRule.INSTANCE,
+          FilterJoinRule.FILTER_ON_JOIN,
+          JoinPushExpressionsRule.INSTANCE,
+          SortJoinTransposeRule.INSTANCE,
+          JoinPushThroughJoinRule.LEFT,
+          JoinCommuteRule.INSTANCE,
+          FilterJoinRule.FILTER_ON_JOIN
       );
 
   private final Set<ExtensionCalciteRuleProvider> extensionCalciteRuleProviderSet;
@@ -283,8 +307,13 @@ public class CalciteRulesManager
     rules.addAll(ABSTRACT_RULES);
     rules.addAll(ABSTRACT_RELATIONAL_RULES);
 
+    if (plannerContext.getJoinAlgorithm().requiresSubquery()) {
+      rules.addAll(FANCY_JOIN_RULES);
+    }
+
     if (!plannerConfig.isUseApproximateCountDistinct()) {
-      if (plannerConfig.isUseGroupingSetForExactDistinct()) {
+      if (plannerConfig.isUseGroupingSetForExactDistinct()
+          && plannerContext.featureAvailable(EngineFeature.GROUPING_SETS)) {
         rules.add(AggregateExpandDistinctAggregatesRule.INSTANCE);
       } else {
         rules.add(AggregateExpandDistinctAggregatesRule.JOIN);

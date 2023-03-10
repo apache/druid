@@ -68,18 +68,8 @@
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.druid</groupId>
-      <artifactId>druid-core</artifactId>
-      <version>${project.parent.version}</version>
-    </dependency>
-    <dependency>
       <groupId>org.apache.druid.extensions</groupId>
       <artifactId>druid-datasketches</artifactId>
-      <version>${project.parent.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.druid</groupId>
-      <artifactId>extendedset</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
@@ -91,12 +81,6 @@
       <groupId>org.apache.druid.extensions</groupId>
       <artifactId>druid-stats</artifactId>
       <version>${project.parent.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.druid</groupId>
-      <artifactId>druid-core</artifactId>
-      <version>${project.parent.version}</version>
-      <type>test-jar</type>
     </dependency>
     <dependency>
       <groupId>org.apache.druid</groupId>

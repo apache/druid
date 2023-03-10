@@ -1019,7 +1019,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
   {
     expectedException.expect(RuntimeException.class);
     expectedException.expectMessage(
-        "Invalid expression: (concat [(map ([x] -> (concat [x, othertags])), [tags]), tags]); [tags] used as both scalar and array variables"
+        "Invalid expression: (concat [(cartesian_map ([x, othertags] -> (concat [x, othertags])), [tags, othertags]), tags]); [tags] used as both scalar and array variables"
     );
     GroupByQuery query = GroupByQuery
         .builder()

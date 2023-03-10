@@ -169,7 +169,7 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
     final String file = "example/flattening/test_nested_1.parquet";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", null),
-        DimensionsSpec.builder().setUseNestedColumnIndexerForSchemaDiscovery(false).build(),
+        DimensionsSpec.builder().useSchemaDiscovery(false).build(),
         ColumnsFilter.all(),
         null
     );
@@ -206,7 +206,7 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
     final String file = "example/flattening/test_nested_1.parquet";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", null),
-        DimensionsSpec.builder().setUseNestedColumnIndexerForSchemaDiscovery(true).build(),
+        DimensionsSpec.builder().useSchemaDiscovery(true).build(),
         ColumnsFilter.all(),
         null
     );

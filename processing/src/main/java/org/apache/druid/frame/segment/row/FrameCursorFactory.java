@@ -38,8 +38,8 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleDescendingOffset;
+import org.apache.druid.segment.SimpleSettableOffset;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.data.Offset;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -101,11 +101,11 @@ public class FrameCursorFactory implements CursorFactory
   {
     final Filter filterToUse = FrameCursorUtils.buildFilter(filter, interval);
 
-    final Offset baseOffset = descending
+    final SimpleSettableOffset baseOffset = descending
                               ? new SimpleDescendingOffset(frame.numRows())
                               : new SimpleAscendingOffset(frame.numRows());
 
-    final Offset offset;
+    final SimpleSettableOffset offset;
 
     final ColumnSelectorFactory columnSelectorFactory =
         virtualColumns.wrap(

@@ -107,7 +107,7 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
   {
     return new DruidUnionDataSourceRel(
         getCluster(),
-        getTraitSet().plusAll(newQueryBuilder.getRelTraits()),
+        newQueryBuilder.getTraitSet(getConvention()),
         unionRel,
         unionColumnNames,
         newQueryBuilder,
