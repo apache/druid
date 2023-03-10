@@ -44,14 +44,16 @@ public class OutputChannelTest
     final IllegalStateException e1 = Assert.assertThrows(IllegalStateException.class, channel::getWritableChannel);
     MatcherAssert.assertThat(
         e1,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("Writable channel is not available"))
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(
+        "Writable channel is not available. The output channel might be marked as read-only, hence no writes are allowed."))
     );
 
     // No writable channel: cannot call getFrameMemoryAllocator.
     final IllegalStateException e2 = Assert.assertThrows(IllegalStateException.class, channel::getFrameMemoryAllocator);
     MatcherAssert.assertThat(
         e2,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("Writable channel is not available"))
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(
+            "Frame allocator is not available. The output channel might be marked as read-only, hence memory allocator is not required."))
     );
 
     // Mapping the writable channel of a nil channel has no effect, because there is no writable channel.

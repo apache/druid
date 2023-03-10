@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.UnnestSegmentReference;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
@@ -48,32 +49,28 @@ import java.util.function.Function;
 public class UnnestDataSource implements DataSource
 {
   private final DataSource base;
-  private final String column;
-  private final String outputName;
+  private final VirtualColumn virtualColumn;
   private final LinkedHashSet<String> allowList;
 
   private UnnestDataSource(
       DataSource dataSource,
-      String columnName,
-      String outputName,
+      VirtualColumn virtualColumn,
       LinkedHashSet<String> allowList
   )
   {
     this.base = dataSource;
-    this.column = columnName;
-    this.outputName = outputName;
+    this.virtualColumn = virtualColumn;
     this.allowList = allowList;
   }
 
   @JsonCreator
   public static UnnestDataSource create(
       @JsonProperty("base") DataSource base,
-      @JsonProperty("column") String columnName,
-      @JsonProperty("outputName") String outputName,
+      @JsonProperty("virtualColumn") VirtualColumn virtualColumn,
       @Nullable @JsonProperty("allowList") LinkedHashSet<String> allowList
   )
   {
-    return new UnnestDataSource(base, columnName, outputName, allowList);
+    return new UnnestDataSource(base, virtualColumn, allowList);
   }
 
   @JsonProperty("base")
@@ -82,16 +79,10 @@ public class UnnestDataSource implements DataSource
     return base;
   }
 
-  @JsonProperty("column")
-  public String getColumn()
+  @JsonProperty("virtualColumn")
+  public VirtualColumn getVirtualColumn()
   {
-    return column;
-  }
-
-  @JsonProperty("outputName")
-  public String getOutputName()
-  {
-    return outputName;
+    return virtualColumn;
   }
 
   @JsonProperty("allowList")
@@ -118,7 +109,7 @@ public class UnnestDataSource implements DataSource
     if (children.size() != 1) {
       throw new IAE("Expected [1] child, got [%d]", children.size());
     }
-    return new UnnestDataSource(children.get(0), column, outputName, allowList);
+    return new UnnestDataSource(children.get(0), virtualColumn, allowList);
   }
 
   @Override
@@ -151,22 +142,13 @@ public class UnnestDataSource implements DataSource
     );
     return JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
-        () -> {
-          if (column == null) {
-            return segmentMapFn;
-          } else if (column.isEmpty()) {
-            return segmentMapFn;
-          } else {
-            return
-                baseSegment ->
-                    new UnnestSegmentReference(
-                        segmentMapFn.apply(baseSegment),
-                        column,
-                        outputName,
-                        allowList
-                    );
-          }
-        }
+        () ->
+            baseSegment ->
+                new UnnestSegmentReference(
+                    segmentMapFn.apply(baseSegment),
+                    virtualColumn,
+                    allowList
+                )
     );
 
   }
@@ -174,7 +156,7 @@ public class UnnestDataSource implements DataSource
   @Override
   public DataSource withUpdatedDataSource(DataSource newSource)
   {
-    return new UnnestDataSource(newSource, column, outputName, allowList);
+    return new UnnestDataSource(newSource, virtualColumn, allowList);
   }
 
   @Override
@@ -205,15 +187,14 @@ public class UnnestDataSource implements DataSource
       return false;
     }
     UnnestDataSource that = (UnnestDataSource) o;
-    return column.equals(that.column)
-           && outputName.equals(that.outputName)
+    return virtualColumn.equals(that.virtualColumn)
            && base.equals(that.base);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(base, column, outputName);
+    return Objects.hash(base, virtualColumn);
   }
 
   @Override
@@ -221,8 +202,7 @@ public class UnnestDataSource implements DataSource
   {
     return "UnnestDataSource{" +
            "base=" + base +
-           ", column='" + column + '\'' +
-           ", outputName='" + outputName + '\'' +
+           ", column='" + virtualColumn + '\'' +
            ", allowList=" + allowList +
            '}';
   }

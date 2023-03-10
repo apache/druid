@@ -25,7 +25,10 @@ title: "Unnest arrays within a column"
 
 > If you're looking for information about how to unnest `COMPLEX<json>` columns, see [Nested columns](../querying/nested-columns.md).
 
-This tutorial demonstrates how to use the UNNEST function (SQL) or the unnest datasource (native) to unnest data stored in an array. For example, if you have a column named `dim3` with values like `[a,b]` or `[c,d,f]`, you can unnest this data and use it in a subsequent query or output the data to a new column. This new column would have individual rows that contain single values like `a` and `b`. When doing this, be mindful of the following:
+> The unnest datasource is [experimental](../development/experimental.md). Its API and behavior are subject
+> to change in future releases. It is not recommended to use this feature in production at this time.
+
+This tutorial demonstrates how to use the unnest datasource to unnest a column that has data stored in arrays. For example, if you have a column named `dim3` with values like `[a,b]` or `[c,d,f]`, the unnest datasource can output the data to a new column with individual rows that contain single values like `a` and `b`. When doing this, be mindful of the following:
 
 - Unnesting data can dramatically increase the total number of rows. 
 - You cannot unnest an array within an array. 
@@ -247,9 +250,11 @@ The following native Scan query returns the rows of the datasource and unnests t
       "type": "table",
       "name": "nested_data"
     },
-    "column": "dim3",
-    "outputName": "unnest-dim3",
-    "allowList": []
+    "virtualColumn": {
+      "type": "expression",
+      "name": "unnest-dim3",
+      "expression": "\"dim3\""
+    }
   },
   "intervals": {
     "type": "intervals",
@@ -308,9 +313,11 @@ The following query returns an unnested version of the column `dim3` as the colu
   "dataSource": {
     "type": "unnest",
     "base": "nested_data",
-    "column": "dim3",
-    "outputName": "unnest-dim3",
-    "allowList": []
+    "virtualColumn": {
+      "type": "expression",
+      "name": "unnest-dim3",
+      "expression": "\"dim3\""
+    }
   },
   "intervals": ["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"],
   "granularity": "all",
@@ -350,8 +357,11 @@ The example topN query unnests `dim3` into the column `unnest-dim3`. The query u
       "type": "table",
       "name": "nested_data"
     },
-    "column": "dim3",
-    "outputName": "unnest-dim3",
+    "virtualColumn": {
+      "type": "expression",
+      "name": "unnest-dim3",
+      "expression": "\"dim3\""
+    },
     "allowList": null
   },
   "dimension": {
@@ -455,9 +465,11 @@ This query joins the `nested_data` table with itself and outputs the unnested da
         "condition": "(\"m1\" == \"j0.v0\")",
         "joinType": "INNER"
       },
-    "column": "dim3",
-    "outputName": "unnest-dim3",
-    "allowList": []
+    "virtualColumn": {
+      "type": "expression",
+      "name": "unnest-dim3",
+      "expression": "\"dim3\""
+    }
     },
   "intervals": {
     "type": "intervals",
@@ -575,6 +587,7 @@ When you run the query, pay special attention to how the total number of rows ha
         "type": "table",
         "name": "nested_data"
       },
+<<<<<<< HEAD:docs/tutorials/tutorial-unnest-arrays.md
       "column": "dim4",
       "outputName": "unnest-dim4",
       "allowList": []
@@ -582,6 +595,17 @@ When you run the query, pay special attention to how the total number of rows ha
     "column": "dim5",
     "outputName": "unnest-dim5",
     "allowList": []
+=======
+    "virtualColumn": {
+      "type": "expression",
+      "name": "unnest-dim3",
+      "expression": "\"dim3\""
+    },
+      "allowList": []
+    },
+    "column": "dim2",
+    "outputName": "unnest-dim2"
+>>>>>>> master:docs/tutorials/tutorial-unnest-datasource.md
   },
   "intervals": {
     "type": "intervals",
@@ -640,9 +664,11 @@ You can also use the `unnest` datasource to unnest an inline datasource. The fol
         ]
       ]
     },
-    "column": "inline_data",
-    "outputName": "output",
-    "allowList": []
+    "virtualColumn": {
+      "type": "expression",
+      "name": "output",
+      "expression": "\"inline_data\""
+    }
   },
   "intervals": {
     "type": "intervals",
@@ -665,6 +691,68 @@ You can also use the `unnest` datasource to unnest an inline datasource. The fol
 
 </details>
 
+<<<<<<< HEAD:docs/tutorials/tutorial-unnest-arrays.md
+=======
+## Unnest a virtual column
+
+The `unnest` datasource supports unnesting a virtual columns, which is a queryable composite column that can draw data from multiple source columns.
+
+The following Scan query uses the `nested_data2` table you created in [Load data with two columns of nested values](#load-data-with-two-columns-of-nested-values). It returns the columns `unnest-v0` and `m1`. The `unnest-v0` column is the unnested version of the virtual column `v0`, which contains an array of the `dim2` and `dim3` columns.
+
+<details><summary>Show the query</summary>
+
+```json
+{
+  "queryType": "scan",
+  "dataSource":{
+    "type": "unnest",
+    "base": {
+      "type": "table",
+      "name": "nested_data2"
+    },
+    "virtualColumn": {
+      "type": "expression",
+      "name": "unnest-v0",
+      "expression": "\"v0\""
+    }
+  }
+  "intervals": {
+    "type": "intervals",
+    "intervals": [
+      "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+    ]
+  },
+  "virtualColumns": [
+    {
+      "type": "expression",
+      "name": "v0",
+      "expression": "array(\"dim2\",\"dim3\")",
+      "outputType": "ARRAY<STRING>"
+    }
+  ],
+  "resultFormat": "compactedList",
+  "limit": 1001,
+  "columns": [
+    "unnest-v0",
+    "m1"
+  ],
+  "legacy": false,
+  "context": {
+    "populateCache": false,
+    "queryId": "d273facb-08cc-4de7-ac0b-d0b82173e531",
+    "sqlOuterLimit": 1001,
+    "sqlQueryId": "d273facb-08cc-4de7-ac0b-d0b82173e531",
+    "useCache": false,
+    "useNativeQueryExplain": true
+  },
+  "granularity": {
+    "type": "all"
+  }
+}
+```
+
+</details>
+>>>>>>> master:docs/tutorials/tutorial-unnest-datasource.md
 
 ## Learn more
 

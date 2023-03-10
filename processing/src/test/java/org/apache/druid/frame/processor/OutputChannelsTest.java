@@ -86,7 +86,8 @@ public class OutputChannelsTest
 
     MatcherAssert.assertThat(
         e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("Writable channel is not available"))
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(
+            "Writable channel is not available. The output channel might be marked as read-only, hence no writes are allowed."))
     );
 
     final IllegalStateException e2 = Assert.assertThrows(
@@ -96,7 +97,8 @@ public class OutputChannelsTest
 
     MatcherAssert.assertThat(
         e2,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("Writable channel is not available"))
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(
+            "Frame allocator is not available. The output channel might be marked as read-only, hence memory allocator is not required."))
     );
   }
 }

@@ -20,6 +20,7 @@
 package org.apache.druid.segment.data;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 
 public class BitmapSerde
 {
@@ -32,7 +33,7 @@ public class BitmapSerde
   {
     public DefaultBitmapSerdeFactory()
     {
-      super(RoaringBitmapSerdeFactory.DEFAULT_COMPRESS_RUN_ON_SERIALIZATION);
+      super(RoaringBitmapFactory.INSTANCE);
     }
   }
 
