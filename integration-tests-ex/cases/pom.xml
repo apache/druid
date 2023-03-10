@@ -475,7 +475,7 @@
                   <goal>integration-test</goal>
                 </goals>
                 <configuration>
-                  <!-- Turning on logs so that travis does not time out tests for not providing any output.  -->
+                  <!-- Turning on logs so that builds do not time out tests for not providing any output.  -->
                   <redirectTestOutputToFile>False</redirectTestOutputToFile>
                   <!-- Can run only one test category per Maven run. -->
                   <groups>org.apache.druid.testsEx.categories.${it.category}</groups>
