@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.Lists;
+import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -31,6 +32,7 @@ import org.apache.druid.server.coordinator.SegmentLoader;
 import org.apache.druid.server.coordinator.SegmentStateManager;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import java.util.HashSet;
 import java.util.Iterator;
@@ -244,9 +246,8 @@ public class BalanceSegments implements CoordinatorDuty
       // any segment that happens to be loaded on some server, even if it is not used. (Coordinator closes such
       // discrepancies eventually via UnloadUnusedSegments). Therefore the picked segmentToMoveHolder's segment may not
       // need to be balanced.
-      boolean needToBalancePickedSegment = params.getUsedSegments().contains(segmentToMoveHolder.getSegment());
-      if (needToBalancePickedSegment) {
-        final DataSegment segmentToMove = segmentToMoveHolder.getSegment();
+      final DataSegment segmentToMove = getLoadableSegment(segmentToMoveHolder.getSegment(), params);
+      if (segmentToMove != null) {
         final ImmutableDruidServer fromServer = segmentToMoveHolder.getFromServer().getServer();
         // we want to leave the server the segment is currently on in the list...
         // but filter out replicas that are already serving the segment, and servers with a full load queue
@@ -338,5 +339,33 @@ public class BalanceSegments implements CoordinatorDuty
         calculatedMaxSegmentsToMove
     );
     return calculatedMaxSegmentsToMove;
+  }
+
+  /**
+   * Returns a DataSegment with the correct value of loadSpec (as obtained from
+   * metadata store). This method may return null if there is no snapshot available
+   * for the underlying datasource or if the segment is unused.
+   */
+  private DataSegment getLoadableSegment(DataSegment segmentToMove, DruidCoordinatorRuntimeParams params)
+  {
+    final SegmentId segmentId = segmentToMove.getId();
+    if (!params.getUsedSegments().contains(segmentToMove)) {
+      log.warn("Not moving segment [%s] because it is an unused segment.", segmentId);
+      return null;
+    }
+
+    ImmutableDruidDataSource datasource = params.getDataSourcesSnapshot().getDataSource(segmentToMove.getDataSource());
+    if (datasource == null) {
+      log.warn("Not moving segment [%s] because datasource snapshot does not exist.", segmentId);
+      return null;
+    }
+
+    DataSegment loadableSegment = datasource.getSegment(segmentId);
+    if (loadableSegment == null) {
+      log.warn("Not moving segment [%s] as its metadata could not be found.", segmentId);
+      return null;
+    }
+
+    return loadableSegment;
   }
 }
