@@ -3269,12 +3269,12 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .filters(
                       and(
-                          selector("dim2", "a", null),
-                          not(selector("dim1", "foo", null)),
                           or(
                               new LikeDimFilter("j0.unnest", "_", null, null),
                               in("j0.unnest", ImmutableList.of("a", "c"), null)
-                          )
+                          ),
+                          selector("dim2", "a", null),
+                          not(selector("dim1", "foo", null))
                       )
                   )
                   .legacy(false)
