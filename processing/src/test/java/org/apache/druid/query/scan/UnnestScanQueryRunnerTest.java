@@ -75,7 +75,7 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
     this.legacy = legacy;
   }
 
-  @Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "legacy = {1}")
   public static Iterable<Object[]> constructorFeeder()
   {
     NullHandling.initializeForTests();
@@ -382,6 +382,111 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
         : Collections.singletonList(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST),
         0,
         3
+    );
+    ScanQueryRunnerTest.verify(expectedResults, results);
+  }
+
+  @Test
+  public void testUnnestRunnerWithFilterOnOutputColumn()
+  {
+    ScanQuery query = newTestUnnestQuery()
+        .intervals(I_0112_0114)
+        .columns(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
+        .limit(Long.MAX_VALUE)
+        .filters(new SelectorDimFilter(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "preferred", null))
+        .build();
+
+    final QueryRunner queryRunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
+        FACTORY,
+        new IncrementalIndexSegment(
+            index,
+            QueryRunnerTestHelper.SEGMENT_ID
+        ),
+        query,
+        "rtIndexvc"
+    );
+
+    Iterable<ScanResultValue> results = queryRunner.run(QueryPlus.wrap(query)).toList();
+    String[] columnNames;
+    if (legacy) {
+      columnNames = new String[]{
+          getTimestampName() + ":TIME",
+          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+      };
+    } else {
+      columnNames = new String[]{
+          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+      };
+    }
+    String[] values;
+    if (legacy) {
+      values = new String[]{
+          "2011-01-12T00:00:00.000Z\tpreferred",
+          "2011-01-12T00:00:00.000Z\tpreferred",
+          "2011-01-12T00:00:00.000Z\tpreferred",
+          "2011-01-12T00:00:00.000Z\tpreferred",
+          "2011-01-12T00:00:00.000Z\tpreferred",
+          "2011-01-12T00:00:00.000Z\tpreferred",
+          "2011-01-12T00:00:00.000Z\tpreferred",
+          "2011-01-12T00:00:00.000Z\tpreferred",
+          "2011-01-12T00:00:00.000Z\tpreferred",
+          "2011-01-12T00:00:00.000Z\tpreferred",
+          "2011-01-12T00:00:00.000Z\tpreferred",
+          "2011-01-12T00:00:00.000Z\tpreferred",
+          "2011-01-12T00:00:00.000Z\tpreferred",
+          "2011-01-13T00:00:00.000Z\tpreferred",
+          "2011-01-13T00:00:00.000Z\tpreferred",
+          "2011-01-13T00:00:00.000Z\tpreferred",
+          "2011-01-13T00:00:00.000Z\tpreferred",
+          "2011-01-13T00:00:00.000Z\tpreferred",
+          "2011-01-13T00:00:00.000Z\tpreferred",
+          "2011-01-13T00:00:00.000Z\tpreferred",
+          "2011-01-13T00:00:00.000Z\tpreferred",
+          "2011-01-13T00:00:00.000Z\tpreferred",
+          "2011-01-13T00:00:00.000Z\tpreferred",
+          "2011-01-13T00:00:00.000Z\tpreferred",
+          "2011-01-13T00:00:00.000Z\tpreferred",
+          "2011-01-13T00:00:00.000Z\tpreferred",
+      };
+    } else {
+      values = new String[]{
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+          "preferred",
+      };
+    }
+
+    final List<List<Map<String, Object>>> events = ScanQueryRunnerTest.toEvents(columnNames, legacy, values);
+    List<ScanResultValue> expectedResults = toExpected(
+        events,
+        legacy
+        ? Lists.newArrayList(getTimestampName(), QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
+        : Collections.singletonList(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST),
+        0,
+        values.length
     );
     ScanQueryRunnerTest.verify(expectedResults, results);
   }
