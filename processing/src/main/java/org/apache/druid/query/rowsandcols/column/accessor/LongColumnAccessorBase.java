@@ -69,6 +69,6 @@ public abstract class LongColumnAccessorBase implements ColumnAccessor
       return 1;
     }
 
-    return Double.compare(getLong(lhsRowNum), getLong(rhsRowNum));
+    return Long.compare(getLong(lhsRowNum), getLong(rhsRowNum));
   }
 }
