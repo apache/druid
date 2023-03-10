@@ -29,12 +29,13 @@ import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.Window;
+import org.apache.calcite.rel.rules.ProjectCorrelateTransposeRule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidOuterQueryRel;
-import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
+import org.apache.druid.sql.calcite.run.EngineFeature;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -97,13 +98,11 @@ public class DruidRules
             new DruidUnionRule(plannerContext),
             new DruidUnionDataSourceRule(plannerContext),
             DruidSortUnionRule.instance(),
-            DruidJoinRule.instance(plannerContext),
-            new DruidUnnestDatasourceRule(plannerContext),
-            new DruidCorrelateUnnestRule(plannerContext)
+            DruidJoinRule.instance(plannerContext)
         )
     );
 
-    if (plannerContext.queryContext().getBoolean(DruidQuery.CTX_ENABLE_WINDOW_FNS, false)) {
+    if (plannerContext.featureAvailable(EngineFeature.WINDOW_FUNCTIONS)) {
       retVal.add(new DruidQueryRule<>(Window.class, PartialDruidQuery.Stage.WINDOW, PartialDruidQuery::withWindow));
       retVal.add(
           new DruidQueryRule<>(
@@ -115,6 +114,15 @@ public class DruidRules
       );
       retVal.add(DruidOuterQueryRule.WINDOW);
     }
+
+    if (plannerContext.featureAvailable(EngineFeature.UNNEST)) {
+      retVal.add(new DruidUnnestRule(plannerContext));
+      retVal.add(new DruidCorrelateUnnestRule(plannerContext));
+      retVal.add(ProjectCorrelateTransposeRule.INSTANCE);
+      retVal.add(CorrelateFilterLTransposeRule.instance());
+      retVal.add(CorrelateFilterRTransposeRule.instance());
+    }
+
     return retVal;
   }
 
