@@ -72,6 +72,18 @@ jobs:
       use_indexer: ${{ matrix.indexer }}
       group: other
 
+  unit-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: [ 11, 17 ]
+    name: unit tests (jdk${{ matrix.jdk }}, sql-compat=true)
+    uses: ./.github/workflows/unit-tests.yml
+    needs: unit-tests
+    with:
+      jdk: ${{ matrix.jdk }}
+      sql_compatibility: true
+
   security_vulnerabilities:
     name: "security vulnerabilities"
     matrix:
