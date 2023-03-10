@@ -171,7 +171,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   {
     return new DruidQueryRel(
         getCluster(),
-        getTraitSet().plusAll(newQueryBuilder.getRelTraits()),
+        newQueryBuilder.getTraitSet(getConvention()),
         table,
         druidTable,
         getPlannerContext(),
