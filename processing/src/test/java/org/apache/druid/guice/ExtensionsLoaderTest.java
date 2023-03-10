@@ -237,7 +237,7 @@ public class ExtensionsLoaderTest
         .build();
     final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
     final File mysql_metadata_storage = new File(extensionsDir, "mysql-metadata-storage");
-    mysql_metadata_storage.mkdir();
+    FileUtils.mkdirp(mysql_metadata_storage);
 
     final List<File> expectedFileList = Arrays.asList(mysql_metadata_storage);
     final List<File> actualFileList = extnLoader.getExtensionFilesToLoad();
@@ -264,8 +264,8 @@ public class ExtensionsLoaderTest
     final File mysql_metadata_storage = new File(extensionsDir, "mysql-metadata-storage");
     final File random_extension = new File(extensionsDir, "random-extensions");
 
-    mysql_metadata_storage.mkdir();
-    random_extension.mkdir();
+    FileUtils.mkdirp(mysql_metadata_storage);
+    FileUtils.mkdirp(random_extension);
 
     final List<File> expectedFileList = Arrays.asList(mysql_metadata_storage, absolutePathExtension);
     final List<File> actualFileList = extnLoader.getExtensionFilesToLoad();
@@ -279,7 +279,7 @@ public class ExtensionsLoaderTest
     final File extensionsDir1 = temporaryFolder.newFolder();
     String extn1 = "extension1";
     File extn1Dir = new File(extensionsDir1, extn1);
-    extn1Dir.mkdir();
+    FileUtils.mkdirp(extn1Dir);
     final File extensionsDir2 = temporaryFolder.newFolder();
     String extn2 = "extension2";
     File extn2Dir = new File(extensionsDir2, extn2);
@@ -368,7 +368,7 @@ public class ExtensionsLoaderTest
         .loadList(Collections.singletonList("mysql-metadata-storage"))
         .build();
     final File random_extension = new File(extensionsDir, "random-extensions");
-    random_extension.mkdir();
+    FileUtils.mkdirp(random_extension);
     final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
     Assert.assertThrows(ISE.class, () -> extnLoader.getExtensionFilesToLoad());
   }
