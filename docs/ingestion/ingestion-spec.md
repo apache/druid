@@ -186,7 +186,20 @@ Treat `__time` as a millisecond timestamp: the number of milliseconds since Jan 
 ### `dimensionsSpec`
 
 The `dimensionsSpec` is located in `dataSchema` → `dimensionsSpec` and is responsible for
-configuring [dimensions](./data-model.md#dimensions). An example `dimensionsSpec` is:
+configuring [dimensions](./data-model.md#dimensions). 
+
+You can either manually specify the dimensions or allow Druid to discover the schema for your data and perform a schemaless ingestion. To do schemaless ingestion, configure the following properties:
+
+- Set `dimensionsSpec` to empty 
+- Set `spec.tuningConfig.appendableIndexSpec.useSchemaDiscovery` to `true`.
+
+Keep in mind that you cannot partially define a schema
+
+
+`dimensionsSpec` examples:
+
+<!--DOCUSAURUS_CODE_TABS-->
+<!--Explicit dimensions-->
 
 ```
 "dimensionsSpec" : {
@@ -199,6 +212,22 @@ configuring [dimensions](./data-model.md#dimensions). An example `dimensionsSpec
   "spatialDimensions" : []
 }
 ```
+
+<!--Schemaless-->
+
+```
+    "tuningConfig": {
+      ...
+      "appendableIndexSpec": {
+        ...,
+        "useSchemaDiscovery": true
+      },
+      ...
+      "dimensionsSpec": {}
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
 
 > Conceptually, after input data records are read, Druid applies ingestion spec components in a particular order:
 > first [`flattenSpec`](data-formats.md#flattenspec) (if any), then [`timestampSpec`](#timestampspec), then [`transformSpec`](#transformspec),
@@ -467,6 +496,7 @@ is:
 |skipBytesInMemoryOverheadCheck|The calculation of maxBytesInMemory takes into account overhead objects created during ingestion and each intermediate persist. Setting this to true can exclude the bytes of these overhead objects from maxBytesInMemory check.|false|
 |indexSpec|Defines segment storage format options to use at indexing time.|See [`indexSpec`](#indexspec) for more information.|
 |indexSpecForIntermediatePersists|Defines segment storage format options to use at indexing time for intermediate persisted temporary segments.|See [`indexSpec`](#indexspec) for more information.|
+| appendableIndexSpec.useSchemaDiscovery | Configure Druid to discover the schema for your ingestion to perform schemaless ingestion. You can use this for native batch or streaming ingestion. To use this feature, set this property to true along with an empty `dimensionsSpec`. For an example, see [`dimensionsSpec`](#dimensionsspec). |false  | 
 |Other properties|Each ingestion method has its own list of additional tuning properties. See the documentation for each method for a full list: [Kafka indexing service](../development/extensions-core/kafka-supervisor-reference.md#tuningconfig), [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md#tuningconfig), [Native batch](native-batch.md#tuningconfig), and [Hadoop-based](hadoop.md#tuningconfig).||
 
 ### `indexSpec`
