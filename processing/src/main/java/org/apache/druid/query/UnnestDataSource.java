@@ -29,8 +29,6 @@ import org.apache.druid.segment.UnnestSegmentReference;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.utils.JvmUtils;
 
-import javax.annotation.Nullable;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -39,7 +37,6 @@ import java.util.function.Function;
 
 /**
  * The data source for representing an unnest operation.
- *
  * An unnest data source has the following:
  * a base data source which is to be unnested
  * the column name of the MVD which will be unnested
@@ -50,27 +47,23 @@ public class UnnestDataSource implements DataSource
 {
   private final DataSource base;
   private final VirtualColumn virtualColumn;
-  private final LinkedHashSet<String> allowList;
 
   private UnnestDataSource(
       DataSource dataSource,
-      VirtualColumn virtualColumn,
-      LinkedHashSet<String> allowList
+      VirtualColumn virtualColumn
   )
   {
     this.base = dataSource;
     this.virtualColumn = virtualColumn;
-    this.allowList = allowList;
   }
 
   @JsonCreator
   public static UnnestDataSource create(
       @JsonProperty("base") DataSource base,
-      @JsonProperty("virtualColumn") VirtualColumn virtualColumn,
-      @Nullable @JsonProperty("allowList") LinkedHashSet<String> allowList
+      @JsonProperty("virtualColumn") VirtualColumn virtualColumn
   )
   {
-    return new UnnestDataSource(base, virtualColumn, allowList);
+    return new UnnestDataSource(base, virtualColumn);
   }
 
   @JsonProperty("base")
@@ -83,12 +76,6 @@ public class UnnestDataSource implements DataSource
   public VirtualColumn getVirtualColumn()
   {
     return virtualColumn;
-  }
-
-  @JsonProperty("allowList")
-  public LinkedHashSet<String> getAllowList()
-  {
-    return allowList;
   }
 
   @Override
@@ -109,7 +96,7 @@ public class UnnestDataSource implements DataSource
     if (children.size() != 1) {
       throw new IAE("Expected [1] child, got [%d]", children.size());
     }
-    return new UnnestDataSource(children.get(0), virtualColumn, allowList);
+    return new UnnestDataSource(children.get(0), virtualColumn);
   }
 
   @Override
@@ -146,17 +133,15 @@ public class UnnestDataSource implements DataSource
             baseSegment ->
                 new UnnestSegmentReference(
                     segmentMapFn.apply(baseSegment),
-                    virtualColumn,
-                    allowList
+                    virtualColumn
                 )
     );
-
   }
 
   @Override
   public DataSource withUpdatedDataSource(DataSource newSource)
   {
-    return new UnnestDataSource(newSource, virtualColumn, allowList);
+    return new UnnestDataSource(newSource, virtualColumn);
   }
 
   @Override
@@ -203,7 +188,6 @@ public class UnnestDataSource implements DataSource
     return "UnnestDataSource{" +
            "base=" + base +
            ", column='" + virtualColumn + '\'' +
-           ", allowList=" + allowList +
            '}';
   }
 

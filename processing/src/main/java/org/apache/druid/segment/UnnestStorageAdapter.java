@@ -62,18 +62,15 @@ public class UnnestStorageAdapter implements StorageAdapter
   private final StorageAdapter baseAdapter;
   private final VirtualColumn unnestColumn;
   private final String outputColumnName;
-  private final LinkedHashSet<String> allowSet;
 
   public UnnestStorageAdapter(
       final StorageAdapter baseAdapter,
-      final VirtualColumn unnestColumn,
-      final LinkedHashSet<String> allowSet
+      final VirtualColumn unnestColumn
   )
   {
     this.baseAdapter = baseAdapter;
     this.unnestColumn = unnestColumn;
     this.outputColumnName = unnestColumn.getOutputName();
-    this.allowSet = allowSet;
   }
 
   @Override
@@ -87,7 +84,7 @@ public class UnnestStorageAdapter implements StorageAdapter
   )
   {
     final String inputColumn = getUnnestInputIfDirectAccess();
-    final Pair<Filter, Filter> filterPair = computeBaseAndPostCorrelateFilters(
+    final Pair<Filter, Filter> filterPair = computeBaseAndPostUnnestFilters(
         filter,
         virtualColumns,
         inputColumn,
@@ -121,7 +118,7 @@ public class UnnestStorageAdapter implements StorageAdapter
                   retVal.getColumnSelectorFactory(),
                   unnestColumn,
                   outputColumnName,
-                  allowSet
+                  filterPair.rhs
               );
             } else {
               retVal = new UnnestColumnValueSelectorCursor(
@@ -129,7 +126,7 @@ public class UnnestStorageAdapter implements StorageAdapter
                   retVal.getColumnSelectorFactory(),
                   unnestColumn,
                   outputColumnName,
-                  allowSet
+                  filterPair.rhs
               );
             }
           } else {
@@ -138,13 +135,16 @@ public class UnnestStorageAdapter implements StorageAdapter
                 retVal.getColumnSelectorFactory(),
                 unnestColumn,
                 outputColumnName,
-                allowSet
+                filterPair.rhs
             );
           }
+          // This is needed at this moment for nested queries
+          // Future developer would want to move the virtual columns
+          // inside the UnnestCursor and wrap the columnSelectorFactory
           return PostJoinCursor.wrap(
               retVal,
               virtualColumns,
-              filterPair.rhs
+              null
           );
         }
     );
@@ -260,9 +260,9 @@ public class UnnestStorageAdapter implements StorageAdapter
    * @param inputColumn            input column to unnest if it's a direct access; otherwise null
    * @param inputColumnCapabilites input column capabilities if known; otherwise null
    *
-   * @return pair of pre- and post-correlate filters
+   * @return pair of pre- and post-unnest filters
    */
-  private Pair<Filter, Filter> computeBaseAndPostCorrelateFilters(
+  private Pair<Filter, Filter> computeBaseAndPostUnnestFilters(
       @Nullable final Filter queryFilter,
       final VirtualColumns queryVirtualColumns,
       @Nullable final String inputColumn,
@@ -282,7 +282,7 @@ public class UnnestStorageAdapter implements StorageAdapter
 
         final Set<String> requiredColumns = filter.getRequiredColumns();
 
-        // Run filter post-correlate if it refers to any virtual columns.
+        // Run filter post-unnest if it refers to any virtual columns.
         if (queryVirtualColumns.getVirtualColumns().length > 0) {
           for (String column : requiredColumns) {
             if (queryVirtualColumns.exists(column)) {
@@ -293,13 +293,16 @@ public class UnnestStorageAdapter implements StorageAdapter
         }
 
         if (requiredColumns.contains(outputColumnName)) {
-          // Try to move filter pre-correlate if possible.
+          // Rewrite filter post-unnest if possible.
           final Filter newFilter = rewriteFilterOnUnnestColumnIfPossible(filter, inputColumn, inputColumnCapabilites);
           if (newFilter != null) {
+            // Add the rewritten filter pre-unnest, so we get the benefit of any indexes, and so we avoid unnesting
+            // any rows that do not match this filter at all.
             preFilters.add(newFilter);
-          } else {
-            postFilters.add(filter);
           }
+          // This is needed as a filter on an MV String Dimension returns the entire row matching the filter
+          // Add original filter post-unnest no matter what: we need to filter out any extraneous unnested values.
+          postFilters.add(filter);
         } else {
           preFilters.add(filter);
         }
@@ -307,11 +310,6 @@ public class UnnestStorageAdapter implements StorageAdapter
     }
 
     final FilterSplitter filterSplitter = new FilterSplitter();
-
-    if (allowSet != null && !allowSet.isEmpty()) {
-      // Filter on input column if possible (it may be faster); otherwise use output column.
-      filterSplitter.add(new InDimFilter(inputColumn != null ? inputColumn : outputColumnName, allowSet));
-    }
 
     if (queryFilter instanceof AndFilter) {
       for (Filter filter : ((AndFilter) queryFilter).getFilters()) {

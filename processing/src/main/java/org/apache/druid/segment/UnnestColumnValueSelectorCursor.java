@@ -22,15 +22,17 @@ package org.apache.druid.segment;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.List;
 
 /**
@@ -65,18 +67,20 @@ public class UnnestColumnValueSelectorCursor implements Cursor
   private final ColumnValueSelector columnValueSelector;
   private final VirtualColumn unnestColumn;
   private final String outputName;
-  private final LinkedHashSet<String> allowSet;
   private int index;
   private Object currentVal;
   private List<Object> unnestListForCurrentRow;
   private boolean needInitialization;
+  private ValueMatcher valueMatcher;
+  @Nullable
+  private final Filter allowFilter;
 
   public UnnestColumnValueSelectorCursor(
       Cursor cursor,
       ColumnSelectorFactory baseColumnSelectorFactory,
       VirtualColumn unnestColumn,
       String outputColumnName,
-      LinkedHashSet<String> allowSet
+      @Nullable Filter allowFilter
   )
   {
     this.baseCursor = cursor;
@@ -89,7 +93,7 @@ public class UnnestColumnValueSelectorCursor implements Cursor
     this.index = 0;
     this.outputName = outputColumnName;
     this.needInitialization = true;
-    this.allowSet = allowSet;
+    this.allowFilter = allowFilter;
   }
 
   @Override
@@ -194,11 +198,7 @@ public class UnnestColumnValueSelectorCursor implements Cursor
           public Object getObject()
           {
             if (!unnestListForCurrentRow.isEmpty()) {
-              if (allowSet == null || allowSet.isEmpty()) {
-                return unnestListForCurrentRow.get(index);
-              } else if (allowSet.contains((String) unnestListForCurrentRow.get(index))) {
-                return unnestListForCurrentRow.get(index);
-              }
+              return unnestListForCurrentRow.get(index);
             }
             return null;
           }
@@ -253,9 +253,13 @@ public class UnnestColumnValueSelectorCursor implements Cursor
   @Override
   public void advanceUninterruptibly()
   {
-    do {
+    while (true) {
       advanceAndUpdate();
-    } while (matchAndProceed());
+      boolean match = valueMatcher.matches();
+      if (match || baseCursor.isDone()) {
+        return;
+      }
+    }
   }
 
   @Override
@@ -310,12 +314,15 @@ public class UnnestColumnValueSelectorCursor implements Cursor
   private void initialize()
   {
     getNextRow();
-    if (allowSet != null) {
-      if (!allowSet.isEmpty()) {
-        if (!allowSet.contains((String) unnestListForCurrentRow.get(index))) {
-          advance();
-        }
-      }
+    if (allowFilter != null) {
+      this.valueMatcher = allowFilter.makeMatcher(getColumnSelectorFactory());
+    } else {
+      this.valueMatcher = BooleanValueMatcher.of(true);
+    }
+    // If the first value the index is pointing to does not match the filter
+    // advance the index to the first value which will match
+    if (!valueMatcher.matches()) {
+      advance();
     }
     needInitialization = false;
   }
@@ -337,23 +344,5 @@ public class UnnestColumnValueSelectorCursor implements Cursor
     } else {
       index++;
     }
-  }
-
-  /**
-   * This advances the unnest cursor in cases where an allowList is specified
-   * and the current value at the unnest cursor is not in the allowList.
-   * The cursor in such cases is moved till the next match is found.
-   *
-   * @return a boolean to indicate whether to stay or move cursor
-   */
-  private boolean matchAndProceed()
-  {
-    boolean matchStatus;
-    if (allowSet == null || allowSet.isEmpty()) {
-      matchStatus = true;
-    } else {
-      matchStatus = allowSet.contains((String) unnestListForCurrentRow.get(index));
-    }
-    return !baseCursor.isDone() && !matchStatus;
   }
 }
