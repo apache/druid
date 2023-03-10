@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite.expression;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.rex.RexNode;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExpressionValidationException;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -39,7 +38,6 @@ public class IPv4AddressParseExpressionTest extends ExpressionTestBase
   private static final String VALID = "192.168.0.1";
   private static final long EXPECTED = 3232235521L;
   private static final Object IGNORE_EXPECTED_RESULT = null;
-  private static final Long NULL = NullHandling.replaceWithDefault() ? NullHandling.ZERO_LONG : null;
 
   private static final String VAR = "f";
   private static final RowSignature ROW_SIGNATURE = RowSignature.builder().add(VAR, ColumnType.FLOAT).build();
@@ -88,7 +86,7 @@ public class IPv4AddressParseExpressionTest extends ExpressionTestBase
     testExpression(
         testHelper.getConstantNull(),
         buildExpectedExpression((String) null),
-        NULL
+        null
     );
   }
 
@@ -99,7 +97,7 @@ public class IPv4AddressParseExpressionTest extends ExpressionTestBase
     testExpression(
         testHelper.makeInputRef(variableNameWithInvalidType),
         buildExpectedExpression(testHelper.makeVariable(variableNameWithInvalidType)),
-        NULL
+        null
     );
   }
 
@@ -110,7 +108,7 @@ public class IPv4AddressParseExpressionTest extends ExpressionTestBase
     testExpression(
         testHelper.makeLiteral(notIpAddress),
         buildExpectedExpression(notIpAddress),
-        NULL
+        null
     );
   }
 
@@ -121,7 +119,7 @@ public class IPv4AddressParseExpressionTest extends ExpressionTestBase
     testExpression(
         testHelper.makeLiteral(ipv6Compatible),
         buildExpectedExpression(ipv6Compatible),
-        NULL
+        null
     );
   }
 
@@ -132,7 +130,7 @@ public class IPv4AddressParseExpressionTest extends ExpressionTestBase
     testExpression(
         testHelper.makeLiteral(ipv6Mapped),
         buildExpectedExpression(ipv6Mapped),
-        NULL
+        null
     );
   }
 
@@ -153,7 +151,7 @@ public class IPv4AddressParseExpressionTest extends ExpressionTestBase
     testExpression(
         testHelper.makeLiteral(unsignedInt),
         buildExpectedExpression(unsignedInt),
-        NULL
+        null
     );
   }
 
@@ -164,7 +162,7 @@ public class IPv4AddressParseExpressionTest extends ExpressionTestBase
     testExpression(
         testHelper.makeLiteral(tooLow),
         buildExpectedExpression(tooLow),
-        NULL
+        null
     );
   }
 
@@ -207,7 +205,7 @@ public class IPv4AddressParseExpressionTest extends ExpressionTestBase
     testExpression(
         testHelper.makeLiteral(tooHigh),
         buildExpectedExpression(tooHigh),
-        NULL
+        null
     );
   }
 

@@ -22,10 +22,11 @@ package org.apache.druid.msq.querykit.scan;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.frame.key.ClusterBy;
-import org.apache.druid.frame.key.SortColumn;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.input.stage.StageInputSpec;
-import org.apache.druid.msq.kernel.MaxCountShuffleSpec;
+import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.ShuffleSpec;
@@ -57,7 +58,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
   {
     RowSignature scanSignature;
     try {
-      final String s = scanQuery.getQueryContext().getAsString(DruidQuery.CTX_SCAN_SIGNATURE);
+      final String s = scanQuery.context().getString(DruidQuery.CTX_SCAN_SIGNATURE);
       scanSignature = jsonMapper.readValue(s, RowSignature.class);
     }
     catch (JsonProcessingException e) {
@@ -70,11 +71,11 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
 
   /**
    * We ignore the resultShuffleSpecFactory in case:
-   *  1. There is no cluster by
-   *  2. This is an offset which means everything gets funneled into a single partition hence we use MaxCountShuffleSpec
+   * 1. There is no cluster by
+   * 2. This is an offset which means everything gets funneled into a single partition hence we use MaxCountShuffleSpec
    */
   // No ordering, but there is a limit or an offset. These work by funneling everything through a single partition.
-  // So there is no point in forcing any particular partitioning. Since everything is funnelled into a single
+  // So there is no point in forcing any particular partitioning. Since everything is funneled into a single
   // partition without a ClusterBy, we don't need to necessarily create it via the resultShuffleSpecFactory provided
   @Override
   public QueryDefinition makeQueryDefinition(
@@ -90,6 +91,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
     final DataSourcePlan dataSourcePlan = DataSourcePlan.forDataSource(
         queryKit,
         queryId,
+        originalQuery.context(),
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
         originalQuery.getFilter(),
@@ -112,25 +114,26 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
     //  1. There is no cluster by
     //  2. There is an offset which means everything gets funneled into a single partition hence we use MaxCountShuffleSpec
     if (queryToRun.getOrderBys().isEmpty() && hasLimitOrOffset) {
-      shuffleSpec = new MaxCountShuffleSpec(ClusterBy.none(), 1, false);
+      shuffleSpec = MixShuffleSpec.instance();
       signatureToUse = scanSignature;
     } else {
       final RowSignature.Builder signatureBuilder = RowSignature.builder().addAll(scanSignature);
-      final Granularity segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(queryToRun.getContext());
-      final List<SortColumn> clusterByColumns = new ArrayList<>();
+      final Granularity segmentGranularity =
+          QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, queryToRun.getContext());
+      final List<KeyColumn> clusterByColumns = new ArrayList<>();
 
       // Add regular orderBys.
       for (final ScanQuery.OrderBy orderBy : queryToRun.getOrderBys()) {
         clusterByColumns.add(
-            new SortColumn(
+            new KeyColumn(
                 orderBy.getColumnName(),
-                orderBy.getOrder() == ScanQuery.Order.DESCENDING
+                orderBy.getOrder() == ScanQuery.Order.DESCENDING ? KeyOrder.DESCENDING : KeyOrder.ASCENDING
             )
         );
       }
 
       // Add partition boosting column.
-      clusterByColumns.add(new SortColumn(QueryKitUtils.PARTITION_BOOST_COLUMN, false));
+      clusterByColumns.add(new KeyColumn(QueryKitUtils.PARTITION_BOOST_COLUMN, KeyOrder.ASCENDING));
       signatureBuilder.add(QueryKitUtils.PARTITION_BOOST_COLUMN, ColumnType.LONG);
 
       final ClusterBy clusterBy =
@@ -158,7 +161,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
                          .inputs(new StageInputSpec(firstStageNumber))
                          .signature(signatureToUse)
                          .maxWorkerCount(1)
-                         .shuffleSpec(new MaxCountShuffleSpec(ClusterBy.none(), 1, false))
+                         .shuffleSpec(MixShuffleSpec.instance())
                          .processorFactory(
                              new OffsetLimitFrameProcessorFactory(
                                  queryToRun.getScanRowsOffset(),

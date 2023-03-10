@@ -100,7 +100,7 @@ public class GroupByQueryHelper
     );
     final IncrementalIndex index;
 
-    final boolean sortResults = query.getContextBoolean(CTX_KEY_SORT_RESULTS, true);
+    final boolean sortResults = query.context().getBoolean(CTX_KEY_SORT_RESULTS, true);
 
     // All groupBy dimensions are strings, for now.
     final List<DimensionSchema> dimensionSchemas = new ArrayList<>();
@@ -118,7 +118,7 @@ public class GroupByQueryHelper
 
     final AppendableIndexBuilder indexBuilder;
 
-    if (query.getContextBoolean("useOffheap", false)) {
+    if (query.context().getBoolean("useOffheap", false)) {
       throw new UnsupportedOperationException(
           "The 'useOffheap' option is no longer available for groupBy v1. Please move to the newer groupBy engine, "
           + "which always operates off-heap, by removing any custom 'druid.query.groupBy.defaultStrategy' runtime "

@@ -119,6 +119,8 @@ public class HadoopTaskTest
         false,
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null,
+        false,
         null
     )).once();
     EasyMock.replay(toolbox);

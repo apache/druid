@@ -662,7 +662,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     }
 
     @Override
-    public TaskStatus run(final TaskToolbox toolbox) throws Exception
+    public TaskStatus runTask(final TaskToolbox toolbox) throws Exception
     {
       while (state == TaskState.RUNNING) {
         Thread.sleep(100);

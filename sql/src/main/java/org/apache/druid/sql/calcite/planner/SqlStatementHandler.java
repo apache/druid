@@ -21,13 +21,13 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.joda.time.DateTimeZone;
 
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -36,7 +36,6 @@ import java.util.Set;
  */
 public interface SqlStatementHandler
 {
-  SqlNode sqlNode();
   void validate() throws ValidationException;
   Set<ResourceAction> resourceActions();
   void prepare();
@@ -52,9 +51,11 @@ public interface SqlStatementHandler
     SqlEngine engine();
     CalcitePlanner planner();
     QueryContext queryContext();
+    Map<String, Object> queryContextMap();
     SchemaPlus defaultSchema();
     ObjectMapper jsonMapper();
     DateTimeZone timeZone();
+    PlannerHook hook();
   }
 
   abstract class BaseStatementHandler implements SqlStatementHandler

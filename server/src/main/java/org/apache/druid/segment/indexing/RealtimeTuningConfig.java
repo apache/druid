@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
@@ -56,11 +55,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
   private static final long DEFAULT_ALERT_TIMEOUT = 0;
   private static final String DEFAULT_DEDUP_COLUMN = null;
 
-  private static File createNewBasePersistDirectory()
-  {
-    return FileUtils.createTempDir("druid-realtime-persist");
-  }
-
   // Might make sense for this to be a builder
   public static RealtimeTuningConfig makeDefaultTuningConfig(final @Nullable File basePersistDirectory)
   {
@@ -71,7 +65,7 @@ public class RealtimeTuningConfig implements AppenderatorConfig
         DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK,
         DEFAULT_INTERMEDIATE_PERSIST_PERIOD,
         DEFAULT_WINDOW_PERIOD,
-        basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory,
+        basePersistDirectory,
         DEFAULT_VERSIONING_POLICY,
         DEFAULT_REJECTION_POLICY_FACTORY,
         DEFAULT_MAX_PENDING_PERSISTS,
@@ -111,28 +105,27 @@ public class RealtimeTuningConfig implements AppenderatorConfig
   @Nullable
   private final String dedupColumn;
 
-  @JsonCreator
   public RealtimeTuningConfig(
-      @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
-      @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
-      @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
-      @JsonProperty("skipBytesInMemoryOverheadCheck") @Nullable Boolean skipBytesInMemoryOverheadCheck,
-      @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
-      @JsonProperty("windowPeriod") Period windowPeriod,
-      @JsonProperty("basePersistDirectory") File basePersistDirectory,
-      @JsonProperty("versioningPolicy") VersioningPolicy versioningPolicy,
-      @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicyFactory,
-      @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
-      @JsonProperty("shardSpec") ShardSpec shardSpec,
-      @JsonProperty("indexSpec") IndexSpec indexSpec,
-      @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
-      @JsonProperty("persistThreadPriority") int persistThreadPriority,
-      @JsonProperty("mergeThreadPriority") int mergeThreadPriority,
-      @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
-      @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
-      @JsonProperty("alertTimeout") Long alertTimeout,
-      @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-      @JsonProperty("dedupColumn") @Nullable String dedupColumn
+      @Nullable AppendableIndexSpec appendableIndexSpec,
+      Integer maxRowsInMemory,
+      Long maxBytesInMemory,
+      @Nullable Boolean skipBytesInMemoryOverheadCheck,
+      Period intermediatePersistPeriod,
+      Period windowPeriod,
+      File basePersistDirectory,
+      VersioningPolicy versioningPolicy,
+      RejectionPolicyFactory rejectionPolicyFactory,
+      Integer maxPendingPersists,
+      ShardSpec shardSpec,
+      IndexSpec indexSpec,
+      @Nullable IndexSpec indexSpecForIntermediatePersists,
+      int persistThreadPriority,
+      int mergeThreadPriority,
+      Boolean reportParseExceptions,
+      Long handoffConditionTimeout,
+      Long alertTimeout,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      @Nullable String dedupColumn
   )
   {
     this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
@@ -146,8 +139,8 @@ public class RealtimeTuningConfig implements AppenderatorConfig
                                      ? DEFAULT_INTERMEDIATE_PERSIST_PERIOD
                                      : intermediatePersistPeriod;
     this.windowPeriod = windowPeriod == null ? DEFAULT_WINDOW_PERIOD : windowPeriod;
-    this.basePersistDirectory = basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory;
-    this.versioningPolicy = versioningPolicy == null ? DEFAULT_VERSIONING_POLICY : versioningPolicy;
+    this.basePersistDirectory = basePersistDirectory;
+    this.versioningPolicy = versioningPolicy;
     this.rejectionPolicyFactory = rejectionPolicyFactory == null
                                   ? DEFAULT_REJECTION_POLICY_FACTORY
                                   : rejectionPolicyFactory;
@@ -170,6 +163,52 @@ public class RealtimeTuningConfig implements AppenderatorConfig
     Preconditions.checkArgument(this.alertTimeout >= 0, "alertTimeout must be >= 0");
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
     this.dedupColumn = dedupColumn == null ? DEFAULT_DEDUP_COLUMN : dedupColumn;
+  }
+
+  @JsonCreator
+  private RealtimeTuningConfig(
+      @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
+      @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
+      @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
+      @JsonProperty("skipBytesInMemoryOverheadCheck") @Nullable Boolean skipBytesInMemoryOverheadCheck,
+      @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
+      @JsonProperty("windowPeriod") Period windowPeriod,
+      @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicyFactory,
+      @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
+      @JsonProperty("shardSpec") ShardSpec shardSpec,
+      @JsonProperty("indexSpec") IndexSpec indexSpec,
+      @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
+      @JsonProperty("persistThreadPriority") int persistThreadPriority,
+      @JsonProperty("mergeThreadPriority") int mergeThreadPriority,
+      @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
+      @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
+      @JsonProperty("alertTimeout") Long alertTimeout,
+      @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      @JsonProperty("dedupColumn") @Nullable String dedupColumn
+  )
+  {
+    this(
+        appendableIndexSpec,
+        maxRowsInMemory,
+        maxBytesInMemory,
+        skipBytesInMemoryOverheadCheck,
+        intermediatePersistPeriod,
+        windowPeriod,
+        null,
+        null,
+        rejectionPolicyFactory,
+        maxPendingPersists,
+        shardSpec,
+        indexSpec,
+        indexSpecForIntermediatePersists,
+        persistThreadPriority,
+        mergeThreadPriority,
+        reportParseExceptions,
+        handoffConditionTimeout,
+        alertTimeout,
+        segmentWriteOutMediumFactory,
+        dedupColumn
+    );
   }
 
   @Override
@@ -214,16 +253,14 @@ public class RealtimeTuningConfig implements AppenderatorConfig
   }
 
   @Override
-  @JsonProperty
   public File getBasePersistDirectory()
   {
-    return basePersistDirectory;
+    return Preconditions.checkNotNull(basePersistDirectory, "basePersistDirectory not set");
   }
 
-  @JsonProperty
   public VersioningPolicy getVersioningPolicy()
   {
-    return versioningPolicy;
+    return Preconditions.checkNotNull(versioningPolicy, "versioningPolicy not set");
   }
 
   @JsonProperty("rejectionPolicy")

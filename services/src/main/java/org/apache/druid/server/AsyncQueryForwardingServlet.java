@@ -402,7 +402,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       HttpServletResponse response
   ) throws ServletException, IOException
   {
-    // Just call the superclass service method. Overriden in tests.
+    // Just call the superclass service method. Overridden in tests.
     super.service(request, response);
   }
 

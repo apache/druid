@@ -19,3 +19,4 @@
 {"regionIsoCode":"ZZ","countryIsoCode":"USCA","regionName":"Usca City"}
 {"regionIsoCode":"MMMM","countryIsoCode":"MMMM","regionName":"Fourems Province", "extraField":"California"}
 {"regionIsoCode":"AAAA","countryIsoCode":"AAAA","regionName":"Foureis Province", "extraField":"California"}
+{"regionIsoCode":null,"countryIsoCode":null,"regionName":"Nulland"}

@@ -40,7 +40,7 @@ public class ReadableInput
   private final SegmentWithDescriptor segment;
 
   @Nullable
-  private final ReadableFrameChannel inputChannel;
+  private final ReadableFrameChannel channel;
 
   @Nullable
   private final FrameReader frameReader;
@@ -56,7 +56,7 @@ public class ReadableInput
   )
   {
     this.segment = segment;
-    this.inputChannel = channel;
+    this.channel = channel;
     this.frameReader = frameReader;
     this.stagePartition = stagePartition;
 
@@ -65,48 +65,107 @@ public class ReadableInput
     }
   }
 
+  /**
+   * Create an input associated with a physical segment.
+   *
+   * @param segment the segment
+   */
   public static ReadableInput segment(final SegmentWithDescriptor segment)
   {
-    return new ReadableInput(segment, null, null, null);
+    return new ReadableInput(Preconditions.checkNotNull(segment, "segment"), null, null, null);
   }
 
+  /**
+   * Create an input associated with a channel.
+   *
+   * @param channel        the channel
+   * @param frameReader    reader for the channel
+   * @param stagePartition stage-partition associated with the channel, if meaningful. May be null if this channel
+   *                       does not correspond to any one particular stage-partition.
+   */
   public static ReadableInput channel(
-      final ReadableFrameChannel inputChannel,
+      final ReadableFrameChannel channel,
       final FrameReader frameReader,
-      final StagePartition stagePartition
+      @Nullable final StagePartition stagePartition
   )
   {
-    return new ReadableInput(null, inputChannel, frameReader, stagePartition);
+    return new ReadableInput(
+        null,
+        Preconditions.checkNotNull(channel, "channel"),
+        Preconditions.checkNotNull(frameReader, "frameReader"),
+        stagePartition
+    );
   }
 
+  /**
+   * Whether this input is a segment (from {@link #segment(SegmentWithDescriptor)}.
+   */
   public boolean hasSegment()
   {
     return segment != null;
   }
 
+  /**
+   * Whether this input is a channel (from {@link #channel(ReadableFrameChannel, FrameReader, StagePartition)}.
+   */
   public boolean hasChannel()
   {
-    return inputChannel != null;
+    return channel != null;
   }
 
+  /**
+   * The segment for this input. Only valid if {@link #hasSegment()}.
+   */
   public SegmentWithDescriptor getSegment()
   {
-    return Preconditions.checkNotNull(segment, "segment");
+    checkIsSegment();
+    return segment;
   }
 
+  /**
+   * The channel for this input. Only valid if {@link #hasChannel()}.
+   */
   public ReadableFrameChannel getChannel()
   {
-    return Preconditions.checkNotNull(inputChannel, "channel");
+    checkIsChannel();
+    return channel;
   }
 
+  /**
+   * The frame reader for this input. Only valid if {@link #hasChannel()}.
+   */
   public FrameReader getChannelFrameReader()
   {
-    return Preconditions.checkNotNull(frameReader, "frameReader");
+    checkIsChannel();
+    return frameReader;
   }
 
-  @Nullable
+  /**
+   * The stage-partition this input. Only valid if {@link #hasChannel()}, and if a stage-partition was provided
+   * during construction. Throws {@link IllegalStateException} if no stage-partition was provided during construction.
+   */
   public StagePartition getStagePartition()
   {
+    checkIsChannel();
+
+    if (stagePartition == null) {
+      throw new ISE("Stage-partition is not set for this channel");
+    }
+
     return stagePartition;
+  }
+
+  private void checkIsSegment()
+  {
+    if (!hasSegment()) {
+      throw new ISE("Not a channel input; cannot call this method");
+    }
+  }
+
+  private void checkIsChannel()
+  {
+    if (!hasChannel()) {
+      throw new ISE("Not a channel input; cannot call this method");
+    }
   }
 }

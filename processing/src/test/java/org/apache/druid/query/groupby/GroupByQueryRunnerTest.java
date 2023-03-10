@@ -412,6 +412,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             configSupplier,
             bufferPools.getProcessingPool(),
             bufferPools.getMergePool(),
+            TestHelper.makeJsonMapper(),
             mapper,
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
         )
@@ -756,8 +757,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         query,
         serviceEmitter
     );
-    Assert.assertEquals(1, serviceEmitter.getEvents().size());
-    Assert.assertEquals(vectorize, serviceEmitter.getEvents().get(0).toMap().getOrDefault("vectorized", null));
+    serviceEmitter.verifyEmitted("query/wait/time", ImmutableMap.of("vectorized", vectorize), 1);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
   }
 
@@ -13398,7 +13398,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "minExpression",
             NullHandling.replaceWithDefault() ? Float.POSITIVE_INFINITY : null,
             "minVc",
-            NullHandling.replaceWithDefault() ? Float.POSITIVE_INFINITY : null
+            Float.POSITIVE_INFINITY
         )
     );
 

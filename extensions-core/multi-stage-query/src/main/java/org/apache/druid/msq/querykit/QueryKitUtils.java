@@ -23,8 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.druid.frame.key.ClusterBy;
-import org.apache.druid.frame.key.SortColumn;
-import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -76,15 +76,16 @@ public class QueryKitUtils
    */
   public static final String CTX_TIME_COLUMN_NAME = "__timeColumn";
 
-  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
-
-  public static Granularity getSegmentGranularityFromContext(@Nullable final Map<String, Object> context)
+  public static Granularity getSegmentGranularityFromContext(
+      final ObjectMapper objectMapper,
+      @Nullable final Map<String, Object> context
+  )
   {
     final Object o = context == null ? null : context.get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY);
 
     if (o instanceof String) {
       try {
-        return OBJECT_MAPPER.readValue((String) o, Granularity.class);
+        return objectMapper.readValue((String) o, Granularity.class);
       }
       catch (JsonProcessingException e) {
         throw new ISE("Invalid segment granularity [%s]", o);
@@ -107,8 +108,8 @@ public class QueryKitUtils
     if (Granularities.ALL.equals(segmentGranularity)) {
       return clusterBy;
     } else {
-      final List<SortColumn> newColumns = new ArrayList<>(clusterBy.getColumns().size() + 1);
-      newColumns.add(new SortColumn(QueryKitUtils.SEGMENT_GRANULARITY_COLUMN, false));
+      final List<KeyColumn> newColumns = new ArrayList<>(clusterBy.getColumns().size() + 1);
+      newColumns.add(new KeyColumn(QueryKitUtils.SEGMENT_GRANULARITY_COLUMN, KeyOrder.ASCENDING));
       newColumns.addAll(clusterBy.getColumns());
       return new ClusterBy(newColumns, 1);
     }
@@ -153,12 +154,12 @@ public class QueryKitUtils
    */
   public static RowSignature sortableSignature(
       final RowSignature signature,
-      final List<SortColumn> clusterByColumns
+      final List<KeyColumn> clusterByColumns
   )
   {
     final RowSignature.Builder builder = RowSignature.builder();
 
-    for (final SortColumn columnName : clusterByColumns) {
+    for (final KeyColumn columnName : clusterByColumns) {
       final Optional<ColumnType> columnType = signature.getColumnType(columnName.columnName());
       if (!columnType.isPresent()) {
         throw new IAE("Column [%s] not present in signature", columnName);
@@ -168,7 +169,7 @@ public class QueryKitUtils
     }
 
     final Set<String> clusterByColumnNames =
-        clusterByColumns.stream().map(SortColumn::columnName).collect(Collectors.toSet());
+        clusterByColumns.stream().map(KeyColumn::columnName).collect(Collectors.toSet());
 
     for (int i = 0; i < signature.size(); i++) {
       final String columnName = signature.getColumnName(i);
@@ -188,10 +189,11 @@ public class QueryKitUtils
    * @throws IllegalArgumentException if the provided granularity is not supported
    */
   @Nullable
-  public static VirtualColumn makeSegmentGranularityVirtualColumn(final Query<?> query)
+  public static VirtualColumn makeSegmentGranularityVirtualColumn(final ObjectMapper jsonMapper, final Query<?> query)
   {
-    final Granularity segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(query.getContext());
-    final String timeColumnName = query.getQueryContext().getAsString(QueryKitUtils.CTX_TIME_COLUMN_NAME);
+    final Granularity segmentGranularity =
+        QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, query.getContext());
+    final String timeColumnName = query.context().getString(QueryKitUtils.CTX_TIME_COLUMN_NAME);
 
     if (timeColumnName == null || Granularities.ALL.equals(segmentGranularity)) {
       return null;

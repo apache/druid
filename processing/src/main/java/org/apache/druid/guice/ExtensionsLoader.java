@@ -55,6 +55,7 @@ import java.util.stream.Collectors;
  * any kind of extension that may be needed in the future.
  * The extensions are cached so that they can be reported by various REST APIs.
  */
+@LazySingleton
 public class ExtensionsLoader
 {
   private static final Logger log = new Logger(ExtensionsLoader.class);
@@ -318,13 +319,13 @@ public class ExtensionsLoader
       final String serviceImplName = serviceImpl.getClass().getName();
       if (serviceImplName == null) {
         log.warn(
-            "Implementation [%s] was ignored because it doesn't have a canonical name, "
+            "Implementation %s was ignored because it doesn't have a canonical name, "
             + "is it a local or anonymous class?",
             serviceImpl.getClass().getName()
         );
       } else if (!implClassNamesToLoad.contains(serviceImplName)) {
         log.debug(
-            "Adding implementation [%s] for class [%s] from %s extension",
+            "Adding implementation %s for class %s from %s extension",
             serviceImplName,
             serviceClass,
             extensionType

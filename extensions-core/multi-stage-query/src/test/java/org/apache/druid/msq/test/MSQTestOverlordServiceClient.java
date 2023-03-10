@@ -20,8 +20,10 @@
 package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Injector;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.indexing.common.TaskReport;
@@ -32,6 +34,7 @@ import org.apache.druid.msq.exec.ControllerImpl;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
+import org.apache.druid.msq.indexing.report.MSQTaskReport;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
@@ -103,6 +106,18 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
     return Futures.immediateFuture(null);
   }
 
+  @Override
+  public ListenableFuture<Map<String, Object>> taskReportAsMap(String taskId)
+  {
+    SettableFuture<Map<String, Object>> future = SettableFuture.create();
+    future.set(
+        ImmutableMap.of(
+            MSQTaskReport.REPORT_KEY,
+            getReportForTask(taskId).get(MSQTaskReport.REPORT_KEY)
+        ));
+    return future;
+  }
+
   // hooks to pull stuff out for testing
   @Nullable
   Map<String, TaskReport> getReportForTask(String id)
@@ -115,5 +130,4 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   {
     return msqSpec.get(id);
   }
-
 }

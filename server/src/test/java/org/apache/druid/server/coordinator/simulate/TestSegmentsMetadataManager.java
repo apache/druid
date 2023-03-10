@@ -146,12 +146,6 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public Set<SegmentId> getOvershadowedSegments()
-  {
-    return getSnapshotOfDataSourcesWithAllUsedSegments().getOvershadowedSegments();
-  }
-
-  @Override
   public DataSourcesSnapshot getSnapshotOfDataSourcesWithAllUsedSegments()
   {
     return DataSourcesSnapshot.fromUsedSegments(usedSegments.values(), ImmutableMap.of());

@@ -27,9 +27,8 @@ import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.OperandTypes;
-import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
-import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchSetPostAggregator;
@@ -38,7 +37,6 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.PostAggregatorVisitor;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
-import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
@@ -65,6 +63,8 @@ public abstract class ThetaSketchSetBaseOperatorConversion implements SqlOperato
       RexNode rexNode
   )
   {
+    plannerContext.setPlanningError("%s can only be used on aggregates. " +
+        "It cannot be used directly on a column or on a scalar expression.", getFunctionName());
     return null;
   }
 
@@ -81,31 +81,24 @@ public abstract class ThetaSketchSetBaseOperatorConversion implements SqlOperato
     final List<PostAggregator> inputPostAggs = new ArrayList<>();
     Integer size = null;
 
-    int operandCounter = 0;
-    for (RexNode operand : operands) {
-      final PostAggregator convertedPostAgg = OperatorConversions.toPostAggregator(
-          plannerContext,
-          rowSignature,
-          operand,
-          postAggregatorVisitor
-      );
-      if (convertedPostAgg == null) {
-        if (operandCounter == 0) {
-          try {
-            if (!operand.isA(SqlKind.LITERAL)) {
-              return null;
-            }
-            size = RexLiteral.intValue(operand);
-          }
-          catch (ClassCastException cce) {
-            return null;
-          }
-        } else {
-          return null;
-        }
+    for (int i = 0; i < operands.size(); i++) {
+      RexNode operand = operands.get(i);
+      if (i == 0 && operand.isA(SqlKind.LITERAL) && SqlTypeFamily.INTEGER.contains(operand.getType())) {
+        size = RexLiteral.intValue(operand);
       } else {
-        inputPostAggs.add(convertedPostAgg);
-        operandCounter++;
+        final PostAggregator convertedPostAgg = OperatorConversions.toPostAggregator(
+            plannerContext,
+            rowSignature,
+            operand,
+            postAggregatorVisitor,
+            true
+        );
+
+        if (convertedPostAgg == null) {
+          return null;
+        } else {
+          inputPostAggs.add(convertedPostAgg);
+        }
       }
     }
 
@@ -122,9 +115,7 @@ public abstract class ThetaSketchSetBaseOperatorConversion implements SqlOperato
     return new SqlFunction(
         getFunctionName(),
         SqlKind.OTHER_FUNCTION,
-        ReturnTypes.explicit(
-            factory -> Calcites.createSqlType(factory, SqlTypeName.OTHER)
-        ),
+        ThetaSketchSqlOperators.RETURN_TYPE_INFERENCE,
         null,
         OperandTypes.variadic(SqlOperandCountRanges.from(2)),
         SqlFunctionCategory.USER_DEFINED_FUNCTION

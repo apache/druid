@@ -18,7 +18,8 @@
   ~ under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <artifactId>druid-sql</artifactId>
@@ -28,20 +29,10 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>25.0.0-SNAPSHOT</version>
+    <version>26.0.0-SNAPSHOT</version>
   </parent>
 
   <dependencies>
-    <dependency>
-      <groupId>org.apache.druid</groupId>
-      <artifactId>druid-core</artifactId>
-      <version>${project.parent.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.druid</groupId>
-      <artifactId>druid-hll</artifactId>
-      <version>${project.parent.version}</version>
-    </dependency>
     <dependency>
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-processing</artifactId>
@@ -186,6 +177,7 @@
       <scope>provided</scope>
     </dependency>
 
+
     <!-- Tests -->
     <dependency>
       <groupId>junit</groupId>
@@ -195,6 +187,11 @@
     <dependency>
       <groupId>pl.pragmatists</groupId>
       <artifactId>JUnitParams</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-text</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -209,15 +206,13 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
+      <groupId>com.fasterxml.jackson.dataformat</groupId>
+      <artifactId>jackson-dataformat-yaml</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.druid</groupId>
-      <artifactId>druid-core</artifactId>
-      <version>${project.parent.version}</version>
-      <type>test-jar</type>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -247,7 +242,11 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
-      <version>${mockito.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jdbi</groupId>
+      <artifactId>jdbi</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -274,7 +273,7 @@
         <executions>
           <execution>
             <id>unpack-parser-template</id>
-            <phase>initialize</phase>
+            <phase>generate-sources</phase>
             <goals>
               <goal>unpack</goal>
             </goals>
@@ -302,7 +301,7 @@
         <executions>
           <execution>
             <id>copy-fmpp-resources</id>
-            <phase>initialize</phase>
+            <phase>generate-sources</phase>
             <goals>
               <goal>copy-resources</goal>
             </goals>
@@ -333,14 +332,14 @@
             </goals>
             <configuration>
               <cfgFile>${project.build.directory}/codegen/config.fmpp</cfgFile>
-              <outputDirectory>${project.build.directory}/generated-sources/annotations</outputDirectory>
+              <outputDirectory>${project.build.directory}/generated-sources</outputDirectory>
               <templateDirectory>${project.build.directory}/codegen/templates</templateDirectory>
             </configuration>
           </execution>
         </executions>
       </plugin>
 
-      <!-- Creates a Java class for the custom parser from the Parser.jj -->
+      <!-- Creates a Java class for the custom parser from Parser.jj -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>javacc-maven-plugin</artifactId>
@@ -352,16 +351,48 @@
               <goal>javacc</goal>
             </goals>
             <configuration>
-              <sourceDirectory>${project.build.directory}/generated-sources/annotations</sourceDirectory>
+              <sourceDirectory>${project.build.directory}/generated-sources/javacc</sourceDirectory>
               <includes>
-                <include>**/Parser.jj</include>
+                <include>Parser.jj</include>
               </includes>
               <lookAhead>2</lookAhead>
               <isStatic>false</isStatic>
-              <outputDirectory>${project.build.directory}/generated-sources/annotations</outputDirectory>
+              <outputDirectory>${project.build.directory}/generated-sources</outputDirectory>
             </configuration>
           </execution>
         </executions>
+      </plugin>
+
+      <!-- This plugin is used to replace the production rule for FROM clause in the calcite grammar.
+           It is done by a search and replace since calcite doesn't allow to override production rules generally
+           in its grammar (override is possible only if there's a hook for it in the grammar). And the FROM clause
+           doesn't contain any hook for extension. For the custom changes done in
+           extension, please check from.ftl file in sql module.
+      -->
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <version>1.5.3</version>
+        <executions>
+          <execution>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>replace</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <basedir>${project.build.directory}/generated-sources/org/apache/druid/sql/calcite/parser</basedir>
+          <includes>
+            <include>**/DruidSqlParserImpl.java</include>
+          </includes>
+          <replacements>
+            <replacement>
+              <token>fromClause = FromClause</token>
+              <value>fromClause = DruidFromClause</value>
+            </replacement>
+          </replacements>
+        </configuration>
       </plugin>
 
       <!-- Adds the path of the generated parser to the classpath -->
@@ -377,7 +408,7 @@
             </goals>
             <configuration>
               <sources>
-                <source>src/generated-sources/annotations</source>
+                <source>src/generated-sources</source>
               </sources>
             </configuration>
           </execution>

@@ -360,7 +360,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
                 QueryableIndex oldIndex = segment.asQueryableIndex();
                 for (String dim : oldIndex.getAvailableDimensions()) {
                   dimOrder.add(dim);
-                  oldCapabilities.put(dim, oldIndex.getColumnHolder(dim).getCapabilities());
+                  oldCapabilities.put(dim, oldIndex.getColumnHolder(dim).getHandlerCapabilities());
                 }
               }
               finally {
@@ -369,7 +369,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
             } else {
               IncrementalIndex oldIndex = lastHydrant.getIndex();
               dimOrder.addAll(oldIndex.getDimensionOrder());
-              oldCapabilities = oldIndex.getColumnCapabilities();
+              oldCapabilities = oldIndex.getColumnHandlerCapabilities();
             }
             newIndex.loadDimensionIterable(dimOrder, oldCapabilities);
           }

@@ -21,7 +21,9 @@ package org.apache.druid.msq.indexing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -45,15 +47,22 @@ public class MSQTuningConfigTest
   public void testSerdeNonDefault() throws Exception
   {
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
-    final MSQTuningConfig config = new MSQTuningConfig(2, 3, 4);
-
-    Assert.assertEquals(
-        config,
-        mapper.readValue(
-            mapper.writeValueAsString(config),
-            MSQTuningConfig.class
+    final MSQTuningConfig config = new MSQTuningConfig(
+        2,
+        3,
+        4,
+        new IndexSpec(
+            null,
+            null,
+            new StringEncodingStrategy.FrontCoded(null),
+            null,
+            null,
+            null,
+            null
         )
     );
+
+    Assert.assertEquals(config, mapper.readValue(mapper.writeValueAsString(config), MSQTuningConfig.class));
   }
 
   @Test

@@ -40,6 +40,11 @@ public class ThetaSketchApproxCountDistinctSqlAggregator extends ThetaSketchBase
 
   private static final SqlAggFunction FUNCTION_INSTANCE = new ThetaSketchSqlAggFunction();
 
+  public ThetaSketchApproxCountDistinctSqlAggregator()
+  {
+    super(true);
+  }
+
   @Override
   public SqlAggFunction calciteFunction()
   {

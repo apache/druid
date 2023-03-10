@@ -43,6 +43,7 @@ import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.AfterClass;
@@ -60,7 +61,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
-public class ExpressionVectorSelectorsTest
+public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
 {
   private static List<String> EXPRESSIONS = ImmutableList.of(
       "long1 * long2",

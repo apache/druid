@@ -114,10 +114,9 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
 
     startSimulation(sim);
     runCoordinatorCycle();
-
-    // Verify that segments have been chosen for balancing
     verifyValue(Metric.MOVED_COUNT, 5L);
 
+    // Remove histT12 from cluster so that the move fails
     removeServer(historicalT12);
     loadQueuedSegments();
 

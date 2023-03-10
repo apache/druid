@@ -34,7 +34,12 @@ public class CalcitePlannerModule implements Module
   @Override
   public void configure(Binder binder)
   {
+    // PlannerConfig previously held the segment metadata cache config,
+    // so both configs are bound to the same property prefix.
+    // It turns out that the order of the arguments above is misleading.
+    // We're actually binding the class to the config prefix, not the other way around.
     JsonConfigProvider.bind(binder, "druid.sql.planner", PlannerConfig.class);
+    JsonConfigProvider.bind(binder, "druid.sql.planner", SegmentMetadataCacheConfig.class);
     binder.bind(PlannerFactory.class).in(LazySingleton.class);
     binder.bind(DruidOperatorTable.class).in(LazySingleton.class);
     Multibinder.newSetBinder(binder, ExtensionCalciteRuleProvider.class);

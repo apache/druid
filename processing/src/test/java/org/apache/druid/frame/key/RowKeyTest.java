@@ -97,11 +97,11 @@ public class RowKeyTest extends InitializedNullHandlingTest
   {
     final RowSignature signatureLong = RowSignature.builder().add("1", ColumnType.LONG).build();
     final RowKey longKey = KeyTestUtils.createKey(signatureLong, 1L, "abc");
-    Assert.assertEquals(longKey.array().length, longKey.getNumberOfBytes());
+    Assert.assertEquals(RowKey.OBJECT_OVERHEAD_SIZE_BYTES + longKey.array().length, longKey.estimatedObjectSizeBytes());
 
     final RowSignature signatureLongString =
         RowSignature.builder().add("1", ColumnType.LONG).add("2", ColumnType.STRING).build();
     final RowKey longStringKey = KeyTestUtils.createKey(signatureLongString, 1L, "abc");
-    Assert.assertEquals(longStringKey.array().length, longStringKey.getNumberOfBytes());
+    Assert.assertEquals(RowKey.OBJECT_OVERHEAD_SIZE_BYTES + longStringKey.array().length, longStringKey.estimatedObjectSizeBytes());
   }
 }

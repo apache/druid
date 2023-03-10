@@ -40,9 +40,9 @@ import {
   DoctorDialog,
   OverlordDynamicConfigDialog,
 } from '../../dialogs';
+import { Capabilities } from '../../helpers';
 import { getLink } from '../../links';
 import {
-  Capabilities,
   localStorageGetJson,
   LocalStorageKeys,
   localStorageRemove,
@@ -65,7 +65,6 @@ export type HeaderActiveTab =
   | 'datasources'
   | 'segments'
   | 'services'
-  | 'query'
   | 'workbench'
   | 'sql-data-loader'
   | 'lookups';
@@ -388,16 +387,11 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         <AnchorButton
           className="header-entry"
           minimal
-          active={oneOf(active, 'workbench', 'query')}
+          active={active === 'workbench'}
           icon={IconNames.APPLICATION}
           text="Query"
           href="#workbench"
           disabled={!capabilities.hasQuerying()}
-          onClick={e => {
-            if (!e.altKey) return;
-            e.preventDefault();
-            location.hash = '#query';
-          }}
         />
         {showSplitDataLoaderMenu ? (
           <Popover2

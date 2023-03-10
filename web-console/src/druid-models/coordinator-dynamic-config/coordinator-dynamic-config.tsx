@@ -19,7 +19,7 @@
 import { Code } from '@blueprintjs/core';
 import React from 'react';
 
-import { Field } from '../../components';
+import type { Field } from '../../components';
 
 export interface CoordinatorDynamicConfig {
   maxSegmentsToMove?: number;
@@ -70,19 +70,8 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
     ),
   },
   {
-    name: 'killAllDataSources',
-    type: 'boolean',
-    defaultValue: false,
-    info: (
-      <>
-        Send kill tasks for ALL dataSources if property <Code>druid.coordinator.kill.on</Code> is
-        true. If this is set to true then <Code>killDataSourceWhitelist</Code> must not be specified
-        or be empty list.
-      </>
-    ),
-  },
-  {
     name: 'killDataSourceWhitelist',
+    label: 'Kill datasource whitelist',
     type: 'string-array',
     emptyValue: [],
     info: (
@@ -197,13 +186,25 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
   {
     name: 'useBatchedSegmentSampler',
     type: 'boolean',
-    defaultValue: false,
+    defaultValue: true,
     info: (
       <>
         Boolean flag for whether or not we should use the Reservoir Sampling with a reservoir of
         size k instead of fixed size 1 to pick segments to move. This option can be enabled to speed
         up segment balancing process, especially if there are huge number of segments in the cluster
         or if there are too many segments to move.
+      </>
+    ),
+  },
+  {
+    name: 'useRoundRobinSegmentAssignment',
+    type: 'boolean',
+    defaultValue: false,
+    info: (
+      <>
+        Boolean flag for whether segments should be assigned to historicals in a round-robin
+        fashion. If enabled, this can speed up initial segment loading leaving segment balancing to
+        make cost-based decisions and find the optimal location of a segment.
       </>
     ),
   },

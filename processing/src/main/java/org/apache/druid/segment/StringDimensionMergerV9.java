@@ -32,10 +32,12 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnDescriptor;
+import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ByteBufferWriter;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.data.DictionaryWriter;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ImmutableRTreeObjectStrategy;
 import org.apache.druid.segment.data.Indexed;
@@ -95,6 +97,16 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
   protected String coerceValue(String value)
   {
     return NullHandling.emptyToNullIfNeeded(value);
+  }
+
+  @Override
+  protected DictionaryWriter<String> makeDictionaryWriter(String fileName)
+  {
+    return StringEncodingStrategies.getStringDictionaryWriter(
+        indexSpec.getStringDictionaryEncoding(),
+        segmentWriteOutMedium,
+        fileName
+    );
   }
 
   @Nullable

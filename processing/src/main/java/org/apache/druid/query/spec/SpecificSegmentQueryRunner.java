@@ -68,7 +68,7 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
         )
     );
 
-    final boolean setName = input.getQuery().getContextBoolean(CTX_SET_THREAD_NAME, true);
+    final boolean setName = input.getQuery().context().getBoolean(CTX_SET_THREAD_NAME, true);
 
     final Query<T> query = queryPlus.getQuery();
 

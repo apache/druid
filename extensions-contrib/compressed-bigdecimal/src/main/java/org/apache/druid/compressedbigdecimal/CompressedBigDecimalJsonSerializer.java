@@ -31,10 +31,6 @@ import java.io.IOException;
 public class CompressedBigDecimalJsonSerializer extends JsonSerializer<CompressedBigDecimal>
 {
 
-  /* (non-Javadoc)
-   * @see JsonSerializer#serialize(java.lang.Object, com.fasterxml.jackson.core.JsonGenerator,
-   * com.fasterxml.jackson.databind.SerializerProvider)
-   */
   @Override
   public void serialize(CompressedBigDecimal value, JsonGenerator jgen, SerializerProvider provider)
       throws IOException

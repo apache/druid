@@ -66,6 +66,17 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
     this.rowSignature = Preconditions.checkNotNull(rowSignature, "rowSignature");
   }
 
+  /**
+   * Whether the provided time interval and granularity combination is allowed.
+   *
+   * We restrict ETERNITY with non-ALL granularity, because allowing it would involve creating a very high number
+   * of time grains. This would cause queries to take an excessive amount of time or run out of memory.
+   */
+  public static boolean isQueryGranularityAllowed(final Interval interval, final Granularity granularity)
+  {
+    return Granularities.ALL.equals(granularity) || !Intervals.ETERNITY.equals(interval);
+  }
+
   @Override
   public Interval getInterval()
   {
@@ -172,11 +183,13 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
     if (actualInterval == null) {
       return Sequences.empty();
     }
-    // Incase time interval is ETERNITY with non-ALL granularity, don't risk creating time grains.
-    // For all non-ALL granularities, the time grains will be very high in number and that can either OOM the heap
-    // or create an very very long query.
-    if (actualInterval.contains(Intervals.ETERNITY) && !gran.equals(Granularities.ALL)) {
-      throw new IAE("Cannot support ETERNITY interval with %s time granluarity", gran);
+
+    if (!isQueryGranularityAllowed(actualInterval, gran)) {
+      throw new IAE(
+          "Cannot support interval [%s] with granularity [%s]",
+          Intervals.ETERNITY.equals(actualInterval) ? "ETERNITY" : actualInterval,
+          gran
+      );
     }
 
     final RowWalker<RowType> rowWalker = new RowWalker<>(

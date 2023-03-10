@@ -28,7 +28,6 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.filter.DimFilter;
@@ -41,6 +40,7 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -144,12 +144,6 @@ public class MaterializedViewQuery<T> implements Query<T>
   public Map<String, Object> getContext()
   {
     return query.getContext();
-  }
-
-  @Override
-  public QueryContext getQueryContext()
-  {
-    return query.getQueryContext();
   }
 
   @Override

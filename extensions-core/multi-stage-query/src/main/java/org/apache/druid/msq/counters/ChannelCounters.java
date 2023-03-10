@@ -58,6 +58,11 @@ public class ChannelCounters implements QueryCounter
     add(NO_PARTITION, 1, 0, 0, 0);
   }
 
+  public void incrementBytes(long bytes)
+  {
+    add(NO_PARTITION, 0, bytes, 0, 0);
+  }
+
   public void incrementFileCount()
   {
     add(NO_PARTITION, 0, 0, 0, 1);

@@ -23,11 +23,15 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.frame.key.ClusterBy;
+import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
@@ -36,11 +40,16 @@ import org.apache.druid.msq.input.NilInputSource;
 import org.apache.druid.msq.input.external.ExternalInputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.input.table.TableInputSpec;
+import org.apache.druid.msq.kernel.HashShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
+import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.msq.kernel.StageDefinitionBuilder;
+import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.DimFilter;
@@ -51,6 +60,9 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
+import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
+import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -62,11 +74,18 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-/**
- * Used by {@link QueryKit} implementations to produce {@link InputSpec} from native {@link DataSource}.
- */
 public class DataSourcePlan
 {
+  /**
+   * A map with {@link DruidSqlInsert#SQL_INSERT_SEGMENT_GRANULARITY} set to null, so we can clear it from the context
+   * of subqueries.
+   */
+  private static final Map<String, Object> CONTEXT_MAP_NO_SEGMENT_GRANULARITY = new HashMap<>();
+
+  static {
+    CONTEXT_MAP_NO_SEGMENT_GRANULARITY.put(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY, null);
+  }
+
   private final DataSource newDataSource;
   private final List<InputSpec> inputSpecs;
   private final IntSet broadcastInputs;
@@ -97,6 +116,7 @@ public class DataSourcePlan
   public static DataSourcePlan forDataSource(
       final QueryKit queryKit,
       final String queryId,
+      final QueryContext queryContext,
       final DataSource dataSource,
       final QuerySegmentSpec querySegmentSpec,
       @Nullable DimFilter filter,
@@ -124,15 +144,35 @@ public class DataSourcePlan
           broadcast
       );
     } else if (dataSource instanceof JoinDataSource) {
-      return forJoin(
-          queryKit,
-          queryId,
-          (JoinDataSource) dataSource,
-          querySegmentSpec,
-          maxWorkerCount,
-          minStageNumber,
-          broadcast
-      );
+      final JoinAlgorithm joinAlgorithm = PlannerContext.getJoinAlgorithm(queryContext);
+
+      switch (joinAlgorithm) {
+        case BROADCAST:
+          return forBroadcastHashJoin(
+              queryKit,
+              queryId,
+              queryContext,
+              (JoinDataSource) dataSource,
+              querySegmentSpec,
+              maxWorkerCount,
+              minStageNumber,
+              broadcast
+          );
+
+        case SORT_MERGE:
+          return forSortMergeJoin(
+              queryKit,
+              queryId,
+              (JoinDataSource) dataSource,
+              querySegmentSpec,
+              maxWorkerCount,
+              minStageNumber,
+              broadcast
+          );
+
+        default:
+          throw new UOE("Cannot handle join algorithm [%s]", joinAlgorithm);
+      }
     } else {
       throw new UOE("Cannot handle dataSource [%s]", dataSource);
     }
@@ -247,9 +287,12 @@ public class DataSourcePlan
   {
     final QueryDefinition subQueryDef = queryKit.makeQueryDefinition(
         queryId,
-        dataSource.getQuery(),
+
+        // Subqueries ignore SQL_INSERT_SEGMENT_GRANULARITY, even if set in the context. It's only used for the
+        // outermost query, and setting it for the subquery makes us erroneously add bucketing where it doesn't belong.
+        dataSource.getQuery().withOverriddenContext(CONTEXT_MAP_NO_SEGMENT_GRANULARITY),
         queryKit,
-        ShuffleSpecFactories.subQueryWithMaxWorkerCount(maxWorkerCount),
+        ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount),
         maxWorkerCount,
         minStageNumber
     );
@@ -264,9 +307,13 @@ public class DataSourcePlan
     );
   }
 
-  private static DataSourcePlan forJoin(
+  /**
+   * Build a plan for broadcast hash-join.
+   */
+  private static DataSourcePlan forBroadcastHashJoin(
       final QueryKit queryKit,
       final String queryId,
+      final QueryContext queryContext,
       final JoinDataSource dataSource,
       final QuerySegmentSpec querySegmentSpec,
       final int maxWorkerCount,
@@ -275,16 +322,18 @@ public class DataSourcePlan
   )
   {
     final QueryDefinitionBuilder subQueryDefBuilder = QueryDefinition.builder();
-    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(dataSource);
+    final DataSourceAnalysis analysis = dataSource.getAnalysis();
 
     final DataSourcePlan basePlan = forDataSource(
         queryKit,
         queryId,
+        queryContext,
         analysis.getBaseDataSource(),
         querySegmentSpec,
         null, // Don't push query filters down through a join: this needs some work to ensure pruning works properly.
         maxWorkerCount,
         Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
+
         broadcast
     );
 
@@ -298,6 +347,7 @@ public class DataSourcePlan
       final DataSourcePlan clausePlan = forDataSource(
           queryKit,
           queryId,
+          queryContext,
           clause.getDataSource(),
           new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY),
           null, // Don't push query filters down through a join: this needs some work to ensure pruning works properly.
@@ -315,9 +365,9 @@ public class DataSourcePlan
           clause.getPrefix(),
           clause.getCondition(),
           clause.getJoinType(),
-
           // First JoinDataSource (i == 0) involves the base table, so we need to propagate the base table filter.
-          i == 0 ? analysis.getJoinBaseTableFilter().orElse(null) : null
+          i == 0 ? analysis.getJoinBaseTableFilter().orElse(null) : null,
+          dataSource.getJoinableFactoryWrapper()
       );
       inputSpecs.addAll(clausePlan.getInputSpecs());
       clausePlan.getBroadcastInputs().intStream().forEach(n -> broadcastInputs.add(n + shift));
@@ -325,6 +375,117 @@ public class DataSourcePlan
     }
 
     return new DataSourcePlan(newDataSource, inputSpecs, broadcastInputs, subQueryDefBuilder);
+  }
+
+  /**
+   * Build a plan for sort-merge join.
+   */
+  private static DataSourcePlan forSortMergeJoin(
+      final QueryKit queryKit,
+      final String queryId,
+      final JoinDataSource dataSource,
+      final QuerySegmentSpec querySegmentSpec,
+      final int maxWorkerCount,
+      final int minStageNumber,
+      final boolean broadcast
+  )
+  {
+    checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
+    SortMergeJoinFrameProcessorFactory.validateCondition(dataSource.getConditionAnalysis());
+
+    // Partition by keys given by the join condition.
+    final List<List<KeyColumn>> partitionKeys = SortMergeJoinFrameProcessorFactory.toKeyColumns(
+        SortMergeJoinFrameProcessorFactory.validateCondition(dataSource.getConditionAnalysis())
+    );
+
+    final QueryDefinitionBuilder subQueryDefBuilder = QueryDefinition.builder();
+
+    // Plan the left input.
+    // We're confident that we can cast dataSource.getLeft() to QueryDataSource, because DruidJoinQueryRel creates
+    // subqueries when the join algorithm is sortMerge.
+    final DataSourcePlan leftPlan = forQuery(
+        queryKit,
+        queryId,
+        (QueryDataSource) dataSource.getLeft(),
+        maxWorkerCount,
+        Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
+        false
+    );
+    leftPlan.getSubQueryDefBuilder().ifPresent(subQueryDefBuilder::addAll);
+
+    // Plan the right input.
+    // We're confident that we can cast dataSource.getRight() to QueryDataSource, because DruidJoinQueryRel creates
+    // subqueries when the join algorithm is sortMerge.
+    final DataSourcePlan rightPlan = forQuery(
+        queryKit,
+        queryId,
+        (QueryDataSource) dataSource.getRight(),
+        maxWorkerCount,
+        Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
+        false
+    );
+    rightPlan.getSubQueryDefBuilder().ifPresent(subQueryDefBuilder::addAll);
+
+    // Build up the left stage.
+    final StageDefinitionBuilder leftBuilder = subQueryDefBuilder.getStageBuilder(
+        ((StageInputSpec) Iterables.getOnlyElement(leftPlan.getInputSpecs())).getStageNumber()
+    );
+
+    final List<KeyColumn> leftPartitionKey = partitionKeys.get(0);
+    leftBuilder.shuffleSpec(new HashShuffleSpec(new ClusterBy(leftPartitionKey, 0), maxWorkerCount));
+    leftBuilder.signature(QueryKitUtils.sortableSignature(leftBuilder.getSignature(), leftPartitionKey));
+
+    // Build up the right stage.
+    final StageDefinitionBuilder rightBuilder = subQueryDefBuilder.getStageBuilder(
+        ((StageInputSpec) Iterables.getOnlyElement(rightPlan.getInputSpecs())).getStageNumber()
+    );
+
+    final List<KeyColumn> rightPartitionKey = partitionKeys.get(1);
+    rightBuilder.shuffleSpec(new HashShuffleSpec(new ClusterBy(rightPartitionKey, 0), maxWorkerCount));
+    rightBuilder.signature(QueryKitUtils.sortableSignature(rightBuilder.getSignature(), rightPartitionKey));
+
+    // Compute join signature.
+    final RowSignature.Builder joinSignatureBuilder = RowSignature.builder();
+
+    for (String leftColumn : leftBuilder.getSignature().getColumnNames()) {
+      joinSignatureBuilder.add(leftColumn, leftBuilder.getSignature().getColumnType(leftColumn).orElse(null));
+    }
+
+    for (String rightColumn : rightBuilder.getSignature().getColumnNames()) {
+      joinSignatureBuilder.add(
+          dataSource.getRightPrefix() + rightColumn,
+          rightBuilder.getSignature().getColumnType(rightColumn).orElse(null)
+      );
+    }
+
+    // Build up the join stage.
+    final int stageNumber = Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber());
+
+    subQueryDefBuilder.add(
+        StageDefinition.builder(stageNumber)
+                       .inputs(
+                           ImmutableList.of(
+                               Iterables.getOnlyElement(leftPlan.getInputSpecs()),
+                               Iterables.getOnlyElement(rightPlan.getInputSpecs())
+                           )
+                       )
+                       .maxWorkerCount(maxWorkerCount)
+                       .signature(joinSignatureBuilder.build())
+                       .processorFactory(
+                           new SortMergeJoinFrameProcessorFactory(
+                               dataSource.getRightPrefix(),
+                               dataSource.getConditionAnalysis(),
+                               dataSource.getJoinType()
+                           )
+                       )
+    );
+
+    return new DataSourcePlan(
+        new InputNumberDataSource(0),
+        Collections.singletonList(new StageInputSpec(stageNumber)),
+        broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
+        subQueryDefBuilder
+    );
   }
 
   private static DataSource shiftInputNumbers(final DataSource dataSource, final int shift)

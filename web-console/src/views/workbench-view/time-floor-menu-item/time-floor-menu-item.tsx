@@ -18,10 +18,11 @@
 
 import { MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { SqlExpression, SqlFunction, SqlLiteral } from 'druid-query-toolkit';
+import type { SqlExpression } from 'druid-query-toolkit';
+import { F, SqlFunction } from 'druid-query-toolkit';
 import React from 'react';
 
-import { compact, oneOf, tickIcon } from '../../../utils';
+import { oneOf, tickIcon } from '../../../utils';
 
 const OPTIONS: { label: string; value: string }[] = [
   { label: 'Second', value: 'PT1S' },
@@ -53,16 +54,16 @@ export const TimeFloorMenuItem = function TimeFloorMenuItem(props: TimeFloorMenu
 
   let innerExpression = expression.getUnderlyingExpression();
   let currentDuration: string | undefined;
-  let origin: SqlExpression | undefined;
-  let timezone: SqlExpression | undefined;
+  let origin: string | undefined;
+  let timezone: string | undefined;
   if (
     innerExpression instanceof SqlFunction &&
     oneOf(innerExpression.getEffectiveFunctionName(), 'TIME_FLOOR', 'FLOOR')
   ) {
     const firstArg = innerExpression.getArg(0);
     const secondArg = innerExpression.getArgAsString(1)?.toUpperCase();
-    origin = innerExpression.getArg(2);
-    timezone = innerExpression.getArg(3);
+    origin = innerExpression.getArgAsString(2);
+    timezone = innerExpression.getArgAsString(3);
     if (firstArg && secondArg) {
       innerExpression = firstArg;
       currentDuration = UNIT_TO_DURATION[secondArg] || secondArg;
@@ -71,13 +72,9 @@ export const TimeFloorMenuItem = function TimeFloorMenuItem(props: TimeFloorMenu
 
   const changeTimeFloor = (duration: string | undefined) => {
     onChange(
-      (duration
-        ? SqlFunction.simple(
-            'TIME_FLOOR',
-            compact([innerExpression, SqlLiteral.create(duration), origin, timezone]),
-          )
-        : innerExpression
-      ).as(expression.getOutputName()),
+      (duration ? F.timeFloor(innerExpression, duration, origin, timezone) : innerExpression).as(
+        expression.getOutputName(),
+      ),
     );
   };
 

@@ -49,7 +49,10 @@
             "missingValue": "2018-09-01T00:00:00.000Z"
           },
           "dimensionsSpec": {
-            "dimensions": [],
+            "dimensions": [
+              "optionalPrimitive",
+              "requiredPrimitive"
+            ],
             "dimensionExclusions": [],
             "spatialDimensions": []
           }

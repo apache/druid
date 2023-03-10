@@ -164,7 +164,6 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         .withCoordinatorPeriod(new Duration(COORDINATOR_PERIOD))
         .withCoordinatorKillPeriod(new Duration(COORDINATOR_PERIOD))
         .withCoordinatorKillMaxSegments(10)
-        .withLoadQueuePeonRepeatDelay(new Duration("PT0s"))
         .withCoordinatorKillIgnoreDurationToRetain(false)
         .build();
     sourceLoadQueueChildrenCache = new PathChildrenCache(
@@ -450,7 +449,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
       }
     };
 
-    serverView = new CoordinatorServerView(baseView, new CoordinatorSegmentWatcherConfig());
+    serverView = new CoordinatorServerView(baseView, new CoordinatorSegmentWatcherConfig(), new NoopServiceEmitter());
 
     baseView.start();
 

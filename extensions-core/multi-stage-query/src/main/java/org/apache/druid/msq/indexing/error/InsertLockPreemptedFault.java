@@ -32,8 +32,8 @@ public class InsertLockPreemptedFault extends BaseMSQFault
   {
     super(
         CODE,
-        "Insert lock preempted while trying to ingest the data."
-        + " This can occur if there are higher priority jobs like real-time ingestion running on same time chunks."
+        "Lock preempted while trying to ingest the data. This can occur if there are higher priority tasks, such as "
+        + "real-time ingestion, running on the same time chunks."
     );
   }
 

@@ -20,14 +20,12 @@
 
 package org.apache.druid.segment.nested;
 
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
@@ -37,6 +35,7 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Describes the basic shape for any 'nested data' ({@link StructuredData}) {@link ComplexColumn} implementation along
@@ -45,29 +44,6 @@ import java.util.List;
  */
 public abstract class NestedDataComplexColumn implements ComplexColumn
 {
-  @Nullable
-  public static NestedDataComplexColumn fromColumnSelector(
-      ColumnSelector columnSelector,
-      String columnName
-  )
-  {
-    ColumnHolder holder = columnSelector.getColumnHolder(columnName);
-    if (holder == null) {
-      return null;
-    }
-    BaseColumn theColumn = holder.getColumn();
-    if (theColumn instanceof CompressedNestedDataComplexColumn) {
-      return (CompressedNestedDataComplexColumn) theColumn;
-    }
-    throw new IAE(
-        "Column [%s] is invalid type, found [%s] instead of [%s]",
-        columnName,
-        theColumn.getClass(),
-        NestedDataComplexColumn.class.getSimpleName()
-    );
-  }
-
-
   /**
    * Make a {@link DimensionSelector} for a nested literal field column associated with this nested
    * complex column specified by a sequence of {@link NestedPathPart}.
@@ -113,6 +89,14 @@ public abstract class NestedDataComplexColumn implements ComplexColumn
       List<NestedPathPart> path,
       ReadableVectorOffset readableOffset
   );
+
+  public abstract List<List<NestedPathPart>> getNestedFields();
+
+  @Nullable
+  public abstract Set<ColumnType> getColumnTypes(List<NestedPathPart> path);
+
+  @Nullable
+  public abstract ColumnHolder getColumnHolder(List<NestedPathPart> path);
 
   /**
    * Make a {@link ColumnIndexSupplier} for a nested literal field column associated with this nested

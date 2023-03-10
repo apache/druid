@@ -24,9 +24,10 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.frame.key.KeyTestUtils;
 import org.apache.druid.frame.key.RowKey;
-import org.apache.druid.frame.key.SortColumn;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -41,7 +42,7 @@ import java.util.NoSuchElementException;
 
 public class QuantilesSketchKeyCollectorTest
 {
-  private final ClusterBy clusterBy = new ClusterBy(ImmutableList.of(new SortColumn("x", false)), 0);
+  private final ClusterBy clusterBy = new ClusterBy(ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING)), 0);
   private final Comparator<RowKey> comparator = clusterBy.keyComparator();
   private final int numKeys = 500_000;
 
@@ -167,12 +168,12 @@ public class QuantilesSketchKeyCollectorTest
   @Test
   public void testAverageKeyLength()
   {
-    final QuantilesSketchKeyCollector collector = QuantilesSketchKeyCollectorFactory.create(clusterBy).newKeyCollector();
-
+    final QuantilesSketchKeyCollector collector =
+        QuantilesSketchKeyCollectorFactory.create(clusterBy).newKeyCollector();
     final QuantilesSketchKeyCollector other = QuantilesSketchKeyCollectorFactory.create(clusterBy).newKeyCollector();
 
     RowSignature smallKeySignature = KeyTestUtils.createKeySignature(
-        new ClusterBy(ImmutableList.of(new SortColumn("x", false)), 0).getColumns(),
+        new ClusterBy(ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING)), 0).getColumns(),
         RowSignature.builder().add("x", ColumnType.LONG).build()
     );
     RowKey smallKey = KeyTestUtils.createKey(smallKeySignature, 1L);
@@ -180,11 +181,12 @@ public class QuantilesSketchKeyCollectorTest
     RowSignature largeKeySignature = KeyTestUtils.createKeySignature(
         new ClusterBy(
             ImmutableList.of(
-                new SortColumn("x", false),
-                new SortColumn("y", false),
-                new SortColumn("z", false)
+                new KeyColumn("x", KeyOrder.ASCENDING),
+                new KeyColumn("y", KeyOrder.ASCENDING),
+                new KeyColumn("z", KeyOrder.ASCENDING)
             ),
-            0).getColumns(),
+            0
+        ).getColumns(),
         RowSignature.builder()
                     .add("x", ColumnType.LONG)
                     .add("y", ColumnType.LONG)
@@ -195,13 +197,17 @@ public class QuantilesSketchKeyCollectorTest
 
 
     collector.add(smallKey, 3);
-    Assert.assertEquals(smallKey.getNumberOfBytes(), collector.getAverageKeyLength(), 0);
+    Assert.assertEquals(smallKey.estimatedObjectSizeBytes(), collector.getAverageKeyLength(), 0);
 
     other.add(largeKey, 5);
-    Assert.assertEquals(largeKey.getNumberOfBytes(), other.getAverageKeyLength(), 0);
+    Assert.assertEquals(largeKey.estimatedObjectSizeBytes(), other.getAverageKeyLength(), 0);
 
     collector.addAll(other);
-    Assert.assertEquals((smallKey.getNumberOfBytes() * 3 + largeKey.getNumberOfBytes() * 5) / 8.0, collector.getAverageKeyLength(), 0);
+    Assert.assertEquals(
+        (smallKey.estimatedObjectSizeBytes() * 3 + largeKey.estimatedObjectSizeBytes() * 5) / 8.0,
+        collector.getAverageKeyLength(),
+        0
+    );
   }
 
   @Test

@@ -32,14 +32,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.FirehoseFactory;
-import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.Rows;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.IngestionState;
@@ -269,8 +266,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     return findInputSegments(
         getDataSource(),
         taskActionClient,
-        intervals,
-        ingestionSchema.ioConfig.firehoseFactory
+        intervals
     );
   }
 
@@ -486,9 +482,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                                                         .inputIntervals()
                                                         .isEmpty();
 
-      final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
-          ingestionSchema.getDataSchema().getParser()
-      );
+      final InputSource inputSource = ingestionSchema.getIOConfig().getInputSource();
 
       final File tmpDir = toolbox.getIndexingTmpDir();
 
@@ -952,13 +946,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       Set<DataSegment> tombStones = Collections.emptySet();
       if (getIngestionMode() == IngestionMode.REPLACE) {
         // check whether to generate tombstones...
-        TombstoneHelper tombstoneHelper = new TombstoneHelper(
-            pushed.getSegments(),
-            ingestionSchema.getDataSchema(),
-            toolbox.getTaskActionClient()
-        );
+        TombstoneHelper tombstoneHelper = new TombstoneHelper(toolbox.getTaskActionClient());
 
-        List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals();
+        List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals(
+            pushed.getSegments(),
+            ingestionSchema.getDataSchema()
+        );
         // now find the versions for the tombstone intervals
         Map<Interval, SegmentIdWithShardSpec> tombstonesAndVersions = new HashMap<>();
         for (Interval interval : tombstoneIntervals) {
@@ -970,7 +963,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           tombstonesAndVersions.put(interval, segmentIdWithShardSpec);
         }
 
-        tombStones = tombstoneHelper.computeTombstones(tombstonesAndVersions);
+        tombStones = tombstoneHelper.computeTombstones(ingestionSchema.getDataSchema(), tombstonesAndVersions);
 
 
         log.debugSegments(tombStones, "To publish tombstones");
@@ -1196,16 +1189,9 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return inputFormat;
     }
 
-    public InputSource getNonNullInputSource(@Nullable InputRowParser inputRowParser)
+    public InputSource getNonNullInputSource()
     {
-      if (inputSource == null) {
-        return new FirehoseFactoryToInputSourceAdaptor(
-            (FiniteFirehoseFactory) firehoseFactory,
-            inputRowParser
-        );
-      } else {
-        return inputSource;
-      }
+      return Preconditions.checkNotNull(inputSource, "inputSource");
     }
 
     public InputFormat getNonNullInputFormat()

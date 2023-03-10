@@ -30,9 +30,10 @@ For most ingestion methods, the Druid [MiddleManager](../design/middlemanager.md
 [Indexer](../design/indexer.md) processes load your source data. The sole exception is Hadoop-based ingestion, which
 uses a Hadoop MapReduce job on YARN.
 
-During ingestion Druid creates segments and stores them in [deep storage](../dependencies/deep-storage.md). Historical nodes load the segments into memory to respond to queries. For streaming ingestion, the Middle Managers and indexers can respond to queries in real-time with arriving data. See the [Storage design](../design/architecture.md#storage-design) section of the Druid design documentation for more information.
+During ingestion, Druid creates segments and stores them in [deep storage](../dependencies/deep-storage.md). Historical nodes load the segments into memory to respond to queries. For streaming ingestion, the Middle Managers and indexers can respond to queries in real-time with arriving data. See the [Storage design](../design/architecture.md#storage-design) section of the Druid design documentation for more information.
 
 This topic introduces streaming and batch ingestion methods. The following topics describe ingestion concepts and information that apply to all [ingestion methods](#ingestion-methods):
+
 - [Druid data model](./data-model.md) introduces concepts of datasources, primary timestamp, dimensions, and metrics.
 - [Data rollup](./rollup.md) describes rollup as a concept and provides suggestions to maximize the benefits of rollup.
 - [Partitioning](./partitioning.md) describes time chunk and secondary partitioning in Druid.
@@ -67,7 +68,7 @@ runs for the duration of the job.
 | **Method** | [Native batch](./native-batch.md) | [SQL](../multi-stage-query/index.md) | [Hadoop-based](hadoop.md) |
 |---|-----|--------------|------------|
 | **Controller task type** | `index_parallel` | `query_controller` | `index_hadoop` |
-| **How you submit it** | Send an `index_parallel` spec to the [task API](../operations/api-reference.md#task-submit). | Send an [INSERT](../multi-stage-query/concepts.md#insert) or [REPLACE](../multi-stage-query/concepts.md#replace) statement to the [SQL task API](../multi-stage-query/api.md#submit-a-query). | Send an `index_hadoop` spec to the [task API](../operations/api-reference.md#task-submit). |
+| **How you submit it** | Send an `index_parallel` spec to the [task API](../operations/api-reference.md#tasks). | Send an [INSERT](../multi-stage-query/concepts.md#insert) or [REPLACE](../multi-stage-query/concepts.md#replace) statement to the [SQL task API](../multi-stage-query/api.md#submit-a-query). | Send an `index_hadoop` spec to the [task API](../operations/api-reference.md#tasks). |
 | **Parallelism** | Using subtasks, if [`maxNumConcurrentSubTasks`](native-batch.md#tuningconfig) is greater than 1. | Using `query_worker` subtasks. | Using YARN. |
 | **Fault tolerance** | Workers automatically relaunched upon failure. Controller task failure leads to job failure. | Controller or worker task failure leads to job failure. | YARN containers automatically relaunched upon failure. Controller task failure leads to job failure. |
 | **Can append?** | Yes. | Yes (INSERT). | No. |
@@ -77,4 +78,3 @@ runs for the duration of the job.
 | **Input formats** | Any [`inputFormat`](./data-formats.md#input-format). | Any [`inputFormat`](./data-formats.md#input-format). | Any Hadoop InputFormat. |
 | **Secondary partitioning options** | Dynamic, hash-based, and range-based partitioning methods are available. See [partitionsSpec](./native-batch.md#partitionsspec) for details.| Range partitioning ([CLUSTERED BY](../multi-stage-query/concepts.md#clustering)). |  Hash-based or range-based partitioning via [`partitionsSpec`](hadoop.md#partitionsspec). |
 | **[Rollup modes](./rollup.md#perfect-rollup-vs-best-effort-rollup)** | Perfect if `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig).  | Always perfect. | Always perfect. |
-

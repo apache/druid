@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
@@ -47,7 +48,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
@@ -77,7 +77,7 @@ public class BalancerStrategyBenchmark
   private int reservoirSize = 1;
   private double percentOfSegmentsToConsider = 100;
   private final BalancerStrategy balancerStrategy = new CostBalancerStrategy(
-      MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1))
+      MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "BalancerStrategyBenchmark-%d"))
   );
 
   @Setup(Level.Trial)

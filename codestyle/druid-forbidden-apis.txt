@@ -41,6 +41,7 @@ java.util.HashSet#<init>(int, float) @ Use com.google.collect.Sets#newHashSetWit
 java.util.LinkedHashSet#<init>(int) @ Use com.google.collect.Sets#newLinkedHashSatWithExpectedSize(int) instead
 java.util.LinkedHashSet#<init>(int, float) @ Use com.google.collect.Sets#newLinkedHashSatWithExpectedSize(int) instead
 java.util.LinkedList @ Use ArrayList or ArrayDeque instead
+java.util.Properties#getOrDefault(java.lang.Object,java.lang.Object) @ Properties#getOrDefault method does not check the default map for values. Use Properties#getProperty() instead.
 java.util.Random#<init>() @ Use ThreadLocalRandom.current() or the constructor with a seed (the latter in tests only!)
 java.lang.Math#random() @ Use ThreadLocalRandom.current()
 java.util.regex.Pattern#matches(java.lang.String,java.lang.CharSequence) @ Use String.startsWith(), endsWith(), contains(), or compile and cache a Pattern explicitly
@@ -48,6 +49,7 @@ org.apache.commons.io.FileUtils#getTempDirectory() @ Use org.junit.rules.Tempora
 org.apache.commons.io.FileUtils#deleteDirectory(java.io.File) @ Use org.apache.druid.java.util.common.FileUtils#deleteDirectory()
 org.apache.commons.io.FileUtils#forceMkdir(java.io.File) @ Use org.apache.druid.java.util.common.FileUtils.mkdirp instead
 java.lang.Class#getCanonicalName() @ Class.getCanonicalName can return null for anonymous types, use Class.getName instead.
+java.util.concurrent.Executors#newFixedThreadPool(int) @ Executor is non-daemon and can prevent JVM shutdown, use org.apache.druid.java.util.common.concurrent.Execs#multiThreaded(int, java.lang.String) instead.
 
 @defaultMessage Use Locale.ENGLISH
 com.ibm.icu.text.DateFormatSymbols#<init>()

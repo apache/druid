@@ -16,42 +16,26 @@
  * limitations under the License.
  */
 
-import { Icon, Menu, MenuItem } from '@blueprintjs/core';
-import { IconName, IconNames } from '@blueprintjs/icons';
+import { Icon } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
-import {
-  Column,
-  QueryResult,
-  SqlAlias,
-  SqlExpression,
-  SqlLiteral,
-  SqlQuery,
-  SqlStar,
-} from 'druid-query-toolkit';
+import type { Column, QueryResult, SqlQuery } from 'druid-query-toolkit';
+import { SqlAlias, SqlStar } from 'druid-query-toolkit';
 import React, { useState } from 'react';
+import type { RowRenderProps } from 'react-table';
 import ReactTable from 'react-table';
 
 import { BracedText, Deferred, TableCell } from '../../../../components';
+import { CellFilterMenu } from '../../../../components/cell-filter-menu/cell-filter-menu';
 import { ShowValueDialog } from '../../../../dialogs/show-value-dialog/show-value-dialog';
-import {
-  columnToIcon,
-  columnToWidth,
-  filterMap,
-  getNumericColumnBraces,
-  prettyPrintSql,
-  QueryAction,
-  stringifyValue,
-} from '../../../../utils';
+import type { QueryAction } from '../../../../utils';
+import { columnToIcon, columnToWidth, filterMap, getNumericColumnBraces } from '../../../../utils';
 
 import './preview-table.scss';
 
 function isDate(v: any): v is Date {
   return Boolean(v && typeof v.toISOString === 'function');
-}
-
-function isComparable(x: unknown): boolean {
-  return x !== null && x !== '' && !isNaN(Number(x));
 }
 
 function getExpressionIfAlias(query: SqlQuery, selectIndex: number): string {
@@ -89,60 +73,21 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
     if (!parsedQuery || !parsedQuery.isRealOutputColumnAtSelectIndex(headerIndex)) return false;
 
     return (
-      parsedQuery.getEffectiveWhereExpression().containsColumn(header) ||
-      parsedQuery.getEffectiveHavingExpression().containsColumn(header)
-    );
-  }
-
-  function filterOnMenuItem(icon: IconName, clause: SqlExpression) {
-    return (
-      <MenuItem
-        icon={icon}
-        text={`Filter on: ${prettyPrintSql(clause)}`}
-        onClick={() => {
-          onQueryAction(q => q.addWhere(clause));
-        }}
-      />
+      parsedQuery.getEffectiveWhereExpression().containsColumnName(header) ||
+      parsedQuery.getEffectiveHavingExpression().containsColumnName(header)
     );
   }
 
   function getCellMenu(column: Column, headerIndex: number, value: unknown) {
-    const val = SqlLiteral.maybe(value);
-    const showFullValueMenuItem = (
-      <MenuItem
-        icon={IconNames.EYE_OPEN}
-        text="Show full value"
-        onClick={() => {
-          setShowValue(stringifyValue(value));
-        }}
-      />
-    );
-
-    let ex: SqlExpression | undefined;
-    if (!parsedQuery.isAggregateSelectIndex(headerIndex)) {
-      const selectValue = parsedQuery.getSelectExpressionForIndex(headerIndex);
-      if (selectValue) {
-        ex = selectValue.getUnderlyingExpression();
-      }
-    }
-
-    const jsonColumn = column.nativeType === 'COMPLEX<json>';
     return (
-      <Menu>
-        {ex && val && !jsonColumn && (
-          <>
-            {filterOnMenuItem(IconNames.FILTER, ex.equal(val))}
-            {filterOnMenuItem(IconNames.FILTER, ex.unequal(val))}
-            {isComparable(value) && (
-              <>
-                {filterOnMenuItem(IconNames.FILTER, ex.greaterThanOrEqual(val))}
-                {filterOnMenuItem(IconNames.FILTER, ex.lessThanOrEqual(val))}
-              </>
-            )}
-          </>
-        )}
-        {showFullValueMenuItem}
-      </Menu>
+      <CellFilterMenu
+        column={column}
+        value={value}
+        headerIndex={headerIndex}
+        query={parsedQuery}
+        onQueryAction={onQueryAction}
+        onShowFullValue={setShowValue}
+      />
     );
   }
 
@@ -194,7 +139,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
             className: columnClassName,
             width: columnToWidth(column),
             accessor: String(i),
-            Cell(row) {
+            Cell(row: RowRenderProps) {
               const value = row.value;
               return (
                 <div>

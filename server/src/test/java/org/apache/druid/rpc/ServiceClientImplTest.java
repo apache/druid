@@ -67,6 +67,11 @@ public class ServiceClientImplTest
   private static final String SERVICE_NAME = "test-service";
   private static final ServiceLocation SERVER1 = new ServiceLocation("example.com", -1, 8888, "/q");
   private static final ServiceLocation SERVER2 = new ServiceLocation("example.com", -1, 9999, "/q");
+  private static final ServiceLocation SERVER3 = new ServiceLocation("example.com", -1, 1111, "/q");
+  private static final ServiceLocation SERVER4 = new ServiceLocation("example.com", -1, 2222, "/q");
+  private static final ServiceLocation SERVER5 = new ServiceLocation("example.com", -1, 3333, "/q");
+  private static final ServiceLocation SERVER6 = new ServiceLocation("mixed.com", 201, 111, "/q");
+  private static final ServiceLocation SERVER7 = new ServiceLocation("mixed.com", 203, 222, "/q");
 
   private ScheduledExecutorService exec;
 
@@ -270,7 +275,81 @@ public class ServiceClientImplTest
   }
 
   @Test
-  public void test_request_tooManyRedirects()
+  public void test_request_followRedirect_mixedPorts() throws Exception
+  {
+    final RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.GET, "/foo");
+    final ImmutableMap<String, String> expectedResponseObject = ImmutableMap.of("foo", "bar");
+
+    // Redirect from SERVER6 -> SERVER7.
+    stubLocatorCall(locations(SERVER6, SERVER7));
+    expectHttpCall(requestBuilder, SERVER6)
+        .thenReturn(redirectResponse(requestBuilder.build(SERVER7).getUrl().toString()));
+    expectHttpCall(requestBuilder, SERVER7).thenReturn(valueResponse(expectedResponseObject));
+
+    serviceClient = makeServiceClient(StandardRetryPolicy.noRetries());
+    final Map<String, String> response = doRequest(serviceClient, requestBuilder);
+
+    Assert.assertEquals(expectedResponseObject, response);
+  }
+
+  @Test
+  public void test_request_tooLongRedirectChain()
+  {
+    final RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.GET, "/foo");
+
+    // Redirect chain longer than max length.
+    stubLocatorCall(locations(SERVER1, SERVER2, SERVER3, SERVER4, SERVER5));
+    expectHttpCall(requestBuilder, SERVER1)
+        .thenReturn(redirectResponse(requestBuilder.build(SERVER2).getUrl().toString()));
+    expectHttpCall(requestBuilder, SERVER2)
+        .thenReturn(redirectResponse(requestBuilder.build(SERVER3).getUrl().toString()));
+    expectHttpCall(requestBuilder, SERVER3)
+        .thenReturn(redirectResponse(requestBuilder.build(SERVER4).getUrl().toString()));
+    expectHttpCall(requestBuilder, SERVER4)
+        .thenReturn(redirectResponse(requestBuilder.build(SERVER5).getUrl().toString()));
+
+    serviceClient = makeServiceClient(StandardRetryPolicy.noRetries());
+
+    final ExecutionException e = Assert.assertThrows(
+        ExecutionException.class,
+        () -> doRequest(serviceClient, requestBuilder)
+    );
+
+    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(ServiceNotAvailableException.class));
+    MatcherAssert.assertThat(
+        e.getCause(),
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("issued too many redirects"))
+    );
+  }
+
+  @Test
+  public void test_request_tooLongRedirectChainRetry() throws Exception
+  {
+    final RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.GET, "/foo");
+    final ImmutableMap<String, String> expectedResponseObject = ImmutableMap.of("foo", "bar");
+
+    // Redirect chain longer than max length. Can be followed across retries.
+    stubLocatorCall(locations(SERVER1, SERVER2, SERVER3, SERVER4, SERVER5));
+    expectHttpCall(requestBuilder, SERVER1)
+        .thenReturn(redirectResponse(requestBuilder.build(SERVER2).getUrl().toString()));
+    expectHttpCall(requestBuilder, SERVER2)
+        .thenReturn(redirectResponse(requestBuilder.build(SERVER3).getUrl().toString()));
+    expectHttpCall(requestBuilder, SERVER3)
+        .thenReturn(redirectResponse(requestBuilder.build(SERVER4).getUrl().toString()));
+    expectHttpCall(requestBuilder, SERVER4)
+        .thenReturn(redirectResponse(requestBuilder.build(SERVER5).getUrl().toString()));
+    expectHttpCall(requestBuilder, SERVER5)
+        .thenReturn(valueResponse(expectedResponseObject));
+
+    serviceClient = makeServiceClient(StandardRetryPolicy.builder().maxAttempts(2).build());
+
+    final Map<String, String> response = doRequest(serviceClient, requestBuilder);
+
+    Assert.assertEquals(expectedResponseObject, response);
+  }
+
+  @Test
+  public void test_request_selfRedirectLoop()
   {
     final RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.GET, "/foo");
 
@@ -279,17 +358,43 @@ public class ServiceClientImplTest
     expectHttpCall(requestBuilder, SERVER1)
         .thenReturn(redirectResponse(requestBuilder.build(SERVER1).getUrl().toString()));
 
-    serviceClient = makeServiceClient(StandardRetryPolicy.unlimited());
+    serviceClient = makeServiceClient(StandardRetryPolicy.builder().maxAttempts(10).build());
 
     final ExecutionException e = Assert.assertThrows(
         ExecutionException.class,
         () -> doRequest(serviceClient, requestBuilder)
     );
 
-    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(RpcException.class));
+    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(ServiceNotAvailableException.class));
     MatcherAssert.assertThat(
         e.getCause(),
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("redirected too many times"))
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("issued too many redirects"))
+    );
+  }
+
+  @Test
+  public void test_request_twoServerRedirectLoop()
+  {
+    final RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.GET, "/foo");
+
+    // Endless redirects between the same two servers.
+    stubLocatorCall(locations(SERVER1, SERVER2));
+    expectHttpCall(requestBuilder, SERVER1)
+        .thenReturn(redirectResponse(requestBuilder.build(SERVER2).getUrl().toString()));
+    expectHttpCall(requestBuilder, SERVER2)
+        .thenReturn(redirectResponse(requestBuilder.build(SERVER1).getUrl().toString()));
+
+    serviceClient = makeServiceClient(StandardRetryPolicy.builder().maxAttempts(10).build());
+
+    final ExecutionException e = Assert.assertThrows(
+        ExecutionException.class,
+        () -> doRequest(serviceClient, requestBuilder)
+    );
+
+    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(ServiceNotAvailableException.class));
+    MatcherAssert.assertThat(
+        e.getCause(),
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("issued too many redirects"))
     );
   }
 
@@ -314,7 +419,7 @@ public class ServiceClientImplTest
     MatcherAssert.assertThat(
         e.getCause(),
         ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString("redirected [0] times to invalid URL [invalid-url]"))
+            CoreMatchers.containsString("redirected to invalid URL [invalid-url]"))
     );
   }
 
@@ -338,7 +443,7 @@ public class ServiceClientImplTest
     MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(RpcException.class));
     MatcherAssert.assertThat(
         e.getCause(),
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("redirected [0] times to invalid URL [null]"))
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("redirected to invalid URL [null]"))
     );
   }
 
@@ -359,10 +464,11 @@ public class ServiceClientImplTest
         () -> doRequest(serviceClient, requestBuilder)
     );
 
-    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(RpcException.class));
+    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(ServiceNotAvailableException.class));
     MatcherAssert.assertThat(
         e.getCause(),
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("redirected too many times"))
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+            "issued redirect to unknown URL [https://example.com:9999/q/foo]"))
     );
   }
 
@@ -404,6 +510,33 @@ public class ServiceClientImplTest
     final Map<String, String> response = doRequest(serviceClient, requestBuilder);
 
     Assert.assertEquals(expectedResponseObject, response);
+  }
+
+  @Test
+  public void test_request_serviceUnavailableNoRetry()
+  {
+    final RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.GET, "/foo");
+
+    // Service unavailable.
+    stubLocatorCall(locations());
+
+    serviceClient = makeServiceClient(
+        StandardRetryPolicy.builder()
+                           .retryNotAvailable(false)
+                           .maxAttempts(ServiceRetryPolicy.UNLIMITED)
+                           .build()
+    );
+
+    final ExecutionException e = Assert.assertThrows(
+        ExecutionException.class,
+        () -> doRequest(serviceClient, requestBuilder)
+    );
+
+    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(ServiceNotAvailableException.class));
+    MatcherAssert.assertThat(
+        e.getCause(),
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Service [test-service] is not available"))
+    );
   }
 
   @Test

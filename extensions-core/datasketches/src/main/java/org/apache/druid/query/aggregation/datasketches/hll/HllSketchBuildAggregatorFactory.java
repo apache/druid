@@ -53,10 +53,11 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
       @JsonProperty("fieldName") final String fieldName,
       @JsonProperty("lgK") @Nullable final Integer lgK,
       @JsonProperty("tgtHllType") @Nullable final String tgtHllType,
+      @JsonProperty("shouldFinalize") final Boolean shouldFinalize,
       @JsonProperty("round") final boolean round
   )
   {
-    super(name, fieldName, lgK, tgtHllType, round);
+    super(name, fieldName, lgK, tgtHllType, shouldFinalize, round);
   }
 
 
@@ -125,7 +126,14 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
   @Override
   public AggregatorFactory withName(String newName)
   {
-    return new HllSketchBuildAggregatorFactory(newName, getFieldName(), getLgK(), getTgtHllType(), isRound());
+    return new HllSketchBuildAggregatorFactory(
+        newName,
+        getFieldName(),
+        getLgK(),
+        getTgtHllType(),
+        isShouldFinalize(),
+        isRound()
+    );
   }
 
   private void validateInputs(@Nullable ColumnCapabilities capabilities)
