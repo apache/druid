@@ -50,7 +50,6 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
@@ -129,7 +128,6 @@ public class DruidQuery
    * Used by {@link #canUseQueryGranularity}.
    */
   private static final int MAX_TIME_GRAINS_NON_DRUID_TABLE = 100000;
-  public static final String CTX_ENABLE_WINDOW_FNS = "windowsAreForClosers";
 
   private final DataSource dataSource;
   private final PlannerContext plannerContext;
@@ -139,9 +137,6 @@ public class DruidQuery
 
   @Nullable
   private final Projection selectProjection;
-
-  @Nullable
-  private final Projection unnestProjection;
 
   @Nullable
   private final Grouping grouping;
@@ -163,7 +158,6 @@ public class DruidQuery
       final PlannerContext plannerContext,
       @Nullable final DimFilter filter,
       @Nullable final Projection selectProjection,
-      @Nullable final Projection unnestProjection,
       @Nullable final Grouping grouping,
       @Nullable final Sorting sorting,
       @Nullable final Windowing windowing,
@@ -176,7 +170,6 @@ public class DruidQuery
     this.plannerContext = Preconditions.checkNotNull(plannerContext, "plannerContext");
     this.filter = filter;
     this.selectProjection = selectProjection;
-    this.unnestProjection = unnestProjection;
     this.grouping = grouping;
     this.sorting = sorting;
     this.windowing = windowing;
@@ -279,8 +272,7 @@ public class DruidQuery
     }
 
     if (partialQuery.getWindow() != null) {
-      final QueryContext queryContext = plannerContext.queryContext();
-      if (queryContext.getBoolean(CTX_ENABLE_WINDOW_FNS, false)) {
+      if (plannerContext.featureAvailable(EngineFeature.WINDOW_FUNCTIONS)) {
         windowing = Preconditions.checkNotNull(
             Windowing.fromCalciteStuff(
                 partialQuery,
@@ -290,24 +282,11 @@ public class DruidQuery
             )
         );
       } else {
-        plannerContext.setPlanningError("Windowing Not Currently Supported");
-        throw new CannotBuildQueryException("Windowing Not Currently Supported");
+        plannerContext.setPlanningError("Windowing not supported");
+        throw new CannotBuildQueryException("Windowing not supported");
       }
     } else {
       windowing = null;
-    }
-
-    if (partialQuery.getUnnestProject() != null) {
-      unnestProjection = Preconditions.checkNotNull(
-          computeUnnestProjection(
-              partialQuery,
-              plannerContext,
-              computeOutputRowSignature(sourceRowSignature, null, null, null, null),
-              virtualColumnRegistry
-          )
-      );
-    } else {
-      unnestProjection = null;
     }
 
     return new DruidQuery(
@@ -315,7 +294,6 @@ public class DruidQuery
         plannerContext,
         filter,
         selectProjection,
-        unnestProjection,
         grouping,
         sorting,
         windowing,
@@ -390,18 +368,6 @@ public class DruidQuery
     } else {
       return Projection.preAggregation(project, plannerContext, rowSignature, virtualColumnRegistry);
     }
-  }
-
-  @Nonnull
-  private static Projection computeUnnestProjection(
-      final PartialDruidQuery partialQuery,
-      final PlannerContext plannerContext,
-      final RowSignature rowSignature,
-      final VirtualColumnRegistry virtualColumnRegistry
-  )
-  {
-    final Project project = Preconditions.checkNotNull(partialQuery.getUnnestProject(), "unnestProject");
-    return Projection.preAggregation(project, plannerContext, rowSignature, virtualColumnRegistry);
   }
 
   @Nonnull
@@ -801,16 +767,6 @@ public class DruidQuery
       }
     }
 
-
-    if (unnestProjection != null) {
-      for (String columnName : unnestProjection.getVirtualColumns()) {
-        if (virtualColumnRegistry.isVirtualColumnDefined(columnName)) {
-          virtualColumns.add(virtualColumnRegistry.getVirtualColumn(columnName));
-        }
-      }
-    }
-
-
     for (String columnName : specialized) {
       if (virtualColumnRegistry.isVirtualColumnDefined(columnName)) {
         virtualColumns.add(virtualColumnRegistry.getVirtualColumn(columnName));
@@ -1006,7 +962,7 @@ public class DruidQuery
   @Nullable
   private TimeBoundaryQuery toTimeBoundaryQuery()
   {
-    if (!plannerContext.engineHasFeature(EngineFeature.TIME_BOUNDARY_QUERY)
+    if (!plannerContext.featureAvailable(EngineFeature.TIME_BOUNDARY_QUERY)
         || grouping == null
         || grouping.getSubtotals().hasEffect(grouping.getDimensionSpecs())
         || grouping.getHavingFilter() != null
@@ -1072,7 +1028,7 @@ public class DruidQuery
   @Nullable
   private TimeseriesQuery toTimeseriesQuery()
   {
-    if (!plannerContext.engineHasFeature(EngineFeature.TIMESERIES_QUERY)
+    if (!plannerContext.featureAvailable(EngineFeature.TIMESERIES_QUERY)
         || grouping == null
         || grouping.getSubtotals().hasEffect(grouping.getDimensionSpecs())
         || grouping.getHavingFilter() != null
@@ -1191,7 +1147,7 @@ public class DruidQuery
   private TopNQuery toTopNQuery()
   {
     // Must be allowed by the QueryMaker.
-    if (!plannerContext.engineHasFeature(EngineFeature.TOPN_QUERY)) {
+    if (!plannerContext.featureAvailable(EngineFeature.TOPN_QUERY)) {
       return null;
     }
 
@@ -1482,7 +1438,7 @@ public class DruidQuery
       orderByColumns = Collections.emptyList();
     }
 
-    if (!plannerContext.engineHasFeature(EngineFeature.SCAN_ORDER_BY_NON_TIME) && !orderByColumns.isEmpty()) {
+    if (!plannerContext.featureAvailable(EngineFeature.SCAN_ORDER_BY_NON_TIME) && !orderByColumns.isEmpty()) {
       if (orderByColumns.size() > 1 || !ColumnHolder.TIME_COLUMN_NAME.equals(orderByColumns.get(0).getColumnName())) {
         // Cannot handle this ordering.
         // Scan cannot ORDER BY non-time columns.
@@ -1541,7 +1497,7 @@ public class DruidQuery
       final Map<String, Object> queryContext
   )
   {
-    if (!plannerContext.engineHasFeature(EngineFeature.SCAN_NEEDS_SIGNATURE)) {
+    if (!plannerContext.featureAvailable(EngineFeature.SCAN_NEEDS_SIGNATURE)) {
       return queryContext;
     }
     // Compute the signature of the columns that we are selecting.

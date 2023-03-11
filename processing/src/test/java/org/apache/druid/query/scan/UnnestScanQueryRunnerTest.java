@@ -22,6 +22,7 @@ package org.apache.druid.query.scan;
 import com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
@@ -102,8 +103,12 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
     return Druids.newScanQueryBuilder()
                  .dataSource(UnnestDataSource.create(
                      new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
-                     QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
-                     QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+                     new ExpressionVirtualColumn(
+                         QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+                         "\"" + QueryRunnerTestHelper.PLACEMENTISH_DIMENSION + "\"",
+                         null,
+                         ExprMacroTable.nil()
+                     ),
                      allowSet
                  ))
                  .columns(Collections.emptyList())
@@ -178,21 +183,17 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
               .intervals(I_0112_0114)
               .dataSource(UnnestDataSource.create(
                   new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
-                  "vc",
-                  QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+                  new ExpressionVirtualColumn(
+                      QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+                      "mv_to_array(placementish)",
+                      ColumnType.STRING,
+                      TestExprMacroTable.INSTANCE
+                  ),
                   null
               ))
               .columns(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
               .eternityInterval()
               .legacy(legacy)
-              .virtualColumns(
-                  new ExpressionVirtualColumn(
-                      "vc",
-                      "mv_to_array(placementish)",
-                      ColumnType.STRING,
-                      TestExprMacroTable.INSTANCE
-                  )
-              )
               .limit(3)
               .build();
 
@@ -252,21 +253,17 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
               .intervals(I_0112_0114)
               .dataSource(UnnestDataSource.create(
                   new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
-                  "vc",
-                  QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+                  new ExpressionVirtualColumn(
+                      QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+                      "array(\"market\",\"quality\")",
+                      ColumnType.STRING,
+                      TestExprMacroTable.INSTANCE
+                  ),
                   null
               ))
               .columns(QueryRunnerTestHelper.MARKET_DIMENSION, QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
               .eternityInterval()
               .legacy(legacy)
-              .virtualColumns(
-                  new ExpressionVirtualColumn(
-                      "vc",
-                      "array(\"market\",\"quality\")",
-                      ColumnType.STRING,
-                      TestExprMacroTable.INSTANCE
-                  )
-              )
               .limit(4)
               .build();
 

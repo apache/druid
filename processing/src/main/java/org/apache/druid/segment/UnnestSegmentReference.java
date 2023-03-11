@@ -40,15 +40,17 @@ public class UnnestSegmentReference implements SegmentReference
   private static final Logger log = new Logger(UnnestSegmentReference.class);
 
   private final SegmentReference baseSegment;
-  private final String dimension;
-  private final String renamedOutputDimension;
+  private final VirtualColumn unnestColumn;
   private final LinkedHashSet<String> allowSet;
 
-  public UnnestSegmentReference(SegmentReference baseSegment, String dimension, String outputName, LinkedHashSet<String> allowList)
+  public UnnestSegmentReference(
+      SegmentReference baseSegment,
+      VirtualColumn unnestColumn,
+      LinkedHashSet<String> allowList
+  )
   {
     this.baseSegment = baseSegment;
-    this.dimension = dimension;
-    this.renamedOutputDimension = outputName;
+    this.unnestColumn = unnestColumn;
     this.allowSet = allowList;
   }
 
@@ -101,8 +103,7 @@ public class UnnestSegmentReference implements SegmentReference
   {
     return new UnnestStorageAdapter(
         baseSegment.asStorageAdapter(),
-        dimension,
-        renamedOutputDimension,
+        unnestColumn,
         allowSet
     );
   }
