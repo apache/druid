@@ -22,12 +22,9 @@ package org.apache.druid.segment;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -52,9 +49,6 @@ import java.util.List;
  * unnestCursor.advance() -> 'e'
  * <p>
  * <p>
- * The allowSet if available helps skip over elements which are not in the allowList by moving the cursor to
- * the next available match.
- * <p>
  * The index reference points to the index of each row that the unnest cursor is accessing through currentVal
  * The index ranges from 0 to the size of the list in each row which is held in the unnestListForCurrentRow
  * <p>
@@ -71,16 +65,13 @@ public class UnnestColumnValueSelectorCursor implements Cursor
   private Object currentVal;
   private List<Object> unnestListForCurrentRow;
   private boolean needInitialization;
-  private ValueMatcher valueMatcher;
-  @Nullable
-  private final Filter allowFilter;
+
 
   public UnnestColumnValueSelectorCursor(
       Cursor cursor,
       ColumnSelectorFactory baseColumnSelectorFactory,
       VirtualColumn unnestColumn,
-      String outputColumnName,
-      @Nullable Filter allowFilter
+      String outputColumnName
   )
   {
     this.baseCursor = cursor;
@@ -93,7 +84,6 @@ public class UnnestColumnValueSelectorCursor implements Cursor
     this.index = 0;
     this.outputName = outputColumnName;
     this.needInitialization = true;
-    this.allowFilter = allowFilter;
   }
 
   @Override
@@ -253,13 +243,7 @@ public class UnnestColumnValueSelectorCursor implements Cursor
   @Override
   public void advanceUninterruptibly()
   {
-    while (true) {
-      advanceAndUpdate();
-      boolean match = valueMatcher.matches();
-      if (match || baseCursor.isDone()) {
-        return;
-      }
-    }
+    advanceAndUpdate();
   }
 
   @Override
@@ -308,22 +292,10 @@ public class UnnestColumnValueSelectorCursor implements Cursor
   /**
    * This initializes the unnest cursor and creates data structures
    * to start iterating over the values to be unnested.
-   * This would also create a bitset for dictonary encoded columns to
-   * check for matching values specified in allowedList of UnnestDataSource.
    */
   private void initialize()
   {
     getNextRow();
-    if (allowFilter != null) {
-      this.valueMatcher = allowFilter.makeMatcher(getColumnSelectorFactory());
-    } else {
-      this.valueMatcher = BooleanValueMatcher.of(true);
-    }
-    // If the first value the index is pointing to does not match the filter
-    // advance the index to the first value which will match
-    if (!valueMatcher.matches()) {
-      advance();
-    }
     needInitialization = false;
   }
 

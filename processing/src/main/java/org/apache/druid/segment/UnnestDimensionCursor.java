@@ -23,13 +23,11 @@ import com.google.common.base.Predicate;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.data.IndexedInts;
-import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -58,15 +56,6 @@ import javax.annotation.Nullable;
  * <p>
  * Total 5 advance calls above
  * <p>
- * The allowSet, if available, helps skip over elements that are not in the allowList by moving the cursor to
- * the next available match. The hashSet is converted into a bitset (during initialization) for efficiency.
- * If allowSet is ['c', 'd'] then the advance moves over to the next available match
- * <p>
- * advance() -> 2 -> 'c'
- * advance() -> 3 -> 'd' (advances base cursor first)
- * advance() -> 2 -> 'c'
- * <p>
- * Total 3 advance calls in this case
  * <p>
  * The index reference points to the index of each row that the unnest cursor is accessing
  * The indexedInts for each row are held in the indexedIntsForCurrentRow object
@@ -79,9 +68,6 @@ public class UnnestDimensionCursor implements Cursor
   private final DimensionSelector dimSelector;
   private final VirtualColumn unnestColumn;
   private final String outputName;
-  @Nullable
-  private final Filter allowFilter;
-  private ValueMatcher valueMatcher;
   private final ColumnSelectorFactory baseColumnSelectorFactory;
   private int index;
   @Nullable
@@ -93,8 +79,7 @@ public class UnnestDimensionCursor implements Cursor
       Cursor cursor,
       ColumnSelectorFactory baseColumnSelectorFactory,
       VirtualColumn unnestColumn,
-      String outputColumnName,
-      @Nullable Filter allowFilter
+      String outputColumnName
   )
   {
     this.baseCursor = cursor;
@@ -107,7 +92,6 @@ public class UnnestDimensionCursor implements Cursor
     this.index = 0;
     this.outputName = outputColumnName;
     this.needInitialization = true;
-    this.allowFilter = allowFilter;
   }
 
   @Override
@@ -283,13 +267,7 @@ public class UnnestDimensionCursor implements Cursor
   @Override
   public void advanceUninterruptibly()
   {
-    while (true) {
-      advanceAndUpdate();
-      boolean match = valueMatcher.matches();
-      if (match || baseCursor.isDone()) {
-        return;
-      }
-    }
+    advanceAndUpdate();
   }
 
   @Override
@@ -328,19 +306,12 @@ public class UnnestDimensionCursor implements Cursor
   private void initialize()
   {
     index = 0;
-    if (allowFilter != null) {
-      this.valueMatcher = allowFilter.makeMatcher(this.getColumnSelectorFactory());
-    } else {
-      this.valueMatcher = BooleanValueMatcher.of(true);
-    }
     this.indexIntsForRow = new SingleIndexInts();
 
     if (dimSelector.getObject() != null) {
       this.indexedIntsForCurrentRow = dimSelector.getRow();
     }
-    if (!valueMatcher.matches() && !baseCursor.isDone()) {
-      advance();
-    }
+
     needInitialization = false;
   }
 

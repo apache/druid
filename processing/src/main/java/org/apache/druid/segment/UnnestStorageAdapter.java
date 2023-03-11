@@ -117,16 +117,14 @@ public class UnnestStorageAdapter implements StorageAdapter
                   retVal,
                   retVal.getColumnSelectorFactory(),
                   unnestColumn,
-                  outputColumnName,
-                  filterPair.rhs
+                  outputColumnName
               );
             } else {
               retVal = new UnnestColumnValueSelectorCursor(
                   retVal,
                   retVal.getColumnSelectorFactory(),
                   unnestColumn,
-                  outputColumnName,
-                  filterPair.rhs
+                  outputColumnName
               );
             }
           } else {
@@ -134,8 +132,7 @@ public class UnnestStorageAdapter implements StorageAdapter
                 retVal,
                 retVal.getColumnSelectorFactory(),
                 unnestColumn,
-                outputColumnName,
-                filterPair.rhs
+                outputColumnName
             );
           }
           // This is needed at this moment for nested queries
@@ -144,7 +141,7 @@ public class UnnestStorageAdapter implements StorageAdapter
           return PostJoinCursor.wrap(
               retVal,
               virtualColumns,
-              null
+              filterPair.rhs
           );
         }
     );
