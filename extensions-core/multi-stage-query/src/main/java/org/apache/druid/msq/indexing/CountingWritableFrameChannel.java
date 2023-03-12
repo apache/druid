@@ -64,6 +64,12 @@ public class CountingWritableFrameChannel implements WritableFrameChannel
   }
 
   @Override
+  public boolean isClosed()
+  {
+    return baseChannel.isClosed();
+  }
+
+  @Override
   public ListenableFuture<?> writabilityFuture()
   {
     return baseChannel.writabilityFuture();

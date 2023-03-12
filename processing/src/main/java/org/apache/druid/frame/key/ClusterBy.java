@@ -43,12 +43,13 @@ import java.util.Objects;
  */
 public class ClusterBy
 {
-  private final List<SortColumn> columns;
+  private final List<KeyColumn> columns;
   private final int bucketByCount;
+  private final boolean sortable;
 
   @JsonCreator
   public ClusterBy(
-      @JsonProperty("columns") List<SortColumn> columns,
+      @JsonProperty("columns") List<KeyColumn> columns,
       @JsonProperty("bucketByCount") int bucketByCount
   )
   {
@@ -58,6 +59,21 @@ public class ClusterBy
     if (bucketByCount < 0 || bucketByCount > columns.size()) {
       throw new IAE("Invalid bucketByCount [%d]", bucketByCount);
     }
+
+    // Key must be 100% sortable or 100% nonsortable. If empty, call it sortable.
+    boolean sortable = true;
+
+    for (int i = 0; i < columns.size(); i++) {
+      final KeyColumn column = columns.get(i);
+
+      if (i == 0) {
+        sortable = column.order().sortable();
+      } else if (sortable != column.order().sortable()) {
+        throw new IAE("Cannot mix sortable and unsortable key columns");
+      }
+    }
+
+    this.sortable = sortable;
   }
 
   /**
@@ -72,7 +88,7 @@ public class ClusterBy
    * The columns that comprise this key, in order.
    */
   @JsonProperty
-  public List<SortColumn> getColumns()
+  public List<KeyColumn> getColumns()
   {
     return columns;
   }
@@ -86,13 +102,29 @@ public class ClusterBy
    *
    * Will always be less than, or equal to, the size of {@link #getColumns()}.
    *
-   * Not relevant when a ClusterBy instance is used as an ordering key rather than a partitioning key.
+   * Only relevant when a ClusterBy instance is used as a partitioning key.
    */
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public int getBucketByCount()
   {
     return bucketByCount;
+  }
+
+  /**
+   * Whether this key is empty.
+   */
+  public boolean isEmpty()
+  {
+    return columns.isEmpty();
+  }
+
+  /**
+   * Whether this key is sortable. Empty keys (with no columns) are considered sortable.
+   */
+  public boolean sortable()
+  {
+    return sortable;
   }
 
   /**
@@ -105,8 +137,8 @@ public class ClusterBy
   {
     final RowSignature.Builder newSignature = RowSignature.builder();
 
-    for (final SortColumn sortColumn : columns) {
-      final String columnName = sortColumn.columnName();
+    for (final KeyColumn keyColumn : columns) {
+      final String columnName = keyColumn.columnName();
       final ColumnCapabilities capabilities = inspector.getColumnCapabilities(columnName);
       final ColumnType columnType =
           Preconditions.checkNotNull(capabilities, "Type for column [%s]", columnName).toColumnType();

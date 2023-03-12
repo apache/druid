@@ -29,7 +29,7 @@ public interface ShuffleSpecFactory
 {
   /**
    * Build a {@link ShuffleSpec} for given {@link ClusterBy}. The {@code aggregate} flag is used to populate
-   * {@link ShuffleSpec#doesAggregateByClusterKey()}.
+   * {@link ShuffleSpec#doesAggregate()}.
    */
   ShuffleSpec build(ClusterBy clusterBy, boolean aggregate);
 }

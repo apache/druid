@@ -286,6 +286,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           2,
           10,
           2,
+          1,
           0
       )
   );
