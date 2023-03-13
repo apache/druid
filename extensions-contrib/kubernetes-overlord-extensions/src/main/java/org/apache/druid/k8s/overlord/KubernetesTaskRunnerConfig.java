@@ -91,7 +91,7 @@ public class KubernetesTaskRunnerConfig
 
   @JsonProperty
   @NotNull
-  public List<String> javaOptsArray;
+  public List<String> javaOptsArray = new ArrayList<>();
 
   @JsonProperty
   @NotNull

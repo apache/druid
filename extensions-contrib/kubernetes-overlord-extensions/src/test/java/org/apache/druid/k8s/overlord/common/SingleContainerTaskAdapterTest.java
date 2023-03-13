@@ -80,7 +80,7 @@ class SingleContainerTaskAdapterTest
         )
     );
 
-    Job expected = K8sTestUtils.fileToResource("expectedSingleiContainerOutput.yaml", Job.class);
+    Job expected = K8sTestUtils.fileToResource("expectedSingleContainerOutput.yaml", Job.class);
     // something is up with jdk 17, where if you compress with jdk < 17 and try and decompress you get different results,
     // this would never happen in real life, but for the jdk 17 tests this is a problem
     // could be related to: https://bugs.openjdk.org/browse/JDK-8081450
