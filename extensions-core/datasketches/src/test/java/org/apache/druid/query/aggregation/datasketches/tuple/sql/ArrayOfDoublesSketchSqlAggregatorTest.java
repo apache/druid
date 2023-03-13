@@ -251,7 +251,7 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                    + "  SUM(cnt),\n"
                    + "  ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE(ARRAY_OF_DOUBLES_SKETCH(tuplesketch_dim2)) AS all_sum_estimates,\n"
                    + StringUtils.replace(
-                      "ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE(ARRAY_OF_DOUBLES_SKETCH_INTERSECT(ARRAY_OF_DOUBLES_SKETCH('%s'), ARRAY_OF_DOUBLES_SKETCH(tuplesketch_dim2))) AS intersect_sum_estimates\n",
+                      "ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE(ARRAY_OF_DOUBLES_SKETCH_INTERSECT(ARRAY_OF_DOUBLES_SKETCH('%s'), ARRAY_OF_DOUBLES_SKETCH(tuplesketch_dim2), 128)) AS intersect_sum_estimates\n",
                       "%s",
                       COMPACT_BASE_64_ENCODED_SKETCH_FOR_INTERSECTION
                    )
@@ -312,7 +312,7 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                            new ArrayOfDoublesSketchSetOpPostAggregator(
                              "p4",
                              "INTERSECT",
-                             null,
+                             128,
                              null,
                              ImmutableList.of(
                                new FieldAccessPostAggregator("p2", "a2"),

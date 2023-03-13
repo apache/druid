@@ -140,11 +140,29 @@ Concatenates array inputs into a single array.
 
 `ARRAY_OF_DOUBLES_SKETCH(expr, [nominalEntries])`
 
-`ARRAY_OF_DOUBLES_SKETCH(dimensionColumnExpr, metricColumnExpr..., [nominalEntries])`
+`ARRAY_OF_DOUBLES_SKETCH(dimensionColumnExpr, metricColumnExpr, ..., [nominalEntries])`
 
 **Function type:** [Aggregation](sql-aggregations.md)
 
 Creates a Tuple sketch.
+
+## ARRAY_OF_DOUBLES_SKETCH_INTERSECT
+
+`ARRAY_OF_DOUBLES_SKETCH_INTERSECT(expr, ..., [nominalEntries])`
+
+**Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
+
+## ARRAY_OF_DOUBLES_SKETCH_NOT
+
+`ARRAY_OF_DOUBLES_SKETCH_NOT(expr, ..., [nominalEntries])`
+
+**Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
+
+## ARRAY_OF_DOUBLES_SKETCH_UNION
+
+`ARRAY_OF_DOUBLES_SKETCH_UNION(expr, ..., [nominalEntries])`
+
+**Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
 
 ## ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE
 

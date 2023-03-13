@@ -28,7 +28,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
-import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.datasketches.Util;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.datasketches.tuple.ArrayOfDoublesSketchSetOpPostAggregator;
@@ -79,29 +79,37 @@ public abstract class ArrayOfDoublesSketchSetBaseOperatorConversion implements S
   {
     final List<RexNode> operands = ((RexCall) rexNode).getOperands();
     final List<PostAggregator> inputPostAggs = new ArrayList<>();
-    Integer nominalEntries = null;
+    final int nominalEntries;
     Integer numberOfvalues = null;
 
-    for (int i = 0; i < operands.size(); i++) {
-      RexNode operand = operands.get(i);
-      if (i == 0 && operand.isA(SqlKind.LITERAL) && SqlTypeFamily.INTEGER.contains(operand.getType())) {
-        nominalEntries = RexLiteral.intValue(operand);
-      } else if (i == 1 && operand.isA(SqlKind.LITERAL) && SqlTypeFamily.INTEGER.contains(operand.getType())) {
-        numberOfvalues = RexLiteral.intValue(operand);
-      } else {
-        final PostAggregator convertedPostAgg = OperatorConversions.toPostAggregator(
-            plannerContext,
-            rowSignature,
-            operand,
-            postAggregatorVisitor,
-            true
-        );
+    final int metricExpressionEndIndex;
+    final int lastArgIndex = operands.size() - 1;
+    final RexNode potentialNominalEntriesArg = operands.get(lastArgIndex);
 
-        if (convertedPostAgg == null) {
-          return null;
-        } else {
-          inputPostAggs.add(convertedPostAgg);
-        }
+    if (potentialNominalEntriesArg.isA(SqlKind.LITERAL) &&
+        RexLiteral.value(potentialNominalEntriesArg) instanceof Number) {
+
+      nominalEntries = ((Number) RexLiteral.value(potentialNominalEntriesArg)).intValue();
+      metricExpressionEndIndex = lastArgIndex - 1;
+    } else {
+      nominalEntries = Util.DEFAULT_NOMINAL_ENTRIES;
+      metricExpressionEndIndex = lastArgIndex;
+    }
+
+    for (int i = 0; i <= metricExpressionEndIndex; i++) {
+      RexNode operand = operands.get(i);
+      final PostAggregator convertedPostAgg = OperatorConversions.toPostAggregator(
+          plannerContext,
+          rowSignature,
+          operand,
+          postAggregatorVisitor,
+          true
+      );
+
+      if (convertedPostAgg == null) {
+        return null;
+      } else {
+        inputPostAggs.add(convertedPostAgg);
       }
     }
 
