@@ -135,9 +135,6 @@ public class UnnestStorageAdapter implements StorageAdapter
                 outputColumnName
             );
           }
-          // This is needed at this moment for nested queries
-          // Future developer would want to move the virtual columns
-          // inside the UnnestCursor and wrap the columnSelectorFactory
           return PostJoinCursor.wrap(
               retVal,
               virtualColumns,
@@ -297,7 +294,6 @@ public class UnnestStorageAdapter implements StorageAdapter
             // any rows that do not match this filter at all.
             preFilters.add(newFilter);
           }
-          // This is needed as a filter on an MV String Dimension returns the entire row matching the filter
           // Add original filter post-unnest no matter what: we need to filter out any extraneous unnested values.
           postFilters.add(filter);
         } else {
