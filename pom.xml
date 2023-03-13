@@ -124,9 +124,9 @@
         <com.google.apis.compute.version>v1-rev20190607-${com.google.apis.client.version}</com.google.apis.compute.version>
         <com.google.apis.storage.version>v1-rev20190523-${com.google.apis.client.version}</com.google.apis.storage.version>
         <jdk.surefire.argLine><!-- empty placeholder --></jdk.surefire.argLine>
-        <repoOrgId>apache.snapshots</repoOrgId>
-        <repoOrgName>Apache Snapshot Repository</repoOrgName>
-        <repoOrgUrl>https://repository.apache.org/snapshots</repoOrgUrl>
+        <repoOrgId>maven.org</repoOrgId>
+        <repoOrgName>Maven Central Repository</repoOrgName>
+        <repoOrgUrl>https://repo1.maven.org/maven2/</repoOrgUrl>
 
         <!-- Allow the handful of flaky tests with transient failures to pass. -->
         <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
@@ -225,12 +225,18 @@
             <id>${repoOrgId}</id>
             <name>${repoOrgName}</name>
             <url>${repoOrgUrl}</url>
+            <snapshots>
+               <enabled>false</enabled>
+            </snapshots>
         </repository>
 
         <!-- Only used by core, but moved to root for parallel build dependency resolution -->
         <repository>
-          <id>sigar</id>
-          <url>https://repository.mulesoft.org/nexus/content/repositories/public</url>
+            <id>sigar</id>
+            <url>https://repository.mulesoft.org/nexus/content/repositories/public</url>
+            <snapshots>
+               <enabled>false</enabled>
+            </snapshots>
         </repository>
     </repositories>
 
