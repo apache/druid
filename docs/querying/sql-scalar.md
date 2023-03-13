@@ -248,6 +248,15 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 |`DS_RANK(expr, value)`|Returns an approximation to the rank of a given value that is the fraction of the distribution less than that value from a quantiles sketch. `expr` must return a quantiles sketch.|
 |`DS_QUANTILE_SUMMARY(expr)`|Returns a string summary of a quantiles sketch, useful for debugging. `expr` must return a quantiles sketch.|
 
+### Tuple sketch functions
+
+The following functions operate on [tuple sketches](../development/extensions-core/datasketches-tuple.md).
+The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use the following functions.
+
+|Function|Notes|Default|
+|--------|-----|-------|
+|`ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE(expr)`|Computes approximate sums of the values contained within a [Tuple sketch](../development/extensions-core/datasketches-tuple.md#estimated-metrics-values-for-each-column-of-arrayofdoublessketch) column.
+
 ## Other scalar functions
 
 |Function|Notes|

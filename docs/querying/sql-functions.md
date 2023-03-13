@@ -150,7 +150,7 @@ Creates a Tuple sketch.
 
 `ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE(expr)`
 
-**Function type:** [Aggregation](sql-aggregations.md)
+**Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
 
 Computes approximate sums of the values contained within a Tuple sketch.
 
