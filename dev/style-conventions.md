@@ -43,9 +43,20 @@ important that there is consistency in formatting such that someone can easily i
 This consistency applies to both log *and* exception messages.
 
 1. Messages should have something interpolated into them.  Generally speaking, if the time is being taken to generate a message, it is usually valuable to interpolate something from the context into that message.  There are exceptions to this, but all messages should start with the assumption that something should be interpolated and try to figure out what that is.
-   * Messages INFO level or above (this includes all Exceptions) cannot leak secrets or the content of data.  When choosing what to interpolate, it is important to make sure that what is being added is not going to leak secrets or the contents of data.  For example, a query with a malformed filter should provide an indication that the filter was malformed and which filter it is, but it cannot include the values being filtered for as that risks leaking data.
+  * Messages INFO level or above (this includes all Exceptions) cannot leak secrets or the content of data.  When choosing what to interpolate, it is important to make sure that what is being added is not going to leak secrets or the contents of data.  For example, a query with a malformed filter should provide an indication that the filter was malformed and which filter it is, but it cannot include the values being filtered for as that risks leaking data.
+  * It is not always clear that something will leak information when the message is created.  This is a shared responsibility and accidents can happen.  If anything is discovered to leak or a message is suspected of be able to leak things, it should be opportunistically fixed.  It is valid to include such fixes in PRs that are unrelated to the log-line specifically as it is more important that the fixes happen than that we have perfect separation of PRs.  
 2. Interpolated values should always be encased in a `[]` and come after a noun that describes what is being interpolated.  This is to ensure that enough context on what is happening exists and to clearly demark that an interpolation has occurred.  Additionally, this identifies the start and end of the interpolation, which is important because messages that attempt to mimic natural prose that also include interpolation can sometimes mask glaring problems (like the inclusion of a space).
-   * Bad: `log.info("%s %s cannot handle %s", "null", "is not null", "INTEGER")` -> `"null is not null cannot handle INTEGER"`
-   * Better, but still not wonderful: `log.info("column[%s] filter[%s] cannot handle type[%s]", "null", "is not null", "INTEGER")` -> `"column[null] filter[is not null] cannot handle type[INTEGER]"`
-   * Good: `log.info("Filter[%s] on column[%s] cannot be applied to type[%s]", "is not null", "null", "INTEGER")` -> `"Filter[is not null] on column[null] cannot be applied to type[INTEGER]"`
-   * But, if I interpolate an array, I get double `[]`.  Yes, that is true, that is okay.  Said another way, if a log message contains `[[]]` that is indicative of interpolating an array-like structure.
+  * Note, the `[]` is ***not*** the equivalent of a quote, it is an indication of interpolation.  It is not a replacement for quotes nor is it attempting to be something that fits the normal rules of the English language.  An interpolation is an ***optional*** addition to a message that helps accelerate the identification of next steps. 
+  * This means that when intepolating an array-like structure, we will see double `[]`.  That is okay and a similar thing can happen no matter what we use to indicate interpolation.
+3. Messages should read like a sentence and follow sentence-like structure.  
+  * A nice way to validate this is that even if you were to remove interpolations, the message should still be readable and understandable.  When a message requires interpolations to be meaningful, that is indicative of the message not carrying enough context.
+4. Examples
+  * Bad: `log.info("%s %s cannot handle %s", "null", "is not null", "INTEGER")`
+    * After interpolation, it is unclear what values were interpolated and what values were part of the message: `"null is not null cannot handle INTEGER"`
+    * With interpolations removed, it becomes completely incomprehensible: `"  cannot handle "` 
+  * Better, but still not wonderful: `log.info("column[%s] filter[%s] cannot handle type[%s]", "null", "is not null", "INTEGER")`
+    * After interpolation, clear separation: `"column[null] filter[is not null] cannot handle type[INTEGER]"`
+    * With interpolations removed, it becomes something that is difficult to penetrate: `"column filter cannot handle type"` 
+  * Good: `log.info("Filter[%s] on column[%s] cannot be applied to type[%s]", "is not null", "null", "INTEGER")`
+    * After interpolation, clear separation: `"Filter[is not null] on column[null] cannot be applied to type[INTEGER]"`
+    * With interpolations removed, it is clear what happened, though still hard to figure out which specific thing to adjust: `"Filter on column cannot be applied to type"`
