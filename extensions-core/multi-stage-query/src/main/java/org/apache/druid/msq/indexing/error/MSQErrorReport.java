@@ -26,8 +26,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import org.apache.druid.frame.processor.FrameRowTooLargeException;
 import org.apache.druid.frame.write.UnsupportedColumnTypeException;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.msq.statistics.TooManyBucketsException;
+import org.apache.druid.query.groupby.epinephelinae.UnexpectedMultiValueDimensionException;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -190,7 +192,13 @@ public class MSQErrorReport
         return new TooManyBucketsFault(((TooManyBucketsException) cause).getMaxBuckets());
       } else if (cause instanceof FrameRowTooLargeException) {
         return new RowTooLargeFault(((FrameRowTooLargeException) cause).getMaxFrameSize());
-      } else {
+      } else if (cause instanceof UnexpectedMultiValueDimensionException) {
+        return new QueryStackFault(StringUtils.format(
+            "Column [%s] is a multi value string. Please wrap the column using MV_TO_ARRAY() to proceed further.",
+            ((UnexpectedMultiValueDimensionException) cause).getDimensionName()
+        ), cause.getMessage());
+      }
+      else {
         cause = cause.getCause();
       }
     }

@@ -33,6 +33,7 @@ import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.MSQFaultUtils;
+import org.apache.druid.msq.indexing.error.QueryStackFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
@@ -228,8 +229,8 @@ public class MSQTasks
     logMessage.append(": ").append(MSQFaultUtils.generateMessageWithErrorCode(errorReport.getFault()));
 
     if (errorReport.getExceptionStackTrace() != null) {
-      if (errorReport.getFault() instanceof UnknownFault) {
-        // Log full stack trace for unknown faults.
+      if (errorReport.getFault() instanceof UnknownFault || errorReport.getFault() instanceof QueryStackFault) {
+        // Log full stack trace for unknown and QueryStack faults
         logMessage.append('\n').append(errorReport.getExceptionStackTrace());
       } else {
         // Log first line only (error class, message) for known faults, to avoid polluting logs.

@@ -1233,12 +1233,8 @@ public class MSQSelectTest extends MSQTestBase
         .setQueryContext(localContext)
         .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
             CoreMatchers.instanceOf(ISE.class),
-            ThrowableMessageMatcher.hasMessage(
-                !FAULT_TOLERANCE.equals(contextName)
-                ? CoreMatchers.containsString(
-                    "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false.")
-                :
-                CoreMatchers.containsString("exceeded max relaunch count")
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                "Column [dim3] is a multi value string. Please wrap the column using MV_TO_ARRAY() to proceed further.")
             )
         ))
         .verifyExecutionError();
@@ -1375,11 +1371,8 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
             CoreMatchers.instanceOf(ISE.class),
             ThrowableMessageMatcher.hasMessage(
-                !FAULT_TOLERANCE.equals(contextName)
-                ? CoreMatchers.containsString(
+                CoreMatchers.containsString(
                     "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false.")
-                :
-                CoreMatchers.containsString("exceeded max relaunch count")
             )
         ))
         .verifyExecutionError();
@@ -1506,7 +1499,11 @@ public class MSQSelectTest extends MSQTestBase
   @Test
   public void testMultiValueStringWithIncorrectType() throws IOException
   {
-    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/unparseable-mv-string-array.json");
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(
+        temporaryFolder,
+        this,
+        "/unparseable-mv-string-array.json"
+    );
     final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
