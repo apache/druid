@@ -410,9 +410,9 @@ The `unnest` datasource uses the following syntax:
     },
     "virtualColumn": {
       "type": "expression",
+      "name": "output_column",
       "expression": "\"column_reference\""
     },
-    "outputName": "unnested_target_column",
   },
 ```
 
