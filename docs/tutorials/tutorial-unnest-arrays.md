@@ -25,7 +25,7 @@ title: "Unnest arrays within a column"
 
 > If you're looking for information about how to unnest `COMPLEX<json>` columns, see [Nested columns](../querying/nested-columns.md).
 
-> The unnest datasource is [experimental](../development/experimental.md). Its API and behavior are subject
+> The unnest datasource and UNNEST SQL function are [experimental](../development/experimental.md). Their API and behavior are subject
 > to change in future releases. It is not recommended to use this feature in production at this time.
 
 This tutorial demonstrates how to use the unnest datasource to unnest a column that has data stored in arrays. For example, if you have a column named `dim3` with values like `[a,b]` or `[c,d,f]`, the unnest datasource can output the data to a new column with individual rows that contain single values like `a` and `b`. When doing this, be mindful of the following:
@@ -155,23 +155,15 @@ The following is the general syntax for UNNEST:
 SELECT column_alias_name FROM datasource, UNNEST(source_expression) AS table_alias_name(column_alias_name)
 ```
 
+In addition, you must supply the following context parameter:
+
+```json
+"enableUnnest": "true"
+```
+
 For more information about the syntax, see [UNNEST](../querying/sql.md#unnest).
 
-### Unnest inline array
-
-The following query returns a column that unnests the array `[1,2,3]` that is provided inline: 
-
-```sql
-SELECT * FROM UNNEST(ARRAY[1,2,3])
-```
-
-If you unnest that same inline array  while using a table as the datasource, Druid treats this as a JOIN between a left datasource and a constant datasource. For example:
-
-```sql
-SELECT longs FROM nested_data, UNNEST(ARRAY[1,2,3]) AS example_table(longs)
-```
-
-### Unnest a single column in a table
+### Unnest a single source expression in a datasource
 
 The following query returns a column called `d3` from the table `nested_data`. `d3` contains the unnested values from the source column `dim3`:
 
@@ -196,10 +188,31 @@ This virtual column is the product of the two source columns. Notice how the tot
 Another way to unnest a virtual column is to concatenate them with ARRAY_CONCAT:
 
 ```sql
-SELECT d45 FROM nested_data, UNNEST(ARRAY_CONCAT(dim4,dim5)) AS example_table(d45)
+SELECT dim4,dim5,d45 FROM nested_data, UNNEST(ARRAY_CONCAT(dim4,dim5)) AS example_table(d45)
 ```
 
 Decide which method to use based on what your goals are. 
+
+### Unnest multiple source expressions
+
+You can include multiple UNNEST clauses in a single query. Each `UNNEST` clause needs the following:
+
+```sql
+UNNEST(source_expression) AS table_alias_name(column_alias_name)
+```
+
+The `table_alias_name` and `column_alias_name` for each UNNEST clause should be unique.
+
+The example query returns the following from  the `nested_data` datasource:
+
+- the source columns `dim3`, `dim4`, and `dim5`
+- an unnested version of `dim3` aliased to `d3`
+- an unnested virtual column composed of `dim4` and `dim5` aliased to `d45`
+
+```sql
+SELECT dim3,dim4,dim5,d3,d45 FROM "nested_data", UNNEST(MV_TO_ARRAY("dim3")) AS ud(d3), UNNEST(ARRAY[dim4,dim5]) AS foo(d45)
+```
+
 
 ### Unnest a column from a subset of a table
 
@@ -213,13 +226,30 @@ SELECT d3 FROM (select dim1, dim2, dim3 from "nested_data"), UNNEST(MV_TO_ARRAY(
 
 You can specify which rows to unnest by including a filter in your query. The following query:
 
-* Filters based on `dim2`
+* Filters the source expression based on `dim2`
 * Unnests the records in `dim3` into `d3` 
 * Returns the records for  the unnested `d3` that have a `dim2` record that matches the filter
 
 ```sql
 SELECT d3 FROM (SELECT * FROM nested_data WHERE dim2 IN ('abc')), UNNEST(MV_TO_ARRAY(dim3)) AS example_table(d3)
 ```
+
+You can also filter the results of an UNNEST clause. The following example unnests the inline array `[1,2,3]` but only returns the rows that match the filter:
+
+```sql
+SELECT * FROM UNNEST(ARRAY[1,2,3]) AS ud(d1) WHERE d1 IN ('1','2')
+```
+
+This means that you can run a query like the following where Druid only return rows that meet the following conditions: 
+
+- The unnested values of `dim3` (aliased to `d3`) matches `IN ('b', 'd')`
+- The value of `m1` is less than 2.
+
+```sql
+SELECT * FROM nested_data, UNNEST(MV_TO_ARRAY("dim3")) AS foo(d3) WHERE d3 IN ('b', 'd') and m1 < 2
+```
+
+The query only returns a single row since only one row meets the conditions. You can see the results change if you modify the filter.
 
 ### Unnest and then GROUP BY
 
@@ -234,6 +264,8 @@ You can further transform your results by  including clauses like `ORDER BY d3 D
 ## Unnest using native queries
 
 The following section shows examples of how you can use the unnest datasource in queries. They all use the `nested_data` table you created earlier in the tutorial.
+
+You can use a single unnest datasource to unnest multiple columns. Be careful when doing this though because it can lead to a very large number of new rows.
 
 ### Scan query 
 
@@ -286,9 +318,7 @@ The following native Scan query returns the rows of the datasource and unnests t
 
 In the results, notice that there are more rows than before and an additional column named `unnest-dim3`. The values of `unnest-dim3` are the same as the `dim3` column except the nested values are no longer nested and are each a separate record.
 
-With the `dataSource.allowList` parameter, you can unnest a subset of a column. Set the value of `allowList` to `["a","b"]` and run the query again. Only a subset of rows are returned based on the values you allowed.
-
-You can also implement filters. For example, you can add the following to the Scan query to filter results to only rows that have the values `"a"` or `"abc"` in `"dim2"`:
+You can implement filters. For example, you can add the following to the Scan query to filter results to only rows that have the values `"a"` or `"abc"` in `"dim2"`:
 
 ```json
   "filter": {
@@ -362,7 +392,6 @@ The example topN query unnests `dim3` into the column `unnest-dim3`. The query u
       "name": "unnest-dim3",
       "expression": "\"dim3\""
     },
-    "allowList": null
   },
   "dimension": {
     "type": "default",
@@ -507,15 +536,11 @@ This query joins the `nested_data` table with itself and outputs the unnested da
 
 </details>
 
-### Unnest multiple columns 
-
-You can use a single unnest datasource to unnest multiple columns. Be careful when doing this though because it can lead to a very large number of new rows.
-
 ### Unnest a virtual column
 
 The `unnest` datasource supports unnesting virtual columns, which is a queryable composite column that can draw data from multiple source columns.
 
-The following query returns the columns `unnest-v0` and `m1`. The `unnest-v0` column is the unnested version of the virtual column `v0`, which contains an array of the `dim2` and `dim3` columns.
+The following query returns the columns `dim45` and `m1`. The `dim45` column is the unnested version of a virtual column that contains an array of the `dim4` and `dim5` columns.
 
 <details><summary>Show the query</summary>
 
@@ -528,8 +553,12 @@ The following query returns the columns `unnest-v0` and `m1`. The `unnest-v0` co
       "type": "table",
       "name": "nested_data"
     },
-    "column": "v0",
-    "outputName": "unnest-v0"
+    "virtualColumn": {
+      "type": "expression",
+      "name": "dim45",
+      "expression": "array_concat(\"dim4\",\"dim5\")",
+      "outputType": "ARRAY<STRING>"
+    },
   }
   "intervals": {
     "type": "intervals",
@@ -537,94 +566,11 @@ The following query returns the columns `unnest-v0` and `m1`. The `unnest-v0` co
       "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
     ]
   },
-  "virtualColumns": [
-    {
-      "type": "expression",
-      "name": "v0",
-      "expression": "array(\"dim4\",\"dim5\")",
-      "outputType": "ARRAY<STRING>"
-    }
-  ],
   "resultFormat": "compactedList",
   "limit": 1001,
   "columns": [
-    "unnest-v0",
+    "dim45",
     "m1"
-  ],
-  "legacy": false,
-  "context": {
-    "populateCache": false,
-    "queryId": "d273facb-08cc-4de7-ac0b-d0b82173e531",
-    "sqlOuterLimit": 1001,
-    "sqlQueryId": "d273facb-08cc-4de7-ac0b-d0b82173e531",
-    "useCache": false,
-    "useNativeQueryExplain": true
-  },
-  "granularity": {
-    "type": "all"
-  }
-}
-```
-
-</details>
-
-#### Unnest two virtual columns
-
-The following query performs two unnests. It unnests `dim4` into a column named `unnest-dim4`. It also performs an unnest on `dim5` and outputs the results to `unnest-dim5`. You can then treat the combination of `unnest-dim3` and `unnest-dim2` as Cartesian products.
-
-When you run the query, pay special attention to how the total number of rows has grown drastically. The source data has 2 rows. The unnested data has 12 rows, (2 x 2) + (2 x 4).
-
-<details><summary>Show the query</summary>
-
-```json
-{
-  "queryType": "scan",
-  "dataSource": {
-    "type": "unnest",
-    "base": {
-      "type": "unnest",
-      "base": {
-        "type": "table",
-        "name": "nested_data"
-      },
-<<<<<<< HEAD:docs/tutorials/tutorial-unnest-arrays.md
-      "column": "dim4",
-      "outputName": "unnest-dim4",
-      "allowList": []
-    },
-    "column": "dim5",
-    "outputName": "unnest-dim5",
-    "allowList": []
-=======
-    "virtualColumn": {
-      "type": "expression",
-      "name": "unnest-dim3",
-      "expression": "\"dim3\""
-    },
-      "allowList": []
-    },
-    "column": "dim2",
-    "outputName": "unnest-dim2"
->>>>>>> master:docs/tutorials/tutorial-unnest-datasource.md
-  },
-  "intervals": {
-    "type": "intervals",
-    "intervals": [
-      "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
-    ]
-  },
-  "limit": 1000,
-  "columns": [
-    "__time",
-    "dim1",
-    "dim2",
-    "dim3",
-    "dim4",
-    "dim5",
-    "m1",
-    "m2",
-    "unnest-dim4",
-    "unnest-dim5"
   ],
   "legacy": false,
   "granularity": {
@@ -639,11 +585,9 @@ When you run the query, pay special attention to how the total number of rows ha
 
 </details>
 
-### Unnest inline datasource
+### Unnest a column and a virtual column
 
-You can also use the `unnest` datasource to unnest an inline datasource. The following query takes the row `[1,2,3]` in the column `inline_data` that is provided inline within the query and returns it as unnested values in the `output` column:
-
-<details><summary>Show the query</summary>
+The following Scan query unnests the column `dim3` into `d3` and a virtual column composed of `dim4` and `dim5` into the column `d45`. It then returns those source columns and their unnested variants.
 
 ```json
 {
@@ -651,98 +595,47 @@ You can also use the `unnest` datasource to unnest an inline datasource. The fol
   "dataSource": {
     "type": "unnest",
     "base": {
-      "type": "inline",
-      "columnNames": [
-        "inline_data"
-      ],
-      "columnTypes": [
-        "long_array"
-      ],
-      "rows": [
-        [
-          [1,2,3]
-        ]
-      ]
+      "type": "unnest",
+      "base": {
+        "type": "table",
+        "name": "nested_data"
+      },
+
+"virtualColumn": {
+        "type": "expression",
+        "name": "d3",
+        "expression": "\"dim3\"",
+        "outputType": "STRING"
+      },
     },
     "virtualColumn": {
       "type": "expression",
-      "name": "output",
-      "expression": "\"inline_data\""
-    }
-  },
-  "intervals": {
-    "type": "intervals",
-    "intervals": [
-      "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
-    ]
-  },
-  "resultFormat": "compactedList",
-  "limit": 1001,
-  "columns": [
-    "inline_data",
-    "output"
-  ],
-  "legacy": false,
-  "granularity": {
-    "type": "all"
-  }
-}
-```
-
-</details>
-
-<<<<<<< HEAD:docs/tutorials/tutorial-unnest-arrays.md
-=======
-## Unnest a virtual column
-
-The `unnest` datasource supports unnesting a virtual columns, which is a queryable composite column that can draw data from multiple source columns.
-
-The following Scan query uses the `nested_data2` table you created in [Load data with two columns of nested values](#load-data-with-two-columns-of-nested-values). It returns the columns `unnest-v0` and `m1`. The `unnest-v0` column is the unnested version of the virtual column `v0`, which contains an array of the `dim2` and `dim3` columns.
-
-<details><summary>Show the query</summary>
-
-```json
-{
-  "queryType": "scan",
-  "dataSource":{
-    "type": "unnest",
-    "base": {
-      "type": "table",
-      "name": "nested_data2"
-    },
-    "virtualColumn": {
-      "type": "expression",
-      "name": "unnest-v0",
-      "expression": "\"v0\""
-    }
-  }
-  "intervals": {
-    "type": "intervals",
-    "intervals": [
-      "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
-    ]
-  },
-  "virtualColumns": [
-    {
-      "type": "expression",
-      "name": "v0",
-      "expression": "array(\"dim2\",\"dim3\")",
+      "name": "d45",
+      "expression": "array(\"dim4\",\"dim5\")",
       "outputType": "ARRAY<STRING>"
-    }
-  ],
+    },
+  },
+  "intervals": {
+    "type": "intervals",
+    "intervals": [
+      "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+    ]
+  },
   "resultFormat": "compactedList",
   "limit": 1001,
   "columns": [
-    "unnest-v0",
-    "m1"
+    "dim3",
+    "d3",
+    "dim4",
+    "dim5",
+    "d45"
   ],
   "legacy": false,
   "context": {
-    "populateCache": false,
-    "queryId": "d273facb-08cc-4de7-ac0b-d0b82173e531",
+    "enableUnnest": "true",
+    "queryId": "2618b9ce-6c0d-414e-b88d-16fb59b9c481",
     "sqlOuterLimit": 1001,
-    "sqlQueryId": "d273facb-08cc-4de7-ac0b-d0b82173e531",
-    "useCache": false,
+    "sqlQueryId": "2618b9ce-6c0d-414e-b88d-16fb59b9c481",
     "useNativeQueryExplain": true
   },
   "granularity": {
@@ -750,9 +643,6 @@ The following Scan query uses the `nested_data2` table you created in [Load data
   }
 }
 ```
-
-</details>
->>>>>>> master:docs/tutorials/tutorial-unnest-datasource.md
 
 ## Learn more
 

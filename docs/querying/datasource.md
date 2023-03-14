@@ -413,7 +413,6 @@ The `unnest` datasource uses the following syntax:
       "expression": "\"column_reference\""
     },
     "outputName": "unnested_target_column",
-    "allowList": []
   },
 ```
 
@@ -421,6 +420,5 @@ The `unnest` datasource uses the following syntax:
 * `dataSource.base`: Defines the datasource you want to unnest.
   * `dataSource.base.type`: The type of datasource you want to unnest, such as a table.
 * `dataSource.virtualColumn`: [Virtual column](virtual-columns.md) that references the nested values. The output name of this column is reused as the name of the column that contains unnested values. You can replace the source column with the unnested column by specifying the source column's name or a new column by specifying a different name. Outputting it to a new column can help you verify that you get the results that you expect but isn't required.
-* `dataSource.allowList`: Optional. The subset of values you want to unnest.
 
 To learn more about how to use the `unnest` datasource, see the [unnest tutorial](../tutorials/tutorial-unnest-arrays.md).
