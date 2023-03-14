@@ -44,7 +44,7 @@ import java.util.TreeSet;
 
 public class DictionaryEncodedStringIndexSupplierTest extends InitializedNullHandlingTest
 {
-  BitmapSerdeFactory roaringFactory = new RoaringBitmapSerdeFactory(null);
+  BitmapSerdeFactory roaringFactory = RoaringBitmapSerdeFactory.getInstance();
   BitmapResultFactory<ImmutableBitmap> bitmapResultFactory = new DefaultBitmapResultFactory(
       roaringFactory.getBitmapFactory()
   );

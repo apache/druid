@@ -74,7 +74,7 @@ public class OrcReader extends IntermediateRowParsingReader<OrcStruct>
         flattenSpec,
         new OrcStructFlattenerMaker(
             binaryAsString,
-            inputRowSchema.getDimensionsSpec().useNestedColumnIndexerForSchemaDiscovery()
+            inputRowSchema.getDimensionsSpec().useSchemaDiscovery()
         )
     );
   }

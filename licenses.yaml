@@ -5064,6 +5064,15 @@ libraries:
 
 ---
 
+name: jakarta.activation
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Eclipse Distribution License 1.0
+version: 1.2.1
+libraries:
+  - com.sun.activation: jakarta.activation
+
+---
 
 # Web console modules start
 name: "@babel/code-frame"
@@ -5684,7 +5693,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.17.2
+version: 0.17.5
 
 ---
 

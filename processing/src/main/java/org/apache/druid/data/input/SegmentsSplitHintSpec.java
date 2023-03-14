@@ -40,6 +40,7 @@ import java.util.function.Function;
  */
 public class SegmentsSplitHintSpec implements SplitHintSpec
 {
+  @SuppressWarnings("unused")
   public static final String TYPE = "segments";
 
   private static final HumanReadableBytes DEFAULT_MAX_INPUT_SEGMENT_BYTES_PER_TASK = new HumanReadableBytes("1GiB");

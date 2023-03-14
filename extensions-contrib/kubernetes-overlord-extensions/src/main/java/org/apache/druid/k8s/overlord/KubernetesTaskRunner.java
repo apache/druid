@@ -35,7 +35,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ForkingTaskRunner;
 import org.apache.druid.indexing.overlord.QuotableWhiteSpaceSplitter;
@@ -66,9 +66,9 @@ import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -110,7 +110,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private final ListeningExecutorService exec;
   private final KubernetesPeonClient client;
   private final DruidNode node;
-  private final TaskStorageDirTracker dirTracker;
+  private final TaskConfig taskConfig;
 
 
   public KubernetesTaskRunner(
@@ -121,7 +121,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       TaskLogPusher taskLogPusher,
       KubernetesPeonClient client,
       DruidNode node,
-      TaskStorageDirTracker dirTracker
+      TaskConfig taskConfig
   )
   {
     this.startupLoggingConfig = startupLoggingConfig;
@@ -139,7 +139,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         taskQueueConfig.getMaxSize() < Integer.MAX_VALUE,
         "The task queue bounds how many concurrent k8s tasks you can have"
     );
-    this.dirTracker = dirTracker;
+    this.taskConfig = taskConfig;
   }
 
 
@@ -166,7 +166,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                     PeonCommandContext context = new PeonCommandContext(
                         generateCommand(task),
                         javaOpts(task),
-                        dirTracker.getTaskDir(task.getId()),
+                        new File(taskConfig.getBaseTaskDirPaths().get(0)),
                         node.isEnableTlsPort()
                     );
                     Job job = adapter.fromTask(task, context);
@@ -214,18 +214,16 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                   // publish task logs
                   Path log = Files.createTempFile(task.getId(), "log");
                   try {
-                    FileUtils.write(
-                        log.toFile(),
-                        client.getJobLogs(new K8sTaskId(task.getId())),
-                        StandardCharsets.UTF_8
-                    );
+                    Optional<InputStream> logStream = client.getPeonLogs(new K8sTaskId(task.getId()));
+                    if (logStream.isPresent()) {
+                      FileUtils.copyInputStreamToFile(logStream.get(), log.toFile());
+                    }
                     taskLogPusher.pushTaskLog(task.getId(), log.toFile());
                   }
                   finally {
                     Files.deleteIfExists(log);
                   }
                   client.cleanUpJob(new K8sTaskId(task.getId()));
-                  dirTracker.removeTask(task.getId());
                   synchronized (tasks) {
                     tasks.remove(task.getId());
                   }
@@ -269,7 +267,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public void shutdown(String taskid, String reason)
   {
     client.cleanUpJob(new K8sTaskId(taskid));
-    dirTracker.removeTask(taskid);
   }
 
 
@@ -348,7 +345,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   {
     final List<String> command = new ArrayList<>();
     command.add("/peon.sh");
-    command.add(dirTracker.getBaseTaskDir(task.getId()).getAbsolutePath());
+    command.add(taskConfig.getBaseTaskDirPaths().get(0));
     command.add(task.getId());
     command.add("1"); // the attemptId is always 1, we never run the task twice on the same pod.
 
