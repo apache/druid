@@ -50,7 +50,7 @@ public class LookupNodeDiscovery
               if (node == null) {
                 return false;
               }
-              final LookupNodeService lookupNodeService =  node.getService(
+              final LookupNodeService lookupNodeService = node.getService(
                   LookupNodeService.DISCOVERY_SERVICE_KEY,
                   LookupNodeService.class
               );
