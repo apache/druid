@@ -84,7 +84,7 @@ public class CorrelateFilterRTransposeRule extends RelOptRule
   /**
    * Whether an expression refers to correlation variables.
    */
-  private static boolean usesCorrelationId(final CorrelationId correlationId, final RexNode rexNode)
+  public static boolean usesCorrelationId(final CorrelationId correlationId, final RexNode rexNode)
   {
     class CorrelationVisitor extends RexVisitorImpl<Void>
     {
