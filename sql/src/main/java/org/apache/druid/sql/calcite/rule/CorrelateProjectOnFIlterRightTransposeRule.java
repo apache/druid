@@ -72,8 +72,18 @@ public class CorrelateProjectOnFIlterRightTransposeRule extends RelOptRule
     final RelNode left = call.rel(1);
     final Project rightP = call.rel(2);
     final Filter rightF = call.rel(3);
+    final Uncollect uncollect = call.rel(4);
 
-    if (rightP.getProjects().size() <=1 && rightP.getChildExps().get(0).getKind() == SqlKind.CAST) {
+    // The project is top of Uncollect and can only refer to the unnested output column
+    // the project can be a cast if on a string column
+    // e.g. LogicalProject(subset=[rel#123:Subset#5.NONE.[]], d3=[CAST('b':VARCHAR):VARCHAR])
+    // Or for numeric columns takes the shape
+    // e.g. LogicalProject(subset=[rel#126:Subset#5.NONE.[]], d3=[1.0E0:FLOAT])
+    // The projection is always bound to be on a single column reference which will be output of the uncollect
+    // So we check if there is only a single projection and is it either a CAST or a LITERAL
+
+    final SqlKind rightProjectKind = rightP.getChildExps().get(0).getKind();
+    if (rightP.getProjects().size() == 1 && (rightProjectKind == SqlKind.CAST || rightProjectKind == SqlKind.LITERAL)) {
       call.transformTo(
           call.builder()
               .push(correlate.copy(correlate.getTraitSet(), ImmutableList.of(left, rightF.getInput())))
