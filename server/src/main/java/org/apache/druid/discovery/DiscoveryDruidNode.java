@@ -168,9 +168,14 @@ public class DiscoveryDruidNode
 
   @Nullable
   @JsonIgnore
-  public <T extends DruidService> T getService(String key)
+  public <T extends DruidService> T getService(String key, Class<T> clazz)
   {
-    return (T) services.get(key);
+    final DruidService o = services.get(key);
+    if (o != null && clazz.isAssignableFrom(o.getClass())) {
+      //noinspection unchecked
+      return (T) o;
+    }
+    return null;
   }
 
   @Override

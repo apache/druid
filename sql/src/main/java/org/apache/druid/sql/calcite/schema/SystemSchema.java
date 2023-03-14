@@ -544,7 +544,9 @@ public class SystemSchema extends AbstractSchema
           .from(() -> druidServers)
           .transform((DiscoveryDruidNode discoveryDruidNode) -> {
             //noinspection ConstantConditions
-            final boolean isDiscoverableDataServer = isDiscoverableDataServer(discoveryDruidNode);
+            final boolean isDiscoverableDataServer = isDiscoverableDataServer(
+                discoveryDruidNode.getService(DataNodeService.DISCOVERY_SERVICE_KEY, DataNodeService.class)
+            );
             final NodeRole serverRole = discoveryDruidNode.getNodeRole();
 
             if (isDiscoverableDataServer) {
@@ -650,17 +652,19 @@ public class SystemSchema extends AbstractSchema
       };
     }
 
-    private static boolean isDiscoverableDataServer(DiscoveryDruidNode druidNode)
+    private static boolean isDiscoverableDataServer(DataNodeService dataNodeService)
     {
-      final DataNodeService dataNodeService = druidNode.getService(DataNodeService.DISCOVERY_SERVICE_KEY);
       return dataNodeService != null && dataNodeService.isDiscoverable();
     }
 
     private static DruidServer toDruidServer(DiscoveryDruidNode discoveryDruidNode)
     {
-      if (isDiscoverableDataServer(discoveryDruidNode)) {
-        final DruidNode druidNode = discoveryDruidNode.getDruidNode();
-        final DataNodeService dataNodeService = discoveryDruidNode.getService(DataNodeService.DISCOVERY_SERVICE_KEY);
+      final DruidNode druidNode = discoveryDruidNode.getDruidNode();
+      final DataNodeService dataNodeService = discoveryDruidNode.getService(
+          DataNodeService.DISCOVERY_SERVICE_KEY,
+          DataNodeService.class
+      );
+      if (isDiscoverableDataServer(dataNodeService)) {
         return new DruidServer(
             druidNode.getHostAndPortToUse(),
             druidNode.getHostAndPort(),

@@ -29,6 +29,7 @@ import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
@@ -266,12 +267,27 @@ public class HttpServerInventoryViewTest
 
     druidNodeDiscovery.listener.nodesRemoved(ImmutableList.of(druidNode));
 
+    // test removal event with empty services
     druidNodeDiscovery.listener.nodesRemoved(
         ImmutableList.of(
             new DiscoveryDruidNode(
                 new DruidNode("service", "host", false, 8080, null, true, false),
                 NodeRole.INDEXER,
                 Collections.emptyMap()
+            )
+        )
+    );
+
+    // test removal rogue node (announced a service as a DataNodeService but wasn't a DataNodeService at the key)
+    druidNodeDiscovery.listener.nodesRemoved(
+        ImmutableList.of(
+            new DiscoveryDruidNode(
+                new DruidNode("service", "host", false, 8080, null, true, false),
+                NodeRole.INDEXER,
+                ImmutableMap.of(
+                    DataNodeService.DISCOVERY_SERVICE_KEY,
+                    new LookupNodeService("lookyloo")
+                )
             )
         )
     );

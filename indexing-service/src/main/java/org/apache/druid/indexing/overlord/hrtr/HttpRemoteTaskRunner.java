@@ -566,7 +566,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
   private Worker toWorker(DiscoveryDruidNode node)
   {
-    final WorkerNodeService workerNodeService = node.getService(WorkerNodeService.DISCOVERY_SERVICE_KEY);
+    final WorkerNodeService workerNodeService = node.getService(WorkerNodeService.DISCOVERY_SERVICE_KEY, WorkerNodeService.class);
     if (workerNodeService == null) {
       // this shouldn't typically happen, but just in case it does, make a dummy worker to allow the callbacks to
       // continue since addWorker/removeWorker only need worker.getHost()

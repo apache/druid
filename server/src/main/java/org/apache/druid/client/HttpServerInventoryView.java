@@ -177,7 +177,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
               private DruidServer toDruidServer(DiscoveryDruidNode node)
               {
                 final DruidNode druidNode = node.getDruidNode();
-                final DataNodeService dataNodeService = node.getService(DataNodeService.DISCOVERY_SERVICE_KEY);
+                final DataNodeService dataNodeService = node.getService(DataNodeService.DISCOVERY_SERVICE_KEY, DataNodeService.class);
                 if (dataNodeService == null) {
                   // this shouldn't typically happen, but just in case it does, make a dummy server to allow the
                   // callbacks to continue since serverAdded/serverRemoved only need node.getName()
