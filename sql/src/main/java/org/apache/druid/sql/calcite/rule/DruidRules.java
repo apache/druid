@@ -121,7 +121,6 @@ public class DruidRules
       retVal.add(ProjectCorrelateTransposeRule.INSTANCE);
       retVal.add(CorrelateFilterLTransposeRule.instance());
       retVal.add(CorrelateFilterRTransposeRule.instance());
-      retVal.add(CorrelateProjectOnFIlterRightTransposeRule.instance());
     }
 
     return retVal;
