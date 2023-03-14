@@ -56,7 +56,6 @@ import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.discovery.DruidService;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
@@ -653,21 +652,15 @@ public class SystemSchema extends AbstractSchema
 
     private static boolean isDiscoverableDataServer(DiscoveryDruidNode druidNode)
     {
-      final DruidService druidService = druidNode.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY);
-      if (druidService == null) {
-        return false;
-      }
-      final DataNodeService dataNodeService = (DataNodeService) druidService;
-      return dataNodeService.isDiscoverable();
+      final DataNodeService dataNodeService = druidNode.getService(DataNodeService.DISCOVERY_SERVICE_KEY);
+      return dataNodeService != null && dataNodeService.isDiscoverable();
     }
 
     private static DruidServer toDruidServer(DiscoveryDruidNode discoveryDruidNode)
     {
       if (isDiscoverableDataServer(discoveryDruidNode)) {
         final DruidNode druidNode = discoveryDruidNode.getDruidNode();
-        final DataNodeService dataNodeService = (DataNodeService) discoveryDruidNode
-            .getServices()
-            .get(DataNodeService.DISCOVERY_SERVICE_KEY);
+        final DataNodeService dataNodeService = discoveryDruidNode.getService(DataNodeService.DISCOVERY_SERVICE_KEY);
         return new DruidServer(
             druidNode.getHostAndPortToUse(),
             druidNode.getHostAndPort(),

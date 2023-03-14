@@ -58,6 +58,7 @@ import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -264,6 +265,16 @@ public class HttpServerInventoryViewTest
     );
 
     druidNodeDiscovery.listener.nodesRemoved(ImmutableList.of(druidNode));
+
+    druidNodeDiscovery.listener.nodesRemoved(
+        ImmutableList.of(
+            new DiscoveryDruidNode(
+                new DruidNode("service", "host", false, 8080, null, true, false),
+                NodeRole.INDEXER,
+                Collections.emptyMap()
+            )
+        )
+    );
 
     serverRemovedCalled.await();
     Assert.assertNull(httpServerInventoryView.getInventoryValue("host:8080"));

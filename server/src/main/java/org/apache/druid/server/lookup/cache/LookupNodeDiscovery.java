@@ -55,8 +55,9 @@ public class LookupNodeDiscovery
               @Override
               public boolean apply(@Nullable DiscoveryDruidNode node)
               {
-                return tier.equals(((LookupNodeService) node.getServices()
-                                                            .get(LookupNodeService.DISCOVERY_SERVICE_KEY)).getLookupTier());
+                final LookupNodeService lookupNodeService =
+                    node == null ? null : node.getService(LookupNodeService.DISCOVERY_SERVICE_KEY);
+                return lookupNodeService != null && tier.equals(lookupNodeService.getLookupTier());
               }
             }
         ),
@@ -79,8 +80,12 @@ public class LookupNodeDiscovery
     ImmutableSet.Builder<String> builder = new ImmutableSet.Builder<>();
 
     druidNodeDiscovery.getAllNodes().forEach(
-        node -> builder.add(((LookupNodeService) node.getServices()
-                                                     .get(LookupNodeService.DISCOVERY_SERVICE_KEY)).getLookupTier())
+        node -> {
+          LookupNodeService lookupService = node.getService(LookupNodeService.DISCOVERY_SERVICE_KEY);
+          if (lookupService != null) {
+            builder.add(lookupService.getLookupTier());
+          }
+        }
     );
 
     return builder.build();
