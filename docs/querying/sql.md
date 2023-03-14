@@ -115,8 +115,7 @@ For examples, see the [Unnest arrays tutorial](../tutorials/tutorial-unnest-arra
 
 The UNNEST function has the following limitations:
 
-- The function does not remove any duplicates or nulls in an array. Nulls will be treated as any other value in an array. If there are multiple nulls within the array, a record corresponding to each of the nulls gets created
-- The [`unnest` datasource for native queries](./datasource.md#unnest) has the option to specify an `allowList`.  There is no equivalent in the UNNEST function.
+- The function does not remove any duplicates or nulls in an array. Nulls will be treated as any other value in an array. If there are multiple nulls within the array, a record corresponding to each of the nulls gets created.
 - Arrays inside complex JSON types are not supported.
 - You cannot perform an UNNEST at ingestion time, including SQL-based ingestion using the MSQ task engine.
 - UNNEST preserves the ordering in the source array that is being unnested.
