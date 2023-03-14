@@ -120,8 +120,8 @@ public class DruidRules
       retVal.add(new DruidCorrelateUnnestRule(plannerContext));
       retVal.add(ProjectCorrelateTransposeRule.INSTANCE);
       retVal.add(CorrelateFilterLTransposeRule.instance());
-      retVal.add(CorrelateFilterRTransposeRule.instance());
-      retVal.add(CorrelateProjectOnFIlterRightTransposeRule.instance());
+      retVal.add(DruidFilterUnnestRule.instance());
+      retVal.add(DruidFilterUnnestRule.DruidProjectOnCorrelateRule.instance());
     }
 
     return retVal;

@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.BooleanFilter;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -62,15 +63,19 @@ public class UnnestStorageAdapter implements StorageAdapter
   private final StorageAdapter baseAdapter;
   private final VirtualColumn unnestColumn;
   private final String outputColumnName;
+  @Nullable
+  private final DimFilter unnestFilter;
 
   public UnnestStorageAdapter(
       final StorageAdapter baseAdapter,
-      final VirtualColumn unnestColumn
+      final VirtualColumn unnestColumn,
+      final DimFilter unnestFilter
   )
   {
     this.baseAdapter = baseAdapter;
     this.unnestColumn = unnestColumn;
     this.outputColumnName = unnestColumn.getOutputName();
+    this.unnestFilter = unnestFilter;
   }
 
   @Override
@@ -86,6 +91,7 @@ public class UnnestStorageAdapter implements StorageAdapter
     final String inputColumn = getUnnestInputIfDirectAccess();
     final Pair<Filter, Filter> filterPair = computeBaseAndPostUnnestFilters(
         filter,
+        unnestFilter != null ? unnestFilter.toFilter() : null,
         virtualColumns,
         inputColumn,
         inputColumn == null || virtualColumns.exists(inputColumn)
@@ -253,11 +259,11 @@ public class UnnestStorageAdapter implements StorageAdapter
    * @param queryVirtualColumns    query virtual columns passed to makeCursors
    * @param inputColumn            input column to unnest if it's a direct access; otherwise null
    * @param inputColumnCapabilites input column capabilities if known; otherwise null
-   *
    * @return pair of pre- and post-unnest filters
    */
   private Pair<Filter, Filter> computeBaseAndPostUnnestFilters(
       @Nullable final Filter queryFilter,
+      @Nullable final Filter unnestFilter,
       final VirtualColumns queryVirtualColumns,
       @Nullable final String inputColumn,
       @Nullable final ColumnCapabilities inputColumnCapabilites
@@ -268,7 +274,22 @@ public class UnnestStorageAdapter implements StorageAdapter
       final List<Filter> preFilters = new ArrayList<>();
       final List<Filter> postFilters = new ArrayList<>();
 
-      void add(@Nullable final Filter filter)
+      void addPostFilterWithPreFilterIfRewritePossible(@Nullable final Filter filter)
+      {
+        if (filter == null) {
+          return;
+        }
+        final Filter newFilter = rewriteFilterOnUnnestColumnIfPossible(filter, inputColumn, inputColumnCapabilites);
+        if (newFilter != null) {
+          // Add the rewritten filter pre-unnest, so we get the benefit of any indexes, and so we avoid unnesting
+          // any rows that do not match this filter at all.
+          preFilters.add(newFilter);
+        }
+        // Add original filter post-unnest no matter what: we need to filter out any extraneous unnested values.
+        postFilters.add(filter);
+      }
+
+      void addPreFilter(@Nullable final Filter filter)
       {
         if (filter == null) {
           return;
@@ -285,20 +306,7 @@ public class UnnestStorageAdapter implements StorageAdapter
             }
           }
         }
-
-        if (requiredColumns.contains(outputColumnName)) {
-          // Rewrite filter post-unnest if possible.
-          final Filter newFilter = rewriteFilterOnUnnestColumnIfPossible(filter, inputColumn, inputColumnCapabilites);
-          if (newFilter != null) {
-            // Add the rewritten filter pre-unnest, so we get the benefit of any indexes, and so we avoid unnesting
-            // any rows that do not match this filter at all.
-            preFilters.add(newFilter);
-          }
-          // Add original filter post-unnest no matter what: we need to filter out any extraneous unnested values.
-          postFilters.add(filter);
-        } else {
-          preFilters.add(filter);
-        }
+        preFilters.add(filter);
       }
     }
 
@@ -306,10 +314,18 @@ public class UnnestStorageAdapter implements StorageAdapter
 
     if (queryFilter instanceof AndFilter) {
       for (Filter filter : ((AndFilter) queryFilter).getFilters()) {
-        filterSplitter.add(filter);
+        filterSplitter.addPreFilter(filter);
       }
     } else {
-      filterSplitter.add(queryFilter);
+      filterSplitter.addPreFilter(queryFilter);
+    }
+
+    if (unnestFilter instanceof AndFilter) {
+      for (Filter filter : ((AndFilter) unnestFilter).getFilters()) {
+        filterSplitter.addPostFilterWithPreFilterIfRewritePossible(filter);
+      }
+    } else {
+      filterSplitter.addPostFilterWithPreFilterIfRewritePossible(unnestFilter);
     }
 
     return Pair.of(
