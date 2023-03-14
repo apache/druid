@@ -589,6 +589,8 @@ The following query returns the columns `dim45` and `m1`. The `dim45` column is 
 
 The following Scan query unnests the column `dim3` into `d3` and a virtual column composed of `dim4` and `dim5` into the column `d45`. It then returns those source columns and their unnested variants.
 
+<details><summary>Show the query</summary>
+
 ```json
 {
   "queryType": "scan",
@@ -643,6 +645,8 @@ The following Scan query unnests the column `dim3` into `d3` and a virtual colum
   }
 }
 ```
+
+</details>
 
 ## Learn more
 
