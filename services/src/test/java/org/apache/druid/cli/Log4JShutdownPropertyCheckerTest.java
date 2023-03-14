@@ -35,9 +35,9 @@ public class Log4JShutdownPropertyCheckerTest
 
     Assert.assertEquals(
         "org.apache.druid.common.config.Log4jShutdown",
-        properties.get("log4j.shutdownCallbackRegistry")
+        properties.getProperty("log4j.shutdownCallbackRegistry")
     );
-    Assert.assertEquals("true", properties.get("log4j.shutdownHookEnabled"));
-    Assert.assertEquals("false", properties.get("log4j2.is.webapp"));
+    Assert.assertEquals("true", properties.getProperty("log4j.shutdownHookEnabled"));
+    Assert.assertEquals("false", properties.getProperty("log4j2.is.webapp"));
   }
 }

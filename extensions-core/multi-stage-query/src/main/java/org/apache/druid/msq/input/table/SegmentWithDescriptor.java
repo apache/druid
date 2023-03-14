@@ -27,6 +27,9 @@ import org.apache.druid.segment.Segment;
 import java.io.Closeable;
 import java.util.Objects;
 
+/**
+ * A holder for a physical segment.
+ */
 public class SegmentWithDescriptor implements Closeable
 {
   private final ResourceHolder<? extends Segment> segmentHolder;
@@ -41,20 +44,33 @@ public class SegmentWithDescriptor implements Closeable
     this.descriptor = Preconditions.checkNotNull(descriptor, "descriptor");
   }
 
+  /**
+   * The physical segment.
+   *
+   * Named "getOrLoad" because the segment may be held by an eager or lazy resource holder (i.e.
+   * {@link org.apache.druid.msq.querykit.LazyResourceHolder}). If the resource holder is lazy, the segment is acquired
+   * as part of the call to this method.
+   */
   public Segment getOrLoadSegment()
   {
     return segmentHolder.get();
   }
 
+  /**
+   * The segment descriptor associated with this physical segment.
+   */
+  public SegmentDescriptor getDescriptor()
+  {
+    return descriptor;
+  }
+
+  /**
+   * Release resources used by the physical segment.
+   */
   @Override
   public void close()
   {
     segmentHolder.close();
-  }
-
-  public SegmentDescriptor getDescriptor()
-  {
-    return descriptor;
   }
 
   @Override

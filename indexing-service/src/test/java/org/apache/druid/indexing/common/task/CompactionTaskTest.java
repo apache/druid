@@ -327,7 +327,7 @@ public class CompactionTaskTest
         null,
         null,
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -627,7 +627,7 @@ public class CompactionTaskTest
             null,
             null,
             new IndexSpec(
-                new RoaringBitmapSerdeFactory(true),
+                RoaringBitmapSerdeFactory.getInstance(),
                 CompressionStrategy.LZ4,
                 CompressionStrategy.LZF,
                 LongEncodingStrategy.LONGS
@@ -690,7 +690,7 @@ public class CompactionTaskTest
         null,
         null,
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -721,7 +721,7 @@ public class CompactionTaskTest
         null,
         null,
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -766,7 +766,7 @@ public class CompactionTaskTest
         null,
         null,
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -805,7 +805,7 @@ public class CompactionTaskTest
         null,
         null,
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -954,7 +954,7 @@ public class CompactionTaskTest
         null,
         null,
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -1029,7 +1029,7 @@ public class CompactionTaskTest
         null,
         null,
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -1104,7 +1104,7 @@ public class CompactionTaskTest
         null,
         new HashedPartitionsSpec(null, 3, null),
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -1852,7 +1852,7 @@ public class CompactionTaskTest
             null,
             new HashedPartitionsSpec(5000000, null, null), // automatically computed targetPartitionSize
             new IndexSpec(
-                new RoaringBitmapSerdeFactory(true),
+                RoaringBitmapSerdeFactory.getInstance(),
                 CompressionStrategy.LZ4,
                 CompressionStrategy.LZF,
                 LongEncodingStrategy.LONGS

@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
@@ -88,14 +89,29 @@ public class JoinTestHelper
       new StringDimensionSchema("page"),
       new LongDimensionSchema("delta")
   );
-  private static final RowSignature COUNTRIES_SIGNATURE =
+
+  public static final String FACT_RESOURCE = "/wikipedia/data.json";
+  public static final String COUNTRIES_RESOURCE = "/wikipedia/countries.json";
+  public static final String REGIONS_RESOURCE = "/wikipedia/regions.json";
+
+  public static final RowSignature FACT_SIGNATURE = RowSignature.builder().addDimensions(
+      FACT_DIMENSIONS.stream().map(
+          dimensionSchema -> new DefaultDimensionSpec(
+              dimensionSchema.getName(),
+              dimensionSchema.getName(),
+              dimensionSchema.getColumnType()
+          )
+      ).collect(Collectors.toList())
+  ).build();
+
+  public static final RowSignature COUNTRIES_SIGNATURE =
       RowSignature.builder()
                   .add("countryNumber", ColumnType.LONG)
                   .add("countryIsoCode", ColumnType.STRING)
                   .add("countryName", ColumnType.STRING)
                   .build();
 
-  private static final RowSignature REGIONS_SIGNATURE =
+  public static final RowSignature REGIONS_SIGNATURE =
       RowSignature.builder()
                   .add("regionIsoCode", ColumnType.STRING)
                   .add("countryIsoCode", ColumnType.STRING)
@@ -144,7 +160,7 @@ public class JoinTestHelper
       };
 
   public static final String INDEXED_TABLE_VERSION = DateTimes.nowUtc().toString();
-  public static final byte[] INDEXED_TABLE_CACHE_KEY = new byte[] {1, 2, 3};
+  public static final byte[] INDEXED_TABLE_CACHE_KEY = new byte[]{1, 2, 3};
 
   private static RowAdapter<Map<String, Object>> createMapRowAdapter(final RowSignature signature)
   {
@@ -182,7 +198,7 @@ public class JoinTestHelper
   ) throws IOException
   {
     return withRowsFromResource(
-        "/wikipedia/data.json",
+        FACT_RESOURCE,
         rows -> IndexBuilder
             .create(columnConfig)
             .tmpDir(tmpDir)
@@ -258,7 +274,7 @@ public class JoinTestHelper
   public static RowBasedIndexedTable<Map<String, Object>> createCountriesIndexedTable() throws IOException
   {
     return withRowsFromResource(
-        "/wikipedia/countries.json",
+        COUNTRIES_RESOURCE,
         rows -> new RowBasedIndexedTable<>(
             rows,
             createMapRowAdapter(COUNTRIES_SIGNATURE),
@@ -287,7 +303,7 @@ public class JoinTestHelper
   public static RowBasedIndexedTable<Map<String, Object>> createRegionsIndexedTable() throws IOException
   {
     return withRowsFromResource(
-        "/wikipedia/regions.json",
+        REGIONS_RESOURCE,
         rows -> new RowBasedIndexedTable<>(
             rows,
             createMapRowAdapter(REGIONS_SIGNATURE),
@@ -356,7 +372,7 @@ public class JoinTestHelper
     }
   }
 
-  private static <T> T withRowsFromResource(
+  public static <T> T withRowsFromResource(
       final String resource,
       final Function<List<Map<String, Object>>, T> f
   ) throws IOException

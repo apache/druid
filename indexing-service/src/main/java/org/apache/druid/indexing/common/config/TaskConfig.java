@@ -118,6 +118,7 @@ public class TaskConfig
   @JsonProperty
   private final boolean encapsulatedTask;
 
+  @Deprecated
   @JsonProperty("baseTaskDir")
   private final String baseTaskDirPath;
 
@@ -201,6 +202,7 @@ public class TaskConfig
     return baseDir;
   }
 
+  @Deprecated
   @JsonProperty("baseTaskDir")
   public String getBaseTaskDirPath()
   {

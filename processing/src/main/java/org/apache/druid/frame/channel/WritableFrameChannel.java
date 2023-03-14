@@ -74,6 +74,11 @@ public interface WritableFrameChannel extends Closeable
   void close() throws IOException;
 
   /**
+   * Whether {@link #close()} has been called on this channel.
+   */
+  boolean isClosed();
+
+  /**
    * Returns a future that resolves when {@link #write} is able to receive a new frame without blocking or throwing
    * an exception. The future never resolves to an exception.
    */

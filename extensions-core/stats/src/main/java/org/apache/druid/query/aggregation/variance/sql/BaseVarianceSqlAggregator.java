@@ -66,6 +66,7 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
   )
   {
     final RexNode inputOperand = Expressions.fromFieldAccess(
+        rexBuilder.getTypeFactory(),
         rowSignature,
         project,
         aggregateCall.getArgList().get(0)

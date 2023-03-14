@@ -79,7 +79,7 @@ public class ParallelIndexTuningConfigTest
         null,
         new DynamicPartitionsSpec(100, 100L),
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.UNCOMPRESSED,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -126,7 +126,7 @@ public class ParallelIndexTuningConfigTest
         null,
         new DynamicPartitionsSpec(100, 100L),
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.UNCOMPRESSED,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -173,7 +173,7 @@ public class ParallelIndexTuningConfigTest
         null,
         new DynamicPartitionsSpec(100, 100L),
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.UNCOMPRESSED,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -222,7 +222,7 @@ public class ParallelIndexTuningConfigTest
         null,
         new DynamicPartitionsSpec(100, 100L),
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.UNCOMPRESSED,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -268,7 +268,7 @@ public class ParallelIndexTuningConfigTest
         null,
         new HashedPartitionsSpec(null, 10, null),
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.UNCOMPRESSED,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -314,7 +314,7 @@ public class ParallelIndexTuningConfigTest
         null,
         new SingleDimensionPartitionsSpec(100, null, "dim", false),
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.UNCOMPRESSED,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -360,7 +360,7 @@ public class ParallelIndexTuningConfigTest
         null,
         new DynamicPartitionsSpec(100, null),
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.UNCOMPRESSED,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS

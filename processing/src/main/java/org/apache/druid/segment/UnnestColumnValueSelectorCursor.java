@@ -28,8 +28,8 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 
@@ -63,7 +63,7 @@ public class UnnestColumnValueSelectorCursor implements Cursor
   private final Cursor baseCursor;
   private final ColumnSelectorFactory baseColumnSelectorFactory;
   private final ColumnValueSelector columnValueSelector;
-  private final String columnName;
+  private final VirtualColumn unnestColumn;
   private final String outputName;
   private final LinkedHashSet<String> allowSet;
   private int index;
@@ -73,16 +73,19 @@ public class UnnestColumnValueSelectorCursor implements Cursor
 
   public UnnestColumnValueSelectorCursor(
       Cursor cursor,
-      ColumnSelectorFactory baseColumSelectorFactory,
-      String columnName,
+      ColumnSelectorFactory baseColumnSelectorFactory,
+      VirtualColumn unnestColumn,
       String outputColumnName,
       LinkedHashSet<String> allowSet
   )
   {
     this.baseCursor = cursor;
-    this.baseColumnSelectorFactory = baseColumSelectorFactory;
-    this.columnValueSelector = this.baseColumnSelectorFactory.makeColumnValueSelector(columnName);
-    this.columnName = columnName;
+    this.baseColumnSelectorFactory = baseColumnSelectorFactory;
+    this.columnValueSelector = unnestColumn.makeColumnValueSelector(
+        unnestColumn.getOutputName(),
+        this.baseColumnSelectorFactory
+    );
+    this.unnestColumn = unnestColumn;
     this.index = 0;
     this.outputName = outputColumnName;
     this.needInitialization = true;
@@ -215,14 +218,21 @@ public class UnnestColumnValueSelectorCursor implements Cursor
         if (!outputName.equals(column)) {
           return baseColumnSelectorFactory.getColumnCapabilities(column);
         }
-        final ColumnCapabilities capabilities = baseColumnSelectorFactory.getColumnCapabilities(columnName);
-        if (capabilities.isArray()) {
+
+        final ColumnCapabilities capabilities = unnestColumn.capabilities(
+            baseColumnSelectorFactory,
+            unnestColumn.getOutputName()
+        );
+
+        if (capabilities == null) {
+          return null;
+        } else if (capabilities.isArray()) {
           return ColumnCapabilitiesImpl.copyOf(capabilities).setType(capabilities.getElementType());
-        }
-        if (capabilities.hasMultipleValues().isTrue()) {
+        } else if (capabilities.hasMultipleValues().isTrue()) {
           return ColumnCapabilitiesImpl.copyOf(capabilities).setHasMultipleValues(false);
+        } else {
+          return capabilities;
         }
-        return baseColumnSelectorFactory.getColumnCapabilities(columnName);
       }
     };
   }
@@ -276,28 +286,18 @@ public class UnnestColumnValueSelectorCursor implements Cursor
 
   /**
    * This method populates the objects when the base cursor moves to the next row
-   *
-   * @param firstRun flag to populate one time object references to hold values for unnest cursor
    */
-  private void getNextRow(boolean firstRun)
+  private void getNextRow()
   {
     currentVal = this.columnValueSelector.getObject();
     if (currentVal == null) {
-      if (!firstRun) {
-        unnestListForCurrentRow = new ArrayList<>();
-      }
-      unnestListForCurrentRow.add(null);
+      unnestListForCurrentRow = Collections.singletonList(null);
+    } else if (currentVal instanceof List) {
+      unnestListForCurrentRow = (List<Object>) currentVal;
+    } else if (currentVal instanceof Object[]) {
+      unnestListForCurrentRow = Arrays.asList((Object[]) currentVal);
     } else {
-      if (currentVal instanceof List) {
-        unnestListForCurrentRow = (List<Object>) currentVal;
-      } else if (currentVal instanceof Object[]) {
-        unnestListForCurrentRow = Arrays.asList((Object[]) currentVal);
-      } else if (currentVal.getClass().equals(String.class)) {
-        if (!firstRun) {
-          unnestListForCurrentRow = new ArrayList<>();
-        }
-        unnestListForCurrentRow.add(currentVal);
-      }
+      unnestListForCurrentRow = Collections.singletonList(currentVal);
     }
   }
 
@@ -309,8 +309,7 @@ public class UnnestColumnValueSelectorCursor implements Cursor
    */
   private void initialize()
   {
-    this.unnestListForCurrentRow = new ArrayList<>();
-    getNextRow(needInitialization);
+    getNextRow();
     if (allowSet != null) {
       if (!allowSet.isEmpty()) {
         if (!allowSet.contains((String) unnestListForCurrentRow.get(index))) {
@@ -333,7 +332,7 @@ public class UnnestColumnValueSelectorCursor implements Cursor
       index = 0;
       baseCursor.advance();
       if (!baseCursor.isDone()) {
-        getNextRow(needInitialization);
+        getNextRow();
       }
     } else {
       index++;
