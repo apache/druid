@@ -68,7 +68,7 @@ public class DruidFilterUnnestRule extends RelOptRule
   //            9:LogicalValues(subset=[rel#115:Subset#1.NONE.[0]], tuples=[[{ 0 }]])
 
   // This logical project does a type cast only which Druid already has information about
-  // So we can skip this LogicalProject
+  // So we can skip this LogicalProject only if it is a CAST for strings or LITERALS for other types
   // Extensive unit tests can be found in {@link CalciteArraysQueryTest}
 
   static class DruidProjectOnCorrelateRule extends RelOptRule
