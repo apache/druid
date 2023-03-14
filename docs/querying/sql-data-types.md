@@ -78,8 +78,8 @@ applied to all values for each row individually. Multi-value string dimensions c
 [multi-value string functions](sql-multivalue-string-functions.md), which can perform powerful array-aware operations.
 
 Grouping by a multi-value expression observes the native Druid multi-value aggregation behavior, which is similar to
-the `UNNEST` functionality available in some other SQL dialects. Refer to the documentation on
-[multi-value string dimensions](multi-value-dimensions.md) for additional details.
+an implicit SQL `UNNEST`. Refer to the documentation on [multi-value string dimensions](multi-value-dimensions.md)
+for additional details.
 
 > Because multi-value dimensions are treated by the SQL planner as `VARCHAR`, there are some inconsistencies between how
 > they are handled in Druid SQL and in native queries. For example, expressions involving multi-value dimensions may be

@@ -2373,7 +2373,7 @@ public class CompactSegmentsTest
                 transformSpec,
                 ImmutableMap.of(
                     "bitmap",
-                    ImmutableMap.of("type", "roaring", "compressRunOnSerialization", true),
+                    ImmutableMap.of("type", "roaring"),
                     "dimensionCompression",
                     "lz4",
                     "metricCompression",
