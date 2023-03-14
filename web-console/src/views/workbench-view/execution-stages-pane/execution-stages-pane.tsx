@@ -125,6 +125,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
     ...stages.getInputCountersForStage(stage, 'rows').map(formatRows),
     formatRows(stages.getTotalCounterForStage(stage, 'output', 'rows')),
     formatRows(stages.getTotalCounterForStage(stage, 'shuffle', 'rows')),
+    formatRows(stages.getTotalSegmentGenerationProgressForStage(stage)),
   ]);
 
   const filesValues = filterMap(stages.stages, stage => {
@@ -162,6 +163,14 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
         if (!totalFiles) return;
         return formatFileOfTotalForBrace(totalFiles, totalFiles);
       });
+    }
+
+    const isSegmentGenerator = Stages.stageType(stage) === 'segmentGenerator';
+    let bracesSegmentProcess: string[] = [];
+    if (isSegmentGenerator) {
+      bracesSegmentProcess = wideCounters.map(wideCounter =>
+        formatRows(wideCounter.segmentProgress || 0),
+      );
     }
 
     return (
@@ -236,6 +245,23 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
               },
             };
           }),
+          Stages.stageType(stage) === 'segmentGenerator'
+            ? [
+                {
+                  Header: twoLines(
+                    stages.getStageCounterTitle(stage, 'segmentGenerationProgress'),
+                    <i>rows</i>,
+                  ),
+                  id: 'segmentGenerationProgress',
+                  accessor: d => d.segmentProgress,
+                  className: 'padded',
+                  width: 180,
+                  Cell({ value }) {
+                    return <BracedText text={formatRows(value)} braces={bracesSegmentProcess} />;
+                  },
+                },
+              ]
+            : [],
         )}
       />
     );
@@ -420,6 +446,19 @@ ${title} uncompressed size: ${formatBytesCompact(
     );
   }
 
+  function dataProcessedSegmentOutput(stage: StageDefinition) {
+    if (!stages.hasCounterForStage(stage, 'segmentGenerationProgress')) return;
+
+    return (
+      <div className="data-transfer">
+        <BracedText
+          text={formatRows(stages.getTotalSegmentGenerationProgressForStage(stage))}
+          braces={rowsValues}
+        />
+      </div>
+    );
+  }
+
   return (
     <ReactTable
       className={classNames('execution-stages-pane', DEFAULT_TABLE_CLASS_NAME)}
@@ -515,6 +554,9 @@ ${title} uncompressed size: ${formatBytesCompact(
                 {stages.hasCounterForStage(stage, 'shuffle') && (
                   <div>{stages.getStageCounterTitle(stage, 'shuffle')}</div>
                 )}
+                {stages.hasCounterForStage(stage, 'segmentGenerationProgress') && (
+                  <div>{stages.getStageCounterTitle(stage, 'segmentGenerationProgress')}</div>
+                )}
               </>
             );
           },
@@ -540,6 +582,7 @@ ${title} uncompressed size: ${formatBytesCompact(
                 )}
                 {dataProcessedOutput(stage)}
                 {dataProcessedShuffle(stage)}
+                {dataProcessedSegmentOutput(stage)}
               </>
             );
           },
