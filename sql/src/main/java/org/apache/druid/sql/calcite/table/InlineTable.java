@@ -26,7 +26,6 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.segment.column.RowSignature;
 
 /**
  * Represents a specialized table used within Druid's Calcite-based planner.
@@ -38,12 +37,9 @@ public class InlineTable extends DruidTable
 {
   private final DataSource dataSource;
 
-  public InlineTable(
-      final InlineDataSource dataSource,
-      final RowSignature rowSignature
-  )
+  public InlineTable(final InlineDataSource dataSource)
   {
-    super(rowSignature);
+    super(dataSource.getRowSignature());
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
   }
 

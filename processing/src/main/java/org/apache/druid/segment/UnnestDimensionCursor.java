@@ -77,28 +77,32 @@ public class UnnestDimensionCursor implements Cursor
 {
   private final Cursor baseCursor;
   private final DimensionSelector dimSelector;
-  private final String columnName;
+  private final VirtualColumn unnestColumn;
   private final String outputName;
   private final LinkedHashSet<String> allowSet;
   private final BitSet allowedBitSet;
   private final ColumnSelectorFactory baseColumnSelectorFactory;
   private int index;
-  @Nullable private IndexedInts indexedIntsForCurrentRow;
+  @Nullable
+  private IndexedInts indexedIntsForCurrentRow;
   private boolean needInitialization;
   private SingleIndexInts indexIntsForRow;
 
   public UnnestDimensionCursor(
       Cursor cursor,
       ColumnSelectorFactory baseColumnSelectorFactory,
-      String columnName,
+      VirtualColumn unnestColumn,
       String outputColumnName,
       LinkedHashSet<String> allowSet
   )
   {
     this.baseCursor = cursor;
     this.baseColumnSelectorFactory = baseColumnSelectorFactory;
-    this.dimSelector = this.baseColumnSelectorFactory.makeDimensionSelector(DefaultDimensionSpec.of(columnName));
-    this.columnName = columnName;
+    this.dimSelector = unnestColumn.makeDimensionSelector(
+        DefaultDimensionSpec.of(unnestColumn.getOutputName()),
+        this.baseColumnSelectorFactory
+    );
+    this.unnestColumn = unnestColumn;
     this.index = 0;
     this.outputName = outputColumnName;
     this.needInitialization = true;
@@ -254,14 +258,18 @@ public class UnnestDimensionCursor implements Cursor
         // This is fine for STRING types
         // But going forward if the dimension to be unnested is of type ARRAY,
         // this should strip down to the base type of the array
-        final ColumnCapabilities capabilities = baseColumnSelectorFactory.getColumnCapabilities(columnName);
+        final ColumnCapabilities capabilities = unnestColumn.capabilities(
+            baseColumnSelectorFactory,
+            unnestColumn.getOutputName()
+        );
+
         if (capabilities.isArray()) {
           return ColumnCapabilitiesImpl.copyOf(capabilities).setType(capabilities.getElementType());
         }
         if (capabilities.hasMultipleValues().isTrue()) {
           return ColumnCapabilitiesImpl.copyOf(capabilities).setHasMultipleValues(false);
         }
-        return baseColumnSelectorFactory.getColumnCapabilities(columnName);
+        return capabilities;
       }
     };
   }

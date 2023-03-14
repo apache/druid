@@ -31,6 +31,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 public class MSQFaultSerdeTest
 {
@@ -60,7 +61,7 @@ public class MSQFaultSerdeTest
     assertFaultSerde(InsertTimeNullFault.INSTANCE);
     assertFaultSerde(new InsertTimeOutOfBoundsFault(Intervals.ETERNITY));
     assertFaultSerde(new InvalidNullByteFault("the column"));
-    assertFaultSerde(new NotEnoughMemoryFault(1000, 900, 1, 2));
+    assertFaultSerde(new NotEnoughMemoryFault(1000, 1000, 900, 1, 2));
     assertFaultSerde(QueryNotSupportedFault.INSTANCE);
     assertFaultSerde(new RowTooLargeFault(1000));
     assertFaultSerde(new TaskStartTimeoutFault(10));
@@ -69,6 +70,7 @@ public class MSQFaultSerdeTest
     assertFaultSerde(new TooManyClusteredByColumnsFault(10, 8, 1));
     assertFaultSerde(new TooManyInputFilesFault(15, 10, 5));
     assertFaultSerde(new TooManyPartitionsFault(10));
+    assertFaultSerde(new TooManyRowsWithSameKeyFault(Arrays.asList("foo", 123), 1, 2));
     assertFaultSerde(new TooManyWarningsFault(10, "the error"));
     assertFaultSerde(new TooManyWorkersFault(10, 5));
     assertFaultSerde(new TooManyAttemptsForWorker(2, "taskId", 1, "rootError"));

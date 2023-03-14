@@ -364,7 +364,7 @@ public class DumpSegment extends GuiceRunnable
     if (bitmapFactory instanceof ConciseBitmapFactory) {
       bitmapSerdeFactory = new ConciseBitmapSerdeFactory();
     } else if (bitmapFactory instanceof RoaringBitmapFactory) {
-      bitmapSerdeFactory = new RoaringBitmapSerdeFactory(null);
+      bitmapSerdeFactory = RoaringBitmapSerdeFactory.getInstance();
     } else {
       throw new ISE(
           "Don't know which BitmapSerdeFactory to use for BitmapFactory[%s]!",
@@ -565,7 +565,7 @@ public class DumpSegment extends GuiceRunnable
     if (bitmapFactory instanceof ConciseBitmapFactory) {
       bitmapSerdeFactory = new ConciseBitmapSerdeFactory();
     } else if (bitmapFactory instanceof RoaringBitmapFactory) {
-      bitmapSerdeFactory = new RoaringBitmapSerdeFactory(null);
+      bitmapSerdeFactory = RoaringBitmapSerdeFactory.getInstance();
     } else {
       throw new ISE(
           "Don't know which BitmapSerdeFactory to use for BitmapFactory[%s]!",

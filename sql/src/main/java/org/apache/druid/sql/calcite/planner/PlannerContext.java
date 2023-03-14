@@ -48,7 +48,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -66,12 +66,24 @@ public class PlannerContext
   // Query context keys
   public static final String CTX_SQL_CURRENT_TIMESTAMP = "sqlCurrentTimestamp";
   public static final String CTX_SQL_TIME_ZONE = "sqlTimeZone";
+  public static final String CTX_SQL_JOIN_ALGORITHM = "sqlJoinAlgorithm";
+  private static final JoinAlgorithm DEFAULT_SQL_JOIN_ALGORITHM = JoinAlgorithm.BROADCAST;
 
   /**
    * Undocumented context key, used internally, to allow the web console to
    * apply a limit without having to rewrite the SQL query.
    */
   public static final String CTX_SQL_OUTER_LIMIT = "sqlOuterLimit";
+
+  /**
+   * Undocumented context key, used to enable window functions.
+   */
+  public static final String CTX_ENABLE_WINDOW_FNS = "windowsAreForClosers";
+
+  /**
+   * Undocumented context key, used to enable {@link org.apache.calcite.sql.fun.SqlStdOperatorTable#UNNEST}.
+   */
+  public static final String CTX_ENABLE_UNNEST = "enableUnnest";
 
   // DataContext keys
   public static final String DATA_CTX_AUTHENTICATION_RESULT = "authenticationResult";
@@ -174,6 +186,42 @@ public class PlannerContext
     );
   }
 
+  /**
+   * Returns the join algorithm specified in a query context.
+   */
+  public static JoinAlgorithm getJoinAlgorithm(QueryContext queryContext)
+  {
+    return getJoinAlgorithmFromContextValue(queryContext.get(CTX_SQL_JOIN_ALGORITHM));
+  }
+
+  /**
+   * Returns the join algorithm specified in a query context.
+   */
+  public static JoinAlgorithm getJoinAlgorithm(Map<String, Object> queryContext)
+  {
+    return getJoinAlgorithmFromContextValue(queryContext.get(CTX_SQL_JOIN_ALGORITHM));
+  }
+
+  private static JoinAlgorithm getJoinAlgorithmFromContextValue(final Object object)
+  {
+    final String s = QueryContexts.getAsString(
+        CTX_SQL_JOIN_ALGORITHM,
+        object,
+        DEFAULT_SQL_JOIN_ALGORITHM.toString()
+    );
+
+    try {
+      return JoinAlgorithm.fromString(s);
+    }
+    catch (IllegalArgumentException e) {
+      throw QueryContexts.badValueException(
+          CTX_SQL_JOIN_ALGORITHM,
+          StringUtils.format("one of %s", Arrays.toString(JoinAlgorithm.values())),
+          object
+      );
+    }
+  }
+
   public PlannerToolbox getPlannerToolbox()
   {
     return plannerToolbox;
@@ -248,6 +296,11 @@ public class PlannerContext
   public AuthenticationResult getAuthenticationResult()
   {
     return Preconditions.checkNotNull(authenticationResult, "Authentication result not available");
+  }
+
+  public JoinAlgorithm getJoinAlgorithm()
+  {
+    return getJoinAlgorithm(queryContext);
   }
 
   public String getSql()
@@ -411,9 +464,28 @@ public class PlannerContext
     return engine;
   }
 
-  public boolean engineHasFeature(final EngineFeature feature)
+  /**
+   * Checks if the current {@link SqlEngine} supports a particular feature.
+   *
+   * When executing a specific query, use this method instead of
+   * {@link SqlEngine#featureAvailable(EngineFeature, PlannerContext)}, because it also verifies feature flags such as
+   * {@link #CTX_ENABLE_WINDOW_FNS}.
+   */
+  public boolean featureAvailable(final EngineFeature feature)
   {
-    return engine.feature(feature, this);
+    if (feature == EngineFeature.WINDOW_FUNCTIONS &&
+        !QueryContexts.getAsBoolean(CTX_ENABLE_WINDOW_FNS, queryContext.get(CTX_ENABLE_WINDOW_FNS), false)) {
+      // Short-circuit: feature requires context flag.
+      return false;
+    }
+
+    if (feature == EngineFeature.UNNEST &&
+        !QueryContexts.getAsBoolean(CTX_ENABLE_UNNEST, queryContext.get(CTX_ENABLE_UNNEST), false)) {
+      // Short-circuit: feature requires context flag.
+      return false;
+    }
+
+    return engine.featureAvailable(feature, this);
   }
 
   public QueryMaker getQueryMaker()

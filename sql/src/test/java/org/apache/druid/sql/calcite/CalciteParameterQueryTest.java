@@ -683,7 +683,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "case_searched(notnull(\"dim2\"),\"dim2\",'parameter')",
+                                "nvl(\"dim2\",'parameter')",
                                 ColumnType.STRING
                             )
                         )
@@ -718,7 +718,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "case_searched(notnull(\"dim2\"),\"dim2\",'parameter')",
+                                "nvl(\"dim2\",'parameter')",
                                 ColumnType.STRING
                             )
                         )
