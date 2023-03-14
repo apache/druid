@@ -63,6 +63,7 @@ public class UnnestStorageAdapter implements StorageAdapter
   private final StorageAdapter baseAdapter;
   private final VirtualColumn unnestColumn;
   private final String outputColumnName;
+
   @Nullable
   private final DimFilter unnestFilter;
 
@@ -259,6 +260,10 @@ public class UnnestStorageAdapter implements StorageAdapter
    * @param queryVirtualColumns    query virtual columns passed to makeCursors
    * @param inputColumn            input column to unnest if it's a direct access; otherwise null
    * @param inputColumnCapabilites input column capabilities if known; otherwise null
+<<<<<<< HEAD
+=======
+   *
+>>>>>>> upstream/master
    * @return pair of pre- and post-unnest filters
    */
   private Pair<Filter, Filter> computeBaseAndPostUnnestFilters(

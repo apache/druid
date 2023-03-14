@@ -30,7 +30,9 @@ import org.apache.druid.segment.UnnestSegmentReference;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.utils.JvmUtils;
 
+
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -49,6 +51,7 @@ public class UnnestDataSource implements DataSource
 {
   private final DataSource base;
   private final VirtualColumn virtualColumn;
+
   @Nullable
   private final DimFilter unnestFilter;
 
@@ -110,6 +113,7 @@ public class UnnestDataSource implements DataSource
     if (children.size() != 1) {
       throw new IAE("Expected [1] child, got [%d]", children.size());
     }
+
     return new UnnestDataSource(children.get(0), virtualColumn, unnestFilter);
   }
 

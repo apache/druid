@@ -41,8 +41,10 @@ public class UnnestSegmentReference implements SegmentReference
 
   private final SegmentReference baseSegment;
   private final VirtualColumn unnestColumn;
+
   @Nullable
   private final DimFilter unnestFilter;
+
 
 
   public UnnestSegmentReference(
