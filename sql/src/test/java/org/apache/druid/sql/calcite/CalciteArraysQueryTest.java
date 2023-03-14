@@ -3780,4 +3780,33 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testUnnestWithSelectorFiltersOnVirtualColumn()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "SELECT d12 FROM druid.numfoo, UNNEST(ARRAY[m1,m2]) as unnested (d12) where d12=1",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new TableDataSource(CalciteTests.DATASOURCE3),
+                      expressionVirtualColumn("j0.unnest", "array(\"m1\",\"m2\")", ColumnType.FLOAT_ARRAY),
+                      selector("j0.unnest", "1", null)
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_UNNEST)
+                  .columns(ImmutableList.of("j0.unnest"))
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1.0f},
+            new Object[]{1.0f}
+        )
+    );
+  }
 }
