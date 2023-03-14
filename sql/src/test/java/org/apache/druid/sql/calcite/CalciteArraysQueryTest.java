@@ -3739,12 +3739,98 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testUnnestWithSelectorFiltersOnAllColumns()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "SELECT * FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3='b' ",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new TableDataSource(CalciteTests.DATASOURCE3),
+                      expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING)
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .filters(selector("j0.unnest", "b", null))
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_UNNEST)
+                  .columns(ImmutableList.of(
+                      "__time",
+                      "cnt",
+                      "d1",
+                      "d2",
+                      "dim1",
+                      "dim2",
+                      "dim3",
+                      "dim4",
+                      "dim5",
+                      "dim6",
+                      "f1",
+                      "f2",
+                      "j0.unnest",
+                      "l1",
+                      "l2",
+                      "m1",
+                      "m2",
+                      "unique_dim1"
+                  ))
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{
+                946684800000L,
+                "",
+                "a",
+                "[\"a\",\"b\"]",
+                "a",
+                "aa",
+                "1",
+                1.0D,
+                0.0D,
+                1.0F,
+                0.0F,
+                7L,
+                0L,
+                1L,
+                1.0F,
+                1.0D,
+                "\"AQAAAEAAAA==\"",
+                "b"
+            },
+            new Object[]{
+                946771200000L,
+                "10.1",
+                "",
+                "[\"b\",\"c\"]",
+                "a",
+                "ab",
+                "2",
+                1.7D,
+                1.7D,
+                0.1F,
+                0.1F,
+                325323L,
+                325323L,
+                1L,
+                2.0F,
+                2.0D,
+                "\"AQAAAQAAAAHNBA==\"",
+                "b"
+            }
+        )
+    );
+  }
+
+  @Test
   public void testUnnestWithSelectorFiltersOnSelectedColumn()
   {
     skipVectorize();
     cannotVectorize();
     testQuery(
-        "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3='b'",
+        "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3='b' ",
         QUERY_CONTEXT_UNNEST,
         ImmutableList.of(
             Druids.newScanQueryBuilder()
@@ -3768,30 +3854,30 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithSelectorFiltersOnSelectedVirtualColumn()
+  public void testUnnestWithOrFiltersOnSelectedColumn()
   {
     skipVectorize();
     cannotVectorize();
     testQuery(
-        "SELECT d3 FROM druid.numfoo, UNNEST(ARRAY[m1,m2]) as unnested (d3) where d3=1 ",
+        "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3='b' ",
         QUERY_CONTEXT_UNNEST,
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
                       new TableDataSource(CalciteTests.DATASOURCE3),
-                      expressionVirtualColumn("j0.unnest", "array(\"m1\",\"m2\")", ColumnType.FLOAT_ARRAY)
+                      expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING)
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .filters(selector("j0.unnest", "1", null))
+                  .filters(selector("j0.unnest", "b", null))
                   .legacy(false)
                   .context(QUERY_CONTEXT_UNNEST)
                   .columns(ImmutableList.of("j0.unnest"))
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{1.0f},
-            new Object[]{1.0f}
+            new Object[]{"b"},
+            new Object[]{"b"}
         )
     );
   }
