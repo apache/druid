@@ -77,6 +77,15 @@ jobs:
         run: |
           ./it.sh ci
 
+      - name: Clean up docker
+        run: |
+          USER_NAME=$(whoami)
+          echo "Force stopping all containers and pruning"
+          docker ps -aq | xargs -r docker rm -f
+          docker system prune -af --volumes
+          echo "Deleting files in workspace not owned by $USER_NAME"
+          sudo find $GITHUB_WORKSPACE ! -uid $(id -ru $USER_NAME) -delete -print
+
       - name: Run IT
         env:
           MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }}
