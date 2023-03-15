@@ -72,15 +72,6 @@ jobs:
           path: ./**/target
           key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-targets-${{ github.sha }}
 
-      - name: Retrieve cached docker image
-        id: docker-restore
-        uses: actions/cache/restore@v3
-        with:
-          key: druid-container-jdk${{ inputs.build_jdk }}.tar.gz-${{ github.sha }}
-          path: |
-            ./druid-container-jdk${{ inputs.build_jdk }}.tar.gz
-            ./integration-tests-ex/image/target/env.sh
-
       - name: Clean up docker
         run: |
           USER_NAME=$(whoami)
@@ -89,6 +80,15 @@ jobs:
           docker system prune -af --volumes
           echo "Deleting files in workspace not owned by $USER_NAME"
           sudo find $GITHUB_WORKSPACE ! -uid $(id -ru $USER_NAME) -delete -print
+
+      - name: Retrieve cached docker image
+        id: docker-restore
+        uses: actions/cache/restore@v3
+        with:
+          key: druid-container-jdk${{ inputs.build_jdk }}.tar.gz-${{ github.sha }}
+          path: |
+            ./druid-container-jdk${{ inputs.build_jdk }}.tar.gz
+            ./integration-tests-ex/image/target/env.sh
 
       - name: Maven build
         if: steps.maven-restore.outputs.cache-hit != 'true' || ( steps.docker-restore.outputs.cache-hit != 'true' && steps.targets-restore.outputs.cache-hit != 'true' )
