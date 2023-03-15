@@ -14,8 +14,8 @@
 # limitations under the License.
 
 import requests
-from .consts import COORD_BASE
-from .rest import check_error
+from druidapi.consts import COORD_BASE
+from druidapi.rest import check_error
 
 # Catalog (new feature in Druid 26)
 CATALOG_BASE = COORD_BASE + '/catalog'
@@ -30,10 +30,10 @@ class CatalogClient:
     Client for the Druid catalog feature that provides metadata for tables,
     including both datasources and external tables.
     '''
-    
+
     def __init__(self, rest_client):
         self.client = rest_client
-    
+
     def post_table(self, schema, table_name, table_spec, version=None, overwrite=None):
         params = {}
         if version:
@@ -44,7 +44,7 @@ class CatalogClient:
 
     def create(self, schema, table_name, table_spec):
         self.post_table(schema, table_name, table_spec)
-   
+
     def table(self, schema, table_name):
         return self.client.get_json(REQ_CAT_SCHEMA_TABLE, args=[schema, table_name])
 
@@ -53,7 +53,7 @@ class CatalogClient:
         if if_exists and r.status_code == requests.codes.not_found:
             return
         check_error(r)
-        
+
     def edit_table(self, schema, table_name, action):
         return self.client.post_json(REQ_CAT_SCHEMA_TABLE_EDIT, action, args=[schema, table_name])
 

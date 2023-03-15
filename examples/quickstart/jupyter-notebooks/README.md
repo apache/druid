@@ -1,6 +1,6 @@
 # Jupyter Notebook tutorials for Druid
 
-If you are reading this in Jupyter, switch over to the [- START HERE -](- START HERE -.ipynb]
+If you are reading this in Jupyter, switch over to the [- START HERE -](-START%20HERE-.ipynb)
 notebook instead.
 
 <!-- This README, the "- START HERE -" notebook, and the tutorial-jupyter-index.md file in

@@ -14,9 +14,9 @@
 # limitations under the License.
 
 import requests
-from .util import dict_get
+from druidapi.util import dict_get
 from urllib.parse import quote
-from .error import ClientError
+from druidapi.error import ClientError
 
 def check_error(response):
     '''
@@ -31,7 +31,7 @@ def check_error(response):
     This method attempts to parse these variations. If the error response JSON
     matches one of the known error formats, then raises a `ClientError` with the error
     message. Otherise, raises a Requests library `HTTPError` for a generic error.
-    If the response includes a JSON payload, then the it is returned in the json field 
+    If the response includes a JSON payload, then the it is returned in the json field
     of the `HTTPError` object so that the client can perhaps decode it.
     '''
     code = response.status_code
@@ -43,7 +43,7 @@ def check_error(response):
     except Exception:
         # If we can't get the JSON, raise a Requests error
         response.raise_for_status()
-    
+
     # Druid JSON payload. Try to make sense of the error
     msg = dict_get(json, 'errorMessage')
     if not msg:
@@ -51,7 +51,7 @@ def check_error(response):
     if msg:
         # We have an explanation from Druid. Raise a Client exception
         raise ClientError(msg)
-    
+
     # Don't know what the Druid JSON is. Raise a Requetss exception, but
     # add on the JSON in the hopes that the caller can make use of it.
     try:
@@ -191,7 +191,7 @@ class DruidRestClient:
 
         args: array[str], default = None
             Arguments to include in the relative URL to replace {} markers.
-        
+
         headers: dict, default = None
             Additional HTTP header fields to send in the request.
 
@@ -225,7 +225,7 @@ class DruidRestClient:
 
         args: array[str], default = None
             Arguments to include in the relative URL to replace {} markers.
-        
+
         headers: dict, default = None
             Additional HTTP header fields to send in the request.
 
@@ -255,7 +255,7 @@ class DruidRestClient:
 
     def delete_json(self, req, args=None, params=None, headers=None):
         return self.delete(req, args=args, params=params, headers=headers).json()
-    
+
     def close(self):
         '''
         Close the session. Use in scripts and tests when the system will otherwise complain

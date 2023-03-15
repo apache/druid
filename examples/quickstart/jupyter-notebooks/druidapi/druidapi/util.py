@@ -13,23 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .druid import DruidClient
+from druidapi.error import ClientError
 
-def jupyter_client(endpoint) -> DruidClient:
+def dict_get(dict, key, default=None):
     '''
-    Create a Druid client configured to display results as HTML withing a Jupyter notebook.
-    Waits for the cluster to become ready to avoid intermitent problems when using Druid.
+    Returns the value of key in the given dict, or the default value if
+    the key is not found.
     '''
-    from .html import HtmlDisplayClient
-    druid = DruidClient(endpoint, HtmlDisplayClient())
-    druid.status.wait_until_ready()
-    return druid
+    if not dict:
+        return default
+    return dict.get(key, default)
 
-def client(endpoint) -> DruidClient:
-    '''
-    Create a Druid client for use in Python scripts that uses a text-based format for
-    displaying results. Does not wait for the cluster to be ready: clients should call
-    `status().wait_until_ready()` before making other Druid calls if there is a chance
-    that the cluster has not yet fully started.
-    '''
-    return DruidClient(endpoint)
+def split_table_name(table_name, default_schema):
+    if not table_name:
+        raise ClientError('Table name is required')
+    parts = table_name.split('.')
+    if len(parts) > 2:
+        raise ClientError('Druid supports one or two-part table names')
+    if len(parts) == 2:
+        return parts
+    return [default_schema, parts[0]]
