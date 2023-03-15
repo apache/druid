@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Pair;
@@ -272,10 +271,48 @@ public class UnnestStorageAdapter implements StorageAdapter
       @Nullable final ColumnCapabilities inputColumnCapabilites
   )
   {
+    /*
+    The goal of this function is to take a filter from the top of Correlate (queryFilter)
+    and a filter from the top of Uncollect (here unnest filter) and then do a rewrite
+    to generate filters to be passed to base cursor (pre-filters) and unnest cursor (post-filters)
+    based on the following scenarios:
+
+    1. If there is an AND filter between unnested column and left e.g. select * from foo, UNNEST(dim3) as u(d3) where d3 IN (a,b) and m1 < 10
+       query filter -> m1 < 10
+       unnest filter -> d3 IN (a,b)
+
+       Output should be:
+       pre-filter -> dim3 IN (a,b) AND m1 < 10
+       post-filter -> d3 IN (a,b)
+
+    2. There is an AND filter between unnested column and left e.g. select * from foo, UNNEST(ARRAY[dim1,dim2]) as u(d12) where d12 IN (a,b) and m1 < 10
+       query filter -> m1 < 10
+       unnest filter -> d12 IN (a,b)
+
+       Output should be:
+       pre-filter -> m1 < 10 (as unnest is on a virtual column it cannot be added to the pre-filter)
+       post-filter -> d12 IN (a,b)
+
+    3. There is an OR filter involving unnested and left column e.g.  select * from foo, UNNEST(dim3) as u(d3) where d3 IN (a,b) or m1 < 10
+       query filter -> d3 IN (a,b) or m1 < 10
+       unnest filter -> null
+
+       Output should be:
+       query filter -> dim3 IN (a,b) or m1 < 10
+       post filter -> d3 IN (a,b) or m1 < 10
+
+     4. There is an OR filter involving unnested and left column e.g. select * from foo, UNNEST(ARRAY[dim1,dim2]) as u(d12) where d12 IN (a,b) or m1 < 10
+       query filter -> d12 IN (a,b) or m1 < 10
+       unnest filter -> null
+
+       Output should be:
+       query filter -> null (as the filter cannot be re-written due to presence of virtual columns)
+       post filter -> d12 IN (a,b) or m1 < 10
+     */
     class FilterSplitter
     {
-      final List<Filter> preFilters = new ArrayList<>();
-      final List<Filter> postFilters = new ArrayList<>();
+      final List<Filter> filtersOnLeftDataSource = new ArrayList<>();
+      final List<Filter> filtersOnUncollect = new ArrayList<>();
 
       void addPostFilterWithPreFilterIfRewritePossible(@Nullable final Filter filter, boolean skipPreFilters)
       {
@@ -287,11 +324,11 @@ public class UnnestStorageAdapter implements StorageAdapter
           if (newFilter != null) {
             // Add the rewritten filter pre-unnest, so we get the benefit of any indexes, and so we avoid unnesting
             // any rows that do not match this filter at all.
-            preFilters.add(newFilter);
+            filtersOnLeftDataSource.add(newFilter);
           }
         }
         // Add original filter post-unnest no matter what: we need to filter out any extraneous unnested values.
-        postFilters.add(filter);
+        filtersOnUncollect.add(filter);
       }
 
       void addPreFilter(@Nullable final Filter filter)
@@ -302,56 +339,63 @@ public class UnnestStorageAdapter implements StorageAdapter
 
         final Set<String> requiredColumns = filter.getRequiredColumns();
 
-        // Run filter post-unnest if it refers to any virtual columns.
+        // Run filter post-unnest if it refers to any virtual columns. This is a conservative judgement call
+        // that perhaps forces the code to use a ValueMatcher where an index would've been available,
+        // which can have real performance implications. This is an interim choice made to value correctness
+        // over performance. When we need to optimize this performance, we should be able to
+        // create a VirtualColumnDatasource that contains all the virtual columns, in which case the query
+        // itself would stop carrying them and everything should be able to be pushed down.
         if (queryVirtualColumns.getVirtualColumns().length > 0) {
           for (String column : requiredColumns) {
             if (queryVirtualColumns.exists(column)) {
-              postFilters.add(filter);
+              filtersOnUncollect.add(filter);
               return;
             }
           }
         }
-        preFilters.add(filter);
+        filtersOnLeftDataSource.add(filter);
 
       }
     }
 
     final FilterSplitter filterSplitter = new FilterSplitter();
 
-    // non-unnest case
-    // OR CASE
-    List<Filter> preFilterList = new ArrayList<>();
-    List<Filter> postFilterList = new ArrayList<>();
-    if (queryFilter instanceof OrFilter) {
-      for (Filter filter : ((OrFilter) queryFilter).getFilters()) {
-        if (filter.getRequiredColumns().contains(outputColumnName)) {
-          final Filter newFilter = rewriteFilterOnUnnestColumnIfPossible(filter, inputColumn, inputColumnCapabilites);
-          if (newFilter != null) {
-            preFilterList.add(newFilter);
-            postFilterList.add(newFilter);
-          } else {
-            postFilterList.add(filter);
+    if (queryFilter != null) {
+      List<Filter> preFilterList = new ArrayList<>();
+      final int origFilterSize;
+      if (queryFilter.getRequiredColumns().contains(outputColumnName)) {
+        // outside filter contains unnested column
+        // requires check for OR
+        if (queryFilter instanceof OrFilter) {
+          origFilterSize = ((OrFilter) queryFilter).getFilters().size();
+          for (Filter filter : ((OrFilter) queryFilter).getFilters()) {
+            if (filter.getRequiredColumns().contains(outputColumnName)) {
+              final Filter newFilter = rewriteFilterOnUnnestColumnIfPossible(
+                  filter,
+                  inputColumn,
+                  inputColumnCapabilites
+              );
+              if (newFilter != null) {
+                preFilterList.add(newFilter);
+              }
+            } else {
+              preFilterList.add(filter);
+            }
           }
-        } else {
-          preFilterList.add(filter);
+          if (preFilterList.size() == origFilterSize) {
+            // there has been successful rewrites
+            final OrFilter preOrFilter = new OrFilter(preFilterList);
+            filterSplitter.addPreFilter(preOrFilter);
+          }
+          // add the entire query filter to unnest filter to be used in Value matcher
+          filterSplitter.addPostFilterWithPreFilterIfRewritePossible(queryFilter, true);
         }
+      } else {
+        // normal case without any filter on unnested column
+        // add everything to pre-filters
+        filterSplitter.addPreFilter(queryFilter);
       }
     }
-    if (!preFilterList.isEmpty()) {
-      OrFilter orFilter = new OrFilter(preFilterList);
-      filterSplitter.addPreFilter(orFilter);
-    } else {
-      filterSplitter.addPreFilter(queryFilter);
-    }
-
-    if (!postFilterList.isEmpty()) {
-      AndFilter andFilter = new AndFilter(postFilterList);
-      andFilter = new AndFilter(ImmutableList.of(andFilter, queryFilter));
-      filterSplitter.addPostFilterWithPreFilterIfRewritePossible(andFilter, true);
-    }
-
-
-    // unnest case
     if (unnestFilter instanceof AndFilter) {
       for (Filter filter : ((AndFilter) unnestFilter).getFilters()) {
         filterSplitter.addPostFilterWithPreFilterIfRewritePossible(filter, false);
@@ -361,10 +405,11 @@ public class UnnestStorageAdapter implements StorageAdapter
     }
 
     return Pair.of(
-        Filters.maybeAnd(filterSplitter.preFilters).orElse(null),
-        Filters.maybeAnd(filterSplitter.postFilters).orElse(null)
+        Filters.maybeAnd(filterSplitter.filtersOnLeftDataSource).orElse(null),
+        Filters.maybeAnd(filterSplitter.filtersOnUncollect).orElse(null)
     );
   }
+
 
   /**
    * Returns the input of {@link #unnestColumn}, if it's a direct access; otherwise returns null.

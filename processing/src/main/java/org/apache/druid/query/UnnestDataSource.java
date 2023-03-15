@@ -181,29 +181,6 @@ public class UnnestDataSource implements DataSource
     return current.getAnalysis();
   }
 
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    UnnestDataSource that = (UnnestDataSource) o;
-    if (unnestFilter != null) {
-      return virtualColumn.equals(that.virtualColumn) && unnestFilter.equals(that.unnestFilter)
-             && base.equals(that.base);
-    } else {
-      return virtualColumn.equals(that.virtualColumn) && base.equals(that.base);
-    }
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(base, virtualColumn, unnestFilter);
-  }
 
   @Override
   public String toString()
@@ -215,6 +192,27 @@ public class UnnestDataSource implements DataSource
            '}';
   }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    UnnestDataSource that = (UnnestDataSource) o;
+    return base.equals(that.base) && virtualColumn.equals(that.virtualColumn) && Objects.equals(
+        unnestFilter,
+        that.unnestFilter
+    );
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(base, virtualColumn, unnestFilter);
+  }
 }
 
 

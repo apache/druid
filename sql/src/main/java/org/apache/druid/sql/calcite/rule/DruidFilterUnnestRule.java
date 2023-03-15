@@ -71,11 +71,11 @@ public class DruidFilterUnnestRule extends RelOptRule
   // So we can skip this LogicalProject only if it is a CAST for strings or LITERALS for other types
   // Extensive unit tests can be found in {@link CalciteArraysQueryTest}
 
-  static class DruidProjectOnCorrelateRule extends RelOptRule
+  static class DruidProjectOnUnnestRule extends RelOptRule
   {
-    private static final DruidProjectOnCorrelateRule INSTANCE = new DruidProjectOnCorrelateRule();
+    private static final DruidProjectOnUnnestRule INSTANCE = new DruidProjectOnUnnestRule();
 
-    private DruidProjectOnCorrelateRule()
+    private DruidProjectOnUnnestRule()
     {
       super(
           operand(
@@ -85,7 +85,7 @@ public class DruidFilterUnnestRule extends RelOptRule
       );
     }
 
-    public static DruidProjectOnCorrelateRule instance()
+    public static DruidProjectOnUnnestRule instance()
     {
       return INSTANCE;
     }
