@@ -72,11 +72,6 @@ jobs:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-${{ github.sha }}
 
-      - name: Maven build
-        if: steps.maven-restore.outputs.cache-hit != 'true'
-        run: |
-          ./it.sh ci
-
       - name: Clean up docker
         run: |
           USER_NAME=$(whoami)
@@ -85,6 +80,11 @@ jobs:
           docker system prune -af --volumes
           echo "Deleting files in workspace not owned by $USER_NAME"
           sudo find $GITHUB_WORKSPACE ! -uid $(id -ru $USER_NAME) -delete -print
+
+      - name: Maven build
+        if: steps.maven-restore.outputs.cache-hit != 'true'
+        run: |
+          ./it.sh ci
 
       - name: Run IT
         env:
