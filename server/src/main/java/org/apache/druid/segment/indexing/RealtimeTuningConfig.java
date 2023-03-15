@@ -60,7 +60,7 @@ public class RealtimeTuningConfig implements AppenderatorConfig
   {
     return new RealtimeTuningConfig(
         DEFAULT_APPENDABLE_INDEX,
-        DEFAULT_MAX_ROWS_IN_MEMORY,
+        DEFAULT_MAX_ROWS_IN_MEMORY_REALTIME,
         0L,
         DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK,
         DEFAULT_INTERMEDIATE_PERSIST_PERIOD,
@@ -129,7 +129,7 @@ public class RealtimeTuningConfig implements AppenderatorConfig
   )
   {
     this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
-    this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
+    this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY_BATCH : maxRowsInMemory;
     // initializing this to 0, it will be lazily initialized to a value
     // @see #getMaxBytesInMemoryOrDefault()
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
