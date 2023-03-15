@@ -42,7 +42,7 @@ When performing math operations, Druid uses 64-bit integer (long) data type unle
 Keep the following guidelines in mind to help you manage precision issues:
 
 - Long values can store up to 2^63 accurately with an additional bit used for the sign.
-- Float values use 32 bits, and doubles use 64-bits. Both types are impacted by floating point precision. If you need exact decimal values, consider storing the number in a non-decimal format as a long value (up to the limit for longs). For example, if you need three decimal places, store the number multiplied by 1000 and then divide by 1000 when querying.
+- Float values use 32 bits, and doubles use 64 bits. Both types are impacted by floating point precision. If you need exact decimal values, consider storing the number in a non-decimal format as a long value (up to the limit for longs). For example, if you need three decimal places, store the number multiplied by 1000 and then divide by 1000 when querying.
 
 ## Arithmetic operators
 
