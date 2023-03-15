@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Pair;
@@ -39,6 +40,7 @@ import org.apache.druid.segment.filter.BoundFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.LikeFilter;
 import org.apache.druid.segment.filter.NotFilter;
+import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.join.PostJoinCursor;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -275,16 +277,18 @@ public class UnnestStorageAdapter implements StorageAdapter
       final List<Filter> preFilters = new ArrayList<>();
       final List<Filter> postFilters = new ArrayList<>();
 
-      void addPostFilterWithPreFilterIfRewritePossible(@Nullable final Filter filter)
+      void addPostFilterWithPreFilterIfRewritePossible(@Nullable final Filter filter, boolean skipPreFilters)
       {
         if (filter == null) {
           return;
         }
-        final Filter newFilter = rewriteFilterOnUnnestColumnIfPossible(filter, inputColumn, inputColumnCapabilites);
-        if (newFilter != null) {
-          // Add the rewritten filter pre-unnest, so we get the benefit of any indexes, and so we avoid unnesting
-          // any rows that do not match this filter at all.
-          preFilters.add(newFilter);
+        if (!skipPreFilters) {
+          final Filter newFilter = rewriteFilterOnUnnestColumnIfPossible(filter, inputColumn, inputColumnCapabilites);
+          if (newFilter != null) {
+            // Add the rewritten filter pre-unnest, so we get the benefit of any indexes, and so we avoid unnesting
+            // any rows that do not match this filter at all.
+            preFilters.add(newFilter);
+          }
         }
         // Add original filter post-unnest no matter what: we need to filter out any extraneous unnested values.
         postFilters.add(filter);
@@ -307,42 +311,53 @@ public class UnnestStorageAdapter implements StorageAdapter
             }
           }
         }
-        // this happens with an or filter when calcite plans both filters atop Correlate
-        // For example:
-        // SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3='b' or m1 < 2
-        // Plans to:
-        // 116:LogicalProject(d3=[$17])
-        //  114:LogicalFilter(subset=[rel#115:Subset#6.NONE.[]], condition=[OR(=($17, 'b'), <($14, 2))])
-        //    112:LogicalCorrelate(subset=[rel#113:Subset#5.NONE.[]], correlation=[$cor0], joinType=[inner], requiredColumns=[{3}])
-        //      8:LogicalTableScan(subset=[rel#104:Subset#0.NONE.[]], table=[[druid, numfoo]])
-        //      108:Uncollect(subset=[rel#109:Subset#3.NONE.[]])
-        //        106:LogicalProject(subset=[rel#107:Subset#2.NONE.[]], EXPR$0=[MV_TO_ARRAY($cor0.dim3)])
-        //          9:LogicalValues(subset=[rel#105:Subset#1.NONE.[0]], tuples=[[{ 0 }]])
-        // Run filter post-unnest if it refers to the outputColumnName
-        if (requiredColumns.contains(outputColumnName)) {
-          postFilters.add(filter);
-        } else {
-          preFilters.add(filter);
-        }
+        preFilters.add(filter);
+
       }
     }
 
     final FilterSplitter filterSplitter = new FilterSplitter();
 
-    if (queryFilter instanceof AndFilter) {
-      for (Filter filter : ((AndFilter) queryFilter).getFilters()) {
-        filterSplitter.addPreFilter(filter);
+    // non-unnest case
+    // OR CASE
+    List<Filter> preFilterList = new ArrayList<>();
+    List<Filter> postFilterList = new ArrayList<>();
+    if (queryFilter instanceof OrFilter) {
+      for (Filter filter : ((OrFilter) queryFilter).getFilters()) {
+        if (filter.getRequiredColumns().contains(outputColumnName)) {
+          final Filter newFilter = rewriteFilterOnUnnestColumnIfPossible(filter, inputColumn, inputColumnCapabilites);
+          if (newFilter != null) {
+            preFilterList.add(newFilter);
+            postFilterList.add(newFilter);
+          } else {
+            postFilterList.add(filter);
+          }
+        } else {
+          preFilterList.add(filter);
+        }
       }
+    }
+    if (!preFilterList.isEmpty()) {
+      OrFilter orFilter = new OrFilter(preFilterList);
+      filterSplitter.addPreFilter(orFilter);
     } else {
       filterSplitter.addPreFilter(queryFilter);
     }
 
+    if (!postFilterList.isEmpty()) {
+      AndFilter andFilter = new AndFilter(postFilterList);
+      andFilter = new AndFilter(ImmutableList.of(andFilter, queryFilter));
+      filterSplitter.addPostFilterWithPreFilterIfRewritePossible(andFilter, true);
+    }
+
+
+    // unnest case
     if (unnestFilter instanceof AndFilter) {
       for (Filter filter : ((AndFilter) unnestFilter).getFilters()) {
-        filterSplitter.addPostFilterWithPreFilterIfRewritePossible(filter);
+        filterSplitter.addPostFilterWithPreFilterIfRewritePossible(filter, false);
       }
     } else {
-      filterSplitter.addPostFilterWithPreFilterIfRewritePossible(unnestFilter);
+      filterSplitter.addPostFilterWithPreFilterIfRewritePossible(unnestFilter, false);
     }
 
     return Pair.of(

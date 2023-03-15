@@ -3811,6 +3811,38 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testUnnestWithSelectorFiltersOnVirtualStringColumn()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "SELECT d45 FROM druid.numfoo, UNNEST(ARRAY[dim4,dim5]) as unnested (d45) where d45 IN ('a','ab')",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new TableDataSource(CalciteTests.DATASOURCE3),
+                      expressionVirtualColumn("j0.unnest", "array(\"dim4\",\"dim5\")", ColumnType.STRING_ARRAY),
+                      new InDimFilter("j0.unnest", ImmutableSet.of("a", "ab"), null)
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_UNNEST)
+                  .columns(ImmutableList.of("j0.unnest"))
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"a"},
+            new Object[]{"ab"},
+            new Object[]{"a"},
+            new Object[]{"ab"}
+        )
+    );
+  }
+
+  @Test
   public void testUnnestWithMultipleAndFiltersOnSelectedColumns()
   {
     skipVectorize();
@@ -3852,6 +3884,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQuery(
         "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3='b' or m1 < 2 ",
+        // go over each filter in the OR
+        // d3 -> dim3
+        // recreate an or filter with dim3 replacing d3
+        // push this or filter to base cursor
+        // original filter goes to post
         QUERY_CONTEXT_UNNEST,
         ImmutableList.of(
             Druids.newScanQueryBuilder()
@@ -3877,6 +3914,41 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             new Object[]{"a"},
             new Object[]{"b"},
             new Object[]{"b"}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithMultipleOrFiltersOnSelectedVirtualColumns()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "SELECT d45 FROM druid.numfoo, UNNEST(ARRAY[dim4,dim5]) as unnested (d45) where d45 IN ('a','aa') or m1 < 2 ",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new TableDataSource(CalciteTests.DATASOURCE3),
+                      expressionVirtualColumn("j0.unnest", "array(\"dim4\",\"dim5\")", ColumnType.STRING_ARRAY),
+                      null
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_UNNEST)
+                  .filters(
+                      or(
+                          bound("m1", null, "2", false, true, null, StringComparators.NUMERIC),
+                          new InDimFilter("j0.unnest", ImmutableSet.of("a", "aa"), null)
+                      )
+                  )
+                  .columns(ImmutableList.of("j0.unnest"))
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"aa"}
         )
     );
   }
