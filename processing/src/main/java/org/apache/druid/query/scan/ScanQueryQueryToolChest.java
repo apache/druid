@@ -36,6 +36,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.CloseableUtils;
@@ -172,7 +173,8 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
 
         final VirtualColumn virtualColumn = query.getVirtualColumns().getVirtualColumn(columnName);
         if (virtualColumn != null) {
-          columnType = virtualColumn.capabilities(columnName).toColumnType();
+          final ColumnCapabilities capabilities = virtualColumn.capabilities(c -> null, columnName);
+          columnType = capabilities != null ? capabilities.toColumnType() : null;
         } else {
           // Unknown type. In the future, it would be nice to have a way to fill these in.
           columnType = null;

@@ -232,7 +232,6 @@ For Roaring bitmaps:
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |`type`|String|Must be `roaring`.|yes|
-|`compressRunOnSerialization`|Boolean|Use a run-length encoding where it is estimated as more space efficient.|no (default == `true`)|
 
 For Concise bitmaps:
 

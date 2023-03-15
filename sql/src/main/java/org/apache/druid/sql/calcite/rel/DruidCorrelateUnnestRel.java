@@ -30,12 +30,16 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.Correlate;
-import org.apache.calcite.rel.core.Filter;
-import org.apache.calcite.rel.core.JoinRelType;
-import org.apache.calcite.rel.logical.LogicalProject;
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexCorrelVariable;
+import org.apache.calcite.rex.RexFieldAccess;
+import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexShuttle;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -43,7 +47,8 @@ import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringToArrayOperatorConversion;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
@@ -57,28 +62,26 @@ import java.util.stream.Collectors;
  * This is the DruidRel to handle correlated rel nodes to be used for unnest.
  * Each correlate can be perceived as a join with the join type being inner
  * the left of a correlate as seen in the rule {@link org.apache.druid.sql.calcite.rule.DruidCorrelateUnnestRule}
- * is the {@link DruidQueryRel} while the right will always be an {@link DruidUnnestDatasourceRel}.
+ * is the {@link DruidQueryRel} while the right will always be an {@link DruidUnnestRel}.
  *
  * Since this is a subclass of DruidRel it is automatically considered by other rules that involves DruidRels.
  * Some example being SELECT_PROJECT and SORT_PROJECT rules in {@link org.apache.druid.sql.calcite.rule.DruidRules.DruidQueryRule}
  */
 public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
 {
-  private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("unnest");
+  private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__correlate_unnest__");
+  private static final String BASE_UNNEST_OUTPUT_COLUMN = "unnest";
 
-  private final Filter leftFilter;
-  private final PartialDruidQuery partialQuery;
-  private final PlannerConfig plannerConfig;
   private final Correlate correlateRel;
-  private RelNode left;
-  private RelNode right;
+  private final RelNode left;
+  private final RelNode right;
+  private final PartialDruidQuery partialQuery;
 
   private DruidCorrelateUnnestRel(
       RelOptCluster cluster,
       RelTraitSet traitSet,
       Correlate correlateRel,
       PartialDruidQuery partialQuery,
-      Filter baseFilter,
       PlannerContext plannerContext
   )
   {
@@ -87,16 +90,13 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     this.partialQuery = partialQuery;
     this.left = correlateRel.getLeft();
     this.right = correlateRel.getRight();
-    this.leftFilter = baseFilter;
-    this.plannerConfig = plannerContext.getPlannerConfig();
   }
 
   /**
-   * Create an instance from a Correlate that is based on a {@link DruidRel} and a {@link DruidUnnestDatasourceRel} inputs.
+   * Create an instance from a Correlate that is based on a {@link DruidRel} and a {@link DruidUnnestRel} inputs.
    */
   public static DruidCorrelateUnnestRel create(
       final Correlate correlateRel,
-      final Filter leftFilter,
       final PlannerContext plannerContext
   )
   {
@@ -105,7 +105,6 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
         correlateRel.getTraitSet(),
         correlateRel,
         PartialDruidQuery.create(correlateRel),
-        leftFilter,
         plannerContext
     );
   }
@@ -122,10 +121,9 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   {
     return new DruidCorrelateUnnestRel(
         getCluster(),
-        getTraitSet().plusAll(newQueryBuilder.getRelTraits()),
+        newQueryBuilder.getTraitSet(getConvention()),
         correlateRel,
         newQueryBuilder,
-        leftFilter,
         getPlannerContext()
     );
   }
@@ -133,92 +131,55 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   @Override
   public DruidQuery toDruidQuery(boolean finalizeAggregations)
   {
-    final DruidRel<?> druidQueryRel = (DruidRel<?>) left;
-    final DruidQuery leftQuery = Preconditions.checkNotNull((druidQueryRel).toDruidQuery(false), "leftQuery");
+    final DruidRel<?> leftDruidRel = (DruidRel<?>) left;
+    final DruidQuery leftQuery = Preconditions.checkNotNull(leftDruidRel.toDruidQuery(false), "leftQuery");
+    final DruidUnnestRel unnestDatasourceRel = (DruidUnnestRel) right;
     final DataSource leftDataSource;
+    final RowSignature leftDataSourceSignature;
 
-    if (DruidJoinQueryRel.computeLeftRequiresSubquery(getPlannerContext(), druidQueryRel)) {
+    if (right.getRowType().getFieldNames().size() != 1) {
+      throw new CannotBuildQueryException("Cannot perform correlated join + UNNEST with more than one column");
+    }
+
+    if (computeLeftRequiresSubquery(leftDruidRel)) {
+      // Left side is doing more than simple scan: generate a subquery.
       leftDataSource = new QueryDataSource(leftQuery.getQuery());
+      leftDataSourceSignature = leftQuery.getOutputRowSignature();
     } else {
       leftDataSource = leftQuery.getDataSource();
+      leftDataSourceSignature = DruidRels.dataSourceSignature(leftDruidRel);
     }
 
-    final DruidUnnestDatasourceRel unnestDatasourceRel = (DruidUnnestDatasourceRel) right;
-
-
-    final RowSignature rowSignature = RowSignatures.fromRelDataType(
-        correlateRel.getRowType().getFieldNames(),
-        correlateRel.getRowType()
-    );
-
-    final DruidExpression expression = Expressions.toDruidExpression(
+    // Compute the expression to unnest.
+    final RexNode rexNodeToUnnest = getRexNodeToUnnest(correlateRel, unnestDatasourceRel);
+    final DruidExpression expressionToUnnest = Expressions.toDruidExpression(
         getPlannerContext(),
-        rowSignature,
-        unnestDatasourceRel.getUnnestProject().getProjects().get(0)
+        leftDataSourceSignature,
+        rexNodeToUnnest
     );
 
-    LogicalProject unnestProject = LogicalProject.create(
-        this,
-        ImmutableList.of(unnestDatasourceRel.getUnnestProject()
-                                            .getProjects()
-                                            .get(0)),
-        unnestDatasourceRel.getUnnestProject().getRowType()
-    );
-
-    // placeholder for dimension or expression to be unnested
-    final String dimOrExpToUnnest;
-    final VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(
-        rowSignature,
-        getPlannerContext().getExprMacroTable(),
-        getPlannerContext().getPlannerConfig().isForceExpressionVirtualColumns()
-    );
-
-    // the unnest project is needed in case of a virtual column
-    // unnest(mv_to_array(dim_1)) is reconciled as unnesting a MVD dim_1 not requiring a virtual column
-    // while unnest(array(dim_2,dim_3)) is understood as unnesting a virtual column which is an array over dim_2 and dim_3 elements
-    boolean unnestProjectNeeded = false;
-    getPlannerContext().setJoinExpressionVirtualColumnRegistry(virtualColumnRegistry);
-
-    // handling for case when mv_to_array is used
-    // No need to use virtual column in such a case
-    if (StringUtils.toLowerCase(expression.getExpression()).startsWith("mv_to_array")) {
-      dimOrExpToUnnest = expression.getArguments().get(0).getSimpleExtraction().getColumn();
-    } else {
-      if (expression.isDirectColumnAccess()) {
-        dimOrExpToUnnest = expression.getDirectColumn();
-      } else {
-        // buckle up time to create virtual columns on expressions
-        unnestProjectNeeded = true;
-        dimOrExpToUnnest = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-            expression,
-            expression.getDruidType()
-        );
-      }
+    if (expressionToUnnest == null) {
+      throw new CannotBuildQueryException(unnestDatasourceRel, unnestDatasourceRel.getInputRexNode());
     }
 
-    // add the unnest project to the partial query if required
-    // This is necessary to handle the virtual columns on the unnestProject
-    // Also create the unnest datasource to be used by the partial query
-    PartialDruidQuery partialDruidQuery = unnestProjectNeeded ? partialQuery.withUnnest(unnestProject) : partialQuery;
-    return partialDruidQuery.build(
+    // Final output row signature.
+    final RowSignature correlateRowSignature = getCorrelateRowSignature(correlateRel, leftQuery);
+
+    return partialQuery.build(
         UnnestDataSource.create(
             leftDataSource,
-            dimOrExpToUnnest,
-            unnestDatasourceRel.getUnnestProject().getRowType().getFieldNames().get(0),
-            null
+            expressionToUnnest.toVirtualColumn(
+                correlateRowSignature.getColumnName(correlateRowSignature.size() - 1),
+                Calcites.getColumnTypeForRelDataType(rexNodeToUnnest.getType()),
+                getPlannerContext().getExprMacroTable()
+            )
         ),
-        rowSignature,
+        correlateRowSignature,
         getPlannerContext(),
         getCluster().getRexBuilder(),
         finalizeAggregations,
-        virtualColumnRegistry
+        null
     );
-  }
-
-  @Override
-  protected DruidCorrelateUnnestRel clone()
-  {
-    return DruidCorrelateUnnestRel.create(correlateRel, leftFilter, getPlannerContext());
   }
 
   @Override
@@ -242,10 +203,6 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     );
   }
 
-  // This is required to be overwritten as Calcite uses this method
-  // to maintain a map of equivalent DruidCorrelateUnnestRel or in general any Rel nodes.
-  // Without this method overwritten multiple RelNodes will produce the same key
-  // which makes the planner plan incorrectly.
   @Override
   public RelWriter explainTerms(RelWriter pw)
   {
@@ -259,8 +216,9 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
       throw new RuntimeException(e);
     }
 
-    return pw.item("query", queryString)
-             .item("signature", druidQuery.getOutputRowSignature());
+    return correlateRel.explainTerms(pw)
+                       .item("query", queryString)
+                       .item("signature", druidQuery.getOutputRowSignature());
   }
 
   // This is called from the DruidRelToDruidRule which converts from the NONE convention to the DRUID convention
@@ -278,7 +236,6 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
                         .collect(Collectors.toList())
         ),
         partialQuery,
-        leftFilter,
         getPlannerContext()
     );
   }
@@ -297,7 +254,6 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
         traitSet,
         correlateRel.copy(correlateRel.getTraitSet(), inputs),
         getPartialDruidQuery(),
-        leftFilter,
         getPlannerContext()
     );
   }
@@ -305,15 +261,10 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   @Override
   public RelOptCost computeSelfCost(final RelOptPlanner planner, final RelMetadataQuery mq)
   {
-    double cost;
+    double cost = partialQuery.estimateCost();
 
-    if (DruidJoinQueryRel.computeLeftRequiresSubquery(getPlannerContext(), DruidJoinQueryRel.getSomeDruidChild(left))) {
-      cost = CostEstimates.COST_SUBQUERY;
-    } else {
-      cost = partialQuery.estimateCost();
-      if (correlateRel.getJoinType() == JoinRelType.INNER && plannerConfig.isComputeInnerJoinCostAsFilter()) {
-        cost *= CostEstimates.MULTIPLIER_FILTER;
-      }
+    if (computeLeftRequiresSubquery(DruidJoinQueryRel.getSomeDruidChild(left))) {
+      cost += CostEstimates.COST_SUBQUERY;
     }
 
     return planner.getCostFactory().makeCost(cost, 0, 0);
@@ -326,5 +277,111 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     retVal.addAll(((DruidRel<?>) left).getDataSourceNames());
     retVal.addAll(((DruidRel<?>) right).getDataSourceNames());
     return retVal;
+  }
+
+  /**
+   * Computes whether a particular left-side rel requires a subquery, or if we can operate on its underlying
+   * datasource directly.
+   *
+   * Stricter than {@link DruidJoinQueryRel#computeLeftRequiresSubquery}: this method only allows scans (not mappings).
+   * This is OK because any mapping or other simple projection would have been pulled above the {@link Correlate} by
+   * {@link org.apache.druid.sql.calcite.rule.DruidCorrelateUnnestRule}.
+   */
+  public static boolean computeLeftRequiresSubquery(final DruidRel<?> left)
+  {
+    return left == null || left.getPartialDruidQuery().stage() != PartialDruidQuery.Stage.SCAN;
+  }
+
+  /**
+   * Whether an expr is MV_TO_ARRAY of an input reference.
+   */
+  private static boolean isMvToArrayOfInputRef(final RexNode expr)
+  {
+    return expr.isA(SqlKind.OTHER_FUNCTION)
+           && ((RexCall) expr).op.equals(MultiValueStringToArrayOperatorConversion.SQL_FUNCTION)
+           && ((RexCall) expr).getOperands().get(0).isA(SqlKind.INPUT_REF);
+  }
+
+  /**
+   * Unwrap MV_TO_ARRAY at the outer layer of an expr, if it refers to an input ref.
+   */
+  private static RexNode unwrapMvToArray(final RexNode expr)
+  {
+    if (isMvToArrayOfInputRef(expr)) {
+      return ((RexCall) expr).getOperands().get(0);
+    } else {
+      return expr;
+    }
+  }
+
+  /**
+   * Compute the row signature of this rel, given a particular left-hand {@link DruidQuery}.
+   * The right-hand side is assumed to have a single column with the name {@link #BASE_UNNEST_OUTPUT_COLUMN}.
+   */
+  private static RowSignature getCorrelateRowSignature(
+      final Correlate correlate,
+      final DruidQuery leftQuery
+  )
+  {
+    // Compute signature of the correlation operation. It's like a join: the left and right sides are concatenated.
+    // On the native query side, this is what is ultimately emitted by the UnnestStorageAdapter.
+    //
+    // Ignore prefix (lhs) from computeJoinRowSignature; we don't need this since we will declare the name of the
+    // single output column directly. (And we know it's the last column in the signature.)
+    final RelDataType unnestedType =
+        correlate.getRowType().getFieldList().get(correlate.getRowType().getFieldCount() - 1).getType();
+
+    return DruidJoinQueryRel.computeJoinRowSignature(
+        leftQuery.getOutputRowSignature(),
+        RowSignature.builder().add(
+            BASE_UNNEST_OUTPUT_COLUMN,
+            Calcites.getColumnTypeForRelDataType(unnestedType)
+        ).build()
+    ).rhs;
+  }
+
+  /**
+   * Return the expression to unnest from the left-hand side. Correlation variable references are rewritten to
+   * regular field accesses, i.e., {@link RexInputRef}.
+   */
+  private static RexNode getRexNodeToUnnest(
+      final Correlate correlate,
+      final DruidUnnestRel unnestDatasourceRel
+  )
+  {
+    // Update unnestDatasourceRel.getUnnestProject() so it refers to the left-hand side rather than the correlation
+    // variable. This is the expression to unnest.
+    final RexNode rexNodeToUnnest =
+        new CorrelatedFieldAccessToInputRef(correlate.getCorrelationId())
+            .apply(unnestDatasourceRel.getInputRexNode());
+
+    // Unwrap MV_TO_ARRAY if present.
+    return unwrapMvToArray(rexNodeToUnnest);
+  }
+
+  /**
+   * Shuttle that replaces correlating variables with regular field accesses to the left-hand side.
+   */
+  private static class CorrelatedFieldAccessToInputRef extends RexShuttle
+  {
+    private final CorrelationId correlationId;
+
+    public CorrelatedFieldAccessToInputRef(final CorrelationId correlationId)
+    {
+      this.correlationId = correlationId;
+    }
+
+    @Override
+    public RexNode visitFieldAccess(final RexFieldAccess fieldAccess)
+    {
+      if (fieldAccess.getReferenceExpr() instanceof RexCorrelVariable) {
+        final RexCorrelVariable encounteredCorrelationId = (RexCorrelVariable) fieldAccess.getReferenceExpr();
+        if (encounteredCorrelationId.id.equals(correlationId)) {
+          return new RexInputRef(fieldAccess.getField().getIndex(), fieldAccess.getType());
+        }
+      }
+
+      return super.visitFieldAccess(fieldAccess);
+    }
   }
 }

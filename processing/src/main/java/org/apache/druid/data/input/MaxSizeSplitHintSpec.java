@@ -42,6 +42,7 @@ import java.util.function.Function;
  */
 public class MaxSizeSplitHintSpec implements SplitHintSpec
 {
+  @SuppressWarnings("unused")
   public static final String TYPE = "maxSize";
 
   @VisibleForTesting
