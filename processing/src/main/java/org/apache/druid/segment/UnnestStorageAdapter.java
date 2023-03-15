@@ -260,7 +260,6 @@ public class UnnestStorageAdapter implements StorageAdapter
    * @param queryVirtualColumns    query virtual columns passed to makeCursors
    * @param inputColumn            input column to unnest if it's a direct access; otherwise null
    * @param inputColumnCapabilites input column capabilities if known; otherwise null
-   *
    * @return pair of pre- and post-unnest filters
    */
   private Pair<Filter, Filter> computeBaseAndPostUnnestFilters(
@@ -308,7 +307,23 @@ public class UnnestStorageAdapter implements StorageAdapter
             }
           }
         }
-        preFilters.add(filter);
+        // this happens with an or filter when calcite plans both filters atop Correlate
+        // For example:
+        // SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3='b' or m1 < 2
+        // Plans to:
+        // 116:LogicalProject(d3=[$17])
+        //  114:LogicalFilter(subset=[rel#115:Subset#6.NONE.[]], condition=[OR(=($17, 'b'), <($14, 2))])
+        //    112:LogicalCorrelate(subset=[rel#113:Subset#5.NONE.[]], correlation=[$cor0], joinType=[inner], requiredColumns=[{3}])
+        //      8:LogicalTableScan(subset=[rel#104:Subset#0.NONE.[]], table=[[druid, numfoo]])
+        //      108:Uncollect(subset=[rel#109:Subset#3.NONE.[]])
+        //        106:LogicalProject(subset=[rel#107:Subset#2.NONE.[]], EXPR$0=[MV_TO_ARRAY($cor0.dim3)])
+        //          9:LogicalValues(subset=[rel#105:Subset#1.NONE.[0]], tuples=[[{ 0 }]])
+        // Run filter post-unnest if it refers to the outputColumnName
+        if (requiredColumns.contains(outputColumnName)) {
+          postFilters.add(filter);
+        } else {
+          preFilters.add(filter);
+        }
       }
     }
 
