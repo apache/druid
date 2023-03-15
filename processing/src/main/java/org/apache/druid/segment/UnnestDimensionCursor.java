@@ -31,8 +31,6 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.util.BitSet;
-import java.util.LinkedHashSet;
 
 /**
  * The cursor to help unnest MVDs with dictionary encoding.
@@ -58,15 +56,6 @@ import java.util.LinkedHashSet;
  * <p>
  * Total 5 advance calls above
  * <p>
- * The allowSet, if available, helps skip over elements that are not in the allowList by moving the cursor to
- * the next available match. The hashSet is converted into a bitset (during initialization) for efficiency.
- * If allowSet is ['c', 'd'] then the advance moves over to the next available match
- * <p>
- * advance() -> 2 -> 'c'
- * advance() -> 3 -> 'd' (advances base cursor first)
- * advance() -> 2 -> 'c'
- * <p>
- * Total 3 advance calls in this case
  * <p>
  * The index reference points to the index of each row that the unnest cursor is accessing
  * The indexedInts for each row are held in the indexedIntsForCurrentRow object
@@ -79,8 +68,6 @@ public class UnnestDimensionCursor implements Cursor
   private final DimensionSelector dimSelector;
   private final VirtualColumn unnestColumn;
   private final String outputName;
-  private final LinkedHashSet<String> allowSet;
-  private final BitSet allowedBitSet;
   private final ColumnSelectorFactory baseColumnSelectorFactory;
   private int index;
   @Nullable
@@ -92,8 +79,7 @@ public class UnnestDimensionCursor implements Cursor
       Cursor cursor,
       ColumnSelectorFactory baseColumnSelectorFactory,
       VirtualColumn unnestColumn,
-      String outputColumnName,
-      LinkedHashSet<String> allowSet
+      String outputColumnName
   )
   {
     this.baseCursor = cursor;
@@ -106,8 +92,6 @@ public class UnnestDimensionCursor implements Cursor
     this.index = 0;
     this.outputName = outputColumnName;
     this.needInitialization = true;
-    this.allowSet = allowSet;
-    this.allowedBitSet = new BitSet();
   }
 
   @Override
@@ -158,6 +142,9 @@ public class UnnestDimensionCursor implements Cursor
               @Override
               public boolean matches()
               {
+                if (indexedIntsForCurrentRow.size() <= 0) {
+                  return false;
+                }
                 return idForLookup == indexedIntsForCurrentRow.get(index);
               }
 
@@ -188,14 +175,7 @@ public class UnnestDimensionCursor implements Cursor
             if (indexedIntsForCurrentRow == null || indexedIntsForCurrentRow.size() == 0) {
               return null;
             }
-            if (allowedBitSet.isEmpty()) {
-              if (allowSet == null || allowSet.isEmpty()) {
-                return lookupName(indexedIntsForCurrentRow.get(index));
-              }
-            } else if (allowedBitSet.get(indexedIntsForCurrentRow.get(index))) {
-              return lookupName(indexedIntsForCurrentRow.get(index));
-            }
-            return null;
+            return lookupName(indexedIntsForCurrentRow.get(index));
           }
 
           @Override
@@ -207,9 +187,6 @@ public class UnnestDimensionCursor implements Cursor
           @Override
           public int getValueCardinality()
           {
-            if (!allowedBitSet.isEmpty()) {
-              return allowedBitSet.cardinality();
-            }
             return dimSelector.getValueCardinality();
           }
 
@@ -290,9 +267,7 @@ public class UnnestDimensionCursor implements Cursor
   @Override
   public void advanceUninterruptibly()
   {
-    do {
-      advanceAndUpdate();
-    } while (matchAndProceed());
+    advanceAndUpdate();
   }
 
   @Override
@@ -330,23 +305,13 @@ public class UnnestDimensionCursor implements Cursor
   @Nullable
   private void initialize()
   {
-    IdLookup idLookup = dimSelector.idLookup();
+    index = 0;
     this.indexIntsForRow = new SingleIndexInts();
-    if (allowSet != null && !allowSet.isEmpty() && idLookup != null) {
-      for (String s : allowSet) {
-        if (idLookup.lookupId(s) >= 0) {
-          allowedBitSet.set(idLookup.lookupId(s));
-        }
-      }
-    }
+
     if (dimSelector.getObject() != null) {
       this.indexedIntsForCurrentRow = dimSelector.getRow();
     }
-    if (!allowedBitSet.isEmpty()) {
-      if (!allowedBitSet.get(indexedIntsForCurrentRow.get(index))) {
-        advance();
-      }
-    }
+
     needInitialization = false;
   }
 
@@ -362,6 +327,9 @@ public class UnnestDimensionCursor implements Cursor
       index = 0;
       if (!baseCursor.isDone()) {
         baseCursor.advanceUninterruptibly();
+        if (!baseCursor.isDone()) {
+          indexedIntsForCurrentRow = dimSelector.getRow();
+        }
       }
     } else {
       if (index >= indexedIntsForCurrentRow.size() - 1) {
@@ -378,23 +346,6 @@ public class UnnestDimensionCursor implements Cursor
     }
   }
 
-  /**
-   * This advances the unnest cursor in cases where an allowList is specified
-   * and the current value at the unnest cursor is not in the allowList.
-   * The cursor in such cases is moved till the next match is found.
-   *
-   * @return a boolean to indicate whether to stay or move cursor
-   */
-  private boolean matchAndProceed()
-  {
-    boolean matchStatus;
-    if ((allowSet == null || allowSet.isEmpty()) && allowedBitSet.isEmpty()) {
-      matchStatus = true;
-    } else {
-      matchStatus = allowedBitSet.get(indexedIntsForCurrentRow.get(index));
-    }
-    return !baseCursor.isDone() && !matchStatus;
-  }
 
   // Helper class to help in returning
   // getRow from the dimensionSelector
