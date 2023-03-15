@@ -187,6 +187,16 @@
       <artifactId>easymock</artifactId>
       <scope>test</scope>
     </dependency>
+        <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>jsr311-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
   </dependencies>
 
   <build>
@@ -270,7 +280,6 @@
         </configuration>
         <executions>
           <execution>
-            <phase>generate-sources</phase>
             <goals>
               <goal>test-compile</goal>
             </goals>
@@ -293,7 +302,7 @@
             </goals>
             <configuration>
               <sources>
-                <source>target/generated-test-sources</source>
+                <source>target/generated-test-sources/protobuf/java</source>
               </sources>
             </configuration>
           </execution>
@@ -315,9 +324,6 @@
             </goals>
             <configuration>
               <classifier>tests</classifier>
-              <excludes>
-                <exclude>**/proto/*</exclude>
-              </excludes>
             </configuration>
           </execution>
           <!-- Test jar with only the Protobuf classes. This one is

@@ -79,7 +79,6 @@ public class BasicRoleBasedAuthorizer implements Authorizer
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
   {
     if (authenticationResult == null) {
