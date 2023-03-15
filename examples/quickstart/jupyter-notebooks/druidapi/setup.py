@@ -20,7 +20,7 @@ setup(
     version='0.1.0',
     description='Python API client for Apache Druid',
     url='https://github.com/apache/druid/tree/master/examples/quickstart/jupyter-notebooks/druidapi',
-    author='Paul Rogers',
+    author='Apache Druid project',
     author_email='dev@druid.apache.org',
     license='Apache License 2.0',
     packages=find_packages(),

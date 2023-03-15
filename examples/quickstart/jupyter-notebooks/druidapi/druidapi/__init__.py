@@ -20,7 +20,7 @@ def jupyter_client(endpoint) -> DruidClient:
     Create a Druid client configured to display results as HTML withing a Jupyter notebook.
     Waits for the cluster to become ready to avoid intermitent problems when using Druid.
     '''
-    from .html_table import HtmlDisplayClient
+    from druidapi.html_display import HtmlDisplayClient
     druid = DruidClient(endpoint, HtmlDisplayClient())
     druid.status.wait_until_ready()
     return druid

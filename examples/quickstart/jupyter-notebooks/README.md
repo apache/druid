@@ -1,9 +1,9 @@
 # Jupyter Notebook tutorials for Druid
 
-If you are reading this in Jupyter, switch over to the [- START HERE -](-START%20HERE-.ipynb)
+If you are reading this in Jupyter, switch over to the [0-START-HERE](0-START-HERE.ipynb)
 notebook instead.
 
-<!-- This README, the "- START HERE -" notebook, and the tutorial-jupyter-index.md file in
+<!-- This README, the "0-START-HERE" notebook, and the tutorial-jupyter-index.md file in
 docs/tutorials share a lot of the same content. If you make a change in one place, update
 the other too. -->
 
@@ -92,4 +92,4 @@ Make sure you meet the following requirements before starting the Jupyter-based 
 
 ## Continue in Jupyter
 
-Start Jupyter (see above) and navigate to the "- START HERE -" page for more information.
+Start Jupyter (see above) and navigate to the "0-START-HERE" notebook for more information.

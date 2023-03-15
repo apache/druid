@@ -36,7 +36,7 @@ class DruidClient:
         if display_client:
             self.display_client = display_client
         else:
-            from .text import TextDisplayClient
+            from druidapi.text_display import TextDisplayClient
             self.display_client = TextDisplayClient()
         self.display_client._druid = self
 

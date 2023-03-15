@@ -46,18 +46,20 @@ From this directory, install the package and its dependencies with pip using the
 pip install .
 ```
 
-Verify your installation by checking that the following commands run in Python without error:
+Note that there is a second level `druidapi` directory that contains the modules. Do not run
+the install command in this internal folder.
+
+Verify your installation by checking that the following command runs in Python without error:
 
 ```python
 import druidapi
-druid = druidapi.jupyter_client('http://localhost:8888')
 ```
 
 ## Getting started
 
 To use `druidapi`, first import the library, then connect to your cluster by providing the URL to your Router instance. The way that is done differs a bit between consumers.
 
-### From a tutorial Jupyter Notebook
+### From a tutorial Jupyter notebook
 
 The tutorial Jupyter notebooks in `examples/quickstart/jupyter-notebooks` reside in the same directory tree
 as this library. We start the library using the Jupyter-oriented API which is able to render tables in
@@ -479,3 +481,25 @@ Druid has a large number of special constants: type names, options, etc. The con
 from druidapi import consts
 help(consts)
 ```
+
+## Contributing
+
+We encourage you to contribute to the `druidapi` package.
+Set up an editable installation for development by running the following command
+in a local clone of your `apache/druid` repo in
+`examples/quickstart/jupyter-notebooks/druidapi/`:
+
+```
+pip install -e .
+```
+
+Increment the version field in `setup.py` following the
+[PEP 440 semantic versioning scheme](https://peps.python.org/pep-0440/#semantic-versioning).
+
+Use the following guidelines for incrementing the version number:
+* Increment the third position for a patch or bug fix.
+* Increment the second position for new features, such as adding new method wrappers.
+* Increment the first position for major changes and changes that are not backwards compatible.
+
+Submit your contribution by opening a pull request to the `apache/druid` GitHub repository.
+
