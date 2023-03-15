@@ -14,6 +14,13 @@ else
     echo "Using pom file: $POM"
 fi
 
+if [ -z "$PARALLELISM" ]
+then
+    echo "Disabling parallelism"
+else
+    echo "Using parallelism: $PARALLELISM"
+fi
+
 # require the revision to end in -SNAPSHOT
 if [ "$PROJECT_REVISION" == "${PROJECT_REVISION/%-SNAPSHOT/}" ]; then
     echo The "revision" property in pom.xml must end with "-SNAPSHOT" for this script to work correctly.
@@ -30,7 +37,7 @@ if [ "$BRANCH_NAME" == "verta/main" ]; then
     export PROJECT_VERSION=${PROJECT_VERSION/%-SNAPSHOT/-$COMMIT_INFO}
 fi
 
-export MAVEN_PARAMS="-T 1.5C -Pdist-hadoop3,hadoop3,bundle-contrib-exts -Dpmd.skip=true -Denforcer.skip -Dforbiddenapis.skip=true -Dcheckstyle.skip=true -Danimal.sniffer.skip=true -Djacoco.skip=true -DskipTests -f $POM"
+export MAVEN_PARAMS="$PARALLELISM -Pdist-hadoop3,hadoop3,bundle-contrib-exts -Dpmd.skip=true -Denforcer.skip -Dforbiddenapis.skip=true -Dcheckstyle.skip=true -Danimal.sniffer.skip=true -Djacoco.skip=true -DskipTests -f $POM"
 mvn -B versions:set -DnewVersion=$PROJECT_VERSION > /dev/null
 mvn -B deploy $MAVEN_PARAMS || {
     mvn -B versions:set -DnewVersion=$PROJECT_REVISION > /dev/null
