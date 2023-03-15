@@ -65,10 +65,11 @@ Make sure you meet the following requirements before starting the Jupyter-based 
     jupyter notebook --port 3001
     ```
 
-- The Python API client for Druid. From the Druid repo in `examples/quickstart/jupyter-notebooks/druidapi`
-  install `druidapi` with the following command:
+- The Python API client for Druid. Clone the Druid repo if you haven't already.
+Go to your Druid source repo and install `druidapi` with the following commands:
 
   ```bash
+  cd examples/quickstart/jupyter-notebooks/druidapi
   pip install .
   ```
 
