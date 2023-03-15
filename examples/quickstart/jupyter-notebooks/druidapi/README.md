@@ -493,7 +493,10 @@ in a local clone of your `apache/druid` repo in
 pip install -e .
 ```
 
-Increment the version field in `setup.py` following the
+An editable installation allows you to implement and test changes iteratively
+without having to reinstall the package with every change.
+
+When you update the package, also increment the version field in `setup.py` following the
 [PEP 440 semantic versioning scheme](https://peps.python.org/pep-0440/#semantic-versioning).
 
 Use the following guidelines for incrementing the version number:
