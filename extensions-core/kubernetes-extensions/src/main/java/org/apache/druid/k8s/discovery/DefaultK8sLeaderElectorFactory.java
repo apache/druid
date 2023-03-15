@@ -21,20 +21,25 @@ package org.apache.druid.k8s.discovery;
 
 import com.google.inject.Inject;
 import io.kubernetes.client.extended.leaderelection.LeaderElectionConfig;
+import io.kubernetes.client.extended.leaderelection.LeaderElectionRecord;
 import io.kubernetes.client.extended.leaderelection.LeaderElector;
 import io.kubernetes.client.extended.leaderelection.Lock;
 import io.kubernetes.client.extended.leaderelection.resourcelock.ConfigMapLock;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import java.time.Duration;
+import java.util.Date;
 
 /**
  * Concrete {@link K8sLeaderElectorFactory} impl using k8s-client java lib.
  */
 public class DefaultK8sLeaderElectorFactory implements K8sLeaderElectorFactory
 {
+  private static final EmittingLogger LOGGER = new EmittingLogger(DefaultK8sLeaderElectorFactory.class);
+
   private final ApiClient realK8sClient;
   private final K8sDiscoveryConfig discoveryConfig;
 
@@ -48,6 +53,7 @@ public class DefaultK8sLeaderElectorFactory implements K8sLeaderElectorFactory
   @Override
   public K8sLeaderElector create(String candidateId, String namespace, String lockResourceName)
   {
+    LOGGER.info("creating leader elector with id [%s] for [%s] in namespace [%s] ", candidateId, lockResourceName, namespace);
     Lock lock = createLock(candidateId, namespace, lockResourceName, realK8sClient);
     LeaderElectionConfig leaderElectionConfig =
         new LeaderElectionConfig(
@@ -56,7 +62,22 @@ public class DefaultK8sLeaderElectorFactory implements K8sLeaderElectorFactory
             Duration.ofMillis(discoveryConfig.getRenewDeadline().getMillis()),
             Duration.ofMillis(discoveryConfig.getRetryPeriod().getMillis())
         );
-    LeaderElector leaderElector = new LeaderElector(leaderElectionConfig);
+    LeaderElector leaderElector = new LeaderElector(leaderElectionConfig, (t) -> {
+      // If any errors occur reading the configmap overwrite it and force a fresh election
+      LOGGER.warn(t, "Failed to get elect leader for [%s], overwriting invalid ConfigMaps", lockResourceName);
+      Date now = new Date();
+      boolean result = lock.update(new LeaderElectionRecord(
+          lock.identity(),
+          (int) discoveryConfig.getLeaseDuration().getStandardSeconds(),
+          now,
+          now,
+          0,
+          leaderElectionConfig.getOwnerReference()));
+      LOGGER.info("result of ConfigMaps update for [%s] is [%s]", lockResourceName, result);
+      if (!result) {
+        throw new RuntimeException("Failed to update ConfigMaps for [" + lockResourceName + "]");
+      }
+    });
 
     return new K8sLeaderElector()
     {
@@ -67,7 +88,7 @@ public class DefaultK8sLeaderElectorFactory implements K8sLeaderElectorFactory
           return lock.get().getHolderIdentity();
         }
         catch (ApiException ex) {
-          throw new RE(ex, "Failed  to get current leader for [%s]", lockResourceName);
+          throw new RE(ex, "Failed to update current leader for [%s]", lockResourceName);
         }
       }
 

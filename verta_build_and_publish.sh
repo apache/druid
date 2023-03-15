@@ -6,6 +6,13 @@ export JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8
 export BRANCH_NAME="$(git rev-parse --abbrev-ref HEAD)"
 export VERSION_SUFFIX=$(echo $BRANCH_NAME | sed 's,/,-,g' | tr '[:upper:]' '[:lower:]')
 export PROJECT_REVISION=$(mvn help:evaluate -Dexpression=revision -q -DforceStdout)
+export POM=$1
+if [ -z "$POM" ]; then
+    echo "Using default pom.xml"
+    POM="pom.xml"
+else
+    echo "Using pom file: $POM"
+fi
 
 # require the revision to end in -SNAPSHOT
 if [ "$PROJECT_REVISION" == "${PROJECT_REVISION/%-SNAPSHOT/}" ]; then
@@ -23,7 +30,7 @@ if [ "$BRANCH_NAME" == "verta/main" ]; then
     export PROJECT_VERSION=${PROJECT_VERSION/%-SNAPSHOT/-$COMMIT_INFO}
 fi
 
-export MAVEN_PARAMS='-Pdist-hadoop3,hadoop3,bundle-contrib-exts -Dpmd.skip=true -Denforcer.skip -Dforbiddenapis.skip=true -Dcheckstyle.skip=true -Danimal.sniffer.skip=true -Djacoco.skip=true -DskipTests'
+export MAVEN_PARAMS="-T 1.5C -Pdist-hadoop3,hadoop3,bundle-contrib-exts -Dpmd.skip=true -Denforcer.skip -Dforbiddenapis.skip=true -Dcheckstyle.skip=true -Danimal.sniffer.skip=true -Djacoco.skip=true -DskipTests -f $POM"
 mvn -B versions:set -DnewVersion=$PROJECT_VERSION > /dev/null
 mvn -B deploy $MAVEN_PARAMS || {
     mvn -B versions:set -DnewVersion=$PROJECT_REVISION > /dev/null
