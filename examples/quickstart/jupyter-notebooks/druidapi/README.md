@@ -28,7 +28,7 @@ in any Python environment, but is optimized for use in Jupyter, providing a comp
 environment which complements the UI-based Druid console. The primary use of `druidapi` at present
 is to support the set of tutorial notebooks provided in the parent directory.
 
-`druidapi` works against any version of Druid. Operations that exploit newer features obviously work
+`druidapi` works against any version of Druid. Operations that make use of newer features obviously work
 only against versions of Druid that support those features.
 
 ## Install
@@ -47,13 +47,15 @@ pip install .
 ```
 
 Note that there is a second level `druidapi` directory that contains the modules. Do not run
-the install command in this internal folder.
+the install command in the subdirectory.
 
-Verify your installation by checking that the following command runs in Python without error:
+Verify your installation by checking that the following command runs in Python:
 
 ```python
 import druidapi
 ```
+
+The import statement should not return anything if it runs successfully.
 
 ## Getting started
 
