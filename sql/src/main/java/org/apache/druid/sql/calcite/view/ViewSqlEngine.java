@@ -50,7 +50,7 @@ public class ViewSqlEngine implements SqlEngine
   }
 
   @Override
-  public boolean feature(EngineFeature feature, PlannerContext plannerContext)
+  public boolean featureAvailable(EngineFeature feature, PlannerContext plannerContext)
   {
     switch (feature) {
       // Use most permissive set of SELECT features, since our goal is to get the row type of the view.
@@ -60,6 +60,9 @@ public class ViewSqlEngine implements SqlEngine
       case ALLOW_BINDABLE_PLAN:
       case READ_EXTERNAL_DATA:
       case SCAN_ORDER_BY_NON_TIME:
+      case GROUPING_SETS:
+      case WINDOW_FUNCTIONS:
+      case UNNEST:
         return true;
 
       // Views can't sit on top of INSERT or REPLACE.

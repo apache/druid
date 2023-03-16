@@ -376,6 +376,9 @@ public class Parser
                                           .filter(x -> unappliedBindings.contains(x.getBinding()))
                                           .collect(Collectors.toList());
 
+    if (args.isEmpty()) {
+      return expr;
+    }
     final List<IdentifierExpr> lambdaArgs = new ArrayList<>();
 
     // construct lambda args from list of args to apply. Identifiers in a lambda body have artificial 'binding' values

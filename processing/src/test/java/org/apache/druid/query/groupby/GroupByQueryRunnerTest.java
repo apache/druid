@@ -13398,7 +13398,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "minExpression",
             NullHandling.replaceWithDefault() ? Float.POSITIVE_INFINITY : null,
             "minVc",
-            NullHandling.replaceWithDefault() ? Float.POSITIVE_INFINITY : null
+            Float.POSITIVE_INFINITY
         )
     );
 
