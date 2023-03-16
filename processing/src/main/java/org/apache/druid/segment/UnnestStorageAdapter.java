@@ -89,7 +89,7 @@ public class UnnestStorageAdapter implements StorageAdapter
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
-    final String inputColumn = getUnnestInputIfDirectAccess();
+    final String inputColumn = getUnnestInputIfDirectAccess(unnestColumn);
     final Pair<Filter, Filter> filterPair = computeBaseAndPostUnnestFilters(
         filter,
         unnestFilter != null ? unnestFilter.toFilter() : null,
@@ -263,7 +263,7 @@ public class UnnestStorageAdapter implements StorageAdapter
    * @param inputColumnCapabilites input column capabilities if known; otherwise null
    * @return pair of pre- and post-unnest filters
    */
-  private Pair<Filter, Filter> computeBaseAndPostUnnestFilters(
+  public Pair<Filter, Filter> computeBaseAndPostUnnestFilters(
       @Nullable final Filter queryFilter,
       @Nullable final Filter unnestFilter,
       final VirtualColumns queryVirtualColumns,
@@ -409,7 +409,7 @@ public class UnnestStorageAdapter implements StorageAdapter
    * Returns the input of {@link #unnestColumn}, if it's a direct access; otherwise returns null.
    */
   @Nullable
-  private String getUnnestInputIfDirectAccess()
+  public String getUnnestInputIfDirectAccess(VirtualColumn unnestColumn)
   {
     if (unnestColumn instanceof ExpressionVirtualColumn) {
       return ((ExpressionVirtualColumn) unnestColumn).getParsedExpression().get().getBindingIfIdentifier();
@@ -420,7 +420,7 @@ public class UnnestStorageAdapter implements StorageAdapter
 
   /**
    * Rewrites a filter on {@link #outputColumnName} to operate on the input column from
-   * {@link #getUnnestInputIfDirectAccess()}, if possible.
+   * if possible.
    */
   @Nullable
   private Filter rewriteFilterOnUnnestColumnIfPossible(

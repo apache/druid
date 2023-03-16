@@ -21,13 +21,18 @@ package org.apache.druid.segment;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.filter.OrFilter;
+import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
@@ -55,6 +60,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   private static IncrementalIndexStorageAdapter INCREMENTAL_INDEX_STORAGE_ADAPTER;
   private static UnnestStorageAdapter UNNEST_STORAGE_ADAPTER;
   private static UnnestStorageAdapter UNNEST_STORAGE_ADAPTER1;
+  private static UnnestStorageAdapter UNNEST_STORAGE_ADAPTER2;
   private static List<StorageAdapter> ADAPTERS;
   private static String COLUMNNAME = "multi-string1";
   private static String OUTPUT_COLUMN_NAME = "unnested-multi-string1";
@@ -91,6 +97,13 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME1, "\"" + COLUMNNAME + "\"", null, ExprMacroTable.nil()),
         null
     );
+
+    UNNEST_STORAGE_ADAPTER2 = new UnnestStorageAdapter(
+        INCREMENTAL_INDEX_STORAGE_ADAPTER,
+        new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME, "\"" + COLUMNNAME + "\"", null, ExprMacroTable.nil()),
+        new SelectorDimFilter(OUTPUT_COLUMN_NAME, "1", null)
+    );
+
 
     ADAPTERS = ImmutableList.of(
         UNNEST_STORAGE_ADAPTER,
@@ -246,5 +259,108 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   {
     MatcherAssert.assertThat(column, CoreMatchers.instanceOf(ExpressionVirtualColumn.class));
     Assert.assertEquals("\"" + identifier + "\"", ((ExpressionVirtualColumn) column).getExpression());
+  }
+
+  @Test
+  public void test_unnest_adapters_with_no_base_filter_active_unnest_filter()
+  {
+
+    Sequence<Cursor> cursorSequence = UNNEST_STORAGE_ADAPTER2.makeCursors(
+        null,
+        UNNEST_STORAGE_ADAPTER2.getInterval(),
+        VirtualColumns.EMPTY,
+        Granularities.ALL,
+        false,
+        null
+    );
+
+    cursorSequence.accumulate(null, (accumulated, cursor) -> {
+      ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+
+      DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
+      int count = 0;
+      while (!cursor.isDone()) {
+        Object dimSelectorVal = dimSelector.getObject();
+        if (dimSelectorVal == null) {
+          Assert.assertNull(dimSelectorVal);
+        }
+        cursor.advance();
+        count++;
+      }
+      Assert.assertEquals(1, count);
+      Filter unnestFilter = new SelectorDimFilter(OUTPUT_COLUMN_NAME, "1", null).toFilter();
+      VirtualColumn vc = new ExpressionVirtualColumn(
+          OUTPUT_COLUMN_NAME,
+          "\"" + COLUMNNAME + "\"",
+          null,
+          ExprMacroTable.nil()
+      );
+      final String inputColumn = UNNEST_STORAGE_ADAPTER2.getUnnestInputIfDirectAccess(vc);
+      Pair<Filter, Filter> filterPair = UNNEST_STORAGE_ADAPTER2.computeBaseAndPostUnnestFilters(
+          null,
+          unnestFilter,
+          VirtualColumns.EMPTY,
+          inputColumn,
+          INCREMENTAL_INDEX_STORAGE_ADAPTER.getColumnCapabilities(inputColumn)
+      );
+      SelectorFilter left = ((SelectorFilter) filterPair.lhs);
+      SelectorFilter right = ((SelectorFilter) filterPair.rhs);
+      Assert.assertEquals(inputColumn, left.getDimension());
+      Assert.assertEquals(OUTPUT_COLUMN_NAME, right.getDimension());
+      Assert.assertEquals(right.getValue(), left.getValue());
+      return null;
+    });
+  }
+
+  @Test
+  public void test_unnest_adapters_with_base_or_filter_no_unnest_filter()
+  {
+    VirtualColumn vc = new ExpressionVirtualColumn(
+        OUTPUT_COLUMN_NAME,
+        "\"" + COLUMNNAME + "\"",
+        null,
+        ExprMacroTable.nil()
+    );
+    final String inputColumn = UNNEST_STORAGE_ADAPTER.getUnnestInputIfDirectAccess(vc);
+    final OrFilter baseFilter = new OrFilter(ImmutableList.of(
+        new SelectorDimFilter(OUTPUT_COLUMN_NAME, "1", null).toFilter(),
+        new SelectorDimFilter(inputColumn, "2", null).toFilter()
+    ));
+    Sequence<Cursor> cursorSequence = UNNEST_STORAGE_ADAPTER.makeCursors(
+        baseFilter,
+        UNNEST_STORAGE_ADAPTER.getInterval(),
+        VirtualColumns.EMPTY,
+        Granularities.ALL,
+        false,
+        null
+    );
+
+    cursorSequence.accumulate(null, (accumulated, cursor) -> {
+      ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+
+      DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
+      int count = 0;
+      while (!cursor.isDone()) {
+        Object dimSelectorVal = dimSelector.getObject();
+        if (dimSelectorVal == null) {
+          Assert.assertNull(dimSelectorVal);
+        }
+        cursor.advance();
+        count++;
+      }
+
+      Pair<Filter, Filter> filterPair = UNNEST_STORAGE_ADAPTER2.computeBaseAndPostUnnestFilters(
+          baseFilter,
+          null,
+          VirtualColumns.EMPTY,
+          inputColumn,
+          INCREMENTAL_INDEX_STORAGE_ADAPTER.getColumnCapabilities(inputColumn)
+      );
+      OrFilter left = ((OrFilter) filterPair.lhs);
+      OrFilter right = ((OrFilter) filterPair.rhs);
+      Assert.assertEquals("(multi-string1 = 1 || multi-string1 = 2)", left.toString());
+      Assert.assertEquals("(unnested-multi-string1 = 1 || multi-string1 = 2)", right.toString());
+      return null;
+    });
   }
 }
