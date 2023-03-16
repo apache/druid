@@ -52,7 +52,7 @@ def check_error(response):
         # We have an explanation from Druid. Raise a Client exception
         raise ClientError(msg)
 
-    # Don't know what the Druid JSON is. Raise a Requetss exception, but
+    # Don't know what the Druid JSON is. Raise a Requests exception, but
     # add on the JSON in the hopes that the caller can make use of it.
     try:
         response.raise_for_status()
