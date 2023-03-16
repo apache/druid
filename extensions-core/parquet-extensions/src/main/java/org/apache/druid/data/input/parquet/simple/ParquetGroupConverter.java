@@ -364,7 +364,7 @@ class ParquetGroupConverter
           case UINT_16:
             return g.getInteger(fieldIndex, index);
           case UINT_32:
-            return g.getInteger(fieldIndex, index) & (-1L >>> 32);
+            return Integer.toUnsignedLong(g.getInteger(fieldIndex, index));
           case UINT_64:
             return g.getLong(fieldIndex, index);
           case DECIMAL:
