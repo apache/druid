@@ -257,6 +257,7 @@ public class UnnestStorageAdapter implements StorageAdapter
    * Split queryFilter into pre- and post-correlate filters.
    *
    * @param queryFilter            query filter passed to makeCursors
+   * @param unnestFilter           filter on unnested column passed to PostUnnestCursor
    * @param queryVirtualColumns    query virtual columns passed to makeCursors
    * @param inputColumn            input column to unnest if it's a direct access; otherwise null
    * @param inputColumnCapabilites input column capabilities if known; otherwise null
@@ -273,7 +274,7 @@ public class UnnestStorageAdapter implements StorageAdapter
     /*
     The goal of this function is to take a filter from the top of Correlate (queryFilter)
     and a filter from the top of Uncollect (here unnest filter) and then do a rewrite
-    to generate filters to be passed to base cursor (filtersOnLeftDataSource) and unnest cursor (filtersOnUncollect)
+    to generate filters to be passed to base cursor (filtersPushedDownToBaseCursor) and unnest cursor (filtersForPostUnnestCursor)
     based on the following scenarios:
 
     1. If there is an AND filter between unnested column and left e.g. select * from foo, UNNEST(dim3) as u(d3) where d3 IN (a,b) and m1 < 10
@@ -281,37 +282,37 @@ public class UnnestStorageAdapter implements StorageAdapter
        unnest filter -> d3 IN (a,b)
 
        Output should be:
-       filtersOnLeftDataSource -> dim3 IN (a,b) AND m1 < 10
-       filtersOnUncollect -> d3 IN (a,b)
+       filtersPushedDownToBaseCursor -> dim3 IN (a,b) AND m1 < 10
+       filtersForPostUnnestCursor -> d3 IN (a,b)
 
     2. There is an AND filter between unnested column and left e.g. select * from foo, UNNEST(ARRAY[dim1,dim2]) as u(d12) where d12 IN (a,b) and m1 < 10
        query filter -> m1 < 10
        unnest filter -> d12 IN (a,b)
 
        Output should be:
-       filtersOnLeftDataSource -> m1 < 10 (as unnest is on a virtual column it cannot be added to the pre-filter)
-       filtersOnUncollect -> d12 IN (a,b)
+       filtersPushedDownToBaseCursor -> m1 < 10 (as unnest is on a virtual column it cannot be added to the pre-filter)
+       filtersForPostUnnestCursor -> d12 IN (a,b)
 
     3. There is an OR filter involving unnested and left column e.g.  select * from foo, UNNEST(dim3) as u(d3) where d3 IN (a,b) or m1 < 10
        query filter -> d3 IN (a,b) or m1 < 10
        unnest filter -> null
 
        Output should be:
-       filtersOnLeftDataSource -> dim3 IN (a,b) or m1 < 10
-       filtersOnUncollect -> d3 IN (a,b) or m1 < 10
+       filtersPushedDownToBaseCursor -> dim3 IN (a,b) or m1 < 10
+       filtersForPostUnnestCursor -> d3 IN (a,b) or m1 < 10
 
      4. There is an OR filter involving unnested and left column e.g. select * from foo, UNNEST(ARRAY[dim1,dim2]) as u(d12) where d12 IN (a,b) or m1 < 10
        query filter -> d12 IN (a,b) or m1 < 10
        unnest filter -> null
 
        Output should be:
-       filtersOnLeftDataSource -> null (as the filter cannot be re-written due to presence of virtual columns)
-       filtersOnUncollect -> d12 IN (a,b) or m1 < 10
+       filtersPushedDownToBaseCursor -> null (as the filter cannot be re-written due to presence of virtual columns)
+       filtersForPostUnnestCursor -> d12 IN (a,b) or m1 < 10
      */
     class FilterSplitter
     {
-      final List<Filter> filtersOnLeftDataSource = new ArrayList<>();
-      final List<Filter> filtersOnUncollect = new ArrayList<>();
+      final List<Filter> filtersPushedDownToBaseCursor = new ArrayList<>();
+      final List<Filter> filtersForPostUnnestCursor = new ArrayList<>();
 
       void addPostFilterWithPreFilterIfRewritePossible(@Nullable final Filter filter, boolean skipPreFilters)
       {
@@ -323,11 +324,11 @@ public class UnnestStorageAdapter implements StorageAdapter
           if (newFilter != null) {
             // Add the rewritten filter pre-unnest, so we get the benefit of any indexes, and so we avoid unnesting
             // any rows that do not match this filter at all.
-            filtersOnLeftDataSource.add(newFilter);
+            filtersPushedDownToBaseCursor.add(newFilter);
           }
         }
         // Add original filter post-unnest no matter what: we need to filter out any extraneous unnested values.
-        filtersOnUncollect.add(filter);
+        filtersForPostUnnestCursor.add(filter);
       }
 
       void addPreFilter(@Nullable final Filter filter)
@@ -347,12 +348,12 @@ public class UnnestStorageAdapter implements StorageAdapter
         if (queryVirtualColumns.getVirtualColumns().length > 0) {
           for (String column : requiredColumns) {
             if (queryVirtualColumns.exists(column)) {
-              filtersOnUncollect.add(filter);
+              filtersForPostUnnestCursor.add(filter);
               return;
             }
           }
         }
-        filtersOnLeftDataSource.add(filter);
+        filtersPushedDownToBaseCursor.add(filter);
 
       }
     }
@@ -398,8 +399,8 @@ public class UnnestStorageAdapter implements StorageAdapter
     filterSplitter.addPostFilterWithPreFilterIfRewritePossible(unnestFilter, false);
 
     return Pair.of(
-        Filters.maybeAnd(filterSplitter.filtersOnLeftDataSource).orElse(null),
-        Filters.maybeAnd(filterSplitter.filtersOnUncollect).orElse(null)
+        Filters.maybeAnd(filterSplitter.filtersPushedDownToBaseCursor).orElse(null),
+        Filters.maybeAnd(filterSplitter.filtersForPostUnnestCursor).orElse(null)
     );
   }
 
