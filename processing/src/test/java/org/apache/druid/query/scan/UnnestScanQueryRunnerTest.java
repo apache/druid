@@ -45,9 +45,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -89,23 +87,6 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
   {
     return Druids.newScanQueryBuilder()
                  .dataSource(QueryRunnerTestHelper.UNNEST_DATA_SOURCE)
-                 .columns(Collections.emptyList())
-                 .eternityInterval()
-                 .limit(3)
-                 .legacy(legacy);
-  }
-
-  private Druids.ScanQueryBuilder newTestUnnestQueryWithAllowSet()
-  {
-    List<String> allowList = Arrays.asList("a", "b", "c");
-    LinkedHashSet allowSet = new LinkedHashSet(allowList);
-    return Druids.newScanQueryBuilder()
-                 .dataSource(UnnestDataSource.create(
-                     new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
-                     QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
-                     QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
-                     allowSet
-                 ))
                  .columns(Collections.emptyList())
                  .eternityInterval()
                  .limit(3)
@@ -178,21 +159,16 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
               .intervals(I_0112_0114)
               .dataSource(UnnestDataSource.create(
                   new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
-                  "vc",
-                  QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
-                  null
-              ))
-              .columns(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
-              .eternityInterval()
-              .legacy(legacy)
-              .virtualColumns(
                   new ExpressionVirtualColumn(
-                      "vc",
+                      QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
                       "mv_to_array(placementish)",
                       ColumnType.STRING,
                       TestExprMacroTable.INSTANCE
                   )
-              )
+              ))
+              .columns(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
+              .eternityInterval()
+              .legacy(legacy)
               .limit(3)
               .build();
 
@@ -252,21 +228,16 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
               .intervals(I_0112_0114)
               .dataSource(UnnestDataSource.create(
                   new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
-                  "vc",
-                  QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
-                  null
-              ))
-              .columns(QueryRunnerTestHelper.MARKET_DIMENSION, QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
-              .eternityInterval()
-              .legacy(legacy)
-              .virtualColumns(
                   new ExpressionVirtualColumn(
-                      "vc",
+                      QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
                       "array(\"market\",\"quality\")",
                       ColumnType.STRING,
                       TestExprMacroTable.INSTANCE
                   )
-              )
+              ))
+              .columns(QueryRunnerTestHelper.MARKET_DIMENSION, QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
+              .eternityInterval()
+              .legacy(legacy)
               .limit(4)
               .build();
 
@@ -462,65 +433,6 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
     );
 
     ScanQueryRunnerTest.verify(ascendingExpectedResults, results);
-  }
-
-  @Test
-  public void testUnnestRunnerNonNullAllowSet()
-  {
-    ScanQuery query = newTestUnnestQueryWithAllowSet()
-        .intervals(I_0112_0114)
-        .columns(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
-        .limit(3)
-        .build();
-
-    final QueryRunner queryRunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
-        FACTORY,
-        new IncrementalIndexSegment(
-            index,
-            QueryRunnerTestHelper.SEGMENT_ID
-        ),
-        query,
-        "rtIndexvc"
-    );
-
-    Iterable<ScanResultValue> results = queryRunner.run(QueryPlus.wrap(query)).toList();
-
-    String[] columnNames;
-    if (legacy) {
-      columnNames = new String[]{
-          getTimestampName() + ":TIME",
-          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
-      };
-    } else {
-      columnNames = new String[]{
-          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
-      };
-    }
-    String[] values;
-    if (legacy) {
-      values = new String[]{
-          "2011-01-12T00:00:00.000Z\ta",
-          "2011-01-12T00:00:00.000Z\tb",
-          "2011-01-13T00:00:00.000Z\ta"
-      };
-    } else {
-      values = new String[]{
-          "a",
-          "b",
-          "a"
-      };
-    }
-
-    final List<List<Map<String, Object>>> events = ScanQueryRunnerTest.toEvents(columnNames, legacy, values);
-    List<ScanResultValue> expectedResults = toExpected(
-        events,
-        legacy
-        ? Lists.newArrayList(getTimestampName(), QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
-        : Collections.singletonList(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST),
-        0,
-        3
-    );
-    ScanQueryRunnerTest.verify(expectedResults, results);
   }
 
 

@@ -26,6 +26,8 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.Either;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 
 import javax.annotation.Nullable;
@@ -36,14 +38,16 @@ import java.util.Objects;
  * to a particular {@link #targetSize}. Commonly used when generating segments, which we want to have a certain number
  * of rows per segment.
  */
-public class TargetSizeShuffleSpec implements ShuffleSpec
+public class GlobalSortTargetSizeShuffleSpec implements GlobalSortShuffleSpec
 {
+  public static final String TYPE = "targetSize";
+
   private final ClusterBy clusterBy;
   private final long targetSize;
   private final boolean aggregate;
 
   @JsonCreator
-  public TargetSizeShuffleSpec(
+  public GlobalSortTargetSizeShuffleSpec(
       @JsonProperty("clusterBy") final ClusterBy clusterBy,
       @JsonProperty("targetSize") final long targetSize,
       @JsonProperty("aggregate") final boolean aggregate
@@ -52,24 +56,40 @@ public class TargetSizeShuffleSpec implements ShuffleSpec
     this.clusterBy = Preconditions.checkNotNull(clusterBy, "clusterBy");
     this.targetSize = targetSize;
     this.aggregate = aggregate;
+
+    if (!clusterBy.sortable()) {
+      throw new IAE("ClusterBy key must be sortable");
+    }
+  }
+
+  @Override
+  public ShuffleKind kind()
+  {
+    return ShuffleKind.GLOBAL_SORT;
   }
 
   @Override
   @JsonProperty("aggregate")
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-  public boolean doesAggregateByClusterKey()
+  public boolean doesAggregate()
   {
     return aggregate;
   }
 
   @Override
-  public boolean needsStatistics()
+  public boolean mustGatherResultKeyStatistics()
   {
     return true;
   }
 
   @Override
-  public Either<Long, ClusterByPartitions> generatePartitions(
+  public int partitionCount()
+  {
+    throw new ISE("Number of partitions not known for [%s].", kind());
+  }
+
+  @Override
+  public Either<Long, ClusterByPartitions> generatePartitionsForGlobalSort(
       @Nullable final ClusterByStatisticsCollector collector,
       final int maxNumPartitions
   )
@@ -90,13 +110,13 @@ public class TargetSizeShuffleSpec implements ShuffleSpec
 
   @Override
   @JsonProperty
-  public ClusterBy getClusterBy()
+  public ClusterBy clusterBy()
   {
     return clusterBy;
   }
 
   @JsonProperty
-  long getTargetSize()
+  long targetSize()
   {
     return targetSize;
   }
@@ -110,7 +130,7 @@ public class TargetSizeShuffleSpec implements ShuffleSpec
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    TargetSizeShuffleSpec that = (TargetSizeShuffleSpec) o;
+    GlobalSortTargetSizeShuffleSpec that = (GlobalSortTargetSizeShuffleSpec) o;
     return targetSize == that.targetSize && aggregate == that.aggregate && Objects.equals(clusterBy, that.clusterBy);
   }
 

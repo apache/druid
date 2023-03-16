@@ -22,11 +22,6 @@ package org.apache.druid.msq.kernel;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.frame.key.ClusterBy;
-import org.apache.druid.frame.key.ClusterByPartitions;
-import org.apache.druid.java.util.common.Either;
-import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
-
-import javax.annotation.Nullable;
 
 /**
  * Describes how outputs of a stage are shuffled. Property of {@link StageDefinition}.
@@ -36,37 +31,46 @@ import javax.annotation.Nullable;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "maxCount", value = MaxCountShuffleSpec.class),
-    @JsonSubTypes.Type(name = "targetSize", value = TargetSizeShuffleSpec.class)
+    @JsonSubTypes.Type(name = MixShuffleSpec.TYPE, value = MixShuffleSpec.class),
+    @JsonSubTypes.Type(name = HashShuffleSpec.TYPE, value = HashShuffleSpec.class),
+    @JsonSubTypes.Type(name = GlobalSortMaxCountShuffleSpec.TYPE, value = GlobalSortMaxCountShuffleSpec.class),
+    @JsonSubTypes.Type(name = GlobalSortTargetSizeShuffleSpec.TYPE, value = GlobalSortTargetSizeShuffleSpec.class)
 })
 public interface ShuffleSpec
 {
   /**
-   * Clustering key that will determine how data are partitioned during the shuffle.
-   */
-  ClusterBy getClusterBy();
-
-  /**
-   * Whether this stage aggregates by the clustering key or not.
-   */
-  boolean doesAggregateByClusterKey();
-
-  /**
-   * Whether {@link #generatePartitions} needs a nonnull collector.
-   */
-  boolean needsStatistics();
-
-  /**
-   * Generates a set of partitions based on the provided statistics.
+   * The nature of this shuffle: hash vs. range based partitioning; whether the data are sorted or not.
    *
-   * @param collector        must be nonnull if {@link #needsStatistics()} is true; may be null otherwise
-   * @param maxNumPartitions maximum number of partitions to generate
-   *
-   * @return either the partition assignment, or (as an error) a number of partitions, greater than maxNumPartitions,
-   * that would be expected to be created
+   * If this method returns {@link ShuffleKind#GLOBAL_SORT}, then this spec is also an instance of
+   * {@link GlobalSortShuffleSpec}, and additional methods are available.
    */
-  Either<Long, ClusterByPartitions> generatePartitions(
-      @Nullable ClusterByStatisticsCollector collector,
-      int maxNumPartitions
-  );
+  ShuffleKind kind();
+
+  /**
+   * Partitioning key for the shuffle.
+   *
+   * If {@link #kind()} is {@link ShuffleKind#HASH}, data are partitioned using a hash of this key, but not sorted.
+   *
+   * If {@link #kind()} is {@link ShuffleKind#HASH_LOCAL_SORT}, data are partitioned using a hash of this key, and
+   * sorted within each partition.
+   *
+   * If {@link #kind()} is {@link ShuffleKind#GLOBAL_SORT}, data are partitioned using ranges of this key, and are
+   * sorted within each partition; therefore, the data are also globally sorted.
+   */
+  ClusterBy clusterBy();
+
+  /**
+   * Whether this stage aggregates by the {@link #clusterBy()} key.
+   */
+  boolean doesAggregate();
+
+  /**
+   * Number of partitions, if known.
+   *
+   * Partition count is always known if {@link #kind()} is {@link ShuffleKind#MIX}, {@link ShuffleKind#HASH}, or
+   * {@link ShuffleKind#HASH_LOCAL_SORT}. It is not known if {@link #kind()} is {@link ShuffleKind#GLOBAL_SORT}.
+   *
+   * @throws IllegalStateException if kind is {@link ShuffleKind#GLOBAL_SORT}
+   */
+  int partitionCount();
 }

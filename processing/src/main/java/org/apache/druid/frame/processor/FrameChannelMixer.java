@@ -19,8 +19,7 @@
 
 package org.apache.druid.frame.processor;
 
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
@@ -29,7 +28,6 @@ import org.apache.druid.frame.channel.WritableFrameChannel;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Processor that merges frames from inputChannels into a single outputChannel. No sorting is done: input frames are
@@ -37,21 +35,22 @@ import java.util.concurrent.ThreadLocalRandom;
  *
  * For sorted output, use {@link FrameChannelMerger} instead.
  */
-public class FrameChannelMuxer implements FrameProcessor<Long>
+public class FrameChannelMixer implements FrameProcessor<Long>
 {
   private final List<ReadableFrameChannel> inputChannels;
   private final WritableFrameChannel outputChannel;
 
-  private final IntSet remainingChannels = new IntOpenHashSet();
+  private final IntSet awaitSet;
   private long rowsRead = 0L;
 
-  public FrameChannelMuxer(
+  public FrameChannelMixer(
       final List<ReadableFrameChannel> inputChannels,
       final WritableFrameChannel outputChannel
   )
   {
     this.inputChannels = inputChannels;
     this.outputChannel = outputChannel;
+    this.awaitSet = FrameProcessors.rangeSet(inputChannels.size());
   }
 
   @Override
@@ -69,39 +68,33 @@ public class FrameChannelMuxer implements FrameProcessor<Long>
   @Override
   public ReturnOrAwait<Long> runIncrementally(final IntSet readableInputs) throws IOException
   {
-    if (remainingChannels.isEmpty()) {
-      // First run.
-      for (int i = 0; i < inputChannels.size(); i++) {
-        final ReadableFrameChannel channel = inputChannels.get(i);
-        if (!channel.isFinished()) {
-          remainingChannels.add(i);
-        }
+    final IntSet readySet = new IntAVLTreeSet(readableInputs);
+
+    for (int channelNumber : readableInputs) {
+      final ReadableFrameChannel channel = inputChannels.get(channelNumber);
+
+      if (channel.isFinished()) {
+        awaitSet.remove(channelNumber);
+        readySet.remove(channelNumber);
       }
     }
 
-    if (!readableInputs.isEmpty()) {
-      // Avoid biasing towards lower-numbered channels.
-      final int channelIdx = ThreadLocalRandom.current().nextInt(readableInputs.size());
+    if (!readySet.isEmpty()) {
+      // Read a random channel: avoid biasing towards lower-numbered channels.
+      final int channelNumber = FrameProcessors.selectRandom(readySet);
+      final ReadableFrameChannel channel = inputChannels.get(channelNumber);
 
-      int i = 0;
-      for (IntIterator iterator = readableInputs.iterator(); iterator.hasNext(); i++) {
-        final int channelNumber = iterator.nextInt();
-        final ReadableFrameChannel channel = inputChannels.get(channelNumber);
-
-        if (channel.isFinished()) {
-          remainingChannels.remove(channelNumber);
-        } else if (i == channelIdx) {
-          final Frame frame = channel.read();
-          outputChannel.write(frame);
-          rowsRead += frame.numRows();
-        }
+      if (!channel.isFinished()) {
+        final Frame frame = channel.read();
+        outputChannel.write(frame);
+        rowsRead += frame.numRows();
       }
     }
 
-    if (remainingChannels.isEmpty()) {
+    if (awaitSet.isEmpty()) {
       return ReturnOrAwait.returnObject(rowsRead);
     } else {
-      return ReturnOrAwait.awaitAny(remainingChannels);
+      return ReturnOrAwait.awaitAny(awaitSet);
     }
   }
 

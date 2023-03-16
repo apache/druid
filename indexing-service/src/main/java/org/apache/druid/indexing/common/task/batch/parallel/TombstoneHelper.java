@@ -20,23 +20,22 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -95,7 +94,7 @@ public class TombstoneHelper
     List<Interval> retVal = new ArrayList<>();
     GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
     List<Interval> pushedSegmentsIntervals = getCondensedPushedSegmentsIntervals(pushedSegments);
-    List<Interval> intervalsForUsedSegments = getCondensedUsedIntervals(
+    List<Interval> intervalsForUsedSegments = getExistingNonEmptyIntervalsOfDatasource(
         dataSchema.getGranularitySpec().inputIntervals(),
         dataSchema.getDataSource()
     );
@@ -167,11 +166,12 @@ public class TombstoneHelper
   }
 
   /**
-   * @param intervalsToDrop Empty intervals in the query that need to be dropped. They should be aligned with the
-   *                        replaceGranularity
+   * See the method body for an example and an indepth explanation as to how the replace interval is created
+   * @param intervalsToDrop    Empty intervals in the query that need to be dropped. They should be aligned with the
+   *                           replaceGranularity
    * @param intervalsToReplace Intervals in the query which are eligible for replacement with new data.
    *                           They should be aligned with the replaceGranularity
-   * @param dataSource Datasource on which the replace is to be performed
+   * @param dataSource         Datasource on which the replace is to be performed
    * @param replaceGranularity Granularity of the replace query
    * @return Intervals computed for the tombstones
    * @throws IOException
@@ -184,13 +184,11 @@ public class TombstoneHelper
   ) throws IOException
   {
     Set<Interval> retVal = new HashSet<>();
-    List<Interval> usedIntervals = getCondensedUsedIntervals(intervalsToReplace, dataSource);
+    List<Interval> usedIntervals = getExistingNonEmptyIntervalsOfDatasource(intervalsToReplace, dataSource);
 
     for (Interval intervalToDrop : intervalsToDrop) {
       for (Interval usedInterval : usedIntervals) {
 
-        // Overlap will always be finite (not starting from -Inf or ending at +Inf) and lesser than or
-        // equal to the size of the usedInterval
         Interval overlap = intervalToDrop.overlap(usedInterval);
 
         // No overlap of the dropped segment with the used interval due to which we donot need to generate any tombstone
@@ -198,27 +196,43 @@ public class TombstoneHelper
           continue;
         }
 
-        // Overlap might not be aligned with the granularity if the used interval is not aligned with the granularity
-        // However when fetching from the iterator, the first interval is found using the bucketStart, which
-        // ensures that the interval is "rounded down" to the first timestamp that aligns with the granularity
-        // Also, the interval would always be contained inside the "intervalToDrop" because the original REPLACE
-        // is aligned by the granularity, and by extension all the elements inside the intervals to drop would
-        // also be aligned by the same granularity (since intervalsToDrop = replaceIntervals - publishIntervals, and
-        // the right-hand side is always aligned)
-        //
+        // "overlap" might not be aligned with the if the used interval is not aligned with the granularity of
+        // the REPLACE i.e. datasource's original granularity and replace's granularity are different
+
+        // However, we align the boundaries of the overlap with the replaceGranularity manually, in the following code.
+
+        DateTime alignedIntervalStart = replaceGranularity.bucketStart(overlap.getStart());
+        long alignedIntervalStartMillis = Math.max(alignedIntervalStart.getMillis(), JodaUtils.MIN_INSTANT);
+        // If the start is aligned, then 'bucketStart()' is unchanged.
+        // Else 'bucketStart()' will return the latest timestamp less than overlap.getStart() which aligns with the REPLACE granularity.
+
+        // That extra interval that we are adding before the overlap should be contained in 'intervalToDrop' because
+        // intervalToDrop is aligned by the replaceGranularity.
+        // If the drop's interval is n, then the extra interval would start from n + 1 (where 1 denotes the replaceGranularity)
+        // The overlap's beginning would always be later than intervalToDrop (trivially,
+        // because it is the overlap) and if bucketStart floors the overlap beginning, it cannot floor it before
+        // the intervalToDrop's start
+
         // For example, if the replace granularity is DAY, intervalsToReplace are 20/02/2023 - 24/02/2023 (always
         // aligned with the replaceGranularity), intervalsToDrop are 22/02/2023 - 24/02/2023 (they must also be aligned with the replaceGranularity)
         // If the relevant usedIntervals for the datasource are from 22/02/2023 01:00:00 - 23/02/2023 02:00:00, then
         // the overlap would be 22/02/2023 01:00:00 - 23/02/2023 02:00:00. When iterating over the overlap we will get
-        // the intervals from 22/02/2023 - 23/02/2023, and 23/02/2023 - 24/02/2023
-        IntervalsByGranularity intervalsToDropByGranularity = new IntervalsByGranularity(
-            ImmutableList.of(overlap),
-            replaceGranularity
-        );
+        // the intervals from 22/02/2023 01:00:00 - 23/02/2023 02:00:00. After aligning it would become
+        // 22/02/2023T00:00:00Z - 23/02/2023T23:59:59Z
 
-        // Helps in deduplication if required. Since all the intervals are uniformly granular, there should be no
-        // no overlap post deduplication
-        retVal.addAll(Sets.newHashSet(intervalsToDropByGranularity.granularityIntervalsIterator()));
+        // If the end is aligned, then we do not alter it, else we align the end by geting the earliest time later
+        // than the overlap's end which aligns with the replace granularity. Using the above-mentioned logic for the
+        // start time, we can also argue that the rounded up end would be contained in the intervalToDrop
+        DateTime alignedIntervalEnd;
+        if (replaceGranularity.bucketStart(overlap.getEnd()).equals(overlap.getEnd())) { // Check if the end is aligned
+          alignedIntervalEnd = overlap.getEnd();
+        } else {
+          alignedIntervalEnd = replaceGranularity.bucketEnd(overlap.getEnd());
+        }
+        long alignedIntervalEndMillis = Math.min(alignedIntervalEnd.getMillis(), JodaUtils.MAX_INSTANT);
+        Interval alignedTombstoneInterval = Intervals.utc(alignedIntervalStartMillis, alignedIntervalEndMillis);
+
+        retVal.add(alignedTombstoneInterval);
       }
     }
     return retVal;
@@ -255,13 +269,16 @@ public class TombstoneHelper
   /**
    * Helper method to prune required tombstones. Only tombstones that cover used intervals will be created
    * since those that not cover used intervals will be redundant.
+   * Example:
+   * For a datasource having segments for 2020-01-01/2020-12-31 and 2022-01-01/2022-12-31, this method would return
+   * the segment 2020-01-01/2020-12-31 if the input intervals asked for the segment between 2019 and 2021.
    *
    * @param inputIntervals   Intervals corresponding to the task
    * @param dataSource       Datasource corresponding to the task
    * @return Intervals corresponding to used segments that overlap with any of the spec's input intervals
    * @throws IOException If used segments cannot be retrieved
    */
-  private List<Interval> getCondensedUsedIntervals(
+  private List<Interval> getExistingNonEmptyIntervalsOfDatasource(
       List<Interval> inputIntervals,
       String dataSource
   ) throws IOException

@@ -207,7 +207,7 @@ function showRawLine(line: SampleEntry): string {
     return `[Multi-line row, length: ${raw.length}]`;
   }
   if (raw.length > 1000) {
-    return raw.substr(0, 1000) + '...';
+    return raw.slice(0, 1000) + '...';
   }
   return raw;
 }
@@ -1220,7 +1220,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           placeholder="Paste your data here"
           value={deepGet(spec, 'spec.ioConfig.inputSource.data')}
           onChange={(e: any) => {
-            const stringValue = e.target.value.substr(0, MAX_INLINE_DATA_LENGTH);
+            const stringValue = e.target.value.slice(0, MAX_INLINE_DATA_LENGTH);
             this.updateSpecPreview(deepSet(spec, 'spec.ioConfig.inputSource.data', stringValue));
           }}
         />

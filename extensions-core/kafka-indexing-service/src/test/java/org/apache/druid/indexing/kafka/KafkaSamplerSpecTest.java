@@ -34,6 +34,7 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.data.input.kafkainput.KafkaInputFormat;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.test.TestBroker;
@@ -94,6 +95,26 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
       null
   );
 
+  private static final DataSchema DATA_SCHEMA_KAFKA_TIMESTAMP = new DataSchema(
+      "test_ds",
+      new TimestampSpec("kafka.timestamp", "iso", null),
+      new DimensionsSpec(
+          Arrays.asList(
+              new StringDimensionSchema("dim1"),
+              new StringDimensionSchema("dim1t"),
+              new StringDimensionSchema("dim2"),
+              new LongDimensionSchema("dimLong"),
+              new FloatDimensionSchema("dimFloat")
+          )
+      ),
+      new AggregatorFactory[]{
+          new DoubleSumAggregatorFactory("met1sum", "met1"),
+          new CountAggregatorFactory("rows")
+      },
+      new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
+      null
+  );
+
   private static TestingCluster zkServer;
   private static TestBroker kafkaServer;
 
@@ -126,7 +147,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
     zkServer.stop();
   }
 
-  @Test(timeout = 30_000L)
+  @Test
   public void testSample()
   {
     insertData(generateRecords(TOPIC));
@@ -169,12 +190,96 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
 
     KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(
         supervisorSpec,
-        new SamplerConfig(5, null, null, null),
+        new SamplerConfig(5, 5_000, null, null),
         new InputSourceSampler(OBJECT_MAPPER),
         OBJECT_MAPPER
     );
 
     runSamplerAndCompareResponse(samplerSpec, true);
+  }
+
+  @Test
+  public void testSampleKafkaInputFormat()
+  {
+    insertData(generateRecords(TOPIC));
+
+    KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
+        null,
+        DATA_SCHEMA_KAFKA_TIMESTAMP,
+        null,
+        new KafkaSupervisorIOConfig(
+            TOPIC,
+            new KafkaInputFormat(
+                null,
+                null,
+                new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
+                null,
+                null,
+                null
+            ),
+
+            null,
+            null,
+            null,
+            kafkaServer.consumerProperties(),
+            null,
+            null,
+            null,
+            null,
+            true,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(
+        supervisorSpec,
+        new SamplerConfig(5, 5_000, null, null),
+        new InputSourceSampler(OBJECT_MAPPER),
+        OBJECT_MAPPER
+    );
+
+    SamplerResponse response = samplerSpec.sample();
+
+    Assert.assertEquals(5, response.getNumRowsRead());
+    // we can parse an extra row compared to other generated data samples because we are using kafka timestamp
+    // for timestamp
+    Assert.assertEquals(4, response.getNumRowsIndexed());
+    Assert.assertEquals(5, response.getData().size());
+
+    Iterator<SamplerResponse.SamplerResponseRow> it = response.getData().iterator();
+
+    SamplerResponse.SamplerResponseRow nextRow;
+    Map<String, Object> rawInput;
+    Map<String, Object> parsedInput;
+
+    for (int i = 0; i < 4; i++) {
+      nextRow = it.next();
+      Assert.assertNull(nextRow.isUnparseable());
+      rawInput = nextRow.getInput();
+      parsedInput = nextRow.getParsed();
+      Assert.assertTrue(rawInput.containsKey("kafka.timestamp"));
+      Assert.assertEquals(rawInput.get("kafka.timestamp"), parsedInput.get("__time"));
+    }
+    nextRow = it.next();
+    Assert.assertTrue(nextRow.isUnparseable());
+
+    Assert.assertFalse(it.hasNext());
   }
 
   @Test
@@ -245,7 +350,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
 
     KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(
         supervisorSpec,
-        new SamplerConfig(5, null, null, null),
+        new SamplerConfig(5, 5_000, null, null),
         new InputSourceSampler(new DefaultObjectMapper()),
         OBJECT_MAPPER
     );
