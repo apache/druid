@@ -148,7 +148,6 @@ We recommend just setting the base ZK path and the ZK service host, but all ZK p
 |`druid.zk.service.connectionTimeoutMs`|ZooKeeper connection timeout, in milliseconds.|`15000`|
 |`druid.zk.service.compress`|Boolean flag for whether or not created Znodes should be compressed.|`true`|
 |`druid.zk.service.acl`|Boolean flag for whether or not to enable ACL security for ZooKeeper. If ACL is enabled, zNode creators will have all permissions.|`false`|
-|`druid.zk.service.maxZkRetries`|Retries for attempting connection to Zookeeper.|`29`|
 
 #### Path Configuration
 Druid interacts with ZK through a set of standard path configurations. We recommend just setting the base ZK path, but all ZK paths that Druid uses can be overwritten to absolute paths.
