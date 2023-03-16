@@ -3884,11 +3884,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQuery(
         "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3='b' or m1 < 2 ",
-        // go over each filter in the OR
-        // d3 -> dim3
-        // recreate an or filter with dim3 replacing d3
-        // push this or filter to base cursor
-        // original filter goes to post
         QUERY_CONTEXT_UNNEST,
         ImmutableList.of(
             Druids.newScanQueryBuilder()
@@ -3919,17 +3914,45 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testUnnestWithMultipleAndFiltersOnSelectedUnnestedColumns()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3 IN ('a','b') and d3 < 'e' ",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new TableDataSource(CalciteTests.DATASOURCE3),
+                      expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                      and(
+                          new InDimFilter("j0.unnest", ImmutableSet.of("a", "b"), null),
+                          bound("j0.unnest", null, "e", false, true, null, StringComparators.LEXICOGRAPHIC)
+                      )
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_UNNEST)
+                  .columns(ImmutableList.of("j0.unnest"))
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{"b"}
+        )
+    );
+  }
+
+  @Test
   public void testUnnestWithMultipleOrFiltersOnUnnestedColumns()
   {
     skipVectorize();
     cannotVectorize();
     testQuery(
         "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3='b' or d3='d' ",
-        // go over each filter in the OR
-        // d3 -> dim3
-        // recreate an or filter with dim3 replacing d3
-        // push this or filter to base cursor
-        // original filter goes to post
         QUERY_CONTEXT_UNNEST,
         ImmutableList.of(
             Druids.newScanQueryBuilder()
@@ -3949,6 +3972,53 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             new Object[]{"b"},
             new Object[]{"b"},
             new Object[]{"d"}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithMultipleOrFiltersOnVariationsOfUnnestedColumns()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where strlen(d3) < 2 or d3='d' ",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new TableDataSource(CalciteTests.DATASOURCE3),
+                      expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                      or(
+                          new ExpressionDimFilter("(strlen(\"j0.unnest\") < 2)", TestExprMacroTable.INSTANCE),
+                          selector("j0.unnest", "d", null)
+                      )
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_UNNEST)
+                  .columns(ImmutableList.of("j0.unnest"))
+                  .build()
+        ),
+        useDefault ?
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"c"},
+            new Object[]{"d"},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""}
+        ) :
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"c"},
+            new Object[]{"d"},
+            new Object[]{""}
         )
     );
   }

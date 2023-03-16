@@ -34,7 +34,6 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
-import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.BoundFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.LikeFilter;
@@ -396,13 +395,7 @@ public class UnnestStorageAdapter implements StorageAdapter
         filterSplitter.addPreFilter(queryFilter);
       }
     }
-    if (unnestFilter instanceof AndFilter) {
-      for (Filter filter : ((AndFilter) unnestFilter).getFilters()) {
-        filterSplitter.addPostFilterWithPreFilterIfRewritePossible(filter, false);
-      }
-    } else {
-      filterSplitter.addPostFilterWithPreFilterIfRewritePossible(unnestFilter, false);
-    }
+    filterSplitter.addPostFilterWithPreFilterIfRewritePossible(unnestFilter, false);
 
     return Pair.of(
         Filters.maybeAnd(filterSplitter.filtersOnLeftDataSource).orElse(null),

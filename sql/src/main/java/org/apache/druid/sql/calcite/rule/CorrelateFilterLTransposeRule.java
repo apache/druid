@@ -30,7 +30,6 @@ import org.apache.calcite.rel.core.Filter;
  * Rule that pulls a {@link Filter} from the left-hand side of a {@link Correlate} above the Correlate.
  * Allows subquery elimination.
  *
- * @see DruidFilterUnnestRule similar, but for right-hand side filters
  */
 public class CorrelateFilterLTransposeRule extends RelOptRule
 {
