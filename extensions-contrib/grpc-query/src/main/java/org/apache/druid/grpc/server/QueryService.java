@@ -19,12 +19,13 @@
 
 package org.apache.druid.grpc.server;
 
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import org.apache.druid.grpc.proto.QueryGrpc;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
-import org.apache.druid.server.security.AuthConfig;
-import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.ForbiddenException;
 
 /**
  * Implementation of the gRPC Query service. Provides a single method
@@ -43,14 +44,16 @@ class QueryService extends QueryGrpc.QueryImplBase
   @Override
   public void submitQuery(QueryRequest request, StreamObserver<QueryResponse> responseObserver)
   {
-    // TODO: How will we get the auth result for gRPC?
-    AuthenticationResult authResult = new AuthenticationResult(
-        "superUser",
-        AuthConfig.ALLOW_ALL_NAME,
-        null, null
-    );
-    QueryResponse reply = driver.submitQuery(request, authResult);
-    responseObserver.onNext(reply);
-    responseObserver.onCompleted();
+    try {
+      QueryResponse reply = driver.submitQuery(request, QueryServer.AUTH_KEY.get());
+      responseObserver.onNext(reply);
+      responseObserver.onCompleted();
+    }
+    catch (ForbiddenException e) {
+      // This block mimics the Servlet pattern of throwing ForbiddenException for
+      // all access denied cases rather than handling permissions in each message
+      // handler.
+      throw new StatusRuntimeException(Status.PERMISSION_DENIED);
+    }
   }
 }

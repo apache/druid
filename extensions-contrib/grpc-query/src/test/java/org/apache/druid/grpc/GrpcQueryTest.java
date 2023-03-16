@@ -19,14 +19,18 @@
 
 package org.apache.druid.grpc;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.grpc.client.GrpcResponseHandler;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryStatus;
 import org.apache.druid.grpc.proto.TestResults.QueryResult;
+import org.apache.druid.grpc.server.GrpcQueryConfig;
 import org.apache.druid.grpc.server.QueryDriver;
 import org.apache.druid.grpc.server.QueryServer;
+import org.apache.druid.server.security.AllowAllAuthenticator;
+import org.apache.druid.server.security.AuthenticatorMapper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -41,7 +45,8 @@ import static org.junit.Assert.assertEquals;
 /**
  * Simple test that runs the gRPC server, on top of a test SQL stack.
  * Uses a simple client to send a query to the server. This is a basic
- * sanity check of the gRPC stack.
+ * sanity check of the gRPC stack. Uses allow-all security, which
+ * does a sanity check of the auth chain.
  */
 public class GrpcQueryTest
 {
@@ -59,7 +64,14 @@ public class GrpcQueryTest
         frameworkFixture.jsonMapper(),
         frameworkFixture.statementFactory()
     );
-    server = new QueryServer(50051, driver);
+    AuthenticatorMapper authMapper = new AuthenticatorMapper(
+        ImmutableMap.of(
+            "test",
+            new AllowAllAuthenticator()
+        )
+    );
+    GrpcQueryConfig config = new GrpcQueryConfig(50051);
+    server = new QueryServer(config, driver, authMapper);
     try {
       server.start();
     }
@@ -71,7 +83,7 @@ public class GrpcQueryTest
       e.printStackTrace();
       throw e;
     }
-    client = new TestClient();
+    client = new TestClient(TestClient.DEFAULT_HOST);
   }
 
   @AfterClass
@@ -100,8 +112,9 @@ public class GrpcQueryTest
     QueryResponse response = client.client().submitQuery(request);
     assertEquals(QueryStatus.OK, response.getStatus());
   }
+
   /**
-   * Do a very basic query that output protobuf.
+   * Do a very basic query that outputs protobuf.
    */
   @Test
   public void testGrpcBasics()

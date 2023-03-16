@@ -19,12 +19,20 @@
 
 package org.apache.druid.grpc.server;
 
+import io.grpc.Context;
 import io.grpc.Grpc;
 import io.grpc.InsecureServerCredentials;
 import io.grpc.Server;
+import io.grpc.ServerInterceptor;
+import io.grpc.ServerInterceptors;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
-
-import javax.inject.Inject;
+import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
+import org.apache.druid.server.security.AllowAllAuthenticator;
+import org.apache.druid.server.security.AnonymousAuthenticator;
+import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.Authenticator;
+import org.apache.druid.server.security.AuthenticatorMapper;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -41,34 +49,68 @@ import java.util.concurrent.TimeUnit;
  */
 public class QueryServer
 {
+  public static final Context.Key<AuthenticationResult> AUTH_KEY = Context.key("druid-auth");
   private static final Logger log = new Logger(QueryServer.class);
 
+  private final AuthenticatorMapper authMapper;
   private final int port;
   private final QueryDriver driver;
   private Server server;
 
-  @Inject
   public QueryServer(
-      Integer port,
-      QueryDriver driver
+      GrpcQueryConfig config,
+      QueryDriver driver,
+      AuthenticatorMapper authMapper
   )
   {
-    this.port = port;
+    this.port = config.getPort();
     this.driver = driver;
+    this.authMapper = authMapper;
   }
 
   public void start() throws IOException
   {
     server = Grpc.newServerBuilderForPort(port, InsecureServerCredentials.create())
-            .addService(new QueryService(driver))
+            .addService(ServerInterceptors.intercept(new QueryService(driver), makeSecurityInterceptor()))
             .build()
             .start();
     log.info("Server started, listening on " + port);
   }
 
+  /**
+   * Map from a Druid authenticator to a gRPC server interceptor. This is a bit of a hack.
+   * Authenticators don't know about gRPC: we have to explicitly do the mapping. This means
+   * that auth extensions occur independently of gRPC and are not supported. Longer term,
+   * we need a way for the extension itself to do the required mapping.
+   */
+  private ServerInterceptor makeSecurityInterceptor()
+  {
+    // First look for a Basic authenticator
+    for (Authenticator authenticator : authMapper.getAuthenticatorChain()) {
+      if (authenticator instanceof BasicHTTPAuthenticator) {
+        log.info("Using Basic authentication");
+        return new BasicAuthServerInterceptor((BasicHTTPAuthenticator) authenticator);
+      }
+    }
+
+    // Otherwise, look for an Anonymous authenticator
+    for (Authenticator authenticator : authMapper.getAuthenticatorChain()) {
+      if (authenticator instanceof AnonymousAuthenticator || authenticator instanceof AllowAllAuthenticator) {
+        log.info("Using Anonymous authentication");
+        return new AnonymousAuthServerInterceptor(authenticator);
+      }
+    }
+
+    // gRPC does not support other forms of authenticators yet.
+    String msg = "The gRPC query server requires either a Basic or Anonymous authorizer: it does not work with others yet.";
+    log.error(msg);
+    throw new UOE(msg);
+  }
+
   public void stop() throws InterruptedException
   {
     if (server != null) {
+      log.info("Server stopping");
       server.shutdown().awaitTermination(30, TimeUnit.SECONDS);
     }
   }
@@ -79,6 +121,7 @@ public class QueryServer
   public void blockUntilShutdown() throws InterruptedException
   {
     if (server != null) {
+      log.info("Server stopping");
       server.awaitTermination();
     }
   }

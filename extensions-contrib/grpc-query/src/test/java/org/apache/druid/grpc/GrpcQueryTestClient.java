@@ -44,7 +44,7 @@ public class GrpcQueryTestClient
       System.err.println("Usage: sql-query");
       System.exit(1);
     }
-    TestClient client = new TestClient();
+    TestClient client = new TestClient(TestClient.DEFAULT_HOST);
     QueryRequest request = QueryRequest.newBuilder()
         .setQuery(args[0])
         .setResultFormat(QueryResultFormat.CSV)

@@ -467,18 +467,10 @@ public class QueryDriver
       //case JSON_OBJECT_LINES:
       //  throw new UnsupportedOperationException(); // TODO
       case PROTOBUF_INLINE:
-        try {
-          writer = new GrpcResultFormatWriter(
-                  new ProtobufWriter(out, (Class<GeneratedMessageV3>) Class.forName(request.getProtobufMessageName())),
-                  rowTransformer
-          );
-        }
-        catch (ClassNotFoundException e) {
-          throw new RequestError(
-              "The Protobuf class [%s] is not known. Is your protobuf jar on the class path?",
-              request.getProtobufMessageName()
-          );
-        }
+        writer = new GrpcResultFormatWriter(
+            new ProtobufWriter(out, getProtobufClass(request)),
+            rowTransformer
+        );
         break;
       // This is the hard one: encode the results as a Protobuf array.
       case PROTOBUF_RESPONSE:
@@ -489,5 +481,25 @@ public class QueryDriver
     GrpcResultsAccumulator accumulator = new GrpcResultsAccumulator(writer);
     accumulator.push(thePlan.run());
     return ByteString.copyFrom(out.toByteArray());
+  }
+
+  @SuppressWarnings("unchecked")
+  private Class<GeneratedMessageV3> getProtobufClass(final QueryRequest request)
+  {
+    try {
+      return (Class<GeneratedMessageV3>) Class.forName(request.getProtobufMessageName());
+    }
+    catch (ClassNotFoundException e) {
+      throw new RequestError(
+          "The Protobuf class [%s] is not known. Is your protobuf jar on the class path?",
+          request.getProtobufMessageName()
+      );
+    }
+    catch (ClassCastException e) {
+      throw new RequestError(
+          "The class [%s] is not a Protobuf",
+          request.getProtobufMessageName()
+      );
+    }
   }
 }

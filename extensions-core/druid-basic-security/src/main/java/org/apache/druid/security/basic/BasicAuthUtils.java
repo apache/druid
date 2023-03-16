@@ -48,7 +48,6 @@ import java.util.Map;
 
 public class BasicAuthUtils
 {
-
   private static final Logger log = new Logger(BasicAuthUtils.class);
   private static final SecureRandom SECURE_RANDOM = new SecureRandom();
   public static final String ADMIN_NAME = "admin";

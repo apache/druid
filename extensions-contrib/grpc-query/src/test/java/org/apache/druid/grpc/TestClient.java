@@ -19,6 +19,7 @@
 
 package org.apache.druid.grpc;
 
+import io.grpc.CallCredentials;
 import io.grpc.Grpc;
 import io.grpc.InsecureChannelCredentials;
 import io.grpc.ManagedChannel;
@@ -34,16 +35,22 @@ import java.util.concurrent.TimeUnit;
  */
 public class TestClient
 {
+  public static final String DEFAULT_HOST = "localhost:50051";
   private ManagedChannel channel;
   private QueryBlockingStub client;
 
-  public TestClient()
+  public TestClient(String target)
   {
     // Access a service running on the local machine on port 50051
-    this("localhost:50051");
+    this(target, null);
   }
 
-  public TestClient(String target)
+  public TestClient(String target, String user, String password)
+  {
+    this(target, new BasicCredentials(user, password));
+  }
+
+  public TestClient(String target, CallCredentials callCreds)
   {
     // Create a communication channel to the server, known as a Channel. Channels are thread-safe
     // and reusable. It is common to create channels at the beginning of your application and reuse
@@ -54,6 +61,9 @@ public class TestClient
     channel = Grpc.newChannelBuilder(target, InsecureChannelCredentials.create())
         .build();
     client = QueryGrpc.newBlockingStub(channel);
+    if (callCreds != null) {
+      client = client.withCallCredentials(callCreds);
+    }
   }
 
   public QueryBlockingStub client()

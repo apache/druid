@@ -19,8 +19,11 @@
 
 package org.apache.druid.grpc;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.grpc.server.GrpcEndpointInitializer;
 import org.apache.druid.grpc.server.GrpcQueryConfig;
+import org.apache.druid.server.security.AllowAllAuthenticator;
+import org.apache.druid.server.security.AuthenticatorMapper;
 
 import java.io.File;
 
@@ -41,10 +44,17 @@ public class TestServer
   {
     frameworkFixture = new QueryFrameworkFixture(new File("/tmp/druid"));
     GrpcQueryConfig config = new GrpcQueryConfig(50051);
+    AuthenticatorMapper authMapper = new AuthenticatorMapper(
+        ImmutableMap.of(
+            "test",
+            new AllowAllAuthenticator()
+        )
+    );
     serverInit = new GrpcEndpointInitializer(
         config,
         frameworkFixture.jsonMapper(),
-        frameworkFixture.statementFactory()
+        frameworkFixture.statementFactory(),
+        authMapper
     );
     serverInit.start();
     Runtime.getRuntime().addShutdownHook(new Thread()
