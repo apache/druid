@@ -57,7 +57,7 @@ public class ExtensionsConfig
    * Extensions are resolved in order along the path: the first match wins. If
    * {@link #directory} is set, it becomes the first element on the full path.
    * A typical use is to let {@code directory} point to {@code $DRUID_HOME/extensions},
-   * and use {@link path} to point to extra extensions mounted into a Docker container.
+   * and use {@link #path} to point to extra extensions mounted into a Docker container.
    * Primarily for testing.
    */
   @JsonProperty

@@ -131,7 +131,7 @@ public class ExtensionsLoaderTest
   }
 
   @Test
-  public void testGetExtensionFilesToLoad_no_extensions_dir() throws IOException
+  public void testGetExtensionFilesToLoad_no_extensions_dir()
   {
     final ExtensionsConfig config = ExtensionsConfig.builder()
         .directory("")
@@ -148,7 +148,7 @@ public class ExtensionsLoaderTest
    * missing as long as the load list is empty.
    */
   @Test
-  public void testGetExtensionFilesToLoad_default_extensions_dir() throws IOException
+  public void testGetExtensionFilesToLoad_default_extensions_dir()
   {
     final ExtensionsConfig config = new ExtensionsConfig();
     final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
@@ -163,7 +163,7 @@ public class ExtensionsLoaderTest
    * then complain about the missing directory.
    */
   @Test
-  public void testGetExtensionFilesToLoad_default_with_load_list() throws IOException
+  public void testGetExtensionFilesToLoad_default_with_load_list()
   {
     final ExtensionsConfig config = ExtensionsConfig.builder()
         .loadList(Collections.singletonList("foo"))
@@ -239,7 +239,7 @@ public class ExtensionsLoaderTest
     final File mysql_metadata_storage = new File(extensionsDir, "mysql-metadata-storage");
     FileUtils.mkdirp(mysql_metadata_storage);
 
-    final List<File> expectedFileList = Arrays.asList(mysql_metadata_storage);
+    final List<File> expectedFileList = Collections.singletonList(mysql_metadata_storage);
     final List<File> actualFileList = extnLoader.getExtensionFilesToLoad();
     Collections.sort(actualFileList);
     Assert.assertEquals(expectedFileList, actualFileList);
