@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.Lists;
 import org.apache.druid.client.ImmutableDruidDataSource;
-import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.BalancerSegmentHolder;
@@ -43,6 +42,7 @@ import java.util.SortedSet;
 import java.util.stream.Collectors;
 
 /**
+ *
  */
 public class BalanceSegments implements CoordinatorDuty
 {
@@ -170,7 +170,13 @@ public class BalanceSegments implements CoordinatorDuty
         maxSegmentsToMoveFromDecommissioningNodes
     );
     Pair<Integer, Integer> decommissioningResult =
-        balanceServers(params, decommissioningServers, activeServers, maxSegmentsToMoveFromDecommissioningNodes, loader);
+        balanceServers(
+            params,
+            decommissioningServers,
+            activeServers,
+            maxSegmentsToMoveFromDecommissioningNodes,
+            loader
+        );
 
     // After moving segments from decomissioning servers, move the remaining segments from the rest of the servers.
     int maxGeneralSegmentsToMove = maxSegmentsToMove - decommissioningResult.lhs;
@@ -213,12 +219,8 @@ public class BalanceSegments implements CoordinatorDuty
       return new Pair<>(0, 0);
     }
 
+    final Iterator<BalancerSegmentHolder> segmentsToMove;
     final BalancerStrategy strategy = params.getBalancerStrategy();
-    final int maxIterations = 2 * maxSegmentsToMove;
-    int moved = 0, unmoved = 0;
-
-    Iterator<BalancerSegmentHolder> segmentsToMove;
-    // The pick method depends on if the operator has enabled batched segment sampling in the Coorinator dynamic config.
     if (params.getCoordinatorDynamicConfig().useBatchedSegmentSampler()) {
       segmentsToMove = strategy.pickSegmentsToMove(
           toMoveFrom,
@@ -233,12 +235,8 @@ public class BalanceSegments implements CoordinatorDuty
       );
     }
 
-    //noinspection ForLoopThatDoesntUseLoopVariable
-    for (int iter = 0; (moved + unmoved) < maxSegmentsToMove; ++iter) {
-      if (!segmentsToMove.hasNext()) {
-        log.info("All servers to move segments from are empty, ending run.");
-        break;
-      }
+    int moved = 0, unmoved = 0;
+    while (segmentsToMove.hasNext() && (moved + unmoved) < maxSegmentsToMove) {
       final BalancerSegmentHolder segmentToMoveHolder = segmentsToMove.next();
 
       // DruidCoordinatorRuntimeParams.getUsedSegments originate from SegmentsMetadataManager, i. e. that's a set of segments
@@ -248,63 +246,51 @@ public class BalanceSegments implements CoordinatorDuty
       // need to be balanced.
       final DataSegment segmentToMove = getLoadableSegment(segmentToMoveHolder.getSegment(), params);
       if (segmentToMove != null) {
-        final ImmutableDruidServer fromServer = segmentToMoveHolder.getFromServer().getServer();
-        // we want to leave the server the segment is currently on in the list...
-        // but filter out replicas that are already serving the segment, and servers with a full load queue
-        final List<ServerHolder> toMoveToWithLoadQueueCapacityAndNotServingSegment =
+        // Keep the current server in the eligible list but filter out
+        // servers already serving a replica or having a full load queue
+        final ServerHolder source = segmentToMoveHolder.getServer();
+        final List<ServerHolder> eligibleDestinationServers =
             toMoveTo.stream()
-                    .filter(s -> s.getServer().equals(fromServer)
-                                 || s.canLoadSegment(segmentToMove))
+                    .filter(
+                        s -> s.getServer().equals(source.getServer())
+                             || s.canLoadSegment(segmentToMove))
                     .collect(Collectors.toList());
 
-        if (toMoveToWithLoadQueueCapacityAndNotServingSegment.size() > 0) {
-          final ServerHolder destinationHolder =
-              strategy.findNewSegmentHomeBalancer(segmentToMove, toMoveToWithLoadQueueCapacityAndNotServingSegment);
-
-          if (destinationHolder != null && !destinationHolder.getServer().equals(fromServer)) {
-            if (moveSegment(segmentToMoveHolder, destinationHolder, loader)) {
-              moved++;
-            } else {
-              unmoved++;
-            }
-          } else {
-            log.debug("Segment [%s] is 'optimally' placed.", segmentToMove.getId());
-            unmoved++;
-          }
-        } else {
+        if (eligibleDestinationServers.isEmpty()) {
           log.debug("No valid movement destinations for segment [%s].", segmentToMove.getId());
           unmoved++;
+        } else {
+          final ServerHolder destination =
+              strategy.findNewSegmentHomeBalancer(segmentToMove, eligibleDestinationServers);
+
+          if (destination == null || destination.getServer().equals(source.getServer())) {
+            log.debug("Segment [%s] is 'optimally' placed.", segmentToMove.getId());
+            unmoved++;
+          } else if (moveSegment(segmentToMove, source, destination, loader)) {
+            moved++;
+          } else {
+            unmoved++;
+          }
         }
-      }
-      if (iter >= maxIterations) {
-        log.info(
-            "Unable to select %d remaining candidate segments out of %d total to balance "
-            + "after %d iterations, ending run.",
-            (maxSegmentsToMove - moved - unmoved),
-            maxSegmentsToMove,
-            iter
-        );
-        break;
+      } else {
+        unmoved++;
       }
     }
     return new Pair<>(moved, unmoved);
   }
 
   protected boolean moveSegment(
-      final BalancerSegmentHolder segmentHolder,
-      final ServerHolder toServer,
-      final SegmentLoader loader
+      DataSegment segment,
+      ServerHolder fromServer,
+      ServerHolder toServer,
+      SegmentLoader loader
   )
   {
     try {
-      return loader.moveSegment(
-          segmentHolder.getSegment(),
-          segmentHolder.getFromServer(),
-          toServer
-      );
+      return loader.moveSegment(segment, fromServer, toServer);
     }
     catch (Exception e) {
-      log.makeAlert(e, "[%s] : Moving exception", segmentHolder.getSegment().getId()).emit();
+      log.makeAlert(e, "[%s] : Moving exception", segment.getId()).emit();
       return false;
     }
   }

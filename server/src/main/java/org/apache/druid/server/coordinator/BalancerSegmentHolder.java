@@ -26,18 +26,18 @@ import org.apache.druid.timeline.DataSegment;
  */
 public class BalancerSegmentHolder
 {
-  private final ServerHolder fromServer;
+  private final ServerHolder server;
   private final DataSegment segment;
 
-  public BalancerSegmentHolder(ServerHolder fromServer, DataSegment segment)
+  public BalancerSegmentHolder(ServerHolder server, DataSegment segment)
   {
-    this.fromServer = fromServer;
+    this.server = server;
     this.segment = segment;
   }
 
-  public ServerHolder getFromServer()
+  public ServerHolder getServer()
   {
-    return fromServer;
+    return server;
   }
 
   public DataSegment getSegment()

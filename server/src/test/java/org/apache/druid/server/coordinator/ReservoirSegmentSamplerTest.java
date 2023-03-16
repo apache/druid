@@ -159,7 +159,7 @@ public class ReservoirSegmentSamplerTest
     // Verify that only the segments on the historical are picked
     Assert.assertEquals(2, pickedSegments.size());
     for (BalancerSegmentHolder holder : pickedSegments) {
-      Assert.assertEquals(historical, holder.getFromServer());
+      Assert.assertEquals(historical, holder.getServer());
     }
   }
 
