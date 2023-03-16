@@ -274,6 +274,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         null
     );
 
+
     cursorSequence.accumulate(null, (accumulated, cursor) -> {
       ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 

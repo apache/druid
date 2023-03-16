@@ -91,15 +91,19 @@ public class DruidFilterUnnestRule extends RelOptRule
     }
 
     @Override
-    public void onMatch(RelOptRuleCall call)
+    public boolean matches(RelOptRuleCall call)
     {
       final Project rightP = call.rel(0);
       final SqlKind rightProjectKind = rightP.getChildExps().get(0).getKind();
-      final DruidUnnestRel unnestDatasourceRel = call.rel(1);
+      // allow rule to trigger only if there's a string CAST or numeric literal cast
+      return rightP.getProjects().size() == 1 && (rightProjectKind == SqlKind.CAST || rightProjectKind == SqlKind.LITERAL);
+    }
 
-      if (rightP.getProjects().size() == 1 && (rightProjectKind == SqlKind.CAST || rightProjectKind == SqlKind.LITERAL)) {
-        call.transformTo(unnestDatasourceRel);
-      }
+    @Override
+    public void onMatch(RelOptRuleCall call)
+    {
+      final DruidUnnestRel unnestDatasourceRel = call.rel(1);
+      call.transformTo(unnestDatasourceRel);
     }
   }
 }
