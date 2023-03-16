@@ -221,8 +221,6 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
   @Override
   public RelWriter explainTerms(RelWriter pw)
   {
-    super.explainTerms(pw);
-
     for (int i = 0; i < rels.size(); i++) {
       pw.input(StringUtils.format("input#%d", i), rels.get(i));
     }

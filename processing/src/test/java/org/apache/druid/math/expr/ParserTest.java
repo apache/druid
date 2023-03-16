@@ -680,6 +680,13 @@ public class ParserTest extends InitializedNullHandlingTest
         "(map ([x] -> (case_searched [(== x b), b, (== x g), g, Other])), [x])",
         ImmutableList.of("x")
     );
+
+    validateApplyUnapplied(
+        "array_overlap(nvl(x, 'other'), ['a', 'b', 'other'])",
+        "(array_overlap [(nvl [x, other]), [a, b, other]])",
+        "(array_overlap [(map ([x] -> (nvl [x, other])), [x]), [a, b, other]])",
+        ImmutableList.of("x")
+    );
   }
 
   @Test

@@ -267,7 +267,6 @@ public class WorkerSketchFetcher implements AutoCloseable
                 ),
                 retryOperation
             );
-
           });
         }
       }

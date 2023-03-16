@@ -592,6 +592,7 @@ The following table lists the context parameters for the MSQ task engine:
 | `maxNumTasks` | SELECT, INSERT, REPLACE<br /><br />The maximum total number of tasks to launch, including the controller task. The lowest possible value for this setting is 2: one controller and one worker. All tasks must be able to launch simultaneously. If they cannot, the query returns a `TaskStartTimeout` error code after approximately 10 minutes.<br /><br />May also be provided as `numTasks`. If both are present, `maxNumTasks` takes priority.| 2 |
 | `taskAssignment` | SELECT, INSERT, REPLACE<br /><br />Determines how many tasks to use. Possible values include: <ul><li>`max`: Uses as many tasks as possible, up to `maxNumTasks`.</li><li>`auto`: When file sizes can be determined through directory listing (for example: local files, S3, GCS, HDFS) uses as few tasks as possible without exceeding 10 GiB or 10,000 files per task, unless exceeding these limits is necessary to stay within `maxNumTasks`. When file sizes cannot be determined through directory listing (for example: http), behaves the same as `max`.</li></ul> | `max` |
 | `finalizeAggregations` | SELECT, INSERT, REPLACE<br /><br />Determines the type of aggregation to return. If true, Druid finalizes the results of complex aggregations that directly appear in query results. If false, Druid returns the aggregation's intermediate type rather than finalized type. This parameter is useful during ingestion, where it enables storing sketches directly in Druid tables. For more information about aggregations, see [SQL aggregation functions](../querying/sql-aggregations.md). | true |
+| `sqlJoinAlgorithm` | SELECT, INSERT, REPLACE<br /><br />Algorithm to use for JOIN. Use `broadcast` (the default) for broadcast hash join or `sortMerge` for sort-merge join. Affects all JOIN operations in the query. See [Joins](#joins) for more details. | `broadcast` |
 | `rowsInMemory` | INSERT or REPLACE<br /><br />Maximum number of rows to store in memory at once before flushing to disk during the segment generation process. Ignored for non-INSERT queries. In most cases, use the default value. You may need to override the default if you run into one of the [known issues](./known-issues.md) around memory usage. | 100,000 |
 | `segmentSortOrder` | INSERT or REPLACE<br /><br />Normally, Druid sorts rows in individual segments using `__time` first, followed by the [CLUSTERED BY](#clustered-by) clause. When you set `segmentSortOrder`, Druid sorts rows in segments using this column list first, followed by the CLUSTERED BY order.<br /><br />You provide the column list as comma-separated values or as a JSON array in string form. If your query includes `__time`, then this list must begin with `__time`. For example, consider an INSERT query that uses `CLUSTERED BY country` and has `segmentSortOrder` set to `__time,city`. Within each time chunk, Druid assigns rows to segments based on `country`, and then within each of those segments, Druid sorts those rows by `__time` first, then `city`, then `country`. | empty list |
 | `maxParseExceptions`| SELECT, INSERT, REPLACE<br /><br />Maximum number of parse exceptions that are ignored while executing the query before it stops with `TooManyWarningsFault`. To ignore all the parse exceptions, set the value to -1.| 0 |
@@ -603,6 +604,92 @@ The following table lists the context parameters for the MSQ task engine:
 | `composedIntermediateSuperSorterStorageEnabled` | SELECT, INSERT, REPLACE<br /><br /> Whether to enable automatic fallback to durable storage from local storage for sorting's intermediate data. Requires to setup `intermediateSuperSorterStorageMaxLocalBytes` limit for local storage and durable shuffle storage feature as well.| `false` |
 | `intermediateSuperSorterStorageMaxLocalBytes` | SELECT, INSERT, REPLACE<br /><br /> Whether to enable a byte limit on local storage for sorting's intermediate data. If that limit is crossed, the task fails with `ResourceLimitExceededException`.| `9223372036854775807` |
 | `maxInputBytesPerWorker` | Should be used in conjunction with taskAssignment `auto` mode. When dividing the input of a stage among the workers, this parameter determines the maximum size in bytes that are given to a single worker before the next worker is chosen. This parameter is only used as a guideline during input slicing, and does not guarantee that a the input cannot be larger. For example, we have 3 files. 3, 7, 12 GB each. then we would end up using 2 worker: worker 1 -> 3, 7 and worker 2 -> 12. This value is used for all stages in a query. | `10737418240` |
+
+## Joins
+
+Joins in multi-stage queries use one of two algorithms, based on the [context parameter](#context-parameters)
+`sqlJoinAlgorithm`. This context parameter applies to the entire SQL statement, so it is not possible to mix different
+join algorithms in the same query.
+
+### Broadcast
+
+Set `sqlJoinAlgorithm` to `broadcast`.
+
+The default join algorithm for multi-stage queries is a broadcast hash join, which is similar to how
+[joins are executed with native queries](../querying/query-execution.md#join). First, any adjacent joins are flattened
+into a structure with a "base" input (the bottom-leftmost one) and other leaf inputs (the rest). Next, any subqueries
+that are inputs the join (either base or other leafs) are planned into independent stages. Then, the non-base leaf
+inputs are all connected as broadcast inputs to the "base" stage.
+
+Together, all of these non-base leaf inputs must not exceed the [limit on broadcast table footprint](#limits). There
+is no limit on the size of the base (leftmost) input.
+
+Only LEFT JOIN, INNER JOIN, and CROSS JOIN are supported with with `broadcast`.
+
+Join conditions, if present, must be equalities. It is not necessary to include a join condition; for example,
+`CROSS JOIN` and comma join do not require join conditions.
+
+As an example, the following statement has a single join chain where `orders` is the base input, and `products` and
+`customers` are non-base leaf inputs. The query will first read `products` and `customers`, then broadcast both to
+the stage that reads `orders`. That stage loads the broadcast inputs (`products` and `customers`) in memory, and walks
+through `orders` row by row. The results are then aggregated and written to the table `orders_enriched`. The broadcast
+inputs (`products` and `customers`) must fall under the limit on broadcast table footprint, but the base `orders` input
+can be unlimited in size.
+
+```
+REPLACE INTO orders_enriched
+OVERWRITE ALL
+SELECT
+  orders.__time,
+  products.name AS product_name,
+  customers.name AS customer_name,
+  SUM(orders.amount) AS amount
+FROM orders
+LEFT JOIN products ON orders.product_id = products.id
+LEFT JOIN customers ON orders.customer_id = customers.id
+GROUP BY 1, 2
+PARTITIONED BY HOUR
+CLUSTERED BY product_name
+```
+
+### Sort-merge
+
+Set `sqlJoinAlgorithm` to `sortMerge`.
+
+Multi-stage queries can use a sort-merge join algorithm. With this algorithm, each pairwise join is planned into its own
+stage with two inputs. The two inputs are partitioned and sorted using a hash partitioning on the same key. This
+approach is generally less performant, but more scalable, than `broadcast`. There are various scenarios where broadcast
+join would return a [`BroadcastTablesTooLarge`](#errors) error, but a sort-merge join would succeed.
+
+There is no limit on the overall size of either input, so sort-merge is a good choice for performing a join of two large
+inputs, or for performing a self-join of a large input with itself.
+
+There is a limit on the amount of data associated with each individual key. If _both_ sides of the join exceed this
+limit, the query returns a [`TooManyRowsWithSameKey`](#errors) error. If only one side exceeds the limit, the query
+does not return this error.
+
+Join conditions, if present, must be equalities. It is not necessary to include a join condition; for example,
+`CROSS JOIN` and comma join do not require join conditions.
+
+All join types are supported with `sortMerge`: LEFT, RIGHT, INNER, FULL, and CROSS.
+
+As an example, the following statement runs using a single sort-merge join stage that receives `eventstream`
+(partitioned on `user_id`) and `users` (partitioned on `id`) as inputs. There is no limit on the size of either input.
+
+```
+REPLACE INTO eventstream_enriched
+OVERWRITE ALL
+SELECT
+  eventstream.__time,
+  eventstream.user_id,
+  eventstream.event_type,
+  eventstream.event_details,
+  users.signup_date AS user_signup_date
+FROM eventstream
+LEFT JOIN users ON eventstream.user_id = users.id
+PARTITIONED BY HOUR
+CLUSTERED BY user
+```
 
 ## Sketch Merging Mode
 This section details the advantages and performance of various Cluster By Statistics Merge Modes.
@@ -656,6 +743,7 @@ The following table lists query limits:
 | Number of cluster by columns that can appear in a stage | 1,500 | [`TooManyClusteredByColumns`](#error_TooManyClusteredByColumns) |
 | Number of workers for any one stage. | Hard limit is 1,000. Memory-dependent soft limit may be lower. | [`TooManyWorkers`](#error_TooManyWorkers) |
 | Maximum memory occupied by broadcasted tables. | 30% of each [processor memory bundle](concepts.md#memory-usage). | [`BroadcastTablesTooLarge`](#error_BroadcastTablesTooLarge) |
+| Maximum memory occupied by buffered data during sort-merge join. Only relevant when `sqlJoinAlgorithm` is `sortMerge`. | 10 MB | `TooManyRowsWithSameKey` |
 | Maximum relaunch attempts per worker. Initial run is not a relaunch. The worker will be spawned 1 + `workerRelaunchLimit` times before the job fails. | 2 | `TooManyAttemptsForWorker` |
 | Maximum relaunch attempts for a job across all workers. | 100 | `TooManyAttemptsForJob` |
 <a name="errors"></a>
@@ -687,10 +775,11 @@ The following table describes error codes you may encounter in the `multiStageQu
 | <a name="error_TooManyInputFiles">`TooManyInputFiles`</a> | Exceeded the maximum number of input files or segments per worker (10,000 files or segments).<br /><br />If you encounter this limit, consider adding more workers, or breaking up your query into smaller queries that process fewer files or segments per query. | `numInputFiles`: The total number of input files/segments for the stage.<br /><br />`maxInputFiles`: The maximum number of input files/segments per worker per stage.<br /><br />`minNumWorker`: The minimum number of workers required for a successful run. |
 | <a name="error_TooManyPartitions">`TooManyPartitions`</a> | Exceeded the maximum number of partitions for a stage (25,000 partitions).<br /><br />This can occur with INSERT or REPLACE statements that generate large numbers of segments, since each segment is associated with a partition. If you encounter this limit, consider breaking up your INSERT or REPLACE statement into smaller statements that process less data per statement. | `maxPartitions`: The limit on partitions which was exceeded |
 | <a name="error_TooManyClusteredByColumns">`TooManyClusteredByColumns`</a>  | Exceeded the maximum number of clustering columns for a stage (1,500 columns).<br /><br />This can occur with `CLUSTERED BY`, `ORDER BY`, or `GROUP BY` with a large number of columns. | `numColumns`: The number of columns requested.<br /><br />`maxColumns`: The limit on columns which was exceeded.`stage`: The stage number exceeding the limit<br /><br /> |
+| <a name="error_TooManyRowsWithSameKey">`TooManyRowsWithSameKey`</a> | The number of rows for a given key exceeded the maximum number of buffered bytes on both sides of a join. See the [Limits](#limits) table for the specific limit. Only occurs when `sqlJoinAlgorithm` is `sortMerge`. | `key`: The key that had a large number of rows.<br /><br />`numBytes`: Number of bytes buffered, which may include other keys.<br /><br />`maxBytes`: Maximum number of bytes buffered. |
 | <a name="error_TooManyColumns">`TooManyColumns`</a> | Exceeded the maximum number of columns for a stage (2,000 columns). | `numColumns`: The number of columns requested.<br /><br />`maxColumns`: The limit on columns which was exceeded. |
 | <a name="error_TooManyWarnings">`TooManyWarnings`</a> | Exceeded the maximum allowed number of warnings of a particular type. | `rootErrorCode`: The error code corresponding to the exception that exceeded the required limit. <br /><br />`maxWarnings`: Maximum number of warnings that are allowed for the corresponding `rootErrorCode`. |
 | <a name="error_TooManyWorkers">`TooManyWorkers`</a> | Exceeded the maximum number of simultaneously-running workers. See the [Limits](#limits) table for more details. | `workers`: The number of simultaneously running workers that exceeded a hard or soft limit. This may be larger than the number of workers in any one stage if multiple stages are running simultaneously. <br /><br />`maxWorkers`: The hard or soft limit on workers that was exceeded. If this is lower than the hard limit (1,000 workers), then you can increase the limit by adding more memory to each task. |
-| <a name="error_NotEnoughMemory">`NotEnoughMemory`</a> | Insufficient memory to launch a stage. | `serverMemory`: The amount of memory available to a single process.<br /><br />`serverWorkers`: The number of workers running in a single process.<br /><br />`serverThreads`: The number of threads in a single process. |
+| <a name="error_NotEnoughMemory">`NotEnoughMemory`</a> | Insufficient memory to launch a stage. | `suggestedServerMemory`: Suggested number of bytes of memory to allocate to a given process. <br /><br />`serverMemory`: The number of bytes of memory available to a single process.<br /><br />`usableMemory`: The number of usable bytes of memory for a single process.<br /><br />`serverWorkers`: The number of workers running in a single process.<br /><br />`serverThreads`: The number of threads in a single process. |
 | <a name="error_WorkerFailed">`WorkerFailed`</a> | A worker task failed unexpectedly. | `errorMsg`<br /><br />`workerTaskId`: The ID of the worker task. |
 | <a name="error_WorkerRpcFailed">`WorkerRpcFailed`</a> | A remote procedure call to a worker task failed and could not recover. | `workerTaskId`: the id of the worker task |
 | <a name="error_UnknownError">`UnknownError`</a> | All other errors. | `message` |

@@ -35,6 +35,11 @@ public interface FrameComparisonWidget
   RowKey readKey(int row);
 
   /**
+   * Whether a particular row has a null field in its comparison key.
+   */
+  boolean isPartiallyNullKey(int row);
+
+  /**
    * Compare a specific row of this frame to the provided key. The key must have been created with sortColumns
    * that match the ones used to create this widget, or else results are undefined.
    */
@@ -42,7 +47,7 @@ public interface FrameComparisonWidget
 
   /**
    * Compare a specific row of this frame to a specific row of another frame. The other frame must have the same
-   * signature, or else results are undefined. The other frame may be the same object as this frame; for example,
+   * sort key, or else results are undefined. The other frame may be the same object as this frame; for example,
    * this is used by {@link org.apache.druid.frame.write.FrameSort} to sort frames in-place.
    */
   int compare(int row, FrameComparisonWidget otherWidget, int otherRow);
