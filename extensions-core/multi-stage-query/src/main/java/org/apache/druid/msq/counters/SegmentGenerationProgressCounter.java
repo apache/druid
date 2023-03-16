@@ -20,7 +20,6 @@
 package org.apache.druid.msq.counters;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
