@@ -48,7 +48,7 @@ env:
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
 
 jobs:
-  test: # Github job that runs a given revised/new IT against retrieved cached druid docker image
+  test: # GitHub job that runs a given revised/new IT against retrieved cached druid docker image
     name: ${{ inputs.it }} integration test (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }}, Indexer=${{ inputs.use_indexer }})
     runs-on: ubuntu-22.04
     steps:
