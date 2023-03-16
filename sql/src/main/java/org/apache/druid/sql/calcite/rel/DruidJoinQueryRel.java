@@ -57,6 +57,8 @@ import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -160,7 +162,12 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       rightDataSource = rightQuery.getDataSource();
     }
 
-    final Pair<String, RowSignature> prefixSignaturePair = computeJoinRowSignature(leftSignature, rightSignature);
+
+    final Pair<String, RowSignature> prefixSignaturePair = computeJoinRowSignature(
+        leftSignature,
+        rightSignature,
+        findExistingJoinPrefixes(leftDataSource, rightDataSource)
+    );
 
     VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(
         prefixSignaturePair.rhs,
@@ -380,13 +387,34 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
              && DruidRels.druidTableIfLeafRel(right).filter(table -> table.getDataSource().isGlobal()).isPresent());
   }
 
+  static Set<String> findExistingJoinPrefixes(DataSource... dataSources)
+  {
+    final ArrayList<DataSource> copy = new ArrayList<>(Arrays.asList(dataSources));
+
+    Set<String> prefixes = new HashSet<>();
+    while (!copy.isEmpty()) {
+      DataSource current = copy.remove(0);
+      if (current instanceof JoinDataSource) {
+        JoinDataSource joiner = (JoinDataSource) current;
+        prefixes.add(joiner.getRightPrefix());
+        if (joiner.getLeft() instanceof JoinDataSource) {
+          copy.add(joiner.getLeft());
+        }
+        if (joiner.getRight() instanceof JoinDataSource) {
+          copy.add(joiner.getRight());
+        }
+      }
+    }
+    return prefixes;
+  }
   /**
    * Returns a Pair of "rightPrefix" (for JoinDataSource) and the signature of rows that will result from
    * applying that prefix.
    */
   static Pair<String, RowSignature> computeJoinRowSignature(
       final RowSignature leftSignature,
-      final RowSignature rightSignature
+      final RowSignature rightSignature,
+      final Set<String> prefixes
   )
   {
     final RowSignature.Builder signatureBuilder = RowSignature.builder();
@@ -395,8 +423,17 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       signatureBuilder.add(column, leftSignature.getColumnType(column).orElse(null));
     }
 
-    // Need to include the "0" since findUnusedPrefixForDigits only guarantees safety for digit-initiated suffixes
-    final String rightPrefix = Calcites.findUnusedPrefixForDigits("j", leftSignature.getColumnNames()) + "0.";
+    StringBuilder base = new StringBuilder("j");
+    // the prefixes collection contains all known join prefixes, which might be in use for nested queries but not
+    // present in the top level row signatures
+    // loop until we are sure we got a new prefix
+    String maybePrefix;
+    do {
+      // Need to include the "0" since findUnusedPrefixForDigits only guarantees safety for digit-initiated suffixes
+      maybePrefix = Calcites.findUnusedPrefixForDigits(base.toString(), leftSignature.getColumnNames()) + "0.";
+      base.insert(0, "_");
+    } while (prefixes.contains(maybePrefix));
+    final String rightPrefix = maybePrefix;
 
     for (final String column : rightSignature.getColumnNames()) {
       signatureBuilder.add(rightPrefix + column, rightSignature.getColumnType(column).orElse(null));
