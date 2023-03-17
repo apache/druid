@@ -276,7 +276,6 @@ case $CMD in
     # Return Maven's return code as the script's return code.
     set +e
     mvn $TEST_OPTIONS -P IT-$CATEGORY -pl $MAVEN_PROJECT
-    ls /bogus
     RESULT=$?
     set -e
     $IT_CASES_DIR/cluster.sh down $CATEGORY
