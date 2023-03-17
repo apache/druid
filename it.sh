@@ -296,7 +296,7 @@ case $CMD in
     fi
     exit $RESULT
     ;;
-  # Name is delibrately long to avoid accidental use.
+  # Name is deliberately long to avoid accidental use.
   "prune-containers" )
     if [ $(docker ps | wc -l) -ne 1 ]; then
       echo "Cleaning running containers"
