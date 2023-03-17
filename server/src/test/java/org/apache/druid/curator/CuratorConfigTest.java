@@ -53,6 +53,6 @@ public class CuratorConfigTest extends JsonConfigTesterBase<CuratorConfig>
     Assert.assertEquals(false, config.getEnableAcl());
     Assert.assertNull(config.getZkUser());
     Assert.assertEquals("digest", config.getAuthScheme());
-    Assert.assertEquals(5, config.getMaxZkRetries());
+    Assert.assertEquals(29, config.getMaxZkRetries());
   }
 }
