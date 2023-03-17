@@ -4769,8 +4769,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .context(queryContext)
                                 .build()
                         ),
-                        "j0.",
-                        equalsCondition(makeColumnExpression("v0"), makeColumnExpression("j0.v0")),
+                        "_j0.",
+                        equalsCondition(makeColumnExpression("v0"), makeColumnExpression("_j0.v0")),
                         JoinType.INNER
                     )
                 )
@@ -4781,7 +4781,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                     ImmutableSet.of("a"),
                     true
                 ))
-                .columns("dim3", "j0.dim3")
+                .columns("_j0.dim3", "dim3")
                 .context(queryContext)
                 .build()
         ),

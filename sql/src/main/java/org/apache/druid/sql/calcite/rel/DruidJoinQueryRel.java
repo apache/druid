@@ -394,15 +394,10 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     Set<String> prefixes = new HashSet<>();
     while (!copy.isEmpty()) {
       DataSource current = copy.remove(0);
+      copy.addAll(current.getChildren());
       if (current instanceof JoinDataSource) {
         JoinDataSource joiner = (JoinDataSource) current;
         prefixes.add(joiner.getRightPrefix());
-        if (joiner.getLeft() instanceof JoinDataSource) {
-          copy.add(joiner.getLeft());
-        }
-        if (joiner.getRight() instanceof JoinDataSource) {
-          copy.add(joiner.getRight());
-        }
       }
     }
     return prefixes;
