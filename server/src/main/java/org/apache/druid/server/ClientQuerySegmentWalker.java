@@ -30,14 +30,12 @@ import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
+import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
-import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.processor.FrameRowTooLargeException;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
-import org.apache.druid.frame.write.columnar.ColumnarFrameWriterFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -62,15 +60,9 @@ import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.BaseObjectColumnValueSelector;
-import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -88,7 +80,6 @@ import java.util.Queue;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
@@ -365,7 +356,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         if (current instanceof QueryDataSource) {
           throw new ISE("Got a QueryDataSource[%s], should've walked it away in the loop above.", current);
         }
-          current = inlineIfNecessary(
+        current = inlineIfNecessary(
             current,
             null,
             subqueryRowLimitAccumulator,
@@ -641,34 +632,34 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
     final RowSignature signature = toolChest.resultArraySignature(query);
 
-//    final ArrayList<Object[]> resultList = new ArrayList<>();
-//
-//    toolChest.resultsAsArrays(query, results).accumulate(
-//        resultList,
-//        (acc, in) -> {
-//          if (limitAccumulator.getAndIncrement() >= limitToUse) {
-//            throw ResourceLimitExceededException.withMessage(
-//                "Subquery generated results beyond maximum[%d]",
-//                limitToUse
-//            );
-//          }
-//          long estimatedMemorySize = estimateResultRowSize(in, signature);
-//          if (memoryLimitAccumulator.getAndAdd(estimatedMemorySize) >= memoryLimitToUse) {
-//            throw ResourceLimitExceededException.withMessage(
-//                "Subquery estimatedly consuming memory beyond maximum %d byte(s)",
-//                memoryLimitToUse
-//            );
-//          }
-//          acc.add(in);
-//          return acc;
-//        }
-//    );
+    /*final ArrayList<Object[]> resultList = new ArrayList<>();
+
+    toolChest.resultsAsArrays(query, results).accumulate(
+        resultList,
+        (acc, in) -> {
+          if (limitAccumulator.getAndIncrement() >= limitToUse) {
+            throw ResourceLimitExceededException.withMessage(
+                "Subquery generated results beyond maximum[%d]",
+                limitToUse
+            );
+          }
+          long estimatedMemorySize = estimateResultRowSize(in, signature);
+          if (memoryLimitAccumulator.getAndAdd(estimatedMemorySize) >= memoryLimitToUse) {
+            throw ResourceLimitExceededException.withMessage(
+                "Subquery estimatedly consuming memory beyond maximum %d byte(s)",
+                memoryLimitToUse
+            );
+          }
+          acc.add(in);
+          return acc;
+        }
+    );*/
     final List<Object[]> resultList = toolChest.resultsAsArrays(query, results).toList();
     final Frame frame;
 
     FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
         FrameType.ROW_BASED,
-        new SingleMemoryAllocatorFactory(ArenaMemoryAllocator.createOnHeap(8_000_000)),
+        new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
         signature,
         new ArrayList<>()
     );
@@ -688,20 +679,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
       frame = Frame.wrap(frameWriter.toByteArray());
     }
-
-//    toolChest.resultsAsArrays(query, results).accumulate(
-//        resultList,
-//        (acc, in) -> {
-//          if (limitAccumulator.getAndIncrement() >= limitToUse) {
-//            throw ResourceLimitExceededException.withMessage(
-//                "Subquery generated results beyond maximum[%d]",
-//                limitToUse
-//            );
-//          }
-//          acc.add(in);
-//          return acc;
-//        }
-//    );
 
     return InlineDataSource.fromFrame(frame, signature);
   }

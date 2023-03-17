@@ -58,7 +58,8 @@ public class InlineResultsCursor implements Cursor
   private final List<Object[]> results;
 
 
-  public InlineResultsCursor(List<Object[]> results, RowSignature rowSignature) {
+  public InlineResultsCursor(List<Object[]> results, RowSignature rowSignature)
+  {
     this.results = Preconditions.checkNotNull(results, "'results' cannot be null");
     this.rowSignature = rowSignature;
     this.offset = new SimpleAscendingOffset(results.size());
@@ -85,7 +86,7 @@ public class InlineResultsCursor implements Cursor
       @Override
       public ColumnCapabilities getColumnCapabilities(String column)
       {
-          return rowSignature.getColumnCapabilities(column);
+        return rowSignature.getColumnCapabilities(column);
       }
     };
   }
@@ -134,7 +135,7 @@ public class InlineResultsCursor implements Cursor
 
   private DimensionSelector makeUndecoratedDimensionSelectorFor(String dimensionSpec)
   {
-    Object string
+    Object stringValueObject = results.get(offset.getOffset())[rowSignature.indexOf(dimensionSpec)];
     return new DimensionSelector()
     {
       @Override
@@ -224,8 +225,8 @@ public class InlineResultsCursor implements Cursor
       case ARRAY:
         switch (columnType.getElementType().getType()) {
           case STRING:
-             columnValueSelector = makeColumnValueSelectorForStringArray(columnValue);
-             break;
+            columnValueSelector = makeColumnValueSelectorForStringArray(columnValue);
+            break;
           default:
             throw new UnsupportedColumnTypeException(columnName, columnType);
         }
