@@ -116,7 +116,8 @@ public class FireDepartmentMetrics
     mergeTimeMillis.addAndGet(millis);
   }
 
-  public void incrementMergeRows(long rows) {
+  public void incrementMergeRows(long rows)
+  {
     mergeRows.addAndGet(rows);
   }
 
