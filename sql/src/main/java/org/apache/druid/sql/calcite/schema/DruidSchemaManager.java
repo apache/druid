@@ -51,12 +51,12 @@ public interface DruidSchemaManager
   @Deprecated
   Map<String, DruidTable> getTables();
 
-  default DruidTable getTable(String name)
+  default DruidTable getTable(String name, SegmentMetadataCache segmentMetadataCache)
   {
     return getTables().get(name);
   }
 
-  default Set<String> getTableNames()
+  default Set<String> getTableNames(SegmentMetadataCache segmentMetadataCache)
   {
     return getTables().keySet();
   }

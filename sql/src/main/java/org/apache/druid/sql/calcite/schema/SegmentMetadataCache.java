@@ -441,12 +441,12 @@ public class SegmentMetadataCache
     initialized.await();
   }
 
-  protected DatasourceTable.PhysicalDatasourceMetadata getDatasource(String name)
+  public DatasourceTable.PhysicalDatasourceMetadata getDatasource(String name)
   {
     return tables.get(name);
   }
 
-  protected Set<String> getDatasourceNames()
+  public Set<String> getDatasourceNames()
   {
     return tables.keySet();
   }
