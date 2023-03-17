@@ -785,6 +785,9 @@ public class BatchAppenderator implements Appenderator
         for (FireHydrant fireHydrant : sink) {
           Pair<ReferenceCountingSegment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
           final QueryableIndex queryableIndex = segmentAndCloseable.lhs.asQueryableIndex();
+          if (queryableIndex != null) {
+            metrics.incrementMergeRows(queryableIndex.getNumRows());
+          }
           log.debug("Segment[%s] adding hydrant[%s]", identifier, fireHydrant);
           indexes.add(queryableIndex);
           closer.register(segmentAndCloseable.rhs);

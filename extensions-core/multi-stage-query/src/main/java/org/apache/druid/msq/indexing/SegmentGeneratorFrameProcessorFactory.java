@@ -147,6 +147,7 @@ public class SegmentGeneratorFrameProcessorFactory
               }
             }
         ));
+    final FireDepartmentMetrics fireDepartmentMetrics = new FireDepartmentMetrics();
 
     final Sequence<SegmentGeneratorFrameProcessor> workers = inputSequence.map(
         readableInputPair -> {
@@ -170,7 +171,7 @@ public class SegmentGeneratorFrameProcessorFactory
                       persistDirectory,
                       frameContext.memoryParameters()
                   ),
-                  new FireDepartmentMetrics(), // We should eventually expose the FireDepartmentMetrics
+                  fireDepartmentMetrics,
                   frameContext.segmentPusher(),
                   frameContext.jsonMapper(),
                   frameContext.indexIO(),
@@ -186,6 +187,7 @@ public class SegmentGeneratorFrameProcessorFactory
               dataSchema.getDimensionsSpec().getDimensionNames(),
               appenderator,
               segmentIdWithShardSpec,
+              fireDepartmentMetrics,
               counters
           );
         }

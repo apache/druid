@@ -128,7 +128,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedSegmentGenerationProgressCountersForStageWorker(
                          CounterSnapshotMatcher
-                             .with().segmentRows(6),
+                             .with().segmentRowsProcessed(6),
                          1, 0
                      )
                      .verifyResults();
@@ -177,7 +177,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedSegmentGenerationProgressCountersForStageWorker(
                          CounterSnapshotMatcher
-                             .with().segmentRows(1),
+                             .with().segmentRowsProcessed(1),
                          1, 0
                      )
                      .verifyResults();
@@ -318,7 +318,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedSegmentGenerationProgressCountersForStageWorker(
                          CounterSnapshotMatcher
-                             .with().segmentRows(4),
+                             .with().segmentRowsProcessed(4),
                          1, 0
                      )
                      .verifyResults();
@@ -391,7 +391,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedSegmentGenerationProgressCountersForStageWorker(
                          CounterSnapshotMatcher
-                             .with().segmentRows(6),
+                             .with().segmentRowsProcessed(6),
                          1, 0
                      )
                      .verifyResults();
@@ -452,7 +452,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedSegmentGenerationProgressCountersForStageWorker(
                          CounterSnapshotMatcher
-                             .with().segmentRows(6),
+                             .with().segmentRowsProcessed(6),
                          1, 0
                      )
                      .verifyResults();
@@ -511,7 +511,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedSegmentGenerationProgressCountersForStageWorker(
                          CounterSnapshotMatcher
-                             .with().segmentRows(2),
+                             .with().segmentRowsProcessed(2),
                          1, 0
                      )
                      .verifyResults();
@@ -565,7 +565,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedSegmentGenerationProgressCountersForStageWorker(
                          CounterSnapshotMatcher
-                             .with().segmentRows(2),
+                             .with().segmentRowsProcessed(2),
                          1, 0
                      )
                      .verifyResults();

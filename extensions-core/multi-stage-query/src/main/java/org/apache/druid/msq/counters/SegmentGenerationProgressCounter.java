@@ -35,10 +35,30 @@ public class SegmentGenerationProgressCounter implements QueryCounter
   @GuardedBy("this")
   private long rowsProcessed = 0L;
 
+  @GuardedBy("this")
+  private long rowsPersisted = 0L;
+
+  @GuardedBy("this")
+  private long rowsMerged = 0L;
+
   public void incrementRowProcessedCount()
   {
     synchronized (this) {
       this.rowsProcessed += 1;
+    }
+  }
+
+  public void setRowsPersisted(long rowsPersisted)
+  {
+    synchronized (this) {
+      this.rowsPersisted = rowsPersisted;
+    }
+  }
+
+  public void setRowsMerged(long rowsMerged)
+  {
+    synchronized (this) {
+      this.rowsMerged = rowsMerged;
     }
   }
 
@@ -47,7 +67,7 @@ public class SegmentGenerationProgressCounter implements QueryCounter
   public QueryCounterSnapshot snapshot()
   {
     synchronized (this) {
-      return new Snapshot(rowsProcessed);
+      return new Snapshot(rowsProcessed, rowsPersisted, rowsMerged);
     }
   }
 
@@ -55,11 +75,19 @@ public class SegmentGenerationProgressCounter implements QueryCounter
   public static class Snapshot implements QueryCounterSnapshot
   {
     private final long rowsProcessed;
+    private final long rowsPersisted;
+    private final long rowsMerged;
 
     @JsonCreator
-    public Snapshot(@JsonProperty("rowsProcessed") final long rowsProcessed)
+    public Snapshot(
+        @JsonProperty("rowsProcessed") final long rowsProcessed,
+        @JsonProperty("rowsPersisted") final long rowsPersisted,
+        @JsonProperty("rowsMerged") final long rowsMerged
+    )
     {
       this.rowsProcessed = rowsProcessed;
+      this.rowsPersisted = rowsPersisted;
+      this.rowsMerged = rowsMerged;
     }
 
     @JsonProperty(value = "rowsProcessed")
@@ -68,11 +96,25 @@ public class SegmentGenerationProgressCounter implements QueryCounter
       return rowsProcessed;
     }
 
+    @JsonProperty(value = "rowsPersisted")
+    public long getRowsPersisted()
+    {
+      return rowsPersisted;
+    }
+
+    @JsonProperty(value = "rowsMerged")
+    public long getRowsMerged()
+    {
+      return rowsMerged;
+    }
+
     @Override
     public String toString()
     {
       return "Snapshot{" +
              "rowsProcessed=" + rowsProcessed +
+             ", rowsPersisted=" + rowsPersisted +
+             ", rowsMerged=" + rowsMerged +
              '}';
     }
 
@@ -86,13 +128,15 @@ public class SegmentGenerationProgressCounter implements QueryCounter
         return false;
       }
       Snapshot snapshot = (Snapshot) o;
-      return rowsProcessed == snapshot.rowsProcessed;
+      return rowsProcessed == snapshot.rowsProcessed
+             && rowsPersisted == snapshot.rowsPersisted
+             && rowsMerged == snapshot.rowsMerged;
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(rowsProcessed);
+      return Objects.hash(rowsProcessed, rowsPersisted, rowsMerged);
     }
   }
 }

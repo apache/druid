@@ -130,7 +130,7 @@ public class MSQInsertTest extends MSQTestBase
                      )
                      .setExpectedSegmentGenerationProgressCountersForStageWorker(
                          CounterSnapshotMatcher
-                             .with().segmentRows(Arrays.stream(expectedArray).sum()),
+                             .with().segmentRowsProcessed(Arrays.stream(expectedArray).sum()),
                          2, 0
                      )
                      .verifyResults();
@@ -195,7 +195,7 @@ public class MSQInsertTest extends MSQTestBase
                      )
                      .setExpectedSegmentGenerationProgressCountersForStageWorker(
                          CounterSnapshotMatcher
-                             .with().segmentRows(1),
+                             .with().segmentRowsProcessed(1),
                          2, 0
                      )
                      .verifyResults();
@@ -275,7 +275,7 @@ public class MSQInsertTest extends MSQTestBase
                      )
                      .setExpectedSegmentGenerationProgressCountersForStageWorker(
                          CounterSnapshotMatcher
-                             .with().segmentRows(Arrays.stream(expectedArray).sum()),
+                             .with().segmentRowsProcessed(Arrays.stream(expectedArray).sum()),
                          2, 0
                      )
                      .verifyResults();
@@ -423,7 +423,7 @@ public class MSQInsertTest extends MSQTestBase
                      )
                      .setExpectedSegmentGenerationProgressCountersForStageWorker(
                          CounterSnapshotMatcher
-                             .with().segmentRows(Arrays.stream(expectedArray).sum()),
+                             .with().segmentRowsProcessed(Arrays.stream(expectedArray).sum()),
                          2, 0
                      )
                      .verifyResults();
@@ -480,7 +480,7 @@ public class MSQInsertTest extends MSQTestBase
                      )
                      .setExpectedSegmentGenerationProgressCountersForStageWorker(
                          CounterSnapshotMatcher
-                             .with().segmentRows(Arrays.stream(expectedArray).sum()),
+                             .with().segmentRowsProcessed(Arrays.stream(expectedArray).sum()),
                          2, 0
                      )
                      .verifyResults();
@@ -597,7 +597,7 @@ public class MSQInsertTest extends MSQTestBase
                      )
                      .setExpectedSegmentGenerationProgressCountersForStageWorker(
                          CounterSnapshotMatcher
-                             .with().segmentRows(1),
+                             .with().segmentRowsProcessed(1),
                          2, 0
                      )
                      .verifyResults();
@@ -672,7 +672,7 @@ public class MSQInsertTest extends MSQTestBase
                      )
                      .setExpectedSegmentGenerationProgressCountersForStageWorker(
                          CounterSnapshotMatcher
-                             .with().segmentRows(6),
+                             .with().segmentRowsProcessed(6),
                          2, 0
                      )
                      .verifyResults();

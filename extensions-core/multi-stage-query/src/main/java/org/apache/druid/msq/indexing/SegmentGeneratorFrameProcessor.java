@@ -52,6 +52,7 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
@@ -77,8 +78,10 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
   private final List<String> dimensionsForInputRows;
   private final Object2IntMap<String> outputColumnNameToFrameColumnNumberMap;
   private final SegmentGenerationProgressCounter segmentGenerationProgressCounter;
+  private final FireDepartmentMetrics metrics;
   private boolean firstRun = true;
   private long rowsWritten = 0L;
+  private long lastCounterUpdatedRows = 0L;
 
   SegmentGeneratorFrameProcessor(
       final ReadableInput readableInput,
@@ -86,6 +89,7 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
       final List<String> dimensionsForInputRows,
       final Appenderator appenderator,
       final SegmentIdWithShardSpec segmentIdWithShardSpec,
+      final FireDepartmentMetrics metrics,
       final CounterTracker counterTracker
   )
   {
@@ -94,6 +98,7 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
     this.appenderator = appenderator;
     this.segmentIdWithShardSpec = segmentIdWithShardSpec;
     this.dimensionsForInputRows = dimensionsForInputRows;
+    this.metrics = metrics;
     this.segmentGenerationProgressCounter = counterTracker.segmentGenerationProgress();
 
     outputColumnNameToFrameColumnNumberMap = new Object2IntOpenHashMap<>();
@@ -208,6 +213,12 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
               rowsWritten++;
               segmentGenerationProgressCounter.incrementRowProcessedCount();
               appenderator.add(segmentIdWithShardSpec, inputRow, null);
+              if (rowsWritten - lastCounterUpdatedRows > 1000) {
+                // Update the metrics every 1000 records or so
+                segmentGenerationProgressCounter.setRowsPersisted(metrics.rowOutput());
+                segmentGenerationProgressCounter.setRowsMerged(metrics.mergeRows());
+                lastCounterUpdatedRows = rowsWritten;
+              }
             }
             catch (Exception e) {
               throw new RuntimeException(e);

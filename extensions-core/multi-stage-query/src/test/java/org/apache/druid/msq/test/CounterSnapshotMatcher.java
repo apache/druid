@@ -34,7 +34,7 @@ public class CounterSnapshotMatcher
   private long[] frames;
   private long[] files;
   private long[] totalFiles;
-  private Long segmentRows;
+  private Long segmentRowsProcessed;
 
   public static CounterSnapshotMatcher with()
   {
@@ -46,9 +46,9 @@ public class CounterSnapshotMatcher
     this.rows = rows;
     return this;
   }
-  public CounterSnapshotMatcher segmentRows(long segmentRows)
+  public CounterSnapshotMatcher segmentRowsProcessed(long segmentRowsProcessed)
   {
-    this.segmentRows = segmentRows;
+    this.segmentRowsProcessed = segmentRowsProcessed;
     return this;
   }
 
@@ -97,8 +97,8 @@ public class CounterSnapshotMatcher
     if (totalFiles != null) {
       Assert.assertArrayEquals(errorMessageFormat, totalFiles, ((ChannelCounters.Snapshot) queryCounterSnapshot).getTotalFiles());
     }
-    if (segmentRows != null) {
-      Assert.assertEquals(errorMessageFormat, segmentRows.longValue(), ((SegmentGenerationProgressCounter.Snapshot) queryCounterSnapshot).getRowsProcessed());
+    if (segmentRowsProcessed != null) {
+      Assert.assertEquals(errorMessageFormat, segmentRowsProcessed.longValue(), ((SegmentGenerationProgressCounter.Snapshot) queryCounterSnapshot).getRowsProcessed());
     }
   }
 }

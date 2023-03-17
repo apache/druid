@@ -43,6 +43,7 @@ public class FireDepartmentMetrics
   private final AtomicLong persistBackPressureMillis = new AtomicLong(0);
   private final AtomicLong failedPersists = new AtomicLong(0);
   private final AtomicLong failedHandoffs = new AtomicLong(0);
+  private final AtomicLong mergeRows = new AtomicLong(0);
   private final AtomicLong mergeTimeMillis = new AtomicLong(0);
   private final AtomicLong mergeCpuTime = new AtomicLong(0);
   private final AtomicLong persistCpuTime = new AtomicLong(0);
@@ -112,6 +113,9 @@ public class FireDepartmentMetrics
   public void incrementMergeTimeMillis(long millis)
   {
     mergeTimeMillis.addAndGet(millis);
+  }
+  public void incrementMergeRows(long rows) {
+    mergeRows.addAndGet(rows);
   }
 
   public void incrementMergeCpuTime(long mergeTime)
@@ -208,6 +212,10 @@ public class FireDepartmentMetrics
   public long failedHandoffs()
   {
     return failedHandoffs.get();
+  }
+
+  public long mergeRows() {
+    return mergeRows.get();
   }
 
   public long mergeTimeMillis()
