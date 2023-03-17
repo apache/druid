@@ -748,9 +748,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
                      .setExpectedTombstoneIntervals(
                          ImmutableSet.of(
-                             Intervals.of("2001-04-01/P3M"),
-                             Intervals.of("2001-07-01/P3M"),
-                             Intervals.of("2001-10-01/P3M")
+                             Intervals.of("2001-04-01/2002-01-01")
                          )
                      )
                      .setExpectedResultRows(expectedResults)

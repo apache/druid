@@ -24,7 +24,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExpressionType;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
@@ -55,7 +54,6 @@ public class ExpressionPlanner
   public static ExpressionPlan plan(ColumnInspector inspector, Expr expression)
   {
     final Expr.BindingAnalysis analysis = expression.analyzeInputs();
-    Parser.validateExpr(expression, analysis);
 
     EnumSet<ExpressionPlan.Trait> traits = EnumSet.noneOf(ExpressionPlan.Trait.class);
     Set<String> noCapabilities = new HashSet<>();
@@ -87,7 +85,7 @@ public class ExpressionPlanner
         boolean isSingleInputMappable = false;
         boolean isSingleInputScalar = capabilities.hasMultipleValues().isFalse();
         if (capabilities.is(ValueType.STRING)) {
-          isSingleInputScalar &= capabilities.isDictionaryEncoded().isTrue();
+          isSingleInputScalar = isSingleInputScalar && capabilities.isDictionaryEncoded().isTrue();
           isSingleInputMappable = capabilities.isDictionaryEncoded().isTrue() &&
                                   !capabilities.hasMultipleValues().isUnknown();
         }

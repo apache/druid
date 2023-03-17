@@ -92,8 +92,7 @@ Sample output:
 ```
 {
   "bitmapSerdeFactory": {
-    "type": "roaring",
-    "compressRunOnSerialization": true
+    "type": "roaring"
   },
   "bitmaps": {
     "isRobot": {
@@ -195,8 +194,7 @@ Sample output:
 ```json
 {
   "bitmapSerdeFactory": {
-    "type": "roaring",
-    "compressRunOnSerialization": true
+    "type": "roaring"
   },
   "nest": {
     "$.x": {
