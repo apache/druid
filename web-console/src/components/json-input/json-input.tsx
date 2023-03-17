@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Ace } from 'ace-builds';
+import type { Ace } from 'ace-builds';
 import classNames from 'classnames';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';

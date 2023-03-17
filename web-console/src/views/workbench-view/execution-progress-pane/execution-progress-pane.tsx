@@ -19,7 +19,7 @@
 import classNames from 'classnames';
 import React, { useState } from 'react';
 
-import { Execution } from '../../../druid-models';
+import type { Execution } from '../../../druid-models';
 import { ExecutionProgressBarPane } from '../execution-progress-bar-pane/execution-progress-bar-pane';
 import { ExecutionStagesPane } from '../execution-stages-pane/execution-stages-pane';
 

@@ -44,7 +44,7 @@ services:
   # Need 3.5 or later for container nodes
   zookeeper:
     container_name: zookeeper
-    image: zookeeper:3.5
+    image: zookeeper:3.5.10
     ports:
       - "2181:2181"
     environment:

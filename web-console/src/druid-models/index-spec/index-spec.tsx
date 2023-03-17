@@ -19,7 +19,7 @@
 import { Code } from '@blueprintjs/core';
 import React from 'react';
 
-import { Field } from '../../components';
+import type { Field } from '../../components';
 import { deepGet } from '../../utils';
 
 export interface IndexSpec {
@@ -33,7 +33,6 @@ export interface IndexSpec {
 
 export interface Bitmap {
   type: string;
-  compressRunOnSerialization?: boolean;
 }
 
 export function summarizeIndexSpec(indexSpec: IndexSpec | undefined): string {
@@ -102,19 +101,6 @@ export const INDEX_SPEC_FIELDS: Field<IndexSpec>[] = [
     defaultValue: 'roaring',
     suggestions: ['roaring', 'concise'],
     info: <>Compression format for bitmap indexes.</>,
-  },
-  {
-    name: 'bitmap.compressRunOnSerialization',
-    label: 'Bitmap compress run on serialization',
-    type: 'boolean',
-    defaultValue: true,
-    defined: spec => (deepGet(spec, 'bitmap.type') || 'roaring') === 'roaring',
-    info: (
-      <>
-        Controls whether or not run-length encoding will be used when it is determined to be more
-        space-efficient.
-      </>
-    ),
   },
 
   {

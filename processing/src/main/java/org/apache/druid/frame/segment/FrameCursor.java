@@ -23,19 +23,23 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.data.Offset;
+import org.apache.druid.segment.SimpleSettableOffset;
 import org.joda.time.DateTime;
 
 /**
- * A simple {@link Cursor} that increments an offset.
+ * An implementation of {@link Cursor} used by {@link org.apache.druid.frame.segment.row.FrameCursorFactory}
+ * and {@link org.apache.druid.frame.segment.columnar.FrameCursorFactory}.
+ *
+ * Adds the methods {@link #getCurrentRow()} and {@link #setCurrentRow(int)} so the cursor can be moved to
+ * particular rows.
  */
 public class FrameCursor implements Cursor
 {
-  private final Offset offset;
+  private final SimpleSettableOffset offset;
   private final ColumnSelectorFactory columnSelectorFactory;
 
   public FrameCursor(
-      Offset offset,
+      SimpleSettableOffset offset,
       ColumnSelectorFactory columnSelectorFactory
   )
   {
@@ -84,5 +88,21 @@ public class FrameCursor implements Cursor
   public void reset()
   {
     offset.reset();
+  }
+
+  /**
+   * Returns the current row number.
+   */
+  public int getCurrentRow()
+  {
+    return offset.getOffset();
+  }
+
+  /**
+   * Moves this cursor to a particular row number.
+   */
+  public void setCurrentRow(final int rowNumber)
+  {
+    offset.setCurrentOffset(rowNumber);
   }
 }

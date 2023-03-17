@@ -59,6 +59,7 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.NoopEscalator;
@@ -194,7 +195,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         ),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -231,7 +233,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         ),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        new NoopServiceEmitter()
     )
     {
       boolean throwException = true;
@@ -281,7 +284,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         ),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        new NoopServiceEmitter()
         )
     {
       @Override
@@ -554,7 +558,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -596,7 +601,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -642,7 +648,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -685,7 +692,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -725,7 +733,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -782,7 +791,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -842,7 +852,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -876,7 +887,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -923,7 +935,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -1160,7 +1173,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         ),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        brokerInternalQueryConfig
+        brokerInternalQueryConfig,
+        new NoopServiceEmitter()
     );
 
     EasyMock.expect(factoryMock.factorize()).andReturn(lifecycleMock).once();

@@ -220,10 +220,12 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
       bitmaps[sortedLocalId].add(rowCount++);
     }
 
-    for (MutableBitmap bitmap : bitmaps) {
+    for (int i = 0; i < bitmaps.length; i++) {
+      final MutableBitmap bitmap = bitmaps[i];
       bitmapIndexWriter.write(
           indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeImmutableBitmap(bitmap)
       );
+      bitmaps[i] = null; // Reclaim memory
     }
 
     final Serializer fieldSerializer = new Serializer()

@@ -70,6 +70,7 @@ import org.apache.druid.sql.calcite.expression.builtin.ArrayQuantileOperatorConv
 import org.apache.druid.sql.calcite.expression.builtin.ArraySliceOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayToStringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.BTrimOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.CaseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CastOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CeilOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ComplexDecodeBase64OperatorConversion;
@@ -330,7 +331,7 @@ public class DruidOperatorTable implements SqlOperatorTable
   private static final List<SqlOperatorConversion> STANDARD_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.ABS, "abs"))
-                   .add(new DirectOperatorConversion(SqlStdOperatorTable.CASE, "case_searched"))
+                   .add(new CaseOperatorConversion())
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.CHAR_LENGTH, "strlen"))
                    .add(CHARACTER_LENGTH_CONVERSION)
                    .add(new AliasedOperatorConversion(CHARACTER_LENGTH_CONVERSION, "LENGTH"))
@@ -486,11 +487,7 @@ public class DruidOperatorTable implements SqlOperatorTable
       final SqlNameMatcher nameMatcher
   )
   {
-    if (opName == null) {
-      return;
-    }
-
-    if (opName.names.size() != 1) {
+    if (opName == null || opName.names.size() != 1) {
       return;
     }
 

@@ -20,7 +20,8 @@ import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core'
 import { IconNames } from '@blueprintjs/icons';
 import { sum } from 'd3-array';
 import React from 'react';
-import ReactTable, { Filter } from 'react-table';
+import type { Filter } from 'react-table';
+import ReactTable from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
@@ -34,10 +35,11 @@ import {
   ViewControlBar,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
-import { QueryWithContext } from '../../druid-models';
-import { Capabilities, CapabilitiesMode } from '../../helpers';
+import type { QueryWithContext } from '../../druid-models';
+import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
+import type { NumberLike } from '../../utils';
 import {
   deepGet,
   filterMap,
@@ -47,14 +49,13 @@ import {
   LocalStorageBackedVisibility,
   LocalStorageKeys,
   lookupBy,
-  NumberLike,
   oneOf,
   pluralIfNeeded,
   queryDruidSql,
   QueryManager,
   QueryState,
 } from '../../utils';
-import { BasicAction } from '../../utils/basic-action';
+import type { BasicAction } from '../../utils/basic-action';
 
 import './services-view.scss';
 

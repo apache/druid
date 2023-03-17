@@ -26,10 +26,9 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.UnnestSegmentReference;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.utils.JvmUtils;
 
-import javax.annotation.Nullable;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -38,7 +37,6 @@ import java.util.function.Function;
 
 /**
  * The data source for representing an unnest operation.
- *
  * An unnest data source has the following:
  * a base data source which is to be unnested
  * the column name of the MVD which will be unnested
@@ -48,32 +46,24 @@ import java.util.function.Function;
 public class UnnestDataSource implements DataSource
 {
   private final DataSource base;
-  private final String column;
-  private final String outputName;
-  private final LinkedHashSet<String> allowList;
+  private final VirtualColumn virtualColumn;
 
   private UnnestDataSource(
       DataSource dataSource,
-      String columnName,
-      String outputName,
-      LinkedHashSet<String> allowList
+      VirtualColumn virtualColumn
   )
   {
     this.base = dataSource;
-    this.column = columnName;
-    this.outputName = outputName;
-    this.allowList = allowList;
+    this.virtualColumn = virtualColumn;
   }
 
   @JsonCreator
   public static UnnestDataSource create(
       @JsonProperty("base") DataSource base,
-      @JsonProperty("column") String columnName,
-      @JsonProperty("outputName") String outputName,
-      @Nullable @JsonProperty("allowList") LinkedHashSet<String> allowList
+      @JsonProperty("virtualColumn") VirtualColumn virtualColumn
   )
   {
-    return new UnnestDataSource(base, columnName, outputName, allowList);
+    return new UnnestDataSource(base, virtualColumn);
   }
 
   @JsonProperty("base")
@@ -82,22 +72,10 @@ public class UnnestDataSource implements DataSource
     return base;
   }
 
-  @JsonProperty("column")
-  public String getColumn()
+  @JsonProperty("virtualColumn")
+  public VirtualColumn getVirtualColumn()
   {
-    return column;
-  }
-
-  @JsonProperty("outputName")
-  public String getOutputName()
-  {
-    return outputName;
-  }
-
-  @JsonProperty("allowList")
-  public LinkedHashSet<String> getAllowList()
-  {
-    return allowList;
+    return virtualColumn;
   }
 
   @Override
@@ -118,7 +96,7 @@ public class UnnestDataSource implements DataSource
     if (children.size() != 1) {
       throw new IAE("Expected [1] child, got [%d]", children.size());
     }
-    return new UnnestDataSource(children.get(0), column, outputName, allowList);
+    return new UnnestDataSource(children.get(0), virtualColumn);
   }
 
   @Override
@@ -151,30 +129,19 @@ public class UnnestDataSource implements DataSource
     );
     return JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
-        () -> {
-          if (column == null) {
-            return segmentMapFn;
-          } else if (column.isEmpty()) {
-            return segmentMapFn;
-          } else {
-            return
-                baseSegment ->
-                    new UnnestSegmentReference(
-                        segmentMapFn.apply(baseSegment),
-                        column,
-                        outputName,
-                        allowList
-                    );
-          }
-        }
+        () ->
+            baseSegment ->
+                new UnnestSegmentReference(
+                    segmentMapFn.apply(baseSegment),
+                    virtualColumn
+                )
     );
-
   }
 
   @Override
   public DataSource withUpdatedDataSource(DataSource newSource)
   {
-    return new UnnestDataSource(newSource, column, outputName, allowList);
+    return new UnnestDataSource(newSource, virtualColumn);
   }
 
   @Override
@@ -205,15 +172,14 @@ public class UnnestDataSource implements DataSource
       return false;
     }
     UnnestDataSource that = (UnnestDataSource) o;
-    return column.equals(that.column)
-           && outputName.equals(that.outputName)
+    return virtualColumn.equals(that.virtualColumn)
            && base.equals(that.base);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(base, column, outputName);
+    return Objects.hash(base, virtualColumn);
   }
 
   @Override
@@ -221,9 +187,7 @@ public class UnnestDataSource implements DataSource
   {
     return "UnnestDataSource{" +
            "base=" + base +
-           ", column='" + column + '\'' +
-           ", outputName='" + outputName + '\'' +
-           ", allowList=" + allowList +
+           ", column='" + virtualColumn + '\'' +
            '}';
   }
 

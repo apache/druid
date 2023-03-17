@@ -268,7 +268,7 @@ public class OperatorConversions
       );
     } else if (rexNode instanceof RexCall) {
       final SqlOperator operator = ((RexCall) rexNode).getOperator();
-      final SqlOperatorConversion conversion = plannerContext.getOperatorTable()
+      final SqlOperatorConversion conversion = plannerContext.getPlannerToolbox().operatorTable()
                                                              .lookupOperatorConversion(operator);
 
       if (conversion != null) {
@@ -510,6 +510,12 @@ public class OperatorConversions
     public OperatorBuilder operandTypeInference(SqlOperandTypeInference operandTypeInference)
     {
       this.operandTypeInference = operandTypeInference;
+      return this;
+    }
+
+    public OperatorBuilder sqlKind(SqlKind kind)
+    {
+      this.kind = kind;
       return this;
     }
 

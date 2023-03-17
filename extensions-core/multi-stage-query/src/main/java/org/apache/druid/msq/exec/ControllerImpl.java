@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.FutureCallback;
@@ -48,9 +47,10 @@ import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.frame.key.RowKeyReader;
-import org.apache.druid.frame.key.SortColumn;
 import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.util.DurableStorageUtils;
@@ -62,12 +62,11 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.MarkSegmentsAsUnusedAction;
-import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
-import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -103,7 +102,6 @@ import org.apache.druid.msq.indexing.error.FaultsExceededChecker;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertCannotOrderByDescendingFault;
-import org.apache.druid.msq.indexing.error.InsertCannotReplaceExistingSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFault;
 import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
@@ -135,12 +133,12 @@ import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpecSlicer;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.input.table.TableInputSpecSlicer;
+import org.apache.druid.msq.kernel.GlobalSortTargetSizeShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.StagePartition;
-import org.apache.druid.msq.kernel.TargetSizeShuffleSpec;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernel;
 import org.apache.druid.msq.kernel.controller.ControllerStagePhase;
@@ -701,8 +699,8 @@ public class ControllerImpl implements Controller
           final StageDefinition stageDef = queryKernel.getStageDefinition(stageId);
           final ObjectMapper mapper = MSQTasks.decorateObjectMapperForKeyCollectorSnapshot(
               context.jsonMapper(),
-              stageDef.getShuffleSpec().get().getClusterBy(),
-              stageDef.getShuffleSpec().get().doesAggregateByClusterKey()
+              stageDef.getShuffleSpec().clusterBy(),
+              stageDef.getShuffleSpec().doesAggregate()
           );
 
           final PartialKeyStatisticsInformation partialKeyStatisticsInformation;
@@ -1247,48 +1245,33 @@ public class ControllerImpl implements Controller
   /**
    * Publish the list of segments. Additionally, if {@link DataSourceMSQDestination#isReplaceTimeChunks()},
    * also drop all other segments within the replacement intervals.
-   * <p>
-   * If any existing segments cannot be dropped because their intervals are not wholly contained within the
-   * replacement parameter, throws a {@link MSQException} with {@link InsertCannotReplaceExistingSegmentFault}.
    */
   private void publishAllSegments(final Set<DataSegment> segments) throws IOException
   {
     final DataSourceMSQDestination destination =
         (DataSourceMSQDestination) task.getQuerySpec().getDestination();
-    final Set<DataSegment> segmentsToDrop;
+    final Set<DataSegment> segmentsWithTombstones = new HashSet<>(segments);
 
     if (destination.isReplaceTimeChunks()) {
       final List<Interval> intervalsToDrop = findIntervalsToDrop(Preconditions.checkNotNull(segments, "segments"));
 
-      if (intervalsToDrop.isEmpty()) {
-        segmentsToDrop = null;
-      } else {
-        // Determine which segments to drop as part of the replace operation. This is safe because, in the case where we
-        // are doing a replace, the isReady method (which runs prior to the task starting) acquires an exclusive lock.
-        segmentsToDrop =
-            ImmutableSet.copyOf(
-                context.taskActionClient().submit(
-                    new RetrieveUsedSegmentsAction(
-                        task.getDataSource(),
-                        null,
-                        intervalsToDrop,
-                        Segments.ONLY_VISIBLE
-                    )
-                )
-            );
-
-        // Validate that there are no segments that partially overlap the intervals-to-drop. Otherwise, the replace
-        // may be incomplete.
-        for (final DataSegment segmentToDrop : segmentsToDrop) {
-          if (destination.getReplaceTimeChunks()
-                         .stream()
-                         .noneMatch(interval -> interval.contains(segmentToDrop.getInterval()))) {
-            throw new MSQException(new InsertCannotReplaceExistingSegmentFault(segmentToDrop.getId()));
-          }
+      if (!intervalsToDrop.isEmpty()) {
+        TombstoneHelper tombstoneHelper = new TombstoneHelper(context.taskActionClient());
+        try {
+          Set<DataSegment> tombstones = tombstoneHelper.computeTombstoneSegmentsForReplace(
+              intervalsToDrop,
+              destination.getReplaceTimeChunks(),
+              task.getDataSource(),
+              destination.getSegmentGranularity()
+          );
+          segmentsWithTombstones.addAll(tombstones);
+        }
+        catch (IllegalStateException e) {
+          throw new MSQException(e, InsertLockPreemptedFault.instance());
         }
       }
 
-      if (segments.isEmpty()) {
+      if (segmentsWithTombstones.isEmpty()) {
         // Nothing to publish, only drop. We already validated that the intervalsToDrop do not have any
         // partially-overlapping segments, so it's safe to drop them as intervals instead of as specific segments.
         for (final Interval interval : intervalsToDrop) {
@@ -1298,7 +1281,7 @@ public class ControllerImpl implements Controller
       } else {
         performSegmentPublish(
             context.taskActionClient(),
-            SegmentTransactionalInsertAction.overwriteAction(null, segmentsToDrop, segments)
+            SegmentTransactionalInsertAction.overwriteAction(null, null, segmentsWithTombstones)
         );
       }
     } else if (!segments.isEmpty()) {
@@ -1520,7 +1503,7 @@ public class ControllerImpl implements Controller
 
     if (MSQControllerTask.isIngestion(querySpec)) {
       shuffleSpecFactory = (clusterBy, aggregate) ->
-          new TargetSizeShuffleSpec(
+          new GlobalSortTargetSizeShuffleSpec(
               clusterBy,
               tuningConfig.getRowsPerSegment(),
               aggregate
@@ -1746,7 +1729,7 @@ public class ControllerImpl implements Controller
       final ColumnMappings columnMappings
   )
   {
-    final List<SortColumn> clusterByColumns = clusterBy.getColumns();
+    final List<KeyColumn> clusterByColumns = clusterBy.getColumns();
     final List<String> shardColumns = new ArrayList<>();
     final boolean boosted = isClusterByBoosted(clusterBy);
     final int numShardColumns = clusterByColumns.size() - clusterBy.getBucketByCount() - (boosted ? 1 : 0);
@@ -1756,11 +1739,11 @@ public class ControllerImpl implements Controller
     }
 
     for (int i = clusterBy.getBucketByCount(); i < clusterBy.getBucketByCount() + numShardColumns; i++) {
-      final SortColumn column = clusterByColumns.get(i);
+      final KeyColumn column = clusterByColumns.get(i);
       final List<String> outputColumns = columnMappings.getOutputColumnsForQueryColumn(column.columnName());
 
       // DimensionRangeShardSpec only handles ascending order.
-      if (column.descending()) {
+      if (column.order() != KeyOrder.ASCENDING) {
         return Collections.emptyList();
       }
 
@@ -1842,8 +1825,8 @@ public class ControllerImpl implements Controller
     // Note: this doesn't work when CLUSTERED BY specifies an expression that is not being selected.
     // Such fields in CLUSTERED BY still control partitioning as expected, but do not affect sort order of rows
     // within an individual segment.
-    for (final SortColumn clusterByColumn : queryClusterBy.getColumns()) {
-      if (clusterByColumn.descending()) {
+    for (final KeyColumn clusterByColumn : queryClusterBy.getColumns()) {
+      if (clusterByColumn.order() == KeyOrder.DESCENDING) {
         throw new MSQException(new InsertCannotOrderByDescendingFault(clusterByColumn.columnName()));
       }
 
@@ -2418,7 +2401,7 @@ public class ControllerImpl implements Controller
           segmentsToGenerate = generateSegmentIdsWithShardSpecs(
               (DataSourceMSQDestination) task.getQuerySpec().getDestination(),
               queryKernel.getStageDefinition(shuffleStageId).getSignature(),
-              queryKernel.getStageDefinition(shuffleStageId).getShuffleSpec().get().getClusterBy(),
+              queryKernel.getStageDefinition(shuffleStageId).getClusterBy(),
               partitionBoundaries,
               mayHaveMultiValuedClusterByFields
           );
@@ -2589,6 +2572,7 @@ public class ControllerImpl implements Controller
     }
     return mergeMode;
   }
+
 
   /**
    * Interface used by {@link #contactWorkersForStage}.
