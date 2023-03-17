@@ -87,6 +87,7 @@ public class ArrayOfDoublesSketchSqlAggregator implements SqlAggregator
     final int metricExpressionEndIndex;
     final int lastArgIndex = argList.size() - 1;
     final RexNode potentialNominalEntriesArg = Expressions.fromFieldAccess(
+        rexBuilder.getTypeFactory(),
         rowSignature,
         project,
         argList.get(lastArgIndex)
@@ -107,6 +108,7 @@ public class ArrayOfDoublesSketchSqlAggregator implements SqlAggregator
       final String fieldName;
 
       final RexNode columnRexNode = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           argList.get(i)
