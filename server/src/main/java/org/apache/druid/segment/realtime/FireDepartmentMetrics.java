@@ -43,6 +43,7 @@ public class FireDepartmentMetrics
   private final AtomicLong persistBackPressureMillis = new AtomicLong(0);
   private final AtomicLong failedPersists = new AtomicLong(0);
   private final AtomicLong failedHandoffs = new AtomicLong(0);
+  // Measures the number of rows that have been merged. Segments are merged into a single file before they are pushed to deepstorage.
   private final AtomicLong mergeRows = new AtomicLong(0);
   private final AtomicLong mergeTimeMillis = new AtomicLong(0);
   private final AtomicLong mergeCpuTime = new AtomicLong(0);
@@ -114,6 +115,7 @@ public class FireDepartmentMetrics
   {
     mergeTimeMillis.addAndGet(millis);
   }
+
   public void incrementMergeRows(long rows) {
     mergeRows.addAndGet(rows);
   }
@@ -214,7 +216,8 @@ public class FireDepartmentMetrics
     return failedHandoffs.get();
   }
 
-  public long mergeRows() {
+  public long mergeRows()
+  {
     return mergeRows.get();
   }
 

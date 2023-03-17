@@ -81,7 +81,6 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
   private final FireDepartmentMetrics metrics;
   private boolean firstRun = true;
   private long rowsWritten = 0L;
-  private long lastCounterUpdatedRows = 0L;
 
   SegmentGeneratorFrameProcessor(
       final ReadableInput readableInput,
@@ -211,14 +210,8 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
 
             try {
               rowsWritten++;
-              segmentGenerationProgressCounter.incrementRowProcessedCount();
               appenderator.add(segmentIdWithShardSpec, inputRow, null);
-              if (rowsWritten - lastCounterUpdatedRows > 1000) {
-                // Update the metrics every 1000 records or so
-                segmentGenerationProgressCounter.setRowsPersisted(metrics.rowOutput());
-                segmentGenerationProgressCounter.setRowsMerged(metrics.mergeRows());
-                lastCounterUpdatedRows = rowsWritten;
-              }
+              segmentGenerationProgressCounter.updateCounters(1, metrics.rowOutput(), metrics.mergeRows());
             }
             catch (Exception e) {
               throw new RuntimeException(e);

@@ -41,23 +41,16 @@ public class SegmentGenerationProgressCounter implements QueryCounter
   @GuardedBy("this")
   private long rowsMerged = 0L;
 
-  public void incrementRowProcessedCount()
+  /**
+   * Increments the rows processed by rowsProcessedIncrement and sets the rowsPersisted and rowsMerged to their
+   * corresponding parameters. This is done to reduce the overhead of getting and releasing the lock repeatedly, as
+   * they are updated from the same place.
+   */
+  public void updateCounters(long rowsProcessedIncrement, long rowsPersisted, long rowsMerged)
   {
     synchronized (this) {
-      this.rowsProcessed += 1;
-    }
-  }
-
-  public void setRowsPersisted(long rowsPersisted)
-  {
-    synchronized (this) {
+      this.rowsProcessed += rowsProcessedIncrement;
       this.rowsPersisted = rowsPersisted;
-    }
-  }
-
-  public void setRowsMerged(long rowsMerged)
-  {
-    synchronized (this) {
       this.rowsMerged = rowsMerged;
     }
   }

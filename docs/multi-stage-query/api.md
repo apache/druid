@@ -533,7 +533,9 @@ The response shows an example report for a query.
             },
             "segmentGenerationProgress": {
               "type": "segmentGenerationProgress",
-              "rowsProcessed": 465346
+              "rowsProcessed": 465346,
+              "rowsPersisted": 465346,
+              "rowsMerged": 465346
             }
           }
         }
