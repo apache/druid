@@ -39,7 +39,7 @@ Make sure you meet the following requirements before starting the Jupyter-based 
 - The `requests` package for Python. For example, you can install it with the following command:
 
   ```bash
-  pip3 install requests
+  pip install requests
   ```
 
 - JupyterLab (recommended) or Jupyter Notebook running on a non-default port. By default, Druid
@@ -49,9 +49,9 @@ Make sure you meet the following requirements before starting the Jupyter-based 
 
     ```bash
     # Install JupyterLab
-    pip3 install jupyterlab
+    pip install jupyterlab
     # Install Jupyter Notebook
-    pip3 install notebook
+    pip install notebook
     ```
   - Start Jupyter using either JupyterLab
     ```bash
