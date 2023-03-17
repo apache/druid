@@ -295,11 +295,6 @@ case $CMD in
     if [ $RESULT -ne 0 ]; then
       $0 tail $CATEGORY
     fi
-
-    # Pruning containers should not be needed. The test command should do the deed.
-    # Doing so out of an abundance of caution.
-    $0 prune-containers
-    $0 prune-volumes
     exit $RESULT
     ;;
   # Name is delibrately long to avoid accidental use.
