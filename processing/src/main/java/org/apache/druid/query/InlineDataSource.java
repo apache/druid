@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import org.apache.druid.frame.Frame;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.RowAdapter;
@@ -53,14 +54,17 @@ import java.util.stream.IntStream;
 public class InlineDataSource implements DataSource
 {
   private final Iterable<Object[]> rows;
+  private final Frame frame;
   private final RowSignature signature;
 
   private InlineDataSource(
       final Iterable<Object[]> rows,
+      final Frame frame,
       final RowSignature signature
   )
   {
-    this.rows = Preconditions.checkNotNull(rows, "'rows' must be nonnull");
+    this.rows = rows;
+    this.frame = frame;
     this.signature = Preconditions.checkNotNull(signature, "'signature' must be nonnull");
   }
 
@@ -89,7 +93,7 @@ public class InlineDataSource implements DataSource
       builder.add(name, type);
     }
 
-    return new InlineDataSource(rows, builder.build());
+    return new InlineDataSource(rows, null, builder.build());
   }
 
   /**
@@ -104,7 +108,15 @@ public class InlineDataSource implements DataSource
       final RowSignature signature
   )
   {
-    return new InlineDataSource(rows, signature);
+    return new InlineDataSource(rows, null, signature);
+  }
+
+  public static InlineDataSource fromFrame(
+      final Frame frame,
+      final RowSignature signature
+  )
+  {
+    return new InlineDataSource(null, frame, signature);
   }
 
   /**
@@ -191,6 +203,16 @@ public class InlineDataSource implements DataSource
   public List<Object[]> getRowsAsList()
   {
     return rows instanceof List ? ((List<Object[]>) rows) : Lists.newArrayList(rows);
+  }
+
+  public Frame getBackingFrame()
+  {
+    return frame;
+  }
+
+  public boolean isBackedByFrame()
+  {
+    return frame != null;
   }
 
   /**

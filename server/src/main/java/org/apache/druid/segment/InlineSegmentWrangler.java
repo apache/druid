@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.frame.read.FrameReader;
+import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
@@ -42,6 +44,14 @@ public class InlineSegmentWrangler implements SegmentWrangler
   public Iterable<Segment> getSegmentsForIntervals(final DataSource dataSource, final Iterable<Interval> intervals)
   {
     final InlineDataSource inlineDataSource = (InlineDataSource) dataSource;
+
+    if (inlineDataSource.isBackedByFrame()) {
+      return Collections.singletonList(new FrameSegment(
+          inlineDataSource.getBackingFrame(),
+          FrameReader.create(inlineDataSource.getRowSignature()),
+          SegmentId.dummy(SEGMENT_ID)
+      ));
+    }
 
     if (inlineDataSource.rowsAreArrayList()) {
       return Collections.singletonList(
