@@ -661,9 +661,11 @@ public class LoadRuleTest
   public void testMaxLoadingQueueSize()
   {
     final int maxSegmentsInLoadQueue = 2;
-    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
-            .andDelegateTo(balancerStrategy)
-            .times(2);
+    if (!useRoundRobinAssignment) {
+      EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
+              .andDelegateTo(balancerStrategy)
+              .times(2);
+    }
 
     EasyMock.replay(throttler, mockBalancerStrategy);
 
