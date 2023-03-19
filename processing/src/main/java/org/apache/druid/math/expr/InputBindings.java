@@ -214,7 +214,8 @@ public class InputBindings
     private final ExpressionType type;
     private final Supplier<T> supplier;
 
-    public InputSupplier(ExpressionType type, Supplier<T> supplier) {
+    public InputSupplier(ExpressionType type, Supplier<T> supplier)
+    {
       this.supplier = supplier;
       this.type = type;
     }
