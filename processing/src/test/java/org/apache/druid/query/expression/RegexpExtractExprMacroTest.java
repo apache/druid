@@ -37,34 +37,34 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
   public void testErrorZeroArguments()
   {
     expectException(IllegalArgumentException.class, "Function[regexp_extract] requires 2 or 3 arguments");
-    eval("regexp_extract()", InputBindings.withMap(ImmutableMap.of()));
+    eval("regexp_extract()", InputBindings.forMap(ImmutableMap.of()));
   }
 
   @Test
   public void testErrorFourArguments()
   {
     expectException(IllegalArgumentException.class, "Function[regexp_extract] requires 2 or 3 arguments");
-    eval("regexp_extract('a', 'b', 'c', 'd')", InputBindings.withMap(ImmutableMap.of()));
+    eval("regexp_extract('a', 'b', 'c', 'd')", InputBindings.forMap(ImmutableMap.of()));
   }
 
   @Test
   public void testMatch()
   {
-    final ExprEval<?> result = eval("regexp_extract(a, 'f(.o)')", InputBindings.withMap(ImmutableMap.of("a", "foo")));
+    final ExprEval<?> result = eval("regexp_extract(a, 'f(.o)')", InputBindings.forMap(ImmutableMap.of("a", "foo")));
     Assert.assertEquals("foo", result.value());
   }
 
   @Test
   public void testMatchGroup0()
   {
-    final ExprEval<?> result = eval("regexp_extract(a, 'f(.o)', 0)", InputBindings.withMap(ImmutableMap.of("a", "foo")));
+    final ExprEval<?> result = eval("regexp_extract(a, 'f(.o)', 0)", InputBindings.forMap(ImmutableMap.of("a", "foo")));
     Assert.assertEquals("foo", result.value());
   }
 
   @Test
   public void testMatchGroup1()
   {
-    final ExprEval<?> result = eval("regexp_extract(a, 'f(.o)', 1)", InputBindings.withMap(ImmutableMap.of("a", "foo")));
+    final ExprEval<?> result = eval("regexp_extract(a, 'f(.o)', 1)", InputBindings.forMap(ImmutableMap.of("a", "foo")));
     Assert.assertEquals("oo", result.value());
   }
 
@@ -72,20 +72,20 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
   public void testMatchGroup2()
   {
     expectedException.expectMessage("No group 2");
-    final ExprEval<?> result = eval("regexp_extract(a, 'f(.o)', 2)", InputBindings.withMap(ImmutableMap.of("a", "foo")));
+    final ExprEval<?> result = eval("regexp_extract(a, 'f(.o)', 2)", InputBindings.forMap(ImmutableMap.of("a", "foo")));
   }
 
   @Test
   public void testNoMatch()
   {
-    final ExprEval<?> result = eval("regexp_extract(a, 'f(.x)')", InputBindings.withMap(ImmutableMap.of("a", "foo")));
+    final ExprEval<?> result = eval("regexp_extract(a, 'f(.x)')", InputBindings.forMap(ImmutableMap.of("a", "foo")));
     Assert.assertNull(result.value());
   }
 
   @Test
   public void testMatchInMiddle()
   {
-    final ExprEval<?> result = eval("regexp_extract(a, '.o$')", InputBindings.withMap(ImmutableMap.of("a", "foo")));
+    final ExprEval<?> result = eval("regexp_extract(a, '.o$')", InputBindings.forMap(ImmutableMap.of("a", "foo")));
     Assert.assertEquals("oo", result.value());
   }
 
@@ -96,14 +96,14 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
       expectException(IllegalArgumentException.class, "Function[regexp_extract] pattern must be a string literal");
     }
 
-    final ExprEval<?> result = eval("regexp_extract(a, null)", InputBindings.withMap(ImmutableMap.of("a", "foo")));
+    final ExprEval<?> result = eval("regexp_extract(a, null)", InputBindings.forMap(ImmutableMap.of("a", "foo")));
     Assert.assertNull(result.value());
   }
 
   @Test
   public void testEmptyStringPattern()
   {
-    final ExprEval<?> result = eval("regexp_extract(a, '')", InputBindings.withMap(ImmutableMap.of("a", "foo")));
+    final ExprEval<?> result = eval("regexp_extract(a, '')", InputBindings.forMap(ImmutableMap.of("a", "foo")));
     Assert.assertEquals(NullHandling.emptyToNullIfNeeded(""), result.value());
   }
 
@@ -111,14 +111,14 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
   public void testNumericPattern()
   {
     expectException(IllegalArgumentException.class, "Function[regexp_extract] pattern must be a string literal");
-    eval("regexp_extract(a, 1)", InputBindings.withMap(ImmutableMap.of("a", "foo")));
+    eval("regexp_extract(a, 1)", InputBindings.forMap(ImmutableMap.of("a", "foo")));
   }
 
   @Test
   public void testNonLiteralPattern()
   {
     expectException(IllegalArgumentException.class, "Function[regexp_extract] pattern must be a string literal");
-    eval("regexp_extract(a, a)", InputBindings.withMap(ImmutableMap.of("a", "foo")));
+    eval("regexp_extract(a, a)", InputBindings.forMap(ImmutableMap.of("a", "foo")));
   }
 
   @Test

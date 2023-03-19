@@ -37,20 +37,20 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   public void testErrorZeroArguments()
   {
     expectException(IllegalArgumentException.class, "Function[regexp_like] requires 2 arguments");
-    eval("regexp_like()", InputBindings.withMap(ImmutableMap.of()));
+    eval("regexp_like()", InputBindings.forMap(ImmutableMap.of()));
   }
 
   @Test
   public void testErrorThreeArguments()
   {
     expectException(IllegalArgumentException.class, "Function[regexp_like] requires 2 arguments");
-    eval("regexp_like('a', 'b', 'c')", InputBindings.withMap(ImmutableMap.of()));
+    eval("regexp_like('a', 'b', 'c')", InputBindings.forMap(ImmutableMap.of()));
   }
 
   @Test
   public void testMatch()
   {
-    final ExprEval<?> result = eval("regexp_like(a, 'f.o')", InputBindings.withMap(ImmutableMap.of("a", "foo")));
+    final ExprEval<?> result = eval("regexp_like(a, 'f.o')", InputBindings.forMap(ImmutableMap.of("a", "foo")));
     Assert.assertEquals(
         ExprEval.ofLongBoolean(true).value(),
         result.value()
@@ -60,7 +60,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   @Test
   public void testNoMatch()
   {
-    final ExprEval<?> result = eval("regexp_like(a, 'f.x')", InputBindings.withMap(ImmutableMap.of("a", "foo")));
+    final ExprEval<?> result = eval("regexp_like(a, 'f.x')", InputBindings.forMap(ImmutableMap.of("a", "foo")));
     Assert.assertEquals(
         ExprEval.ofLongBoolean(false).value(),
         result.value()
@@ -74,7 +74,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
       expectException(IllegalArgumentException.class, "Function[regexp_like] pattern must be a STRING literal");
     }
 
-    final ExprEval<?> result = eval("regexp_like(a, null)", InputBindings.withMap(ImmutableMap.of("a", "foo")));
+    final ExprEval<?> result = eval("regexp_like(a, null)", InputBindings.forMap(ImmutableMap.of("a", "foo")));
     Assert.assertEquals(
         ExprEval.ofLongBoolean(true).value(),
         result.value()
@@ -84,7 +84,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   @Test
   public void testEmptyStringPattern()
   {
-    final ExprEval<?> result = eval("regexp_like(a, '')", InputBindings.withMap(ImmutableMap.of("a", "foo")));
+    final ExprEval<?> result = eval("regexp_like(a, '')", InputBindings.forMap(ImmutableMap.of("a", "foo")));
     Assert.assertEquals(
         ExprEval.ofLongBoolean(true).value(),
         result.value()
@@ -98,7 +98,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
       expectException(IllegalArgumentException.class, "Function[regexp_like] pattern must be a STRING literal");
     }
 
-    final ExprEval<?> result = eval("regexp_like(a, null)", InputBindings.withMap(ImmutableMap.of("a", "")));
+    final ExprEval<?> result = eval("regexp_like(a, null)", InputBindings.forMap(ImmutableMap.of("a", "")));
     Assert.assertEquals(
         ExprEval.ofLongBoolean(true).value(),
         result.value()
@@ -108,7 +108,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   @Test
   public void testEmptyStringPatternOnEmptyString()
   {
-    final ExprEval<?> result = eval("regexp_like(a, '')", InputBindings.withMap(ImmutableMap.of("a", "")));
+    final ExprEval<?> result = eval("regexp_like(a, '')", InputBindings.forMap(ImmutableMap.of("a", "")));
     Assert.assertEquals(
         ExprEval.ofLongBoolean(true).value(),
         result.value()

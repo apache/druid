@@ -334,7 +334,10 @@ public class ExpressionFilter implements Filter
       public Predicate<String> makeStringPredicate()
       {
         return value -> expr.get().eval(
-            InputBindings.forFunction(identifierName -> NullHandling.nullToEmptyIfNeeded(value))
+            InputBindings.forSingleTypeProvider(
+                ExpressionType.STRING,
+                identifierName -> NullHandling.nullToEmptyIfNeeded(value)
+            )
         ).asBoolean();
       }
 
@@ -346,7 +349,9 @@ public class ExpressionFilter implements Filter
           @Override
           public boolean applyLong(long input)
           {
-            return expr.get().eval(InputBindings.forFunction(identifierName -> input)).asBoolean();
+            return expr.get().eval(
+                InputBindings.forSingleTypeProvider(ExpressionType.LONG, identifierName -> input)
+            ).asBoolean();
           }
 
           @Override
@@ -365,7 +370,9 @@ public class ExpressionFilter implements Filter
           @Override
           public boolean applyFloat(float input)
           {
-            return expr.get().eval(InputBindings.forFunction(identifierName -> input)).asBoolean();
+            return expr.get().eval(
+                InputBindings.forSingleTypeProvider(ExpressionType.DOUBLE, identifierName -> input)
+            ).asBoolean();
           }
 
           @Override
@@ -384,7 +391,9 @@ public class ExpressionFilter implements Filter
           @Override
           public boolean applyDouble(double input)
           {
-            return expr.get().eval(InputBindings.forFunction(identifierName -> input)).asBoolean();
+            return expr.get().eval(
+                InputBindings.forSingleTypeProvider(ExpressionType.DOUBLE, identifierName -> input)
+            ).asBoolean();
           }
 
           @Override

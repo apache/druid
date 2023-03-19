@@ -912,7 +912,7 @@ public class ParserTest extends InitializedNullHandlingTest
     Assert.assertEquals(
         expression,
         expected,
-        parsed.eval(InputBindings.withMap(ImmutableMap.of())).value()
+        parsed.eval(InputBindings.forMap(ImmutableMap.of())).value()
     );
 
     final Expr parsedNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
@@ -920,7 +920,7 @@ public class ParserTest extends InitializedNullHandlingTest
     Assert.assertEquals(
         expression,
         expected,
-        parsedRoundTrip.eval(InputBindings.withMap(ImmutableMap.of())).value()
+        parsedRoundTrip.eval(InputBindings.forMap(ImmutableMap.of())).value()
     );
     Assert.assertEquals(parsed.stringify(), parsedRoundTrip.stringify());
   }
@@ -928,7 +928,7 @@ public class ParserTest extends InitializedNullHandlingTest
   private void validateConstantExpression(String expression, Object[] expected)
   {
     Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
-    Object evaluated = parsed.eval(InputBindings.withMap(ImmutableMap.of())).value();
+    Object evaluated = parsed.eval(InputBindings.forMap(ImmutableMap.of())).value();
     Assert.assertArrayEquals(
         expression,
         expected,
@@ -941,7 +941,7 @@ public class ParserTest extends InitializedNullHandlingTest
     Assert.assertArrayEquals(
         expression,
         expected,
-        (Object[]) roundTrip.eval(InputBindings.withMap(ImmutableMap.of())).value()
+        (Object[]) roundTrip.eval(InputBindings.forMap(ImmutableMap.of())).value()
     );
     Assert.assertEquals(parsed.stringify(), roundTrip.stringify());
   }

@@ -37,20 +37,20 @@ public class CaseInsensitiveExprMacroTest extends MacroTestBase
   public void testErrorZeroArguments()
   {
     expectException(IllegalArgumentException.class, "Function[icontains_string] requires 2 arguments");
-    eval("icontains_string()", InputBindings.withMap(ImmutableMap.of()));
+    eval("icontains_string()", InputBindings.forMap(ImmutableMap.of()));
   }
 
   @Test
   public void testErrorThreeArguments()
   {
     expectException(IllegalArgumentException.class, "Function[icontains_string] requires 2 arguments");
-    eval("icontains_string('a', 'b', 'c')", InputBindings.withMap(ImmutableMap.of()));
+    eval("icontains_string('a', 'b', 'c')", InputBindings.forMap(ImmutableMap.of()));
   }
 
   @Test
   public void testMatchSearchLowerCase()
   {
-    final ExprEval<?> result = eval("icontains_string(a, 'OBA')", InputBindings.withMap(ImmutableMap.of("a", "foobar")));
+    final ExprEval<?> result = eval("icontains_string(a, 'OBA')", InputBindings.forMap(ImmutableMap.of("a", "foobar")));
     Assert.assertEquals(
         ExprEval.ofLongBoolean(true).value(),
         result.value()
@@ -60,7 +60,7 @@ public class CaseInsensitiveExprMacroTest extends MacroTestBase
   @Test
   public void testMatchSearchUpperCase()
   {
-    final ExprEval<?> result = eval("icontains_string(a, 'oba')", InputBindings.withMap(ImmutableMap.of("a", "FOOBAR")));
+    final ExprEval<?> result = eval("icontains_string(a, 'oba')", InputBindings.forMap(ImmutableMap.of("a", "FOOBAR")));
     Assert.assertEquals(
         ExprEval.ofLongBoolean(true).value(),
         result.value()
@@ -70,7 +70,7 @@ public class CaseInsensitiveExprMacroTest extends MacroTestBase
   @Test
   public void testNoMatch()
   {
-    final ExprEval<?> result = eval("icontains_string(a, 'bar')", InputBindings.withMap(ImmutableMap.of("a", "foo")));
+    final ExprEval<?> result = eval("icontains_string(a, 'bar')", InputBindings.forMap(ImmutableMap.of("a", "foo")));
     Assert.assertEquals(
         ExprEval.ofLongBoolean(false).value(),
         result.value()
@@ -84,7 +84,7 @@ public class CaseInsensitiveExprMacroTest extends MacroTestBase
       expectException(IllegalArgumentException.class, "Function[icontains_string] substring must be a string literal");
     }
 
-    final ExprEval<?> result = eval("icontains_string(a, null)", InputBindings.withMap(ImmutableMap.of("a", "foo")));
+    final ExprEval<?> result = eval("icontains_string(a, null)", InputBindings.forMap(ImmutableMap.of("a", "foo")));
     Assert.assertEquals(
         ExprEval.ofLongBoolean(true).value(),
         result.value()
@@ -94,7 +94,7 @@ public class CaseInsensitiveExprMacroTest extends MacroTestBase
   @Test
   public void testEmptyStringSearch()
   {
-    final ExprEval<?> result = eval("icontains_string(a, '')", InputBindings.withMap(ImmutableMap.of("a", "foo")));
+    final ExprEval<?> result = eval("icontains_string(a, '')", InputBindings.forMap(ImmutableMap.of("a", "foo")));
     Assert.assertEquals(
         ExprEval.ofLongBoolean(true).value(),
         result.value()
@@ -108,7 +108,7 @@ public class CaseInsensitiveExprMacroTest extends MacroTestBase
       expectException(IllegalArgumentException.class, "Function[icontains_string] substring must be a string literal");
     }
 
-    final ExprEval<?> result = eval("icontains_string(a, null)", InputBindings.withMap(ImmutableMap.of("a", "")));
+    final ExprEval<?> result = eval("icontains_string(a, null)", InputBindings.forMap(ImmutableMap.of("a", "")));
     Assert.assertEquals(
         ExprEval.ofLongBoolean(true).value(),
         result.value()
@@ -118,7 +118,7 @@ public class CaseInsensitiveExprMacroTest extends MacroTestBase
   @Test
   public void testEmptyStringSearchOnEmptyString()
   {
-    final ExprEval<?> result = eval("icontains_string(a, '')", InputBindings.withMap(ImmutableMap.of("a", "")));
+    final ExprEval<?> result = eval("icontains_string(a, '')", InputBindings.forMap(ImmutableMap.of("a", "")));
     Assert.assertEquals(
         ExprEval.ofLongBoolean(true).value(),
         result.value()

@@ -32,7 +32,7 @@ import org.junit.rules.ExpectedException;
 
 public class LookupExprMacroTest extends InitializedNullHandlingTest
 {
-  private static final Expr.ObjectBinding BINDINGS = InputBindings.withMap(
+  private static final Expr.ObjectBinding BINDINGS = InputBindings.forMap(
       ImmutableMap.<String, Object>builder()
           .put("x", "foo")
           .build()

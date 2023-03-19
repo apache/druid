@@ -319,7 +319,7 @@ class ExpressionTestHelper
     }
 
     ExprEval<?> result = Parser.parse(expression.getExpression(), PLANNER_CONTEXT.getExprMacroTable())
-                               .eval(InputBindings.withMap(bindings));
+                               .eval(InputBindings.forMap(bindings));
 
     Assert.assertEquals("Result for: " + rexNode, expectedResult, result.value());
   }

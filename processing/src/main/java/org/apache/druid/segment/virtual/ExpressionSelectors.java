@@ -408,7 +408,7 @@ public class ExpressionSelectors
         }
       };
     } else {
-      return InputBindings.withTypedSuppliers(suppliers);
+      return InputBindings.forTypedSuppliers(suppliers);
     }
   }
 

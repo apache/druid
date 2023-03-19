@@ -20,9 +20,13 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.base.Supplier;
+import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -45,9 +49,39 @@ public class InputBindings
     }
   };
 
+  /**
+   * Empty {@link Expr.ObjectBinding} that doesn't complain about attempts to access type or value for any input
+   * identifiers, both of which will be nulls. Typically used for evaluating known constant expressions, or finding
+   * a default or initial value of some expression if all inputs are null.
+   */
   public static Expr.ObjectBinding nilBindings()
   {
     return NIL_BINDINGS;
+  }
+
+  /**
+   * Empty binding that throw a {@link UOE} if anything attempts to lookup an identifier type or value
+   */
+  public static Expr.ObjectBinding validateConstant(Expr expr)
+  {
+    return new Expr.ObjectBinding()
+    {
+      @Nullable
+      @Override
+      public Object get(String name)
+      {
+        // Sanity check. Bindings should not be used for a constant expression so explode if something tried
+        throw new UOE("Expression " + expr.stringify() + " has non-constant inputs.");
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getType(String name)
+      {
+        // Sanity check. Bindings should not be used for a constant expression so explode if something tried
+        throw new UOE("Expression " + expr.stringify() + " has non-constant inputs.");
+      }
+    };
   }
 
   /**
@@ -66,7 +100,10 @@ public class InputBindings
     };
   }
 
-  public static Expr.ObjectBinding singleProvider(ExpressionType type, final Function<String, ?> valueFn)
+  /**
+   * Create a {@link Expr.ObjectBinding} for a single input value of a known type provided by some value function.
+   */
+  public static Expr.ObjectBinding forSingleTypeProvider(ExpressionType type, final Function<String, ?> valueFn)
   {
     return new Expr.ObjectBinding()
     {
@@ -86,22 +123,38 @@ public class InputBindings
     };
   }
 
-  public static Expr.ObjectBinding forFunction(final Function<String, ?> valueFn)
+  /**
+   * Creates a {@link Expr.ObjectBinding} backed by some {@link Row}. {@link ColumnHolder#TIME_COLUMN_NAME} is special
+   * handled to be backed by {@link Row#getTimestampFromEpoch()}, all other values are ethically sourced from
+   * {@link Row#getRaw(String)}.
+   */
+  public static Expr.ObjectBinding forRow(Row row)
   {
+    final Map<String, ExprEval> cachedBindings = new HashMap<>();
     return new Expr.ObjectBinding()
     {
       @Nullable
       @Override
       public Object get(String name)
       {
-        return valueFn.apply(name);
+        cachedBindings.computeIfAbsent(name, this::compute);
+        return cachedBindings.get(name).value();
       }
 
       @Nullable
       @Override
       public ExpressionType getType(String name)
       {
-        return ExprEval.bestEffortOf(valueFn.apply(name)).type();
+        cachedBindings.computeIfAbsent(name, this::compute);
+        return cachedBindings.get(name).type();
+      }
+
+      private ExprEval compute(String name)
+      {
+        if (ColumnHolder.TIME_COLUMN_NAME.equals(name)) {
+          return ExprEval.ofLong(row.getTimestampFromEpoch());
+        }
+        return ExprEval.bestEffortOf(row.getRaw(name));
       }
     };
   }
@@ -109,7 +162,7 @@ public class InputBindings
   /**
    * Create {@link Expr.ObjectBinding} backed by {@link Map} to provide values for identifiers to evaluate {@link Expr}
    */
-  public static Expr.ObjectBinding withMap(final Map<String, ?> bindings)
+  public static Expr.ObjectBinding forMap(final Map<String, ?> bindings)
   {
     return new Expr.ObjectBinding()
     {
@@ -133,7 +186,7 @@ public class InputBindings
    * Create {@link Expr.ObjectBinding} backed by map of {@link Supplier} to provide values for identifiers to evaluate
    * {@link Expr}
    */
-  public static Expr.ObjectBinding withTypedSuppliers(final Map<String, Pair<ExpressionType, Supplier<Object>>> bindings)
+  public static Expr.ObjectBinding forTypedSuppliers(final Map<String, Pair<ExpressionType, Supplier<Object>>> bindings)
   {
     return new Expr.ObjectBinding()
     {

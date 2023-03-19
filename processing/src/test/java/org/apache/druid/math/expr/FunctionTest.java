@@ -82,7 +82,7 @@ public class FunctionTest extends InitializedNullHandlingTest
                     .put("someComplex", new TypeStrategiesTest.NullableLongPair(1L, 2L))
                     .put("str1", "v1")
                     .put("str2", "v2");
-    bindings = InputBindings.withMap(builder.build());
+    bindings = InputBindings.forMap(builder.build());
   }
 
   @Test

@@ -35,7 +35,7 @@ public class ExprMacroTest
 {
   private static final String IPV4_STRING = "192.168.0.1";
   private static final long IPV4_LONG = 3232235521L;
-  private static final Expr.ObjectBinding BINDINGS = InputBindings.withMap(
+  private static final Expr.ObjectBinding BINDINGS = InputBindings.forMap(
       ImmutableMap.<String, Object>builder()
           .put("t", DateTimes.of("2000-02-03T04:05:06").getMillis())
           .put("t1", DateTimes.of("2000-02-03T00:00:00").getMillis())
