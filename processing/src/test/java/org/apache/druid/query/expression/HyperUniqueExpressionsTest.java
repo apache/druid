@@ -19,13 +19,11 @@
 
 package org.apache.druid.query.expression;
 
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -53,15 +51,15 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
   private static final long SOME_LONG = 1234L;
   private static final double SOME_DOUBLE = 1.234;
 
-  Expr.ObjectBinding inputBindings = InputBindings.forTypedSuppliers(
-      new ImmutableMap.Builder<String, Pair<ExpressionType, Supplier<Object>>>()
-          .put("hll", new Pair<>(HyperUniqueExpressions.TYPE, HyperLogLogCollector::makeLatestCollector))
-          .put("string", new Pair<>(ExpressionType.STRING, () -> SOME_STRING))
-          .put("long", new Pair<>(ExpressionType.LONG, () -> SOME_LONG))
-          .put("double", new Pair<>(ExpressionType.DOUBLE, () -> SOME_DOUBLE))
-          .put("nullString", new Pair<>(ExpressionType.STRING, () -> null))
-          .put("nullLong", new Pair<>(ExpressionType.LONG, () -> null))
-          .put("nullDouble", new Pair<>(ExpressionType.DOUBLE, () -> null))
+  Expr.ObjectBinding inputBindings = InputBindings.forInputSuppliers(
+      new ImmutableMap.Builder<String, InputBindings.InputSupplier>()
+          .put("hll", new InputBindings.InputSupplier<>(HyperUniqueExpressions.TYPE, HyperLogLogCollector::makeLatestCollector))
+          .put("string", new InputBindings.InputSupplier<>(ExpressionType.STRING, () -> SOME_STRING))
+          .put("long", new InputBindings.InputSupplier<>(ExpressionType.LONG, () -> SOME_LONG))
+          .put("double", new InputBindings.InputSupplier<>(ExpressionType.DOUBLE, () -> SOME_DOUBLE))
+          .put("nullString", new InputBindings.InputSupplier<>(ExpressionType.STRING, () -> null))
+          .put("nullLong", new InputBindings.InputSupplier<>(ExpressionType.LONG, () -> null))
+          .put("nullDouble", new InputBindings.InputSupplier<>(ExpressionType.DOUBLE, () -> null))
           .build()
   );
 

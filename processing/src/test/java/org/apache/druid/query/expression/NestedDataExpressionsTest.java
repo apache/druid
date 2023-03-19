@@ -21,11 +21,9 @@ package org.apache.druid.query.expression;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -66,17 +64,17 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
       "y", ImmutableMap.of("a", "hello", "b", "world")
   );
 
-  Expr.ObjectBinding inputBindings = InputBindings.forTypedSuppliers(
-      new ImmutableMap.Builder<String, Pair<ExpressionType, Supplier<Object>>>()
-          .put("nest", new Pair<>(NestedDataExpressions.TYPE, () -> NEST))
-          .put("nestWrapped", new Pair<>(NestedDataExpressions.TYPE, () -> new StructuredData(NEST)))
-          .put("nester", new Pair<>(NestedDataExpressions.TYPE, () -> NESTER))
-          .put("string", new Pair<>(ExpressionType.STRING, () -> "abcdef"))
-          .put("long", new Pair<>(ExpressionType.LONG, () -> 1234L))
-          .put("double", new Pair<>(ExpressionType.DOUBLE, () -> 1.234))
-          .put("nullString", new Pair<>(ExpressionType.STRING, () -> null))
-          .put("nullLong", new Pair<>(ExpressionType.LONG, () -> null))
-          .put("nullDouble", new Pair<>(ExpressionType.DOUBLE, () -> null))
+  Expr.ObjectBinding inputBindings = InputBindings.forInputSuppliers(
+      new ImmutableMap.Builder<String, InputBindings.InputSupplier>()
+          .put("nest", new InputBindings.InputSupplier<>(NestedDataExpressions.TYPE, () -> NEST))
+          .put("nestWrapped", new InputBindings.InputSupplier<>(NestedDataExpressions.TYPE, () -> new StructuredData(NEST)))
+          .put("nester", new InputBindings.InputSupplier<>(NestedDataExpressions.TYPE, () -> NESTER))
+          .put("string", new InputBindings.InputSupplier<>(ExpressionType.STRING, () -> "abcdef"))
+          .put("long", new InputBindings.InputSupplier<>(ExpressionType.LONG, () -> 1234L))
+          .put("double", new InputBindings.InputSupplier<>(ExpressionType.DOUBLE, () -> 1.234))
+          .put("nullString", new InputBindings.InputSupplier<>(ExpressionType.STRING, () -> null))
+          .put("nullLong", new InputBindings.InputSupplier<>(ExpressionType.LONG, () -> null))
+          .put("nullDouble", new InputBindings.InputSupplier<>(ExpressionType.DOUBLE, () -> null))
           .build()
   );
 

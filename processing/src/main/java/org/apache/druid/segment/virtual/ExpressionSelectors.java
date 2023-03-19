@@ -25,7 +25,6 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.NonnullPair;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -322,7 +321,7 @@ public class ExpressionSelectors
   )
   {
     final List<String> columns = plan.getAnalysis().getRequiredBindingsList();
-    final Map<String, Pair<ExpressionType, Supplier<Object>>> suppliers = new HashMap<>();
+    final Map<String, InputBindings.InputSupplier> suppliers = new HashMap<>();
     for (String columnName : columns) {
       final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(columnName);
       final boolean multiVal = capabilities != null && capabilities.hasMultipleValues().isTrue();
@@ -377,7 +376,7 @@ public class ExpressionSelectors
       }
 
       if (supplier != null) {
-        suppliers.put(columnName, new Pair<>(expressionType, supplier));
+        suppliers.put(columnName, new InputBindings.InputSupplier<>(expressionType, supplier));
       }
     }
 
@@ -386,29 +385,11 @@ public class ExpressionSelectors
     } else if (suppliers.size() == 1 && columns.size() == 1) {
       // If there's only one column (and it has a supplier), we can skip the Map and just use that supplier when
       // asked for something.
-      final String column = Iterables.getOnlyElement(suppliers.keySet());
-      final Pair<ExpressionType, Supplier<Object>> supplier = Iterables.getOnlyElement(suppliers.values());
+      final InputBindings.InputSupplier<?> supplier = Iterables.getOnlyElement(suppliers.values());
 
-      return new Expr.ObjectBinding()
-      {
-        @Nullable
-        @Override
-        public Object get(String name)
-        {
-          // There's only one binding, and it must be the single column, so it can safely be ignored in production.
-          assert column.equals(name);
-          return supplier.rhs.get();
-        }
-
-        @Nullable
-        @Override
-        public ExpressionType getType(String name)
-        {
-          return supplier.lhs;
-        }
-      };
+      return InputBindings.forSingleTypeSupplier(supplier.getType(), supplier);
     } else {
-      return InputBindings.forTypedSuppliers(suppliers);
+      return InputBindings.forInputSuppliers(suppliers);
     }
   }
 

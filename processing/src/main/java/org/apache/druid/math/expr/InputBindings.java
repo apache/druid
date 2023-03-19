@@ -21,7 +21,6 @@ package org.apache.druid.math.expr;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.data.input.Row;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.column.ColumnHolder;
 
@@ -185,7 +184,7 @@ public class InputBindings
    * Create {@link Expr.ObjectBinding} backed by map of {@link Supplier} to provide values for identifiers to evaluate
    * {@link Expr}
    */
-  public static Expr.ObjectBinding forTypedSuppliers(final Map<String, Pair<ExpressionType, Supplier<Object>>> bindings)
+  public static Expr.ObjectBinding forInputSuppliers(final Map<String, InputSupplier> bindings)
   {
     return new Expr.ObjectBinding()
     {
@@ -193,20 +192,42 @@ public class InputBindings
       @Override
       public Object get(String name)
       {
-        Pair<ExpressionType, Supplier<Object>> binding = bindings.get(name);
-        return binding == null || binding.rhs == null ? null : binding.rhs.get();
+        InputSupplier<?> binding = bindings.get(name);
+        return binding == null ? null : binding.get();
       }
 
       @Nullable
       @Override
       public ExpressionType getType(String name)
       {
-        Pair<ExpressionType, Supplier<Object>> binding = bindings.get(name);
+        InputSupplier<?> binding = bindings.get(name);
         if (binding == null) {
           return null;
         }
-        return binding.lhs;
+        return binding.getType();
       }
     };
+  }
+
+  public static class InputSupplier<T> implements Supplier<T>
+  {
+    private final ExpressionType type;
+    private final Supplier<T> supplier;
+
+    public InputSupplier(ExpressionType type, Supplier<T> supplier) {
+      this.supplier = supplier;
+      this.type = type;
+    }
+
+    @Override
+    public T get()
+    {
+      return supplier.get();
+    }
+
+    public ExpressionType getType()
+    {
+      return type;
+    }
   }
 }

@@ -71,8 +71,11 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
   @Test
   public void testMatchGroup2()
   {
-    expectedException.expectMessage("No group 2");
-    final ExprEval<?> result = eval("regexp_extract(a, 'f(.o)', 2)", InputBindings.forMap(ImmutableMap.of("a", "foo")));
+    Throwable t = Assert.assertThrows(
+        IndexOutOfBoundsException.class,
+        () -> eval("regexp_extract(a, 'f(.o)', 2)", InputBindings.forMap(ImmutableMap.of("a", "foo")))
+    );
+    Assert.assertEquals("No group 2", t.getMessage());
   }
 
   @Test
