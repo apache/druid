@@ -28,7 +28,6 @@ import org.apache.druid.segment.column.ColumnHolder;
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
 
 public class InputBindings
 {
@@ -101,9 +100,9 @@ public class InputBindings
   }
 
   /**
-   * Create a {@link Expr.ObjectBinding} for a single input value of a known type provided by some value function.
+   * Create a {@link Expr.ObjectBinding} for a single input value of a known type provided by some {@link Supplier}
    */
-  public static Expr.ObjectBinding forSingleTypeProvider(ExpressionType type, final Function<String, ?> valueFn)
+  public static Expr.ObjectBinding forSingleTypeSupplier(ExpressionType type, Supplier<?> supplier)
   {
     return new Expr.ObjectBinding()
     {
@@ -111,7 +110,7 @@ public class InputBindings
       @Override
       public Object get(String name)
       {
-        return valueFn.apply(name);
+        return supplier.get();
       }
 
       @Nullable
