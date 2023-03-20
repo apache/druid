@@ -224,13 +224,13 @@ You only need to complete this step if:
 Example request to add the LDAP user `myuser` to Druid:
 
 ```
-curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authentication/db/ldap/users/myuser 
+curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/users/myuser 
 ```
 
 Example request to assign the `myuser` user to the `queryRole` role:
 
 ```
-curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authentication/db/ldap/users/myuser/roles/queryRole
+curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/users/myuser/roles/queryRole
 ```
 
 ## Enable LDAP over TLS (LDAPS)

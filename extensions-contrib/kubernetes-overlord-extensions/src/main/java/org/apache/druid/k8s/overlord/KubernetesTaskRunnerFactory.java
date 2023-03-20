@@ -25,7 +25,7 @@ import com.google.inject.Inject;
 import io.fabric8.kubernetes.client.Config;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
@@ -46,7 +46,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   private final TaskQueueConfig taskQueueConfig;
   private final TaskLogPusher taskLogPusher;
   private final DruidNode druidNode;
-  private final TaskStorageDirTracker dirTracker;
+  private final TaskConfig taskConfig;
   private KubernetesTaskRunner runner;
 
 
@@ -58,7 +58,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
       @JacksonInject TaskQueueConfig taskQueueConfig,
       TaskLogPusher taskLogPusher,
       @Self DruidNode druidNode,
-      TaskStorageDirTracker dirTracker
+      TaskConfig taskConfig
   )
   {
 
@@ -68,7 +68,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     this.taskQueueConfig = taskQueueConfig;
     this.taskLogPusher = taskLogPusher;
     this.druidNode = druidNode;
-    this.dirTracker = dirTracker;
+    this.taskConfig = taskConfig;
   }
 
   @Override
@@ -99,7 +99,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
         taskLogPusher,
         new DruidKubernetesPeonClient(client, kubernetesTaskRunnerConfig.namespace, kubernetesTaskRunnerConfig.debugJobs),
         druidNode,
-        dirTracker
+        taskConfig
     );
     return runner;
   }

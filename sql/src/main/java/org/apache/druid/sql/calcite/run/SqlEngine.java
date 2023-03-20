@@ -40,7 +40,7 @@ public interface SqlEngine
   /**
    * Whether a feature applies to this engine or not.
    */
-  boolean feature(EngineFeature feature, PlannerContext plannerContext);
+  boolean featureAvailable(EngineFeature feature, PlannerContext plannerContext);
 
   /**
    * Validates a provided query context. Returns quietly if the context is OK; throws {@link ValidationException}

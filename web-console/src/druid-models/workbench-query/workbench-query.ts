@@ -195,7 +195,7 @@ export class WorkbenchQuery {
       .map(line =>
         line.replace(
           /^(\s*)(INSERT\s+INTO|REPLACE\s+INTO|OVERWRITE|PARTITIONED\s+BY|CLUSTERED\s+BY)/i,
-          (_, spaces, thing) => `${spaces}--${thing.substr(2)}`,
+          (_, spaces, thing) => `${spaces}--${thing.slice(2)}`,
         ),
       )
       .join('\n');

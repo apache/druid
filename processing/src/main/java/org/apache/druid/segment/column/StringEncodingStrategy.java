@@ -87,12 +87,6 @@ public interface StringEncodingStrategy
     public static final int DEFAULT_BUCKET_SIZE = 4;
 
     @JsonProperty
-    public int getBucketSize()
-    {
-      return bucketSize;
-    }
-
-    @JsonProperty
     private final int bucketSize;
 
     @JsonCreator
@@ -104,6 +98,12 @@ public interface StringEncodingStrategy
       if (Integer.bitCount(this.bucketSize) != 1) {
         throw new ISE("bucketSize must be a power of two but was[%,d]", bucketSize);
       }
+    }
+
+    @JsonProperty
+    public int getBucketSize()
+    {
+      return bucketSize;
     }
 
     @Override

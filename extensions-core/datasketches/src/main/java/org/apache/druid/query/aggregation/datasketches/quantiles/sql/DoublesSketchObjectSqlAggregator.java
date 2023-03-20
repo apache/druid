@@ -79,6 +79,7 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
         plannerContext,
         rowSignature,
         Expressions.fromFieldAccess(
+            rexBuilder.getTypeFactory(),
             rowSignature,
             project,
             aggregateCall.getArgList().get(0)
@@ -94,6 +95,7 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
 
     if (aggregateCall.getArgList().size() >= 2) {
       final RexNode resolutionArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(1)

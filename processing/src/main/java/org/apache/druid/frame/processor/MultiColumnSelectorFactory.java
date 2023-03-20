@@ -20,16 +20,18 @@
 package org.apache.druid.frame.processor;
 
 import com.google.common.base.Predicate;
+import org.apache.druid.frame.segment.row.FrameColumnSelectorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
@@ -44,22 +46,40 @@ import java.util.function.Supplier;
 public class MultiColumnSelectorFactory implements ColumnSelectorFactory
 {
   private final List<Supplier<ColumnSelectorFactory>> factorySuppliers;
-  private final ColumnInspector columnInspector;
+  private final RowSignature signature;
 
   private int currentFactory = 0;
 
   public MultiColumnSelectorFactory(
       final List<Supplier<ColumnSelectorFactory>> factorySuppliers,
-      final ColumnInspector columnInspector
+      final RowSignature signature
   )
   {
     this.factorySuppliers = factorySuppliers;
-    this.columnInspector = columnInspector;
+    this.signature = signature;
   }
 
   public void setCurrentFactory(final int currentFactory)
   {
     this.currentFactory = currentFactory;
+  }
+
+  /**
+   * Create a copy that includes {@link FrameColumnSelectorFactory#ROW_SIGNATURE_COLUMN} and
+   * {@link FrameColumnSelectorFactory#ROW_MEMORY_COLUMN} to potentially enable direct row memory copying. If these
+   * columns don't actually exist in the underlying column selector factories, they'll be ignored, so it's OK to
+   * use this method even if the columns may not exist.
+   */
+  public MultiColumnSelectorFactory withRowMemoryAndSignatureColumns()
+  {
+    return new MultiColumnSelectorFactory(
+        factorySuppliers,
+        RowSignature.builder()
+                    .addAll(signature)
+                    .add(FrameColumnSelectorFactory.ROW_SIGNATURE_COLUMN, ColumnType.UNKNOWN_COMPLEX)
+                    .add(FrameColumnSelectorFactory.ROW_MEMORY_COLUMN, ColumnType.UNKNOWN_COMPLEX)
+                    .build()
+    );
   }
 
   @Override
@@ -235,6 +255,6 @@ public class MultiColumnSelectorFactory implements ColumnSelectorFactory
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    return columnInspector.getColumnCapabilities(column);
+    return signature.getColumnCapabilities(column);
   }
 }

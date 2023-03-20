@@ -39,7 +39,7 @@ import {
 } from '../../components';
 import {
   AsyncActionDialog,
-  CompactionDialog,
+  CompactionConfigDialog,
   KillDatasourceDialog,
   RetentionDialog,
 } from '../../dialogs';
@@ -233,7 +233,7 @@ interface RetentionDialogOpenOn {
   readonly rules: Rule[];
 }
 
-interface CompactionDialogOpenOn {
+interface CompactionConfigDialogOpenOn {
   readonly datasource: string;
   readonly compactionConfig?: CompactionConfig;
 }
@@ -254,7 +254,7 @@ export interface DatasourcesViewState {
 
   showUnused: boolean;
   retentionDialogOpenOn?: RetentionDialogOpenOn;
-  compactionDialogOpenOn?: CompactionDialogOpenOn;
+  compactionDialogOpenOn?: CompactionConfigDialogOpenOn;
   datasourceToMarkAsUnusedAllSegmentsIn?: string;
   datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn?: string;
   killDatasource?: string;
@@ -981,12 +981,12 @@ ORDER BY 1`;
     );
   }
 
-  private renderCompactionDialog() {
+  private renderCompactionConfigDialog() {
     const { datasourcesAndDefaultRulesState, compactionDialogOpenOn } = this.state;
     if (!compactionDialogOpenOn || !datasourcesAndDefaultRulesState.data) return;
 
     return (
-      <CompactionDialog
+      <CompactionConfigDialog
         datasource={compactionDialogOpenOn.datasource}
         compactionConfig={compactionDialogOpenOn.compactionConfig}
         onClose={() => this.setState({ compactionDialogOpenOn: undefined })}
@@ -1571,7 +1571,7 @@ ORDER BY 1`;
         {this.renderUseUnuseActionByInterval()}
         {this.renderKillAction()}
         {this.renderRetentionDialog()}
-        {this.renderCompactionDialog()}
+        {this.renderCompactionConfigDialog()}
         {this.renderForceCompactAction()}
       </div>
     );

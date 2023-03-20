@@ -57,7 +57,6 @@ import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -125,7 +124,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   {
     return new DruidJoinQueryRel(
         getCluster(),
-        getTraitSet().plusAll(newQueryBuilder.getRelTraits()),
+        newQueryBuilder.getTraitSet(getConvention()),
         joinRel,
         leftFilter,
         newQueryBuilder,
@@ -137,7 +136,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   public DruidQuery toDruidQuery(final boolean finalizeAggregations)
   {
     final DruidRel<?> leftDruidRel = (DruidRel<?>) left;
-    final DruidQuery leftQuery = Preconditions.checkNotNull((leftDruidRel).toDruidQuery(false), "leftQuery");
+    final DruidQuery leftQuery = Preconditions.checkNotNull(leftDruidRel.toDruidQuery(false), "leftQuery");
     final RowSignature leftSignature = leftQuery.getOutputRowSignature();
     final DataSource leftDataSource;
 
@@ -146,7 +145,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     final RowSignature rightSignature = rightQuery.getOutputRowSignature();
     final DataSource rightDataSource;
 
-    if (computeLeftRequiresSubquery(leftDruidRel)) {
+    if (computeLeftRequiresSubquery(getPlannerContext(), leftDruidRel)) {
       leftDataSource = new QueryDataSource(leftQuery.getQuery());
       if (leftFilter != null) {
         throw new ISE("Filter on left table is supposed to be null if left child is a query source");
@@ -155,7 +154,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       leftDataSource = leftQuery.getDataSource();
     }
 
-    if (computeRightRequiresSubquery(rightDruidRel)) {
+    if (computeRightRequiresSubquery(getPlannerContext(), rightDruidRel)) {
       rightDataSource = new QueryDataSource(rightQuery.getQuery());
     } else {
       rightDataSource = rightQuery.getDataSource();
@@ -315,26 +314,31 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   @Override
   public RelOptCost computeSelfCost(final RelOptPlanner planner, final RelMetadataQuery mq)
   {
-    double cost;
+    double joinCost = partialQuery.estimateCost();
 
-    if (computeLeftRequiresSubquery(getSomeDruidChild(left))) {
-      cost = CostEstimates.COST_SUBQUERY;
+    if (getPlannerContext().getJoinAlgorithm().requiresSubquery()) {
+      joinCost *= CostEstimates.MULTIPLIER_OUTER_QUERY;
     } else {
-      cost = partialQuery.estimateCost();
-      if (joinRel.getJoinType() == JoinRelType.INNER && plannerConfig.isComputeInnerJoinCostAsFilter()) {
-        cost *= CostEstimates.MULTIPLIER_FILTER; // treating inner join like a filter on left table
+      // Penalize subqueries if we don't have to do them.
+      if (computeLeftRequiresSubquery(getPlannerContext(), getSomeDruidChild(left))) {
+        joinCost += CostEstimates.COST_SUBQUERY;
+      } else {
+        if (joinRel.getJoinType() == JoinRelType.INNER && plannerConfig.isComputeInnerJoinCostAsFilter()) {
+          joinCost *= CostEstimates.MULTIPLIER_FILTER; // treating inner join like a filter on left table
+        }
+      }
+
+      if (computeRightRequiresSubquery(getPlannerContext(), getSomeDruidChild(right))) {
+        joinCost += CostEstimates.COST_SUBQUERY;
       }
     }
 
-    if (computeRightRequiresSubquery(getSomeDruidChild(right))) {
-      cost += CostEstimates.COST_SUBQUERY;
-    }
-
+    // Penalize cross joins.
     if (joinRel.getCondition().isA(SqlKind.LITERAL) && !joinRel.getCondition().isAlwaysFalse()) {
-      cost += CostEstimates.COST_JOIN_CROSS;
+      joinCost += CostEstimates.COST_JOIN_CROSS;
     }
 
-    return planner.getCostFactory().makeCost(cost, 0, 0);
+    return planner.getCostFactory().makeCost(joinCost, 0, 0);
   }
 
   public static JoinType toDruidJoinType(JoinRelType calciteJoinType)
@@ -353,14 +357,22 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     }
   }
 
-  public static boolean computeLeftRequiresSubquery(final DruidRel<?> left)
+  public static boolean computeLeftRequiresSubquery(final PlannerContext plannerContext, final DruidRel<?> left)
   {
+    if (plannerContext.getJoinAlgorithm().requiresSubquery()) {
+      return true;
+    }
+
     // Left requires a subquery unless it's a scan or mapping on top of any table or a join.
     return !DruidRels.isScanOrMapping(left, true);
   }
 
-  public static boolean computeRightRequiresSubquery(final DruidRel<?> right)
+  public static boolean computeRightRequiresSubquery(final PlannerContext plannerContext, final DruidRel<?> right)
   {
+    if (plannerContext.getJoinAlgorithm().requiresSubquery()) {
+      return true;
+    }
+
     // Right requires a subquery unless it's a scan or mapping on top of a global datasource.
     // ideally this would involve JoinableFactory.isDirectlyJoinable to check that the global datasources
     // are in fact possibly joinable, but for now isGlobal is coupled to joinability

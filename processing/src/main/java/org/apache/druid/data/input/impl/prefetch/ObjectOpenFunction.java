@@ -19,7 +19,6 @@
 
 package org.apache.druid.data.input.impl.prefetch;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -31,10 +30,4 @@ public interface ObjectOpenFunction<T>
   {
     return open(object);
   }
-
-  default InputStream open(T object, File outFile) throws IOException
-  {
-    return open(object);
-  }
-
 }

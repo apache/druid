@@ -43,8 +43,6 @@ import org.junit.Test;
  */
 public class CalciteSelectQueryMSQTest extends CalciteQueryTest
 {
-
-  private MSQTestOverlordServiceClient indexingServiceClient;
   private TestGroupByBuffers groupByBuffers;
 
   @Before
@@ -77,12 +75,13 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
     final WorkerMemoryParameters workerMemoryParameters =
         WorkerMemoryParameters.createInstance(
             WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
-            WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
             2,
             10,
-            2
+            2,
+            0,
+            0
         );
-    indexingServiceClient = new MSQTestOverlordServiceClient(
+    final MSQTestOverlordServiceClient indexingServiceClient = new MSQTestOverlordServiceClient(
         queryJsonMapper,
         injector,
         new MSQTestTaskActionClient(queryJsonMapper),

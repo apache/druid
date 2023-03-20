@@ -513,6 +513,12 @@ public class OperatorConversions
       return this;
     }
 
+    public OperatorBuilder sqlKind(SqlKind kind)
+    {
+      this.kind = kind;
+      return this;
+    }
+
     /**
      * Creates a {@link SqlFunction} from this builder.
      */

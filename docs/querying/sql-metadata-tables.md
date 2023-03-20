@@ -190,7 +190,7 @@ SELECT * FROM sys.segments WHERE is_active = 1 AND last_compaction_state IS NOT 
 or if you want to retrieve segment that was compacted only by a particular compaction spec (such as that of the auto compaction):
 
 ```sql
-SELECT * FROM sys.segments WHERE is_active = 1 AND last_compaction_state = 'CompactionState{partitionsSpec=DynamicPartitionsSpec{maxRowsPerSegment=5000000, maxTotalRows=9223372036854775807}, indexSpec={bitmap={type=roaring, compressRunOnSerialization=true}, dimensionCompression=lz4, metricCompression=lz4, longEncoding=longs, segmentLoader=null}}'
+SELECT * FROM sys.segments WHERE is_active = 1 AND last_compaction_state = 'CompactionState{partitionsSpec=DynamicPartitionsSpec{maxRowsPerSegment=5000000, maxTotalRows=9223372036854775807}, indexSpec={bitmap={type=roaring}, dimensionCompression=lz4, metricCompression=lz4, longEncoding=longs, segmentLoader=null}}'
 ```
 
 ### SERVERS table
