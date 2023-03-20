@@ -150,6 +150,8 @@ export interface SortProgressCounter {
 export interface SegmentGenerationProgressCounter {
   type: 'segmentGenerationProgress';
   rowsProcessed: number;
+  rowsPersisted: number;
+  rowsMerged: number;
 }
 
 export interface WarningCounter {
@@ -420,10 +422,7 @@ export class Stages {
   getTotalSegmentGenerationProgressForStage(stage: StageDefinition): number {
     const { counters } = this;
     if (!counters) return 0;
-    return sum(
-      this.getCountersForStage(stage),
-      c => c.segmentGenerationProgress?.rowsProcessed || 0,
-    );
+    return sum(this.getCountersForStage(stage), c => c.segmentGenerationProgress?.rowsMerged || 0);
   }
 
   getChannelCounterNamesForStage(stage: StageDefinition): ChannelCounterName[] {
@@ -458,7 +457,7 @@ export class Stages {
             }
           : zeroChannelFields();
       }
-      newWideCounter.segmentProgress = stageCounters.segmentGenerationProgress?.rowsProcessed;
+      newWideCounter.segmentProgress = stageCounters.segmentGenerationProgress?.rowsMerged;
       return newWideCounter;
     });
   }
