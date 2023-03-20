@@ -942,7 +942,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
                     worker,
                     channel
                 );
-                Assert.assertTrue(channelToCounters.containsKey(channel));
+                Assert.assertTrue(StringUtils.format("Counters not found for stage [%d], worker [%d], channel [%s]",
+                                                     stage,
+                                                     worker,
+                                                     channel), channelToCounters.containsKey(channel));
                 counter.matchQuerySnapshot(errorMessageFormat, channelToCounters.get(channel));
               }
           );

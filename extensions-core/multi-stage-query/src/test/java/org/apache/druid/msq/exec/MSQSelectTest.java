@@ -372,6 +372,102 @@ public class MSQSelectTest extends MSQTestBase
   }
 
   @Test
+  public void testSelectWithLimit()
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("cnt", ColumnType.LONG)
+                                               .add("dim1", ColumnType.STRING)
+                                               .build();
+
+    testSelectQuery()
+        .setSql("select cnt,dim1 from foo limit 10")
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(
+                       newScanQueryBuilder()
+                           .dataSource(CalciteTests.DATASOURCE1)
+                           .intervals(querySegmentSpec(Filtration.eternity()))
+                           .columns("cnt", "dim1")
+                           .context(defaultScanQueryContext(context, resultSignature))
+                           .limit(10)
+                           .build()
+                   )
+                   .columnMappings(ColumnMappings.identity(resultSignature))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .build()
+        )
+        .setQueryContext(context)
+        .setExpectedRowSignature(resultSignature)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "shuffle"
+        )
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1L, !useDefault ? "" : null},
+            new Object[]{1L, "10.1"},
+            new Object[]{1L, "2"},
+            new Object[]{1L, "1"},
+            new Object[]{1L, "def"},
+            new Object[]{1L, "abc"}
+        )).verifyResults();
+  }
+
+  @Test
+  public void testSelectWithGroupByLimit()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("cnt", ColumnType.LONG)
+                                            .add("cnt1", ColumnType.LONG)
+                                            .build();
+
+
+    testSelectQuery()
+        .setSql("select cnt,count(*) as cnt1 from foo group by cnt limit 10")
+        .setQueryContext(context)
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(GroupByQuery.builder()
+                                                      .setDataSource(CalciteTests.DATASOURCE1)
+                                                      .setInterval(querySegmentSpec(Filtration
+                                                                                        .eternity()))
+                                                      .setGranularity(Granularities.ALL)
+                                                      .setDimensions(dimensions(
+                                                          new DefaultDimensionSpec(
+                                                              "cnt",
+                                                              "d0",
+                                                              ColumnType.LONG
+                                                          )
+                                                      ))
+                                                      .setAggregatorSpecs(aggregators(new CountAggregatorFactory(
+                                                          "a0")))
+                                                      .setContext(context)
+                                                      .setLimit(10)
+                                                      .build())
+                                   .columnMappings(
+                                       new ColumnMappings(ImmutableList.of(
+                                           new ColumnMapping("d0", "cnt"),
+                                           new ColumnMapping("a0", "cnt1")
+                                       )
+                                       ))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
+        .verifyResults();
+
+  }
+
+  @Test
   public void testSubquery()
   {
     RowSignature resultSignature = RowSignature.builder()

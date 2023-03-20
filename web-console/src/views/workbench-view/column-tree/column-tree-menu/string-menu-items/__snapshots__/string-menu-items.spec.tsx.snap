@@ -4,6 +4,7 @@ exports[`StringMenuItems matches snapshot when menu is opened for column inside 
 <div>
   <li
     class="bp4-submenu"
+    role="none"
   >
     <span
       class="bp4-popover-wrapper"
@@ -14,6 +15,7 @@ exports[`StringMenuItems matches snapshot when menu is opened for column inside 
       >
         <a
           class="bp4-menu-item"
+          role="menuitem"
           tabindex="0"
         >
           <span
@@ -28,6 +30,7 @@ exports[`StringMenuItems matches snapshot when menu is opened for column inside 
               <svg
                 data-icon="filter"
                 height="16"
+                role="img"
                 viewBox="0 0 16 16"
                 width="16"
               >
@@ -44,18 +47,17 @@ exports[`StringMenuItems matches snapshot when menu is opened for column inside 
             Filter
           </div>
           <span
+            aria-hidden="true"
             class="bp4-icon bp4-icon-caret-right bp4-submenu-icon"
             icon="caret-right"
           >
             <svg
               data-icon="caret-right"
               height="16"
+              role="img"
               viewBox="0 0 16 16"
               width="16"
             >
-              <desc>
-                Open sub menu
-              </desc>
               <path
                 d="M11 8c0-.15-.07-.28-.17-.37l-4-3.5A.495.495 0 006 4.5v7a.495.495 0 00.83.37l4-3.5c.1-.09.17-.22.17-.37z"
                 fill-rule="evenodd"
@@ -68,6 +70,7 @@ exports[`StringMenuItems matches snapshot when menu is opened for column inside 
   </li>
   <li
     class="bp4-submenu"
+    role="none"
   >
     <span
       class="bp4-popover-wrapper"
@@ -78,6 +81,7 @@ exports[`StringMenuItems matches snapshot when menu is opened for column inside 
       >
         <a
           class="bp4-menu-item"
+          role="menuitem"
           tabindex="0"
         >
           <span
@@ -92,6 +96,7 @@ exports[`StringMenuItems matches snapshot when menu is opened for column inside 
               <svg
                 data-icon="group-objects"
                 height="16"
+                role="img"
                 viewBox="0 0 16 16"
                 width="16"
               >
@@ -108,18 +113,17 @@ exports[`StringMenuItems matches snapshot when menu is opened for column inside 
             Group by
           </div>
           <span
+            aria-hidden="true"
             class="bp4-icon bp4-icon-caret-right bp4-submenu-icon"
             icon="caret-right"
           >
             <svg
               data-icon="caret-right"
               height="16"
+              role="img"
               viewBox="0 0 16 16"
               width="16"
             >
-              <desc>
-                Open sub menu
-              </desc>
               <path
                 d="M11 8c0-.15-.07-.28-.17-.37l-4-3.5A.495.495 0 006 4.5v7a.495.495 0 00.83.37l4-3.5c.1-.09.17-.22.17-.37z"
                 fill-rule="evenodd"
@@ -132,9 +136,11 @@ exports[`StringMenuItems matches snapshot when menu is opened for column inside 
   </li>
   <li
     class=""
+    role="none"
   >
     <a
       class="bp4-menu-item bp4-popover-dismiss"
+      role="menuitem"
       tabindex="0"
     >
       <span
@@ -149,6 +155,7 @@ exports[`StringMenuItems matches snapshot when menu is opened for column inside 
           <svg
             data-icon="ungroup-objects"
             height="16"
+            role="img"
             viewBox="0 0 16 16"
             width="16"
           >
@@ -168,6 +175,7 @@ exports[`StringMenuItems matches snapshot when menu is opened for column inside 
   </li>
   <li
     class="bp4-submenu"
+    role="none"
   >
     <span
       class="bp4-popover-wrapper"
@@ -178,6 +186,7 @@ exports[`StringMenuItems matches snapshot when menu is opened for column inside 
       >
         <a
           class="bp4-menu-item"
+          role="menuitem"
           tabindex="0"
         >
           <span
@@ -192,6 +201,7 @@ exports[`StringMenuItems matches snapshot when menu is opened for column inside 
               <svg
                 data-icon="function"
                 height="16"
+                role="img"
                 viewBox="0 0 16 16"
                 width="16"
               >
@@ -208,18 +218,17 @@ exports[`StringMenuItems matches snapshot when menu is opened for column inside 
             Aggregate
           </div>
           <span
+            aria-hidden="true"
             class="bp4-icon bp4-icon-caret-right bp4-submenu-icon"
             icon="caret-right"
           >
             <svg
               data-icon="caret-right"
               height="16"
+              role="img"
               viewBox="0 0 16 16"
               width="16"
             >
-              <desc>
-                Open sub menu
-              </desc>
               <path
                 d="M11 8c0-.15-.07-.28-.17-.37l-4-3.5A.495.495 0 006 4.5v7a.495.495 0 00.83.37l4-3.5c.1-.09.17-.22.17-.37z"
                 fill-rule="evenodd"
@@ -237,6 +246,7 @@ exports[`StringMenuItems matches snapshot when menu is opened for column not ins
 <div>
   <li
     class="bp4-submenu"
+    role="none"
   >
     <span
       class="bp4-popover-wrapper"
@@ -247,6 +257,7 @@ exports[`StringMenuItems matches snapshot when menu is opened for column not ins
       >
         <a
           class="bp4-menu-item"
+          role="menuitem"
           tabindex="0"
         >
           <span
@@ -261,6 +272,7 @@ exports[`StringMenuItems matches snapshot when menu is opened for column not ins
               <svg
                 data-icon="filter"
                 height="16"
+                role="img"
                 viewBox="0 0 16 16"
                 width="16"
               >
@@ -277,18 +289,17 @@ exports[`StringMenuItems matches snapshot when menu is opened for column not ins
             Filter
           </div>
           <span
+            aria-hidden="true"
             class="bp4-icon bp4-icon-caret-right bp4-submenu-icon"
             icon="caret-right"
           >
             <svg
               data-icon="caret-right"
               height="16"
+              role="img"
               viewBox="0 0 16 16"
               width="16"
             >
-              <desc>
-                Open sub menu
-              </desc>
               <path
                 d="M11 8c0-.15-.07-.28-.17-.37l-4-3.5A.495.495 0 006 4.5v7a.495.495 0 00.83.37l4-3.5c.1-.09.17-.22.17-.37z"
                 fill-rule="evenodd"
@@ -301,6 +312,7 @@ exports[`StringMenuItems matches snapshot when menu is opened for column not ins
   </li>
   <li
     class="bp4-submenu"
+    role="none"
   >
     <span
       class="bp4-popover-wrapper"
@@ -311,6 +323,7 @@ exports[`StringMenuItems matches snapshot when menu is opened for column not ins
       >
         <a
           class="bp4-menu-item"
+          role="menuitem"
           tabindex="0"
         >
           <span
@@ -325,6 +338,7 @@ exports[`StringMenuItems matches snapshot when menu is opened for column not ins
               <svg
                 data-icon="group-objects"
                 height="16"
+                role="img"
                 viewBox="0 0 16 16"
                 width="16"
               >
@@ -341,18 +355,17 @@ exports[`StringMenuItems matches snapshot when menu is opened for column not ins
             Group by
           </div>
           <span
+            aria-hidden="true"
             class="bp4-icon bp4-icon-caret-right bp4-submenu-icon"
             icon="caret-right"
           >
             <svg
               data-icon="caret-right"
               height="16"
+              role="img"
               viewBox="0 0 16 16"
               width="16"
             >
-              <desc>
-                Open sub menu
-              </desc>
               <path
                 d="M11 8c0-.15-.07-.28-.17-.37l-4-3.5A.495.495 0 006 4.5v7a.495.495 0 00.83.37l4-3.5c.1-.09.17-.22.17-.37z"
                 fill-rule="evenodd"
@@ -365,6 +378,7 @@ exports[`StringMenuItems matches snapshot when menu is opened for column not ins
   </li>
   <li
     class="bp4-submenu"
+    role="none"
   >
     <span
       class="bp4-popover-wrapper"
@@ -375,6 +389,7 @@ exports[`StringMenuItems matches snapshot when menu is opened for column not ins
       >
         <a
           class="bp4-menu-item"
+          role="menuitem"
           tabindex="0"
         >
           <span
@@ -389,6 +404,7 @@ exports[`StringMenuItems matches snapshot when menu is opened for column not ins
               <svg
                 data-icon="function"
                 height="16"
+                role="img"
                 viewBox="0 0 16 16"
                 width="16"
               >
@@ -405,18 +421,17 @@ exports[`StringMenuItems matches snapshot when menu is opened for column not ins
             Aggregate
           </div>
           <span
+            aria-hidden="true"
             class="bp4-icon bp4-icon-caret-right bp4-submenu-icon"
             icon="caret-right"
           >
             <svg
               data-icon="caret-right"
               height="16"
+              role="img"
               viewBox="0 0 16 16"
               width="16"
             >
-              <desc>
-                Open sub menu
-              </desc>
               <path
                 d="M11 8c0-.15-.07-.28-.17-.37l-4-3.5A.495.495 0 006 4.5v7a.495.495 0 00.83.37l4-3.5c.1-.09.17-.22.17-.37z"
                 fill-rule="evenodd"
