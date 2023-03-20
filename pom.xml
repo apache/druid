@@ -1721,21 +1721,21 @@
             <properties>
                 <jdk.surefire.argLine>
                     <!-- required for DataSketches Memory on Java 11+ -->
-<!--                    &#45;&#45;add-exports=java.base/jdk.internal.ref=ALL-UNNAMED-->
-<!--                    &#45;&#45;add-exports=java.base/jdk.internal.misc=ALL-UNNAMED-->
-<!--                    &#45;&#45;add-opens=java.base/jdk.internal.ref=ALL-UNNAMED-->
-<!--                    &#45;&#45;add-opens=java.base/java.nio=ALL-UNNAMED-->
-<!--                    &#45;&#45;add-opens=java.base/sun.nio.ch=ALL-UNNAMED-->
+                    --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED
+                    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED
+                    --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED
+                    --add-opens=java.base/java.nio=ALL-UNNAMED
+                    --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
 
                     <!-- required for NativeIO#getfd -->
-<!--                    &#45;&#45;add-opens=java.base/java.io=ALL-UNNAMED-->
+                    --add-opens=java.base/java.io=ALL-UNNAMED
 
                     <!-- required for Guice -->
-<!--                    &#45;&#45;add-opens=java.base/java.lang=ALL-UNNAMED-->
+                    --add-opens=java.base/java.lang=ALL-UNNAMED
 
                     <!-- required for certain EqualsVerifier tests -->
                     <!-- (not required in production) -->
-<!--                    &#45;&#45;add-opens=java.base/java.util=ALL-UNNAMED-->
+                    --add-opens=java.base/java.util=ALL-UNNAMED
                 </jdk.surefire.argLine>
             </properties>
             <build>
