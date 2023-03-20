@@ -74,8 +74,9 @@ jobs:
 
   security_vulnerabilities:
     name: security vulnerabilities
-    matrix:
-      HADOOP_PROFILE: [ '', '-Phadoop3' ]
+    strategy:
+      matrix:
+        HADOOP_PROFILE: [ '', '-Phadoop3' ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
