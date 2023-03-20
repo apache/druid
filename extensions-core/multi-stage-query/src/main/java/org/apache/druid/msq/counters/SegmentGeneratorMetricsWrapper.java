@@ -29,7 +29,7 @@ import org.apache.druid.segment.realtime.FireDepartmentMetrics;
  */
 public class SegmentGeneratorMetricsWrapper extends FireDepartmentMetrics
 {
-  SegmentGenerationProgressCounter segmentGenerationProgressCounter;
+  private final SegmentGenerationProgressCounter segmentGenerationProgressCounter;
 
   public SegmentGeneratorMetricsWrapper(SegmentGenerationProgressCounter segmentGenerationProgressCounter)
   {
