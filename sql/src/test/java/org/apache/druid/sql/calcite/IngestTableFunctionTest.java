@@ -72,7 +72,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
 
   protected final ExternalDataSource httpDataSource = new ExternalDataSource(
       new HttpInputSource(
-          Collections.singletonList(toURI("http:foo.com/bar.csv")),
+          Collections.singletonList(toURI("http://foo.com/bar.csv")),
           "bob",
           new DefaultPasswordProvider("secret"),
           new HttpInputSourceConfig(null)
@@ -158,10 +158,10 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
   public void testHttpFn()
   {
     testIngestionQuery()
-        .sql("INSERT INTO dst SELECT *\n" +
+        .sql("INSERT INTO dst SELECT x, y, z\n" +
              "FROM TABLE(http(userName => 'bob',\n" +
-            "                 password => 'secret',\n" +
-             "                uris => ARRAY['http:foo.com/bar.csv'],\n" +
+             "                password => 'secret',\n" +
+             "                uris => ARRAY['http://foo.com/bar.csv'],\n" +
              "                format => 'csv'))\n" +
              "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
              "PARTITIONED BY ALL TIME")
@@ -181,6 +181,53 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  public void testHttpFn2()
+  {
+    final ExternalDataSource httpDataSource = new ExternalDataSource(
+        new HttpInputSource(
+            Arrays.asList(toURI("http://example.com/foo.csv"), toURI("http://example.com/bar.csv")),
+            "bob",
+            new DefaultPasswordProvider("secret"),
+            new HttpInputSourceConfig(null)
+        ),
+        new CsvInputFormat(ImmutableList.of("timestamp", "isRobot"), null, false, false, 0),
+        RowSignature.builder()
+                    .add("timestamp", ColumnType.STRING)
+                    .add("isRobot", ColumnType.STRING)
+                    .build()
+    );
+    RowSignature expectedSig = RowSignature.builder()
+        .add("__time", ColumnType.LONG)
+        .add("isRobot", ColumnType.STRING)
+        .build();
+    testIngestionQuery()
+        .sql("INSERT INTO w000\n" +
+             "SELECT\n" +
+             "  TIME_PARSE(\"timestamp\") AS __time,\n" +
+             "  isRobot\n" +
+             "FROM TABLE(http(\n" +
+             "  userName => 'bob',\n" +
+             "  password => 'secret',\n" +
+             "  uris => ARRAY['http://example.com/foo.csv', 'http://example.com/bar.csv'],\n" +
+             "  format => 'csv'\n" +
+             "  )\n" +
+             ") EXTEND (\"timestamp\" VARCHAR, isRobot VARCHAR)\n" +
+             "PARTITIONED BY HOUR")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("w000", expectedSig)
+        .expectResources(dataSourceWrite("w000"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(httpDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "timestamp_parse(\"timestamp\",null,'UTC')", ColumnType.LONG))
+                .columns("isRobot", "v0")
+                .build()
+         )
+        .verify();
+  }
+
+  @Test
   public void testHttpFnWithParameters()
   {
     testIngestionQuery()
@@ -192,7 +239,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
              "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
              "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
-        .parameters(Collections.singletonList(new SqlParameter(SqlType.ARRAY, new String[] {"http:foo.com/bar.csv"})))
+        .parameters(Collections.singletonList(new SqlParameter(SqlType.ARRAY, new String[] {"http://foo.com/bar.csv"})))
         .expectTarget("dst", httpDataSource.getSignature())
         .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(

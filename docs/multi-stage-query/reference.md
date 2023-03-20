@@ -106,7 +106,7 @@ FROM TABLE(
   http(
     userName => 'bob',
     password => 'secret',
-    uris => ARRAY['http:example.com/foo.csv', 'http:example.com/bar.csv'],
+    uris => ARRAY['http://example.com/foo.csv', 'http://example.com/bar.csv'],
     format => 'csv'
     )
   ) EXTEND (x VARCHAR, y VARCHAR, z BIGINT)
@@ -129,7 +129,7 @@ FROM TABLE(
   http(
     userName => 'bob',
     password => 'secret',
-    uris => ARRAY['http:example.com/foo.csv', 'http:example.com/bar.csv'],
+    uris => ARRAY['http://example.com/foo.csv', 'http://example.com/bar.csv'],
     format => 'csv'
     )
   ) (x VARCHAR, y VARCHAR, z BIGINT)
