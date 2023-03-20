@@ -667,7 +667,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           cursor.advance();
         }
 
-        processing/src/main/java/org/apache/druid/query/QueryContext.java        frame = Frame.wrap(frameWriter.toByteArray());
+        frame = Frame.wrap(frameWriter.toByteArray());
       }
 
 
