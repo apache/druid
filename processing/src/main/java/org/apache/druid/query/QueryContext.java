@@ -357,6 +357,11 @@ public class QueryContext
     return getInt(QueryContexts.MAX_SUBQUERY_ROWS_KEY, defaultSize);
   }
 
+  public long getMaxSubqueryMemoryBytes(long defaultMemoryBytes)
+  {
+    return getLong(QueryContexts.MAX_SUBQUERY_MEMORY_BYTES_KEY, defaultMemoryBytes);
+  }
+
   public int getUncoveredIntervalsLimit()
   {
     return getUncoveredIntervalsLimit(QueryContexts.DEFAULT_UNCOVERED_INTERVALS_LIMIT);

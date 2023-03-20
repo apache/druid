@@ -31,6 +31,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.FloatColumnSelector;
@@ -43,6 +44,8 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.segment.data.Offset;
+import org.apache.druid.segment.data.RangeIndexedInts;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
 
@@ -73,13 +76,14 @@ public class InlineResultsCursor implements Cursor
       @Override
       public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
       {
-        return null;
+        return makeDimensionSelectorFor(dimensionSpec);
       }
 
       @Override
       public ColumnValueSelector makeColumnValueSelector(String columnName)
       {
-        return makeColumnValueSelectorFor(columnName);
+        int index = offset.getOffset();
+        return makeColumnValueSelectorFor(columnName, index);
       }
 
       @Nullable
@@ -113,13 +117,13 @@ public class InlineResultsCursor implements Cursor
   @Override
   public boolean isDone()
   {
-    return offset.withinBounds();
+    return !offset.withinBounds();
   }
 
   @Override
   public boolean isDoneOrInterrupted()
   {
-    return offset.withinBounds() || Thread.currentThread().isInterrupted();
+    return !offset.withinBounds() || Thread.currentThread().isInterrupted();
   }
 
   @Override
@@ -135,13 +139,19 @@ public class InlineResultsCursor implements Cursor
 
   private DimensionSelector makeUndecoratedDimensionSelectorFor(String dimensionSpec)
   {
-    Object stringValueObject = results.get(offset.getOffset())[rowSignature.indexOf(dimensionSpec)];
     return new DimensionSelector()
     {
       @Override
       public IndexedInts getRow()
       {
-        return null;
+        Object stringValueObject = results.get(offset.getOffset())[rowSignature.indexOf(dimensionSpec)];
+        RangeIndexedInts rangeIndexedInts = new RangeIndexedInts();
+        if (stringValueObject instanceof String) {
+          rangeIndexedInts.setSize(1);
+        } else if (stringValueObject instanceof List) {
+          rangeIndexedInts.setSize(((List<?>) stringValueObject).size());
+        }
+        return rangeIndexedInts;
       }
 
       @Override
@@ -166,26 +176,50 @@ public class InlineResultsCursor implements Cursor
       @Override
       public Object getObject()
       {
-        return null;
+        Object stringValueObject = results.get(offset.getOffset())[rowSignature.indexOf(dimensionSpec)];
+        return stringValueObject;
       }
 
       @Override
       public Class<?> classOfObject()
       {
-        return null;
+        Object stringValueObject = results.get(offset.getOffset())[rowSignature.indexOf(dimensionSpec)];
+        if (stringValueObject instanceof String) {
+          return String.class;
+        } else if (stringValueObject instanceof List) {
+          return List.class;
+        } else {
+          return Object.class;
+        }
       }
 
       @Override
       public int getValueCardinality()
       {
-        return 0;
+        return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
       }
 
       @Nullable
       @Override
       public String lookupName(int id)
       {
-        return null;
+        Object stringValueObject = results.get(offset.getOffset())[rowSignature.indexOf(dimensionSpec)];
+        if (stringValueObject instanceof String) {
+          if (id == 0) {
+            return (String) stringValueObject;
+          } else {
+            throw new IndexOutOfBoundsException();
+          }
+        } else if (stringValueObject instanceof List) {
+          List<?> stringValueList = (List<?>) stringValueObject;
+          if (id < stringValueList.size()) {
+            return (String) stringValueList.get(id);
+          } else {
+            throw new IndexOutOfBoundsException();
+          }
+        } else {
+          throw new UnsupportedOperationException();
+        }
       }
 
       @Override
@@ -203,7 +237,7 @@ public class InlineResultsCursor implements Cursor
     };
   }
 
-  private ColumnValueSelector makeColumnValueSelectorFor(String columnName)
+  private ColumnValueSelector makeColumnValueSelectorFor(String columnName, int index)
   {
     Optional<ColumnType> columnTypeOptional = rowSignature.getColumnType(columnName);
     if (!columnTypeOptional.isPresent()) {
@@ -211,28 +245,28 @@ public class InlineResultsCursor implements Cursor
     }
     ColumnType columnType = columnTypeOptional.get();
     ColumnValueSelector columnValueSelector;
-    Object columnValue = results.get(offset.getOffset())[rowSignature.indexOf(columnName)];
+    int columnNumber = rowSignature.indexOf(columnName);
     switch (columnType.getType()) {
       case LONG:
-        columnValueSelector = makeColumnValueSelectorForLong((Long) columnValue);
+        columnValueSelector = makeColumnValueSelectorForLong(columnNumber, offset, results);
         break;
       case DOUBLE:
-        columnValueSelector = makeColumnValueSelectorForDouble((Double) columnValue);
+        columnValueSelector = makeColumnValueSelectorForDouble(columnNumber, offset, results);
         break;
       case FLOAT:
-        columnValueSelector = makeColumnValueSelectorForFloat((Float) columnValue);
+        columnValueSelector = makeColumnValueSelectorForFloat(columnNumber, offset, results);
         break;
       case ARRAY:
         switch (columnType.getElementType().getType()) {
           case STRING:
-            columnValueSelector = makeColumnValueSelectorForStringArray(columnValue);
+            columnValueSelector = makeColumnValueSelectorForStringArray(columnNumber, offset, results);
             break;
           default:
             throw new UnsupportedColumnTypeException(columnName, columnType);
         }
         break;
       case COMPLEX:
-        columnValueSelector = makeColumnValueSelectorForObject(columnValue, columnType);
+        columnValueSelector = makeColumnValueSelectorForObject(columnNumber, columnType, offset, results);
         break;
       default:
         throw new UnsupportedColumnTypeException(columnName, columnType);
@@ -240,17 +274,19 @@ public class InlineResultsCursor implements Cursor
     return columnValueSelector;
   }
 
-  private ColumnValueSelector makeColumnValueSelectorForLong(Long val)
+  private ColumnValueSelector makeColumnValueSelectorForLong(int columnNumber, Offset offset, List<Object[]> results)
   {
     return new LongColumnSelector()
     {
+
       @Override
       public long getLong()
       {
+        Object val = results.get(offset.getOffset())[columnNumber];
         if (val == null) {
           return 0;
         }
-        return val;
+        return ((Number) val).longValue();
       }
 
       @Override
@@ -262,22 +298,24 @@ public class InlineResultsCursor implements Cursor
       @Override
       public boolean isNull()
       {
+        Object val = results.get(offset.getOffset())[columnNumber];
         return val == null;
       }
     };
   }
 
-  private ColumnValueSelector makeColumnValueSelectorForDouble(Double val)
+  private ColumnValueSelector makeColumnValueSelectorForDouble(int columnNumber, Offset offset, List<Object[]> results)
   {
     return new DoubleColumnSelector()
     {
       @Override
       public double getDouble()
       {
+        Object val = results.get(offset.getOffset())[columnNumber];
         if (val == null) {
           return 0;
         }
-        return val;
+        return (Double) val;
       }
 
       @Override
@@ -289,22 +327,24 @@ public class InlineResultsCursor implements Cursor
       @Override
       public boolean isNull()
       {
+        Object val = results.get(offset.getOffset())[columnNumber];
         return val == null;
       }
     };
   }
 
-  private ColumnValueSelector makeColumnValueSelectorForFloat(Float val)
+  private ColumnValueSelector makeColumnValueSelectorForFloat(int columnNumber, Offset offset, List<Object[]> results)
   {
     return new FloatColumnSelector()
     {
       @Override
       public float getFloat()
       {
+        Object val = results.get(offset.getOffset())[columnNumber];
         if (val == null) {
           return 0;
         }
-        return val;
+        return (Float) val;
       }
 
       @Override
@@ -316,12 +356,18 @@ public class InlineResultsCursor implements Cursor
       @Override
       public boolean isNull()
       {
+        Object val = results.get(offset.getOffset())[columnNumber];
         return val == null;
       }
     };
   }
 
-  private ColumnValueSelector makeColumnValueSelectorForObject(Object val, ColumnType columnType)
+  private ColumnValueSelector makeColumnValueSelectorForObject(
+      int columnNumber,
+      ColumnType columnType,
+      Offset offset,
+      List<Object[]> results
+  )
   {
     return new ObjectColumnSelector()
     {
@@ -329,6 +375,7 @@ public class InlineResultsCursor implements Cursor
       @Override
       public Object getObject()
       {
+        Object val = results.get(offset.getOffset())[columnNumber];
         return val;
       }
 
@@ -346,7 +393,11 @@ public class InlineResultsCursor implements Cursor
     };
   }
 
-  private ColumnValueSelector makeColumnValueSelectorForStringArray(Object val)
+  private ColumnValueSelector makeColumnValueSelectorForStringArray(
+      int columnNumber,
+      Offset offset,
+      List<Object[]> results
+  )
   {
     return new ObjectColumnSelector()
     {
@@ -354,6 +405,7 @@ public class InlineResultsCursor implements Cursor
       @Override
       public Object getObject()
       {
+        Object val = results.get(offset.getOffset())[columnNumber];
         return val;
       }
 
@@ -370,5 +422,4 @@ public class InlineResultsCursor implements Cursor
       }
     };
   }
-
 }

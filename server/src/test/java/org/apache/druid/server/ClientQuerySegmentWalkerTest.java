@@ -348,7 +348,7 @@ public class ClientQuerySegmentWalkerTest
 
     testQuery(
         query,
-        ImmutableList.of(
+        new ArrayList<>(ImmutableList.of(
             ExpectedQuery.cluster(subquery.withId(DUMMY_QUERY_ID).withSubQueryId("1.1")),
             ExpectedQuery.local(
                 query.withDataSource(
@@ -358,7 +358,7 @@ public class ClientQuerySegmentWalkerTest
                     )
                 )
             )
-        ),
+        )),
         ImmutableList.of(new Object[]{Intervals.ETERNITY.getStartMillis(), 3L})
     );
 
@@ -798,7 +798,7 @@ public class ClientQuerySegmentWalkerTest
                                 .withId(DUMMY_QUERY_ID);
 
     expectedException.expect(ResourceLimitExceededException.class);
-    expectedException.expectMessage("Subquery generated results beyond maximum[2]");
+    expectedException.expectMessage("Subquery generated results beyond maximum[2] rows");
 
     testQuery(query, ImmutableList.of(), ImmutableList.of());
   }
@@ -827,7 +827,7 @@ public class ClientQuerySegmentWalkerTest
                                 .withId(DUMMY_QUERY_ID);
 
     expectedException.expect(ResourceLimitExceededException.class);
-    expectedException.expectMessage("Subquery estimatedly consuming memory beyond maximum 1 byte(s)");
+    expectedException.expectMessage("Subquery generated results beyond maximum[1] bytes");
 
     testQuery(query, ImmutableList.of(), ImmutableList.of());
   }

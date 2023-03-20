@@ -175,8 +175,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final DataSource freeTradeDataSource = globalizeIfPossible(newQuery.getDataSource());
     // do an inlining dry run to see if any inlining is necessary, without actually running the queries.
     final int maxSubqueryRows = query.context().getMaxSubqueryRows(serverConfig.getMaxSubqueryRows());
-    final long maxSubqueryMemory = -1L;
-    // final long maxSubqueryMemory = query.context().getMaxSubqueryMemory(query, serverConfig.getMaxSubqueryMemory());
+    final long maxSubqueryMemory = query.context().getMaxSubqueryMemoryBytes(serverConfig.getMaxSubqueryMemory());
 
     final DataSource inlineDryRun = inlineIfNecessary(
         freeTradeDataSource,
@@ -630,56 +629,65 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       );
     }
 
-    final RowSignature signature = toolChest.resultArraySignature(query);
-
-    /*final ArrayList<Object[]> resultList = new ArrayList<>();
-
-    toolChest.resultsAsArrays(query, results).accumulate(
-        resultList,
-        (acc, in) -> {
-          if (limitAccumulator.getAndIncrement() >= limitToUse) {
-            throw ResourceLimitExceededException.withMessage(
-                "Subquery generated results beyond maximum[%d]",
-                limitToUse
-            );
-          }
-          long estimatedMemorySize = estimateResultRowSize(in, signature);
-          if (memoryLimitAccumulator.getAndAdd(estimatedMemorySize) >= memoryLimitToUse) {
-            throw ResourceLimitExceededException.withMessage(
-                "Subquery estimatedly consuming memory beyond maximum %d byte(s)",
-                memoryLimitToUse
-            );
-          }
-          acc.add(in);
-          return acc;
-        }
-    );*/
-    final List<Object[]> resultList = toolChest.resultsAsArrays(query, results).toList();
-    final Frame frame;
-
-    FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
-        FrameType.ROW_BASED,
-        new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
-        signature,
-        new ArrayList<>()
-    );
-
-    final Cursor cursor = new InlineResultsCursor(resultList, signature);
-
-    try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
-      while (!cursor.isDone()) {
-        if (!frameWriter.addSelection()) {
-          // Don't retry; it can't work because the allocator is unlimited anyway.
-          // Also, I don't think this line can be reached, because the allocator is unlimited.
-          throw new FrameRowTooLargeException(frameWriterFactory.allocatorCapacity());
-        }
-
-        cursor.advance();
-      }
-
-      frame = Frame.wrap(frameWriter.toByteArray());
+    if (memoryLimitAccumulator.get() >= memoryLimitToUse) {
+      throw ResourceLimitExceededException.withMessage(
+          "Cannot issue subquery, maximum subquery result bytes[%d] reached",
+          memoryLimitToUse
+      );
     }
 
+    final RowSignature signature = toolChest.resultArraySignature(query);
+
+    final List<Object[]> resultList = toolChest.resultsAsArrays(query, results).toList();
+
+    if (limitAccumulator.addAndGet(resultList.size()) >= limitToUse) {
+      throw ResourceLimitExceededException.withMessage(
+          "Subquery generated results beyond maximum[%d] rows",
+          limitToUse
+      );
+    }
+
+    Frame frame = null;
+    try {
+      FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
+          FrameType.ROW_BASED,
+          new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+          signature,
+          new ArrayList<>()
+      );
+
+      final Cursor cursor = new InlineResultsCursor(resultList, signature);
+
+      try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
+        while (!cursor.isDone()) {
+          if (!frameWriter.addSelection()) {
+            throw new FrameRowTooLargeException(frameWriterFactory.allocatorCapacity());
+          }
+
+          cursor.advance();
+        }
+
+        processing/src/main/java/org/apache/druid/query/QueryContext.java        frame = Frame.wrap(frameWriter.toByteArray());
+      }
+
+
+      if (memoryLimitAccumulator.addAndGet(frame.numBytes()) >= memoryLimitToUse) {
+        throw ResourceLimitExceededException.withMessage(
+            "Subquery generated results beyond maximum[%d] bytes",
+            memoryLimit
+        );
+      }
+    }
+    catch (ResourceLimitExceededException rlee) {
+      throw rlee;
+    }
+    catch (Exception e) {
+      // do nothing
+    }
+
+    if (frame == null) {
+      return InlineDataSource.fromIterable(resultList, signature);
+    }
     return InlineDataSource.fromFrame(frame, signature);
   }
 

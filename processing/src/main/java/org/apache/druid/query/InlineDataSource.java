@@ -26,10 +26,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.read.FrameReader;
+import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -202,6 +211,7 @@ public class InlineDataSource implements DataSource
   @JsonProperty("rows")
   public List<Object[]> getRowsAsList()
   {
+    Iterable<Object[]> rows = getRows();
     return rows instanceof List ? ((List<Object[]>) rows) : Lists.newArrayList(rows);
   }
 
@@ -221,6 +231,37 @@ public class InlineDataSource implements DataSource
   @JsonIgnore
   public Iterable<Object[]> getRows()
   {
+    if (isBackedByFrame()) {
+      List<Object[]> frameRows = new ArrayList<>();
+      FrameReader frameReader = FrameReader.create(signature);
+      final Sequence<Cursor> cursorSequence = new FrameStorageAdapter(
+          frame,
+          frameReader,
+          Intervals.ETERNITY
+      ).makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null);
+      cursorSequence.accumulate(
+          null,
+          (accumulated, cursor) -> {
+            final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+            final List<BaseObjectColumnValueSelector> selectors = frameReader.signature()
+                                                                             .getColumnNames()
+                                                                             .stream()
+                                                                             .map(columnSelectorFactory::makeColumnValueSelector)
+                                                                             .collect(Collectors.toList());
+            while (!cursor.isDone()) {
+              Object[] row = new Object[signature.size()];
+              for (int i = 0; i < signature.size(); ++i) {
+                row[i] = selectors.get(i).getObject();
+              }
+              frameRows.add(row);
+              cursor.advance();
+            }
+            return null;
+          }
+      );
+      return frameRows;
+    }
+
     return rows;
   }
 
@@ -322,7 +363,7 @@ public class InlineDataSource implements DataSource
       return false;
     }
     InlineDataSource that = (InlineDataSource) o;
-    return rowsEqual(rows, that.rows) &&
+    return rowsEqual(getRowsAsList(), that.getRowsAsList()) &&
            Objects.equals(signature, that.signature);
   }
 
