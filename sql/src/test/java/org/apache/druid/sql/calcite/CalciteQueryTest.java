@@ -3550,7 +3550,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNullDoubleTopN()
   {
-    msqCompatible();
+    // Disabled test in MSQ till https://github.com/apache/druid/issues/13951 is resolved
+    // msqCompatible();
     List<Object[]> expected;
     if (useDefault) {
       expected = ImmutableList.of(
@@ -3591,7 +3592,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNullFloatTopN()
   {
-    msqCompatible();
+    // Disabled test in MSQ till https://github.com/apache/druid/issues/13951 is resolved
+    // msqCompatible();
     List<Object[]> expected;
     if (useDefault) {
       expected = ImmutableList.of(
@@ -3632,7 +3634,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNullLongTopN()
   {
-    msqCompatible();
+    // Disabled test in MSQ till https://github.com/apache/druid/issues/13951 is resolved
+    // msqCompatible();
     List<Object[]> expected;
     if (useDefault) {
       expected = ImmutableList.of(
@@ -6612,7 +6615,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     // When HLL is disabled, APPROX_COUNT_DISTINCT is still approximate.
 
-    msqCompatible();
+    // Disabled test in MSQ till https://github.com/apache/druid/issues/13950 is resolved
+    // msqCompatible();
     testQuery(
         PLANNER_CONFIG_NO_HLL,
         "SELECT APPROX_COUNT_DISTINCT(dim2) FROM druid.foo",
@@ -6645,7 +6649,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testApproxCountDistinctBuiltin()
   {
-    msqCompatible();
+    // Disabled test in MSQ till https://github.com/apache/druid/issues/13950 is resolved
+    // msqCompatible();
     testQuery(
         "SELECT APPROX_COUNT_DISTINCT_BUILTIN(dim2) FROM druid.foo",
         ImmutableList.of(
