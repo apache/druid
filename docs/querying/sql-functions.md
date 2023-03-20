@@ -152,9 +152,21 @@ Creates a Tuple sketch.
 
 **Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
 
+## ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE
+
+`ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE(expr)`
+
+**Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
+
+Computes approximate sums of the values contained within a Tuple sketch.
+
+Returns an intersection of Tuple sketches.
+
 ## ARRAY_OF_DOUBLES_SKETCH_NOT
 
 `ARRAY_OF_DOUBLES_SKETCH_NOT(expr, ..., [nominalEntries])`
+
+Returns a set difference of Tuple sketches.
 
 **Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
 
@@ -164,13 +176,7 @@ Creates a Tuple sketch.
 
 **Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
 
-## ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE
-
-`ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE(expr)`
-
-**Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
-
-Computes approximate sums of the values contained within a Tuple sketch.
+Returns a union of Tuple sketches.
 
 ## ASIN
 
