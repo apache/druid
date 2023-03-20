@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FluentQueryRunnerBuilder;
@@ -62,7 +63,6 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -75,7 +75,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Queue;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -93,6 +92,9 @@ import java.util.stream.Collectors;
  */
 public class ClientQuerySegmentWalker implements QuerySegmentWalker
 {
+
+  private static final Logger log = new Logger(ClientQuerySegmentWalker.class);
+
   private final ServiceEmitter emitter;
   private final QuerySegmentWalker clusterClient;
   private final QuerySegmentWalker localClient;
@@ -620,7 +622,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   )
   {
     final int limitToUse = limit < 0 ? Integer.MAX_VALUE : limit;
-    final long memoryLimitToUse = memoryLimit < 0 ? Long.MAX_VALUE : memoryLimit;
+    boolean memoryLimitSet = memoryLimit >= 0;
+    final long memoryLimitToUse = memoryLimitSet ? memoryLimit : Long.MAX_VALUE;
 
     if (limitAccumulator.get() >= limitToUse) {
       throw ResourceLimitExceededException.withMessage(
@@ -648,89 +651,52 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     }
 
     Frame frame = null;
-    try {
-      FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
-          FrameType.ROW_BASED,
-          new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
-          signature,
-          new ArrayList<>()
-      );
 
-      final Cursor cursor = new InlineResultsCursor(resultList, signature);
+    // Try to serialize the results into a frame only if the memory limit is set on the server or the query
+    if (memoryLimitSet) {
+      try {
+        FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
+            FrameType.ROW_BASED,
+            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+            signature,
+            new ArrayList<>()
+        );
 
-      try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
-        while (!cursor.isDone()) {
-          if (!frameWriter.addSelection()) {
-            throw new FrameRowTooLargeException(frameWriterFactory.allocatorCapacity());
+        final Cursor cursor = new InlineResultsCursor(resultList, signature);
+
+        try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
+          while (!cursor.isDone()) {
+            if (!frameWriter.addSelection()) {
+              throw new FrameRowTooLargeException(frameWriterFactory.allocatorCapacity());
+            }
+
+            cursor.advance();
           }
 
-          cursor.advance();
+          frame = Frame.wrap(frameWriter.toByteArray());
         }
 
-        frame = Frame.wrap(frameWriter.toByteArray());
-      }
 
-
-      if (memoryLimitAccumulator.addAndGet(frame.numBytes()) >= memoryLimitToUse) {
-        throw ResourceLimitExceededException.withMessage(
-            "Subquery generated results beyond maximum[%d] bytes",
-            memoryLimit
-        );
+        if (memoryLimitAccumulator.addAndGet(frame.numBytes()) >= memoryLimitToUse) {
+          throw ResourceLimitExceededException.withMessage(
+              "Subquery generated results beyond maximum[%d] bytes",
+              memoryLimit
+          );
+        }
       }
-    }
-    catch (ResourceLimitExceededException rlee) {
-      throw rlee;
-    }
-    catch (Exception e) {
-      // do nothing
+      catch (ResourceLimitExceededException rlee) {
+        throw rlee;
+      }
+      catch (Exception e) {
+        log.info("Unable to write the subquery results to a frame. Results won't be accounted for in the memory"
+                 + "calculation");
+      }
     }
 
     if (frame == null) {
       return InlineDataSource.fromIterable(resultList, signature);
     }
     return InlineDataSource.fromFrame(frame, signature);
-  }
-
-  private static long estimateResultRowSize(Object[] row, RowSignature rowSignature)
-  {
-    int estimate = 0;
-    if (row == null) {
-      return 0;
-    }
-    estimate += 24; // Add memory overhead for the row array
-    for (int i = 0; i < rowSignature.size(); ++i) {
-      Optional<ColumnType> maybeColumnType = rowSignature.getColumnType(i);
-      if (!maybeColumnType.isPresent()) {
-        // This shouldn't be encountered
-        continue;
-      }
-      ColumnType columnType = maybeColumnType.get();
-      if (columnType.equals(ColumnType.LONG)) {
-        estimate += Long.BYTES;
-      } else if (columnType.equals(ColumnType.FLOAT)) {
-        estimate += Float.BYTES;
-      } else if (columnType.equals(ColumnType.DOUBLE)) {
-        estimate += Double.BYTES;
-      } else if (columnType.equals(ColumnType.STRING)
-                 || columnType.equals(ColumnType.STRING_ARRAY)
-                 || columnType.equals(ColumnType.LONG_ARRAY)
-                 || columnType.equals(ColumnType.DOUBLE_ARRAY)) {
-        if (row[i] instanceof String) {
-          estimate += 28 + 16 + 2 * (((String) row[i]).length());
-        } else if (row[i] instanceof Long) {
-          estimate += Long.BYTES;
-        } else if (row[i] instanceof Double) {
-          estimate += Double.BYTES;
-        } else if (row[i] instanceof Float) {
-          estimate += Float.BYTES;
-        } else {
-          estimate += 0;
-        }
-      } else {
-        estimate += 0;
-      }
-    }
-    return estimate;
   }
 
   /**

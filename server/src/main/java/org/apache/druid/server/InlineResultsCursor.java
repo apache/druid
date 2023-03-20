@@ -49,10 +49,15 @@ import org.apache.druid.segment.data.RangeIndexedInts;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * An implementation of {@link Cursor} used to iterate over the fields of a list of rows. This is used by the
+ * {@link ClientQuerySegmentWalker} to iterate over the results of an inline subquery to serialize it into a frame
+ */
 public class InlineResultsCursor implements Cursor
 {
 
@@ -60,7 +65,10 @@ public class InlineResultsCursor implements Cursor
   private final RowSignature rowSignature;
   private final List<Object[]> results;
 
-
+  /**
+   * @param results      results for the cursor to iterate over
+   * @param rowSignature row signature of the result row
+   */
   public InlineResultsCursor(List<Object[]> results, RowSignature rowSignature)
   {
     this.results = Preconditions.checkNotNull(results, "'results' cannot be null");
@@ -68,6 +76,7 @@ public class InlineResultsCursor implements Cursor
     this.offset = new SimpleAscendingOffset(results.size());
   }
 
+  @Nonnull
   @Override
   public ColumnSelectorFactory getColumnSelectorFactory()
   {
@@ -176,8 +185,7 @@ public class InlineResultsCursor implements Cursor
       @Override
       public Object getObject()
       {
-        Object stringValueObject = results.get(offset.getOffset())[rowSignature.indexOf(dimensionSpec)];
-        return stringValueObject;
+        return results.get(offset.getOffset())[rowSignature.indexOf(dimensionSpec)];
       }
 
       @Override
@@ -375,12 +383,11 @@ public class InlineResultsCursor implements Cursor
       @Override
       public Object getObject()
       {
-        Object val = results.get(offset.getOffset())[columnNumber];
-        return val;
+        return results.get(offset.getOffset())[columnNumber];
       }
 
       @Override
-      public Class classOfObject()
+      public Class<?> classOfObject()
       {
         return ComplexMetrics.getSerdeForType(columnType.getComplexTypeName()).getExtractor().extractedClass();
       }
@@ -405,8 +412,7 @@ public class InlineResultsCursor implements Cursor
       @Override
       public Object getObject()
       {
-        Object val = results.get(offset.getOffset())[columnNumber];
-        return val;
+        return results.get(offset.getOffset())[columnNumber];
       }
 
       @Override

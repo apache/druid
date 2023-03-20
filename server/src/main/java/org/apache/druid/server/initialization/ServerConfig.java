@@ -129,7 +129,7 @@ public class ServerConfig
 
   @JsonProperty
   @Min(100_000_000)
-  private long maxSubqueryMemory = 1024L * 1024L * 1024L * 4L;
+  private long maxSubqueryMemory = -1L;
 
   @JsonProperty
   @Min(1)
