@@ -35,6 +35,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
+import org.apache.druid.msq.counters.SegmentGeneratorMetricsWrapper;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
@@ -53,7 +55,6 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.Appenderators;
@@ -147,7 +148,8 @@ public class SegmentGeneratorFrameProcessorFactory
               }
             }
         ));
-    final FireDepartmentMetrics fireDepartmentMetrics = new FireDepartmentMetrics();
+    final SegmentGenerationProgressCounter segmentGenerationProgressCounter = counters.segmentGenerationProgress();
+    final SegmentGeneratorMetricsWrapper segmentGeneratorMetricsWrapper = new SegmentGeneratorMetricsWrapper(segmentGenerationProgressCounter);
 
     final Sequence<SegmentGeneratorFrameProcessor> workers = inputSequence.map(
         readableInputPair -> {
@@ -171,7 +173,7 @@ public class SegmentGeneratorFrameProcessorFactory
                       persistDirectory,
                       frameContext.memoryParameters()
                   ),
-                  fireDepartmentMetrics,
+                  segmentGeneratorMetricsWrapper,
                   frameContext.segmentPusher(),
                   frameContext.jsonMapper(),
                   frameContext.indexIO(),
@@ -187,8 +189,7 @@ public class SegmentGeneratorFrameProcessorFactory
               dataSchema.getDimensionsSpec().getDimensionNames(),
               appenderator,
               segmentIdWithShardSpec,
-              fireDepartmentMetrics,
-              counters
+              segmentGenerationProgressCounter
           );
         }
     );
