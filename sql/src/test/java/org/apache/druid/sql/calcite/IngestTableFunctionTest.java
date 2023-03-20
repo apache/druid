@@ -34,6 +34,8 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.Externals;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -45,6 +47,7 @@ import org.junit.Test;
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -225,6 +228,72 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                 .build()
          )
         .verify();
+  }
+
+  @Test
+  public void testExplainHttpFn() throws SQLException
+  {
+    // Skip vectorization since otherwise the "context" will change for each subtest.
+    skipVectorize();
+
+    final String query =
+        "EXPLAIN PLAN FOR\n" +
+        "INSERT INTO dst SELECT x, y, z\n" +
+        "FROM TABLE(http(userName => 'bob',\n" +
+        "                password => 'secret',\n" +
+        "                uris => ARRAY['http://foo.com/bar.csv'],\n" +
+        "                format => 'csv'))\n" +
+        "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+        "PARTITIONED BY ALL TIME";
+    final String explanation = "[{" +
+        "\"query\":{\"queryType\":\"scan\"," +
+        "\"dataSource\":{\"type\":\"external\"," +
+        "\"inputSource\":{\"type\":\"http\",\"uris\":[\"http://foo.com/bar.csv\"],\"httpAuthenticationUsername\":\"bob\",\"httpAuthenticationPassword\":{\"type\":\"default\",\"password\":\"secret\"}}," +
+        "\"inputFormat\":{\"type\":\"csv\",\"columns\":[\"x\",\"y\",\"z\"]},\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]}," +
+        "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]}," +
+        "\"resultFormat\":\"compactedList\",\"columns\":[\"x\",\"y\",\"z\"],\"legacy\":false," +
+        "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\"," +
+        "\"sqlInsertSegmentGranularity\":\"{\\\"type\\\":\\\"all\\\"}\"," +
+        "\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}," +
+        "\"granularity\":{\"type\":\"all\"}}," +
+        "\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]}]";
+    final String resources = "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]";
+
+    testQuery(
+        PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
+        query,
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of(
+            new Object[]{explanation, resources}
+        )
+    );
+    didTest = true;
+  }
+
+  @Test
+  public void testExplainHttpFnUnauthorized() throws SQLException
+  {
+    final String query =
+        "EXPLAIN PLAN FOR\n" +
+        "INSERT INTO dst SELECT x, y, z\n" +
+        "FROM TABLE(http(userName => 'bob',\n" +
+        "                password => 'secret',\n" +
+        "                uris => ARRAY['http://foo.com/bar.csv'],\n" +
+        "                format => 'csv'))\n" +
+        "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+        "PARTITIONED BY ALL TIME";
+    didTest = true; // Else the framework will complain
+    testBuilder()
+        .plannerConfig(PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN)
+        .sql(query)
+        // Regular user does not have permission on extern or other table functions
+        .authResult(CalciteTests.REGULAR_USER_AUTH_RESULT)
+        .expectedException(expected -> {
+          expected.expect(ForbiddenException.class);
+          expected.expectMessage(Access.DEFAULT_ERROR_MESSAGE);
+        })
+        .run();
   }
 
   @Test

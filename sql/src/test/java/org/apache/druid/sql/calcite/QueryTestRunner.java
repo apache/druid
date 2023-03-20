@@ -609,7 +609,6 @@ public class QueryTestRunner
     }
   }
 
-
   private final List<QueryTestRunner.QueryRunStep> runSteps = new ArrayList<>();
   private final List<QueryTestRunner.QueryVerifyStep> verifySteps = new ArrayList<>();
 
