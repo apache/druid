@@ -105,7 +105,10 @@ public class PodTemplateTaskAdapterTest
   @Test
   public void test_fromTask_withoutBasePodTemplateInRuntimeProperites_raisesIAE()
   {
-    Assert.assertThrows(IAE.class, () -> new PodTemplateTaskAdapter(
+    Assert.assertThrows(
+        "Pod template task adapter requires a base pod template to be specified",
+        IAE.class,
+        () -> new PodTemplateTaskAdapter(
         testClient,
         taskRunnerConfig,
         taskConfig,
@@ -123,7 +126,10 @@ public class PodTemplateTaskAdapterTest
     Properties props = new Properties();
     props.setProperty("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
 
-    Assert.assertThrows(ISE.class, () -> new PodTemplateTaskAdapter(
+    Assert.assertThrows(
+        "Pod template task adapter requires a base pod template to be specified",
+        ISE.class,
+        () -> new PodTemplateTaskAdapter(
         testClient,
         taskRunnerConfig,
         taskConfig,
