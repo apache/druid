@@ -471,9 +471,7 @@ public class EvalTest extends InitializedNullHandlingTest
   @Test
   public void testLogicalOperators()
   {
-    Expr.ObjectBinding bindings = InputBindings.forMap(
-        ImmutableMap.of()
-    );
+    Expr.ObjectBinding bindings = InputBindings.nilBindings();
 
     try {
       ExpressionProcessing.initializeForStrictBooleansTests(true);

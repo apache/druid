@@ -27,6 +27,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class InputBindings
 {
@@ -212,6 +213,35 @@ public class InputBindings
       public ExpressionType getType(String name)
       {
         return type;
+      }
+    };
+  }
+
+  /**
+   * Create a {@link Expr.ObjectBinding} for a single input value of a known type provided by some {@link Supplier}
+   */
+  public static Expr.ObjectBinding forInputSupplier(String supplierName, ExpressionType type, Supplier<?> supplier)
+  {
+    return new Expr.ObjectBinding()
+    {
+      @Nullable
+      @Override
+      public Object get(String name)
+      {
+        if (Objects.equals(name, supplierName)) {
+          return supplier.get();
+        }
+        return null;
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getType(String name)
+      {
+        if (Objects.equals(name, supplierName)) {
+          return type;
+        }
+        return null;
       }
     };
   }

@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.expression;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.junit.Assert;
 import org.junit.Test;
@@ -37,20 +37,23 @@ public class ContainsExprMacroTest extends MacroTestBase
   public void testErrorZeroArguments()
   {
     expectException(IllegalArgumentException.class, "Function[contains_string] requires 2 arguments");
-    eval("contains_string()", InputBindings.forMap(ImmutableMap.of()));
+    eval("contains_string()", InputBindings.nilBindings());
   }
 
   @Test
   public void testErrorThreeArguments()
   {
     expectException(IllegalArgumentException.class, "Function[contains_string] requires 2 arguments");
-    eval("contains_string('a', 'b', 'c')", InputBindings.forMap(ImmutableMap.of()));
+    eval("contains_string('a', 'b', 'c')", InputBindings.nilBindings());
   }
 
   @Test
   public void testMatch()
   {
-    final ExprEval<?> result = eval("contains_string(a, 'oba')", InputBindings.forMap(ImmutableMap.of("a", "foobar")));
+    final ExprEval<?> result = eval(
+        "contains_string(a, 'oba')",
+        InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foobar")
+    );
     Assert.assertEquals(
         ExprEval.ofLongBoolean(true).value(),
         result.value()
@@ -60,7 +63,10 @@ public class ContainsExprMacroTest extends MacroTestBase
   @Test
   public void testNoMatch()
   {
-    final ExprEval<?> result = eval("contains_string(a, 'bar')", InputBindings.forMap(ImmutableMap.of("a", "foo")));
+    final ExprEval<?> result = eval(
+        "contains_string(a, 'bar')",
+        InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
+    );
     Assert.assertEquals(
         ExprEval.ofLongBoolean(false).value(),
         result.value()
@@ -74,7 +80,10 @@ public class ContainsExprMacroTest extends MacroTestBase
       expectException(IllegalArgumentException.class, "Function[contains_string] substring must be a string literal");
     }
 
-    final ExprEval<?> result = eval("contains_string(a, null)", InputBindings.forMap(ImmutableMap.of("a", "foo")));
+    final ExprEval<?> result = eval(
+        "contains_string(a, null)",
+        InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
+    );
     Assert.assertEquals(
         ExprEval.ofLongBoolean(true).value(),
         result.value()
@@ -84,7 +93,10 @@ public class ContainsExprMacroTest extends MacroTestBase
   @Test
   public void testEmptyStringSearch()
   {
-    final ExprEval<?> result = eval("contains_string(a, '')", InputBindings.forMap(ImmutableMap.of("a", "foo")));
+    final ExprEval<?> result = eval(
+        "contains_string(a, '')",
+        InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
+    );
     Assert.assertEquals(
         ExprEval.ofLongBoolean(true).value(),
         result.value()
@@ -98,7 +110,10 @@ public class ContainsExprMacroTest extends MacroTestBase
       expectException(IllegalArgumentException.class, "Function[contains_string] substring must be a string literal");
     }
 
-    final ExprEval<?> result = eval("contains_string(a, null)", InputBindings.forMap(ImmutableMap.of("a", "")));
+    final ExprEval<?> result = eval(
+        "contains_string(a, null)",
+        InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "")
+    );
     Assert.assertEquals(
         ExprEval.ofLongBoolean(true).value(),
         result.value()
@@ -108,7 +123,10 @@ public class ContainsExprMacroTest extends MacroTestBase
   @Test
   public void testEmptyStringSearchOnEmptyString()
   {
-    final ExprEval<?> result = eval("contains_string(a, '')", InputBindings.forMap(ImmutableMap.of("a", "")));
+    final ExprEval<?> result = eval(
+        "contains_string(a, '')",
+        InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "")
+    );
     Assert.assertEquals(
         ExprEval.ofLongBoolean(true).value(),
         result.value()
