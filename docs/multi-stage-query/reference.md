@@ -402,6 +402,12 @@ FROM TABLE(
   ) (x VARCHAR, y VARCHAR)
 ```
 
+The JSON function allows columns to be of type `VARIANT` which indicates that the column contains
+some form of complex JSON: a JSON object, a JSON array, or an array of JSON objects or arrays.
+The SQL `VARIANT` type corresponds to the native Druid type `complex<json>`. However, the actual
+segment column produced may be of some other type if Druid infers that it can use a simpler type
+instead. This is why the column type can "vary" and is thus called `VARIANT`.
+
 ### Parameters
 
 Starting with the Druid 26.0 release, you can use query parameters with MSQ queries. You may find
