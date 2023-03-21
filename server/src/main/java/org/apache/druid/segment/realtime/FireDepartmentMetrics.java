@@ -43,8 +43,10 @@ public class FireDepartmentMetrics
   private final AtomicLong persistBackPressureMillis = new AtomicLong(0);
   private final AtomicLong failedPersists = new AtomicLong(0);
   private final AtomicLong failedHandoffs = new AtomicLong(0);
-  // Measures the number of rows that have been merged. Segments are merged into a single file before they are pushed to deepstorage.
-  private final AtomicLong mergeRows = new AtomicLong(0);
+  // Measures the number of rows that have been merged. Segments are merged into a single file before they are pushed to deep storage.
+  private final AtomicLong mergedRows = new AtomicLong(0);
+  // Measures the number of rows that have been pushed to deep storage.
+  private final AtomicLong pushedRows = new AtomicLong(0);
   private final AtomicLong mergeTimeMillis = new AtomicLong(0);
   private final AtomicLong mergeCpuTime = new AtomicLong(0);
   private final AtomicLong persistCpuTime = new AtomicLong(0);
@@ -116,9 +118,14 @@ public class FireDepartmentMetrics
     mergeTimeMillis.addAndGet(millis);
   }
 
-  public void incrementMergeRows(long rows)
+  public void incrementMergedRows(long rows)
   {
-    mergeRows.addAndGet(rows);
+    mergedRows.addAndGet(rows);
+  }
+
+  public void incrementPushedRows(long rows)
+  {
+    pushedRows.addAndGet(rows);
   }
 
   public void incrementMergeCpuTime(long mergeTime)
@@ -217,11 +224,15 @@ public class FireDepartmentMetrics
     return failedHandoffs.get();
   }
 
-  public long mergeRows()
+  public long mergedRows()
   {
-    return mergeRows.get();
+    return mergedRows.get();
   }
 
+  public long pushedRows()
+  {
+    return pushedRows.get();
+  }
   public long mergeTimeMillis()
   {
     return mergeTimeMillis.get();
@@ -278,6 +289,8 @@ public class FireDepartmentMetrics
     retVal.sinkCount.set(sinkCount.get());
     retVal.messageMaxTimestamp.set(messageMaxTimestamp.get());
     retVal.maxSegmentHandoffTime.set(maxSegmentHandoffTime.get());
+    retVal.mergedRows.set(mergedRows.get());
+    retVal.pushedRows.set(pushedRows.get());
 
     long messageGapSnapshot = 0;
     final long maxTimestamp = retVal.messageMaxTimestamp.get();

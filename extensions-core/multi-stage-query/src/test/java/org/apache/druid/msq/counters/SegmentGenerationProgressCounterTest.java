@@ -29,7 +29,7 @@ public class SegmentGenerationProgressCounterTest
   {
     EqualsVerifier.forClass(SegmentGenerationProgressCounter.Snapshot.class)
                   .usingGetClass()
-                  .withNonnullFields("rowsProcessed", "rowsPersisted", "rowsMerged")
+                  .withNonnullFields("rowsProcessed", "rowsPersisted", "rowsMerged", "rowsPushed")
                   .verify();
   }
 }

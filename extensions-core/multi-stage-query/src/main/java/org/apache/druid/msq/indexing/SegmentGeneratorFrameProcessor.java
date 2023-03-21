@@ -206,7 +206,7 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
             try {
               rowsWritten++;
               appenderator.add(segmentIdWithShardSpec, inputRow, null);
-              segmentGenerationProgressCounter.incrementRowProcessed(1);
+              segmentGenerationProgressCounter.incrementRowsProcessed(1);
             }
             catch (Exception e) {
               throw new RuntimeException(e);

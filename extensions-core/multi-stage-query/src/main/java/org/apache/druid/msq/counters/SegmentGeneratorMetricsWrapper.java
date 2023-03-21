@@ -44,9 +44,16 @@ public class SegmentGeneratorMetricsWrapper extends FireDepartmentMetrics
   }
 
   @Override
-  public void incrementMergeRows(long rows)
+  public void incrementMergedRows(long rows)
   {
-    super.incrementMergeRows(rows);
+    super.incrementMergedRows(rows);
     segmentGenerationProgressCounter.incrementRowsMerged(rows);
+  }
+
+  @Override
+  public void incrementPushedRows(long rows)
+  {
+    super.incrementPushedRows(rows);
+    segmentGenerationProgressCounter.incrementRowsPushed(rows);
   }
 }

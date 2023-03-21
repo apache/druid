@@ -32,16 +32,23 @@ import java.util.Objects;
  */
 public class SegmentGenerationProgressCounter implements QueryCounter
 {
+  // Number of rows processed by the segment generator as input, but not yet persisted.
   @GuardedBy("this")
   private long rowsProcessed = 0L;
 
+  // Number of rows persisted by the segment generator as a queryable index.
   @GuardedBy("this")
   private long rowsPersisted = 0L;
 
+  // Number of rows that have been merged into a single file from the queryable indexes, prior to the push to deep storage.
   @GuardedBy("this")
   private long rowsMerged = 0L;
 
-  public void incrementRowProcessed(long rowsProcessed)
+  // Number of rows in segments that have been pushed to deep storage.
+  @GuardedBy("this")
+  private long rowsPushed = 0L;
+
+  public void incrementRowsProcessed(long rowsProcessed)
   {
     synchronized (this) {
       this.rowsProcessed += rowsProcessed;
@@ -62,12 +69,19 @@ public class SegmentGenerationProgressCounter implements QueryCounter
     }
   }
 
+  public void incrementRowsPushed(long rowsPushed)
+  {
+    synchronized (this) {
+      this.rowsPushed += rowsPushed;
+    }
+  }
+
   @Override
   @Nullable
   public QueryCounterSnapshot snapshot()
   {
     synchronized (this) {
-      return new Snapshot(rowsProcessed, rowsPersisted, rowsMerged);
+      return new Snapshot(rowsProcessed, rowsPersisted, rowsMerged, rowsPushed);
     }
   }
 
@@ -77,17 +91,20 @@ public class SegmentGenerationProgressCounter implements QueryCounter
     private final long rowsProcessed;
     private final long rowsPersisted;
     private final long rowsMerged;
+    private final long rowsPushed;
 
     @JsonCreator
     public Snapshot(
         @JsonProperty("rowsProcessed") final long rowsProcessed,
         @JsonProperty("rowsPersisted") final long rowsPersisted,
-        @JsonProperty("rowsMerged") final long rowsMerged
+        @JsonProperty("rowsMerged") final long rowsMerged,
+        @JsonProperty("rowsPushed") final long rowsPushed
     )
     {
       this.rowsProcessed = rowsProcessed;
       this.rowsPersisted = rowsPersisted;
       this.rowsMerged = rowsMerged;
+      this.rowsPushed = rowsPushed;
     }
 
     @JsonProperty(value = "rowsProcessed")
@@ -108,6 +125,12 @@ public class SegmentGenerationProgressCounter implements QueryCounter
       return rowsMerged;
     }
 
+    @JsonProperty(value = "rowsPushed")
+    public long getRowsPushed()
+    {
+      return rowsPushed;
+    }
+
     @Override
     public String toString()
     {
@@ -115,6 +138,7 @@ public class SegmentGenerationProgressCounter implements QueryCounter
              "rowsProcessed=" + rowsProcessed +
              ", rowsPersisted=" + rowsPersisted +
              ", rowsMerged=" + rowsMerged +
+             ", rowsPushed=" + rowsPushed +
              '}';
     }
 
@@ -130,13 +154,14 @@ public class SegmentGenerationProgressCounter implements QueryCounter
       Snapshot snapshot = (Snapshot) o;
       return rowsProcessed == snapshot.rowsProcessed
              && rowsPersisted == snapshot.rowsPersisted
-             && rowsMerged == snapshot.rowsMerged;
+             && rowsMerged == snapshot.rowsMerged
+             && rowsPushed == snapshot.rowsPushed;
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(rowsProcessed, rowsPersisted, rowsMerged);
+      return Objects.hash(rowsProcessed, rowsPersisted, rowsMerged, rowsPushed);
     }
   }
 }
