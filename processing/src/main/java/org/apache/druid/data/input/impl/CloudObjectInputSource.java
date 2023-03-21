@@ -243,6 +243,8 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       );
     }
 
+    // Only consider nonempty objects. Note: size may be unknown; if so we allow it through, to avoid
+    // calling getObjectSize and triggering a network call.
     return toSplitStream(
         splitWidget,
         splitHintSpec,
@@ -276,8 +278,6 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       );
     }
 
-    // Only consider nonempty objects. Note: size may be unknown; if so we allow it through, to avoid
-    // calling getObjectSize and triggering a network call.
     return toSplitStream(
         splitWidget,
         splitHintSpec,
