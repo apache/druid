@@ -66,15 +66,15 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
 
   Expr.ObjectBinding inputBindings = InputBindings.forInputSuppliers(
       new ImmutableMap.Builder<String, InputBindings.InputSupplier>()
-          .put("nest", new InputBindings.InputSupplier<>(NestedDataExpressions.TYPE, () -> NEST))
-          .put("nestWrapped", new InputBindings.InputSupplier<>(NestedDataExpressions.TYPE, () -> new StructuredData(NEST)))
-          .put("nester", new InputBindings.InputSupplier<>(NestedDataExpressions.TYPE, () -> NESTER))
-          .put("string", new InputBindings.InputSupplier<>(ExpressionType.STRING, () -> "abcdef"))
-          .put("long", new InputBindings.InputSupplier<>(ExpressionType.LONG, () -> 1234L))
-          .put("double", new InputBindings.InputSupplier<>(ExpressionType.DOUBLE, () -> 1.234))
-          .put("nullString", new InputBindings.InputSupplier<>(ExpressionType.STRING, () -> null))
-          .put("nullLong", new InputBindings.InputSupplier<>(ExpressionType.LONG, () -> null))
-          .put("nullDouble", new InputBindings.InputSupplier<>(ExpressionType.DOUBLE, () -> null))
+          .put("nest", InputBindings.inputSupplier(NestedDataExpressions.TYPE, () -> NEST))
+          .put("nestWrapped", InputBindings.inputSupplier(NestedDataExpressions.TYPE, () -> new StructuredData(NEST)))
+          .put("nester", InputBindings.inputSupplier(NestedDataExpressions.TYPE, () -> NESTER))
+          .put("string", InputBindings.inputSupplier(ExpressionType.STRING, () -> "abcdef"))
+          .put("long", InputBindings.inputSupplier(ExpressionType.LONG, () -> 1234L))
+          .put("double", InputBindings.inputSupplier(ExpressionType.DOUBLE, () -> 1.234))
+          .put("nullString", InputBindings.inputSupplier(ExpressionType.STRING, () -> null))
+          .put("nullLong", InputBindings.inputSupplier(ExpressionType.LONG, () -> null))
+          .put("nullDouble", InputBindings.inputSupplier(ExpressionType.DOUBLE, () -> null))
           .build()
   );
 

@@ -53,13 +53,13 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
 
   Expr.ObjectBinding inputBindings = InputBindings.forInputSuppliers(
       new ImmutableMap.Builder<String, InputBindings.InputSupplier>()
-          .put("hll", new InputBindings.InputSupplier<>(HyperUniqueExpressions.TYPE, HyperLogLogCollector::makeLatestCollector))
-          .put("string", new InputBindings.InputSupplier<>(ExpressionType.STRING, () -> SOME_STRING))
-          .put("long", new InputBindings.InputSupplier<>(ExpressionType.LONG, () -> SOME_LONG))
-          .put("double", new InputBindings.InputSupplier<>(ExpressionType.DOUBLE, () -> SOME_DOUBLE))
-          .put("nullString", new InputBindings.InputSupplier<>(ExpressionType.STRING, () -> null))
-          .put("nullLong", new InputBindings.InputSupplier<>(ExpressionType.LONG, () -> null))
-          .put("nullDouble", new InputBindings.InputSupplier<>(ExpressionType.DOUBLE, () -> null))
+          .put("hll", InputBindings.inputSupplier(HyperUniqueExpressions.TYPE, HyperLogLogCollector::makeLatestCollector))
+          .put("string", InputBindings.inputSupplier(ExpressionType.STRING, () -> SOME_STRING))
+          .put("long", InputBindings.inputSupplier(ExpressionType.LONG, () -> SOME_LONG))
+          .put("double", InputBindings.inputSupplier(ExpressionType.DOUBLE, () -> SOME_DOUBLE))
+          .put("nullString", InputBindings.inputSupplier(ExpressionType.STRING, () -> null))
+          .put("nullLong", InputBindings.inputSupplier(ExpressionType.LONG, () -> null))
+          .put("nullDouble", InputBindings.inputSupplier(ExpressionType.DOUBLE, () -> null))
           .build()
   );
 

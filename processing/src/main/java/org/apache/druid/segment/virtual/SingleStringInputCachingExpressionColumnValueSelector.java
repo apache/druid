@@ -68,7 +68,7 @@ public class SingleStringInputCachingExpressionColumnValueSelector extends BaseE
     this.expression = Preconditions.checkNotNull(expression, "expression");
 
     final Supplier<Object> inputSupplier = ExpressionSelectors.supplierFromDimensionSelector(selector, false, false);
-    this.bindings = InputBindings.forSingleTypeSupplier(ExpressionType.STRING, inputSupplier);
+    this.bindings = InputBindings.forInputSupplier(ExpressionType.STRING, inputSupplier);
 
     if (selector.getValueCardinality() == DimensionDictionarySelector.CARDINALITY_UNKNOWN) {
       throw new ISE("Selector must have a dictionary");

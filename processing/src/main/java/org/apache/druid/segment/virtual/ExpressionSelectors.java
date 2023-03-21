@@ -376,7 +376,7 @@ public class ExpressionSelectors
       }
 
       if (supplier != null) {
-        suppliers.put(columnName, new InputBindings.InputSupplier<>(expressionType, supplier));
+        suppliers.put(columnName, InputBindings.inputSupplier(expressionType, supplier));
       }
     }
 
@@ -387,7 +387,7 @@ public class ExpressionSelectors
       // asked for something.
       final InputBindings.InputSupplier<?> supplier = Iterables.getOnlyElement(suppliers.values());
 
-      return InputBindings.forSingleTypeSupplier(supplier.getType(), supplier);
+      return InputBindings.forInputSupplier(supplier.getType(), supplier);
     } else {
       return InputBindings.forInputSuppliers(suppliers);
     }

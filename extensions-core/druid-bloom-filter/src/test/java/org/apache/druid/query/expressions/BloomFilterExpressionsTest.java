@@ -52,13 +52,13 @@ public class BloomFilterExpressionsTest extends InitializedNullHandlingTest
 
   Expr.ObjectBinding inputBindings = InputBindings.forInputSuppliers(
       new ImmutableMap.Builder<String, InputBindings.InputSupplier>()
-          .put("bloomy", new InputBindings.InputSupplier(BloomFilterExpressions.BLOOM_FILTER_TYPE, () -> new BloomKFilter(100)))
-          .put("string", new InputBindings.InputSupplier(ExpressionType.STRING, () -> SOME_STRING))
-          .put("long", new InputBindings.InputSupplier(ExpressionType.LONG, () -> SOME_LONG))
-          .put("double", new InputBindings.InputSupplier(ExpressionType.DOUBLE, () -> SOME_DOUBLE))
-          .put("string_array", new InputBindings.InputSupplier(ExpressionType.STRING_ARRAY, () -> SOME_STRING_ARRAY))
-          .put("long_array", new InputBindings.InputSupplier(ExpressionType.LONG_ARRAY, () -> SOME_LONG_ARRAY))
-          .put("double_array", new InputBindings.InputSupplier(ExpressionType.DOUBLE_ARRAY, () -> SOME_DOUBLE_ARRAY))
+          .put("bloomy", InputBindings.inputSupplier(BloomFilterExpressions.BLOOM_FILTER_TYPE, () -> new BloomKFilter(100)))
+          .put("string", InputBindings.inputSupplier(ExpressionType.STRING, () -> SOME_STRING))
+          .put("long", InputBindings.inputSupplier(ExpressionType.LONG, () -> SOME_LONG))
+          .put("double", InputBindings.inputSupplier(ExpressionType.DOUBLE, () -> SOME_DOUBLE))
+          .put("string_array", InputBindings.inputSupplier(ExpressionType.STRING_ARRAY, () -> SOME_STRING_ARRAY))
+          .put("long_array", InputBindings.inputSupplier(ExpressionType.LONG_ARRAY, () -> SOME_LONG_ARRAY))
+          .put("double_array", InputBindings.inputSupplier(ExpressionType.DOUBLE_ARRAY, () -> SOME_DOUBLE_ARRAY))
           .build()
   );
 
