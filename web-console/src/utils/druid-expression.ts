@@ -20,7 +20,7 @@ const UNSAFE_CHAR = /[^a-z0-9 ,._\-;:(){}[\]<>!@#$%^&*`~?]/gi;
 
 function escape(str: string): string {
   return str.replace(UNSAFE_CHAR, s => {
-    return '\\u' + ('000' + s.charCodeAt(0).toString(16)).substr(-4);
+    return '\\u' + ('000' + s.charCodeAt(0).toString(16)).slice(-4);
   });
 }
 
