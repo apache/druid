@@ -157,6 +157,11 @@ public class WorkerInputs
     return assignmentsMap.size();
   }
 
+  public Int2ObjectMap<List<InputSlice>> assignmentsMap()
+  {
+    return assignmentsMap;
+  }
+
   @Override
   public boolean equals(Object o)
   {
