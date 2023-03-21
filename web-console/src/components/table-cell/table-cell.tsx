@@ -39,8 +39,8 @@ function shortenString(str: string): ShortParts {
   // Print something like:
   // BAAAArAAEiQKpDAEAACwZCBAGSBgiSEAAAAQpAIDwAg...23 omitted...gwiRoQBJIC
   const omit = str.length - (MAX_CHARS_TO_SHOW - 17);
-  const prefix = str.substr(0, str.length - (omit + 10));
-  const suffix = str.substr(str.length - 10);
+  const prefix = str.slice(0, str.length - (omit + 10));
+  const suffix = str.slice(str.length - 10);
   return {
     prefix,
     omitted: `...${omit} omitted...`,
@@ -73,7 +73,7 @@ export const TableCell = React.memo(function TableCell(props: TableCellProps) {
         <div className="table-cell plain">
           {str.length < ABSOLUTE_MAX_CHARS_TO_SHOW
             ? str
-            : `${str.substr(0, ABSOLUTE_MAX_CHARS_TO_SHOW)}...`}
+            : `${str.slice(0, ABSOLUTE_MAX_CHARS_TO_SHOW)}...`}
         </div>
       );
     }

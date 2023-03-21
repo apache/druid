@@ -80,6 +80,6 @@ public class MixShuffleSpec implements ShuffleSpec
   @Override
   public String toString()
   {
-    return "MuxShuffleSpec{}";
+    return "MixShuffleSpec{}";
   }
 }

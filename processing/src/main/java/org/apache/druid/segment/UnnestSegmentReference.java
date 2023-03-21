@@ -28,7 +28,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.LinkedHashSet;
 import java.util.Optional;
 
 /**
@@ -41,17 +40,15 @@ public class UnnestSegmentReference implements SegmentReference
 
   private final SegmentReference baseSegment;
   private final VirtualColumn unnestColumn;
-  private final LinkedHashSet<String> allowSet;
+
 
   public UnnestSegmentReference(
       SegmentReference baseSegment,
-      VirtualColumn unnestColumn,
-      LinkedHashSet<String> allowList
+      VirtualColumn unnestColumn
   )
   {
     this.baseSegment = baseSegment;
     this.unnestColumn = unnestColumn;
-    this.allowSet = allowList;
   }
 
   @Override
@@ -103,8 +100,7 @@ public class UnnestSegmentReference implements SegmentReference
   {
     return new UnnestStorageAdapter(
         baseSegment.asStorageAdapter(),
-        unnestColumn,
-        allowSet
+        unnestColumn
     );
   }
 

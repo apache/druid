@@ -172,8 +172,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
                 correlateRowSignature.getColumnName(correlateRowSignature.size() - 1),
                 Calcites.getColumnTypeForRelDataType(rexNodeToUnnest.getType()),
                 getPlannerContext().getExprMacroTable()
-            ),
-            null
+            )
         ),
         correlateRowSignature,
         getPlannerContext(),
