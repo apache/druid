@@ -14,9 +14,9 @@
 # limitations under the License.
 
 import requests, time
-from .consts import COORD_BASE
-from .rest import check_error
-from .util import dict_get
+from druidapi.consts import COORD_BASE
+from druidapi.rest import check_error
+from druidapi.util import dict_get
 
 REQ_DATASOURCES = COORD_BASE + '/datasources'
 REQ_DATASOURCE = REQ_DATASOURCES + '/{}'
@@ -32,18 +32,18 @@ class DatasourceClient:
 
     See https://druid.apache.org/docs/latest/operations/api-reference.html#datasources
     '''
-    
+
     def __init__(self, rest_client):
         self.rest_client = rest_client
-    
+
     def drop(self, ds_name, if_exists=False):
         '''
         Drops a data source.
 
-        Marks as unused all segments belonging to a datasource. 
+        Marks as unused all segments belonging to a datasource.
 
         Marking all segments as unused is equivalent to dropping the table.
-        
+
         Parameters
         ----------
         ds_name: str
@@ -51,9 +51,9 @@ class DatasourceClient:
 
         Returns
         -------
-        Returns a map of the form 
-        {"numChangedSegments": <number>} with the number of segments in the database whose 
-        state has been changed (that is, the segments were marked as unused) as the result 
+        Returns a map of the form
+        {"numChangedSegments": <number>} with the number of segments in the database whose
+        state has been changed (that is, the segments were marked as unused) as the result
         of this API call.
 
         Reference
@@ -67,10 +67,10 @@ class DatasourceClient:
 
     def load_status_req(self, ds_name, params=None):
         return self.rest_client.get_json(REQ_DS_LOAD_STATUS, args=[ds_name], params=params)
-    
+
     def load_status(self, ds_name):
         return self.load_status_req(ds_name, {
-            'forceMetadataRefresh': 'true', 
+            'forceMetadataRefresh': 'true',
             'interval': '1970-01-01/2999-01-01'})
 
     def wait_until_ready(self, ds_name):
