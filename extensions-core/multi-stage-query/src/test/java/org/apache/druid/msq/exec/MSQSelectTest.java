@@ -25,7 +25,9 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.frame.util.DurableStorageUtils;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.ColumnMapping;
@@ -239,6 +241,44 @@ public class MSQSelectTest extends MSQTestBase
                 .with().rows(3).frames(1),
             0, 0, "shuffle"
         )
+        .verifyResults();
+  }
+
+  @Test
+  public void testSelectOnFooWhereMatchesNoSegments()
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("cnt", ColumnType.LONG)
+                                               .add("dim1", ColumnType.STRING)
+                                               .build();
+
+    // Filter [__time >= timestamp '3000-01-01 00:00:00'] matches no segments at all.
+    testSelectQuery()
+        .setSql("select cnt,dim1 from foo where __time >= timestamp '3000-01-01 00:00:00'")
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(
+                       newScanQueryBuilder()
+                           .dataSource(CalciteTests.DATASOURCE1)
+                           .intervals(
+                               querySegmentSpec(
+                                   Intervals.utc(
+                                       DateTimes.of("3000").getMillis(),
+                                       Intervals.ETERNITY.getEndMillis()
+                                   )
+                               )
+                           )
+                           .columns("cnt", "dim1")
+                           .context(defaultScanQueryContext(context, resultSignature))
+                           .build()
+                   )
+                   .columnMappings(ColumnMappings.identity(resultSignature))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .build()
+        )
+        .setQueryContext(context)
+        .setExpectedRowSignature(resultSignature)
+        .setExpectedResultRows(ImmutableList.of())
         .verifyResults();
   }
 
@@ -1365,7 +1405,8 @@ public class MSQSelectTest extends MSQTestBase
                 + "FROM kttm_data "
                 + "GROUP BY 1")
         .setExpectedValidationErrorMatcher(
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("LATEST() aggregator depends on __time column"))
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                "LATEST() aggregator depends on __time column"))
         )
         .setExpectedRowSignature(rowSignature)
         .verifyPlanningErrors();
@@ -1513,7 +1554,11 @@ public class MSQSelectTest extends MSQTestBase
   @Test
   public void testMultiValueStringWithIncorrectType() throws IOException
   {
-    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/unparseable-mv-string-array.json");
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(
+        temporaryFolder,
+        this,
+        "/unparseable-mv-string-array.json"
+    );
     final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()

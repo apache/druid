@@ -22,6 +22,7 @@ package org.apache.druid.storage.google;
 import com.google.api.client.http.AbstractInputStreamContent;
 import com.google.api.services.storage.Storage;
 import com.google.api.services.storage.Storage.Objects.Get;
+import com.google.api.services.storage.model.StorageObject;
 import com.google.common.base.Supplier;
 
 import java.io.IOException;
@@ -64,6 +65,11 @@ public class GoogleStorage
     InputStream inputStream = get.executeMediaAsInputStream();
     inputStream.skip(start);
     return inputStream;
+  }
+
+  public StorageObject getMetadata(final String bucket, final String path) throws IOException
+  {
+    return storage.get().objects().get(bucket, path).execute();
   }
 
   public void delete(final String bucket, final String path) throws IOException

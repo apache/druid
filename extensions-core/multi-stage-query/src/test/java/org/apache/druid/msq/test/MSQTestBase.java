@@ -849,7 +849,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     public Builder setExpectedResultRows(List<Object[]> expectedResultRows)
     {
-      Preconditions.checkArgument(expectedResultRows.size() > 0, "Results rows cannot be empty");
       this.expectedResultRows = expectedResultRows;
       return asBuilder();
     }

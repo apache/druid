@@ -27,6 +27,7 @@ import com.aliyun.oss.model.ListObjectsRequest;
 import com.aliyun.oss.model.OSSObject;
 import com.aliyun.oss.model.OSSObjectSummary;
 import com.aliyun.oss.model.ObjectListing;
+import com.aliyun.oss.model.ObjectMetadata;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.Module;
@@ -101,9 +102,14 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
       URI.create("oss://bar/foo/file2.csv.gz")
   );
 
-  private static final List<List<CloudObjectLocation>> EXPECTED_COORDS =
+  private static final List<CloudObjectLocation> EXPECTED_OBJECTS =
       EXPECTED_URIS.stream()
-                   .map(uri -> Collections.singletonList(new CloudObjectLocation(uri)))
+                   .map(CloudObjectLocation::new)
+                   .collect(Collectors.toList());
+
+  private static final List<List<CloudObjectLocation>> EXPECTED_COORDS =
+      EXPECTED_OBJECTS.stream()
+                   .map(Collections::singletonList)
                    .collect(Collectors.toList());
 
   private static final List<URI> PREFIXES = Arrays.asList(
@@ -318,6 +324,13 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
   @Test
   public void testWithUrisSplit()
   {
+    EasyMock.reset(OSSCLIENT);
+    EasyMock.expect(OSSCLIENT.getObjectMetadata(EXPECTED_OBJECTS.get(0).getBucket(), EXPECTED_OBJECTS.get(0).getPath()))
+            .andReturn(objectMetadataWithSize(EXPECTED_OBJECTS.get(0), CONTENT.length));
+    EasyMock.expect(OSSCLIENT.getObjectMetadata(EXPECTED_OBJECTS.get(1).getBucket(), EXPECTED_OBJECTS.get(1).getPath()))
+            .andReturn(objectMetadataWithSize(EXPECTED_OBJECTS.get(1), CONTENT.length));
+    EasyMock.replay(OSSCLIENT);
+
     OssInputSource inputSource = new OssInputSource(
         OSSCLIENT,
         INPUT_DATA_CONFIG,
@@ -330,10 +343,11 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
-        null
+        new MaxSizeSplitHintSpec(10, null)
     );
 
     Assert.assertEquals(EXPECTED_COORDS, splits.map(InputSplit::get).collect(Collectors.toList()));
+    EasyMock.verify(OSSCLIENT);
   }
 
   @Test
@@ -682,5 +696,12 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     {
       throw new UnsupportedOperationException();
     }
+  }
+
+  private static ObjectMetadata objectMetadataWithSize(final CloudObjectLocation location, final long size)
+  {
+    final ObjectMetadata retVal = new ObjectMetadata();
+    retVal.setContentLength(size);
+    return retVal;
   }
 }
