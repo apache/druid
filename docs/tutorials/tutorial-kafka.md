@@ -30,7 +30,7 @@ The tutorial guides you through the steps to load sample nested clickstream data
 
 ## Prerequisites
 
-Before you follow the steps in this tutorial, download Druid as described in the [quickstart](index.md) using the [micro-quickstart](../operations/single-server.md#micro-quickstart-4-cpu-16gib-ram) single-machine configuration and have it running on your local machine. You don't need to have loaded any data.
+Before you follow the steps in this tutorial, download Druid as described in the [quickstart](index.md) using the [automatic single-machine configuration](../operations/single-server.md) and have it running on your local machine. You don't need to have loaded any data.
 
 ## Download and start Kafka
 
@@ -45,8 +45,9 @@ Before you follow the steps in this tutorial, download Druid as described in the
    ```
 2. If you're already running Kafka on the machine you're using for this tutorial, delete or rename the `kafka-logs` directory in `/tmp`.
    
-   > Druid and Kafka both rely on [Apache ZooKeeper](https://zookeeper.apache.org/) to coordinate and manage services. Because Druid is already running, Kafka attaches to the Druid ZooKeeper instance when it starts up.<br>
-   In a production environment where you're running Druid and Kafka on different machines, [start the Kafka ZooKeeper](https://kafka.apache.org/quickstart) before you start the Kafka broker.
+   > Druid and Kafka both rely on [Apache ZooKeeper](https://zookeeper.apache.org/) to coordinate and manage services. Because Druid is already running, Kafka attaches to the Druid ZooKeeper instance when it starts up.<br />
+   > 
+   > In a production environment where you're running Druid and Kafka on different machines, [start the Kafka ZooKeeper](https://kafka.apache.org/quickstart) before you start the Kafka broker.
 
 3. In the Kafka root directory, run this command to start a Kafka broker:
 
@@ -76,15 +77,14 @@ In this section, you download sample data to the tutorial's directory and send t
 
    ```bash
    cd sample-data
-   curl -O https://druid.apache.org/docs/latest/assets/files/kttm-nested-data.json.tgz
-   tar -xzf kttm-nested-data.json.tgz
+   curl -O https://static.imply.io/example-data/kttm-nested-v2/kttm-nested-v2-2019-08-25.json.gz
    ```
 
 3. In your Kafka root directory, run the following commands to post sample events to the `kttm` Kafka topic:
 
    ```bash
    export KAFKA_OPTS="-Dfile.encoding=UTF-8"
-   ./bin/kafka-console-producer.sh --broker-list localhost:9092 --topic kttm < ./sample-data/kttm-nested-data.json
+   gzcat ./sample-data/kttm-nested-v2-2019-08-25.json.gz | ./bin/kafka-console-producer.sh --broker-list localhost:9092 --topic kttm
    ```
 
 ## Load data into Druid

@@ -19,16 +19,17 @@
 
 package org.apache.druid.sql.calcite.util;
 
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
 import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.guice.ExpressionModule;
+import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
@@ -36,7 +37,6 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
-import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryLifecycle;
@@ -45,8 +45,9 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlStatementFactory;
-import org.apache.druid.sql.calcite.external.ExternalDataSource;
+import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -63,10 +64,7 @@ import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 /**
@@ -123,6 +121,20 @@ public class SqlTestFramework
    */
   public interface QueryComponentSupplier
   {
+    /**
+     * Gather properties to be used within tests. Particularly useful when choosing
+     * among aggregator implementations: avoids the need to copy/paste code to select
+     * the desired implementation.
+     */
+    void gatherProperties(Properties properties);
+
+    /**
+     * Configure modules needed for tests. This is the preferred way to configure
+     * Jackson: include the production module in this method that includes the
+     * required Jackson configuration.
+     */
+    void configureGuice(DruidInjectorBuilder builder);
+
     QueryRunnerFactoryConglomerate createCongolmerate(
         Builder builder,
         Closer closer
@@ -130,27 +142,26 @@ public class SqlTestFramework
 
     SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
         QueryRunnerFactoryConglomerate conglomerate,
-        JoinableFactoryWrapper joinableFactory
+        JoinableFactoryWrapper joinableFactory,
+        Injector injector
     ) throws IOException;
 
     SqlEngine createEngine(
         QueryLifecycleFactory qlf,
-        ObjectMapper objectMapper
+        ObjectMapper objectMapper,
+        Injector injector
     );
 
-    DruidOperatorTable createOperatorTable();
-
-    ExprMacroTable createMacroTable();
-
-    Iterable<? extends Module> getJacksonModules();
-
-    Map<String, Object> getJacksonInjectables();
-
+    /**
+     * Configure the JSON mapper.
+     *
+     * @see #configureGuice(DruidInjectorBuilder) for the preferred solution.
+     */
     void configureJsonMapper(ObjectMapper mapper);
 
-    void configureGuice(DruidInjectorBuilder builder);
-
     JoinableFactoryWrapper createJoinableFactoryWrapper(LookupExtractorFactoryContainerProvider lookupProvider);
+
+    void finalizeTestFramework(SqlTestFramework sqlTestFramework);
   }
 
   public interface PlannerComponentSupplier
@@ -174,16 +185,23 @@ public class SqlTestFramework
    */
   public static class StandardComponentSupplier implements QueryComponentSupplier
   {
-    private final Injector injector;
     private final File temporaryFolder;
 
     public StandardComponentSupplier(
-        final Injector injector,
         final File temporaryFolder
     )
     {
-      this.injector = injector;
       this.temporaryFolder = temporaryFolder;
+    }
+
+    @Override
+    public void gatherProperties(Properties properties)
+    {
+    }
+
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
     }
 
     @Override
@@ -208,7 +226,8 @@ public class SqlTestFramework
     @Override
     public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
         final QueryRunnerFactoryConglomerate conglomerate,
-        final JoinableFactoryWrapper joinableFactory
+        final JoinableFactoryWrapper joinableFactory,
+        final Injector injector
     )
     {
       return TestDataBuilder.createMockWalker(
@@ -221,7 +240,11 @@ public class SqlTestFramework
     }
 
     @Override
-    public SqlEngine createEngine(QueryLifecycleFactory qlf, ObjectMapper objectMapper)
+    public SqlEngine createEngine(
+        QueryLifecycleFactory qlf,
+        ObjectMapper objectMapper,
+        Injector injector
+    )
     {
       return new NativeSqlEngine(
           qlf,
@@ -230,38 +253,7 @@ public class SqlTestFramework
     }
 
     @Override
-    public DruidOperatorTable createOperatorTable()
-    {
-      return QueryFrameworkUtils.createOperatorTable(injector);
-    }
-
-    @Override
-    public ExprMacroTable createMacroTable()
-    {
-      return QueryFrameworkUtils.createExprMacroTable(injector);
-    }
-
-    @Override
-    public Iterable<? extends Module> getJacksonModules()
-    {
-      final List<Module> modules = new ArrayList<>(new LookupSerdeModule().getJacksonModules());
-      modules.add(new SimpleModule().registerSubtypes(ExternalDataSource.class));
-      return modules;
-    }
-
-    @Override
-    public Map<String, Object> getJacksonInjectables()
-    {
-      return new HashMap<>();
-    }
-
-    @Override
     public void configureJsonMapper(ObjectMapper mapper)
-    {
-    }
-
-    @Override
-    public void configureGuice(DruidInjectorBuilder builder)
     {
     }
 
@@ -275,6 +267,11 @@ public class SqlTestFramework
               ImmutableMap.of(TestDataBuilder.CUSTOM_ROW_TABLE_JOINABLE.getClass(), GlobalTableDataSource.class)
           )
       );
+    }
+
+    @Override
+    public void finalizeTestFramework(SqlTestFramework sqlTestFramework)
+    {
     }
   }
 
@@ -361,6 +358,7 @@ public class SqlTestFramework
     private final QueryComponentSupplier componentSupplier;
     private int minTopNThreshold = TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
     private int mergeBufferCount;
+    private CatalogResolver catalogResolver = CatalogResolver.NULL_RESOLVER;
 
     public Builder(QueryComponentSupplier componentSupplier)
     {
@@ -376,6 +374,12 @@ public class SqlTestFramework
     public Builder mergeBufferCount(int mergeBufferCount)
     {
       this.mergeBufferCount = mergeBufferCount;
+      return this;
+    }
+
+    public Builder catalogResolver(CatalogResolver catalogResolver)
+    {
+      this.catalogResolver = catalogResolver;
       return this;
     }
 
@@ -424,7 +428,8 @@ public class SqlTestFramework
           framework.queryJsonMapper(),
           CalciteTests.DRUID_SCHEMA_NAME,
           new CalciteRulesManager(componentSupplier.extensionCalciteRules()),
-          framework.injector.getInstance(JoinableFactoryWrapper.class)
+          framework.injector.getInstance(JoinableFactoryWrapper.class),
+          framework.builder.catalogResolver
       );
       componentSupplier.finalizePlanner(this);
       this.statementFactory = QueryFrameworkUtils.createSqlStatementFactory(
@@ -476,24 +481,19 @@ public class SqlTestFramework
     @Override
     public void configure(Binder binder)
     {
-      binder.bind(DruidOperatorTable.class).toInstance(componentSupplier.createOperatorTable());
-      binder.bind(ExprMacroTable.class).toInstance(componentSupplier.createMacroTable());
+      binder.bind(DruidOperatorTable.class).in(LazySingleton.class);
       binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
     }
 
-    @Override
-    public List<? extends Module> getJacksonModules()
-    {
-      return Lists.newArrayList(componentSupplier.getJacksonModules());
-    }
-
     @Provides
+    @LazySingleton
     public QueryRunnerFactoryConglomerate conglomerate()
     {
       return componentSupplier.createCongolmerate(builder, resourceCloser);
     }
 
     @Provides
+    @LazySingleton
     public JoinableFactoryWrapper joinableFactoryWrapper(final Injector injector)
     {
       return builder.componentSupplier.createJoinableFactoryWrapper(
@@ -502,12 +502,14 @@ public class SqlTestFramework
     }
 
     @Provides
+    @LazySingleton
     public SpecificSegmentsQuerySegmentWalker segmentsQuerySegmentWalker(final Injector injector)
     {
       try {
         SpecificSegmentsQuerySegmentWalker walker = componentSupplier.createQuerySegmentWalker(
             injector.getInstance(QueryRunnerFactoryConglomerate.class),
-            injector.getInstance(JoinableFactoryWrapper.class)
+            injector.getInstance(JoinableFactoryWrapper.class),
+            injector
         );
         resourceCloser.register(walker);
         return walker;
@@ -518,6 +520,7 @@ public class SqlTestFramework
     }
 
     @Provides
+    @LazySingleton
     public QueryLifecycleFactory queryLifecycleFactory(final Injector injector)
     {
       return QueryFrameworkUtils.createMockQueryLifecycleFactory(
@@ -529,6 +532,7 @@ public class SqlTestFramework
 
   public static final DruidViewMacroFactory DRUID_VIEW_MACRO_FACTORY = new TestDruidViewMacroFactory();
 
+  private final Builder builder;
   private final QueryComponentSupplier componentSupplier;
   private final Closer resourceCloser = Closer.create();
   private final Injector injector;
@@ -537,12 +541,37 @@ public class SqlTestFramework
 
   private SqlTestFramework(Builder builder)
   {
+    this.builder = builder;
     this.componentSupplier = builder.componentSupplier;
-    this.injector = new CalciteTestInjectorBuilder()
-      .addModule(new TestSetupModule(builder))
-      .build();
-    this.engine = builder.componentSupplier.createEngine(queryLifecycleFactory(), queryJsonMapper());
+    Properties properties = new Properties();
+    this.componentSupplier.gatherProperties(properties);
+    Injector startupInjector = new StartupInjectorBuilder()
+        .withProperties(properties)
+        .build();
+    DruidInjectorBuilder injectorBuilder = new CoreInjectorBuilder(startupInjector)
+        // Ignore load scopes. This is a unit test, not a Druid node. If a
+        // test pulls in a module, then pull in that module, even though we are
+        // not the Druid node to which the module is scoped.
+        .ignoreLoadScopes()
+        .addModule(new BasicTestModule())
+        .addModule(new SqlAggregationModule())
+        .addModule(new ExpressionModule())
+        .addModule(new TestSetupModule(builder));
+    builder.componentSupplier.configureGuice(injectorBuilder);
+    this.injector = injectorBuilder.build();
+    this.engine = builder.componentSupplier.createEngine(queryLifecycleFactory(), queryJsonMapper(), injector);
     componentSupplier.configureJsonMapper(queryJsonMapper());
+    componentSupplier.finalizeTestFramework(this);
+  }
+
+  public Injector injector()
+  {
+    return injector;
+  }
+
+  public SqlEngine engine()
+  {
+    return engine;
   }
 
   public ObjectMapper queryJsonMapper()

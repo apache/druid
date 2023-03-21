@@ -129,6 +129,7 @@ JDK
 JDK7
 JDK8
 JKS
+jks
 JMX
 JRE
 JS
@@ -141,12 +142,14 @@ JVMs
 Joda
 JsonProperty
 Jupyter
+JupyterLab
 KMS
 Kerberized
 Kerberos
 KeyStores
 Kinesis
 Kubernetes
+LDAPS
 LRU
 LZ4
 LZO
@@ -203,12 +206,14 @@ SYSTEM_TABLE
 TCP
 TGT
 TLS
+tls
 TopN
 TopNs
 UI
 UIs
 URI
 URIs
+uris
 UTF-16
 UTF-8
 UTF8
@@ -376,6 +381,7 @@ non-nullable
 noop
 numerics
 numShards
+parameterize
 objectGlob
 parameterized
 parse_json
@@ -421,6 +427,10 @@ programmatically
 proto
 proxied
 proxyConfig
+python2
+python3
+Python2
+Python3
 QPS
 quantile
 quantiles
@@ -714,6 +724,9 @@ rowsInMemory
 segmentSortOrder
 rowsPerSegment
 durableShuffleStorage
+composedIntermediateSuperSorterStorageEnabled
+intermediateSuperSorterStorageMaxLocalBytes
+ResourceLimitExceededException
 # Aggregations
 groupByEnableMultiValueUnnesting
 APPROX_COUNT_DISTINCT_DS_HLL
@@ -732,6 +745,8 @@ appenders
 druid-hdfs-storage
 druid-s3-extensions
 druid.sql.planner.maxNumericInFilters
+Minio
+multi-server
  - ../docs/dependencies/metadata-storage.md
 BasicDataSource
  - ../docs/dependencies/zookeeper.md
@@ -1085,7 +1100,7 @@ KinesisSupervisorIOConfig
 KinesisSupervisorTuningConfig
 Resharding
 resharding
-LZ4LZFuncompressedLZ4LZ4LZFuncompressednoneLZ4autolongsautolongslongstypeconcisetyperoaringcompressRunOnSerializationtruetypestreamendpointreplicastaskCounttaskCount
+LZ4LZFuncompressedLZ4LZ4LZFuncompressednoneLZ4autolongsautolongslongstypeconcisetyperoaringtypestreamendpointreplicastaskCounttaskCount
 deaggregate
 druid-kinesis-indexing-service
 maxRecordsPerPoll
@@ -1265,6 +1280,7 @@ kafka.timestamp
 keyColumnName
 keyFormat
 listDelimiter
+timestamp
 timestampColumnName
 timestampSpec
 urls
@@ -1429,6 +1445,7 @@ BUILD_SEGMENTS
 DETERMINE_PARTITIONS
 forceTimeChunkLock
 taskLockTimeout
+index.md
  - ../docs/misc/math-expr.md
 DOUBLE_ARRAY
 DOY
@@ -1949,7 +1966,6 @@ GiB
 1_000_000
 2012-01-01T00
 2GB
-30_000
 524288000L
 5MiB
 8u60
@@ -2039,8 +2055,8 @@ druid_pendingSegments
 druid_rules
 druid_segments
 druid_supervisors
-druid_taskLock
-druid_taskLog
+druid_tasklocks
+druid_tasklogs
 druid_tasks
 DruidQueryRel
 durationToRetain
@@ -2295,3 +2311,11 @@ Czechia
 Zeelund
  - ../docs/tutorials/docker.md
  nano
+ - ../docs/operations/python.md
+MacOS
+RHEL
+psutil
+pathlib
+- ../docs/tutorials/tutorial-sql-query-view.md
+kttm_simple
+dist_country

@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
@@ -33,7 +32,7 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
-import org.apache.druid.indexing.common.actions.SegmentInsertAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
@@ -57,6 +56,7 @@ import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
@@ -64,6 +64,8 @@ import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.JvmUtils;
+import org.apache.druid.utils.RuntimeInfo;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -126,6 +128,7 @@ public class TaskToolbox
 
   private final TaskLogPusher taskLogPusher;
   private final String attemptId;
+  private final TaskStorageDirTracker dirTracker;
 
 
   public TaskToolbox(
@@ -167,7 +170,8 @@ public class TaskToolbox
       ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider,
       ShuffleClient shuffleClient,
       TaskLogPusher taskLogPusher,
-      String attemptId
+      String attemptId,
+      TaskStorageDirTracker dirTracker
   )
   {
     this.config = config;
@@ -210,6 +214,7 @@ public class TaskToolbox
     this.shuffleClient = shuffleClient;
     this.taskLogPusher = taskLogPusher;
     this.attemptId = attemptId;
+    this.dirTracker = dirTracker;
   }
 
   public TaskConfig getConfig()
@@ -329,17 +334,14 @@ public class TaskToolbox
     // Request segment pushes for each set
     final Multimap<Interval, DataSegment> segmentMultimap = Multimaps.index(
         segments,
-        new Function<DataSegment, Interval>()
-        {
-          @Override
-          public Interval apply(DataSegment segment)
-          {
-            return segment.getInterval();
-          }
-        }
+        DataSegment::getInterval
     );
     for (final Collection<DataSegment> segmentCollection : segmentMultimap.asMap().values()) {
-      getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.copyOf(segmentCollection)));
+      getTaskActionClient().submit(
+          SegmentTransactionalInsertAction.appendAction(
+              ImmutableSet.copyOf(segmentCollection), null, null
+          )
+      );
     }
   }
 
@@ -470,6 +472,45 @@ public class TaskToolbox
     return attemptId;
   }
 
+  public TaskStorageDirTracker getDirTracker()
+  {
+    return dirTracker;
+  }
+
+  /**
+   * Get {@link RuntimeInfo} adjusted for this particular task. When running in a task JVM launched by a MiddleManager,
+   * this is the same as the baseline {@link RuntimeInfo}. When running in an Indexer, it is adjusted based on
+   * {@code druid.worker.capacity}.
+   */
+  public RuntimeInfo getAdjustedRuntimeInfo()
+  {
+    return createAdjustedRuntimeInfo(JvmUtils.getRuntimeInfo(), appenderatorsManager);
+  }
+
+  /**
+   * Create {@link AdjustedRuntimeInfo} based on the given {@link RuntimeInfo} and {@link AppenderatorsManager}. This
+   * is a way to allow code to properly apportion the amount of processors and heap available to the entire JVM.
+   * When running in an Indexer, other tasks share the same JVM, so this must be accounted for.
+   */
+  public static RuntimeInfo createAdjustedRuntimeInfo(
+      final RuntimeInfo runtimeInfo,
+      final AppenderatorsManager appenderatorsManager
+  )
+  {
+    if (appenderatorsManager instanceof UnifiedIndexerAppenderatorsManager) {
+      // CliIndexer. Each JVM runs multiple tasks; adjust.
+      return new AdjustedRuntimeInfo(
+          runtimeInfo,
+          ((UnifiedIndexerAppenderatorsManager) appenderatorsManager).getWorkerConfig().getCapacity()
+      );
+    } else {
+      // CliPeon (assumed to be launched by CliMiddleManager).
+      // Each JVM runs a single task. ForkingTaskRunner sets XX:ActiveProcessorCount so each task already sees
+      // an adjusted number of processors from the baseline RuntimeInfo. So, we return it directly.
+      return runtimeInfo;
+    }
+  }
+
   public static class Builder
   {
     private TaskConfig config;
@@ -511,6 +552,7 @@ public class TaskToolbox
     private ShuffleClient shuffleClient;
     private TaskLogPusher taskLogPusher;
     private String attemptId;
+    private TaskStorageDirTracker dirTracker;
 
     public Builder()
     {
@@ -555,6 +597,7 @@ public class TaskToolbox
       this.intermediaryDataManager = other.intermediaryDataManager;
       this.supervisorTaskClientProvider = other.supervisorTaskClientProvider;
       this.shuffleClient = other.shuffleClient;
+      this.dirTracker = other.getDirTracker();
     }
 
     public Builder config(final TaskConfig config)
@@ -791,6 +834,12 @@ public class TaskToolbox
       return this;
     }
 
+    public Builder dirTracker(final TaskStorageDirTracker dirTracker)
+    {
+      this.dirTracker = dirTracker;
+      return this;
+    }
+
     public TaskToolbox build()
     {
       return new TaskToolbox(
@@ -832,7 +881,8 @@ public class TaskToolbox
           supervisorTaskClientProvider,
           shuffleClient,
           taskLogPusher,
-          attemptId
+          attemptId,
+          dirTracker
       );
     }
   }

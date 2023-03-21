@@ -104,13 +104,17 @@ public class MSQTaskSqlEngine implements SqlEngine
   }
 
   @Override
-  public boolean feature(EngineFeature feature, PlannerContext plannerContext)
+  public boolean featureAvailable(EngineFeature feature, PlannerContext plannerContext)
   {
     switch (feature) {
       case ALLOW_BINDABLE_PLAN:
+      case ALLOW_BROADCAST_RIGHTY_JOIN:
       case TIMESERIES_QUERY:
       case TOPN_QUERY:
       case TIME_BOUNDARY_QUERY:
+      case GROUPING_SETS:
+      case WINDOW_FUNCTIONS:
+      case UNNEST:
         return false;
       case CAN_SELECT:
       case CAN_INSERT:
@@ -139,6 +143,11 @@ public class MSQTaskSqlEngine implements SqlEngine
         jsonMapper,
         relRoot.fields
     );
+  }
+
+  public OverlordClient overlordClient()
+  {
+    return overlordClient;
   }
 
   @Override
@@ -207,6 +216,7 @@ public class MSQTaskSqlEngine implements SqlEngine
 
     try {
       segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(
+          plannerContext.getJsonMapper(),
           plannerContext.queryContextMap()
       );
     }

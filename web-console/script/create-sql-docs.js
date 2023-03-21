@@ -52,9 +52,7 @@ function convertMarkdownToHtml(markdown) {
   // Concert to markdown
   markdown = snarkdown(markdown);
 
-  return markdown
-    .replace(/<br \/>/g, '<br /><br />') // Double up the <br>s
-    .replace(/<a[^>]*>(.*?)<\/a>/g, '$1'); // Remove links
+  return markdown.replace(/<a[^>]*>(.*?)<\/a>/g, '$1'); // Remove links
 }
 
 const readDoc = async () => {

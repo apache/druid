@@ -177,15 +177,9 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   }
 
   @Override
-  public String getMetricType(String metric)
-  {
-    return index.getMetricType(metric);
-  }
-
-  @Override
   public ColumnCapabilities getCapabilities(String column)
   {
-    return index.getColumnCapabilities(column);
+    return index.getColumnHandlerCapabilities(column);
   }
 
   @Override

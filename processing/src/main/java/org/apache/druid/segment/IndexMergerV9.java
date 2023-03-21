@@ -45,6 +45,7 @@ import org.apache.druid.segment.column.ColumnCapabilities.CoercionLogic;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -262,10 +263,9 @@ public class IndexMergerV9 implements IndexMerger
       log.debug("Completed factory.json in %,d millis", System.currentTimeMillis() - startTime);
 
       progress.progress();
-      final Map<String, ValueType> metricsValueTypes = new TreeMap<>(Comparators.naturalNullsFirst());
-      final Map<String, String> metricTypeNames = new TreeMap<>(Comparators.naturalNullsFirst());
+      final Map<String, TypeSignature<ValueType>> metricTypes = new TreeMap<>(Comparators.naturalNullsFirst());
       final List<ColumnCapabilities> dimCapabilities = Lists.newArrayListWithCapacity(mergedDimensions.size());
-      mergeCapabilities(adapters, mergedDimensions, metricsValueTypes, metricTypeNames, dimCapabilities);
+      mergeCapabilities(adapters, mergedDimensions, metricTypes, dimCapabilities);
 
       final Map<String, DimensionHandler> handlers = makeDimensionHandlers(mergedDimensions, dimCapabilities);
       final List<DimensionMergerV9> mergers = new ArrayList<>();
@@ -301,7 +301,7 @@ public class IndexMergerV9 implements IndexMerger
       closer.register(timeAndDimsIterator);
       final GenericColumnSerializer timeWriter = setupTimeWriter(segmentWriteOutMedium, indexSpec);
       final ArrayList<GenericColumnSerializer> metricWriters =
-          setupMetricsWriters(segmentWriteOutMedium, mergedMetrics, metricsValueTypes, metricTypeNames, indexSpec);
+          setupMetricsWriters(segmentWriteOutMedium, mergedMetrics, metricTypes, indexSpec);
       IndexMergeResult indexMergeResult = mergeIndexesAndWriteColumns(
           adapters,
           progress,
@@ -320,8 +320,7 @@ public class IndexMergerV9 implements IndexMerger
           v9Smoosher,
           progress,
           mergedMetrics,
-          metricsValueTypes,
-          metricTypeNames,
+          metricTypes,
           metricWriters,
           indexSpec
       );
@@ -494,8 +493,7 @@ public class IndexMergerV9 implements IndexMerger
       final FileSmoosher v9Smoosher,
       final ProgressIndicator progress,
       final List<String> mergedMetrics,
-      final Map<String, ValueType> metricsValueTypes,
-      final Map<String, String> metricTypeNames,
+      final Map<String, TypeSignature<ValueType>> metricsTypes,
       final List<GenericColumnSerializer> metWriters,
       final IndexSpec indexSpec
   ) throws IOException
@@ -510,8 +508,8 @@ public class IndexMergerV9 implements IndexMerger
       GenericColumnSerializer writer = metWriters.get(i);
 
       final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
-      ValueType type = metricsValueTypes.get(metric);
-      switch (type) {
+      TypeSignature<ValueType> type = metricsTypes.get(metric);
+      switch (type.getType()) {
         case LONG:
           builder.setValueType(ValueType.LONG);
           builder.addSerde(createLongColumnPartSerde(writer, indexSpec));
@@ -525,7 +523,7 @@ public class IndexMergerV9 implements IndexMerger
           builder.addSerde(createDoubleColumnPartSerde(writer, indexSpec));
           break;
         case COMPLEX:
-          final String typeName = metricTypeNames.get(metric);
+          final String typeName = type.getComplexTypeName();
           builder.setValueType(ValueType.COMPLEX);
           builder.addSerde(
               ComplexColumnPartSerde
@@ -686,7 +684,7 @@ public class IndexMergerV9 implements IndexMerger
       }
 
       for (int dimIndex = 0; dimIndex < timeAndDims.getNumDimensions(); dimIndex++) {
-        DimensionMerger merger = mergers.get(dimIndex);
+        DimensionMergerV9 merger = mergers.get(dimIndex);
         if (merger.hasOnlyNulls()) {
           continue;
         }
@@ -763,17 +761,16 @@ public class IndexMergerV9 implements IndexMerger
   private ArrayList<GenericColumnSerializer> setupMetricsWriters(
       final SegmentWriteOutMedium segmentWriteOutMedium,
       final List<String> mergedMetrics,
-      final Map<String, ValueType> metricsValueTypes,
-      final Map<String, String> metricTypeNames,
+      final Map<String, TypeSignature<ValueType>> metricsTypes,
       final IndexSpec indexSpec
   ) throws IOException
   {
     ArrayList<GenericColumnSerializer> metWriters = Lists.newArrayListWithCapacity(mergedMetrics.size());
 
     for (String metric : mergedMetrics) {
-      ValueType type = metricsValueTypes.get(metric);
+      TypeSignature<ValueType> type = metricsTypes.get(metric);
       GenericColumnSerializer writer;
-      switch (type) {
+      switch (type.getType()) {
         case LONG:
           writer = createLongColumnSerializer(segmentWriteOutMedium, metric, indexSpec);
           break;
@@ -784,10 +781,9 @@ public class IndexMergerV9 implements IndexMerger
           writer = createDoubleColumnSerializer(segmentWriteOutMedium, metric, indexSpec);
           break;
         case COMPLEX:
-          final String typeName = metricTypeNames.get(metric);
-          ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
+          ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(type.getComplexTypeName());
           if (serde == null) {
-            throw new ISE("Unknown type[%s]", typeName);
+            throw new ISE("Unknown type[%s]", type.getComplexTypeName());
           }
           writer = serde.getSerializer(segmentWriteOutMedium, metric);
           break;
@@ -897,8 +893,7 @@ public class IndexMergerV9 implements IndexMerger
   private void mergeCapabilities(
       final List<IndexableAdapter> adapters,
       final List<String> mergedDimensions,
-      final Map<String, ValueType> metricsValueTypes,
-      final Map<String, String> metricTypeNames,
+      final Map<String, TypeSignature<ValueType>> metricTypes,
       final List<ColumnCapabilities> dimCapabilities
   )
   {
@@ -911,12 +906,11 @@ public class IndexMergerV9 implements IndexMerger
         );
       }
       for (String metric : adapter.getMetricNames()) {
-        ColumnCapabilities capabilities = adapter.getCapabilities(metric);
-        capabilitiesMap.compute(metric, (m, existingCapabilities) ->
+        final ColumnCapabilities capabilities = adapter.getCapabilities(metric);
+        final ColumnCapabilities merged = capabilitiesMap.compute(metric, (m, existingCapabilities) ->
             mergeCapabilities(capabilities, existingCapabilities, METRIC_CAPABILITY_MERGE_LOGIC)
         );
-        metricsValueTypes.put(metric, capabilities.getType());
-        metricTypeNames.put(metric, adapter.getMetricType(metric));
+        metricTypes.put(metric, merged);
       }
     }
     for (String dim : mergedDimensions) {

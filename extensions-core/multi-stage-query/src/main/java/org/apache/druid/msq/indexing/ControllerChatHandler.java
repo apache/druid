@@ -128,16 +128,17 @@ public class ControllerChatHandler implements ChatHandler
    * See {@link ControllerClient#postCounters} for the client-side code that calls this API.
    */
   @POST
-  @Path("/counters")
+  @Path("/counters/{taskId}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   public Response httpPostCounters(
+      @PathParam("taskId") final String taskId,
       final CounterSnapshotsTree snapshotsTree,
       @Context final HttpServletRequest req
   )
   {
     ChatHandlers.authorizationCheck(req, Action.WRITE, task.getDataSource(), toolbox.getAuthorizerMapper());
-    controller.updateCounters(snapshotsTree);
+    controller.updateCounters(taskId, snapshotsTree);
     return Response.status(Response.Status.OK).build();
   }
 

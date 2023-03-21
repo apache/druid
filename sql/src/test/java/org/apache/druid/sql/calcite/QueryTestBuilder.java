@@ -25,6 +25,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest.ResultsVerifier;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -36,7 +37,7 @@ import org.apache.druid.sql.http.SqlParameter;
 import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
-
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -61,17 +62,22 @@ public class QueryTestBuilder
 {
   /**
    * Implement to provide the execution framework that the tests require.
-   * The {@link #analyze(QueryTestBuilder)} method builds up the classes that
+   * The constructor builds up the classes that
    * will run the test, since some verification depends on context, such as that
    * provided by {@link BaseCalciteQueryTest}.
    */
   public interface QueryTestConfig
   {
-    QueryTestRunner analyze(QueryTestBuilder builder);
     QueryLogHook queryLogHook();
+
     ExpectedException expectedException();
+
     ObjectMapper jsonMapper();
+
     PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig);
+    ResultsVerifier defaultResultsVerifier(List<Object[]> expectedResults, RowSignature expectedResultSignature);
+
+    boolean isRunningMSQ();
   }
 
   protected final QueryTestConfig config;
@@ -82,14 +88,21 @@ public class QueryTestBuilder
   protected AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
   protected List<Query<?>> expectedQueries;
   protected List<Object[]> expectedResults;
+  protected List<QueryTestRunner.QueryRunStepFactory> customRunners = new ArrayList<>();
+  protected List<QueryTestRunner.QueryVerifyStepFactory> customVerifications = new ArrayList<>();
   protected RowSignature expectedResultSignature;
   protected List<ResourceAction> expectedResources;
   protected ResultsVerifier expectedResultsVerifier;
-  protected @Nullable Consumer<ExpectedException> expectedExceptionInitializer;
+  @Nullable
+  protected Consumer<ExpectedException> expectedExceptionInitializer;
   protected boolean skipVectorize;
+  protected boolean msqCompatible;
   protected boolean queryCannotVectorize;
+  protected boolean verifyNativeQueries = true;
   protected AuthConfig authConfig = new AuthConfig();
   protected PlannerFixture plannerFixture;
+  protected String expectedLogicalPlan;
+  protected SqlSchema expectedSqlSchema;
 
   public QueryTestBuilder(final QueryTestConfig config)
   {
@@ -148,6 +161,40 @@ public class QueryTestBuilder
     return this;
   }
 
+  public QueryTestBuilder addCustomRunner(
+      QueryTestRunner.QueryRunStepFactory factory
+  )
+  {
+    this.customRunners.add(factory);
+    return this;
+  }
+
+  public QueryTestBuilder setCustomRunners(
+      List<QueryTestRunner.QueryRunStepFactory> factories
+  )
+  {
+    this.customRunners = new ArrayList<>(factories);
+    return this;
+  }
+
+
+  public QueryTestBuilder addCustomVerification(
+      QueryTestRunner.QueryVerifyStepFactory factory
+  )
+  {
+    this.customVerifications.add(factory);
+    return this;
+  }
+
+  public QueryTestBuilder setCustomVerifications(
+      List<QueryTestRunner.QueryVerifyStepFactory> factories
+  )
+  {
+    this.customVerifications = new ArrayList<>();
+    this.customVerifications.addAll(factories);
+    return this;
+  }
+
   public QueryTestBuilder expectedSignature(
       final RowSignature expectedResultSignature
   )
@@ -185,6 +232,18 @@ public class QueryTestBuilder
     return this;
   }
 
+  public QueryTestBuilder msqCompatible(boolean msqCompatible)
+  {
+    this.msqCompatible = msqCompatible;
+    return this;
+  }
+
+  public QueryTestBuilder verifyNativeQueries(boolean verifyNativeQueries)
+  {
+    this.verifyNativeQueries = verifyNativeQueries;
+    return this;
+  }
+
   public QueryTestBuilder cannotVectorize()
   {
     return cannotVectorize(true);
@@ -215,23 +274,40 @@ public class QueryTestBuilder
     return this;
   }
 
+  public QueryTestBuilder expectedLogicalPlan(String expectedLogicalPlan)
+  {
+    this.expectedLogicalPlan = expectedLogicalPlan;
+    return this;
+  }
+
+  public QueryTestBuilder expectedSqlSchema(SqlSchema querySchema)
+  {
+    this.expectedSqlSchema = querySchema;
+    return this;
+  }
+
+  public List<Query<?>> getExpectedQueries()
+  {
+    return expectedQueries;
+  }
+
   public QueryTestRunner build()
   {
-    return config.analyze(this);
+    return new QueryTestRunner(this);
   }
 
   /**
-   * Internal method to return the cached planner config, or create a new one
+   * Internal method to return the cached statement factory, or create a new one
    * based on the configs provided. Note: does not cache the newly created
    * config: doing so would confuse the "please use mine" vs. "create a new
    * one each time" semantics.
    */
-  protected PlannerFixture plannerFixture()
+  protected SqlStatementFactory statementFactory()
   {
     if (plannerFixture != null) {
-      return plannerFixture;
+      return plannerFixture.statementFactory();
     } else {
-      return config.plannerFixture(plannerConfig, authConfig);
+      return config.plannerFixture(plannerConfig, authConfig).statementFactory();
     }
   }
 
@@ -244,4 +320,5 @@ public class QueryTestBuilder
   {
     return build().resultsOnly();
   }
+
 }

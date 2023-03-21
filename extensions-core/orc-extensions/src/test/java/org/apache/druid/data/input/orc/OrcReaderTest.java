@@ -29,6 +29,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FileEntity;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -51,6 +52,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 
 public class OrcReaderTest extends InitializedNullHandlingTest
 {
@@ -421,6 +423,109 @@ public class OrcReaderTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testNestedColumnSchemaless() throws IOException
+  {
+    final OrcInputFormat inputFormat = new OrcInputFormat(
+        new JSONPathSpec(true, ImmutableList.of()),
+        null,
+        new Configuration()
+    );
+    final InputRowSchema schema = new InputRowSchema(
+        new TimestampSpec("ts", "millis", null),
+        DimensionsSpec.builder().useSchemaDiscovery(true).build(),
+        ColumnsFilter.all(),
+        null
+    );
+    final FileEntity entity = new FileEntity(new File("example/orc-file-11-format.orc"));
+
+    final InputEntityReader reader = inputFormat.createReader(schema, entity, temporaryFolder.newFolder());
+
+    List<String> dims = ImmutableList.of(
+        "boolean1",
+        "byte1",
+        "short1",
+        "int1",
+        "long1",
+        "float1",
+        "double1",
+        "bytes1",
+        "string1",
+        "middle",
+        "list",
+        "map",
+        "ts",
+        "decimal1"
+    );
+    try (CloseableIterator<InputRow> iterator = reader.read()) {
+      int actualRowCount = 0;
+
+      // Check the first row
+      Assert.assertTrue(iterator.hasNext());
+      InputRow row = iterator.next();
+
+      Assert.assertEquals(dims, row.getDimensions());
+      actualRowCount++;
+      Assert.assertEquals(
+          ImmutableMap.of(
+              "list",
+              ImmutableList.of(
+                  ImmutableMap.of("int1", 1, "string1", "bye"),
+                  ImmutableMap.of("int1", 2, "string1", "sigh")
+              )
+          ),
+          row.getRaw("middle")
+      );
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableMap.of("int1", 3, "string1", "good"),
+              ImmutableMap.of("int1", 4, "string1", "bad")
+          ),
+          row.getRaw("list")
+      );
+      Assert.assertEquals(
+          ImmutableMap.of(),
+          row.getRaw("map")
+      );
+      Assert.assertEquals(DateTimes.of("2000-03-12T15:00:00.0Z"), row.getTimestamp());
+
+      while (iterator.hasNext()) {
+        actualRowCount++;
+        row = iterator.next();
+        Assert.assertEquals(dims, row.getDimensions());
+      }
+
+      // Check the last row
+      Assert.assertEquals(
+          ImmutableMap.of(
+              "list",
+              ImmutableList.of(
+                  ImmutableMap.of("int1", 1, "string1", "bye"),
+                  ImmutableMap.of("int1", 2, "string1", "sigh")
+              )
+          ),
+          row.getRaw("middle")
+      );
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableMap.of("int1", 100000000, "string1", "cat"),
+              ImmutableMap.of("int1", -100000, "string1", "in"),
+              ImmutableMap.of("int1", 1234, "string1", "hat")
+          ),
+          row.getRaw("list")
+      );
+      Assert.assertEquals(
+          ImmutableMap.of(
+              "chani", ImmutableMap.of("int1", 5, "string1", "chani"),
+              "mauddib", ImmutableMap.of("int1", 1, "string1", "mauddib")
+          ),
+          row.getRaw("map")
+      );
+
+      Assert.assertEquals(7500, actualRowCount);
+    }
+  }
+
+  @Test
   public void testListMap() throws IOException
   {
     final InputFormat inputFormat = new OrcInputFormat(
@@ -566,6 +671,44 @@ public class OrcReaderTest extends InitializedNullHandlingTest
     }
     finally {
       ExpressionProcessing.initializeForTests(null);
+    }
+  }
+
+  @Test
+  public void testSimpleNullValues() throws IOException
+  {
+    final InputFormat inputFormat = new OrcInputFormat(
+        new JSONPathSpec(
+            true,
+            ImmutableList.of()
+        ),
+        null,
+        new Configuration()
+    );
+    final InputEntityReader reader = createReader(
+        new TimestampSpec("timestamp", "auto", null),
+        new DimensionsSpec(
+            ImmutableList.of(
+                new StringDimensionSchema("c1"),
+                new StringDimensionSchema("c2")
+            )
+        ),
+        inputFormat,
+        "example/test_simple.orc"
+    );
+    try (CloseableIterator<InputRow> iterator = reader.read()) {
+      Assert.assertTrue(iterator.hasNext());
+      InputRow row = iterator.next();
+
+      Assert.assertEquals(DateTimes.of("2022-01-01T00:00:00.000Z"), row.getTimestamp());
+      Assert.assertEquals("true", Iterables.getOnlyElement(row.getDimension("c1")));
+      Assert.assertEquals("str1", Iterables.getOnlyElement(row.getDimension("c2")));
+
+      row = iterator.next();
+      Assert.assertEquals(DateTimes.of("2022-01-02T00:00:00.000Z"), row.getTimestamp());
+      Assert.assertEquals(ImmutableList.of(), row.getDimension("c1"));
+      Assert.assertEquals(ImmutableList.of(), row.getDimension("c2"));
+      Assert.assertFalse(iterator.hasNext());
     }
   }
 

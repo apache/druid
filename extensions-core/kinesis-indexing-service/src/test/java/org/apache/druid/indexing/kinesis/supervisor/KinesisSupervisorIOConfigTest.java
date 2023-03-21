@@ -70,8 +70,8 @@ public class KinesisSupervisorIOConfigTest
     Assert.assertFalse("lateMessageRejectionPeriod", config.getLateMessageRejectionPeriod().isPresent());
     Assert.assertFalse("earlyMessageRejectionPeriod", config.getEarlyMessageRejectionPeriod().isPresent());
     Assert.assertFalse("lateMessageRejectionStartDateTime", config.getLateMessageRejectionStartDateTime().isPresent());
-    Assert.assertEquals((Integer) 4000, config.getRecordsPerFetch());
-    Assert.assertEquals((Integer) 0, config.getFetchDelayMillis());
+    Assert.assertNull(config.getRecordsPerFetch());
+    Assert.assertEquals(0, config.getFetchDelayMillis());
     Assert.assertNull(config.getAwsAssumedRoleArn());
     Assert.assertNull(config.getAwsExternalId());
     Assert.assertFalse(config.isDeaggregate());
@@ -118,7 +118,7 @@ public class KinesisSupervisorIOConfigTest
     Assert.assertEquals(Duration.standardHours(1), config.getLateMessageRejectionPeriod().get());
     Assert.assertEquals(Duration.standardHours(1), config.getEarlyMessageRejectionPeriod().get());
     Assert.assertEquals((Integer) 4000, config.getRecordsPerFetch());
-    Assert.assertEquals((Integer) 1000, config.getFetchDelayMillis());
+    Assert.assertEquals(1000, config.getFetchDelayMillis());
     Assert.assertEquals("role", config.getAwsAssumedRoleArn());
     Assert.assertEquals("awsexternalid", config.getAwsExternalId());
     Assert.assertTrue(config.isDeaggregate());

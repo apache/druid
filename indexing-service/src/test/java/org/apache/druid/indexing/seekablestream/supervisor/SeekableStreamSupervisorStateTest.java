@@ -68,6 +68,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
@@ -110,6 +111,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   private static final String SHARD_ID = "0";
   private static final StreamPartition<String> SHARD0_PARTITION = StreamPartition.of(STREAM, SHARD_ID);
   private static final String EXCEPTION_MSG = "I had an exception";
+  private static final Map<String, Object> METRIC_TAGS = ImmutableMap.of("k1", "v1", "k2", 20);
 
   private TaskStorage taskStorage;
   private TaskMaster taskMaster;
@@ -151,6 +153,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig()).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(METRIC_TAGS).anyTimes();
 
     EasyMock.expect(taskClientFactory.build(
         EasyMock.anyString(),
@@ -331,6 +334,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).times(3);
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(ImmutableList.of()).anyTimes();
 
     replayAll();
 
@@ -564,6 +568,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andThrow(new IllegalStateException(EXCEPTION_MSG)).times(3);
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).times(3);
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andThrow(new IllegalStateException(EXCEPTION_MSG)).times(3);
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(ImmutableList.of()).anyTimes();
 
     replayAll();
 
@@ -790,16 +795,22 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Assert.assertEquals(6, events.size());
     Assert.assertEquals("ingest/test/lag", events.get(0).toMap().get("metric"));
     Assert.assertEquals(850L, events.get(0).toMap().get("value"));
+    Assert.assertEquals(METRIC_TAGS, events.get(0).toMap().get(DruidMetrics.TAGS));
     Assert.assertEquals("ingest/test/maxLag", events.get(1).toMap().get("metric"));
     Assert.assertEquals(500L, events.get(1).toMap().get("value"));
+    Assert.assertEquals(METRIC_TAGS, events.get(1).toMap().get(DruidMetrics.TAGS));
     Assert.assertEquals("ingest/test/avgLag", events.get(2).toMap().get("metric"));
     Assert.assertEquals(283L, events.get(2).toMap().get("value"));
+    Assert.assertEquals(METRIC_TAGS, events.get(2).toMap().get(DruidMetrics.TAGS));
     Assert.assertEquals("ingest/test/lag/time", events.get(3).toMap().get("metric"));
     Assert.assertEquals(45000L, events.get(3).toMap().get("value"));
+    Assert.assertEquals(METRIC_TAGS, events.get(3).toMap().get(DruidMetrics.TAGS));
     Assert.assertEquals("ingest/test/maxLag/time", events.get(4).toMap().get("metric"));
     Assert.assertEquals(20000L, events.get(4).toMap().get("value"));
+    Assert.assertEquals(METRIC_TAGS, events.get(4).toMap().get(DruidMetrics.TAGS));
     Assert.assertEquals("ingest/test/avgLag/time", events.get(5).toMap().get("metric"));
     Assert.assertEquals(15000L, events.get(5).toMap().get("value"));
+    Assert.assertEquals(METRIC_TAGS, events.get(5).toMap().get(DruidMetrics.TAGS));
     verifyAll();
   }
 
@@ -870,10 +881,13 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Assert.assertEquals(3, events.size());
     Assert.assertEquals("ingest/test/lag/time", events.get(0).toMap().get("metric"));
     Assert.assertEquals(45000L, events.get(0).toMap().get("value"));
+    Assert.assertEquals(METRIC_TAGS, events.get(0).toMap().get(DruidMetrics.TAGS));
     Assert.assertEquals("ingest/test/maxLag/time", events.get(1).toMap().get("metric"));
     Assert.assertEquals(20000L, events.get(1).toMap().get("value"));
+    Assert.assertEquals(METRIC_TAGS, events.get(1).toMap().get(DruidMetrics.TAGS));
     Assert.assertEquals("ingest/test/avgLag/time", events.get(2).toMap().get("metric"));
     Assert.assertEquals(15000L, events.get(2).toMap().get("value"));
+    Assert.assertEquals(METRIC_TAGS, events.get(2).toMap().get(DruidMetrics.TAGS));
     verifyAll();
   }
 
@@ -907,6 +921,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Assert.assertEquals(1, events.size());
     Assert.assertEquals("ingest/notices/queueSize", events.get(0).toMap().get("metric"));
     Assert.assertEquals(0, events.get(0).toMap().get("value"));
+    Assert.assertEquals(METRIC_TAGS, events.get(0).toMap().get(DruidMetrics.TAGS));
     Assert.assertEquals("testDS", events.get(0).toMap().get("dataSource"));
     verifyAll();
   }
@@ -934,6 +949,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     events = filterMetrics(events, whitelist);
     Assert.assertEquals(1, events.size());
     Assert.assertEquals("ingest/notices/time", events.get(0).toMap().get("metric"));
+    Assert.assertEquals(METRIC_TAGS, events.get(0).toMap().get(DruidMetrics.TAGS));
     Assert.assertTrue(String.valueOf(events.get(0).toMap().get("value")), (long) events.get(0).toMap().get("value") > 0);
     Assert.assertEquals("testDS", events.get(0).toMap().get("dataSource"));
     Assert.assertEquals("run_notice", events.get(0).toMap().get("noticeType"));
@@ -1061,6 +1077,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(suspended).anyTimes();
     EasyMock.expect(spec.getType()).andReturn("test").anyTimes();
+    EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(METRIC_TAGS).anyTimes();
 
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();

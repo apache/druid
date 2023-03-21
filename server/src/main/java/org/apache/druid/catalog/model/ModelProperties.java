@@ -23,9 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.PeriodGranularity;
-import org.joda.time.Period;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -46,8 +43,21 @@ public interface ModelProperties
 {
   interface PropertyDefn<T>
   {
+    /**
+     * Name of the property as visible to catalog users. All properties are top-level within
+     * the {@code properties} object within a catalog spec.
+     */
     String name();
+
+    /**
+     * The name of the type of this property to be displayed in error messages.
+     */
     String typeName();
+
+    /**
+     * Validates that the object given is valid for this property. Provides the JSON
+     * mapper in case JSON decoding is required.
+     */
     void validate(Object value, ObjectMapper jsonMapper);
 
     /**
@@ -57,6 +67,10 @@ public interface ModelProperties
      * value.
      */
     Object merge(Object existing, Object update);
+
+    /**
+     * Decodes a JSON-encoded value into a corresponding Java value.
+     */
     T decode(Object value, ObjectMapper jsonMapper);
   }
 
@@ -144,6 +158,65 @@ public interface ModelProperties
     {
       decode(value, jsonMapper);
     }
+
+    public T decodeJson(String value, ObjectMapper jsonMapper)
+    {
+      if (value == null) {
+        return null;
+      }
+      try {
+        return jsonMapper.readValue(value, valueClass);
+      }
+      catch (Exception e) {
+        throw new IAE(
+            "Value [%s] is not valid for property [%s]",
+            value,
+            name
+        );
+      }
+    }
+  }
+
+
+  class ObjectPropertyDefn<T> extends BasePropertyDefn<T>
+  {
+    public final Class<T> valueClass;
+
+    public ObjectPropertyDefn(
+        final String name,
+        final Class<T> valueClass
+    )
+    {
+      super(name);
+      this.valueClass = valueClass;
+    }
+
+    @Override
+    public String typeName()
+    {
+      return valueClass.getSimpleName();
+    }
+
+    /**
+     * Convert the value from the deserialized JSON format to the type
+     * required by this field data type. Also used to decode values from
+     * SQL parameters. As a side effect, verifies that the value is of
+     * the correct type.
+     */
+    @Override
+    public T decode(Object value, ObjectMapper jsonMapper)
+    {
+      return CatalogUtils.safeCast(value, valueClass, "JSON object");
+    }
+
+    /**
+     * Validate that the given value is valid for this property.
+     * By default, does a value conversion and discards the value.
+     */
+    @Override
+    public void validate(Object value, ObjectMapper jsonMapper)
+    {
+    }
   }
 
   class TypeRefPropertyDefn<T> extends BasePropertyDefn<T>
@@ -219,21 +292,7 @@ public interface ModelProperties
     public void validate(Object value, ObjectMapper jsonMapper)
     {
       String gran = decode(value, jsonMapper);
-      validateGranularity(gran);
-    }
-
-    public void validateGranularity(String value)
-    {
-      if (value == null) {
-        return;
-      }
-      try {
-        //noinspection ResultOfObjectAllocationIgnored
-        new PeriodGranularity(new Period(value), null, null);
-      }
-      catch (IllegalArgumentException e) {
-        throw new IAE(StringUtils.format("[%s] is an invalid granularity string", value));
-      }
+      CatalogUtils.validateGranularity(gran);
     }
   }
 

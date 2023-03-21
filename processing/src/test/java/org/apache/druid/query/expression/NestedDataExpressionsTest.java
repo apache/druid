@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
@@ -129,12 +128,12 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
     Expr expr = Parser.parse("json_paths(nest)", MACRO_TABLE);
     ExprEval eval = expr.eval(inputBindings);
     Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[]{"$.y", "$.z", "$.x"}, (Object[]) eval.value());
+    Assert.assertArrayEquals(new Object[]{"$.x", "$.y", "$.z"}, (Object[]) eval.value());
 
     expr = Parser.parse("json_paths(nester)", MACRO_TABLE);
     eval = expr.eval(inputBindings);
     Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[]{"$.x[0]", "$.x[1]", "$.x[2]", "$.y.b", "$.y.a"}, (Object[]) eval.value());
+    Assert.assertArrayEquals(new Object[]{"$.x[0]", "$.y.a", "$.x[1]", "$.y.b", "$.x[2]"}, (Object[]) eval.value());
   }
 
   @Test
@@ -173,7 +172,7 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
 
     expr = Parser.parse("json_value(nester, '$.y.a', 'LONG')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
-    Assert.assertEquals(NullHandling.defaultLongValue(), eval.value());
+    Assert.assertNull(eval.value());
     Assert.assertEquals(ExpressionType.LONG, eval.type());
 
     expr = Parser.parse("json_value(nester, '$.y.a.b.c[12]')", MACRO_TABLE);

@@ -17,29 +17,32 @@
  */
 
 import { Switch } from '@blueprintjs/core';
+import type { ReactNode } from 'react';
 import React, { useState } from 'react';
 
 export interface WarningChecklistProps {
-  checks: string[];
-  onChange: (allChecked: boolean) => void;
+  checks: ReactNode[];
+  onChange(allChecked: boolean): void;
 }
 
 export const WarningChecklist = React.memo(function WarningChecklist(props: WarningChecklistProps) {
   const { checks, onChange } = props;
-  const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const [checked, setChecked] = useState<Record<number, boolean>>({});
 
-  function doCheck(check: string) {
+  function doCheck(checkIndex: number) {
     const newChecked = { ...checked };
-    newChecked[check] = !newChecked[check];
+    newChecked[checkIndex] = !newChecked[checkIndex];
     setChecked(newChecked);
 
-    onChange(checks.every(check => newChecked[check]));
+    onChange(checks.every((_, i) => newChecked[i]));
   }
 
   return (
     <div className="warning-checklist">
       {checks.map((check, i) => (
-        <Switch key={i} label={check} onChange={() => doCheck(check)} />
+        <Switch key={i} onChange={() => doCheck(i)}>
+          {check}
+        </Switch>
       ))}
     </div>
   );

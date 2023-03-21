@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 
-import { AxiosResponse, CancelToken } from 'axios';
+import type { AxiosResponse, CancelToken } from 'axios';
 import { L } from 'druid-query-toolkit';
 
-import { Execution, QueryContext } from '../../druid-models';
+import type { QueryContext } from '../../druid-models';
+import { Execution } from '../../druid-models';
 import { Api } from '../../singletons';
 import {
   deepGet,
@@ -124,9 +125,14 @@ export async function reattachTaskExecution(
   option: ReattachTaskQueryOptions,
 ): Promise<Execution | IntermediateQueryState<Execution>> {
   const { id, cancelToken, preserveOnTermination } = option;
-  let execution = await getTaskExecution(id, undefined, cancelToken);
+  let execution: Execution;
 
-  execution = await updateExecutionWithDatasourceExistsIfNeeded(execution, cancelToken);
+  try {
+    execution = await getTaskExecution(id, undefined, cancelToken);
+    execution = await updateExecutionWithDatasourceExistsIfNeeded(execution, cancelToken);
+  } catch (e) {
+    throw new Error(`Reattaching to query failed due to: ${e.message}`);
+  }
 
   if (execution.isFullyComplete()) return execution;
 

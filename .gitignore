@@ -6,6 +6,7 @@ target
 *.tar.gz
 *.swp
 *.swo
+*.pyc
 .classpath
 .idea
 .project
@@ -27,3 +28,5 @@ README
 integration-tests/gen-scripts/
 /bin/
 *.hprof
+**/.ipynb_checkpoints/
+*.pyc

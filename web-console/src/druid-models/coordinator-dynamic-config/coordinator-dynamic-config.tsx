@@ -19,7 +19,7 @@
 import { Code } from '@blueprintjs/core';
 import React from 'react';
 
-import { Field } from '../../components';
+import type { Field } from '../../components';
 
 export interface CoordinatorDynamicConfig {
   maxSegmentsToMove?: number;
@@ -70,19 +70,8 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
     ),
   },
   {
-    name: 'killAllDataSources',
-    type: 'boolean',
-    defaultValue: false,
-    info: (
-      <>
-        Send kill tasks for ALL dataSources if property <Code>druid.coordinator.kill.on</Code> is
-        true. If this is set to true then <Code>killDataSourceWhitelist</Code> must not be specified
-        or be empty list.
-      </>
-    ),
-  },
-  {
     name: 'killDataSourceWhitelist',
+    label: 'Kill datasource whitelist',
     type: 'string-array',
     emptyValue: [],
     info: (

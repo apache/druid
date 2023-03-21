@@ -20,12 +20,14 @@
 package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Injector;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.DruidInjectorBuilder;
@@ -37,7 +39,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.JoinDataSource;
@@ -79,12 +80,9 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.sql.PreparedStatement;
-import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -111,19 +109,18 @@ import org.joda.time.chrono.ISOChronology;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
-import java.util.ArrayList;
+import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -264,11 +261,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  @ClassRule
-  public static TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   public boolean cannotVectorize = false;
   public boolean skipVectorize = false;
+  public boolean msqCompatible = false;
 
   public QueryLogHook queryLogHook;
 
@@ -488,7 +486,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @Rule
   public QueryLogHook getQueryLogHook()
   {
-    return queryLogHook = QueryLogHook.create(queryFramework().queryJsonMapper());
+    // Indirection for the JSON mapper. Otherwise, this rule method is called
+    // before Setup is called, causing the query framework to be built before
+    // tests have done their setup. The indirection means we access the query
+    // framework only when we log the first query. By then, the query framework
+    // will have been created via the normal path.
+    return queryLogHook = new QueryLogHook(() -> queryFramework().queryJsonMapper());
   }
 
   public SqlTestFramework queryFramework()
@@ -512,38 +515,57 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     resetFramework();
     try {
       baseComponentSupplier = new StandardComponentSupplier(
-          CalciteTests.INJECTOR,
-          temporaryFolder.newFolder());
+          temporaryFolder.newFolder()
+      );
     }
     catch (IOException e) {
       throw new RE(e);
     }
-    queryFramework = new SqlTestFramework.Builder(this)
+    SqlTestFramework.Builder builder = new SqlTestFramework.Builder(this)
         .minTopNThreshold(minTopNThreshold)
-        .mergeBufferCount(mergeBufferCount)
-        .build();
+        .mergeBufferCount(mergeBufferCount);
+    configureBuilder(builder);
+    queryFramework = builder.build();
+  }
+
+  protected void configureBuilder(Builder builder)
+  {
   }
 
   @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
       final QueryRunnerFactoryConglomerate conglomerate,
-      final JoinableFactoryWrapper joinableFactory
+      final JoinableFactoryWrapper joinableFactory,
+      final Injector injector
   ) throws IOException
   {
-    return baseComponentSupplier.createQuerySegmentWalker(conglomerate, joinableFactory);
+    return baseComponentSupplier.createQuerySegmentWalker(conglomerate, joinableFactory, injector);
   }
 
   @Override
   public SqlEngine createEngine(
       final QueryLifecycleFactory qlf,
-      final ObjectMapper queryJsonMapper
+      final ObjectMapper queryJsonMapper,
+      Injector injector
   )
   {
     if (engine0 == null) {
-      return baseComponentSupplier.createEngine(qlf, queryJsonMapper);
+      return baseComponentSupplier.createEngine(qlf, queryJsonMapper, injector);
     } else {
       return engine0;
     }
+  }
+
+  @Override
+  public void gatherProperties(Properties properties)
+  {
+    baseComponentSupplier.gatherProperties(properties);
+  }
+
+  @Override
+  public void configureGuice(DruidInjectorBuilder builder)
+  {
+    baseComponentSupplier.configureGuice(builder);
   }
 
   @Override
@@ -559,33 +581,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   }
 
   @Override
-  public DruidOperatorTable createOperatorTable()
-  {
-    return baseComponentSupplier.createOperatorTable();
-  }
-
-  @Override
-  public ExprMacroTable createMacroTable()
-  {
-    return baseComponentSupplier.createMacroTable();
-  }
-
-  @Override
-  public Map<String, Object> getJacksonInjectables()
-  {
-    return baseComponentSupplier.getJacksonInjectables();
-  }
-
-  @Override
-  public Iterable<? extends Module> getJacksonModules()
-  {
-    return baseComponentSupplier.getJacksonModules();
-  }
-
-  @Override
   public JoinableFactoryWrapper createJoinableFactoryWrapper(LookupExtractorFactoryContainerProvider lookupProvider)
   {
     return baseComponentSupplier.createJoinableFactoryWrapper(lookupProvider);
+  }
+
+  @Override
+  public void finalizeTestFramework(SqlTestFramework sqlTestFramework)
+  {
+    baseComponentSupplier.finalizeTestFramework(sqlTestFramework);
   }
 
   @Override
@@ -616,11 +620,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public void finalizePlanner(PlannerFixture plannerFixture)
   {
     basePlannerComponentSupplier.finalizePlanner(plannerFixture);
-  }
-
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
-  {
   }
 
   public void assertQueryIsUnplannable(final String sql, String expectedError)
@@ -834,52 +833,21 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     return new QueryTestBuilder(new CalciteTestConfig())
         .cannotVectorize(cannotVectorize)
-        .skipVectorize(skipVectorize);
+        .skipVectorize(skipVectorize)
+        .msqCompatible(msqCompatible);
   }
 
   public class CalciteTestConfig implements QueryTestBuilder.QueryTestConfig
   {
-    @Override
-    public QueryTestRunner analyze(QueryTestBuilder builder)
+    private boolean isRunningMSQ = false;
+
+    public CalciteTestConfig()
     {
-      if (builder.expectedResultsVerifier == null && builder.expectedResults != null) {
-        builder.expectedResultsVerifier = defaultResultsVerifier(
-            builder.expectedResults,
-            builder.expectedResultSignature
-        );
-      }
-      final List<QueryTestRunner.QueryRunStep> runSteps = new ArrayList<>();
-      final List<QueryTestRunner.QueryVerifyStep> verifySteps = new ArrayList<>();
+    }
 
-      // Historically, a test either prepares the query (to check resources), or
-      // runs the query (to check the native query and results.) In the future we
-      // may want to do both in a single test; but we have no such tests today.
-      if (builder.expectedResources != null) {
-        Preconditions.checkArgument(
-            builder.expectedResultsVerifier == null,
-            "Cannot check both results and resources"
-        );
-        QueryTestRunner.PrepareQuery execStep = new QueryTestRunner.PrepareQuery(builder);
-        runSteps.add(execStep);
-        verifySteps.add(new QueryTestRunner.VerifyResources(execStep));
-      } else {
-        QueryTestRunner.ExecuteQuery execStep = new QueryTestRunner.ExecuteQuery(builder);
-        runSteps.add(execStep);
-
-        // Verify native queries before results. (Note: change from prior pattern
-        // that reversed the steps.
-        if (builder.expectedQueries != null) {
-          verifySteps.add(new QueryTestRunner.VerifyNativeQueries(execStep));
-        }
-        if (builder.expectedResultsVerifier != null) {
-          verifySteps.add(new QueryTestRunner.VerifyResults(execStep));
-        }
-
-        // The exception is always verified: either there should be no exception
-        // (the other steps ran), or there should be the defined exception.
-        verifySteps.add(new QueryTestRunner.VerifyExpectedException(execStep));
-      }
-      return new QueryTestRunner(runSteps, verifySteps);
+    public CalciteTestConfig(boolean isRunningMSQ)
+    {
+      this.isRunningMSQ = isRunningMSQ;
     }
 
     @Override
@@ -897,7 +865,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     @Override
     public PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig)
     {
-      return queryFramework.plannerFixture(BaseCalciteQueryTest.this, plannerConfig, authConfig);
+      return queryFramework().plannerFixture(BaseCalciteQueryTest.this, plannerConfig, authConfig);
     }
 
     @Override
@@ -905,16 +873,24 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     {
       return queryFramework().queryJsonMapper();
     }
-  }
 
-  public Set<ResourceAction> analyzeResources(
-      final SqlStatementFactory sqlStatementFactory,
-      final SqlQueryPlus query
-  )
-  {
-    PreparedStatement stmt = sqlStatementFactory.preparedStatement(query);
-    stmt.prepare();
-    return stmt.allResources();
+    @Override
+    public ResultsVerifier defaultResultsVerifier(
+        List<Object[]> expectedResults,
+        RowSignature expectedResultSignature
+    )
+    {
+      return BaseCalciteQueryTest.this.defaultResultsVerifier(
+          expectedResults,
+          expectedResultSignature
+      );
+    }
+
+    @Override
+    public boolean isRunningMSQ()
+    {
+      return isRunningMSQ;
+    }
   }
 
   public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
@@ -926,6 +902,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
           results.get(i)
       );
     }
+    Assert.assertEquals(expectedResults.size(), results.size());
   }
 
   public void testQueryThrows(final String sql, Consumer<ExpectedException> expectedExceptionInitializer)
@@ -1032,6 +1009,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     skipVectorize = true;
   }
 
+  protected void msqCompatible()
+  {
+    msqCompatible = true;
+  }
+
   protected static boolean isRewriteJoinToFilter(final Map<String, Object> queryContext)
   {
     return (boolean) queryContext.getOrDefault(
@@ -1042,26 +1024,36 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   /**
    * Override not just the outer query context, but also the contexts of all subqueries.
+   * @return
    */
-  public static <T> Query<T> recursivelyOverrideContext(final Query<T> query, final Map<String, Object> context)
+  public static <T> Query<?> recursivelyClearContext(final Query<T> query, ObjectMapper queryJsonMapper)
   {
-    return query.withDataSource(recursivelyOverrideContext(query.getDataSource(), context))
-                .withOverriddenContext(context);
+    try {
+      Query<T> newQuery = query.withDataSource(recursivelyClearContext(query.getDataSource(), queryJsonMapper));
+      final JsonNode newQueryNode = queryJsonMapper.valueToTree(newQuery);
+      ((ObjectNode) newQueryNode).remove("context");
+      return queryJsonMapper.treeToValue(newQueryNode, Query.class);
+    }
+    catch (Exception e) {
+      Assert.fail(e.getMessage());
+      return null;
+    }
   }
 
   /**
    * Override the contexts of all subqueries of a particular datasource.
    */
-  private static DataSource recursivelyOverrideContext(final DataSource dataSource, final Map<String, Object> context)
+  private static DataSource recursivelyClearContext(final DataSource dataSource, ObjectMapper queryJsonMapper)
   {
     if (dataSource instanceof QueryDataSource) {
       final Query<?> subquery = ((QueryDataSource) dataSource).getQuery();
-      return new QueryDataSource(recursivelyOverrideContext(subquery, context));
+      Query<?> newSubQuery = recursivelyClearContext(subquery, queryJsonMapper);
+      return new QueryDataSource(newSubQuery);
     } else {
       return dataSource.withChildren(
           dataSource.getChildren()
                     .stream()
-                    .map(ds -> recursivelyOverrideContext(ds, context))
+                    .map(ds -> recursivelyClearContext(ds, queryJsonMapper))
                     .collect(Collectors.toList())
       );
     }
@@ -1206,8 +1198,75 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     @Override
     public void verify(String sql, List<Object[]> results)
     {
-      Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResults.size(), results.size());
-      assertResultsEquals(sql, expectedResults, results);
+      try {
+        Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResults.size(), results.size());
+        assertResultsEquals(sql, expectedResults, results);
+      }
+      catch (AssertionError e) {
+        displayResults(results);
+        throw e;
+      }
     }
+  }
+
+  /**
+   * Dump the expected results in the form of the elements of a Java array which
+   * can be used to validate the results. This is a convenient way to create the
+   * expected results: let the test fail with empty results. The actual results
+   * are printed to the console. Copy them into the test.
+   */
+  public static void displayResults(List<Object[]> results)
+  {
+    PrintStream out = System.out;
+    out.println("-- Actual results --");
+    for (int rowIndex = 0; rowIndex < results.size(); rowIndex++) {
+      printArray(results.get(rowIndex), out);
+      if (rowIndex < results.size() - 1) {
+        out.print(",");
+      }
+      out.println();
+    }
+    out.println("----");
+  }
+
+  private static void printArray(final Object[] array, final PrintStream out)
+  {
+    printArrayImpl(array, out, "new Object[]{", "}");
+  }
+
+  private static void printList(final List<?> list, final PrintStream out)
+  {
+    printArrayImpl(list.toArray(new Object[0]), out, "ImmutableList.of(", ")");
+  }
+
+  private static void printArrayImpl(final Object[] array, final PrintStream out, final String pre, final String post)
+  {
+    out.print(pre);
+    for (int colIndex = 0; colIndex < array.length; colIndex++) {
+      Object col = array[colIndex];
+      if (colIndex > 0) {
+        out.print(", ");
+      }
+      if (col == null) {
+        out.print("null");
+      } else if (col instanceof String) {
+        out.print("\"");
+        out.print(StringEscapeUtils.escapeJava((String) col));
+        out.print("\"");
+      } else if (col instanceof Long) {
+        out.print(col);
+        out.print("L");
+      } else if (col instanceof Double) {
+        out.print(col);
+        out.print("D");
+      } else if (col instanceof Object[]) {
+        printArray(array, out);
+      } else if (col instanceof List) {
+        printList((List<?>) col, out);
+      } else {
+        out.print(col);
+      }
+    }
+    out.print(post);
   }
 }

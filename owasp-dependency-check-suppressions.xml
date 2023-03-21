@@ -193,6 +193,7 @@
     <cve>CVE-2019-20445</cve>
     <cve>CVE-2021-37136</cve>
     <cve>CVE-2021-37137</cve>
+    <cve>CVE-2022-41881</cve>
   </suppress>
   <suppress>
     <!-- TODO: Fix by upgrading hadoop-auth version -->
@@ -228,6 +229,8 @@
     <packageUrl regex="true">^pkg:maven/org\.codehaus\.jettison/jettison@1.*$</packageUrl>
     <cve>CVE-2022-40149</cve>
     <cve>CVE-2022-40150</cve>
+    <cve>CVE-2022-45685</cve>
+    <cve>CVE-2022-45693</cve>
   </suppress>
   <suppress>
     <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-storage -->
@@ -244,6 +247,7 @@
     file name: snakeyaml-1.27.jar
     ]]></notes>
     <cve>CVE-2022-25857</cve>
+    <cve>CVE-2022-1471</cve>
   </suppress>
   <suppress>
     <notes><![CDATA[
@@ -371,6 +375,7 @@
     <cve>CVE-2022-23307</cve>
     <cve>CVE-2022-23305</cve>
     <cve>CVE-2022-23302</cve>
+    <cve>CVE-2022-41881</cve>
   </suppress>
   <suppress>
        <!--
@@ -401,6 +406,7 @@
      <cve>CVE-2022-25168</cve>
      <cve>CVE-2022-26612</cve>
      <cve>CVE-2018-8009</cve>
+     <cve>CVE-2021-33036</cve>
   </suppress>
   <suppress>
     <notes><![CDATA[
@@ -413,6 +419,9 @@
     <cve>CVE-2021-35516</cve>
     <cve>CVE-2021-35515</cve>
     <cve>CVE-2021-36090</cve>
+    <cve>CVE-2022-2048</cve>
+    <cve>CVE-2022-3509</cve>
+    <cve>CVE-2022-40152</cve>
   </suppress>
   <suppress>
     <!-- The CVE is not applicable to kafka-clients. -->
@@ -520,6 +529,7 @@
     <cve>CVE-2020-10740</cve>
     <cve>CVE-2020-25644</cve>
     <cve>CVE-2020-10718</cve>
+    <cve>CVE-2022-1278</cve>
   </suppress>
 
   <suppress>
@@ -702,10 +712,11 @@
    file name: d3-color:2.0.0
    ]]></notes>
     <!--
-    Not vulnerable to this as, we use d3-color on the client only.
+    Not vulnerable to these as, we use d3-color on the client only.
     -->
     <packageUrl regex="true">^pkg:npm/d3\-color@.*$</packageUrl>
     <vulnerabilityName>1084597</vulnerabilityName>
+    <vulnerabilityName>1088594</vulnerabilityName>
   </suppress>
 
   <suppress>

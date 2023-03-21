@@ -21,11 +21,11 @@ package org.apache.druid.msq.indexing;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
-import org.apache.druid.msq.shuffle.DurableStorageUtils;
 import org.apache.druid.storage.StorageConnector;
 import org.easymock.Capture;
 import org.easymock.EasyMock;

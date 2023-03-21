@@ -30,9 +30,7 @@ import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
-import org.apache.druid.catalog.model.table.AbstractDatasourceDefn;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
-import org.apache.druid.catalog.model.table.DatasourceDefn.DatasourceColumnDefn;
 import org.apache.druid.catalog.storage.sql.CatalogManager;
 import org.apache.druid.catalog.storage.sql.SQLCatalogManager;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -88,8 +86,8 @@ public class TableManagerTest
   public void testCreate() throws DuplicateKeyException, NotFoundException
   {
     Map<String, Object> props = ImmutableMap.of(
-        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
-        AbstractDatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
+        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
+        DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
     );
     TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
     TableMetadata table = TableMetadata.newTable(TableId.datasource("table1"), spec);
@@ -113,8 +111,8 @@ public class TableManagerTest
   public void testUpdate() throws DuplicateKeyException, NotFoundException
   {
     Map<String, Object> props = ImmutableMap.of(
-        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
-        AbstractDatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
+        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
+        DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
     );
     TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
     TableMetadata table = TableMetadata.newTable(TableId.datasource("table1"), spec);
@@ -122,8 +120,8 @@ public class TableManagerTest
 
     // Change the definition
     props = ImmutableMap.of(
-        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
-        AbstractDatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 2_000_000
+        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
+        DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 2_000_000
     );
     TableSpec spec2 = spec.withProperties(props);
     TableMetadata table2 = table.withSpec(spec2);
@@ -161,8 +159,8 @@ public class TableManagerTest
   public void testUpdateProperties() throws CatalogException
   {
     Map<String, Object> props = ImmutableMap.of(
-        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
-        AbstractDatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
+        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
+        DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
     );
     TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
     TableMetadata table = TableMetadata.newTable(TableId.datasource("table1"), spec);
@@ -205,14 +203,14 @@ public class TableManagerTest
   public void testUpdateColumns() throws CatalogException
   {
     Map<String, Object> props = ImmutableMap.of(
-        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
-        AbstractDatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
+        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
+        DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
     );
     List<ColumnSpec> cols = Arrays.asList(
-        new ColumnSpec(DatasourceColumnDefn.COLUMN_TYPE, "a", Columns.VARCHAR, null),
-        new ColumnSpec(DatasourceColumnDefn.COLUMN_TYPE, "b", Columns.BIGINT, null)
+        new ColumnSpec("a", Columns.VARCHAR, null),
+        new ColumnSpec("b", Columns.BIGINT, null)
     );
-    ColumnSpec colC = new ColumnSpec(DatasourceColumnDefn.COLUMN_TYPE, "c", Columns.DOUBLE, null);
+    ColumnSpec colC = new ColumnSpec("c", Columns.DOUBLE, null);
 
     TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, cols);
     TableMetadata table = TableMetadata.newTable(TableId.datasource("table1"), spec);
@@ -255,8 +253,8 @@ public class TableManagerTest
   public void testDelete() throws DuplicateKeyException, NotFoundException
   {
     Map<String, Object> props = ImmutableMap.of(
-        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
-        AbstractDatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
+        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
+        DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
     );
     TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
     TableMetadata table = TableMetadata.newTable(TableId.datasource("table1"), spec);
@@ -274,8 +272,8 @@ public class TableManagerTest
     assertTrue(list.isEmpty());
 
     Map<String, Object> props = ImmutableMap.of(
-        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H",
-        AbstractDatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
+        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H",
+        DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
     );
     TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
 

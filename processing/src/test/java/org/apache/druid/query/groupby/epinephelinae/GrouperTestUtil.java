@@ -41,9 +41,9 @@ public class GrouperTestUtil
     return IntKeySerde.INSTANCE;
   }
 
-  public static TestColumnSelectorFactory newColumnSelectorFactory()
+  public static GroupByTestColumnSelectorFactory newColumnSelectorFactory()
   {
-    return new TestColumnSelectorFactory();
+    return new GroupByTestColumnSelectorFactory();
   }
 
   public static <T> List<Grouper.Entry<T>> sortedEntries(

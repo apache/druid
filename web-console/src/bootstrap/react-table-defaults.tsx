@@ -17,7 +17,8 @@
  */
 
 import React from 'react';
-import { Filter, ReactTableDefaults } from 'react-table';
+import type { Filter } from 'react-table';
+import { ReactTableDefaults } from 'react-table';
 
 import { Loader } from '../components';
 import {
@@ -46,6 +47,15 @@ export function bootstrapReactTable() {
     NoDataComponent: NoData,
     FilterComponent: GenericFilterInput,
     PaginationComponent: ReactTablePagination,
+    PivotValueComponent: function PivotValue(opt: any) {
+      const { value, subRows } = opt;
+      let msg = String(value);
+      if (msg === 'undefined') msg = 'n/a';
+      if (subRows) {
+        msg += ` (${subRows.length})`;
+      }
+      return <span className="default-pivoted">{msg}</span>;
+    },
     AggregatedComponent: function Aggregated(opt: any) {
       const { subRows, column } = opt;
       const previewValues = subRows
@@ -53,12 +63,12 @@ export function bootstrapReactTable() {
         .map((row: any) => row[column.id]);
       const previewCount = countBy(previewValues);
       return (
-        <span>
+        <div className="default-aggregated">
           {Object.keys(previewCount)
             .sort()
             .map(v => `${v} (${previewCount[v]})`)
             .join(', ')}
-        </span>
+        </div>
       );
     },
     defaultPageSize: 20,

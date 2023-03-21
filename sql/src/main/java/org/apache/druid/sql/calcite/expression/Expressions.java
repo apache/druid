@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
@@ -78,7 +79,11 @@ public class Expressions
   }
 
   /**
-   * Translate a field access, possibly through a projection, to an underlying Druid dataSource.
+   * Old method used to translate a field access, possibly through a projection, to an underlying Druid dataSource.
+   *
+   * This exists to provide API compatibility to extensions, but is deprecated because there is a 4 argument version
+   * that should be used instead.  Call sites should have access to a RexBuilder instance that they can get the
+   * typeFactory from.
    *
    * @param rowSignature row signature of underlying Druid dataSource
    * @param project      projection, or null
@@ -86,17 +91,38 @@ public class Expressions
    *
    * @return row expression
    */
+  @Deprecated
   public static RexNode fromFieldAccess(
       final RowSignature rowSignature,
       @Nullable final Project project,
       final int fieldNumber
   )
   {
+    //noinspection VariableNotUsedInsideIf
+    return fromFieldAccess(project == null ? new JavaTypeFactoryImpl() : null, rowSignature, project, fieldNumber);
+  }
+
+  /**
+   * Translate a field access, possibly through a projection, to an underlying Druid dataSource.
+   *
+   * @param typeFactory  factory for creating SQL types
+   * @param rowSignature row signature of underlying Druid dataSource
+   * @param project      projection, or null
+   * @param fieldNumber  number of the field to access
+   *
+   * @return row expression
+   */
+  public static RexNode fromFieldAccess(
+      final RelDataTypeFactory typeFactory,
+      final RowSignature rowSignature,
+      @Nullable final Project project,
+      final int fieldNumber
+  )
+  {
     if (project == null) {
-      // I don't think the factory impl matters here.
-      return RexInputRef.of(fieldNumber, RowSignatures.toRelDataType(rowSignature, new JavaTypeFactoryImpl()));
+      return RexInputRef.of(fieldNumber, RowSignatures.toRelDataType(rowSignature, typeFactory));
     } else {
-      return project.getChildExps().get(fieldNumber);
+      return project.getProjects().get(fieldNumber);
     }
   }
 
@@ -240,7 +266,7 @@ public class Expressions
   {
     final SqlOperator operator = ((RexCall) rexNode).getOperator();
 
-    final SqlOperatorConversion conversion = plannerContext.getOperatorTable()
+    final SqlOperatorConversion conversion = plannerContext.getPlannerToolbox().operatorTable()
                                                            .lookupOperatorConversion(operator);
 
     if (conversion == null) {
@@ -656,7 +682,7 @@ public class Expressions
       return filter;
     } else if (rexNode instanceof RexCall) {
       final SqlOperator operator = ((RexCall) rexNode).getOperator();
-      final SqlOperatorConversion conversion = plannerContext.getOperatorTable().lookupOperatorConversion(operator);
+      final SqlOperatorConversion conversion = plannerContext.getPlannerToolbox().operatorTable().lookupOperatorConversion(operator);
 
       if (conversion == null) {
         return null;

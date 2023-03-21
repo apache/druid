@@ -61,6 +61,7 @@ public class DruidInjectorBuilder
   private final ObjectMapper smileMapper;
   private final Set<NodeRole> nodeRoles;
   private final ModulesConfig modulesConfig;
+  private boolean ignoreLoadScopes;
 
   public DruidInjectorBuilder(final Injector baseInjector)
   {
@@ -83,6 +84,18 @@ public class DruidInjectorBuilder
     this.modulesConfig = from.modulesConfig;
     this.jsonMapper = from.jsonMapper;
     this.smileMapper = from.smileMapper;
+    this.ignoreLoadScopes = from.ignoreLoadScopes;
+  }
+
+  /**
+   * Ignore load scope annotations on modules. Primarily for testing where a unit
+   * test is not any Druid node, and may wish to load a module that is annotated
+   * with a load scope.
+   */
+  public DruidInjectorBuilder ignoreLoadScopes()
+  {
+    this.ignoreLoadScopes = true;
+    return this;
   }
 
   /**
@@ -127,7 +140,7 @@ public class DruidInjectorBuilder
     } else if (input instanceof Class) {
       return addClass((Class<?>) input);
     } else {
-      throw new ISE("Unknown module type[%s]", input.getClass());
+      throw new ISE("Unknown module type [%s]", input.getClass());
     }
   }
 
@@ -173,8 +186,14 @@ public class DruidInjectorBuilder
     // Modules config is optional: it won't be present in tests or clients.
     String moduleClassName = moduleClass.getName();
     if (moduleClassName != null && modulesConfig.getExcludeList().contains(moduleClassName)) {
-      log.info("Not loading module [%s] because it is present in excludeList", moduleClassName);
+      log.info("Not loading module %s because it is present in excludeList", moduleClassName);
       return false;
+    }
+
+    // Tests don't have node roles, and so want to load the given modules
+    // regardless of the node roles provided.
+    if (ignoreLoadScopes) {
+      return true;
     }
     LoadScope loadScope = moduleClass.getAnnotation(LoadScope.class);
     if (loadScope == null) {
@@ -203,5 +222,10 @@ public class DruidInjectorBuilder
   public Injector build()
   {
     return Guice.createInjector(modules);
+  }
+
+  public Injector baseInjector()
+  {
+    return baseInjector;
   }
 }
