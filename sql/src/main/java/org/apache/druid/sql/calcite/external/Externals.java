@@ -242,6 +242,9 @@ public class Externals
     if (typeName == null || !typeName.isSimple()) {
       throw unsupportedType(name, dataType);
     }
+    if (DruidTypeSystem.VARIANT_TYPE_NAME.equals(typeName.getSimple())) {
+      return typeName.getSimple();
+    }
     SqlTypeName type = SqlTypeName.get(typeName.getSimple());
     if (type == null) {
       throw unsupportedType(name, dataType);

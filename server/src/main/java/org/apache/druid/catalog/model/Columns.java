@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,7 @@ public class Columns
   public static final String FLOAT = "FLOAT";
   public static final String DOUBLE = "DOUBLE";
   public static final String TIMESTAMP = "TIMESTAMP";
+  public static final String VARIANT = "VARIANT";
 
   public static final Set<String> NUMERIC_TYPES =
       ImmutableSet.of(BIGINT, FLOAT, DOUBLE);
@@ -52,6 +54,7 @@ public class Columns
         .put(FLOAT, ColumnType.FLOAT)
         .put(DOUBLE, ColumnType.DOUBLE)
         .put(VARCHAR, ColumnType.STRING)
+        .put(VARIANT, NestedDataComplexTypeSerde.TYPE)
         .build();
 
   public static final Map<ColumnType, String> DRUID_TO_SQL_TYPES =

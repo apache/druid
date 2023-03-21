@@ -60,6 +60,7 @@ data: {
       "org.apache.druid.sql.calcite.parser.DruidSqlParserUtils"
       "org.apache.druid.sql.calcite.external.ExtendOperator"
       "org.apache.druid.sql.calcite.external.ParameterizeOperator"
+      "org.apache.druid.sql.calcite.planner.DruidTypeSystem"
     ]
 
     # List of new keywords. Example: "DATABASES", "TABLES". If the keyword is not a reserved
@@ -68,6 +69,7 @@ data: {
       "CLUSTERED"
       "OVERWRITE"
       "PARTITIONED"
+      "VARIANT"
     ]
 
     # List of keywords from "keywords" section that are not reserved.
@@ -402,6 +404,7 @@ data: {
     # Return type of method implementation should be "SqlTypeNameSpec".
     # Example: SqlParseTimeStampZ().
     dataTypeParserMethods: [
+      "VariantType()"
     ]
 
     # List of methods for parsing builtin function calls.
