@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
+import org.apache.druid.k8s.overlord.common.MultiContainerTaskAdapter;
+import org.apache.druid.k8s.overlord.common.SingleContainerTaskAdapter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.NoopTaskLogs;
@@ -116,7 +118,9 @@ public class KubernetesTaskRunnerFactoryTest
     );
 
     KubernetesTaskRunner runner = factory.build();
+
     Assert.assertNotNull(runner);
+    Assert.assertTrue(runner.adapter instanceof SingleContainerTaskAdapter);
   }
 
   @Test
@@ -137,25 +141,6 @@ public class KubernetesTaskRunnerFactoryTest
     KubernetesTaskRunner runner = factory.build();
 
     Assert.assertNotNull(runner);
-  }
-
-  @Test
-  public void test_build_withClientProxyDisabled_returnsKubernetesTaskRunnerWithDruidKubernetesClientWithoutClientProxySupport()
-  {
-    kubernetesTaskRunnerConfig.disableClientProxy = true;
-
-    KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
-        objectMapper,
-        kubernetesTaskRunnerConfig,
-        startupLoggingConfig,
-        taskQueueConfig,
-        taskLogPusher,
-        druidNode,
-        taskConfig
-    );
-
-    KubernetesTaskRunner runner = factory.build();
-
-    Assert.assertNotNull(runner);
+    Assert.assertTrue(runner.adapter instanceof MultiContainerTaskAdapter);
   }
 }

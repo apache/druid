@@ -91,7 +91,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private final ScheduledExecutorService cleanupExecutor;
 
   protected final ConcurrentHashMap<String, K8sWorkItem> tasks = new ConcurrentHashMap<>();
-  private final TaskAdapter adapter;
+  protected final TaskAdapter adapter;
 
   private final KubernetesTaskRunnerConfig k8sConfig;
   private final TaskQueueConfig taskQueueConfig;
