@@ -326,9 +326,9 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
   {
     EasyMock.reset(OSSCLIENT);
     EasyMock.expect(OSSCLIENT.getObjectMetadata(EXPECTED_OBJECTS.get(0).getBucket(), EXPECTED_OBJECTS.get(0).getPath()))
-            .andReturn(objectMetadataWithSize(EXPECTED_OBJECTS.get(0), CONTENT.length));
+            .andReturn(objectMetadataWithSize(CONTENT.length));
     EasyMock.expect(OSSCLIENT.getObjectMetadata(EXPECTED_OBJECTS.get(1).getBucket(), EXPECTED_OBJECTS.get(1).getPath()))
-            .andReturn(objectMetadataWithSize(EXPECTED_OBJECTS.get(1), CONTENT.length));
+            .andReturn(objectMetadataWithSize(CONTENT.length));
     EasyMock.replay(OSSCLIENT);
 
     OssInputSource inputSource = new OssInputSource(
@@ -698,7 +698,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     }
   }
 
-  private static ObjectMetadata objectMetadataWithSize(final CloudObjectLocation location, final long size)
+  private static ObjectMetadata objectMetadataWithSize(final long size)
   {
     final ObjectMetadata retVal = new ObjectMetadata();
     retVal.setContentLength(size);

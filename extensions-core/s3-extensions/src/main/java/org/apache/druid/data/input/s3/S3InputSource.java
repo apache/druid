@@ -403,35 +403,4 @@ public class S3InputSource extends CloudObjectInputSource
            ", awsClientConfig=" + getAwsClientConfig() +
            '}';
   }
-
-  private static class ObjectDescriptor
-  {
-    private static final long UNKNOWN_SIZE = -1;
-
-    private final String bucket;
-    private final String key;
-    private final long size;
-
-    public ObjectDescriptor(String bucket, String key, long size)
-    {
-      this.bucket = bucket;
-      this.key = key;
-      this.size = size;
-    }
-
-    public String getBucket()
-    {
-      return bucket;
-    }
-
-    public String getKey()
-    {
-      return key;
-    }
-
-    public long getSize()
-    {
-      return size;
-    }
-  }
 }
