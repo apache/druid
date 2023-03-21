@@ -38,7 +38,20 @@ public interface TuningConfig
   AppendableIndexSpec DEFAULT_APPENDABLE_INDEX = new OnheapIncrementalIndex.Spec();
   int DEFAULT_MAX_PARSE_EXCEPTIONS = Integer.MAX_VALUE;
   int DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS = 0;
-  int DEFAULT_MAX_ROWS_IN_MEMORY = 1_000_000;
+
+  /**
+   * For batch ingestion, we want to maximize throughput by minimizing the number of incremental persists. The limit
+   * here is really a safety: in case we have a large number of very small rows, we don't want to get overwhelmed
+   * by per-row overheads. Mostly, we rely on the bytes limit {@link #getMaxBytesInMemory()}.
+   */
+  int DEFAULT_MAX_ROWS_IN_MEMORY_BATCH = 1_000_000;
+
+  /**
+   * For realtime ingestion, we want to balance ingestion throughput and query performance. Since queries on
+   * in-memory data are slower due to using {@link org.apache.druid.segment.incremental.IncrementalIndex}
+   * instead of {@link org.apache.druid.segment.QueryableIndex}, we cap the row count of in-memory data.
+   */
+  int DEFAULT_MAX_ROWS_IN_MEMORY_REALTIME = 150_000;
   boolean DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK = false;
   long DEFAULT_AWAIT_SEGMENT_AVAILABILITY_TIMEOUT_MILLIS = 0L;
 

@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .display import DisplayClient
-from .base_table import pad, BaseTable
+from druidapi.display import DisplayClient
+from druidapi.base_table import pad, BaseTable
 
 alignments = ['', '^', '>']
 
@@ -130,13 +130,13 @@ class TextTable(BaseTable):
             self._rows = []
         table_rows = self.formatter(self.compute_def(self._rows))
         return '\n'.join(table_rows)
-    
+
     def format_rows(self, rows, min_width, max_width):
         if not self._col_fmt:
             return self.default_row_format(rows, min_width, max_width)
         else:
             return self.apply_row_formats(rows, max_width)
-        
+
     def default_row_format(self, rows, min_width, max_width):
         new_rows = []
         if min_width <= max_width:
@@ -164,7 +164,7 @@ class TextDisplayClient(DisplayClient):
 
     def __init__(self):
         DisplayClient.__init__(self)
-    
+
     def text(self, msg):
         print(msg)
 
@@ -176,6 +176,6 @@ class TextDisplayClient(DisplayClient):
 
     def new_table(self):
         return TextTable()
-    
+
     def show_table(self, table):
         print(table.format())
