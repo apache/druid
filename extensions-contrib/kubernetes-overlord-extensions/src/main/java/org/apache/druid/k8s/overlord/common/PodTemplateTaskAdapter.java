@@ -53,6 +53,20 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 
+/**
+ * A PodTemplate {@link TaskAdapter} to transform tasks to kubernetes jobs and kubernetes pods to tasks
+ *
+ * Pod Templates
+ * This TaskAdapter allows the user to provide a pod template per druid task.  If a pod template has
+ * not been provided for a task, then the provided base template will be used.
+ *
+ * Providing Pod Templates per Task
+ * Pod templates are provided as files, each pod template file path must be specified as a runtime property
+ * druid.indexer.runner.k8s.podTemplate.{task_name}=/path/to/podTemplate.yaml.
+ *
+ * Note that the base pod template must be specified as the runtime property
+ * druid.indexer.runner.k8s.podTemplate.base=/path/to/podTemplate.yaml
+ */
 public class PodTemplateTaskAdapter implements TaskAdapter
 {
   public static String TYPE = "PodTemplate";
@@ -84,6 +98,19 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     this.templates = initializePodTemplates(properties);
   }
 
+  /**
+   * Create a {@link Job} from a {@link Task}
+   *
+   * 1. Select pod template based on task type
+   * 2. Add labels and annotations to the pod template including the task as a compressed and base64 encoded string
+   * 3. Add labels and annotations to the job
+   * 4. Add user specified active deadline seconds and job ttl
+   * 5. Set backoff limit to zero since druid does not support external systems retrying failed tasks
+   *
+   * @param task
+   * @return {@link Job}
+   * @throws IOException
+   */
   @Override
   public Job fromTask(Task task) throws IOException
   {
@@ -112,12 +139,22 @@ public class PodTemplateTaskAdapter implements TaskAdapter
         .endSpec()
         .endTemplate()
         .withActiveDeadlineSeconds(taskRunnerConfig.maxTaskDuration.toStandardDuration().getStandardSeconds())
-        .withBackoffLimit(0)
+        .withBackoffLimit(0)  // druid does not support an external system retrying failed tasks
         .withTtlSecondsAfterFinished((int) taskRunnerConfig.taskCleanupDelay.toStandardDuration().getStandardSeconds())
         .endSpec()
         .build();
   }
 
+  /**
+   * Transform a {@link Pod} to a {@link Task}
+   *
+   * 1. Find task annotation on the pod
+   * 2. Base 64 decode and decompress task, read into {@link Task}
+   *
+   * @param from
+   * @return {@link Task}
+   * @throws IOException
+   */
   @Override
   public Task toTask(Pod from) throws IOException
   {
