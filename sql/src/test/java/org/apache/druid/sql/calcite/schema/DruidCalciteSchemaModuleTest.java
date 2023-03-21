@@ -59,6 +59,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @RunWith(EasyMockRunner.class)
@@ -234,5 +235,14 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
     InformationSchema expectedSchema = injector.getInstance(InformationSchema.class);
     Assert.assertNotNull(rootSchema);
     Assert.assertSame(expectedSchema, rootSchema.getSubSchema("INFORMATION_SCHEMA").unwrap(InformationSchema.class));
+  }
+
+  @Test
+  public void testDruidSchemaManagerIsInjected()
+  {
+    DruidSchemaManager druidSchemaManager = injector.getInstance(DruidSchemaManager.class);
+    Assert.assertNotNull(druidSchemaManager);
+    Assert.assertNull(druidSchemaManager.getTable("test", null));
+    Assert.assertEquals(ImmutableSet.of(), druidSchemaManager.getTableNames(null));
   }
 }

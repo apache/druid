@@ -40,8 +40,8 @@ public interface DruidSchemaManager
   /**
    * Return all tables known to this schema manager. Deprecated because getting
    * all tables is never actually needed in the current code. Calcite asks for
-   * the information for a single table (via {@link #getTable(String)}, or
-   * the list of all table <i>names</i> (via {@link #getTableNames()}. This
+   * the information for a single table (via {@link #getTable(String, SegmentMetadataCache)}, or
+   * the list of all table <i>names</i> (via {@link #getTableNames(SegmentMetadataCache)}. This
    * method was originally used to allow Calcite's {@link
    * org.apache.calcite.schema.impl.AbstractSchema AbstractSchema} class to do
    * the lookup. The current code implements the operations directly. For
