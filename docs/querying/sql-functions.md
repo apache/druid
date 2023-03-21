@@ -136,48 +136,6 @@ Returns an array of all values of the specified expression.
 
 Concatenates array inputs into a single array.
 
-## ARRAY_OF_DOUBLES_SKETCH
-
-`ARRAY_OF_DOUBLES_SKETCH(expr, [nominalEntries])`
-
-`ARRAY_OF_DOUBLES_SKETCH(dimensionColumnExpr, metricColumnExpr, ..., [nominalEntries])`
-
-**Function type:** [Aggregation](sql-aggregations.md)
-
-Creates a Tuple sketch.
-
-## ARRAY_OF_DOUBLES_SKETCH_INTERSECT
-
-`ARRAY_OF_DOUBLES_SKETCH_INTERSECT(expr, ..., [nominalEntries])`
-
-**Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
-
-## ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE
-
-`ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE(expr)`
-
-**Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
-
-Computes approximate sums of the values contained within a Tuple sketch.
-
-Returns an intersection of Tuple sketches.
-
-## ARRAY_OF_DOUBLES_SKETCH_NOT
-
-`ARRAY_OF_DOUBLES_SKETCH_NOT(expr, ..., [nominalEntries])`
-
-Returns a set difference of Tuple sketches.
-
-**Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
-
-## ARRAY_OF_DOUBLES_SKETCH_UNION
-
-`ARRAY_OF_DOUBLES_SKETCH_UNION(expr, ..., [nominalEntries])`
-
-**Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
-
-Returns a union of Tuple sketches.
-
 ## ASIN
 
 `ASIN(<NUMERIC>)`
@@ -532,6 +490,48 @@ Returns an approximate rank between 0 and 1 of a given value, in which the rank 
 **Function type:** [Aggregation](sql-aggregations.md)
 
 Creates a Theta sketch on a column containing Theta sketches or a regular column.
+
+## DS_TUPLE_DOUBLES
+
+`DS_TUPLE_DOUBLES(expr, [nominalEntries])`
+
+`DS_TUPLE_DOUBLES(dimensionColumnExpr, metricColumnExpr, ..., [nominalEntries])`
+
+**Function type:** [Aggregation](sql-aggregations.md)
+
+Creates a Tuple sketch which contains an array of double values as the Summary Object. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).
+
+## DS_TUPLE_DOUBLES_INTERSECT
+
+`DS_TUPLE_DOUBLES_INTERSECT(expr, ..., [nominalEntries])`
+
+**Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
+
+Returns an intersection of Tuple sketches which each contain an array of double values as their Summary Objects. The values contained in the Summary Objects are summed when combined. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).
+
+## DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE
+
+`DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE(expr)`
+
+**Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
+
+Computes approximate sums of the values contained within a Tuple sketch which contains an array of double values as the Summary Object.
+
+## DS_TUPLE_DOUBLES_NOT
+
+`DS_TUPLE_DOUBLES_NOT(expr, ..., [nominalEntries])`
+
+Returns a set difference of Tuple sketches which each contain an array of double values as their Summary Objects. The values contained in the Summary Object are preserved as-is. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).
+
+**Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
+
+## DS_TUPLE_DOUBLES_UNION
+
+`DS_TUPLE_DOUBLES_UNION(expr, ..., [nominalEntries])`
+
+**Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
+
+Returns a union of Tuple sketches which each contain an array of double values as their Summary Objects. The values contained in the Summary Objects are summed when combined. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).
 
 ## EARLIEST
 

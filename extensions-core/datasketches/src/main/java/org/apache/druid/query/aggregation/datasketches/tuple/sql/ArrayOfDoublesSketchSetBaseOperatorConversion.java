@@ -138,7 +138,7 @@ public abstract class ArrayOfDoublesSketchSetBaseOperatorConversion implements S
 
   public String getFunctionName()
   {
-    return StringUtils.format("ARRAY_OF_DOUBLES_SKETCH_%s", getSetOperationName());
+    return StringUtils.format("DS_TUPLE_DOUBLES_%s", getSetOperationName());
   }
 
 }

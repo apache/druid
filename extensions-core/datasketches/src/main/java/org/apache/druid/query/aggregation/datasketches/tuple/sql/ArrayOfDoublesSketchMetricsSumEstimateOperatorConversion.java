@@ -40,7 +40,7 @@ import java.util.List;
 
 public class ArrayOfDoublesSketchMetricsSumEstimateOperatorConversion implements SqlOperatorConversion
 {
-  private static final String FUNCTION_NAME = "ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE";
+  private static final String FUNCTION_NAME = "DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE";
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
       .operandTypes(SqlTypeFamily.ANY)

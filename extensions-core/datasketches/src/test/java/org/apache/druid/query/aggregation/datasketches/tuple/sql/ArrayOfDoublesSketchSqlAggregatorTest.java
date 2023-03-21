@@ -160,9 +160,9 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
     final String sql = "SELECT\n"
                    + "  dim1,\n"
                    + "  SUM(cnt),\n"
-                   + "  ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE(ARRAY_OF_DOUBLES_SKETCH(tuplesketch_dim2)),\n"
-                   + "  ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE(ARRAY_OF_DOUBLES_SKETCH(dim2, m1)),\n"
-                   + "  ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE(ARRAY_OF_DOUBLES_SKETCH(dim2, m1, 256))\n"
+                   + "  DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE(DS_TUPLE_DOUBLES(tuplesketch_dim2)),\n"
+                   + "  DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE(DS_TUPLE_DOUBLES(dim2, m1)),\n"
+                   + "  DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE(DS_TUPLE_DOUBLES(dim2, m1, 256))\n"
                    + "FROM druid.foo\n"
                    + "GROUP BY dim1";
 
@@ -249,9 +249,9 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
     final String sql = "SELECT\n"
                    + "  SUM(cnt),\n"
-                   + "  ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE(ARRAY_OF_DOUBLES_SKETCH(tuplesketch_dim2)) AS all_sum_estimates,\n"
+                   + "  DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE(DS_TUPLE_DOUBLES(tuplesketch_dim2)) AS all_sum_estimates,\n"
                    + StringUtils.replace(
-                      "ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE(ARRAY_OF_DOUBLES_SKETCH_INTERSECT(COMPLEX_DECODE_BASE64('arrayOfDoublesSketch', '%s'), ARRAY_OF_DOUBLES_SKETCH(tuplesketch_dim2), 128)) AS intersect_sum_estimates\n",
+                      "DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE(DS_TUPLE_DOUBLES_INTERSECT(COMPLEX_DECODE_BASE64('arrayOfDoublesSketch', '%s'), DS_TUPLE_DOUBLES(tuplesketch_dim2), 128)) AS intersect_sum_estimates\n",
                       "%s",
                       COMPACT_BASE_64_ENCODED_SKETCH_FOR_INTERSECTION
                    )
@@ -329,11 +329,11 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     final String sql = "SELECT\n"
-                   + "  ARRAY_OF_DOUBLES_SKETCH(NULL),\n"
-                   + "  ARRAY_OF_DOUBLES_SKETCH_METRICS_SUM_ESTIMATE(NULL),\n"
-                   + "  ARRAY_OF_DOUBLES_SKETCH_UNION(NULL, NULL),\n"
-                   + "  ARRAY_OF_DOUBLES_SKETCH_UNION(NULL, ARRAY_OF_DOUBLES_SKETCH(tuplesketch_dim2)),\n"
-                   + "  ARRAY_OF_DOUBLES_SKETCH_UNION(ARRAY_OF_DOUBLES_SKETCH(tuplesketch_dim2), NULL)\n"
+                   + "  DS_TUPLE_DOUBLES(NULL),\n"
+                   + "  DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE(NULL),\n"
+                   + "  DS_TUPLE_DOUBLES_UNION(NULL, NULL),\n"
+                   + "  DS_TUPLE_DOUBLES_UNION(NULL, DS_TUPLE_DOUBLES(tuplesketch_dim2)),\n"
+                   + "  DS_TUPLE_DOUBLES_UNION(DS_TUPLE_DOUBLES(tuplesketch_dim2), NULL)\n"
                    + "FROM druid.foo";
 
     final List<Object[]> expectedResults;
@@ -429,24 +429,24 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testArrayOfDoublesSketchIntersectOnScalarExpression()
   {
-    assertQueryIsUnplannable("SELECT ARRAY_OF_DOUBLES_SKETCH_INTERSECT(NULL, NULL) FROM foo",
-        "Possible error: ARRAY_OF_DOUBLES_SKETCH_INTERSECT can only be used on aggregates. " +
+    assertQueryIsUnplannable("SELECT DS_TUPLE_DOUBLES_INTERSECT(NULL, NULL) FROM foo",
+        "Possible error: DS_TUPLE_DOUBLES_INTERSECT can only be used on aggregates. " +
             "It cannot be used directly on a column or on a scalar expression.");
   }
 
   @Test
   public void testArrayOfDoublesSketchNotOnScalarExpression()
   {
-    assertQueryIsUnplannable("SELECT ARRAY_OF_DOUBLES_SKETCH_NOT(NULL, NULL) FROM foo",
-        "Possible error: ARRAY_OF_DOUBLES_SKETCH_NOT can only be used on aggregates. " +
+    assertQueryIsUnplannable("SELECT DS_TUPLE_DOUBLES_NOT(NULL, NULL) FROM foo",
+        "Possible error: DS_TUPLE_DOUBLES_NOT can only be used on aggregates. " +
             "It cannot be used directly on a column or on a scalar expression.");
   }
 
   @Test
   public void testArrayOfDoublesSketchUnionOnScalarExpression()
   {
-    assertQueryIsUnplannable("SELECT ARRAY_OF_DOUBLES_SKETCH_UNION(NULL, NULL) FROM foo",
-        "Possible error: ARRAY_OF_DOUBLES_SKETCH_UNION can only be used on aggregates. " +
+    assertQueryIsUnplannable("SELECT DS_TUPLE_DOUBLES_UNION(NULL, NULL) FROM foo",
+        "Possible error: DS_TUPLE_DOUBLES_UNION can only be used on aggregates. " +
             "It cannot be used directly on a column or on a scalar expression.");
   }
 }

@@ -57,7 +57,7 @@ public class ArrayOfDoublesSketchSqlAggregator implements SqlAggregator
 {
 
   private static final SqlAggFunction FUNCTION_INSTANCE = new ArrayOfDoublesSqlAggFunction();
-  private static final String NAME = "ARRAY_OF_DOUBLES_SKETCH";
+  private static final String NAME = "DS_TUPLE_DOUBLES";
 
   @Override
   public SqlAggFunction calciteFunction()
