@@ -24,12 +24,21 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
+import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.allocation.HeapMemoryAllocator;
+import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
+import org.apache.druid.frame.processor.FrameRowTooLargeException;
+import org.apache.druid.frame.write.FrameWriter;
+import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.GenericQueryMetricsFactory;
+import org.apache.druid.query.IterableRowsCursor;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
@@ -41,6 +50,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.CloseableUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -188,10 +198,60 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   }
 
   @Override
+  public Sequence<Frame> resultsAsFrames(final ScanQuery query, final Sequence<ScanResultValue> resultSequence)
+  {
+    return resultSequence.map(
+        result -> {
+          final List rows = (List) result.getEvents();
+          final Iterable<Object[]> formattedRows = Iterables.transform(rows, getResultFormatMapper(query));
+          IterableRowsCursor cursor = new IterableRowsCursor(formattedRows, result.getRowSignature());
+
+          FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
+              FrameType.ROW_BASED,
+              new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+              result.getRowSignature(),
+              new ArrayList<>(),
+              true
+          );
+
+          Frame frame;
+
+          try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
+            while (!cursor.isDone()) {
+              if (!frameWriter.addSelection()) {
+                throw new FrameRowTooLargeException(frameWriterFactory.allocatorCapacity());
+              }
+
+              cursor.advance();
+            }
+
+            frame = Frame.wrap(frameWriter.toByteArray());
+          }
+
+          return frame;
+        }
+    );
+  }
+
+  @Override
   public Sequence<Object[]> resultsAsArrays(final ScanQuery query, final Sequence<ScanResultValue> resultSequence)
   {
+    final Function<?, Object[]> mapper = getResultFormatMapper(query);
+
+    return resultSequence.flatMap(
+        result -> {
+          // Generics? Where we're going, we don't need generics.
+          final List rows = (List) result.getEvents();
+          final Iterable arrays = Iterables.transform(rows, (Function) mapper);
+          return Sequences.simple(arrays);
+        }
+    );
+  }
+
+  private Function<?, Object[]> getResultFormatMapper(ScanQuery query)
+  {
+    Function<?, Object[]> mapper;
     final List<String> fields = resultArraySignature(query).getColumnNames();
-    final Function<?, Object[]> mapper;
 
     switch (query.getResultFormat()) {
       case RESULT_FORMAT_LIST:
@@ -222,14 +282,6 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
       default:
         throw new UOE("Unsupported resultFormat for array-based results: %s", query.getResultFormat());
     }
-
-    return resultSequence.flatMap(
-        result -> {
-          // Generics? Where we're going, we don't need generics.
-          final List rows = (List) result.getEvents();
-          final Iterable arrays = Iterables.transform(rows, (Function) mapper);
-          return Sequences.simple(arrays);
-        }
-    );
+    return mapper;
   }
 }

@@ -128,7 +128,6 @@ public class ServerConfig
   private int maxSubqueryRows = 100000;
 
   @JsonProperty
-  @Min(100_000_000)
   private long maxSubqueryMemory = -1L;
 
   @JsonProperty

@@ -56,10 +56,14 @@ public class FrameColumnWriters
       final ColumnSelectorFactory columnSelectorFactory,
       final MemoryAllocator allocator,
       final String column,
-      final ColumnType type
+      final ColumnType type,
+      final boolean allowNullType
   )
   {
     if (type == null) {
+      if (allowNullType) {
+        return makeLongWriter(columnSelectorFactory, allocator, column);
+      }
       throw new UnsupportedColumnTypeException(column, null);
     }
 

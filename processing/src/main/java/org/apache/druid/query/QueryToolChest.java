@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Function;
+import org.apache.druid.frame.Frame;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -327,6 +328,11 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * @throws UnsupportedOperationException if this query type does not support returning results as arrays
    */
   public Sequence<Object[]> resultsAsArrays(QueryType query, Sequence<ResultType> resultSequence)
+  {
+    throw new UOE("Query type '%s' does not support returning results as arrays", query.getType());
+  }
+
+  public Sequence<Frame> resultsAsFrames(QueryType query, Sequence<ResultType> resultSequence)
   {
     throw new UOE("Query type '%s' does not support returning results as arrays", query.getType());
   }

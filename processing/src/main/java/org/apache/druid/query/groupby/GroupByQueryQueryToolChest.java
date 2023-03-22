@@ -32,18 +32,30 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.allocation.HeapMemoryAllocator;
+import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
+import org.apache.druid.frame.processor.FrameRowTooLargeException;
+import org.apache.druid.frame.write.FrameWriter;
+import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.MappedSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.IterableRowsCursor;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
@@ -703,6 +715,65 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   public Sequence<Object[]> resultsAsArrays(final GroupByQuery query, final Sequence<ResultRow> resultSequence)
   {
     return resultSequence.map(ResultRow::getArray);
+  }
+
+  @Override
+  public Sequence<Frame> resultsAsFrames(GroupByQuery query, Sequence<ResultRow> resultSequence)
+  {
+    RowSignature rowSignature = query.getResultRowSignature(RowSignature.Finalization.YES);
+
+    FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
+        FrameType.ROW_BASED,
+        new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+        rowSignature,
+        new ArrayList<>(),
+        true
+    );
+
+    Frame frame;
+
+    IterableRowsCursor cursor = new IterableRowsCursor(
+        new Iterable<Object[]>()
+        {
+          Yielder<Object[]> yielder = Yielders.each(resultSequence.map(ResultRow::getArray));
+
+          @Override
+          public Iterator<Object[]> iterator()
+          {
+            return new Iterator<Object[]>()
+            {
+              @Override
+              public boolean hasNext()
+              {
+                return !yielder.isDone();
+              }
+
+              @Override
+              public Object[] next()
+              {
+                Object[] retVal = yielder.get();
+                yielder = yielder.next(null);
+                return retVal;
+              }
+            };
+          }
+        },
+        rowSignature
+    );
+
+    try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
+      while (!cursor.isDone()) {
+        if (!frameWriter.addSelection()) {
+          throw new FrameRowTooLargeException(frameWriterFactory.allocatorCapacity());
+        }
+
+        cursor.advance();
+      }
+
+      frame = Frame.wrap(frameWriter.toByteArray());
+    }
+
+    return Sequences.simple(ImmutableList.of(frame));
   }
 
   /**

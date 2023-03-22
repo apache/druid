@@ -58,17 +58,28 @@ public class FrameWriters
       final FrameType frameType,
       final MemoryAllocatorFactory allocatorFactory,
       final RowSignature signature,
-      final List<KeyColumn> sortColumns
+      final List<KeyColumn> sortColumns,
+      final boolean allowNullColumnTypes
   )
   {
     switch (Preconditions.checkNotNull(frameType, "frameType")) {
       case COLUMNAR:
-        return new ColumnarFrameWriterFactory(allocatorFactory, signature, sortColumns);
+        return new ColumnarFrameWriterFactory(allocatorFactory, signature, sortColumns, allowNullColumnTypes);
       case ROW_BASED:
-        return new RowBasedFrameWriterFactory(allocatorFactory, signature, sortColumns);
+        return new RowBasedFrameWriterFactory(allocatorFactory, signature, sortColumns, allowNullColumnTypes);
       default:
         throw new ISE("Unrecognized frame type [%s]", frameType);
     }
+  }
+
+  public static FrameWriterFactory makeFrameWriterFactory(
+      final FrameType frameType,
+      final MemoryAllocatorFactory allocatorFactory,
+      final RowSignature signature,
+      final List<KeyColumn> sortColumns
+  )
+  {
+    return makeFrameWriterFactory(frameType, allocatorFactory, signature, sortColumns, false);
   }
 
   /**

@@ -57,8 +57,12 @@ import java.util.stream.IntStream;
 /**
  * Represents an inline datasource, where the rows are embedded within the DataSource object itself.
  * <p>
- * The rows are backed by an Iterable, which can be lazy or not. Lazy datasources will only be iterated if someone calls
- * {@link #getRows()} and iterates the result, or until someone calls {@link #getRowsAsList()}.
+ * The rows are backed by either one of the following:
+ * 1. Iterable, which can be lazy or not. Lazy datasources will only be iterated if someone calls
+ *    {@link #getRows()} and iterates the result, or until someone calls {@link #getRowsAsList()}.
+ *
+ * 2. {@link Frame} which is useful in calculating the memory that the data source takes up, since
+ *    frames are backed by exact-memory semantics ({@link Frame#numBytes()})
  */
 public class InlineDataSource implements DataSource
 {
@@ -72,8 +76,14 @@ public class InlineDataSource implements DataSource
       final RowSignature signature
   )
   {
-    this.rows = rows;
-    this.frame = frame;
+    if (frame == null) {
+      this.rows = Preconditions.checkNotNull(rows, "either 'rows' or 'frame' must be nonnull");
+      this.frame = null;
+    } else {
+      Preconditions.checkArgument(rows == null, "either 'rows' or 'frame' can be supplied");
+      this.rows = null;
+      this.frame = frame;
+    }
     this.signature = Preconditions.checkNotNull(signature, "'signature' must be nonnull");
   }
 
@@ -231,38 +241,39 @@ public class InlineDataSource implements DataSource
   @JsonIgnore
   public Iterable<Object[]> getRows()
   {
-    if (isBackedByFrame()) {
-      List<Object[]> frameRows = new ArrayList<>();
-      FrameReader frameReader = FrameReader.create(signature);
-      final Sequence<Cursor> cursorSequence = new FrameStorageAdapter(
-          frame,
-          frameReader,
-          Intervals.ETERNITY
-      ).makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null);
-      cursorSequence.accumulate(
-          null,
-          (accumulated, cursor) -> {
-            final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
-            final List<BaseObjectColumnValueSelector> selectors = frameReader.signature()
-                                                                             .getColumnNames()
-                                                                             .stream()
-                                                                             .map(columnSelectorFactory::makeColumnValueSelector)
-                                                                             .collect(Collectors.toList());
-            while (!cursor.isDone()) {
-              Object[] row = new Object[signature.size()];
-              for (int i = 0; i < signature.size(); ++i) {
-                row[i] = selectors.get(i).getObject();
-              }
-              frameRows.add(row);
-              cursor.advance();
-            }
-            return null;
-          }
-      );
-      return frameRows;
+    if (!isBackedByFrame()) {
+      return rows;
     }
 
-    return rows;
+    // The inline data source is backed by a frame, therefore extract the rows from the frame
+    List<Object[]> frameRows = new ArrayList<>();
+    FrameReader frameReader = FrameReader.create(signature);
+    final Sequence<Cursor> cursorSequence = new FrameStorageAdapter(
+        frame,
+        frameReader,
+        Intervals.ETERNITY
+    ).makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null);
+    cursorSequence.accumulate(
+        null,
+        (accumulated, cursor) -> {
+          final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+          final List<BaseObjectColumnValueSelector> selectors = frameReader.signature()
+                                                                           .getColumnNames()
+                                                                           .stream()
+                                                                           .map(columnSelectorFactory::makeColumnValueSelector)
+                                                                           .collect(Collectors.toList());
+          while (!cursor.isDone()) {
+            Object[] row = new Object[signature.size()];
+            for (int i = 0; i < signature.size(); ++i) {
+              row[i] = selectors.get(i).getObject();
+            }
+            frameRows.add(row);
+            cursor.advance();
+          }
+          return null;
+        }
+    );
+    return frameRows;
   }
 
   public boolean rowsAreArrayList()

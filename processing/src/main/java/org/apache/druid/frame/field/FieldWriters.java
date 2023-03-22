@@ -57,10 +57,14 @@ public class FieldWriters
   public static FieldWriter create(
       final ColumnSelectorFactory columnSelectorFactory,
       final String columnName,
-      final ColumnType columnType
+      final ColumnType columnType,
+      final boolean allowNullColumnType
   )
   {
     if (columnType == null) {
+      if (allowNullColumnType) {
+        return makeLongWriter(columnSelectorFactory, columnName);
+      }
       throw new UnsupportedColumnTypeException(columnName, null);
     }
 
