@@ -30,3 +30,6 @@ integration-tests/gen-scripts/
 *.hprof
 **/.ipynb_checkpoints/
 *.pyc
+**/.ipython/
+**/.jupyter/
+**/.local/

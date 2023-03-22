@@ -13,23 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .error import ClientError
+from setuptools import setup, find_packages
 
-def dict_get(dict, key, default=None):
-    '''
-    Returns the value of key in the given dict, or the default value if
-    the key is not found. 
-    '''
-    if not dict:
-        return default
-    return dict.get(key, default)
+setup(
+    name='druidapi',
+    version='0.1.0',
+    description='Python API client for Apache Druid',
+    url='https://github.com/apache/druid/tree/master/examples/quickstart/jupyter-notebooks/druidapi',
+    author='Apache Druid project',
+    author_email='dev@druid.apache.org',
+    license='Apache License 2.0',
+    packages=find_packages(),
+    install_requires=['requests'],
 
-def split_table_name(table_name, default_schema):
-    if not table_name:
-        raise ClientError('Table name is required')
-    parts = table_name.split('.')
-    if len(parts) > 2:
-        raise ClientError('Druid supports one or two-part table names')
-    if len(parts) == 2:
-        return parts
-    return [default_schema, parts[0]]
+    classifiers=[
+        'Development Status :: 3 - Alpha',
+        'Intended Audience :: Developers',
+        'Intended Audience :: End Users/Desktop',
+        'License :: OSI Approved :: Apache Software License',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python :: 3',
+    ],
+)

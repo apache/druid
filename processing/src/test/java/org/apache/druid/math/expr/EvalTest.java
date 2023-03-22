@@ -21,6 +21,7 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import junitparams.converters.Nullable;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -76,7 +77,7 @@ public class EvalTest extends InitializedNullHandlingTest
   @Test
   public void testDoubleEval()
   {
-    Expr.ObjectBinding bindings = InputBindings.withMap(ImmutableMap.of("x", 2.0d));
+    Expr.ObjectBinding bindings = InputBindings.forMap(ImmutableMap.of("x", 2.0d));
     assertEquals(2.0, evalDouble("x", bindings), 0.0001);
     assertEquals(2.0, evalDouble("\"x\"", bindings), 0.0001);
     assertEquals(304.0, evalDouble("300 + \"x\" * 2", bindings), 0.0001);
@@ -143,7 +144,7 @@ public class EvalTest extends InitializedNullHandlingTest
   @Test
   public void testLongEval()
   {
-    Expr.ObjectBinding bindings = InputBindings.withMap(ImmutableMap.of("x", 9223372036854775807L));
+    Expr.ObjectBinding bindings = InputBindings.forMap(ImmutableMap.of("x", 9223372036854775807L));
 
     assertEquals(9223372036854775807L, evalLong("x", bindings));
     assertEquals(9223372036854775807L, evalLong("\"x\"", bindings));
@@ -411,7 +412,7 @@ public class EvalTest extends InitializedNullHandlingTest
   @Test
   public void testBooleanReturn()
   {
-    Expr.ObjectBinding bindings = InputBindings.withMap(
+    Expr.ObjectBinding bindings = InputBindings.forMap(
         ImmutableMap.of("x", 100L, "y", 100L, "z", 100D, "w", 100D)
     );
 
@@ -470,9 +471,7 @@ public class EvalTest extends InitializedNullHandlingTest
   @Test
   public void testLogicalOperators()
   {
-    Expr.ObjectBinding bindings = InputBindings.withMap(
-        ImmutableMap.of()
-    );
+    Expr.ObjectBinding bindings = InputBindings.nilBindings();
 
     try {
       ExpressionProcessing.initializeForStrictBooleansTests(true);
@@ -624,7 +623,7 @@ public class EvalTest extends InitializedNullHandlingTest
     bindingsMap.put("s2", "false");
     bindingsMap.put("b1", true);
     bindingsMap.put("b2", false);
-    Expr.ObjectBinding bindings = InputBindings.withMap(bindingsMap);
+    Expr.ObjectBinding bindings = InputBindings.forMap(bindingsMap);
 
     try {
       ExpressionProcessing.initializeForStrictBooleansTests(true);
@@ -1052,34 +1051,25 @@ public class EvalTest extends InitializedNullHandlingTest
   public void testBestEffortOf()
   {
     // strings
-    ExprEval eval = ExprEval.bestEffortOf("stringy");
-    Assert.assertEquals(ExpressionType.STRING, eval.type());
-    Assert.assertEquals("stringy", eval.value());
+    assertBestEffortOf("stringy", ExpressionType.STRING, "stringy");
 
     // by default, booleans are handled as strings
-    eval = ExprEval.bestEffortOf(true);
-    Assert.assertEquals(ExpressionType.STRING, eval.type());
-    Assert.assertEquals("true", eval.value());
+    assertBestEffortOf(true, ExpressionType.STRING, "true");
 
-    eval = ExprEval.bestEffortOf(new byte[]{1, 2, 3, 4});
-    Assert.assertEquals(ExpressionType.STRING, eval.type());
-    Assert.assertEquals(StringUtils.encodeBase64String(new byte[]{1, 2, 3, 4}), eval.value());
+    assertBestEffortOf(
+        new byte[]{1, 2, 3, 4},
+        ExpressionType.STRING,
+        StringUtils.encodeBase64String(new byte[]{1, 2, 3, 4})
+    );
 
     // longs
-    eval = ExprEval.bestEffortOf(1L);
-    Assert.assertEquals(ExpressionType.LONG, eval.type());
-    Assert.assertEquals(1L, eval.value());
-
-    eval = ExprEval.bestEffortOf(1);
-    Assert.assertEquals(ExpressionType.LONG, eval.type());
-    Assert.assertEquals(1L, eval.value());
+    assertBestEffortOf(1L, ExpressionType.LONG, 1L);
+    assertBestEffortOf(1, ExpressionType.LONG, 1L);
 
     try {
       // in strict boolean mode, they are longs
       ExpressionProcessing.initializeForStrictBooleansTests(true);
-      eval = ExprEval.ofType(ExpressionType.LONG, true);
-      Assert.assertEquals(ExpressionType.LONG, eval.type());
-      Assert.assertEquals(1L, eval.value());
+      assertBestEffortOf(true, ExpressionType.LONG, 1L);
     }
     finally {
       // reset
@@ -1087,96 +1077,68 @@ public class EvalTest extends InitializedNullHandlingTest
     }
 
     // doubles
-    eval = ExprEval.bestEffortOf(1.0);
-    Assert.assertEquals(ExpressionType.DOUBLE, eval.type());
-    Assert.assertEquals(1.0, eval.value());
-
-    eval = ExprEval.bestEffortOf(1.0f);
-    Assert.assertEquals(ExpressionType.DOUBLE, eval.type());
-    Assert.assertEquals(1.0, eval.value());
+    assertBestEffortOf(1.0, ExpressionType.DOUBLE, 1.0);
+    assertBestEffortOf(1.0f, ExpressionType.DOUBLE, 1.0);
 
     // arrays
-    eval = ExprEval.bestEffortOf(new Object[] {1L, 2L, 3L});
-    Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {1L, 2L, 3L}, (Object[]) eval.value());
+    assertBestEffortOf(new Object[] {1L, 2L, 3L}, ExpressionType.LONG_ARRAY, new Object[] {1L, 2L, 3L});
+    assertBestEffortOf(new Object[] {1L, 2L, null, 3L}, ExpressionType.LONG_ARRAY, new Object[] {1L, 2L, null, 3L});
+    assertBestEffortOf(ImmutableList.of(1L, 2L, 3L), ExpressionType.LONG_ARRAY, new Object[] {1L, 2L, 3L});
+    assertBestEffortOf(new long[] {1L, 2L, 3L}, ExpressionType.LONG_ARRAY, new Object[] {1L, 2L, 3L});
+    assertBestEffortOf(new Object[] {1, 2, 3}, ExpressionType.LONG_ARRAY, new Object[] {1L, 2L, 3L});
+    assertBestEffortOf(new Integer[] {1, 2, 3}, ExpressionType.LONG_ARRAY, new Object[] {1L, 2L, 3L});
+    assertBestEffortOf(new int[] {1, 2, 3}, ExpressionType.LONG_ARRAY, new Object[] {1L, 2L, 3L});
 
-    eval = ExprEval.bestEffortOf(new Object[] {1L, 2L, null, 3L});
-    Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {1L, 2L, null, 3L}, (Object[]) eval.value());
+    assertBestEffortOf(new Object[] {1.0, 2.0, 3.0}, ExpressionType.DOUBLE_ARRAY, new Object[] {1.0, 2.0, 3.0});
+    assertBestEffortOf(
+        new Object[] {null, 1.0, 2.0, 3.0},
+        ExpressionType.DOUBLE_ARRAY,
+        new Object[] {null, 1.0, 2.0, 3.0}
+    );
+    assertBestEffortOf(new Double[] {1.0, 2.0, 3.0}, ExpressionType.DOUBLE_ARRAY, new Object[] {1.0, 2.0, 3.0});
+    assertBestEffortOf(new double[] {1.0, 2.0, 3.0}, ExpressionType.DOUBLE_ARRAY, new Object[] {1.0, 2.0, 3.0});
+    assertBestEffortOf(new Object[] {1.0f, 2.0f, 3.0f}, ExpressionType.DOUBLE_ARRAY, new Object[] {1.0, 2.0, 3.0});
+    assertBestEffortOf(new Float[] {1.0f, 2.0f, 3.0f}, ExpressionType.DOUBLE_ARRAY, new Object[] {1.0, 2.0, 3.0});
+    assertBestEffortOf(new float[] {1.0f, 2.0f, 3.0f}, ExpressionType.DOUBLE_ARRAY, new Object[] {1.0, 2.0, 3.0});
 
-    eval = ExprEval.bestEffortOf(ImmutableList.of(1L, 2L, 3L));
-    Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {1L, 2L, 3L}, (Object[]) eval.value());
-
-    eval = ExprEval.bestEffortOf(new long[] {1L, 2L, 3L});
-    Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {1L, 2L, 3L}, (Object[]) eval.value());
-
-    eval = ExprEval.bestEffortOf(new Object[] {1, 2, 3});
-    Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {1L, 2L, 3L}, (Object[]) eval.value());
-
-    eval = ExprEval.bestEffortOf(new Integer[] {1, 2, 3});
-    Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {1L, 2L, 3L}, (Object[]) eval.value());
-
-    eval = ExprEval.bestEffortOf(new int[] {1, 2, 3});
-    Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {1L, 2L, 3L}, (Object[]) eval.value());
-
-    eval = ExprEval.bestEffortOf(new Object[] {1.0, 2.0, 3.0});
-    Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {1.0, 2.0, 3.0}, (Object[]) eval.value());
-
-    eval = ExprEval.bestEffortOf(new Object[] {null, 1.0, 2.0, 3.0});
-    Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {null, 1.0, 2.0, 3.0}, (Object[]) eval.value());
-
-    eval = ExprEval.bestEffortOf(new Double[] {1.0, 2.0, 3.0});
-    Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {1.0, 2.0, 3.0}, (Object[]) eval.value());
-
-    eval = ExprEval.bestEffortOf(new double[] {1.0, 2.0, 3.0});
-    Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {1.0, 2.0, 3.0}, (Object[]) eval.value());
-
-    eval = ExprEval.bestEffortOf(new Object[] {1.0f, 2.0f, 3.0f});
-    Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {1.0, 2.0, 3.0}, (Object[]) eval.value());
-
-    eval = ExprEval.bestEffortOf(new Float[] {1.0f, 2.0f, 3.0f});
-    Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {1.0, 2.0, 3.0}, (Object[]) eval.value());
-
-    eval = ExprEval.bestEffortOf(new float[] {1.0f, 2.0f, 3.0f});
-    Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {1.0, 2.0, 3.0}, (Object[]) eval.value());
-
-    eval = ExprEval.bestEffortOf(new Object[] {"1", "2", "3"});
-    Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {"1", "2", "3"}, (Object[]) eval.value());
-
-    eval = ExprEval.bestEffortOf(new String[] {"1", "2", "3"});
-    Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {"1", "2", "3"}, (Object[]) eval.value());
-
-    eval = ExprEval.bestEffortOf(ImmutableList.of("1", "2", "3"));
-    Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {"1", "2", "3"}, (Object[]) eval.value());
+    assertBestEffortOf(new Object[] {"1", "2", "3"}, ExpressionType.STRING_ARRAY, new Object[] {"1", "2", "3"});
+    assertBestEffortOf(new String[] {"1", "2", "3"}, ExpressionType.STRING_ARRAY, new Object[] {"1", "2", "3"});
+    assertBestEffortOf(ImmutableList.of("1", "2", "3"), ExpressionType.STRING_ARRAY, new Object[] {"1", "2", "3"});
 
     // arrays end up as the least restrictive type
-    eval = ExprEval.bestEffortOf(new Object[] {1.0, 2L});
-    Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {1.0, 2.0}, (Object[]) eval.value());
+    assertBestEffortOf(new Object[] {1.0, 2L}, ExpressionType.DOUBLE_ARRAY, new Object[] {1.0, 2.0});
 
     // arrays end up as the least restrictive type
-    eval = ExprEval.bestEffortOf(new Object[] {1.0, 2L, "3", true, false});
-    Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {"1.0", "2", "3", "true", "false"}, (Object[]) eval.value());
+    assertBestEffortOf(
+        new Object[] {1.0, 2L, "3", true, false},
+        ExpressionType.STRING_ARRAY,
+        new Object[] {"1.0", "2", "3", "true", "false"}
+    );
 
-    // json type isn't defined in druid-core, what happens if we have some nested data?
-    eval = ExprEval.bestEffortOf(ImmutableMap.of("x", 1L, "y", 2L));
-    Assert.assertEquals(ExpressionType.UNKNOWN_COMPLEX, eval.type());
-    Assert.assertEquals(ImmutableMap.of("x", 1L, "y", 2L), eval.value());
+    // best effort of doesn't know of nested type, what happens if we have some nested data?
+    assertBestEffortOf(
+        ImmutableMap.of("x", 1L, "y", 2L),
+        ExpressionType.UNKNOWN_COMPLEX,
+        ImmutableMap.of("x", 1L, "y", 2L)
+    );
+  }
+
+  private void assertBestEffortOf(@Nullable Object val, ExpressionType expectedType, @Nullable Object expectedValue)
+  {
+    ExprEval eval = ExprEval.bestEffortOf(val);
+    Assert.assertEquals(expectedType, eval.type());
+    if (eval.type().isArray()) {
+      Assert.assertArrayEquals((Object[]) expectedValue, eval.asArray());
+    } else {
+      Assert.assertEquals(expectedValue, eval.value());
+    }
+    // make sure that ofType matches bestEffortOf
+    eval = ExprEval.ofType(eval.type(), val);
+    Assert.assertEquals(expectedType, eval.type());
+    if (eval.type().isArray()) {
+      Assert.assertArrayEquals((Object[]) expectedValue, eval.asArray());
+    } else {
+      Assert.assertEquals(expectedValue, eval.value());
+    }
   }
 }
