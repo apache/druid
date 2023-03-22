@@ -17,14 +17,44 @@ name: Cron Job ITs
 on:
   schedule: # Runs by default on master branch
     - cron: '0 3 * * *' # Runs every day at 3:00 AM UTC
+  pull_request:
+    paths:
+      - 'owasp-dependency-check-suppressions.xml'
+    branches:
+      - master
+      - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
 
 jobs:
+  build:
+    if: github.event_name == 'schedule'
+    name: build (jdk8)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v3
+
+      - name: Setup java
+        run: export JAVA_HOME=$JAVA_HOME_8_X64
+
+      - name: Cache Maven m2 repository
+        id: maven
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-8-${{ github.sha }}
+
+      - name: Maven build
+        id: maven_build
+        run: |
+          ./it.sh ci
+
   integration-index-tests-middleManager:
     strategy:
       fail-fast: false
       matrix:
         testing_group: [batch-index, input-format, input-source, perfect-rollup-parallel-batch-index, kafka-index, kafka-index-slow, kafka-transactional-index, kafka-transactional-index-slow, kafka-data-format, ldap-security, realtime-index, append-ingestion, compaction]
     uses: ./.github/workflows/reusable-standard-its.yml
+    needs: build
     with:
       build_jdk: 8
       runtime_jdk: 11
@@ -38,6 +68,7 @@ jobs:
       matrix:
         testing_group: [ input-source, perfect-rollup-parallel-batch-index, kafka-index, kafka-transactional-index, kafka-index-slow, kafka-transactional-index-slow, kafka-data-format, append-ingestion, compaction ]
     uses: ./.github/workflows/reusable-standard-its.yml
+    needs: build
     with:
       build_jdk: 8
       runtime_jdk: 11
@@ -51,6 +82,7 @@ jobs:
       matrix:
         testing_group: [ query, query-retry, query-error, security, high-availability ]
     uses: ./.github/workflows/reusable-standard-its.yml
+    needs: build
     with:
       build_jdk: 8
       runtime_jdk: 11
@@ -65,6 +97,7 @@ jobs:
       matrix:
         indexer: [ middleManager, indexer ]
     uses: ./.github/workflows/reusable-standard-its.yml
+    needs: build
     with:
       build_jdk: 8
       runtime_jdk: 11
@@ -82,8 +115,16 @@ jobs:
       - name: Checkout branch
         uses: actions/checkout@v3
 
+      - name: setup java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: 'zulu'
+          cache: maven
+
       - name: security vulnerabilities check
         env:
+          MVN: mvn --no-snapshot-updates
           HADOOP_PROFILE: ${{ matrix.HADOOP_PROFILE }}
         run: |
           ${MVN} dependency-check:purge dependency-check:check ${HADOOP_PROFILE} || { echo "
