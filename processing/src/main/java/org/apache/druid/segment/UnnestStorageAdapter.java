@@ -60,6 +60,11 @@ import java.util.Set;
  */
 public class UnnestStorageAdapter implements StorageAdapter
 {
+  public StorageAdapter getBaseAdapter()
+  {
+    return baseAdapter;
+  }
+
   private final StorageAdapter baseAdapter;
   private final VirtualColumn unnestColumn;
   private final String outputColumnName;
@@ -173,6 +178,12 @@ public class UnnestStorageAdapter implements StorageAdapter
   public Iterable<String> getAvailableMetrics()
   {
     return baseAdapter.getAvailableMetrics();
+  }
+
+  @Nullable
+  public Filter getUnnestFilter()
+  {
+    return unnestFilter.toFilter();
   }
 
   @Override
