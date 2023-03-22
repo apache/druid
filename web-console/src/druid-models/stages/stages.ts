@@ -152,7 +152,14 @@ export interface SegmentGenerationProgressCounter {
   rowsProcessed: number;
   rowsPersisted: number;
   rowsMerged: number;
+  rowsPushed: number;
 }
+
+export type SegmentGenerationProgressFields =
+  | 'rowsProcessed'
+  | 'rowsPersisted'
+  | 'rowsMerged'
+  | 'rowsPushed';
 
 export interface WarningCounter {
   type: 'warning';
@@ -165,7 +172,7 @@ export interface SimpleWideCounter {
   [k: `input${number}`]: Record<ChannelFields, number> | undefined;
   output?: Record<ChannelFields, number>;
   shuffle?: Record<ChannelFields, number>;
-  segmentProgress?: number;
+  segmentGenerationProgress?: SegmentGenerationProgressCounter;
 }
 
 function zeroChannelFields(): Record<ChannelFields, number> {
@@ -307,7 +314,7 @@ export class Stages {
       // use the segment generation counter in the special case of a segmentGenerator stage
       return zeroDivide(
         Stages.stageType(stage) === 'segmentGenerator'
-          ? this.getTotalSegmentGenerationProgressForStage(stage)
+          ? this.getTotalSegmentGenerationProgressForStage(stage, 'rowsPushed')
           : sum(input, (inputSource, i) =>
               inputSource.type === 'stage' && !broadcast?.includes(i)
                 ? this.getTotalCounterForStage(stage, `input${i}`, 'rows')
@@ -419,10 +426,13 @@ export class Stages {
     );
   }
 
-  getTotalSegmentGenerationProgressForStage(stage: StageDefinition): number {
+  getTotalSegmentGenerationProgressForStage(
+    stage: StageDefinition,
+    field: SegmentGenerationProgressFields,
+  ): number {
     const { counters } = this;
     if (!counters) return 0;
-    return sum(this.getCountersForStage(stage), c => c.segmentGenerationProgress?.rowsMerged || 0);
+    return sum(this.getCountersForStage(stage), c => c.segmentGenerationProgress?.[field] || 0);
   }
 
   getChannelCounterNamesForStage(stage: StageDefinition): ChannelCounterName[] {
@@ -457,7 +467,7 @@ export class Stages {
             }
           : zeroChannelFields();
       }
-      newWideCounter.segmentProgress = stageCounters.segmentGenerationProgress?.rowsMerged;
+      newWideCounter.segmentGenerationProgress = stageCounters.segmentGenerationProgress;
       return newWideCounter;
     });
   }
