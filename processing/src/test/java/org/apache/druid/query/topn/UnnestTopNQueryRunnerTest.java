@@ -258,8 +258,7 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
                 "mv_to_array(\"placementish\")",
                 ColumnType.STRING_ARRAY,
                 TestExprMacroTable.INSTANCE
-            ),
-            null
+            )
         ))
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
         .dimension(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
@@ -341,8 +340,7 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
                 "array(\"market\",\"quality\")",
                 ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
-            ),
-            null
+            )
         ))
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
         .dimension(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
