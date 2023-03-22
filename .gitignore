@@ -33,3 +33,4 @@ integration-tests/gen-scripts/
 **/.ipython/
 **/.jupyter/
 **/.local/
+**/druidapi.egg-info/
