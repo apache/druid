@@ -25,7 +25,6 @@ import com.google.common.collect.Sets;
 import com.google.inject.Injector;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -74,7 +73,7 @@ public class ExtensionsLoaderTest
     Injector startupInjector = startupInjector();
     ExtensionsLoader extnLoader = ExtensionsLoader.instance(startupInjector);
 
-    Pair<File, Boolean> key = Pair.of(extensionDir, true);
+    String key = extensionDir.getName();
     extnLoader.getLoadersMap()
                   .put(key, new URLClassLoader(new URL[]{}, ExtensionsLoader.class.getClassLoader()));
 
@@ -305,29 +304,5 @@ public class ExtensionsLoaderTest
     Assert.assertEquals(tmpDir3.toURI().toURL(), urLsForClasspath.get(2));
     Assert.assertEquals(Sets.newHashSet(tmpDir2c.toURI().toURL(), tmpDir2d.toURI().toURL(), tmpDir2e.toURI().toURL()),
                         Sets.newHashSet(urLsForClasspath.subList(3, 6)));
-  }
-
-  @Test
-  public void testExtensionsWithSameDirName() throws Exception
-  {
-    final String extensionName = "some_extension";
-    final File tmpDir1 = temporaryFolder.newFolder();
-    final File tmpDir2 = temporaryFolder.newFolder();
-    final File extension1 = new File(tmpDir1, extensionName);
-    final File extension2 = new File(tmpDir2, extensionName);
-    Assert.assertTrue(extension1.mkdir());
-    Assert.assertTrue(extension2.mkdir());
-    final File jar1 = new File(extension1, "jar1.jar");
-    final File jar2 = new File(extension2, "jar2.jar");
-
-    Assert.assertTrue(jar1.createNewFile());
-    Assert.assertTrue(jar2.createNewFile());
-
-    final ExtensionsLoader extnLoader = new ExtensionsLoader(new ExtensionsConfig());
-    final ClassLoader classLoader1 = extnLoader.getClassLoaderForExtension(extension1, false);
-    final ClassLoader classLoader2 = extnLoader.getClassLoaderForExtension(extension2, false);
-
-    Assert.assertArrayEquals(new URL[]{jar1.toURI().toURL()}, ((URLClassLoader) classLoader1).getURLs());
-    Assert.assertArrayEquals(new URL[]{jar2.toURI().toURL()}, ((URLClassLoader) classLoader2).getURLs());
   }
 }
