@@ -92,3 +92,14 @@ SqlNodeList ClusterItems() :
     return new SqlNodeList(list, s.addAll(list).pos());
   }
 }
+
+SqlTypeNameSpec VariantType() :
+{
+}
+{
+  <VARIANT>
+  {
+    return new SqlUserDefinedTypeNameSpec("VARIANT", span().pos());
+  }
+}
+
