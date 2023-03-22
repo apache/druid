@@ -336,7 +336,8 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
         RowSignature.builder().add(
             BASE_UNNEST_OUTPUT_COLUMN,
             Calcites.getColumnTypeForRelDataType(unnestedType)
-        ).build()
+        ).build(),
+        DruidJoinQueryRel.findExistingJoinPrefixes(leftQuery.getDataSource())
     ).rhs;
   }
 
