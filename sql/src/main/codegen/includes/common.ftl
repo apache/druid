@@ -95,11 +95,15 @@ SqlNodeList ClusterItems() :
 
 SqlTypeNameSpec VariantType() :
 {
+  String typeName;
 }
 {
-  <VARIANT>
+  <TYPE> <LPAREN> <QUOTED_STRING>
   {
-    return new SqlUserDefinedTypeNameSpec("VARIANT", span().pos());
+    typeName = SqlParserUtil.trim(token.image, "'");
+  }
+  <RPAREN>
+  {
+    return new SqlUserDefinedTypeNameSpec(typeName, span().pos());
   }
 }
-

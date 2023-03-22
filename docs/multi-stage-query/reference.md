@@ -402,11 +402,12 @@ FROM TABLE(
   ) (x VARCHAR, y VARCHAR)
 ```
 
-The JSON function allows columns to be of type `VARIANT` which indicates that the column contains
+The JSON function allows columns to be of type `TYPE('COMPLEX<json>')` which indicates that the column contains
 some form of complex JSON: a JSON object, a JSON array, or an array of JSON objects or arrays.
-The SQL `VARIANT` type corresponds to the native Druid type `complex<json>`. However, the actual
+Note that the case must exactly match that given: upper case `COMPLEX`, lower case `json`.
+The SQL type simply names a native Druid type. However, the actual
 segment column produced may be of some other type if Druid infers that it can use a simpler type
-instead. This is why the column type can "vary" and is thus called `VARIANT`.
+instead.
 
 ### Parameters
 

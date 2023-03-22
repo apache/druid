@@ -231,7 +231,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
             "                 password => 'secret',\n" +
              "                uris => ARRAY['http://foo.com/bar.json'],\n" +
              "                format => 'csv'))\n" +
-             "     EXTEND (x VARCHAR, y VARCHAR, z VARIANT)\n" +
+             "     EXTEND (x VARCHAR, y VARCHAR, z TYPE('COMPLEX<json>'))\n" +
              "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", httpDataSource.getSignature())
