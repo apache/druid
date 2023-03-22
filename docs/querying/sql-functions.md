@@ -521,9 +521,9 @@ Computes approximate sums of the values contained within a Tuple sketch which co
 
 `DS_TUPLE_DOUBLES_NOT(expr, ..., [nominalEntries])`
 
-Returns a set difference of Tuple sketches which each contain an array of double values as their Summary Objects. The values contained in the Summary Object are preserved as-is. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).
-
 **Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
+
+Returns a set difference of Tuple sketches which each contain an array of double values as their Summary Objects. The values contained in the Summary Object are preserved as is. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).
 
 ## DS_TUPLE_DOUBLES_UNION
 
