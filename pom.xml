@@ -229,6 +229,20 @@
                <enabled>false</enabled>
             </snapshots>
         </repository>
+        <repository>
+          <!--
+           Placed here to override the search order.
+          -->
+          <id>central</id>
+          <name>Maven Repository</name>
+          <url>https://repo.maven.apache.org/maven2</url>
+          <releases>
+            <enabled>true</enabled>
+          </releases>
+          <snapshots>
+            <enabled>false</enabled>
+          </snapshots>
+        </repository>
 
         <!-- Only used by core, but moved to root for parallel build dependency resolution -->
         <repository>
