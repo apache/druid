@@ -45,8 +45,7 @@ public class DurableStorageUtils
         stageNumber,
         workerNumber
     );
-    String fileName = StringUtils.format("%s/%s", folderName, SUCCESS_MARKER_FILENAME);
-    return fileName;
+    return StringUtils.format("%s/%s", folderName, SUCCESS_MARKER_FILENAME);
   }
 
   /**
@@ -120,5 +119,15 @@ public class DurableStorageUtils
         getTaskIdOutputsFolderName(controllerTaskId, stageNumber, workerNumber, taskId),
         path
     );
+  }
+
+  /**
+   * Tries to parse out the controller taskID from the input path.
+   * <br></br>
+   * For eg:  for input path <b>controller_query_id/task/123</b> <br/>the function will return <b>controller_query_id</b>
+   */
+  public static String getControllerTaskIdWithPrefixFromPath(String path)
+  {
+    return path.split("/", 1)[0];
   }
 }
