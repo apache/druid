@@ -57,7 +57,7 @@ import java.util.stream.Collectors;
  * Extensions reside in a directory. The name of the directory is the extension
  * name. No two extensions can have the same name. This is not actually a restriction
  * as extensions reside in {@code $DRUID_HOME/extensions}, so each extension must
- * be in its own extension. The extension name is the same as that used in the
+ * be in its own directory. The extension name is the same as that used in the
  * Druid extension load list.
  */
 @LazySingleton
@@ -66,7 +66,11 @@ public class ExtensionsLoader
   private static final Logger log = new Logger(ExtensionsLoader.class);
 
   private final ExtensionsConfig extensionsConfig;
-  private final ConcurrentHashMap<String, URLClassLoader> loaders = new ConcurrentHashMap<>();
+  
+  // Map of extension directories to class loaders. Extensions
+  // on the class path, but not in an extension folder, use the
+  // application class loader.
+  private final ConcurrentHashMap<File, URLClassLoader> loaders = new ConcurrentHashMap<>();
 
   /**
    * Map of loaded extensions, keyed by class (or interface).
@@ -114,7 +118,7 @@ public class ExtensionsLoader
   }
 
   @VisibleForTesting
-  public Map<String, URLClassLoader> getLoadersMap()
+  public Map<File, URLClassLoader> getLoadersMap()
   {
     return loaders;
   }
@@ -208,7 +212,7 @@ public class ExtensionsLoader
   public URLClassLoader getClassLoaderForExtension(File extension, boolean useExtensionClassloaderFirst)
   {
     return loaders.computeIfAbsent(
-        extension.getName(),
+        extension,
         k -> makeClassLoaderForExtension(extension, useExtensionClassloaderFirst)
     );
   }

@@ -73,9 +73,8 @@ public class ExtensionsLoaderTest
     Injector startupInjector = startupInjector();
     ExtensionsLoader extnLoader = ExtensionsLoader.instance(startupInjector);
 
-    String key = extensionDir.getName();
     extnLoader.getLoadersMap()
-                  .put(key, new URLClassLoader(new URL[]{}, ExtensionsLoader.class.getClassLoader()));
+                  .put(extensionDir, new URLClassLoader(new URL[]{}, ExtensionsLoader.class.getClassLoader()));
 
     Collection<DruidModule> modules = extnLoader.getFromExtensions(DruidModule.class);
 
