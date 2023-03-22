@@ -47,7 +47,6 @@ import org.junit.Test;
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -231,7 +230,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testExplainHttpFn() throws SQLException
+  public void testExplainHttpFn()
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
@@ -272,7 +271,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testExplainHttpFnUnauthorized() throws SQLException
+  public void testExplainHttpFnUnauthorized()
   {
     final String query =
         "EXPLAIN PLAN FOR\n" +
