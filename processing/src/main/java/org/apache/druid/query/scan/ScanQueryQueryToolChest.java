@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.IterableRowsCursor;
 import org.apache.druid.query.Query;
@@ -198,7 +199,10 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   }
 
   @Override
-  public Sequence<Frame> resultsAsFrames(final ScanQuery query, final Sequence<ScanResultValue> resultSequence)
+  public Sequence<FrameSignaturePair> resultsAsFrames(
+      final ScanQuery query,
+      final Sequence<ScanResultValue> resultSequence
+  )
   {
     return resultSequence.map(
         result -> {
@@ -228,7 +232,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
             frame = Frame.wrap(frameWriter.toByteArray());
           }
 
-          return frame;
+          return new FrameSignaturePair(frame, result.getRowSignature());
         }
     );
   }
