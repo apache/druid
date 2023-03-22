@@ -156,6 +156,16 @@ usable in a Protobuf response object. Internally Druid converts all `float` valu
 An attempt to use `float` will lead to a runtime error when processing the query.
 Use the `double` type instead.
 
+## Security
+
+The extension supports both "anonymous" and basic authorization. Anonymous is the mode
+for an out-of-the-box Druid: not authorization needed. The extension does not yet support
+other security extensions: each needs its own specific integration.
+
+Clients that use basic authentication must include a set of credentials. See
+`BasicCredentials` for a typical implementation and `BasicAuthTest` for how to
+configure the credentials in the client.
+
 ## Implementation Notes
 
 The extension is made up of three projects. Druid uses a different version of Guava than
