@@ -34,8 +34,11 @@ import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.log.StartupLoggingConfig;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -44,13 +47,18 @@ import java.util.Map;
 
 public class MultiContainerTaskAdapter extends K8sTaskAdapter
 {
+  public static String TYPE = "MultiContainer";
+
   public MultiContainerTaskAdapter(
       KubernetesClientApi client,
-      KubernetesTaskRunnerConfig config,
+      KubernetesTaskRunnerConfig taskRunnerConfig,
+      TaskConfig taskConfig,
+      StartupLoggingConfig startupLoggingConfig,
+      DruidNode druidNode,
       ObjectMapper mapper
   )
   {
-    super(client, config, mapper);
+    super(client, taskRunnerConfig, taskConfig, startupLoggingConfig, druidNode, mapper);
   }
 
   @Override
@@ -87,7 +95,7 @@ public class MultiContainerTaskAdapter extends K8sTaskAdapter
   {
     return new ContainerBuilder()
         .withName("kubexit")
-        .withImage(config.kubexitImage)
+        .withImage(taskRunnerConfig.kubexitImage)
         .withCommand("cp", "/bin/kubexit", "/kubexit/kubexit")
         .withVolumeMounts(new VolumeMountBuilder().withMountPath("/kubexit").withName("kubexit").build())
         .build();
