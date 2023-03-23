@@ -164,7 +164,8 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
                       "mv_to_array(placementish)",
                       ColumnType.STRING,
                       TestExprMacroTable.INSTANCE
-                  )
+                  ),
+                  null
               ))
               .columns(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
               .eternityInterval()
@@ -233,7 +234,8 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
                       "array(\"market\",\"quality\")",
                       ColumnType.STRING,
                       TestExprMacroTable.INSTANCE
-                  )
+                  ),
+                  null
               ))
               .columns(QueryRunnerTestHelper.MARKET_DIMENSION, QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
               .eternityInterval()
