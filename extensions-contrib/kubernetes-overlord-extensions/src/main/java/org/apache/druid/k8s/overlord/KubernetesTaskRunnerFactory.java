@@ -86,20 +86,31 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
 
     K8sTaskAdapter adapter;
     if (kubernetesTaskRunnerConfig.sidecarSupport) {
-      adapter = new MultiContainerTaskAdapter(client, kubernetesTaskRunnerConfig, smileMapper);
+      adapter = new MultiContainerTaskAdapter(
+          client,
+          kubernetesTaskRunnerConfig,
+          taskConfig,
+          startupLoggingConfig,
+          druidNode,
+          smileMapper
+      );
     } else {
-      adapter = new SingleContainerTaskAdapter(client, kubernetesTaskRunnerConfig, smileMapper);
+      adapter = new SingleContainerTaskAdapter(
+          client,
+          kubernetesTaskRunnerConfig,
+          taskConfig,
+          startupLoggingConfig,
+          druidNode,
+          smileMapper
+      );
     }
 
     runner = new KubernetesTaskRunner(
-        startupLoggingConfig,
         adapter,
         kubernetesTaskRunnerConfig,
         taskQueueConfig,
         taskLogPusher,
-        new DruidKubernetesPeonClient(client, kubernetesTaskRunnerConfig.namespace, kubernetesTaskRunnerConfig.debugJobs),
-        druidNode,
-        taskConfig
+        new DruidKubernetesPeonClient(client, kubernetesTaskRunnerConfig.namespace, kubernetesTaskRunnerConfig.debugJobs)
     );
     return runner;
   }

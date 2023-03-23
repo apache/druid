@@ -17,19 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.common;
+package org.apache.druid.msq.counters;
 
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.batch.v1.Job;
-import org.apache.druid.indexing.common.task.Task;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Test;
 
-import java.io.IOException;
-
-public interface TaskAdapter
+public class SegmentGenerationProgressCounterTest
 {
-
-  Job fromTask(Task task) throws IOException;
-
-  Task toTask(Pod from) throws IOException;
-
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(SegmentGenerationProgressCounter.Snapshot.class)
+                  .usingGetClass()
+                  .withNonnullFields("rowsProcessed", "rowsPersisted", "rowsMerged", "rowsPushed")
+                  .verify();
+  }
 }
