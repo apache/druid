@@ -50,6 +50,7 @@ import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.JobResponse;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
+import org.apache.druid.k8s.overlord.common.KubernetesResourceNotFoundException;
 import org.apache.druid.k8s.overlord.common.PeonPhase;
 import org.apache.druid.k8s.overlord.common.TaskAdapter;
 import org.apache.druid.tasklogs.TaskLogPusher;
@@ -468,6 +469,9 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
             DruidK8sConstants.TLS_PORT,
             tlsEnabled
         );
+      }
+      catch (KubernetesResourceNotFoundException e) {
+        return TaskLocation.unknown();
       }
       catch (Exception e) {
         log.error(e, "Error getting task location for task %s", taskId);
