@@ -402,6 +402,13 @@ FROM TABLE(
   ) (x VARCHAR, y VARCHAR)
 ```
 
+The JSON function allows columns to be of type `TYPE('COMPLEX<json>')` which indicates that the column contains
+some form of complex JSON: a JSON object, a JSON array, or an array of JSON objects or arrays.
+Note that the case must exactly match that given: upper case `COMPLEX`, lower case `json`.
+The SQL type simply names a native Druid type. However, the actual
+segment column produced may be of some other type if Druid infers that it can use a simpler type
+instead.
+
 ### Parameters
 
 Starting with the Druid 26.0 release, you can use query parameters with MSQ queries. You may find
@@ -598,12 +605,8 @@ The following table lists the context parameters for the MSQ task engine:
 | `maxParseExceptions`| SELECT, INSERT, REPLACE<br /><br />Maximum number of parse exceptions that are ignored while executing the query before it stops with `TooManyWarningsFault`. To ignore all the parse exceptions, set the value to -1.| 0 |
 | `rowsPerSegment` | INSERT or REPLACE<br /><br />The number of rows per segment to target. The actual number of rows per segment may be somewhat higher or lower than this number. In most cases, use the default. For general information about sizing rows per segment, see [Segment Size Optimization](../operations/segment-optimization.md). | 3,000,000 |
 | `indexSpec` | INSERT or REPLACE<br /><br />An [`indexSpec`](../ingestion/ingestion-spec.md#indexspec) to use when generating segments. May be a JSON string or object. See [Front coding](../ingestion/ingestion-spec.md#front-coding) for details on configuring an `indexSpec` with front coding. | See [`indexSpec`](../ingestion/ingestion-spec.md#indexspec). |
-| `clusterStatisticsMergeMode` | Whether to use parallel or sequential mode for merging of the worker sketches. Can be `PARALLEL`, `SEQUENTIAL` or `AUTO`. See [Sketch Merging Mode](#sketch-merging-mode) for more information. | `PARALLEL` |
 | `durableShuffleStorage` | SELECT, INSERT, REPLACE <br /><br />Whether to use durable storage for shuffle mesh. To use this feature, configure the durable storage at the server level using `druid.msq.intermediate.storage.enable=true`). If these properties are not configured, any query with the context variable `durableShuffleStorage=true` fails with a configuration error. <br /><br /> | `false` |
 | `faultTolerance` | SELECT, INSERT, REPLACE<br /><br /> Whether to turn on fault tolerance mode or not. Failed workers are retried based on [Limits](#limits). Cannot be used when `durableShuffleStorage` is explicitly set to false.  | `false` |
-| `composedIntermediateSuperSorterStorageEnabled` | SELECT, INSERT, REPLACE<br /><br /> Whether to enable automatic fallback to durable storage from local storage for sorting's intermediate data. Requires to setup `intermediateSuperSorterStorageMaxLocalBytes` limit for local storage and durable shuffle storage feature as well.| `false` |
-| `intermediateSuperSorterStorageMaxLocalBytes` | SELECT, INSERT, REPLACE<br /><br /> Whether to enable a byte limit on local storage for sorting's intermediate data. If that limit is crossed, the task fails with `ResourceLimitExceededException`.| `9223372036854775807` |
-| `maxInputBytesPerWorker` | Should be used in conjunction with taskAssignment `auto` mode. When dividing the input of a stage among the workers, this parameter determines the maximum size in bytes that are given to a single worker before the next worker is chosen. This parameter is only used as a guideline during input slicing, and does not guarantee that a the input cannot be larger. For example, we have 3 files. 3, 7, 12 GB each. then we would end up using 2 worker: worker 1 -> 3, 7 and worker 2 -> 12. This value is used for all stages in a query. | `10737418240` |
 
 ## Joins
 
@@ -690,26 +693,6 @@ LEFT JOIN users ON eventstream.user_id = users.id
 PARTITIONED BY HOUR
 CLUSTERED BY user
 ```
-
-## Sketch Merging Mode
-This section details the advantages and performance of various Cluster By Statistics Merge Modes.
-
-If a query requires key statistics to generate partition boundaries, key statistics are gathered by the workers while
-reading rows from the datasource. These statistics must be transferred to the controller to be merged together.
-`clusterStatisticsMergeMode` configures the way in which this happens.
-
-`PARALLEL` mode fetches the key statistics for all time chunks from all workers together and the controller then downsamples
-the sketch if it does not fit in memory. This is faster than `SEQUENTIAL` mode as there is less over head in fetching sketches
-for all time chunks together. This is good for small sketches which won't be down sampled even if merged together or if
-accuracy in segment sizing for the ingestion is not very important.
-
-`SEQUENTIAL` mode fetches the sketches in ascending order of time and generates the partition boundaries for one time
-chunk at a time. This gives more working memory to the controller for merging sketches, which results in less
-down sampling and thus, more accuracy. There is, however, a time overhead on fetching sketches in sequential order. This is
-good for cases where accuracy is important.
-
-`AUTO` mode tries to find the best approach based on number of workers. If there are more
-than 100 workers, `SEQUENTIAL` is chosen, otherwise, `PARALLEL` is chosen.
 
 ## Durable Storage
 

@@ -14,9 +14,9 @@
 # limitations under the License.
 
 import time, requests
-from . import consts
-from .util import dict_get, split_table_name
-from .error import DruidError, ClientError
+from druidapi import consts
+from druidapi.util import dict_get, split_table_name
+from druidapi.error import DruidError, ClientError
 
 REQ_SQL = consts.ROUTER_BASE + '/sql'
 REQ_SQL_TASK = REQ_SQL + '/task'
@@ -50,7 +50,7 @@ class SqlRequest:
         else:
             self.context.update(context)
         return self
-    
+
     def add_context(self, key, value):
         return self.with_context({key: value})
 
@@ -93,7 +93,7 @@ class SqlRequest:
     def request_headers(self, headers):
         self.headers = headers
         return self
-    
+
     def to_common_format(self):
         self.header = False
         self.sql_types = False
@@ -122,7 +122,7 @@ class SqlRequest:
 
     def run(self):
         return self.query_client.sql_query(self)
-    
+
 def request_from_sql_query(query_client, sql_query):
     try:
         req = SqlRequest(query_client, sql_query['query'])
@@ -273,7 +273,7 @@ class SqlQueryResult:
     @property
     def _druid(self):
         return self.request.query_client.druid_client
-    
+
     @property
     def result_format(self):
         return self.request.result_format()
@@ -384,7 +384,7 @@ class SqlQueryResult:
 
     def _display(self, display):
         return self._druid.display if not display else display
-    
+
     def show(self, non_null=False, display=None):
         display = self._display(display)
         if not self.ok:
@@ -469,7 +469,7 @@ class QueryTaskResult:
 
     def _druid(self):
         return self._request.query_client.druid_client
-    
+
     def _tasks(self):
         return self._druid().tasks
 
@@ -613,7 +613,7 @@ class QueryTaskResult:
 
     def _display(self, display):
         return self._druid().display if not display else display
-    
+
     def show(self, non_null=False, display=None):
         display = self._display(display)
         if not self.done:
@@ -629,7 +629,7 @@ class QueryTaskResult:
             display.alert('Query returned no {}rows'.format("visible " if non_null else ''))
             return
         display.data_table(data, [c.name for c in self.schema])
- 
+
 class QueryClient:
 
     def __init__(self, druid, rest_client=None):
@@ -806,7 +806,7 @@ class QueryClient:
         '''
         Returns the schema of a table as an array of dictionaries of the
         form {"Position": "<n>", "Name": "<name>", "Type": "<type>"}
- 
+
         Parameters
         ----------
         table_name: str

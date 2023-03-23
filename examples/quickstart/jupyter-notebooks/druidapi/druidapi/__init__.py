@@ -13,14 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .druid import DruidClient
+from druidapi.druid import DruidClient
 
 def jupyter_client(endpoint) -> DruidClient:
     '''
     Create a Druid client configured to display results as HTML withing a Jupyter notebook.
     Waits for the cluster to become ready to avoid intermitent problems when using Druid.
     '''
-    from .html import HtmlDisplayClient
+    from druidapi.html_display import HtmlDisplayClient
     druid = DruidClient(endpoint, HtmlDisplayClient())
     druid.status.wait_until_ready()
     return druid
@@ -33,3 +33,4 @@ def client(endpoint) -> DruidClient:
     that the cluster has not yet fully started.
     '''
     return DruidClient(endpoint)
+

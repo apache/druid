@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
 import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.util.SequenceUtils;
@@ -74,7 +75,7 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
   private final SegmentIdWithShardSpec segmentIdWithShardSpec;
   private final List<String> dimensionsForInputRows;
   private final Object2IntMap<String> outputColumnNameToFrameColumnNumberMap;
-
+  private final SegmentGenerationProgressCounter segmentGenerationProgressCounter;
   private boolean firstRun = true;
   private long rowsWritten = 0L;
 
@@ -83,7 +84,8 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
       final ColumnMappings columnMappings,
       final List<String> dimensionsForInputRows,
       final Appenderator appenderator,
-      final SegmentIdWithShardSpec segmentIdWithShardSpec
+      final SegmentIdWithShardSpec segmentIdWithShardSpec,
+      final SegmentGenerationProgressCounter segmentGenerationProgressCounter
   )
   {
     this.inChannel = readableInput.getChannel();
@@ -91,6 +93,7 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
     this.appenderator = appenderator;
     this.segmentIdWithShardSpec = segmentIdWithShardSpec;
     this.dimensionsForInputRows = dimensionsForInputRows;
+    this.segmentGenerationProgressCounter = segmentGenerationProgressCounter;
 
     outputColumnNameToFrameColumnNumberMap = new Object2IntOpenHashMap<>();
     outputColumnNameToFrameColumnNumberMap.defaultReturnValue(-1);
@@ -203,6 +206,7 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
             try {
               rowsWritten++;
               appenderator.add(segmentIdWithShardSpec, inputRow, null);
+              segmentGenerationProgressCounter.incrementRowsProcessed(1);
             }
             catch (Exception e) {
               throw new RuntimeException(e);

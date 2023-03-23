@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from . import consts
+from druidapi import consts
 
 class DisplayClient:
     '''
@@ -41,7 +41,7 @@ class DisplayClient:
 
     def new_table(self):
         raise NotImplementedError()
-    
+
     def show_table(self, table):
         raise NotImplementedError()
 
@@ -114,7 +114,7 @@ class DisplayClient:
     def table(self, table_name):
         '''
         Describe a table by returning the list of columns in the table.
- 
+
         Parameters
         ----------
         table_name str
@@ -122,7 +122,7 @@ class DisplayClient:
             If the form is "table", then the 'druid' schema is assumed.
         '''
         self._druid.sql._schema_query(table_name).show(display=self)
- 
+
     def function(self,  table_name):
         '''
         Retrieve the list of parameters for a partial external table defined in

@@ -30,7 +30,6 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.List;
 
 /**
@@ -50,9 +49,6 @@ import java.util.List;
  * unnestCursor.advance() -> 'e'
  * <p>
  * <p>
- * The allowSet if available helps skip over elements which are not in the allowList by moving the cursor to
- * the next available match.
- * <p>
  * The index reference points to the index of each row that the unnest cursor is accessing through currentVal
  * The index ranges from 0 to the size of the list in each row which is held in the unnestListForCurrentRow
  * <p>
@@ -65,18 +61,17 @@ public class UnnestColumnValueSelectorCursor implements Cursor
   private final ColumnValueSelector columnValueSelector;
   private final VirtualColumn unnestColumn;
   private final String outputName;
-  private final LinkedHashSet<String> allowSet;
   private int index;
   private Object currentVal;
   private List<Object> unnestListForCurrentRow;
   private boolean needInitialization;
 
+
   public UnnestColumnValueSelectorCursor(
       Cursor cursor,
       ColumnSelectorFactory baseColumnSelectorFactory,
       VirtualColumn unnestColumn,
-      String outputColumnName,
-      LinkedHashSet<String> allowSet
+      String outputColumnName
   )
   {
     this.baseCursor = cursor;
@@ -89,7 +84,6 @@ public class UnnestColumnValueSelectorCursor implements Cursor
     this.index = 0;
     this.outputName = outputColumnName;
     this.needInitialization = true;
-    this.allowSet = allowSet;
   }
 
   @Override
@@ -194,11 +188,7 @@ public class UnnestColumnValueSelectorCursor implements Cursor
           public Object getObject()
           {
             if (!unnestListForCurrentRow.isEmpty()) {
-              if (allowSet == null || allowSet.isEmpty()) {
-                return unnestListForCurrentRow.get(index);
-              } else if (allowSet.contains((String) unnestListForCurrentRow.get(index))) {
-                return unnestListForCurrentRow.get(index);
-              }
+              return unnestListForCurrentRow.get(index);
             }
             return null;
           }
@@ -253,9 +243,7 @@ public class UnnestColumnValueSelectorCursor implements Cursor
   @Override
   public void advanceUninterruptibly()
   {
-    do {
-      advanceAndUpdate();
-    } while (matchAndProceed());
+    advanceAndUpdate();
   }
 
   @Override
@@ -304,19 +292,10 @@ public class UnnestColumnValueSelectorCursor implements Cursor
   /**
    * This initializes the unnest cursor and creates data structures
    * to start iterating over the values to be unnested.
-   * This would also create a bitset for dictonary encoded columns to
-   * check for matching values specified in allowedList of UnnestDataSource.
    */
   private void initialize()
   {
     getNextRow();
-    if (allowSet != null) {
-      if (!allowSet.isEmpty()) {
-        if (!allowSet.contains((String) unnestListForCurrentRow.get(index))) {
-          advance();
-        }
-      }
-    }
     needInitialization = false;
   }
 
@@ -337,23 +316,5 @@ public class UnnestColumnValueSelectorCursor implements Cursor
     } else {
       index++;
     }
-  }
-
-  /**
-   * This advances the unnest cursor in cases where an allowList is specified
-   * and the current value at the unnest cursor is not in the allowList.
-   * The cursor in such cases is moved till the next match is found.
-   *
-   * @return a boolean to indicate whether to stay or move cursor
-   */
-  private boolean matchAndProceed()
-  {
-    boolean matchStatus;
-    if (allowSet == null || allowSet.isEmpty()) {
-      matchStatus = true;
-    } else {
-      matchStatus = allowSet.contains((String) unnestListForCurrentRow.get(index));
-    }
-    return !baseCursor.isDone() && !matchStatus;
   }
 }
