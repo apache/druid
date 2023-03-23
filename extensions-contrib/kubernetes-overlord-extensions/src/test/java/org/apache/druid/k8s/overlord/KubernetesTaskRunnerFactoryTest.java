@@ -197,7 +197,7 @@ public class KubernetesTaskRunnerFactoryTest
     );
 
     Assert.assertThrows(
-        "Only kubernetes pod adapter [overlordMultiContainer] can be specified when sidecarSupport is enabled",
+        "Invalid pod adapter [overlordSingleContainer], only pod adapter [overlordMultiContainer] can be specified when sidecarSupport is enabled",
         IAE.class,
         factory::build
     );

@@ -120,7 +120,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
 
     if (adapter != null && !MultiContainerTaskAdapter.TYPE.equals(adapter) && kubernetesTaskRunnerConfig.sidecarSupport) {
       throw new IAE(
-          "Only kubernetes pod adapter [%s] can be specified when sidecarSupport is enabled",
+          "Invalid pod adapter [%s], only pod adapter [%s] can be specified when sidecarSupport is enabled",
+          adapter,
           MultiContainerTaskAdapter.TYPE
       );
     }
