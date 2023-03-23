@@ -44,6 +44,14 @@ public class DataSourcesSnapshot
 {
   public static DataSourcesSnapshot fromUsedSegments(
       Iterable<DataSegment> segments,
+      ImmutableMap<String, String> dataSourceProperties
+  )
+  {
+    return fromUsedSegments(segments, dataSourceProperties, ImmutableMap.of());
+  }
+
+  public static DataSourcesSnapshot fromUsedSegments(
+      Iterable<DataSegment> segments,
       ImmutableMap<String, String> dataSourceProperties,
       Map<String, Map<SegmentId, Boolean>> handedOffState
   )
@@ -79,6 +87,12 @@ public class DataSourcesSnapshot
   private final ImmutableSet<DataSegment> overshadowedSegments;
 
   private final Map<String, Map<SegmentId, Boolean>> handedOffStatePerDataSource;
+
+  public DataSourcesSnapshot(
+      Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments
+  ) {
+    this(dataSourcesWithAllUsedSegments, ImmutableMap.of());
+  }
 
   public DataSourcesSnapshot(
       Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments,

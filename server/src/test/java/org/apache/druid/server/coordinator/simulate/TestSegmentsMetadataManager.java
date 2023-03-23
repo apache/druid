@@ -154,7 +154,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public DataSourcesSnapshot getSnapshotOfDataSourcesWithAllUsedSegments()
   {
-    return DataSourcesSnapshot.fromUsedSegments(usedSegments.values(), ImmutableMap.of(), ImmutableMap.of());
+    return DataSourcesSnapshot.fromUsedSegments(usedSegments.values(), ImmutableMap.of());
   }
 
   @Override

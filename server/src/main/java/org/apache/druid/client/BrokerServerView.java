@@ -282,12 +282,14 @@ public class BrokerServerView implements TimelineServerView
   }
 
   private void polledSegmentsFromCoordinator(final ImmutableSortedSet<SegmentWithOvershadowedStatus> segmentWithOvershadowedStatusSet) {
-    log.info("Polled segments from coordinator " + segmentWithOvershadowedStatusSet.size());
-    segmentWithOvershadowedStatusSet.iterator().forEachRemaining(v -> log.info(v.toString()));
-
+    // filter out handed off segments
+    // group by data source
     Map<String, Map<SegmentId, SegmentWithOvershadowedStatus>> polledSegmentsPerDataSource =
         CollectionUtils.mapValues(
-            segmentWithOvershadowedStatusSet.stream().collect(Collectors.groupingBy(segment -> segment.getDataSegment().getDataSource(), toSet())),
+            segmentWithOvershadowedStatusSet
+                .stream()
+                .filter(SegmentWithOvershadowedStatus::isHandedOff)
+                .collect(Collectors.groupingBy(segment -> segment.getDataSegment().getDataSource(), toSet())),
             segmentSet -> segmentSet.stream().collect(
                 Collectors.toMap(
                     segmentWithOvershadowedStatus -> segmentWithOvershadowedStatus.getDataSegment().getId(),
@@ -322,7 +324,8 @@ public class BrokerServerView implements TimelineServerView
         for (Map.Entry<SegmentId, SegmentWithOvershadowedStatus> segmentWithOvershadowedStatusEntry : entry.getValue().entrySet()) {
           if (!segmentIdPartitionChunkEntryMap.containsKey(segmentWithOvershadowedStatusEntry.getKey())) {
             addSegmentToTimeline(segmentWithOvershadowedStatusEntry.getValue().getDataSegment());
-            // runTimelineCallbacks(callback -> callback.segmentAdded(server, segment)); required?
+            // required ?
+            // runTimelineCallbacks(callback -> callback.segmentAdded(server, segment));
           }
         }
       }

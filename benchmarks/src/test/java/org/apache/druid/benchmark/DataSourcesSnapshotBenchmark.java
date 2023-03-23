@@ -95,7 +95,7 @@ public class DataSourcesSnapshotBenchmark
       dataSources.put(dataSource, new ImmutableDruidDataSource(dataSource, Collections.emptyMap(), segments));
     }
 
-    snapshot = new DataSourcesSnapshot(dataSources, ImmutableMap.of());
+    snapshot = new DataSourcesSnapshot(dataSources);
 
     System.out.println("Setup Time " + (System.currentTimeMillis() - start) + " ms");
   }
