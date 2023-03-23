@@ -161,6 +161,24 @@ public class SqlSegmentsMetadataQuery
     );
   }
 
+  public int markSegmentAsOnceLoaded(final SegmentId segmentId) {
+    final String dataSource = segmentId.getDataSource();
+
+    final PreparedBatch batch =
+        handle.prepareBatch(
+            StringUtils.format(
+                "UPDATE %s SET everMetadatloaded = true WHERE datasource = ? AND id = ?",
+                dbTables.getSegmentsTable()
+            )
+        );
+
+    batch.add(dataSource, segmentId.toString());
+
+    final int[] segmentChanges = batch.execute();
+
+    return segmentChanges.length;
+  }
+
   /**
    * Marks all segments for a datasource unused that are *fully contained by* a particular interval.
    *

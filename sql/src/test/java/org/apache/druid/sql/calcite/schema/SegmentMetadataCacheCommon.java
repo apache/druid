@@ -33,7 +33,7 @@ import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
-import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
+import org.apache.druid.client.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.easymock.EasyMock;

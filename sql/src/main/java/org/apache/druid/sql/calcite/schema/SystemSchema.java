@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite.schema;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -31,7 +30,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
-import com.google.common.util.concurrent.Futures;
 import com.google.inject.Inject;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.linq4j.DefaultEnumerable;
@@ -48,6 +46,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.JsonParserIterator;
+import org.apache.druid.client.MetadataSegmentView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
@@ -61,12 +60,8 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
-import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.DruidNode;
@@ -83,10 +78,8 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
-import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -900,7 +893,7 @@ public class SystemSchema extends AbstractSchema
       ObjectMapper jsonMapper
   )
   {
-    return getThingsFromLeaderNode(
+    return MetadataSegmentView.getThingsFromLeaderNode(
         "/druid/indexer/v1/tasks",
         new TypeReference<TaskStatusPlus>()
         {
@@ -1042,56 +1035,12 @@ public class SystemSchema extends AbstractSchema
       ObjectMapper jsonMapper
   )
   {
-    return getThingsFromLeaderNode(
+    return MetadataSegmentView.getThingsFromLeaderNode(
         "/druid/indexer/v1/supervisor?system",
         new TypeReference<SupervisorStatus>()
         {
         },
         indexingServiceClient,
-        jsonMapper
-    );
-  }
-
-  public static <T> JsonParserIterator<T> getThingsFromLeaderNode(
-      String query,
-      TypeReference<T> typeRef,
-      DruidLeaderClient leaderClient,
-      ObjectMapper jsonMapper
-  )
-  {
-    Request request;
-    InputStreamFullResponseHolder responseHolder;
-    try {
-      request = leaderClient.makeRequest(
-          HttpMethod.GET,
-          query
-      );
-
-      responseHolder = leaderClient.go(
-          request,
-          new InputStreamFullResponseHandler()
-      );
-
-      if (responseHolder.getStatus().getCode() != HttpServletResponse.SC_OK) {
-        throw new RE(
-            "Failed to talk to leader node at [%s]. Error code [%d], description [%s].",
-            query,
-            responseHolder.getStatus().getCode(),
-            responseHolder.getStatus().getReasonPhrase()
-        );
-      }
-    }
-    catch (IOException | InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-
-    final JavaType javaType = jsonMapper.getTypeFactory().constructType(typeRef);
-    return new JsonParserIterator<>(
-        javaType,
-        Futures.immediateFuture(responseHolder.getContent()),
-        request.getUrl().toString(),
-        null,
-        request.getUrl().getHost(),
         jsonMapper
     );
   }

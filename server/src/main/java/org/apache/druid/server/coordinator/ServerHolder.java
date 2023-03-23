@@ -168,6 +168,7 @@ public class ServerHolder implements Comparable<ServerHolder>
            && !isServingSegment(segment.getId())
            && !isLoadingSegment(segment)
            && (maxSegmentsInLoadQueue == 0 || maxSegmentsInLoadQueue > peon.getNumberOfSegmentsInQueue())
+           && maxSegmentsInLoadQueue != 666
            && getAvailableSize() >= segment.getSize();
   }
 

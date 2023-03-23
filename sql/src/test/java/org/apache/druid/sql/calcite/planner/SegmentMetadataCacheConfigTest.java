@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import org.apache.druid.client.SegmentMetadataCacheConfig;
 import org.joda.time.Period;
 import org.junit.Test;
 

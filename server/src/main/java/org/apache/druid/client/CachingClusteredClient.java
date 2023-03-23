@@ -462,6 +462,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
               chunk.getChunkNumber()
           );
           segments.add(new SegmentServerSelector(server, segment));
+          if (server.isEmpty()) {
+            // fail the query or alternatively set some headers
+            throw new RuntimeException("Query failed, incomplete data");
+          }
         }
       }
       return segments;

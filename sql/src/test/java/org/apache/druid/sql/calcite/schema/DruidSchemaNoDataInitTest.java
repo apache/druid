@@ -30,7 +30,7 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.NoopEscalator;
-import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
+import org.apache.druid.client.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;

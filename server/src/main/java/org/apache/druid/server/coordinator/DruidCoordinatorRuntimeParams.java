@@ -387,7 +387,7 @@ public class DruidCoordinatorRuntimeParams
     public Builder withUsedSegmentsInTest(Collection<DataSegment> usedSegments)
     {
       this.usedSegments = createUsedSegmentsSet(usedSegments);
-      this.dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(usedSegments, ImmutableMap.of());
+      this.dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(usedSegments, ImmutableMap.of(), ImmutableMap.of());
       return this;
     }
 

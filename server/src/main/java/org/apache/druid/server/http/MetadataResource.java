@@ -55,6 +55,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -184,8 +185,14 @@ public class MetadataResource
         .flatMap(t -> t.getSegments().stream());
     final Set<DataSegment> overshadowedSegments = dataSourcesSnapshot.getOvershadowedSegments();
 
+
     final Stream<SegmentWithOvershadowedStatus> usedSegmentsWithOvershadowedStatus = usedSegments
-        .map(segment -> new SegmentWithOvershadowedStatus(segment, overshadowedSegments.contains(segment)));
+        .map(segment -> new SegmentWithOvershadowedStatus(
+            segment, overshadowedSegments.contains(segment),
+            dataSourcesSnapshot.getHandedOffStatePerDataSource()
+                               .getOrDefault(segment.getDataSource(), new HashMap<>())
+                               .getOrDefault(segment.getId(), false)
+        ));
 
     final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>> raGenerator = segment -> Collections
         .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));

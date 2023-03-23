@@ -70,6 +70,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -774,6 +775,16 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
+  public int markSegmentAsOnceLoaded(SegmentId segmentId)
+  {
+    return connector.getDBI().withHandle(
+        handle ->
+            SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
+                                    .markSegmentAsOnceLoaded(segmentId)
+    );
+  }
+
+  @Override
   public int markAsUnusedSegmentsInInterval(String dataSourceName, Interval interval)
   {
     try {
@@ -884,6 +895,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     //
     // setting connection to read-only will allow some database such as MySQL
     // to automatically use read-only transaction mode, further optimizing the query
+    final Map<String, Map<SegmentId, Boolean>> handedOffState = new HashMap<>();
     final List<DataSegment> segments = connector.inReadOnlyTransaction(
         new TransactionCallback<List<DataSegment>>()
         {
@@ -891,7 +903,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           public List<DataSegment> inTransaction(Handle handle, TransactionStatus status)
           {
             return handle
-                .createQuery(StringUtils.format("SELECT payload FROM %s WHERE used=true", getSegmentsTable()))
+                .createQuery(StringUtils.format("SELECT handed_off, payload FROM %s WHERE used=true", getSegmentsTable()))
                 .setFetchSize(connector.getStreamingFetchSize())
                 .map(
                     new ResultSetMapper<DataSegment>()
@@ -901,6 +913,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                       {
                         try {
                           DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
+                          boolean handedOff = r.getBoolean("handed_off");
+                          handedOffState.computeIfAbsent(segment.getDataSource(), v -> new HashMap<>()).put(segment.getId(), handedOff);
                           return replaceWithExistingSegmentIfPresent(segment);
                         }
                         catch (IOException e) {
@@ -939,7 +953,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     }
     dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
         Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
-        dataSourceProperties
+        dataSourceProperties,
+        handedOffState
     );
   }
 

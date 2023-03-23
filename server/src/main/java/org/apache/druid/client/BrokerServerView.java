@@ -21,7 +21,9 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
@@ -46,13 +48,15 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.utils.CollectionUtils;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
@@ -60,6 +64,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toSet;
 
 /**
  *
@@ -97,7 +103,8 @@ public class BrokerServerView implements TimelineServerView
       final FilteredServerInventoryView baseView,
       final TierSelectorStrategy tierSelectorStrategy,
       final ServiceEmitter emitter,
-      final BrokerSegmentWatcherConfig segmentWatcherConfig
+      final BrokerSegmentWatcherConfig segmentWatcherConfig,
+      final MetadataSegmentView metadataSegmentView
   )
   {
     this.warehouse = warehouse;
@@ -175,6 +182,15 @@ public class BrokerServerView implements TimelineServerView
           removeServer(server);
           return CallbackAction.CONTINUE;
         }
+    );
+
+    metadataSegmentView.registerSegmentCallback(
+        exec,
+        polledSegments ->
+          {
+            coordinatorPolledSegments(polledSegments);
+            return CallbackAction.CONTINUE;
+          }
     );
   }
 
@@ -265,29 +281,61 @@ public class BrokerServerView implements TimelineServerView
     return clients.remove(server.getName());
   }
 
+  private void coordinatorPolledSegments(final ImmutableSortedSet<SegmentWithOvershadowedStatus> segmentWithOvershadowedStatusSet) {
+    Map<String, Map<SegmentId, SegmentWithOvershadowedStatus>> polledSegmentsPerDataSource =
+        CollectionUtils.mapValues(
+            segmentWithOvershadowedStatusSet.stream().collect(Collectors.groupingBy(segment -> segment.getDataSegment().getDataSource(), toSet())),
+            segmentSet -> segmentSet.stream().collect(
+                Collectors.toMap(
+                    segmentWithOvershadowedStatus -> segmentWithOvershadowedStatus.getDataSegment().getId(),
+                    segmentWithOvershadowedStatus -> segmentWithOvershadowedStatus))
+        );
+
+    synchronized (lock) {
+      // we have two sets here
+      // set1 -> all segments which are existing in the system and handed off
+      // set2 -> all segments in the timeline
+      // for each datasource
+      // remove segments from set2 which are not in set1 -> get rid of unused segments
+      // add segments from set1 not in set2 -> adds handed off but unavialble segments to the timeline
+
+      for (Map.Entry<String, Map<SegmentId, SegmentWithOvershadowedStatus>> entry : polledSegmentsPerDataSource.entrySet()) {
+        String dataSource = entry.getKey();
+        Map<SegmentId, SegmentWithOvershadowedStatus> segments = entry.getValue();
+
+        VersionedIntervalTimeline<String, ServerSelector> versionedIntervalTimeline = timelines.get(dataSource);
+
+        Map<SegmentId, VersionedIntervalTimeline.PartitionChunkEntry<String, ServerSelector>> segmentIdPartitionChunkEntryMap =
+            versionedIntervalTimeline.getAllPartitionChunkEntry().stream().collect(
+                Collectors.toMap(pce -> pce.getChunk().getObject().getSegment().getId(), pce -> pce));
+
+        Set<SegmentId> segmentIdsToRemoveFromTimeline = Sets.difference(segmentIdPartitionChunkEntryMap.keySet(), segments.keySet());
+
+        segmentIdsToRemoveFromTimeline
+            .stream()
+            .map(segmentIdPartitionChunkEntryMap::get)
+            .forEach(pce -> versionedIntervalTimeline.remove(pce.getInterval(), pce.getVersion(), pce.getChunk()));
+
+        for (Map.Entry<SegmentId, SegmentWithOvershadowedStatus> segmentWithOvershadowedStatusEntry : entry.getValue().entrySet()) {
+          if (!segmentIdPartitionChunkEntryMap.containsKey(segmentWithOvershadowedStatusEntry.getKey())) {
+            addSegmentToTimeline(segmentWithOvershadowedStatusEntry.getValue().getDataSegment());
+            // runTimelineCallbacks(callback -> callback.segmentAdded(server, segment)); required?
+          }
+        }
+      }
+    }
+  }
+
   private void serverAddedSegment(final DruidServerMetadata server, final DataSegment segment)
   {
-    SegmentId segmentId = segment.getId();
     synchronized (lock) {
       // in theory we could probably just filter this to ensure we don't put ourselves in here, to make broker tree
       // query topologies, but for now just skip all brokers, so we don't create some sort of wild infinite query
       // loop...
       if (!server.getType().equals(ServerType.BROKER)) {
         log.debug("Adding segment[%s] for server[%s]", segment, server);
-        ServerSelector selector = selectors.get(segmentId);
-        if (selector == null) {
-          selector = new ServerSelector(segment, tierSelectorStrategy);
 
-          VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
-          if (timeline == null) {
-            // broker needs to skip tombstones
-            timeline = new VersionedIntervalTimeline<>(Ordering.natural(), true);
-            timelines.put(segment.getDataSource(), timeline);
-          }
-
-          timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector));
-          selectors.put(segmentId, selector);
-        }
+        ServerSelector selector = addSegmentToTimeline(segment);
 
         QueryableDruidServer queryableDruidServer = clients.get(server.getName());
         if (queryableDruidServer == null) {
@@ -298,6 +346,26 @@ public class BrokerServerView implements TimelineServerView
       // run the callbacks, even if the segment came from a broker, lets downstream watchers decide what to do with it
       runTimelineCallbacks(callback -> callback.segmentAdded(server, segment));
     }
+  }
+
+  private ServerSelector addSegmentToTimeline(DataSegment segment) {
+    SegmentId segmentId = segment.getId();
+    ServerSelector selector = selectors.get(segmentId);
+    if (selector == null) {
+      selector = new ServerSelector(segment, tierSelectorStrategy);
+
+      VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
+      if (timeline == null) {
+        // broker needs to skip tombstones
+        timeline = new VersionedIntervalTimeline<>(Ordering.natural(), true);
+        timelines.put(segment.getDataSource(), timeline);
+      }
+
+      timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector));
+      selectors.put(segmentId, selector);
+    }
+
+    return selector;
   }
 
   private void serverRemovedSegment(DruidServerMetadata server, DataSegment segment)
@@ -334,22 +402,7 @@ public class BrokerServerView implements TimelineServerView
       }
 
       if (selector.isEmpty()) {
-        VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
         selectors.remove(segmentId);
-
-        final PartitionChunk<ServerSelector> removedPartition = timeline.remove(
-            segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector)
-        );
-
-        if (removedPartition == null) {
-          log.warn(
-              "Asked to remove timeline entry[interval: %s, version: %s] that doesn't exist",
-              segment.getInterval(),
-              segment.getVersion()
-          );
-        } else {
-          runTimelineCallbacks(callback -> callback.segmentRemoved(segment));
-        }
       }
     }
   }

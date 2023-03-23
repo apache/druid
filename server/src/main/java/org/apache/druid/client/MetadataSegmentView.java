@@ -17,35 +17,45 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.schema;
+package org.apache.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.inject.Inject;
-import org.apache.druid.client.BrokerSegmentWatcherConfig;
-import org.apache.druid.client.DataSegmentInterner;
-import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -81,6 +91,8 @@ public class MetadataSegmentView
   private final long pollPeriodInMS;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
   private final CountDownLatch cachePopulated = new CountDownLatch(1);
+
+  private final ConcurrentMap<ServerView.PublishedSegmentCallback, Executor> segmentCallbacks = new ConcurrentHashMap<>();
 
   @Inject
   public MetadataSegmentView(
@@ -145,15 +157,55 @@ public class MetadataSegmentView
       final DataSegment interned = DataSegmentInterner.intern(segment.getDataSegment());
       final SegmentWithOvershadowedStatus segmentWithOvershadowedStatus = new SegmentWithOvershadowedStatus(
           interned,
-          segment.isOvershadowed()
+          segment.isOvershadowed(),
+          segment.isHandedOff()
       );
       builder.add(segmentWithOvershadowedStatus);
     }
+
     publishedSegments = builder.build();
+
+    runSegmentCallbacks(
+        new Function<ServerView.PublishedSegmentCallback, ServerView.CallbackAction>()
+        {
+          @Override
+          public ServerView.CallbackAction apply(ServerView.PublishedSegmentCallback input)
+          {
+            return input.segmentsPolled(publishedSegments);
+          }
+        }
+    );
+
     cachePopulated.countDown();
   }
 
-  Iterator<SegmentWithOvershadowedStatus> getPublishedSegments()
+  public void registerSegmentCallback(
+      Executor exec,
+      ServerView.PublishedSegmentCallback segmentCallback
+  )
+  {
+    segmentCallbacks.put(segmentCallback, exec);
+  }
+
+  private void runSegmentCallbacks(
+      final Function<ServerView.PublishedSegmentCallback, ServerView.CallbackAction> fn
+  )
+  {
+    for (final Map.Entry<ServerView.PublishedSegmentCallback, Executor> entry : segmentCallbacks.entrySet()) {
+      entry.getValue().execute(
+          new Runnable()
+          {
+            @Override
+            public void run()
+            {
+              fn.apply(entry.getKey());
+            }
+          }
+      );
+    }
+  }
+
+  public Iterator<SegmentWithOvershadowedStatus> getPublishedSegments()
   {
     if (isCacheEnabled) {
       Uninterruptibles.awaitUninterruptibly(cachePopulated);
@@ -186,12 +238,56 @@ public class MetadataSegmentView
       query = "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&" + sb;
     }
 
-    return SystemSchema.getThingsFromLeaderNode(
+    return getThingsFromLeaderNode(
         query,
         new TypeReference<SegmentWithOvershadowedStatus>()
         {
         },
         coordinatorClient,
+        jsonMapper
+    );
+  }
+
+  public static <T> JsonParserIterator<T> getThingsFromLeaderNode(
+      String query,
+      TypeReference<T> typeRef,
+      DruidLeaderClient leaderClient,
+      ObjectMapper jsonMapper
+  )
+  {
+    Request request;
+    InputStreamFullResponseHolder responseHolder;
+    try {
+      request = leaderClient.makeRequest(
+          HttpMethod.GET,
+          query
+      );
+
+      responseHolder = leaderClient.go(
+          request,
+          new InputStreamFullResponseHandler()
+      );
+
+      if (responseHolder.getStatus().getCode() != HttpServletResponse.SC_OK) {
+        throw new RE(
+            "Failed to talk to leader node at [%s]. Error code [%d], description [%s].",
+            query,
+            responseHolder.getStatus().getCode(),
+            responseHolder.getStatus().getReasonPhrase()
+        );
+      }
+    }
+    catch (IOException | InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+
+    final JavaType javaType = jsonMapper.getTypeFactory().constructType(typeRef);
+    return new JsonParserIterator<>(
+        javaType,
+        Futures.immediateFuture(responseHolder.getContent()),
+        request.getUrl().toString(),
+        null,
+        request.getUrl().getHost(),
         jsonMapper
     );
   }

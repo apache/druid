@@ -40,22 +40,26 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
   @JsonUnwrapped
   private final DataSegment dataSegment;
 
+  private final boolean handedOff;
+
   @JsonCreator
   public SegmentWithOvershadowedStatus(
       @JsonProperty("overshadowed") boolean overshadowed
   )
   {
     // Jackson will overwrite dataSegment if needed (even though the field is final)
-    this(null, overshadowed);
+    this(null, overshadowed, false);
   }
 
   public SegmentWithOvershadowedStatus(
       DataSegment dataSegment,
-      boolean overshadowed
+      boolean overshadowed,
+      boolean handedOff
   )
   {
     this.dataSegment = dataSegment;
     this.overshadowed = overshadowed;
+    this.handedOff = handedOff;
   }
 
   @JsonProperty
@@ -68,6 +72,12 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
   public DataSegment getDataSegment()
   {
     return dataSegment;
+  }
+
+  @JsonProperty
+  public boolean isHandedOff()
+  {
+    return handedOff;
   }
 
   @Override
@@ -86,6 +96,9 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
     if (overshadowed != (that.overshadowed)) {
       return false;
     }
+    if (handedOff != (that.handedOff)) {
+      return false;
+    }
     return true;
   }
 
@@ -94,6 +107,7 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
   {
     int result = dataSegment.hashCode();
     result = 31 * result + Boolean.hashCode(overshadowed);
+    result = 31 * result + Boolean.hashCode(handedOff);
     return result;
   }
 
@@ -108,6 +122,7 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
   {
     return "SegmentWithOvershadowedStatus{" +
            "overshadowed=" + overshadowed +
+           ", handedOff="  + handedOff +
            ", dataSegment=" + dataSegment +
            '}';
   }

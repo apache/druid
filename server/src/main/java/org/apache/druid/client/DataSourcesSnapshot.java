@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.utils.CollectionUtils;
@@ -43,7 +44,8 @@ public class DataSourcesSnapshot
 {
   public static DataSourcesSnapshot fromUsedSegments(
       Iterable<DataSegment> segments,
-      ImmutableMap<String, String> dataSourceProperties
+      ImmutableMap<String, String> dataSourceProperties,
+      Map<String, Map<SegmentId, Boolean>> handedOffState
   )
   {
     Map<String, DruidDataSource> dataSources = new HashMap<>();
@@ -52,7 +54,7 @@ public class DataSourcesSnapshot
           .computeIfAbsent(segment.getDataSource(), dsName -> new DruidDataSource(dsName, dataSourceProperties))
           .addSegmentIfAbsent(segment);
     });
-    return new DataSourcesSnapshot(CollectionUtils.mapValues(dataSources, DruidDataSource::toImmutableDruidDataSource));
+    return new DataSourcesSnapshot(CollectionUtils.mapValues(dataSources, DruidDataSource::toImmutableDruidDataSource), handedOffState);
   }
 
   public static DataSourcesSnapshot fromUsedSegmentsTimelines(
@@ -69,32 +71,39 @@ public class DataSourcesSnapshot
           dataSourcesWithAllUsedSegments.put(dataSourceName, dataSource.toImmutableDruidDataSource());
         }
     );
-    return new DataSourcesSnapshot(dataSourcesWithAllUsedSegments, usedSegmentsTimelinesPerDataSource);
+    return new DataSourcesSnapshot(dataSourcesWithAllUsedSegments, usedSegmentsTimelinesPerDataSource, ImmutableMap.of());
   }
 
   private final Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments;
   private final Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource;
   private final ImmutableSet<DataSegment> overshadowedSegments;
 
-  public DataSourcesSnapshot(Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments)
+  private final Map<String, Map<SegmentId, Boolean>> handedOffStatePerDataSource;
+
+  public DataSourcesSnapshot(
+      Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments,
+      Map<String, Map<SegmentId, Boolean>> handedOffStatePerDataSource)
   {
     this(
         dataSourcesWithAllUsedSegments,
         CollectionUtils.mapValues(
             dataSourcesWithAllUsedSegments,
             dataSource -> SegmentTimeline.forSegments(dataSource.getSegments())
-        )
+        ),
+        handedOffStatePerDataSource
     );
   }
 
   private DataSourcesSnapshot(
       Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments,
-      Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource
+      Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource,
+      Map<String, Map<SegmentId, Boolean>> handedOffStatePerDataSource
   )
   {
     this.dataSourcesWithAllUsedSegments = dataSourcesWithAllUsedSegments;
     this.usedSegmentsTimelinesPerDataSource = usedSegmentsTimelinesPerDataSource;
     this.overshadowedSegments = ImmutableSet.copyOf(determineOvershadowedSegments());
+    this.handedOffStatePerDataSource = handedOffStatePerDataSource;
   }
 
   public Collection<ImmutableDruidDataSource> getDataSourcesWithAllUsedSegments()
@@ -121,6 +130,11 @@ public class DataSourcesSnapshot
   public ImmutableSet<DataSegment> getOvershadowedSegments()
   {
     return overshadowedSegments;
+  }
+
+  public Map<String, Map<SegmentId, Boolean>> getHandedOffStatePerDataSource()
+  {
+    return handedOffStatePerDataSource;
   }
 
   /**

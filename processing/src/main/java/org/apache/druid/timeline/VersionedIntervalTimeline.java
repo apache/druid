@@ -160,6 +160,19 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     );
   }
 
+  public Collection<PartitionChunkEntry<VersionType, ObjectType>> getAllPartitionChunkEntry() {
+    return CollectionUtils.createLazyCollectionFromStream(() ->
+        allTimelineEntries
+        .values()
+        .stream()
+        .flatMap((Map<VersionType, TimelineEntry> entry) -> entry.values().stream())
+        .flatMap(
+            entry -> StreamSupport.stream(
+                entry.getPartitionHolder().spliterator(), false)
+                                  .map(partitionChunk -> new PartitionChunkEntry<>(entry.getTrueInterval(), entry.getVersion(), partitionChunk))),
+       numObjects.get());
+  }
+
   public int getNumObjects()
   {
     return numObjects.get();

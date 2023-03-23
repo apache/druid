@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.planner;
+package org.apache.druid.client;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Period;
@@ -27,7 +27,7 @@ import java.util.Objects;
 /**
  * Configuration properties for the Broker-side cache of segment metadata
  * used to infer datasources for SQL. This class shares the same config root
- * as {@link PlannerConfig} to maintain backward compatibility for when
+ * as {@code PlannerConfig} to maintain backward compatibility for when
  * the properties here resided in {@code PlannerConfig}.
  */
 public class SegmentMetadataCacheConfig

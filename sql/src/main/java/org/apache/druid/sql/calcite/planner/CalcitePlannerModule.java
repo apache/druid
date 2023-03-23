@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.planner;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.multibindings.Multibinder;
+import org.apache.druid.client.SegmentMetadataCacheConfig;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
