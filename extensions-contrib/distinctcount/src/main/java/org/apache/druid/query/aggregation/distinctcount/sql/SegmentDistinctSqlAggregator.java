@@ -30,7 +30,6 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
-import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Optionality;
 import org.apache.druid.java.util.common.ISE;
@@ -130,8 +129,6 @@ public class SegmentDistinctSqlAggregator implements SqlAggregator
 
   private static class SegmentDistinctAggFunction extends SqlAggFunction
   {
-    private static final String SIGNATURE = "'" + NAME + "(column, bitMapFactory)'\n";
-
     SegmentDistinctAggFunction()
     {
       super(
@@ -140,13 +137,7 @@ public class SegmentDistinctSqlAggregator implements SqlAggregator
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.explicit(SqlTypeName.BIGINT),
           InferTypes.VARCHAR_1024,
-          OperandTypes.or(
-              OperandTypes.ANY,
-              OperandTypes.and(
-                  OperandTypes.sequence(SIGNATURE, OperandTypes.ANY, OperandTypes.LITERAL),
-                  OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.STRING)
-              )
-          ),
+          OperandTypes.ANY,
           SqlFunctionCategory.NUMERIC,
           false,
           false,
