@@ -82,6 +82,8 @@ public class QueryContexts
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
   public static final String MIN_TOP_N_THRESHOLD = "minTopNThreshold";
 
+  public static final String PARTIAL_RESULT_KEY = "partialResult";
+
   // SQL query context keys
   public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;
   public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
@@ -153,6 +155,19 @@ public class QueryContexts
     public String toString()
     {
       return StringUtils.toLowerCase(name()).replace('_', '-');
+    }
+  }
+
+  public enum PartialResultAction {
+    FAIL,
+    ALLOW;
+
+    public static PartialResultAction fromString(String str)
+    {
+      if (org.apache.commons.lang.StringUtils.isEmpty(str)) {
+        return PartialResultAction.ALLOW;
+      }
+      return PartialResultAction.valueOf(StringUtils.toUpperCase(str));
     }
   }
 

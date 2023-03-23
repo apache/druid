@@ -577,6 +577,10 @@ public class QueryContext
     return getString(QueryContexts.BROKER_SERVICE_NAME);
   }
 
+  public QueryContexts.PartialResultAction getPartialResultAction() {
+    return QueryContexts.PartialResultAction.fromString(getString(QueryContexts.PARTIAL_RESULT_KEY));
+  }
+
   @Override
   public boolean equals(Object o)
   {

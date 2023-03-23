@@ -267,6 +267,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private final boolean populateCache;
     private final boolean isBySegment;
     private final int uncoveredIntervalsLimit;
+    private final QueryContexts.PartialResultAction partialResultAction;
+
     private final Map<String, Cache.NamedKey> cachePopulatorKeyMap = new HashMap<>();
     private final DataSourceAnalysis dataSourceAnalysis;
     private final List<Interval> intervals;
@@ -288,6 +290,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       // Note that enabling this leads to putting uncovered intervals information in the response headers
       // and might blow up in some cases https://github.com/apache/druid/issues/2108
       this.uncoveredIntervalsLimit = queryContext.getUncoveredIntervalsLimit();
+      this.partialResultAction = queryContext.getPartialResultAction();
       // For nested queries, we need to look at the intervals of the inner most query.
       this.intervals = dataSourceAnalysis.getBaseQuerySegmentSpec()
                                          .map(QuerySegmentSpec::getIntervals)
@@ -463,8 +466,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
           );
           segments.add(new SegmentServerSelector(server, segment));
           if (server.isEmpty()) {
-            // fail the query or alternatively set some headers
-            throw new RuntimeException("Query failed, incomplete data");
+            switch (partialResultAction) {
+              case FAIL:
+                throw new RuntimeException("Query failed, incomplete data");
+            }
           }
         }
       }
