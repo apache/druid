@@ -134,7 +134,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
         .endMetadata()
         .editSpec()
         .editFirstContainer()
-        .addAllToEnv(getEnv())
+        .addAllToEnv(getEnv(task))
         .endContainer()
         .endSpec()
         .endTemplate()
@@ -205,12 +205,16 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     }
   }
 
-  private Collection<EnvVar> getEnv()
+  private Collection<EnvVar> getEnv(Task task)
   {
     return ImmutableList.of(
         new EnvVarBuilder()
             .withName(DruidK8sConstants.TASK_DIR_ENV)
             .withValue(new File(taskConfig.getBaseTaskDirPaths().get(0)).getAbsolutePath())
+            .build(),
+        new EnvVarBuilder()
+            .withName(DruidK8sConstants.TASK_ID_ENV)
+            .withValue(task.getId())
             .build(),
         new EnvVarBuilder()
             .withName(DruidK8sConstants.TASK_JSON_ENV)
