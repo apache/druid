@@ -239,7 +239,8 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
                 "\"" + QueryRunnerTestHelper.PLACEMENTISH_DIMENSION + "\"",
                 null,
                 ExprMacroTable.nil()
-            )
+            ),
+            null
         ))
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -452,7 +453,8 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
                 "\"" + QueryRunnerTestHelper.PLACEMENTISH_DIMENSION + "\"",
                 null,
                 ExprMacroTable.nil()
-            )
+            ),
+            null
         ))
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
@@ -564,7 +566,8 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
             "mv_to_array(placementish)",
             ColumnType.STRING_ARRAY,
             TestExprMacroTable.INSTANCE
-        )
+        ),
+        null
     );
 
     GroupByQuery query = makeQueryBuilder()
@@ -652,7 +655,8 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
             "array(\"market\",\"quality\")",
             ColumnType.STRING,
             TestExprMacroTable.INSTANCE
-        )
+        ),
+        null
     );
 
     GroupByQuery query = makeQueryBuilder()
