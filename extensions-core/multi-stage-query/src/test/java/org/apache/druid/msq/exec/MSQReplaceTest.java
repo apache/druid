@@ -21,13 +21,17 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
+import org.apache.druid.msq.test.MSQTestTaskActionClient;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.SqlPlanningException;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.hamcrest.CoreMatchers;
@@ -35,6 +39,8 @@ import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import java.io.File;
@@ -120,6 +126,11 @@ public class MSQReplaceTest extends MSQTestBase
                              .with().rows(1, 1, 1, 1, 1, 1).frames(1, 1, 1, 1, 1, 1),
                          1, 0, "input0"
                      )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(6),
+                         1, 0
+                     )
                      .verifyResults();
   }
 
@@ -163,6 +174,11 @@ public class MSQReplaceTest extends MSQTestBase
                          CounterSnapshotMatcher
                              .with().rows(1).frames(1),
                          1, 0, "input0"
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(1),
+                         1, 0
                      )
                      .verifyResults();
   }
@@ -300,6 +316,11 @@ public class MSQReplaceTest extends MSQTestBase
                              .with().rows(4).frames(1),
                          1, 0, "input0"
                      )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(4),
+                         1, 0
+                     )
                      .verifyResults();
   }
 
@@ -368,6 +389,11 @@ public class MSQReplaceTest extends MSQTestBase
                              .with().rows(6).frames(1),
                          1, 0, "input0"
                      )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(6),
+                         1, 0
+                     )
                      .verifyResults();
   }
 
@@ -424,6 +450,11 @@ public class MSQReplaceTest extends MSQTestBase
                              .with().rows(3, 3).frames(1, 1),
                          1, 0, "input0"
                      )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(6),
+                         1, 0
+                     )
                      .verifyResults();
   }
 
@@ -478,6 +509,11 @@ public class MSQReplaceTest extends MSQTestBase
                              .with().rows(2).frames(1),
                          1, 0, "input0"
                      )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(2),
+                         1, 0
+                     )
                      .verifyResults();
   }
 
@@ -499,6 +535,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Collections.singletonList(Intervals.of("2000-01-01T/2002-01-01T")))
+                     .setExpectedTombstoneIntervals(ImmutableSet.of(Intervals.of("2001-01-01T/2001-02-01T")))
                      .setExpectedSegment(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
@@ -511,12 +548,6 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{946771200000L, 2.0f}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
-                         "foo",
-                         Intervals.of("2000-01-01T/P1M"),
-                         "test",
-                         0
-                     )))
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
                              .with().totalFiles(1),
@@ -531,6 +562,11 @@ public class MSQReplaceTest extends MSQTestBase
                          CounterSnapshotMatcher
                              .with().rows(2).frames(1),
                          1, 0, "input0"
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(2),
+                         1, 0
                      )
                      .verifyResults();
   }
@@ -625,6 +661,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Collections.singletonList(Intervals.of("2000-01-01T/2002-01-01T")))
+                     .setExpectedTombstoneIntervals(ImmutableSet.of(Intervals.of("2001-01-01T/2001-02-01T")))
                      .setExpectedSegment(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
@@ -691,6 +728,65 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f}
                          )
                      )
+                     .verifyResults();
+  }
+
+  @Test
+  public void testReplaceTombstonesOverPartiallyOverlappingSegments()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+
+    // Create a datasegment which lies partially outside the generated segment
+    DataSegment existingDataSegment = DataSegment.builder()
+                                                 .interval(Intervals.of("2001-01-01T/2003-01-04T"))
+                                                 .size(50)
+                                                 .version(MSQTestTaskActionClient.VERSION)
+                                                 .dataSource("foo1")
+                                                 .build();
+
+    Mockito.doReturn(ImmutableSet.of(existingDataSegment)).when(testTaskActionClient).submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+
+    List<Object[]> expectedResults;
+    if (NullHandling.sqlCompatible()) {
+      expectedResults = ImmutableList.of(
+          new Object[]{946684800000L, "", 1L},
+          new Object[]{946771200000L, "10.1", 1L},
+          new Object[]{946857600000L, "2", 1L},
+          new Object[]{978307200000L, "1", 1L},
+          new Object[]{978393600000L, "def", 1L},
+          new Object[]{978480000000L, "abc", 1L}
+      );
+    } else {
+      expectedResults = ImmutableList.of(
+          new Object[]{946771200000L, "10.1", 1L},
+          new Object[]{946857600000L, "2", 1L},
+          new Object[]{978307200000L, "1", 1L},
+          new Object[]{978393600000L, "def", 1L},
+          new Object[]{978480000000L, "abc", 1L}
+      );
+    }
+
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1 "
+                         + "OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' and __time < TIMESTAMP '2002-01-01 00:00:00'"
+                         + "SELECT  __time, dim1 , count(*) as cnt "
+                         + "FROM foo "
+                         + "WHERE dim1 IS NOT NULL "
+                         + "GROUP BY 1, 2 "
+                         + "PARTITIONED by TIME_FLOOR(__time, 'P3M') "
+                         + "CLUSTERED by dim1")
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedShardSpec(DimensionRangeShardSpec.class)
+                     .setExpectedTombstoneIntervals(
+                         ImmutableSet.of(
+                             Intervals.of("2001-04-01/2002-01-01")
+                         )
+                     )
+                     .setExpectedResultRows(expectedResults)
                      .verifyResults();
   }
 

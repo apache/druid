@@ -340,6 +340,9 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
   )
   {
+    // Wait for any existing kill tasks to complete before submitting new index task otherwise
+    // kill tasks can fail with interval lock revoked.
+    waitForAllTasksToCompleteForDataSource(dataSourceName);
     final List<DataSegment> oldVersions = waitForNewVersion ? coordinator.getAvailableSegments(dataSourceName) : null;
 
     long startSubTaskCount = -1;

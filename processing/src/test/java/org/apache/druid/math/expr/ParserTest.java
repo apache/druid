@@ -20,7 +20,6 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
@@ -680,6 +679,13 @@ public class ParserTest extends InitializedNullHandlingTest
         "(map ([x] -> (case_searched [(== x b), b, (== x g), g, Other])), [x])",
         ImmutableList.of("x")
     );
+
+    validateApplyUnapplied(
+        "array_overlap(nvl(x, 'other'), ['a', 'b', 'other'])",
+        "(array_overlap [(nvl [x, other]), [a, b, other]])",
+        "(array_overlap [(map ([x] -> (nvl [x, other])), [x]), [a, b, other]])",
+        ImmutableList.of("x")
+    );
   }
 
   @Test
@@ -905,7 +911,7 @@ public class ParserTest extends InitializedNullHandlingTest
     Assert.assertEquals(
         expression,
         expected,
-        parsed.eval(InputBindings.withMap(ImmutableMap.of())).value()
+        parsed.eval(InputBindings.nilBindings()).value()
     );
 
     final Expr parsedNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
@@ -913,7 +919,7 @@ public class ParserTest extends InitializedNullHandlingTest
     Assert.assertEquals(
         expression,
         expected,
-        parsedRoundTrip.eval(InputBindings.withMap(ImmutableMap.of())).value()
+        parsedRoundTrip.eval(InputBindings.nilBindings()).value()
     );
     Assert.assertEquals(parsed.stringify(), parsedRoundTrip.stringify());
   }
@@ -921,7 +927,7 @@ public class ParserTest extends InitializedNullHandlingTest
   private void validateConstantExpression(String expression, Object[] expected)
   {
     Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
-    Object evaluated = parsed.eval(InputBindings.withMap(ImmutableMap.of())).value();
+    Object evaluated = parsed.eval(InputBindings.nilBindings()).value();
     Assert.assertArrayEquals(
         expression,
         expected,
@@ -934,7 +940,7 @@ public class ParserTest extends InitializedNullHandlingTest
     Assert.assertArrayEquals(
         expression,
         expected,
-        (Object[]) roundTrip.eval(InputBindings.withMap(ImmutableMap.of())).value()
+        (Object[]) roundTrip.eval(InputBindings.nilBindings()).value()
     );
     Assert.assertEquals(parsed.stringify(), roundTrip.stringify());
   }

@@ -21,6 +21,7 @@ on:
       - 'dev/**'
       - 'helm/**'
       - 'web-console/**'
+      - '**/*.md'
     branches:
       - master
       - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
@@ -30,6 +31,7 @@ on:
       - 'dev/**'
       - 'helm/**'
       - 'web-console/**'
+      - '**/*.md'
     branches:
       - master
       - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
@@ -55,10 +57,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Setup java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: ${{ matrix.jdk }}
+        run: export JAVA_HOME=$JAVA_HOME_${{ matrix.jdk }}_X64
 
       - name: Cache Maven m2 repository
         id: maven
@@ -66,8 +65,6 @@ jobs:
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-${{ matrix.jdk }}-${{ github.sha }}
-          restore-keys: |
-            maven-${{ runner.os }}-${{ matrix.jdk }}
 
       - name: Cache targets
         id: target
@@ -76,8 +73,6 @@ jobs:
           path: |
             ./**/target
           key: maven-${{ runner.os }}-${{ matrix.jdk }}-targets-${{ github.sha }}
-          restore-keys: |
-            maven-${{ runner.os }}-${{ matrix.jdk }}-targets
 
       - name: Cache image
         id: docker_container
@@ -87,8 +82,6 @@ jobs:
           path: |
             ./druid-container-jdk${{ matrix.jdk }}.tar.gz
             ./integration-tests-ex/image/target/env.sh
-          restore-keys: |
-            druid-container-jdk${{ matrix.jdk }}.tar.gz-
 
       - name: Maven build
         id: maven_build
@@ -107,6 +100,18 @@ jobs:
           echo $DRUID_IT_IMAGE_NAME
           docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ matrix.jdk }}.tar.gz
 
+  unit-tests-phase2:
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: [ 11, 17 ]
+    name: unit tests (jdk${{ matrix.jdk }}, sql-compat=true)
+    uses: ./.github/workflows/unit-tests.yml
+    needs: unit-tests
+    with:
+      jdk: ${{ matrix.jdk }}
+      sql_compatibility: true
+
   unit-tests:
     strategy:
       fail-fast: false
@@ -117,19 +122,6 @@ jobs:
     needs: build
     with:
       jdk: 8
-      sql_compatibility: ${{ matrix.sql_compatibility }}
-
-  unit-tests-phase2:
-    strategy:
-      fail-fast: false
-      matrix:
-        jdk: [11, 17]
-        sql_compatibility: [ false, true ]
-    name: unit tests (jdk${{ matrix.jdk }}, sql-compat=${{ matrix.sql_compatibility }})
-    uses: ./.github/workflows/unit-tests.yml
-    needs: unit-tests
-    with:
-      jdk: ${{ matrix.jdk }}
       sql_compatibility: ${{ matrix.sql_compatibility }}
 
   standard-its:

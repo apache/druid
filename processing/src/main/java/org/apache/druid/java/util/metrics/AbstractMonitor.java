@@ -41,6 +41,7 @@ public abstract class AbstractMonitor implements Monitor
     started = false;
   }
 
+  @SuppressWarnings("unused")
   public boolean isStarted()
   {
     return started;

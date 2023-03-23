@@ -20,9 +20,11 @@
 package org.apache.druid.frame.write.columnar;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.AppendableMemory;
 import org.apache.druid.frame.allocation.MemoryAllocator;
-import org.apache.druid.frame.key.SortColumn;
+import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
+import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriterUtils;
@@ -39,30 +41,30 @@ import java.util.Set;
 
 public class ColumnarFrameWriterFactory implements FrameWriterFactory
 {
-  private final MemoryAllocator allocator;
+  private final MemoryAllocatorFactory allocatorFactory;
   private final RowSignature signature;
-  private final List<SortColumn> sortColumns;
+  private final List<KeyColumn> keyColumns;
 
   /**
    * Create a ColumnarFrameWriterFactory.
    *
-   * @param allocator   memory allocator; will use as much as possible
-   * @param signature   output signature for this frame writer
-   * @param sortColumns columns to sort by, if any. May be empty.
+   * @param allocatorFactory memory allocator; will use as much as possible
+   * @param signature        output signature for this frame writer
+   * @param keyColumns       columns to sort by, if any. May be empty.
    *
    * @throws UnsupportedColumnTypeException if "signature" contains any type that we cannot handle
    */
   public ColumnarFrameWriterFactory(
-      final MemoryAllocator allocator,
+      final MemoryAllocatorFactory allocatorFactory,
       final RowSignature signature,
-      final List<SortColumn> sortColumns
+      final List<KeyColumn> keyColumns
   )
   {
-    this.allocator = Preconditions.checkNotNull(allocator, "allocator");
+    this.allocatorFactory = Preconditions.checkNotNull(allocatorFactory, "allocatorFactory");
     this.signature = signature;
-    this.sortColumns = Preconditions.checkNotNull(sortColumns, "sortColumns");
+    this.keyColumns = Preconditions.checkNotNull(keyColumns, "sortColumns");
 
-    if (!sortColumns.isEmpty()) {
+    if (!keyColumns.isEmpty()) {
       throw new IAE("Columnar frames cannot be sorted");
     }
 
@@ -76,6 +78,7 @@ public class ColumnarFrameWriterFactory implements FrameWriterFactory
   @Override
   public FrameWriter newFrameWriter(final ColumnSelectorFactory columnSelectorFactory)
   {
+    final MemoryAllocator allocator = allocatorFactory.newAllocator();
     final List<FrameColumnWriter> columnWriters = new ArrayList<>();
 
     try {
@@ -92,11 +95,11 @@ public class ColumnarFrameWriterFactory implements FrameWriterFactory
     }
 
     // Only need rowOrderMemory if we are sorting.
-    final AppendableMemory rowOrderMemory = sortColumns.isEmpty() ? null : AppendableMemory.create(allocator);
+    final AppendableMemory rowOrderMemory = keyColumns.isEmpty() ? null : AppendableMemory.create(allocator);
 
     return new ColumnarFrameWriter(
         signature,
-        sortColumns,
+        keyColumns,
         rowOrderMemory,
         columnWriters
     );
@@ -105,6 +108,18 @@ public class ColumnarFrameWriterFactory implements FrameWriterFactory
   @Override
   public long allocatorCapacity()
   {
-    return allocator.capacity();
+    return allocatorFactory.allocatorCapacity();
+  }
+
+  @Override
+  public RowSignature signature()
+  {
+    return signature;
+  }
+
+  @Override
+  public FrameType frameType()
+  {
+    return FrameType.COLUMNAR;
   }
 }

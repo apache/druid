@@ -94,6 +94,9 @@ public class SqlExecutionReporter
         metricBuilder.setDimension("id", plannerContext.getSqlQueryId());
         metricBuilder.setDimension("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
       }
+      if (stmt.sqlToolbox.engine != null) {
+        metricBuilder.setDimension("engine", stmt.sqlToolbox.engine.name());
+      }
       if (stmt.authResult != null) {
         // Note: the dimension is "dataSource" (sic), so we log only the SQL resource
         // actions. Even here, for external tables, those actions are not always

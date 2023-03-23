@@ -25,6 +25,7 @@ import java.lang.annotation.RetentionPolicy;
 /**
  * Annotation for suppressing spotbugs checks when necessary.
  */
+@SuppressWarnings("unused")
 @Retention(RetentionPolicy.CLASS)
 public @interface SuppressFBWarnings
 {

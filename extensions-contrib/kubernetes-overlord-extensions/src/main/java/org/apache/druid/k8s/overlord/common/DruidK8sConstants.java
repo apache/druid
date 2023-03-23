@@ -23,7 +23,11 @@ import com.google.common.base.Predicate;
 
 public class DruidK8sConstants
 {
+  public static final String TASK = "task";
   public static final String TASK_ID = "task.id";
+  public static final String TASK_TYPE = "task.type";
+  public static final String TASK_GROUP_ID = "task.group.id";
+  public static final String TASK_DATASOURCE = "task.datasource";
   public static final int PORT = 8100;
   public static final int TLS_PORT = 8091;
   public static final String TLS_ENABLED = "tls.enabled";

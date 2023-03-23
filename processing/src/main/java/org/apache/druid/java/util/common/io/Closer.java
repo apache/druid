@@ -131,18 +131,6 @@ public final class Closer implements Closeable
   }
 
   /**
-   * Registers a list of {@code Closeable} to be closed when this {@code Closer} is
-   * {@linkplain #close closed}.
-   *
-   * @return the supplied list of {@code Closeable}
-   */
-  public <C extends Closeable> Iterable<C> registerAll(Iterable<C> closeables)
-  {
-    closeables.forEach(this::register);
-    return closeables;
-  }
-
-  /**
    * Stores the given throwable and rethrows it. It will be rethrown as is if it is an
    * {@code IOException}, {@code RuntimeException} or {@code Error}. Otherwise, it will be rethrown
    * wrapped in a {@code RuntimeException}. <b>Note:</b> Be sure to declare all of the checked

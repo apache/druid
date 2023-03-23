@@ -26,7 +26,10 @@ import java.util.Map;
 
 public interface TaskMetricsGetter
 {
+  @SuppressWarnings("unused")
   List<String> getKeys();
+
+  @SuppressWarnings("unused")
   @Nullable
   Map<String, Number> getTotalMetrics();
 }

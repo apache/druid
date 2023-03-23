@@ -70,7 +70,7 @@ class BinLtExpr extends BinaryBooleanOpExprBase
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return VectorComparisonProcessors.lessThan(inspector, left, right);
   }
@@ -116,7 +116,7 @@ class BinLeqExpr extends BinaryBooleanOpExprBase
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return VectorComparisonProcessors.lessThanOrEqual(inspector, left, right);
   }
@@ -162,7 +162,7 @@ class BinGtExpr extends BinaryBooleanOpExprBase
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return VectorComparisonProcessors.greaterThan(inspector, left, right);
   }
@@ -208,7 +208,7 @@ class BinGeqExpr extends BinaryBooleanOpExprBase
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return VectorComparisonProcessors.greaterThanOrEqual(inspector, left, right);
   }
@@ -253,7 +253,7 @@ class BinEqExpr extends BinaryBooleanOpExprBase
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return VectorComparisonProcessors.equal(inspector, left, right);
   }
@@ -298,7 +298,7 @@ class BinNeqExpr extends BinaryBooleanOpExprBase
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return VectorComparisonProcessors.notEqual(inspector, left, right);
   }
@@ -331,7 +331,9 @@ class BinAndExpr extends BinaryOpExprBase
       return ExprEval.ofLongBoolean(false);
     }
     ExprEval rightVal;
-    if (NullHandling.sqlCompatible() || Types.is(leftVal.type(), ExprType.STRING)) {
+    // null values can (but not always) appear as string typed
+    // so type isn't necessarily string unless value is non-null
+    if (NullHandling.sqlCompatible() || (Types.is(leftVal.type(), ExprType.STRING))) {
       // true/null, null/true, null/null -> null
       // false/null, null/false -> false
       if (leftVal.value() == null) {
@@ -362,7 +364,7 @@ class BinAndExpr extends BinaryOpExprBase
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return VectorProcessors.and(inspector, left, right);
   }
@@ -405,7 +407,9 @@ class BinOrExpr extends BinaryOpExprBase
     }
 
     final ExprEval rightVal;
-    if (NullHandling.sqlCompatible() || Types.is(leftVal.type(), ExprType.STRING)) {
+    // null values can (but not always) appear as string typed
+    // so type isn't necessarily string unless value is non-null
+    if (NullHandling.sqlCompatible() || (Types.is(leftVal.type(), ExprType.STRING))) {
       // true/null, null/true -> true
       // false/null, null/false, null/null -> null
       if (leftVal.value() == null) {
@@ -438,7 +442,7 @@ class BinOrExpr extends BinaryOpExprBase
   }
 
   @Override
-  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return VectorProcessors.or(inspector, left, right);
   }

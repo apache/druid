@@ -22,6 +22,8 @@ package org.apache.druid.msq.indexing.error;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import java.util.Objects;
 
@@ -35,9 +37,14 @@ public class BroadcastTablesTooLargeFault extends BaseMSQFault
   @JsonCreator
   public BroadcastTablesTooLargeFault(@JsonProperty("maxBroadcastTablesSize") final long maxBroadcastTablesSize)
   {
-    super(CODE,
-          "Size of the broadcast tables exceed the memory reserved for them (memory reserved for broadcast tables = %d bytes)",
-          maxBroadcastTablesSize
+    super(
+        CODE,
+        "Size of broadcast tables in JOIN exceeds reserved memory limit "
+        + "(memory reserved for broadcast tables = %d bytes). "
+        + "Increase available memory, or set %s: %s in query context to use a shuffle-based join.",
+        maxBroadcastTablesSize,
+        PlannerContext.CTX_SQL_JOIN_ALGORITHM,
+        JoinAlgorithm.SORT_MERGE.toString()
     );
     this.maxBroadcastTablesSize = maxBroadcastTablesSize;
   }

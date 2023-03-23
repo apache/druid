@@ -21,7 +21,6 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -403,11 +402,11 @@ public class ExprEvalTest extends InitializedNullHandlingTest
   {
     ExprEval someStringArray = ExprEval.ofStringArray(new String[]{"1", "2", "foo", null, "3.3"});
     Assert.assertArrayEquals(
-        new Object[]{1L, 2L, NullHandling.defaultLongValue(), NullHandling.defaultLongValue(), 3L},
+        new Object[]{1L, 2L, null, null, 3L},
         someStringArray.castTo(ExpressionType.LONG_ARRAY).asArray()
     );
     Assert.assertArrayEquals(
-        new Object[]{1.0, 2.0, NullHandling.defaultDoubleValue(), NullHandling.defaultDoubleValue(), 3.3},
+        new Object[]{1.0, 2.0, null, null, 3.3},
         someStringArray.castTo(ExpressionType.DOUBLE_ARRAY).asArray()
     );
   }

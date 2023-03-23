@@ -65,7 +65,8 @@ public class QueryTimeoutExceptionTest
         timeoutException.getErrorCode()
     );
     Assert.assertEquals(
-        "Query Timed Out!",
+        "Query did not complete within configured timeout period. You can increase " +
+            "query timeout or tune the performance of query.",
         timeoutException.getMessage()
     );
     Assert.assertEquals(
