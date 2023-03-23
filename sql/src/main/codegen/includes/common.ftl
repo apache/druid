@@ -93,7 +93,7 @@ SqlNodeList ClusterItems() :
   }
 }
 
-SqlTypeNameSpec VariantType() :
+SqlTypeNameSpec DruidType() :
 {
   String typeName;
 }
