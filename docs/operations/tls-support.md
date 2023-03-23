@@ -2,8 +2,6 @@
 id: tls-support
 title: "TLS support"
 ---
-FYI the Polaris docs now include a guide on how to execute a Proof of Concept.
-Thanks to @Muthu Lalapet for draft content.
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
