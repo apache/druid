@@ -158,7 +158,7 @@ public class KubernetesTaskRunnerFactoryTest
   public void test_build_withSingleContainerAdapterType_returnsKubernetesTaskRunnerWithSingleContainerTaskAdapter()
   {
     Properties props = new Properties();
-    props.setProperty("druid.indexer.runner.k8s.adapter.type", "singleContainer");
+    props.setProperty("druid.indexer.runner.k8s.adapter.type", "overlordSingleContainer");
 
     KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
         objectMapper,
@@ -183,7 +183,7 @@ public class KubernetesTaskRunnerFactoryTest
     kubernetesTaskRunnerConfig.sidecarSupport = true;
 
     Properties props = new Properties();
-    props.setProperty("druid.indexer.runner.k8s.adapter.type", "singleContainer");
+    props.setProperty("druid.indexer.runner.k8s.adapter.type", "overlordSingleContainer");
 
     KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
         objectMapper,
@@ -197,7 +197,7 @@ public class KubernetesTaskRunnerFactoryTest
     );
 
     Assert.assertThrows(
-        "Only kubernetes pod adapter [multiContainer] can be specified when sidecarSupport is enabled",
+        "Only kubernetes pod adapter [overlordMultiContainer] can be specified when sidecarSupport is enabled",
         IAE.class,
         factory::build
     );
@@ -209,7 +209,7 @@ public class KubernetesTaskRunnerFactoryTest
     kubernetesTaskRunnerConfig.sidecarSupport = true;
 
     Properties props = new Properties();
-    props.setProperty("druid.indexer.runner.k8s.adapter.type", "multiContainer");
+    props.setProperty("druid.indexer.runner.k8s.adapter.type", "overlordMultiContainer");
 
     KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
         objectMapper,
@@ -232,7 +232,7 @@ public class KubernetesTaskRunnerFactoryTest
   public void test_build_withMultiContainerAdapterTypeAndSidecarSupport_returnsKubernetesTaskRunnerWithMultiContainerTaskAdapter()
   {
     Properties props = new Properties();
-    props.setProperty("druid.indexer.runner.k8s.adapter.type", "multiContainer");
+    props.setProperty("druid.indexer.runner.k8s.adapter.type", "overlordMultiContainer");
 
     KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
         objectMapper,
@@ -257,7 +257,7 @@ public class KubernetesTaskRunnerFactoryTest
     URL url = this.getClass().getClassLoader().getResource("basePodTemplate.yaml");
 
     Properties props = new Properties();
-    props.setProperty("druid.indexer.runner.k8s.adapter.type", "podTemplate");
+    props.setProperty("druid.indexer.runner.k8s.adapter.type", "customTemplateAdapter");
     props.setProperty("druid.indexer.runner.k8s.podTemplate.base", url.getPath());
 
     KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
