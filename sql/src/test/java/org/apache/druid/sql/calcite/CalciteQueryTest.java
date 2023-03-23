@@ -7308,11 +7308,22 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(
+                            useDefault ?
                             aggregators(
                                 new LongMaxAggregatorFactory("_a0", "a0"),
                                 new LongMinAggregatorFactory("_a1", "a0"),
                                 new LongSumAggregatorFactory("_a2:sum", "a0"),
                                 new CountAggregatorFactory("_a2:count"),
+                                new LongMaxAggregatorFactory("_a3", "d0"),
+                                new CountAggregatorFactory("_a4")
+                            ) : aggregators(
+                                new LongMaxAggregatorFactory("_a0", "a0"),
+                                new LongMinAggregatorFactory("_a1", "a0"),
+                                new LongSumAggregatorFactory("_a2:sum", "a0"),
+                                new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("_a2:count"),
+                                    not(selector("a0", null, null))
+                                ),
                                 new LongMaxAggregatorFactory("_a3", "d0"),
                                 new CountAggregatorFactory("_a4")
                             )
