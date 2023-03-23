@@ -2829,6 +2829,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .columns(ImmutableList.of("_j0.unnest", "dim1", "j0.unnest", "v0", "v1"))
                   .build()
         ),
+        NullHandling.replaceWithDefault() ?
         ImmutableList.of(
             new Object[]{"10.1", ImmutableList.of("b", "c"), ImmutableList.of("10", "1"), "10", "b"},
             new Object[]{"10.1", ImmutableList.of("b", "c"), ImmutableList.of("10", "1"), "10", "c"},
@@ -2838,6 +2839,18 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             new Object[]{"1", useDefault ? null : ImmutableList.of(""), ImmutableList.of("1"), "1", ""},
             new Object[]{"def", null, ImmutableList.of("def"), "def", NullHandling.defaultStringValue()},
             new Object[]{"abc", null, ImmutableList.of("abc"), "abc", NullHandling.defaultStringValue()}
+        ) :
+        ImmutableList.of(
+            new Object[]{"", ImmutableList.of("a", "b"), ImmutableList.of(""), "", "a"},
+            new Object[]{"", ImmutableList.of("a", "b"), ImmutableList.of(""), "", "b"},
+            new Object[]{"10.1", ImmutableList.of("b", "c"), ImmutableList.of("10", "1"), "10", "b"},
+            new Object[]{"10.1", ImmutableList.of("b", "c"), ImmutableList.of("10", "1"), "10", "c"},
+            new Object[]{"10.1", ImmutableList.of("b", "c"), ImmutableList.of("10", "1"), "1", "b"},
+            new Object[]{"10.1", ImmutableList.of("b", "c"), ImmutableList.of("10", "1"), "1", "c"},
+            new Object[]{"2", ImmutableList.of("d"), ImmutableList.of("2"), "2", "d"},
+            new Object[]{"1", ImmutableList.of(""), ImmutableList.of("1"), "1", ""},
+            new Object[]{"def", null, ImmutableList.of("def"), "def", null},
+            new Object[]{"abc", null, ImmutableList.of("abc"), "abc", null}
         )
     );
   }
@@ -3213,9 +3226,15 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .columns(ImmutableList.of("j0.unnest"))
                   .build()
         ),
+        NullHandling.replaceWithDefault() ?
         ImmutableList.of(
             new Object[]{"a"},
             new Object[]{"b"}
+        ) :
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{""}
         )
     );
   }
@@ -3262,8 +3281,13 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .columns(ImmutableList.of("j0.unnest"))
                   .build()
         ),
+        NullHandling.replaceWithDefault() ?
         ImmutableList.of(
             new Object[]{"a"}
+        ) :
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{""}
         )
     );
   }

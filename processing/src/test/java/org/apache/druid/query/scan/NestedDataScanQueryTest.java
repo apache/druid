@@ -75,10 +75,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
   {
     NestedDataModule.registerHandlersAndSerde();
     List<? extends Module> mods = NestedDataModule.getJacksonModulesList();
-    this.helper = AggregationTestHelper.createScanQueryAggregationTestHelper(
-        mods,
-        tempFolder
-    );
+    this.helper = AggregationTestHelper.createScanQueryAggregationTestHelper(mods, tempFolder);
     this.closer = Closer.create();
   }
 
