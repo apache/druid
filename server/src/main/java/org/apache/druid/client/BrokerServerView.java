@@ -282,6 +282,8 @@ public class BrokerServerView implements TimelineServerView
   }
 
   private void coordinatorPolledSegments(final ImmutableSortedSet<SegmentWithOvershadowedStatus> segmentWithOvershadowedStatusSet) {
+    segmentWithOvershadowedStatusSet.iterator().forEachRemaining(v -> log.info(v.toString()));
+
     Map<String, Map<SegmentId, SegmentWithOvershadowedStatus>> polledSegmentsPerDataSource =
         CollectionUtils.mapValues(
             segmentWithOvershadowedStatusSet.stream().collect(Collectors.groupingBy(segment -> segment.getDataSegment().getDataSource(), toSet())),

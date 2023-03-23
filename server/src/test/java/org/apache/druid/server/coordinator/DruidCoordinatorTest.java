@@ -915,7 +915,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     );
     dataSource.addSegment(dataSegment);
     DataSourcesSnapshot dataSourcesSnapshot =
-        new DataSourcesSnapshot(ImmutableMap.of(dataSource.getName(), dataSource.toImmutableDruidDataSource()));
+        new DataSourcesSnapshot(ImmutableMap.of(dataSource.getName(), dataSource.toImmutableDruidDataSource()), ImmutableMap.of());
     EasyMock
         .expect(segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments())
         .andReturn(dataSourcesSnapshot)
@@ -1043,7 +1043,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         .andReturn(Collections.singleton(dataSource.toImmutableDruidDataSource()))
         .anyTimes();
     DataSourcesSnapshot dataSourcesSnapshot =
-        new DataSourcesSnapshot(ImmutableMap.of(dataSource.getName(), dataSource.toImmutableDruidDataSource()));
+        new DataSourcesSnapshot(ImmutableMap.of(dataSource.getName(), dataSource.toImmutableDruidDataSource()), ImmutableMap.of());
     EasyMock
         .expect(segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments())
         .andReturn(dataSourcesSnapshot)

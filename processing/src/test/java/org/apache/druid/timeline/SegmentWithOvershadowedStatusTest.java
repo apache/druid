@@ -74,7 +74,7 @@ public class SegmentWithOvershadowedStatusTest
         1
     );
 
-    return new SegmentWithOvershadowedStatus(dataSegment, OVERSHADOWED);
+    return new SegmentWithOvershadowedStatus(dataSegment, OVERSHADOWED, false);
   }
 
   @Test

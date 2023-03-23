@@ -166,14 +166,7 @@ public class MetadataSegmentView
     publishedSegments = builder.build();
 
     runSegmentCallbacks(
-        new Function<ServerView.PublishedSegmentCallback, ServerView.CallbackAction>()
-        {
-          @Override
-          public ServerView.CallbackAction apply(ServerView.PublishedSegmentCallback input)
-          {
-            return input.segmentsPolled(publishedSegments);
-          }
-        }
+        input -> input.segmentsPolled(publishedSegments)
     );
 
     cachePopulated.countDown();
@@ -193,14 +186,7 @@ public class MetadataSegmentView
   {
     for (final Map.Entry<ServerView.PublishedSegmentCallback, Executor> entry : segmentCallbacks.entrySet()) {
       entry.getValue().execute(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              fn.apply(entry.getKey());
-            }
-          }
+          () -> fn.apply(entry.getKey())
       );
     }
   }

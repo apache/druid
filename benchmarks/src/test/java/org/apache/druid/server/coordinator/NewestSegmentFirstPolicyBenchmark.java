@@ -134,7 +134,7 @@ public class NewestSegmentFirstPolicyBenchmark
         }
       }
     }
-    dataSources = DataSourcesSnapshot.fromUsedSegments(segments, ImmutableMap.of()).getUsedSegmentsTimelinesPerDataSource();
+    dataSources = DataSourcesSnapshot.fromUsedSegments(segments, ImmutableMap.of(), ImmutableMap.of()).getUsedSegmentsTimelinesPerDataSource();
   }
 
   @Benchmark

@@ -19,6 +19,7 @@
 
 package org.apache.druid.benchmark;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.Intervals;
@@ -94,7 +95,7 @@ public class DataSourcesSnapshotBenchmark
       dataSources.put(dataSource, new ImmutableDruidDataSource(dataSource, Collections.emptyMap(), segments));
     }
 
-    snapshot = new DataSourcesSnapshot(dataSources);
+    snapshot = new DataSourcesSnapshot(dataSources, ImmutableMap.of());
 
     System.out.println("Setup Time " + (System.currentTimeMillis() - start) + " ms");
   }

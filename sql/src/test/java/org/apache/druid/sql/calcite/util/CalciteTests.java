@@ -29,6 +29,7 @@ import com.google.inject.Key;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.FilteredServerInventoryView;
+import org.apache.druid.client.SegmentMetadataCacheConfig;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.ServerView;
 import org.apache.druid.discovery.DiscoveryDruidNode;

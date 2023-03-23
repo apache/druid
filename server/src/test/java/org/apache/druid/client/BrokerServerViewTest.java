@@ -664,7 +664,8 @@ public class BrokerServerViewTest extends CuratorTestBase
           {
             return ignoredTiers;
           }
-        }
+        },
+        EasyMock.createMock(MetadataSegmentView.class)
     );
 
     baseView.start();

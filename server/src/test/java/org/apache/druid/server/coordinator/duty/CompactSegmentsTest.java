@@ -206,7 +206,7 @@ public class CompactSegmentsTest
       }
     }
     dataSources = DataSourcesSnapshot
-        .fromUsedSegments(allSegments, ImmutableMap.of())
+        .fromUsedSegments(allSegments, ImmutableMap.of(), ImmutableMap.of())
         .getUsedSegmentsTimelinesPerDataSource();
     Mockito.when(COORDINATOR_CONFIG.getCompactionSkipLockedIntervals()).thenReturn(true);
   }
@@ -440,7 +440,7 @@ public class CompactSegmentsTest
     }
 
     dataSources = DataSourcesSnapshot
-        .fromUsedSegments(segments, ImmutableMap.of())
+        .fromUsedSegments(segments, ImmutableMap.of(), ImmutableMap.of())
         .getUsedSegmentsTimelinesPerDataSource();
 
 
@@ -600,7 +600,7 @@ public class CompactSegmentsTest
     }
 
     dataSources = DataSourcesSnapshot
-        .fromUsedSegments(segments, ImmutableMap.of())
+        .fromUsedSegments(segments, ImmutableMap.of(), ImmutableMap.of())
         .getUsedSegmentsTimelinesPerDataSource();
 
 
@@ -1593,7 +1593,7 @@ public class CompactSegmentsTest
         )
     );
     dataSources = DataSourcesSnapshot
-        .fromUsedSegments(segments, ImmutableMap.of())
+        .fromUsedSegments(segments, ImmutableMap.of(), ImmutableMap.of())
         .getUsedSegmentsTimelinesPerDataSource();
 
 
@@ -1691,7 +1691,7 @@ public class CompactSegmentsTest
         )
     );
     dataSources = DataSourcesSnapshot
-        .fromUsedSegments(segments, ImmutableMap.of())
+        .fromUsedSegments(segments, ImmutableMap.of(), ImmutableMap.of())
         .getUsedSegmentsTimelinesPerDataSource();
 
 

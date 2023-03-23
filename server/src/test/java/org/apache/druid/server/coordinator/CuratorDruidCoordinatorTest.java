@@ -46,6 +46,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -98,6 +99,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   private PathChildrenCache destinationLoadQueueChildrenCache;
   private DruidCoordinatorConfig druidCoordinatorConfig;
   private JacksonConfigManager configManager;
+  private SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
 
   private static final String SEGPATH = "/druid/segments";
   private static final String SOURCE_LOAD_PATH = "/druid/loadQueue/localhost:1";
@@ -135,6 +137,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     coordinatorRuntimeParams = EasyMock.createNiceMock(DruidCoordinatorRuntimeParams.class);
 
     configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
+    sqlSegmentsMetadataManager = EasyMock.createNiceMock(SqlSegmentsMetadataManager.class);
+
     EasyMock.expect(
         configManager.watch(
             EasyMock.eq(CoordinatorDynamicConfig.CONFIG_KEY),
@@ -449,7 +453,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
       }
     };
 
-    serverView = new CoordinatorServerView(baseView, new CoordinatorSegmentWatcherConfig(), new NoopServiceEmitter());
+    serverView = new CoordinatorServerView(baseView, new CoordinatorSegmentWatcherConfig(), new NoopServiceEmitter(), sqlSegmentsMetadataManager);
 
     baseView.start();
 
