@@ -200,7 +200,7 @@ public class S3StorageConnectorTest
     EasyMock.replay(S3_CLIENT);
     storageConnector.deleteFiles(Lists.newArrayList(TEST_FILE, testFile2));
 
-    Assert.assertEquals(convetDelReqToString(deleteObjectsRequest), convetDelReqToString(capturedArgument.getValue()));
+    Assert.assertEquals(convertDeleteObjectsRequestToString(deleteObjectsRequest), convertDeleteObjectsRequestToString(capturedArgument.getValue()));
     EasyMock.reset(S3_CLIENT);
   }
 
@@ -257,7 +257,7 @@ public class S3StorageConnectorTest
     Assert.assertEquals(ImmutableList.of(TEST_FILE), listDirResult);
   }
 
-  private String convetDelReqToString(DeleteObjectsRequest deleteObjectsRequest)
+  private String convertDeleteObjectsRequestToString(DeleteObjectsRequest deleteObjectsRequest)
   {
     return deleteObjectsRequest.getKeys()
                                .stream()

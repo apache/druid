@@ -334,27 +334,34 @@ public class S3StorageConnector implements StorageConnector
   }
 
   @Override
-  public Iterator<String> listDir(String dirName)
+  public Iterator<String> listDir(String dirName) throws IOException
   {
     final String prefixBasePath = objectPath(dirName);
-    Iterator<S3ObjectSummary> files = S3Utils.objectSummaryIterator(
-        s3Client,
-        ImmutableList.of(new CloudObjectLocation(
-            config.getBucket(),
-            prefixBasePath
-        ).toUri("s3")),
-        MAX_NUMBER_OF_LISTINGS,
-        config.getMaxRetry()
-    );
+    try {
 
-    return Iterators.transform(files, summary -> {
-      String[] size = summary.getKey().split(prefixBasePath, 2);
-      if (size.length > 1) {
-        return size[1];
-      } else {
-        return "";
-      }
-    });
+      Iterator<S3ObjectSummary> files = S3Utils.objectSummaryIterator(
+          s3Client,
+          ImmutableList.of(new CloudObjectLocation(
+              config.getBucket(),
+              prefixBasePath
+          ).toUri("s3")),
+          MAX_NUMBER_OF_LISTINGS,
+          config.getMaxRetry()
+      );
+
+      return Iterators.transform(files, summary -> {
+        String[] size = summary.getKey().split(prefixBasePath, 2);
+        if (size.length > 1) {
+          return size[1];
+        } else {
+          return "";
+        }
+      });
+    }
+    catch (Exception e) {
+      log.error("Error occoured while listing files at path [%s]. Error: [%s]", dirName, e.getMessage());
+      throw new IOException(e);
+    }
   }
 
   @Nonnull

@@ -113,7 +113,7 @@ public class DurableStorageCleaner implements OverlordHelper
               }
             }
             if (filesToRemove.isEmpty()) {
-              LOG.info("Nothing to delete");
+              LOG.info("DurableStorageCleaner did not find any left over directories to delete");
             } else {
               if (LOG.isDebugEnabled()) {
                 LOG.debug(

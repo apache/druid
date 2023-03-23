@@ -19,8 +19,12 @@
 
 package org.apache.druid.frame.util;
 
+import com.google.common.base.Splitter;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.StringUtils;
+
+import javax.annotation.Nullable;
+import java.util.Iterator;
 
 /**
  * Helper class that fetches the directory and file names corresponding to file location
@@ -28,6 +32,7 @@ import org.apache.druid.java.util.common.StringUtils;
 public class DurableStorageUtils
 {
   public static final String SUCCESS_MARKER_FILENAME = "__success";
+  public static final Splitter SPLITTER = Splitter.on("/").limit(2);
 
   public static String getControllerDirectory(final String controllerTaskId)
   {
@@ -124,10 +129,25 @@ public class DurableStorageUtils
   /**
    * Tries to parse out the controller taskID from the input path.
    * <br></br>
-   * For eg:  for input path <b>controller_query_id/task/123</b> <br/>the function will return <b>controller_query_id</b>
+   * For eg:
+   * <br/>
+   * <ul>
+   *   <li>for input path <b>controller_query_id/task/123</b> the function will return <b>controller_query_id</b></li>
+   *   <li>for input path <b>abcd</b>, the function will return <b>abcd</b></li>
+   *   <li>for input path <b>null</b>, the function will return <b>null</b></li>
+   * </ul>
    */
+  @Nullable
   public static String getControllerTaskIdWithPrefixFromPath(String path)
   {
-    return path.split("/", 1)[0];
+    if (path == null) {
+      return null;
+    }
+    Iterator<String> elements = SPLITTER.split(path).iterator();
+    if (elements.hasNext()) {
+      return elements.next();
+    } else {
+      return null;
+    }
   }
 }
