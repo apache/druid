@@ -188,7 +188,7 @@ public class BrokerServerView implements TimelineServerView
         exec,
         polledSegments ->
           {
-            coordinatorPolledSegments(polledSegments);
+            polledSegmentsFromCoordinator(polledSegments);
             return CallbackAction.CONTINUE;
           }
     );
@@ -281,7 +281,8 @@ public class BrokerServerView implements TimelineServerView
     return clients.remove(server.getName());
   }
 
-  private void coordinatorPolledSegments(final ImmutableSortedSet<SegmentWithOvershadowedStatus> segmentWithOvershadowedStatusSet) {
+  private void polledSegmentsFromCoordinator(final ImmutableSortedSet<SegmentWithOvershadowedStatus> segmentWithOvershadowedStatusSet) {
+    log.info("Polled segments from coordinator " + segmentWithOvershadowedStatusSet.size());
     segmentWithOvershadowedStatusSet.iterator().forEachRemaining(v -> log.info(v.toString()));
 
     Map<String, Map<SegmentId, SegmentWithOvershadowedStatus>> polledSegmentsPerDataSource =
