@@ -136,7 +136,7 @@ public class SegmentAnalyzer
           break;
         case ARRAY:
           final ColumnHolder arrayHolder = index != null ? index.getColumnHolder(columnName) : null;
-          analysis = analyzeArrayColumn(capabilities, numRows, arrayHolder);
+          analysis = analyzeArrayColumn(capabilities);
           break;
         case COMPLEX:
           final ColumnHolder columnHolder = index != null ? index.getColumnHolder(columnName) : null;
@@ -390,22 +390,13 @@ public class SegmentAnalyzer
     }
   }
 
-  private ColumnAnalysis analyzeArrayColumn(
-      @Nullable final ColumnCapabilities capabilities,
-      final int numCells,
-      @Nullable final ColumnHolder columnHolder
-  )
+  private ColumnAnalysis analyzeArrayColumn(final ColumnCapabilities capabilities)
   {
-    final TypeSignature<ValueType> typeSignature = capabilities == null ? ColumnType.UNKNOWN_COMPLEX : capabilities;
-    final String typeName = typeSignature.getComplexTypeName();
-    final boolean hasMultipleValues = capabilities != null && capabilities.hasMultipleValues().isTrue();
-    final boolean hasNulls = capabilities != null && capabilities.hasNulls().isMaybeTrue();
-
     return new ColumnAnalysis(
-        ColumnTypeFactory.ofType(typeSignature),
-        typeName,
-        hasMultipleValues,
-        hasNulls,
+        capabilities.toColumnType(),
+        capabilities.getType().name(),
+        false,
+        capabilities.hasNulls().isTrue(),
         0L,
         null,
         null,

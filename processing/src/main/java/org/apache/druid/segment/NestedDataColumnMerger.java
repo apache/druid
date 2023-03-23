@@ -423,27 +423,27 @@ public class NestedDataColumnMerger implements DimensionMergerV9
       if (next == null) {
         return null;
       }
-      final int[] newIdsWhoDis = new int[next.length];
+      final int[] globalIds = new int[next.length];
       for (int i = 0; i < next.length; i++) {
         if (next[i] == null) {
-          newIdsWhoDis[i] = 0;
+          globalIds[i] = 0;
         } else if (next[i] instanceof String) {
-          newIdsWhoDis[i] = idLookup.lookupString((String) next[i]);
+          globalIds[i] = idLookup.lookupString((String) next[i]);
         } else if (next[i] instanceof Long) {
-          newIdsWhoDis[i] = idLookup.lookupLong((Long) next[i]);
+          globalIds[i] = idLookup.lookupLong((Long) next[i]);
         } else if (next[i] instanceof Double) {
-          newIdsWhoDis[i] = idLookup.lookupDouble((Double) next[i]);
+          globalIds[i] = idLookup.lookupDouble((Double) next[i]);
         } else {
-          newIdsWhoDis[i] = -1;
+          globalIds[i] = -1;
         }
         Preconditions.checkArgument(
-            newIdsWhoDis[i] >= 0,
+            globalIds[i] >= 0,
             "unknown global id [%s] for value [%s]",
-            newIdsWhoDis[i],
+            globalIds[i],
             next[i]
         );
       }
-      return newIdsWhoDis;
+      return globalIds;
     }
   }
 }
