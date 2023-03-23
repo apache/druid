@@ -116,6 +116,15 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
   @Override
   public Object combine(Object lhs, Object rhs)
   {
+    if (lhs == null && rhs == null) {
+      return 0L;
+    }
+    if (rhs == null) {
+      return ((Number) lhs).longValue();
+    }
+    if (lhs == null) {
+      return ((Number) rhs).longValue();
+    }
     return ((Number) lhs).longValue() + ((Number) rhs).longValue();
   }
 
