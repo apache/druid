@@ -210,6 +210,8 @@ public class ExtensionsLoader
     return getClassLoaderForExtension(extension, extensionsConfig.isUseExtensionClassloaderFirst());
   }
 
+  // The Kafka IT will fail without the ability to keep two copies of the class loader.
+  // This is likely a bit of a hack and could benefit from investigation.
   public URLClassLoader getClassLoaderForExtension(File extension, boolean useExtensionClassloaderFirst)
   {
     return loaders.computeIfAbsent(

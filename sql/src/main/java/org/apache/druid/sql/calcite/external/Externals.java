@@ -272,7 +272,7 @@ public class Externals
   }
 
   /**
-   * Create an MSQ ExternalTable given an external table spec. Enforces type restructions
+   * Create an MSQ ExternalTable given an external table spec. Enforces type restrictions
    * (which should be revisited.)
    */
   public static ExternalTable buildExternalTable(ExternalTableSpec spec, ObjectMapper jsonMapper)

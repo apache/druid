@@ -99,7 +99,7 @@ public class ExtensionsLoaderTest
     a_jar.createNewFile();
     b_jar.createNewFile();
     c_jar.createNewFile();
-    final URLClassLoader loader = extnLoader.getClassLoaderForExtension(some_extension_dir, false);
+    final URLClassLoader loader = extnLoader.getClassLoaderForExtension(some_extension_dir);
     final URL[] expectedURLs = new URL[]{a_jar.toURI().toURL(), b_jar.toURI().toURL(), c_jar.toURI().toURL()};
     final URL[] actualURLs = loader.getURLs();
     Arrays.sort(actualURLs, Comparator.comparing(URL::getPath));
@@ -324,8 +324,8 @@ public class ExtensionsLoaderTest
     Assert.assertTrue(jar2.createNewFile());
 
     final ExtensionsLoader extnLoader = new ExtensionsLoader(new ExtensionsConfig());
-    final ClassLoader classLoader1 = extnLoader.getClassLoaderForExtension(extension1, false);
-    final ClassLoader classLoader2 = extnLoader.getClassLoaderForExtension(extension2, false);
+    final ClassLoader classLoader1 = extnLoader.getClassLoaderForExtension(extension1);
+    final ClassLoader classLoader2 = extnLoader.getClassLoaderForExtension(extension2);
 
     Assert.assertArrayEquals(new URL[]{jar1.toURI().toURL()}, ((URLClassLoader) classLoader1).getURLs());
     Assert.assertArrayEquals(new URL[]{jar2.toURI().toURL()}, ((URLClassLoader) classLoader2).getURLs());
