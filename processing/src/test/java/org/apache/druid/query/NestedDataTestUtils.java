@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -77,6 +78,14 @@ public class NestedDataTestUtils
 
   public static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec("timestamp", null, null);
 
+  public static final JsonInputFormat DEFAULT_JSON_INPUT_FORMAT = new JsonInputFormat(
+      JSONPathSpec.DEFAULT,
+      null,
+      null,
+      null,
+      null
+  );
+
   public static final DimensionsSpec AUTO_DISCOVERY =
       DimensionsSpec.builder()
                     .useSchemaDiscovery(true)
@@ -106,14 +115,22 @@ public class NestedDataTestUtils
       null
   );
 
-  public static DelimitedInputFormat SIMPLE_DATA_TSV_INPUT_FORMAT = DelimitedInputFormat.ofColumns(
-      "timestamp",
-      "dim",
-      "nest",
-      "nester",
-      "variant",
-      "list"
+  public static DelimitedInputFormat SIMPLE_DATA_TSV_INPUT_FORMAT = new DelimitedInputFormat(
+      Arrays.asList(
+          "timestamp",
+          "dim",
+          "nest",
+          "nester",
+          "variant",
+          "list"
+      ),
+      null,
+      null,
+      false,
+      false,
+      0
   );
+
   public static final TransformSpec SIMPLE_DATA_TSV_TRANSFORM = new TransformSpec(
       null,
       Arrays.asList(
@@ -215,7 +232,7 @@ public class NestedDataTestUtils
     return createIncrementalIndex(
         tempFolder,
         file,
-        JsonInputFormat.DEFAULT,
+        DEFAULT_JSON_INPUT_FORMAT,
         TIMESTAMP_SPEC,
         AUTO_DISCOVERY,
         TransformSpec.NONE,
@@ -237,7 +254,7 @@ public class NestedDataTestUtils
         tempFolder,
         closer,
         inputFile,
-        JsonInputFormat.DEFAULT,
+        DEFAULT_JSON_INPUT_FORMAT,
         TIMESTAMP_SPEC,
         AUTO_DISCOVERY,
         TransformSpec.NONE,
@@ -266,7 +283,7 @@ public class NestedDataTestUtils
         tempFolder,
         closer,
         inputFiles,
-        JsonInputFormat.DEFAULT,
+        DEFAULT_JSON_INPUT_FORMAT,
         TIMESTAMP_SPEC,
         AUTO_DISCOVERY,
         TransformSpec.NONE,

@@ -181,17 +181,17 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
       for (Object o : data) {
         indexer.processRowValsToUnsortedEncodedKeyComponent(o, false);
       }
-      SortedMap<String, NestedLiteralTypeInfo.MutableTypeSet> sortedFields = new TreeMap<>();
+      SortedMap<String, NestedFieldTypeInfo.MutableTypeSet> sortedFields = new TreeMap<>();
       indexer.mergeFields(sortedFields);
 
       GlobalDictionarySortedCollector globalDictionarySortedCollector = indexer.getSortedCollector();
 
       serializer.open();
       serializer.serializeFields(sortedFields);
-      serializer.serializeStringDictionary(globalDictionarySortedCollector.getSortedStrings());
-      serializer.serializeLongDictionary(globalDictionarySortedCollector.getSortedLongs());
-      serializer.serializeDoubleDictionary(globalDictionarySortedCollector.getSortedDoubles());
-      serializer.serializeArrayDictionary(
+      serializer.serializeDictionaries(
+          globalDictionarySortedCollector.getSortedStrings(),
+          globalDictionarySortedCollector.getSortedLongs(),
+          globalDictionarySortedCollector.getSortedDoubles(),
           () -> new NestedDataColumnMerger.ArrayDictionaryMergingIterator(
               new Iterable[]{globalDictionarySortedCollector.getSortedArrays()},
               serializer.getGlobalLookup()
@@ -320,8 +320,8 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
       ColumnHolder nestedColumnHolder = v3.getColumnHolder(path);
       Assert.assertNotNull(nestedColumnHolder);
       Assert.assertEquals(ColumnType.STRING, nestedColumnHolder.getCapabilities().toColumnType());
-      NestedFieldLiteralDictionaryEncodedColumn<?> nestedColumn =
-          (NestedFieldLiteralDictionaryEncodedColumn<?>) nestedColumnHolder.getColumn();
+      NestedFieldDictionaryEncodedColumn<?> nestedColumn =
+          (NestedFieldDictionaryEncodedColumn<?>) nestedColumnHolder.getColumn();
 
       Assert.assertNotNull(nestedColumn);
 
@@ -364,8 +364,8 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
       ColumnHolder nestedColumnHolder = v4.getColumnHolder(path);
       Assert.assertNotNull(nestedColumnHolder);
       Assert.assertEquals(ColumnType.STRING, nestedColumnHolder.getCapabilities().toColumnType());
-      NestedFieldLiteralDictionaryEncodedColumn<?> nestedColumn =
-          (NestedFieldLiteralDictionaryEncodedColumn<?>) nestedColumnHolder.getColumn();
+      NestedFieldDictionaryEncodedColumn<?> nestedColumn =
+          (NestedFieldDictionaryEncodedColumn<?>) nestedColumnHolder.getColumn();
 
       Assert.assertNotNull(nestedColumn);
 

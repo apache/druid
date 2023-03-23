@@ -21,7 +21,6 @@ package org.apache.druid.segment.nested;
 
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
@@ -60,7 +59,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.IOException;
 import java.util.List;
 
-public class NestedFieldLiteralColumnSelectorsTest
+public class NestedFieldColumnSelectorsTest
 {
   private static final String NESTED_LONG_FIELD = "long";
   private static final String NESTED_DOUBLE_FIELD = "double";
@@ -78,7 +77,7 @@ public class NestedFieldLiteralColumnSelectorsTest
   private final AggregationTestHelper helper;
   private final Closer closer;
 
-  public NestedFieldLiteralColumnSelectorsTest()
+  public NestedFieldColumnSelectorsTest()
   {
     NestedDataModule.registerHandlersAndSerde();
     List<? extends Module> mods = NestedDataModule.getJacksonModulesList();
@@ -331,7 +330,7 @@ public class NestedFieldLiteralColumnSelectorsTest
         tempFolder,
         closer,
         NestedDataTestUtils.NUMERIC_DATA_FILE,
-        JsonInputFormat.DEFAULT,
+        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
         NestedDataTestUtils.TIMESTAMP_SPEC,
         NestedDataTestUtils.AUTO_DISCOVERY,
         TransformSpec.NONE,
@@ -361,7 +360,7 @@ public class NestedFieldLiteralColumnSelectorsTest
         tempFolder,
         closer,
         NestedDataTestUtils.NUMERIC_DATA_FILE,
-        JsonInputFormat.DEFAULT,
+        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
         NestedDataTestUtils.TIMESTAMP_SPEC,
         NestedDataTestUtils.AUTO_DISCOVERY,
         TransformSpec.NONE,

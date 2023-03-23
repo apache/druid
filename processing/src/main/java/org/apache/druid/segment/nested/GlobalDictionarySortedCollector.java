@@ -89,4 +89,20 @@ public class GlobalDictionarySortedCollector
   {
     return arrayCount;
   }
+
+  public boolean allNull()
+  {
+    for (String s : sortedStrings) {
+      if (s != null) {
+        return false;
+      }
+    }
+    if (sortedLongs.size() > 0) {
+      return false;
+    }
+    if (sortedDoubles.size() > 0) {
+      return false;
+    }
+    return arrayCount == 0;
+  }
 }

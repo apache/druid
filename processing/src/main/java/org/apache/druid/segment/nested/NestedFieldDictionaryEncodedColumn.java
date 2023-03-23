@@ -71,10 +71,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.BitSet;
 
-public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends Indexed<ByteBuffer>>
+public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexed<ByteBuffer>>
     implements DictionaryEncodedColumn<String>
 {
-  private final NestedLiteralTypeInfo.TypeSet types;
+  private final NestedFieldTypeInfo.TypeSet types;
   @Nullable
   private final ColumnType singleType;
   private final ColumnarLongs longsColumn;
@@ -94,8 +94,8 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
   private final int adjustArrayId;
 
 
-  public NestedFieldLiteralDictionaryEncodedColumn(
-      NestedLiteralTypeInfo.TypeSet types,
+  public NestedFieldDictionaryEncodedColumn(
+      NestedFieldTypeInfo.TypeSet types,
       ColumnarLongs longsColumn,
       ColumnarDoubles doublesColumn,
       ColumnarInts column,
@@ -356,7 +356,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
               @Override
               public void inspectRuntimeShape(RuntimeShapeInspector inspector)
               {
-                inspector.visit("column", NestedFieldLiteralDictionaryEncodedColumn.this);
+                inspector.visit("column", NestedFieldDictionaryEncodedColumn.this);
               }
             };
           } else {
@@ -397,7 +397,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
           @Override
           public void inspectRuntimeShape(RuntimeShapeInspector inspector)
           {
-            inspector.visit("column", NestedFieldLiteralDictionaryEncodedColumn.this);
+            inspector.visit("column", NestedFieldDictionaryEncodedColumn.this);
           }
         };
       }
@@ -405,7 +405,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
       @Override
       public Object getObject()
       {
-        return NestedFieldLiteralDictionaryEncodedColumn.this.lookupName(getRowValue());
+        return NestedFieldDictionaryEncodedColumn.this.lookupName(getRowValue());
       }
 
       @Override
@@ -431,7 +431,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
       @Override
       public String lookupName(int id)
       {
-        final String value = NestedFieldLiteralDictionaryEncodedColumn.this.lookupName(id);
+        final String value = NestedFieldDictionaryEncodedColumn.this.lookupName(id);
         return extractionFn == null ? value : extractionFn.apply(value);
       }
 
@@ -452,7 +452,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
       public int lookupId(String name)
       {
         if (extractionFn == null) {
-          return NestedFieldLiteralDictionaryEncodedColumn.this.lookupId(name);
+          return NestedFieldDictionaryEncodedColumn.this.lookupId(name);
         }
         throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
       }
@@ -695,7 +695,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
       @Override
       public String lookupName(final int id)
       {
-        return NestedFieldLiteralDictionaryEncodedColumn.this.lookupName(id);
+        return NestedFieldDictionaryEncodedColumn.this.lookupName(id);
       }
 
       @Nullable
@@ -715,7 +715,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
       @Override
       public int lookupId(@Nullable String name)
       {
-        return NestedFieldLiteralDictionaryEncodedColumn.this.lookupId(name);
+        return NestedFieldDictionaryEncodedColumn.this.lookupId(name);
       }
     }
 
@@ -797,7 +797,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
       @Override
       public String lookupName(int id)
       {
-        return NestedFieldLiteralDictionaryEncodedColumn.this.lookupName(id);
+        return NestedFieldDictionaryEncodedColumn.this.lookupName(id);
       }
     }
 

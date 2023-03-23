@@ -220,7 +220,7 @@ public class FrontCodedIntArrayIndexedWriter implements DictionaryWriter<int[]>
       final ByteBuffer bucketBuffer = ByteBuffer.allocate(currentBucketSize).order(byteOrder);
       valuesOut.readFully(startOffset, bucketBuffer);
       bucketBuffer.clear();
-      return FrontCodedIntArrayIndexed.getFromBucket(bucketBuffer, relativeIndex);
+      return getFromBucket(bucketBuffer, relativeIndex);
     }
   }
 
@@ -276,13 +276,13 @@ public class FrontCodedIntArrayIndexedWriter implements DictionaryWriter<int[]>
   public static int writeBucket(ByteBuffer buffer, int[][] values, int numValues)
   {
     int written = 0;
-    int[] first = null;
+    int[] prev = null;
     while (written < numValues) {
       int[] next = values[written];
       if (written == 0) {
-        first = next;
+        prev = next;
         // the first value in the bucket is written completely as it is
-        int rem = writeValue(buffer, first);
+        int rem = writeValue(buffer, prev);
         // wasn't enough room, bail out
         if (rem < 0) {
           return rem;
@@ -290,12 +290,13 @@ public class FrontCodedIntArrayIndexedWriter implements DictionaryWriter<int[]>
       } else {
         // all other values must be partitioned into a prefix length and suffix bytes
         int prefixLength = 0;
-        for (; prefixLength < first.length; prefixLength++) {
-          final int cmp = Integer.compare(first[prefixLength], next[prefixLength]);
+        for (; prefixLength < prev.length; prefixLength++) {
+          final int cmp = Integer.compare(prev[prefixLength], next[prefixLength]);
           if (cmp != 0) {
             break;
           }
         }
+        // convert to bytes because not every char is a single byte
         final int[] suffix = new int[next.length - prefixLength];
         System.arraycopy(next, prefixLength, suffix, 0, suffix.length);
         int rem = buffer.remaining() - VByte.computeIntSize(prefixLength);
@@ -305,6 +306,7 @@ public class FrontCodedIntArrayIndexedWriter implements DictionaryWriter<int[]>
         }
         VByte.writeInt(buffer, prefixLength);
         rem = writeValue(buffer, suffix);
+        prev = next;
         // wasn't enough room, bail out
         if (rem < 0) {
           return rem;
@@ -336,5 +338,72 @@ public class FrontCodedIntArrayIndexedWriter implements DictionaryWriter<int[]>
       buffer.putInt(anInt);
     }
     return buffer.position() - pos;
+  }
+
+  /**
+   * Copy of {@link FrontCodedIntArrayIndexed#getFromBucket(ByteBuffer, int)} but with local declarations of arrays
+   * for unwinding stuff
+   */
+  int[] getFromBucket(ByteBuffer buffer, int offset)
+  {
+    int[] unwindPrefixLength = new int[bucketSize];
+    int[] unwindBufferPosition = new int[bucketSize];
+    // first value is written whole
+    final int length = VByte.readInt(buffer);
+    if (offset == 0) {
+      final int[] firstValue = new int[length];
+      for (int i = 0; i < length; i++) {
+        firstValue[i] = buffer.getInt();
+      }
+      return firstValue;
+    }
+    int pos = 0;
+    int prefixLength;
+    int fragmentLength;
+    unwindPrefixLength[pos] = 0;
+    unwindBufferPosition[pos] = buffer.position();
+
+    buffer.position(buffer.position() + (length * Integer.BYTES));
+    do {
+      prefixLength = VByte.readInt(buffer);
+      if (++pos < offset) {
+        // not there yet, no need to read anything other than the length to skip ahead
+        final int skipLength = VByte.readInt(buffer);
+        unwindPrefixLength[pos] = prefixLength;
+        unwindBufferPosition[pos] = buffer.position();
+        buffer.position(buffer.position() + (skipLength * Integer.BYTES));
+      } else {
+        // we've reached our destination
+        fragmentLength = VByte.readInt(buffer);
+        if (prefixLength == 0) {
+          // no prefix, return it directly
+          final int[] value = new int[fragmentLength];
+          for (int i = 0; i < fragmentLength; i++) {
+            value[i] = buffer.getInt();
+          }
+          return value;
+        }
+        break;
+      }
+    } while (true);
+    final int valueLength = prefixLength + fragmentLength;
+    final int[] value = new int[valueLength];
+    for (int i = prefixLength; i < valueLength; i++) {
+      value[i] = buffer.getInt();
+    }
+    for (int i = prefixLength; i > 0;) {
+      // previous value had a larger prefix than or the same as the value we are looking for
+      // skip it since the fragment doesn't have anything we need
+      if (unwindPrefixLength[--pos] >= i) {
+        continue;
+      }
+      buffer.position(unwindBufferPosition[pos]);
+      final int prevLength = unwindPrefixLength[pos];
+      for (int fragmentOffset = 0; fragmentOffset < i - prevLength; fragmentOffset++) {
+        value[prevLength + fragmentOffset] = buffer.getInt();
+      }
+      i = unwindPrefixLength[pos];
+    }
+    return value;
   }
 }

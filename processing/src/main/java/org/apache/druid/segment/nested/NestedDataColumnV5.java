@@ -41,7 +41,7 @@ public class NestedDataColumnV5<TStringDictionary extends Indexed<ByteBuffer>>
       CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
       ImmutableBitmap nullValues,
       GenericIndexed<String> fields,
-      NestedLiteralTypeInfo fieldInfo,
+      NestedFieldTypeInfo fieldInfo,
       Supplier<TStringDictionary> stringDictionary,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,

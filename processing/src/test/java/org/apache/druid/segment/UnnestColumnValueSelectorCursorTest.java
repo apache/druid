@@ -123,7 +123,8 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     List<Object> inputList = Arrays.asList(
         Collections.singletonList(null),
         Arrays.asList(null, null),
-        Collections.singletonList(null)
+        Collections.singletonList(null),
+        Collections.emptyList()
     );
 
     //Create base cursor
@@ -145,6 +146,40 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
       k++;
       unnestCursor.advance();
     }
+    // since type is 'STRING', it follows multi-value string rules so single element arrays become scalar values,
+    // so [null] becomes null, meaning we only have 2 rows
+    Assert.assertEquals(k, 2);
+  }
+
+  @Test
+  public void test_list_unnest_cursors_user_supplied_list_only_nulls_array()
+  {
+    List<Object> inputList = Arrays.asList(
+        Collections.singletonList(null),
+        Arrays.asList(null, null),
+        Collections.singletonList(null),
+        Collections.emptyList()
+    );
+
+    //Create base cursor
+    ListCursor listCursor = new ListCursor(inputList);
+
+    //Create unnest cursor
+    UnnestColumnValueSelectorCursor unnestCursor = new UnnestColumnValueSelectorCursor(
+        listCursor,
+        listCursor.getColumnSelectorFactory(),
+        new ExpressionVirtualColumn("__unnest__", "\"dummy\"", ColumnType.STRING_ARRAY, ExprMacroTable.nil()),
+        OUTPUT_NAME
+    );
+    ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
+                                                                .makeColumnValueSelector(OUTPUT_NAME);
+    int k = 0;
+    while (!unnestCursor.isDone()) {
+      Object valueSelectorVal = unnestColumnValueSelector.getObject();
+      Assert.assertNull(valueSelectorVal);
+      k++;
+      unnestCursor.advance();
+    }
     Assert.assertEquals(k, 4);
   }
 
@@ -155,12 +190,15 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
         Arrays.asList("a", "b"),
         Arrays.asList("b", "c"),
         "d",
+        Collections.singletonList(null),
+        Arrays.asList(null, null),
+        Collections.emptyList(),
         null,
         null,
         null
     );
 
-    List<String> expectedResults = Arrays.asList("a", "b", "b", "c", "d", null, null, null);
+    List<String> expectedResults = Arrays.asList("a", "b", "b", "c", "d", null, null);
 
     //Create base cursor
     ListCursor listCursor = new ListCursor(inputList);
@@ -178,7 +216,52 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     while (!unnestCursor.isDone()) {
       Object valueSelectorVal = unnestColumnValueSelector.getObject();
       if (valueSelectorVal == null) {
-        Assert.assertEquals(expectedResults.get(k), null);
+        Assert.assertNull(expectedResults.get(k));
+      } else {
+        Assert.assertEquals(expectedResults.get(k), valueSelectorVal.toString());
+      }
+      k++;
+      unnestCursor.advance();
+    }
+    // since type is 'STRING', it follows multi-value string rules so single element arrays become scalar values,
+    // so [null] becomes null, meaning we only have 7 rows
+    Assert.assertEquals(k, 7);
+  }
+
+  @Test
+  public void test_list_unnest_cursors_user_supplied_list_mixed_with_nulls_array()
+  {
+    List<Object> inputList = Arrays.asList(
+        Arrays.asList("a", "b"),
+        Arrays.asList("b", "c"),
+        "d",
+        Collections.singletonList(null),
+        Arrays.asList(null, null),
+        Collections.emptyList(),
+        null,
+        null,
+        null
+    );
+
+    List<String> expectedResults = Arrays.asList("a", "b", "b", "c", "d", null, null, null);
+
+    //Create base cursor
+    ListCursor listCursor = new ListCursor(inputList);
+
+    //Create unnest cursor
+    UnnestColumnValueSelectorCursor unnestCursor = new UnnestColumnValueSelectorCursor(
+        listCursor,
+        listCursor.getColumnSelectorFactory(),
+        new ExpressionVirtualColumn("__unnest__", "\"dummy\"", ColumnType.STRING_ARRAY, ExprMacroTable.nil()),
+        OUTPUT_NAME
+    );
+    ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
+                                                                .makeColumnValueSelector(OUTPUT_NAME);
+    int k = 0;
+    while (!unnestCursor.isDone()) {
+      Object valueSelectorVal = unnestColumnValueSelector.getObject();
+      if (valueSelectorVal == null) {
+        Assert.assertNull(expectedResults.get(k));
       } else {
         Assert.assertEquals(expectedResults.get(k), valueSelectorVal.toString());
       }
@@ -568,7 +651,7 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
       k++;
       unnestCursor.advance();
     }
-    Assert.assertEquals(k, 9);
+    Assert.assertEquals(k, 8);
     unnestCursor.reset();
     Assert.assertNotNull(unnestDimSelector);
   }

@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class MapInputRowParser implements InputRowParser<Map<String, Object>>
 {
@@ -85,10 +86,12 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
       Map<String, Object> rawInputRow
   )
   {
+    final String timestampColumn = timestampSpec.getTimestampColumn();
+    final Set<String> exclusions = dimensionsSpec.getDimensionExclusions();
     if (dimensionsSpec.isIncludeAllDimensions()) {
       LinkedHashSet<String> dimensions = new LinkedHashSet<>(dimensionsSpec.getDimensionNames());
       for (String field : rawInputRow.keySet()) {
-        if (timestampSpec.getTimestampColumn().equals(field) || dimensionsSpec.getDimensionExclusions().contains(field)) {
+        if (timestampColumn.equals(field) || exclusions.contains(field)) {
           continue;
         }
         dimensions.add(field);
@@ -100,7 +103,7 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
       } else {
         List<String> dimensions = new ArrayList<>();
         for (String field : rawInputRow.keySet()) {
-          if (timestampSpec.getTimestampColumn().equals(field) || dimensionsSpec.getDimensionExclusions().contains(field)) {
+          if (timestampColumn.equals(field) || exclusions.contains(field)) {
             continue;
           }
           dimensions.add(field);

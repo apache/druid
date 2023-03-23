@@ -39,7 +39,7 @@ import java.util.Set;
  * Binary serialization for nested field type info, translated into this compact format for storage in segments.
  * The index of the type info here is the same as the field index in {@link CompressedNestedDataComplexColumn#fields}
  */
-public class NestedLiteralTypeInfo
+public class NestedFieldTypeInfo
 {
   private static final byte STRING_MASK = 1;
   private static final byte LONG_MASK = 1 << 2;
@@ -51,9 +51,9 @@ public class NestedLiteralTypeInfo
 
   private static final byte DOUBLE_ARRAY_MASK = 1 << 6;
 
-  public static NestedLiteralTypeInfo read(ByteBuffer buffer, int length)
+  public static NestedFieldTypeInfo read(ByteBuffer buffer, int length)
   {
-    NestedLiteralTypeInfo typeInfo = new NestedLiteralTypeInfo(buffer);
+    NestedFieldTypeInfo typeInfo = new NestedFieldTypeInfo(buffer);
     buffer.position(buffer.position() + length);
     return typeInfo;
   }
@@ -61,7 +61,7 @@ public class NestedLiteralTypeInfo
   private final ByteBuffer buffer;
   private final int startOffset;
 
-  public NestedLiteralTypeInfo(ByteBuffer buffer)
+  public NestedFieldTypeInfo(ByteBuffer buffer)
   {
     this.buffer = buffer;
     this.startOffset = buffer.position();
@@ -87,7 +87,7 @@ public class NestedLiteralTypeInfo
     @Nullable
     public ColumnType getSingleType()
     {
-      return NestedLiteralTypeInfo.getSingleType(types);
+      return NestedFieldTypeInfo.getSingleType(types);
     }
 
     public byte getByteValue()
@@ -178,7 +178,7 @@ public class NestedLiteralTypeInfo
     @Nullable
     public ColumnType getSingleType()
     {
-      return NestedLiteralTypeInfo.getSingleType(types);
+      return NestedFieldTypeInfo.getSingleType(types);
     }
 
     public boolean isEmpty()

@@ -38,6 +38,7 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
@@ -107,6 +108,14 @@ public class TestDataBuilder
       return Optional.empty();
     }
   };
+
+  public static final JsonInputFormat DEFAULT_JSON_INPUT_FORMAT = new JsonInputFormat(
+      JSONPathSpec.DEFAULT,
+      null,
+      null,
+      null,
+      null
+  );
 
   private static final InputRowSchema FOO_SCHEMA = new InputRowSchema(
       new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
@@ -623,7 +632,7 @@ public class TestDataBuilder
                 "calcite/tests/wikiticker-2015-09-12-sampled.json.gz"
             )
         )
-        .inputFormat(JsonInputFormat.DEFAULT)
+        .inputFormat(DEFAULT_JSON_INPUT_FORMAT)
         .inputTmpDir(new File(tmpDir, "tmpWikipedia1"))
         .buildMMappedIndex();
   }

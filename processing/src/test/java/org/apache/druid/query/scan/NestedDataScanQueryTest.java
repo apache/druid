@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -134,7 +133,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
             tempFolder,
             closer,
             NestedDataTestUtils.NUMERIC_DATA_FILE,
-            JsonInputFormat.DEFAULT,
+            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
             NestedDataTestUtils.TIMESTAMP_SPEC,
             NestedDataTestUtils.AUTO_DISCOVERY,
             TransformSpec.NONE,
@@ -477,7 +476,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.createIncrementalIndex(
             tempFolder,
             NestedDataTestUtils.TYPES_DATA_FILE,
-            JsonInputFormat.DEFAULT,
+            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
             NestedDataTestUtils.TIMESTAMP_SPEC,
             NestedDataTestUtils.AUTO_DISCOVERY,
             TransformSpec.NONE,
@@ -490,7 +489,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         tempFolder,
         closer,
         NestedDataTestUtils.TYPES_DATA_FILE,
-        JsonInputFormat.DEFAULT,
+        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
         NestedDataTestUtils.TIMESTAMP_SPEC,
         NestedDataTestUtils.AUTO_DISCOVERY,
         TransformSpec.NONE,
@@ -536,7 +535,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.createIncrementalIndex(
             tempFolder,
             NestedDataTestUtils.ARRAY_TYPES_DATA_FILE,
-            JsonInputFormat.DEFAULT,
+            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
             NestedDataTestUtils.TIMESTAMP_SPEC,
             NestedDataTestUtils.AUTO_DISCOVERY,
             TransformSpec.NONE,
@@ -549,7 +548,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         tempFolder,
         closer,
         NestedDataTestUtils.ARRAY_TYPES_DATA_FILE,
-        JsonInputFormat.DEFAULT,
+        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
         NestedDataTestUtils.TIMESTAMP_SPEC,
         NestedDataTestUtils.AUTO_DISCOVERY,
         TransformSpec.NONE,

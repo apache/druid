@@ -135,9 +135,8 @@ public class SegmentAnalyzer
           }
           break;
         case ARRAY:
-          // todo (clint): this is wack, but works for now because arrays are always nested complex columns...
           final ColumnHolder arrayHolder = index != null ? index.getColumnHolder(columnName) : null;
-          analysis = analyzeComplexColumn(capabilities, numRows, arrayHolder);
+          analysis = analyzeArrayColumn(capabilities, numRows, arrayHolder);
           break;
         case COMPLEX:
           final ColumnHolder columnHolder = index != null ? index.getColumnHolder(columnName) : null;
@@ -389,5 +388,29 @@ public class SegmentAnalyzer
           null
       );
     }
+  }
+
+  private ColumnAnalysis analyzeArrayColumn(
+      @Nullable final ColumnCapabilities capabilities,
+      final int numCells,
+      @Nullable final ColumnHolder columnHolder
+  )
+  {
+    final TypeSignature<ValueType> typeSignature = capabilities == null ? ColumnType.UNKNOWN_COMPLEX : capabilities;
+    final String typeName = typeSignature.getComplexTypeName();
+    final boolean hasMultipleValues = capabilities != null && capabilities.hasMultipleValues().isTrue();
+    final boolean hasNulls = capabilities != null && capabilities.hasNulls().isMaybeTrue();
+
+    return new ColumnAnalysis(
+        ColumnTypeFactory.ofType(typeSignature),
+        typeName,
+        hasMultipleValues,
+        hasNulls,
+        0L,
+        null,
+        null,
+        null,
+        null
+    );
   }
 }

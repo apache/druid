@@ -370,6 +370,18 @@ public abstract class ExprEval<T>
     return new ComplexExprEval(outputType, value);
   }
 
+  public static ExprEval bestEffortArray(@Nullable List<?> theList)
+  {
+    // do not convert empty lists to arrays with a single null element here, because that should have been done
+    // by the selectors preparing their ObjectBindings if necessary. If we get to this point it was legitimately
+    // empty
+    NonnullPair<ExpressionType, Object[]> coerced = coerceListToArray(theList, false);
+    if (coerced == null) {
+      return bestEffortOf(null);
+    }
+    return ofArray(coerced.lhs, coerced.rhs);
+  }
+
   /**
    * Examine java type to find most appropriate expression type
    */
@@ -468,14 +480,7 @@ public abstract class ExprEval<T>
 
     if (val instanceof List || val instanceof Object[]) {
       final List<?> theList = val instanceof List ? ((List<?>) val) : Arrays.asList((Object[]) val);
-      // do not convert empty lists to arrays with a single null element here, because that should have been done
-      // by the selectors preparing their ObjectBindings if necessary. If we get to this point it was legitimately
-      // empty
-      NonnullPair<ExpressionType, Object[]> coerced = coerceListToArray(theList, false);
-      if (coerced == null) {
-        return bestEffortOf(null);
-      }
-      return ofArray(coerced.lhs, coerced.rhs);
+      return bestEffortArray(theList);
     }
 
     // in 'best effort' mode, we couldn't possibly use byte[] as a complex or anything else useful without type

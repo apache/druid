@@ -27,12 +27,10 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
-/**
- * Literal field writer for mixed type nested columns of {@link NestedDataColumnSerializer}
- */
-public final class VariantLiteralFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<Object>
+public class ArrayFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<int[]>
 {
-  public VariantLiteralFieldColumnWriter(
+
+  protected ArrayFieldColumnWriter(
       String columnName,
       String fieldName,
       SegmentWriteOutMedium segmentWriteOutMedium,
@@ -43,47 +41,39 @@ public final class VariantLiteralFieldColumnWriter extends GlobalDictionaryEncod
     super(columnName, fieldName, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);
   }
 
-
   @Override
-  Object processValue(int row, Object value)
+  int[] processValue(int row, Object value)
   {
     if (value instanceof Object[]) {
       Object[] array = (Object[]) value;
-      final int[] newIdsWhoDis = new int[array.length];
+      final int[] globalIds = new int[array.length];
       for (int i = 0; i < array.length; i++) {
         if (array[i] == null) {
-          newIdsWhoDis[i] = 0;
+          globalIds[i] = 0;
         } else if (array[i] instanceof String) {
-          newIdsWhoDis[i] = globalDictionaryIdLookup.lookupString((String) array[i]);
+          globalIds[i] = globalDictionaryIdLookup.lookupString((String) array[i]);
         } else if (array[i] instanceof Long) {
-          newIdsWhoDis[i] = globalDictionaryIdLookup.lookupLong((Long) array[i]);
+          globalIds[i] = globalDictionaryIdLookup.lookupLong((Long) array[i]);
         } else if (array[i] instanceof Double) {
-          newIdsWhoDis[i] = globalDictionaryIdLookup.lookupDouble((Double) array[i]);
+          globalIds[i] = globalDictionaryIdLookup.lookupDouble((Double) array[i]);
         } else {
-          newIdsWhoDis[i] = -1;
+          globalIds[i] = -1;
         }
-        Preconditions.checkArgument(newIdsWhoDis[i] >= 0, "unknown global id [%s] for value [%s]", newIdsWhoDis[i], array[i]);
+        Preconditions.checkArgument(globalIds[i] >= 0, "unknown global id [%s] for value [%s]", globalIds[i], array[i]);
+        arrayElements.computeIfAbsent(
+            globalIds[i],
+            (id) -> indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap()
+        ).add(row);
       }
-      return newIdsWhoDis;
+      return globalIds;
     }
-    return super.processValue(row, value);
+    return null;
   }
 
   @Override
-  int lookupGlobalId(Object value)
+  int lookupGlobalId(int[] value)
   {
-    if (value == null) {
-      return 0;
-    }
-    if (value instanceof Long) {
-      return globalDictionaryIdLookup.lookupLong((Long) value);
-    } else if (value instanceof Double) {
-      return globalDictionaryIdLookup.lookupDouble((Double) value);
-    } else if (value instanceof int[]) {
-      return globalDictionaryIdLookup.lookupArray((int[]) value);
-    } else {
-      return globalDictionaryIdLookup.lookupString(String.valueOf(value));
-    }
+    return globalDictionaryIdLookup.lookupArray(value);
   }
 
   @Override

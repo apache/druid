@@ -94,7 +94,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   private final ImmutableBitmap nullValues;
 
   private final GenericIndexed<String> fields;
-  private final NestedLiteralTypeInfo fieldInfo;
+  private final NestedFieldTypeInfo fieldInfo;
 
   private final Supplier<TStringDictionary> stringDictionarySupplier;
   private final Supplier<FixedIndexed<Long>> longDictionarySupplier;
@@ -115,7 +115,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
       ImmutableBitmap nullValues,
       GenericIndexed<String> fields,
-      NestedLiteralTypeInfo fieldInfo,
+      NestedFieldTypeInfo fieldInfo,
       Supplier<TStringDictionary> stringDictionary,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
@@ -159,7 +159,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     return fieldParts;
   }
 
-  public NestedLiteralTypeInfo getFieldInfo()
+  public NestedFieldTypeInfo getFieldInfo()
   {
     return fieldInfo;
   }
@@ -749,7 +749,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     if (index < 0) {
       return null;
     }
-    return NestedLiteralTypeInfo.convertToSet(fieldInfo.getTypes(index).getByteValue());
+    return NestedFieldTypeInfo.convertToSet(fieldInfo.getTypes(index).getByteValue());
   }
 
   @Nullable
@@ -798,7 +798,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
         return null;
       }
       final int fieldIndex = fields.indexOf(field);
-      final NestedLiteralTypeInfo.TypeSet types = fieldInfo.getTypes(fieldIndex);
+      final NestedFieldTypeInfo.TypeSet types = fieldInfo.getTypes(fieldIndex);
       final String fieldFileName = getFieldFileName(metadata.getFileNameBase(), field, fieldIndex);
       final ByteBuffer dataBuffer = fileMapper.mapFile(fieldFileName);
       if (dataBuffer == null) {
@@ -882,7 +882,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       final boolean hasNull = localDictionarySupplier.get().get(0) == 0;
       Supplier<DictionaryEncodedColumn<?>> columnSupplier = () -> {
         FixedIndexed<Integer> localDict = localDictionarySupplier.get();
-        return closer.register(new NestedFieldLiteralDictionaryEncodedColumn(
+        return closer.register(new NestedFieldDictionaryEncodedColumn(
             types,
             longs.get(),
             doubles.get(),
@@ -901,7 +901,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
                    .setHasNulls(hasNull)
                    .setDictionaryEncodedColumnSupplier(columnSupplier);
       columnBuilder.setIndexSupplier(
-          new NestedFieldLiteralColumnIndexSupplier(
+          new NestedFieldColumnIndexSupplier(
               types,
               metadata.getBitmapSerdeFactory().getBitmapFactory(),
               rBitmaps,

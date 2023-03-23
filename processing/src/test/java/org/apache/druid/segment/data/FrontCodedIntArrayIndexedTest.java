@@ -20,6 +20,7 @@
 package org.apache.druid.segment.data;
 
 import com.google.common.collect.ImmutableList;
+import junitparams.converters.Nullable;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
@@ -32,6 +33,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -66,8 +68,10 @@ public class FrontCodedIntArrayIndexedTest
     values.add(new int[]{1, 2, 4});
     values.add(new int[]{1, 3, 4});
     values.add(new int[]{1, 2, 1});
+    values.add(new int[]{2, 1});
+    values.add(new int[]{2, 2, 1});
 
-    fillBuffer(buffer, values, 4);
+    persistToBuffer(buffer, values, 4);
 
     buffer.position(0);
     FrontCodedIntArrayIndexed codedIndexed = FrontCodedIntArrayIndexed.read(
@@ -81,8 +85,9 @@ public class FrontCodedIntArrayIndexedTest
     while (expectedIterator.hasNext() && indexedIterator.hasNext()) {
       final int[] expectedNext = expectedIterator.next();
       final int[] next = indexedIterator.next();
-      Assert.assertArrayEquals(expectedNext, next);
-      Assert.assertEquals(ctr, codedIndexed.indexOf(next));
+      assertSame(ctr, expectedNext, next);
+      assertSame(ctr, expectedNext, codedIndexed.get(ctr));
+      Assert.assertEquals("row " + ctr, ctr, codedIndexed.indexOf(next));
       ctr++;
     }
     Assert.assertEquals(expectedIterator.hasNext(), indexedIterator.hasNext());
@@ -100,7 +105,7 @@ public class FrontCodedIntArrayIndexedTest
     values.add(new int[]{1, 2, 4});
     values.add(new int[]{1, 3, 4});
     values.add(new int[]{1, 2, 1});
-    fillBuffer(buffer, values, 16);
+    persistToBuffer(buffer, values, 16);
 
     FrontCodedIntArrayIndexed codedIndexed = FrontCodedIntArrayIndexed.read(
         buffer,
@@ -113,7 +118,8 @@ public class FrontCodedIntArrayIndexedTest
     while (indexedIterator.hasNext() && expectedIterator.hasNext()) {
       final int[] expectedNext = expectedIterator.next();
       final int[] next = indexedIterator.next();
-      Assert.assertArrayEquals(expectedNext, next);
+      assertSame(ctr, expectedNext, next);
+      assertSame(ctr, expectedNext, codedIndexed.get(ctr));
       Assert.assertEquals(ctr, codedIndexed.indexOf(next));
       ctr++;
     }
@@ -136,7 +142,7 @@ public class FrontCodedIntArrayIndexedTest
         }
         values.add(val);
       }
-      fillBuffer(buffer, values, bucketSize);
+      persistToBuffer(buffer, values, bucketSize);
 
       FrontCodedIntArrayIndexed codedIndexed = FrontCodedIntArrayIndexed.read(
           buffer,
@@ -149,7 +155,8 @@ public class FrontCodedIntArrayIndexedTest
       while (indexedIterator.hasNext() && expectedIterator.hasNext()) {
         final int[] expectedNext = expectedIterator.next();
         final int[] next = indexedIterator.next();
-        Assert.assertArrayEquals(expectedNext, next);
+        assertSame(ctr, expectedNext, next);
+        assertSame(ctr, expectedNext, codedIndexed.get(ctr));
         Assert.assertEquals(ctr, codedIndexed.indexOf(next));
         ctr++;
       }
@@ -175,7 +182,7 @@ public class FrontCodedIntArrayIndexedTest
         }
         values.add(val);
       }
-      fillBuffer(buffer, values, bucketSize);
+      persistToBuffer(buffer, values, bucketSize);
 
       FrontCodedIntArrayIndexed codedIndexed = FrontCodedIntArrayIndexed.read(
           buffer,
@@ -188,7 +195,8 @@ public class FrontCodedIntArrayIndexedTest
       while (indexedIterator.hasNext() && expectedIterator.hasNext()) {
         final int[] expectedNext = expectedIterator.next();
         final int[] next = indexedIterator.next();
-        Assert.assertArrayEquals(expectedNext, next);
+        assertSame(ctr, expectedNext, next);
+        assertSame(ctr, expectedNext, codedIndexed.get(ctr));
         Assert.assertEquals(ctr, codedIndexed.indexOf(next));
         ctr++;
       }
@@ -209,7 +217,7 @@ public class FrontCodedIntArrayIndexedTest
     values.add(new int[]{1, 3});
     values.add(new int[]{1, 3, 4});
 
-    fillBuffer(buffer, values, 4);
+    persistToBuffer(buffer, values, 4);
 
     FrontCodedIntArrayIndexed codedIndexed = FrontCodedIntArrayIndexed.read(
         buffer,
@@ -237,7 +245,7 @@ public class FrontCodedIntArrayIndexedTest
     values.add(new int[]{1, 2, 4});
     values.add(new int[]{1, 3});
     values.add(new int[]{1, 3, 4});
-    fillBuffer(buffer, values, 4);
+    persistToBuffer(buffer, values, 4);
 
     FrontCodedIntArrayIndexed codedIndexed = FrontCodedIntArrayIndexed.read(
         buffer,
@@ -259,7 +267,7 @@ public class FrontCodedIntArrayIndexedTest
   {
     ByteBuffer buffer = ByteBuffer.allocate(1 << 12).order(order);
     List<int[]> theList = Collections.singletonList(null);
-    fillBuffer(buffer, theList, 4);
+    persistToBuffer(buffer, theList, 4);
 
     buffer.position(0);
     FrontCodedIntArrayIndexed codedIndexed = FrontCodedIntArrayIndexed.read(
@@ -285,7 +293,7 @@ public class FrontCodedIntArrayIndexedTest
   {
     ByteBuffer buffer = ByteBuffer.allocate(1 << 6).order(order);
     List<int[]> theList = Collections.emptyList();
-    fillBuffer(buffer, theList, 4);
+    persistToBuffer(buffer, theList, 4);
 
     buffer.position(0);
     FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
@@ -333,7 +341,7 @@ public class FrontCodedIntArrayIndexedTest
       values.add(val);
     }
     for (int bucketSize : bucketSizes) {
-      fillBuffer(buffer, values, bucketSize);
+      persistToBuffer(buffer, values, bucketSize);
       FrontCodedIntArrayIndexed codedIndexed = FrontCodedIntArrayIndexed.read(
           buffer,
           buffer.order()
@@ -345,8 +353,8 @@ public class FrontCodedIntArrayIndexedTest
       while (iterator.hasNext() && expectedIterator.hasNext()) {
         final int[] expectedNext = expectedIterator.next();
         final int[] next = iterator.next();
-        Assert.assertArrayEquals(expectedNext, next);
-
+        assertSame(ctr, expectedNext, next);
+        assertSame(ctr, expectedNext, codedIndexed.get(ctr));
         Assert.assertEquals(ctr, codedIndexed.indexOf(next));
         ctr++;
       }
@@ -388,7 +396,7 @@ public class FrontCodedIntArrayIndexedTest
     );
   }
 
-  private static long fillBuffer(ByteBuffer buffer, Iterable<int[]> sortedIterable, int bucketSize) throws IOException
+  private static long persistToBuffer(ByteBuffer buffer, Iterable<int[]> sortedIterable, int bucketSize) throws IOException
   {
     Iterator<int[]> sortedInts = sortedIterable.iterator();
     buffer.position(0);
@@ -403,11 +411,7 @@ public class FrontCodedIntArrayIndexedTest
     while (sortedInts.hasNext()) {
       final int[] next = sortedInts.next();
       writer.write(next);
-      if (next == null) {
-        Assert.assertNull(writer.get(index));
-      } else {
-        Assert.assertArrayEquals(next, writer.get(index));
-      }
+      assertSame(index, next, writer.get(index));
       index++;
     }
 
@@ -415,12 +419,7 @@ public class FrontCodedIntArrayIndexedTest
     index = 0;
     sortedInts = sortedIterable.iterator();
     while (sortedInts.hasNext()) {
-      final int[] next = sortedInts.next();
-      if (next == null) {
-        Assert.assertNull("row " + index, writer.get(index));
-      } else {
-        Assert.assertArrayEquals("row " + index, next, writer.get(index));
-      }
+      assertSame(index, sortedInts.next(), writer.get(index));
       index++;
     }
 
@@ -451,5 +450,18 @@ public class FrontCodedIntArrayIndexedTest
     Assert.assertEquals(size, buffer.position());
     buffer.position(0);
     return size;
+  }
+
+  private static void assertSame(int index, @Nullable int[] expected, @Nullable int[] actual)
+  {
+    if (expected == null) {
+      Assert.assertNull("row " + index, actual);
+    } else {
+      Assert.assertArrayEquals(
+          "row " + index + " expected: " + Arrays.toString(expected) + " actual: " + Arrays.toString(actual),
+          expected,
+          actual
+      );
+    }
   }
 }

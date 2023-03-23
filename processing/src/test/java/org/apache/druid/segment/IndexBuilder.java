@@ -248,10 +248,10 @@ public class IndexBuilder
       Preconditions.checkNotNull(inputFormat, "inputFormat");
       Preconditions.checkNotNull(inputSourceTmpDir, "inputSourceTmpDir");
 
-      TransformSpec tranformer = transformSpec != null ? transformSpec : TransformSpec.NONE;
+      TransformSpec transformer = transformSpec != null ? transformSpec : TransformSpec.NONE;
       InputRowSchema rowSchema = new InputRowSchema(schema.getTimestampSpec(), schema.getDimensionsSpec(), null);
       InputSourceReader reader = inputSource.reader(rowSchema, inputFormat, inputSourceTmpDir);
-      InputSourceReader transformingReader = tranformer.decorate(reader);
+      InputSourceReader transformingReader = transformer.decorate(reader);
       return mergeIndexes(indexMerger, persisted, transformingReader::read);
     }
 

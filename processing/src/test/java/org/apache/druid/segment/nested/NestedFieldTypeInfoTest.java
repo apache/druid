@@ -35,7 +35,7 @@ import java.nio.channels.WritableByteChannel;
 import java.util.List;
 import java.util.Set;
 
-public class NestedLiteralTypeInfoTest
+public class NestedFieldTypeInfoTest
 {
   private static final ByteBuffer BUFFER = ByteBuffer.allocate(1024).order(ByteOrder.nativeOrder());
 
@@ -75,11 +75,11 @@ public class NestedLiteralTypeInfoTest
   @Test
   public void testEqualsAndHashCode()
   {
-    EqualsVerifier.forClass(NestedLiteralTypeInfo.TypeSet.class)
+    EqualsVerifier.forClass(NestedFieldTypeInfo.TypeSet.class)
                   .usingGetClass()
                   .verify();
 
-    EqualsVerifier.forClass(NestedLiteralTypeInfo.MutableTypeSet.class)
+    EqualsVerifier.forClass(NestedFieldTypeInfo.MutableTypeSet.class)
                   .suppress(Warning.NONFINAL_FIELDS)
                   .usingGetClass()
                   .verify();
@@ -87,60 +87,60 @@ public class NestedLiteralTypeInfoTest
 
   private void testSingleType(ColumnType columnType) throws IOException
   {
-    NestedLiteralTypeInfo.MutableTypeSet typeSet = new NestedLiteralTypeInfo.MutableTypeSet();
+    NestedFieldTypeInfo.MutableTypeSet typeSet = new NestedFieldTypeInfo.MutableTypeSet();
     Assert.assertNull(typeSet.getSingleType());
     Assert.assertTrue(typeSet.isEmpty());
 
     typeSet.add(columnType);
 
     Assert.assertEquals(columnType, typeSet.getSingleType());
-    Assert.assertEquals(ImmutableSet.of(columnType), NestedLiteralTypeInfo.convertToSet(typeSet.getByteValue()));
+    Assert.assertEquals(ImmutableSet.of(columnType), NestedFieldTypeInfo.convertToSet(typeSet.getByteValue()));
 
     writeTypeSet(typeSet);
-    NestedLiteralTypeInfo info = new NestedLiteralTypeInfo(BUFFER);
+    NestedFieldTypeInfo info = new NestedFieldTypeInfo(BUFFER);
     Assert.assertEquals(0, BUFFER.position());
 
-    NestedLiteralTypeInfo.TypeSet roundTrip = info.getTypes(0);
+    NestedFieldTypeInfo.TypeSet roundTrip = info.getTypes(0);
     Assert.assertEquals(columnType, roundTrip.getSingleType());
 
-    NestedLiteralTypeInfo info2 = NestedLiteralTypeInfo.read(BUFFER, 1);
+    NestedFieldTypeInfo info2 = NestedFieldTypeInfo.read(BUFFER, 1);
     Assert.assertEquals(info.getTypes(0), info2.getTypes(0));
     Assert.assertEquals(1, BUFFER.position());
   }
 
   private void testMultiType(Set<ColumnType> columnTypes) throws IOException
   {
-    NestedLiteralTypeInfo.MutableTypeSet typeSet = new NestedLiteralTypeInfo.MutableTypeSet();
+    NestedFieldTypeInfo.MutableTypeSet typeSet = new NestedFieldTypeInfo.MutableTypeSet();
     Assert.assertNull(typeSet.getSingleType());
     Assert.assertTrue(typeSet.isEmpty());
 
-    NestedLiteralTypeInfo.MutableTypeSet merge = new NestedLiteralTypeInfo.MutableTypeSet();
+    NestedFieldTypeInfo.MutableTypeSet merge = new NestedFieldTypeInfo.MutableTypeSet();
     for (ColumnType columnType : columnTypes) {
       typeSet.add(columnType);
-      merge.merge(new NestedLiteralTypeInfo.MutableTypeSet().add(columnType).getByteValue());
+      merge.merge(new NestedFieldTypeInfo.MutableTypeSet().add(columnType).getByteValue());
     }
 
     Assert.assertEquals(merge.getByteValue(), typeSet.getByteValue());
     Assert.assertNull(typeSet.getSingleType());
-    Assert.assertEquals(columnTypes, NestedLiteralTypeInfo.convertToSet(typeSet.getByteValue()));
+    Assert.assertEquals(columnTypes, NestedFieldTypeInfo.convertToSet(typeSet.getByteValue()));
 
     writeTypeSet(typeSet);
-    NestedLiteralTypeInfo info = new NestedLiteralTypeInfo(BUFFER);
+    NestedFieldTypeInfo info = new NestedFieldTypeInfo(BUFFER);
     Assert.assertEquals(0, BUFFER.position());
 
-    NestedLiteralTypeInfo.TypeSet roundTrip = info.getTypes(0);
+    NestedFieldTypeInfo.TypeSet roundTrip = info.getTypes(0);
     Assert.assertNull(roundTrip.getSingleType());
-    Assert.assertEquals(columnTypes, NestedLiteralTypeInfo.convertToSet(roundTrip.getByteValue()));
+    Assert.assertEquals(columnTypes, NestedFieldTypeInfo.convertToSet(roundTrip.getByteValue()));
 
-    NestedLiteralTypeInfo info2 = NestedLiteralTypeInfo.read(BUFFER, 1);
+    NestedFieldTypeInfo info2 = NestedFieldTypeInfo.read(BUFFER, 1);
     Assert.assertEquals(info.getTypes(0), info2.getTypes(0));
     Assert.assertEquals(1, BUFFER.position());
   }
 
-  private static void writeTypeSet(NestedLiteralTypeInfo.MutableTypeSet typeSet) throws IOException
+  private static void writeTypeSet(NestedFieldTypeInfo.MutableTypeSet typeSet) throws IOException
   {
     BUFFER.position(0);
-    NestedLiteralTypeInfo.Writer writer = new NestedLiteralTypeInfo.Writer(new OnHeapMemorySegmentWriteOutMedium());
+    NestedFieldTypeInfo.Writer writer = new NestedFieldTypeInfo.Writer(new OnHeapMemorySegmentWriteOutMedium());
     writer.open();
     writer.write(typeSet);
     Assert.assertEquals(1, writer.getSerializedSize());

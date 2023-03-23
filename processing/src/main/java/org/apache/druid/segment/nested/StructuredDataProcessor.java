@@ -22,6 +22,7 @@ package org.apache.druid.segment.nested;
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -36,27 +37,26 @@ public abstract class StructuredDataProcessor
   }
 
   /**
-   * process a literal value that is definitely not a {@link Map}, {@link List}, or {@link Object[]}
+   * process a value that is definitely not a {@link Map}, {@link List}, or {@link Object[]}
    */
-  public abstract ProcessedLiteral<?> processLiteralField(
-      ArrayList<NestedPathPart> fieldPath,
-      @Nullable Object fieldValue
-  );
+  public abstract ProcessedValue<?> processField(ArrayList<NestedPathPart> fieldPath, @Nullable Object fieldValue);
 
   /**
-   * process a {@link List} or {@link Object[]} that might be an array of literals. If the object was an array of
-   * literals, returns a {@link ProcessedLiteral}, else returns null.
+   * Process a {@link List} or {@link Object[]} returning a {@link ProcessedValue} if no further processing should
+   * be performed by the {@link StructuredDataProcessor}, else a return value of null indicates that each element
+   * of the array will be processed separately as a new {@link NestedPathArrayElement} part.
    */
   @Nullable
-  public abstract ProcessedLiteral<?> processArrayOfLiteralsField(
-      ArrayList<NestedPathPart> fieldPath,
-      @Nullable Object maybeArrayOfLiterals
-  );
+  public abstract ProcessedValue<?> processArrayField(ArrayList<NestedPathPart> fieldPath, @Nullable List<?> array);
 
 
   /**
-   * Process fields, returning a list of all paths to literal fields, represented as an ordered sequence of
-   * {@link NestedPathPart}.
+   * Process some object, traversing any nested structure and returning a list of all paths which created a
+   * {@link ProcessedValue} during processing, represented as an ordered sequence of {@link NestedPathPart}.
+   *
+   * This method processes plain java objects, for each {@link Map} it adds a {@link MapField} to the path, for
+   * {@link List} a {@link ArrayField}, {@link Object[]} a {@link ArrayField}, and so on. {@link ArrayField} and
+   * {@link ArrayField} will be processed by {@link #processArrayField(ArrayList, List)}
    */
   public ProcessResults processFields(Object raw)
   {
@@ -66,11 +66,11 @@ public abstract class StructuredDataProcessor
     if (raw instanceof Map) {
       toProcess.add(new MapField(newPath, (Map<String, ?>) raw));
     } else if (raw instanceof List) {
-      toProcess.add(new ListField(newPath, (List<?>) raw));
+      toProcess.add(new ArrayField(newPath, (List<?>) raw));
     } else if (raw instanceof Object[]) {
-      toProcess.add(new ArrayField(newPath, (Object[]) raw));
+      toProcess.add(new ArrayField(newPath, Arrays.asList((Object[]) raw)));
     } else {
-      return new ProcessResults().addLiteralField(newPath, processLiteralField(newPath, raw).getSize());
+      return new ProcessResults().addLiteralField(newPath, processField(newPath, raw).getSize());
     }
 
     final ProcessResults accumulator = new ProcessResults();
@@ -79,8 +79,6 @@ public abstract class StructuredDataProcessor
       Field next = toProcess.poll();
       if (next instanceof MapField) {
         accumulator.merge(processMapField(toProcess, (MapField) next));
-      } else if (next instanceof ListField) {
-        accumulator.merge(processListField(toProcess, (ListField) next));
       } else if (next instanceof ArrayField) {
         accumulator.merge(processArrayField(toProcess, (ArrayField) next));
       }
@@ -101,26 +99,28 @@ public abstract class StructuredDataProcessor
       newPath.add(new NestedPathField(entry.getKey()));
       if (value instanceof List) {
         List<?> theList = (List<?>) value;
-        toProcess.add(new ListField(newPath, theList));
+        toProcess.add(new ArrayField(newPath, theList));
+      } else if (value instanceof Object[]) {
+        toProcess.add(new ArrayField(newPath, Arrays.asList((Object[]) value)));
       } else if (value instanceof Map) {
         toProcess.add(new MapField(newPath, (Map<String, ?>) value));
       } else {
         // literals get processed
-        processResults.addLiteralField(newPath, processLiteralField(newPath, value).getSize());
+        processResults.addLiteralField(newPath, processField(newPath, value).getSize());
       }
     }
     return processResults;
   }
 
-  private ProcessResults processListField(Queue<Field> toProcess, ListField list)
+  private ProcessResults processArrayField(Queue<Field> toProcess, ArrayField list)
   {
     // start with object reference, is probably a bit bigger than this...
     final ProcessResults results = new ProcessResults().withSize(8);
     final List<?> theList = list.getList();
-    // check to see if the processor treats arrays of literals as literals, if so we can stop processing here
-    ProcessedLiteral<?> maybeArrayOfLiterals = processArrayOfLiteralsField(list.getPath(), theList);
-    if (maybeArrayOfLiterals != null) {
-      results.addLiteralField(list.getPath(), maybeArrayOfLiterals.getSize());
+    // check to see if the processor handled the array, indicated by a non-null result, if so we can stop here
+    final ProcessedValue<?> maybeProcessed = processArrayField(list.getPath(), theList);
+    if (maybeProcessed != null) {
+      results.addLiteralField(list.getPath(), maybeProcessed.getSize());
     } else {
       // else we have to dig into the list and process each element
       for (int i = 0; i < theList.size(); i++) {
@@ -131,41 +131,11 @@ public abstract class StructuredDataProcessor
         if (element instanceof Map) {
           toProcess.add(new MapField(newPath, (Map<String, ?>) element));
         } else if (element instanceof List) {
-          toProcess.add(new ListField(newPath, (List<?>) element));
+          toProcess.add(new ArrayField(newPath, (List<?>) element));
         } else if (element instanceof Object[]) {
-          toProcess.add(new ArrayField(newPath, (Object[]) element));
+          toProcess.add(new ArrayField(newPath, Arrays.asList((Object[]) element)));
         } else {
-          results.addLiteralField(newPath, processLiteralField(newPath, element).getSize());
-        }
-      }
-    }
-    return results;
-  }
-
-  private ProcessResults processArrayField(Queue<Field> toProcess, ArrayField array)
-  {
-    // start with object reference, is probably a bit bigger than this...
-    final ProcessResults results = new ProcessResults().withSize(8);
-    final Object[] theArray = array.getArray();
-    // check to see if the processor treats arrays of literals as literals, if so we can stop processing here
-    ProcessedLiteral<?> maybeArrayOfLiterals = processArrayOfLiteralsField(array.getPath(), theArray);
-    if (maybeArrayOfLiterals != null) {
-      results.addLiteralField(array.getPath(), maybeArrayOfLiterals.getSize());
-    } else {
-      // else we have to dig into the list and process each element
-      for (int i = 0; i < theArray.length; i++) {
-        final ArrayList<NestedPathPart> newPath = new ArrayList<>(array.getPath());
-        newPath.add(new NestedPathArrayElement(i));
-        final Object element = StructuredData.unwrap(theArray[i]);
-        // maps and lists go back into the queue
-        if (element instanceof Map) {
-          toProcess.add(new MapField(newPath, (Map<String, ?>) element));
-        } else if (element instanceof List) {
-          toProcess.add(new ListField(newPath, (List<?>) element));
-        } else if (element instanceof Object[]) {
-          toProcess.add(new ArrayField(newPath, (Object[]) element));
-        } else {
-          results.addLiteralField(newPath, processLiteralField(newPath, element).getSize());
+          results.addLiteralField(newPath, processField(newPath, element).getSize());
         }
       }
     }
@@ -187,11 +157,11 @@ public abstract class StructuredDataProcessor
     }
   }
 
-  static class ListField extends Field
+  static class ArrayField extends Field
   {
     private final List<?> list;
 
-    ListField(ArrayList<NestedPathPart> path, List<?> list)
+    ArrayField(ArrayList<NestedPathPart> path, List<?> list)
     {
       super(path);
       this.list = list;
@@ -200,22 +170,6 @@ public abstract class StructuredDataProcessor
     public List<?> getList()
     {
       return list;
-    }
-  }
-
-  static class ArrayField extends Field
-  {
-    private final Object[] array;
-
-    ArrayField(ArrayList<NestedPathPart> path, Object[] array)
-    {
-      super(path);
-      this.array = array;
-    }
-
-    public Object[] getArray()
-    {
-      return array;
     }
   }
 
@@ -235,14 +189,14 @@ public abstract class StructuredDataProcessor
     }
   }
 
-  public static class ProcessedLiteral<T>
+  public static class ProcessedValue<T>
   {
-    public static final ProcessedLiteral<?> NULL_LITERAL = new ProcessedLiteral<>(null, 0);
+    public static final ProcessedValue<?> NULL_LITERAL = new ProcessedValue<>(null, 0);
     @Nullable
     private final T value;
     private final int size;
 
-    public ProcessedLiteral(@Nullable T value, int size)
+    public ProcessedValue(@Nullable T value, int size)
     {
       this.value = value;
       this.size = size;
@@ -269,7 +223,7 @@ public abstract class StructuredDataProcessor
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
-      ProcessedLiteral<?> that = (ProcessedLiteral<?>) o;
+      ProcessedValue<?> that = (ProcessedValue<?>) o;
       return size == that.size && Objects.equals(value, that.value);
     }
 

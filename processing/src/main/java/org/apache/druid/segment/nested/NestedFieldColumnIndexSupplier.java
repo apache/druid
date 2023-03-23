@@ -68,10 +68,10 @@ import java.util.NoSuchElementException;
 import java.util.SortedSet;
 
 /**
- * Supplies indexes for nested field columns {@link NestedFieldLiteralDictionaryEncodedColumn} of
+ * Supplies indexes for nested field columns {@link NestedFieldDictionaryEncodedColumn} of
  * {@link NestedDataComplexColumn}.
  */
-public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Indexed<ByteBuffer>>
+public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<ByteBuffer>>
     implements ColumnIndexSupplier
 {
   @Nullable
@@ -93,8 +93,8 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
   private final int adjustLongId;
   private final int adjustDoubleId;
 
-  public NestedFieldLiteralColumnIndexSupplier(
-      NestedLiteralTypeInfo.TypeSet types,
+  public NestedFieldColumnIndexSupplier(
+      NestedFieldTypeInfo.TypeSet types,
       BitmapFactory bitmapFactory,
       GenericIndexed<ImmutableBitmap> bitmaps,
       Supplier<FixedIndexed<Integer>> localDictionarySupplier,
@@ -331,7 +331,7 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
     @Override
     public ImmutableBitmap getBitmap(int idx)
     {
-      return NestedFieldLiteralColumnIndexSupplier.this.getBitmap(idx);
+      return NestedFieldColumnIndexSupplier.this.getBitmap(idx);
     }
   }
 

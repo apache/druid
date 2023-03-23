@@ -108,6 +108,8 @@ public final class FrontCodedIntArrayIndexed implements Indexed<int[]>
   private final int bucketsPosition;
   private final boolean hasNull;
   private final int lastBucketNumValues;
+  private final int[] unwindPrefixLength;
+  private final int[] unwindBufferPosition;
 
   private FrontCodedIntArrayIndexed(
       ByteBuffer buffer,
@@ -133,6 +135,8 @@ public final class FrontCodedIntArrayIndexed implements Indexed<int[]>
     this.lastBucketNumValues = (numValues & rem) == 0 ? bucketSize : numValues & rem;
     this.offsetsPosition = offsetsPosition;
     this.bucketsPosition = offsetsPosition + ((numBuckets - 1) * Integer.BYTES);
+    this.unwindPrefixLength = new int[bucketSize];
+    this.unwindBufferPosition = new int[bucketSize];
   }
 
   @Override
@@ -379,7 +383,7 @@ public final class FrontCodedIntArrayIndexed implements Indexed<int[]>
   /**
    * Finds a value in a bucket among the fragments. The first value is assumed to have been already compared against
    * and be smaller than the value we are looking for. This comparison is the source of the 'shared prefix', which is
-   * the length which the value has in common with the first value of the bucket.
+   * the length which the value has in common with the previous values of the bucket.
    *
    * This method uses this shared prefix length to skip more expensive byte by byte full value comparisons when
    * possible by comparing the shared prefix length with the prefix length of the fragment. Since the bucket is always
@@ -394,7 +398,7 @@ public final class FrontCodedIntArrayIndexed implements Indexed<int[]>
       int[] value,
       int currBucketFirstValueIndex,
       int bucketSize,
-      int sharedPrefix
+      int sharedPrefixLength
   )
   {
     int relativePosition = 0;
@@ -403,23 +407,28 @@ public final class FrontCodedIntArrayIndexed implements Indexed<int[]>
     int insertionPoint = 1;
     while (++relativePosition < bucketSize) {
       prefixLength = VByte.readInt(buffer);
-      if (prefixLength > sharedPrefix) {
+      if (prefixLength > sharedPrefixLength) {
+        // bucket value shares more in common with the preceding value, so the value we are looking for comes after
         final int skip = VByte.readInt(buffer);
         buffer.position(buffer.position() + (skip * Integer.BYTES));
         insertionPoint++;
-      } else if (prefixLength < sharedPrefix) {
-        // prefix is smaller, that means this value sorts ahead of it
+      } else if (prefixLength < sharedPrefixLength) {
+        // bucket value prefix is smaller, that means the value we are looking for sorts ahead of it
         break;
       } else {
+        // value has the same shared prefix, so compare additional values to find
         final int fragmentLength = VByte.readInt(buffer);
         final int common = Math.min(fragmentLength, value.length - prefixLength);
         int fragmentComparison = 0;
+        boolean shortCircuit = false;
         for (int i = 0; i < common; i++) {
           fragmentComparison = Integer.compare(
               buffer.getInt(buffer.position() + (i * Integer.BYTES)),
               value[prefixLength + i]
           );
           if (fragmentComparison != 0) {
+            sharedPrefixLength = prefixLength + i;
+            shortCircuit = true;
             break;
           }
         }
@@ -430,6 +439,10 @@ public final class FrontCodedIntArrayIndexed implements Indexed<int[]>
         if (fragmentComparison == 0) {
           return (currBucketFirstValueIndex + adjustIndex) + relativePosition;
         } else if (fragmentComparison < 0) {
+          // value we are looking for is longer than the current bucket value, continue on
+          if (!shortCircuit) {
+            sharedPrefixLength = prefixLength + common;
+          }
           buffer.position(buffer.position() + (fragmentLength * Integer.BYTES));
           insertionPoint++;
         } else {
@@ -438,7 +451,7 @@ public final class FrontCodedIntArrayIndexed implements Indexed<int[]>
       }
     }
     // (-(insertion point) - 1)
-    return -(currBucketFirstValueIndex + adjustIndex) + (-(insertionPoint) - 1);
+    return -(currBucketFirstValueIndex + adjustIndex) + (~insertionPoint);
   }
 
   /**
@@ -446,47 +459,64 @@ public final class FrontCodedIntArrayIndexed implements Indexed<int[]>
    *
    * This method modifies the position of the buffer.
    */
-  static int[] getFromBucket(ByteBuffer buffer, int offset)
+  int[] getFromBucket(ByteBuffer buffer, int offset)
   {
-    int prefixPosition;
+    // first value is written whole
+    final int length = VByte.readInt(buffer);
     if (offset == 0) {
-      final int length = VByte.readInt(buffer);
       final int[] firstValue = new int[length];
       for (int i = 0; i < length; i++) {
         firstValue[i] = buffer.getInt();
       }
       return firstValue;
-    } else {
-      final int firstLength = VByte.readInt(buffer);
-      prefixPosition = buffer.position();
-      buffer.position(buffer.position() + (firstLength * Integer.BYTES));
     }
     int pos = 0;
     int prefixLength;
     int fragmentLength;
-    int fragmentPosition;
-    // scan through bucket values until we reach offset
+    unwindPrefixLength[pos] = 0;
+    unwindBufferPosition[pos] = buffer.position();
+
+    buffer.position(buffer.position() + (length * Integer.BYTES));
     do {
       prefixLength = VByte.readInt(buffer);
       if (++pos < offset) {
         // not there yet, no need to read anything other than the length to skip ahead
         final int skipLength = VByte.readInt(buffer);
+        unwindPrefixLength[pos] = prefixLength;
+        unwindBufferPosition[pos] = buffer.position();
         buffer.position(buffer.position() + (skipLength * Integer.BYTES));
       } else {
         // we've reached our destination
         fragmentLength = VByte.readInt(buffer);
-        fragmentPosition = buffer.position();
+        if (prefixLength == 0) {
+          // no prefix, return it directly
+          final int[] value = new int[fragmentLength];
+          for (int i = 0; i < fragmentLength; i++) {
+            value[i] = buffer.getInt();
+          }
+          return value;
+        }
         break;
       }
     } while (true);
     final int valueLength = prefixLength + fragmentLength;
     final int[] value = new int[valueLength];
-    for (int i = 0; i < valueLength; i++) {
-      if (i < prefixLength) {
-        value[i] = buffer.getInt(prefixPosition + (i * Integer.BYTES));
-      } else {
-        value[i] = buffer.getInt(fragmentPosition + ((i - prefixLength) * Integer.BYTES));
+    for (int i = prefixLength; i < valueLength; i++) {
+      value[i] = buffer.getInt();
+    }
+    for (int i = prefixLength; i > 0;) {
+      // previous value had a larger prefix than or the same as the value we are looking for
+      // skip it since the fragment doesn't have anything we need
+      if (unwindPrefixLength[--pos] >= i) {
+        continue;
       }
+      buffer.position(unwindBufferPosition[pos]);
+      final int prevLength = unwindPrefixLength[pos];
+      for (int fragmentOffset = 0; fragmentOffset < i - prevLength; fragmentOffset++) {
+        value[prevLength + fragmentOffset] = buffer.getInt();
+      }
+
+      i = unwindPrefixLength[pos];
     }
     return value;
   }
@@ -499,12 +529,14 @@ public final class FrontCodedIntArrayIndexed implements Indexed<int[]>
    */
   private static int[][] readBucket(ByteBuffer bucket, int numValues)
   {
+    final int[][] bucketValues = new int[numValues][];
+
+    // first value is written whole
     final int length = VByte.readInt(bucket);
-    final int[] prefix = new int[length];
+    int[] prefix = new int[length];
     for (int i = 0; i < length; i++) {
       prefix[i] = bucket.getInt();
     }
-    final int[][] bucketValues = new int[numValues][];
     bucketValues[0] = prefix;
     int pos = 1;
     while (pos < numValues) {
@@ -517,6 +549,7 @@ public final class FrontCodedIntArrayIndexed implements Indexed<int[]>
       for (int i = prefixLength; i < value.length; i++) {
         value[i] = bucket.getInt();
       }
+      prefix = value;
       bucketValues[pos++] = value;
     }
     return bucketValues;

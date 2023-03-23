@@ -78,7 +78,7 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
         final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
         final NestedDataColumnMetadata metadata;
         final GenericIndexed<String> fields;
-        final NestedLiteralTypeInfo fieldInfo;
+        final NestedFieldTypeInfo fieldInfo;
         final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
         final ImmutableBitmap nullValues;
         final GenericIndexed<ByteBuffer> stringDictionary;
@@ -94,7 +94,7 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
             NestedDataColumnMetadata.class
         );
         fields = GenericIndexed.read(bb, GenericIndexed.STRING_STRATEGY, mapper);
-        fieldInfo = NestedLiteralTypeInfo.read(bb, fields.size());
+        fieldInfo = NestedFieldTypeInfo.read(bb, fields.size());
 
         if (fields.size() == 0) {
           // all nulls, in the future we'll deal with this better... but for now lets just call it a string because
@@ -227,7 +227,7 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
   private final byte version;
   private final NestedDataColumnMetadata metadata;
   private final GenericIndexed<String> fields;
-  private final NestedLiteralTypeInfo fieldInfo;
+  private final NestedFieldTypeInfo fieldInfo;
   private final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
   private final ImmutableBitmap nullValues;
   private final GenericIndexed<ByteBuffer> stringDictionary;
@@ -245,7 +245,7 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
       byte version,
       NestedDataColumnMetadata metadata,
       GenericIndexed<String> fields,
-      NestedLiteralTypeInfo fieldInfo,
+      NestedFieldTypeInfo fieldInfo,
       CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
       ImmutableBitmap nullValues,
       GenericIndexed<ByteBuffer> stringDictionary,

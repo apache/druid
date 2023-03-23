@@ -29,7 +29,6 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -41,6 +40,8 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
@@ -289,7 +290,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             NestedDataTestUtils.ARRAY_TYPES_DATA_FILE
                         )
                     )
-                    .inputFormat(JsonInputFormat.DEFAULT)
+                    .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
                     .inputTmpDir(temporaryFolder.newFolder())
                     .buildMMappedIndex();
 
@@ -860,708 +861,1189 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonValueArrays()
   {
-    testQuery(
-        "SELECT "
-        + "JSON_VALUE(arrayString, '$' RETURNING VARCHAR ARRAY), "
-        + "JSON_VALUE(arrayLong, '$' RETURNING BIGINT ARRAY), "
-        + "JSON_VALUE(arrayDouble, '$' RETURNING DOUBLE ARRAY) "
-        + "FROM druid.arrays",
-        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
-        ImmutableList.of(
-            Druids.newScanQueryBuilder()
-                  .dataSource(DATA_SOURCE_ARRAYS)
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .virtualColumns(
-                      new NestedFieldVirtualColumn("arrayString", "$", "v0", ColumnType.STRING_ARRAY),
-                      new NestedFieldVirtualColumn("arrayLong", "$", "v1", ColumnType.LONG_ARRAY),
-                      new NestedFieldVirtualColumn("arrayDouble", "$", "v2", ColumnType.DOUBLE_ARRAY)
-                  )
-                  .columns("v0", "v1", "v2")
-                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
-                  .build()
-        ),
-        ImmutableList.of(
-            new Object[]{null, Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1, 2.2, 3.3)},
-            new Object[]{null, null, null},
-            new Object[]{Arrays.asList("d", "e"), Arrays.asList(1L, 4L), Arrays.asList(2.2, 3.3, 4.0)},
-            new Object[]{Arrays.asList("a", "b"), null, null},
-            new Object[]{Arrays.asList("a", "b"), Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1, 2.2, 3.3)},
-            new Object[]{Arrays.asList("b", "c"), Arrays.asList(1L, 2L, 3L, 4L), Arrays.asList(1.1, 3.3)},
-            new Object[]{Arrays.asList("a", "b", "c"), Arrays.asList(2L, 3L), Arrays.asList(3.3, 4.4, 5.5)},
-            new Object[]{null, Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1, 2.2, 3.3)},
-            new Object[]{null, null, null},
-            new Object[]{Arrays.asList("d", "e"), Arrays.asList(1L, 4L), Arrays.asList(2.2, 3.3, 4.0)},
-            new Object[]{Arrays.asList("a", "b"), null, null},
-            new Object[]{Arrays.asList("a", "b"), Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1, 2.2, 3.3)},
-            new Object[]{Arrays.asList("b", "c"), Arrays.asList(1L, 2L, 3L, 4L), Arrays.asList(1.1, 3.3)},
-            new Object[]{Arrays.asList("a", "b", "c"), Arrays.asList(2L, 3L), Arrays.asList(3.3, 4.4, 5.5)}
-        ),
-        RowSignature.builder()
-                    .add("EXPR$0", ColumnType.STRING_ARRAY)
-                    .add("EXPR$1", ColumnType.LONG_ARRAY)
-                    .add("EXPR$2", ColumnType.DOUBLE_ARRAY)
-                    .build()
-    );
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "JSON_VALUE(arrayString, '$' RETURNING VARCHAR ARRAY), "
+            + "JSON_VALUE(arrayLong, '$' RETURNING BIGINT ARRAY), "
+            + "JSON_VALUE(arrayDouble, '$' RETURNING DOUBLE ARRAY) "
+            + "FROM druid.arrays"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                Druids.newScanQueryBuilder()
+                      .dataSource(DATA_SOURCE_ARRAYS)
+                      .intervals(querySegmentSpec(Filtration.eternity()))
+                      .virtualColumns(
+                          new NestedFieldVirtualColumn("arrayString", "$", "v0", ColumnType.STRING_ARRAY),
+                          new NestedFieldVirtualColumn("arrayLong", "$", "v1", ColumnType.LONG_ARRAY),
+                          new NestedFieldVirtualColumn("arrayDouble", "$", "v2", ColumnType.DOUBLE_ARRAY)
+                      )
+                      .columns("v0", "v1", "v2")
+                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                      .legacy(false)
+                      .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{null, Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1, 2.2, 3.3)},
+                new Object[]{null, null, null},
+                new Object[]{Arrays.asList("d", "e"), Arrays.asList(1L, 4L), Arrays.asList(2.2, 3.3, 4.0)},
+                new Object[]{Arrays.asList("a", "b"), null, null},
+                new Object[]{Arrays.asList("a", "b"), Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1, 2.2, 3.3)},
+                new Object[]{Arrays.asList("b", "c"), Arrays.asList(1L, 2L, 3L, 4L), Arrays.asList(1.1, 3.3)},
+                new Object[]{Arrays.asList("a", "b", "c"), Arrays.asList(2L, 3L), Arrays.asList(3.3, 4.4, 5.5)},
+                new Object[]{null, Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1, 2.2, 3.3)},
+                new Object[]{null, null, null},
+                new Object[]{Arrays.asList("d", "e"), Arrays.asList(1L, 4L), Arrays.asList(2.2, 3.3, 4.0)},
+                new Object[]{Arrays.asList("a", "b"), null, null},
+                new Object[]{Arrays.asList("a", "b"), Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1, 2.2, 3.3)},
+                new Object[]{Arrays.asList("b", "c"), Arrays.asList(1L, 2L, 3L, 4L), Arrays.asList(1.1, 3.3)},
+                new Object[]{Arrays.asList("a", "b", "c"), Arrays.asList(2L, 3L), Arrays.asList(3.3, 4.4, 5.5)}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.STRING_ARRAY)
+                        .add("EXPR$1", ColumnType.LONG_ARRAY)
+                        .add("EXPR$2", ColumnType.DOUBLE_ARRAY)
+                        .build()
+        )
+        .run();
   }
+
+  @Test
+  public void testUnnestRootSingleTypeArrayLongNulls()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql("SELECT longs FROM druid.arrays, UNNEST(arrayLongNulls) as u(longs)")
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                Druids.newScanQueryBuilder()
+                      .dataSource(
+                          UnnestDataSource.create(
+                              TableDataSource.create(DATA_SOURCE_ARRAYS),
+                              expressionVirtualColumn("j0.unnest", "\"arrayLongNulls\"", ColumnType.LONG_ARRAY),
+                              null
+                          )
+                      )
+                      .intervals(querySegmentSpec(Filtration.eternity()))
+                      .columns("j0.unnest")
+                      .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                      .legacy(false)
+                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                      .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{2L},
+                new Object[]{3L},
+                new Object[]{1L},
+                new Object[]{null},
+                new Object[]{2L},
+                new Object[]{9L},
+                new Object[]{1L},
+                new Object[]{null},
+                new Object[]{3L},
+                new Object[]{1L},
+                new Object[]{2L},
+                new Object[]{3L},
+                new Object[]{2L},
+                new Object[]{3L},
+                new Object[]{null},
+                new Object[]{null},
+                new Object[]{2L},
+                new Object[]{9L},
+                new Object[]{1L},
+                new Object[]{null},
+                new Object[]{3L},
+                new Object[]{1L},
+                new Object[]{2L},
+                new Object[]{3L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("longs", ColumnType.LONG)
+                        .build()
+        )
+        .run();
+  }
+
+  @Test
+  public void testUnnestRootSingleTypeArrayStringNulls()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql("SELECT strings FROM druid.arrays, UNNEST(arrayStringNulls) as u(strings)")
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                Druids.newScanQueryBuilder()
+                      .dataSource(
+                          UnnestDataSource.create(
+                              TableDataSource.create(DATA_SOURCE_ARRAYS),
+                              expressionVirtualColumn("j0.unnest", "\"arrayStringNulls\"", ColumnType.STRING_ARRAY),
+                              null
+                          )
+                      )
+                      .intervals(querySegmentSpec(Filtration.eternity()))
+                      .columns("j0.unnest")
+                      .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                      .legacy(false)
+                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                      .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{"a"},
+                new Object[]{"b"},
+                new Object[]{"b"},
+                new Object[]{"b"},
+                new Object[]{"a"},
+                new Object[]{"b"},
+                new Object[]{"d"},
+                new Object[]{NullHandling.defaultStringValue()},
+                new Object[]{"b"},
+                new Object[]{NullHandling.defaultStringValue()},
+                new Object[]{"b"},
+                new Object[]{"a"},
+                new Object[]{"b"},
+                new Object[]{"b"},
+                new Object[]{"b"},
+                new Object[]{NullHandling.defaultStringValue()},
+                new Object[]{"d"},
+                new Object[]{NullHandling.defaultStringValue()},
+                new Object[]{"b"},
+                new Object[]{NullHandling.defaultStringValue()},
+                new Object[]{"b"}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("strings", ColumnType.STRING)
+                        .build()
+        )
+        .run();
+  }
+
+  @Test
+  public void testUnnestRootSingleTypeArrayDoubleNulls()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql("SELECT doubles FROM druid.arrays, UNNEST(arrayDoubleNulls) as u(doubles)")
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                Druids.newScanQueryBuilder()
+                      .dataSource(
+                          UnnestDataSource.create(
+                              TableDataSource.create(DATA_SOURCE_ARRAYS),
+                              expressionVirtualColumn("j0.unnest", "\"arrayDoubleNulls\"", ColumnType.DOUBLE_ARRAY),
+                              null
+                          )
+                      )
+                      .intervals(querySegmentSpec(Filtration.eternity()))
+                      .columns("j0.unnest")
+                      .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                      .legacy(false)
+                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                      .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{null},
+                new Object[]{999.0D},
+                new Object[]{5.5D},
+                new Object[]{null},
+                new Object[]{1.1D},
+                new Object[]{2.2D},
+                new Object[]{null},
+                new Object[]{null},
+                new Object[]{2.2D},
+                new Object[]{null},
+                new Object[]{999.0D},
+                new Object[]{null},
+                new Object[]{5.5D},
+                new Object[]{null},
+                new Object[]{1.1D},
+                new Object[]{999.0D},
+                new Object[]{5.5D},
+                new Object[]{null},
+                new Object[]{1.1D},
+                new Object[]{2.2D},
+                new Object[]{null},
+                new Object[]{null},
+                new Object[]{2.2D},
+                new Object[]{null},
+                new Object[]{999.0D},
+                new Object[]{null},
+                new Object[]{5.5D}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("doubles", ColumnType.DOUBLE)
+                        .build()
+        )
+        .run();
+  }
+
 
   @Test
   public void testGroupByRootSingleTypeArrayLong()
   {
     cannotVectorize();
-    testQuery(
-        "SELECT "
-        + "arrayLong, "
-        + "SUM(cnt) "
-        + "FROM druid.arrays GROUP BY 1",
-        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(DATA_SOURCE_ARRAYS)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("arrayLong", "d0", ColumnType.LONG_ARRAY)
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "arrayLong, "
+            + "SUM(cnt) "
+            + "FROM druid.arrays GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("arrayLong", "d0", ColumnType.LONG_ARRAY)
+                                )
                             )
-                        )
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{null, 4L},
+                new Object[]{Arrays.asList(1L, 2L, 3L), 4L},
+                new Object[]{Arrays.asList(1L, 2L, 3L, 4L), 2L},
+                new Object[]{Arrays.asList(1L, 4L), 2L},
+                new Object[]{Arrays.asList(2L, 3L), 2L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("arrayLong", ColumnType.LONG_ARRAY)
+                        .add("EXPR$1", ColumnType.LONG)
                         .build()
-        ),
-        ImmutableList.of(
-            new Object[]{null, 4L},
-            new Object[]{Arrays.asList(1L, 2L, 3L), 4L},
-            new Object[]{Arrays.asList(1L, 2L, 3L, 4L), 2L},
-            new Object[]{Arrays.asList(1L, 4L), 2L},
-            new Object[]{Arrays.asList(2L, 3L), 2L}
-        ),
-        RowSignature.builder()
-                    .add("arrayLong", ColumnType.LONG_ARRAY)
-                    .add("EXPR$1", ColumnType.LONG)
-                    .build()
-    );
+        )
+        .run();
   }
 
   @Test
   public void testGroupByRootSingleTypeArrayLongNulls()
   {
     cannotVectorize();
-    testQuery(
-        "SELECT "
-        + "arrayLongNulls, "
-        + "SUM(cnt) "
-        + "FROM druid.arrays GROUP BY 1",
-        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(DATA_SOURCE_ARRAYS)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("arrayLongNulls", "d0", ColumnType.LONG_ARRAY)
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "arrayLongNulls, "
+            + "SUM(cnt) "
+            + "FROM druid.arrays GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("arrayLongNulls", "d0", ColumnType.LONG_ARRAY)
+                                )
                             )
-                        )
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{null, 3L},
+                new Object[]{Collections.emptyList(), 1L},
+                new Object[]{Collections.singletonList(null), 1L},
+                new Object[]{Arrays.asList(null, 2L, 9L), 2L},
+                new Object[]{Collections.singletonList(1L), 1L},
+                new Object[]{Arrays.asList(1L, null, 3L), 2L},
+                new Object[]{Arrays.asList(1L, 2L, 3L), 2L},
+                new Object[]{Arrays.asList(2L, 3L), 2L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("arrayLongNulls", ColumnType.LONG_ARRAY)
+                        .add("EXPR$1", ColumnType.LONG)
                         .build()
-        ),
-        ImmutableList.of(
-            new Object[]{null, 4L},
-            new Object[]{Arrays.asList(null, 2L, 9L), 2L},
-            new Object[]{Collections.singletonList(1L), 2L},
-            new Object[]{Arrays.asList(1L, null, 3L), 2L},
-            new Object[]{Arrays.asList(1L, 2L, 3L), 2L},
-            new Object[]{Arrays.asList(2L, 3L), 2L}
-        ),
-        RowSignature.builder()
-                    .add("arrayLongNulls", ColumnType.LONG_ARRAY)
-                    .add("EXPR$1", ColumnType.LONG)
-                    .build()
-    );
+        )
+        .run();
+  }
+
+  @Test
+  public void testGroupByRootSingleTypeArrayLongNullsUnnest()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "longs, "
+            + "SUM(cnt) "
+            + "FROM druid.arrays, UNNEST(arrayLongNulls) as u (longs) GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(
+                                UnnestDataSource.create(
+                                    TableDataSource.create(DATA_SOURCE_ARRAYS),
+                                    expressionVirtualColumn("j0.unnest", "\"arrayLongNulls\"", ColumnType.LONG_ARRAY),
+                                    null
+                                )
+                            )
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("j0.unnest", "d0", ColumnType.LONG)
+                                )
+                            )
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{NullHandling.defaultLongValue(), 5L},
+                new Object[]{1L, 5L},
+                new Object[]{2L, 6L},
+                new Object[]{3L, 6L},
+                new Object[]{9L, 2L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("longs", ColumnType.LONG)
+                        .add("EXPR$1", ColumnType.LONG)
+                        .build()
+        )
+        .run();
   }
 
   @Test
   public void testGroupByRootSingleTypeArrayLongNullsFiltered()
   {
     cannotVectorize();
-    testQuery(
-        "SELECT "
-        + "arrayLongNulls, "
-        + "SUM(cnt), "
-        + "SUM(ARRAY_LENGTH(arrayLongNulls)) "
-        + "FROM druid.arrays "
-        + "WHERE ARRAY_CONTAINS(arrayLongNulls, 1) "
-        + "GROUP BY 1",
-        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(DATA_SOURCE_ARRAYS)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("arrayLongNulls", "d0", ColumnType.LONG_ARRAY)
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "arrayLongNulls, "
+            + "SUM(cnt), "
+            + "SUM(ARRAY_LENGTH(arrayLongNulls)) "
+            + "FROM druid.arrays "
+            + "WHERE ARRAY_CONTAINS(arrayLongNulls, 1) "
+            + "GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("arrayLongNulls", "d0", ColumnType.LONG_ARRAY)
+                                )
                             )
-                        )
-                        .setVirtualColumns(
-                            new ExpressionVirtualColumn("v0", "array_length(\"arrayLongNulls\")", ColumnType.LONG, queryFramework().macroTable())
-                        )
-                        .setDimFilter(
-                            new ExpressionDimFilter("array_contains(\"arrayLongNulls\",1)", queryFramework().macroTable())
-                        )
-                        .setAggregatorSpecs(
-                            aggregators(
-                                new LongSumAggregatorFactory("a0", "cnt"),
-                                new LongSumAggregatorFactory("a1", "v0")
+                            .setVirtualColumns(
+                                new ExpressionVirtualColumn("v0", "array_length(\"arrayLongNulls\")", ColumnType.LONG, queryFramework().macroTable())
                             )
-                        )
-                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .setDimFilter(
+                                new ExpressionDimFilter("array_contains(\"arrayLongNulls\",1)", queryFramework().macroTable())
+                            )
+                            .setAggregatorSpecs(
+                                aggregators(
+                                    new LongSumAggregatorFactory("a0", "cnt"),
+                                    new LongSumAggregatorFactory("a1", "v0")
+                                )
+                            )
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{Collections.singletonList(1L), 1L, 1L},
+                new Object[]{Arrays.asList(1L, null, 3L), 2L, 6L},
+                new Object[]{Arrays.asList(1L, 2L, 3L), 2L, 6L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("arrayLongNulls", ColumnType.LONG_ARRAY)
+                        .add("EXPR$1", ColumnType.LONG)
+                        .add("EXPR$2", ColumnType.LONG)
                         .build()
-        ),
-        ImmutableList.of(
-            new Object[]{Collections.singletonList(1L), 2L, 2L},
-            new Object[]{Arrays.asList(1L, null, 3L), 2L, 6L},
-            new Object[]{Arrays.asList(1L, 2L, 3L), 2L, 6L}
-        ),
-        RowSignature.builder()
-                    .add("arrayLongNulls", ColumnType.LONG_ARRAY)
-                    .add("EXPR$1", ColumnType.LONG)
-                    .add("EXPR$2", ColumnType.LONG)
-                    .build()
-    );
+        )
+        .run();
   }
 
   @Test
   public void testGroupByRootSingleTypeArrayString()
   {
     cannotVectorize();
-    testQuery(
-        "SELECT "
-        + "arrayString, "
-        + "SUM(cnt) "
-        + "FROM druid.arrays GROUP BY 1",
-        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(DATA_SOURCE_ARRAYS)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("arrayString", "d0", ColumnType.STRING_ARRAY)
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "arrayString, "
+            + "SUM(cnt) "
+            + "FROM druid.arrays GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("arrayString", "d0", ColumnType.STRING_ARRAY)
+                                )
                             )
-                        )
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{null, 4L},
+                new Object[]{Arrays.asList("a", "b"), 4L},
+                new Object[]{Arrays.asList("a", "b", "c"), 2L},
+                new Object[]{Arrays.asList("b", "c"), 2L},
+                new Object[]{Arrays.asList("d", "e"), 2L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("arrayString", ColumnType.STRING_ARRAY)
+                        .add("EXPR$1", ColumnType.LONG)
                         .build()
-        ),
-        ImmutableList.of(
-            new Object[]{null, 4L},
-            new Object[]{Arrays.asList("a", "b"), 4L},
-            new Object[]{Arrays.asList("a", "b", "c"), 2L},
-            new Object[]{Arrays.asList("b", "c"), 2L},
-            new Object[]{Arrays.asList("d", "e"), 2L}
-        ),
-        RowSignature.builder()
-                    .add("arrayString", ColumnType.STRING_ARRAY)
-                    .add("EXPR$1", ColumnType.LONG)
-                    .build()
-    );
+        )
+        .run();
   }
 
   @Test
   public void testGroupByRootSingleTypeArrayStringNulls()
   {
     cannotVectorize();
-    testQuery(
-        "SELECT "
-        + "arrayStringNulls, "
-        + "SUM(cnt) "
-        + "FROM druid.arrays GROUP BY 1",
-        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(DATA_SOURCE_ARRAYS)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("arrayStringNulls", "d0", ColumnType.STRING_ARRAY)
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "arrayStringNulls, "
+            + "SUM(cnt) "
+            + "FROM druid.arrays GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("arrayStringNulls", "d0", ColumnType.STRING_ARRAY)
+                                )
                             )
-                        )
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{null, 3L},
+                new Object[]{Collections.emptyList(), 1L},
+                new Object[]{Collections.singletonList(null), 1L},
+                new Object[]{Arrays.asList(null, "b"), 2L},
+                new Object[]{Arrays.asList("a", "b"), 3L},
+                new Object[]{Arrays.asList("b", "b"), 2L},
+                new Object[]{Arrays.asList("d", null, "b"), 2L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("arrayStringNulls", ColumnType.STRING_ARRAY)
+                        .add("EXPR$1", ColumnType.LONG)
                         .build()
-        ),
-        ImmutableList.of(
-            new Object[]{null, 4L},
-            new Object[]{Arrays.asList(null, "b"), 2L},
-            new Object[]{Arrays.asList("a", "b"), 4L},
-            new Object[]{Arrays.asList("b", "b"), 2L},
-            new Object[]{Arrays.asList("d", null, "b"), 2L}
-        ),
-        RowSignature.builder()
-                    .add("arrayStringNulls", ColumnType.STRING_ARRAY)
-                    .add("EXPR$1", ColumnType.LONG)
-                    .build()
-    );
+        )
+        .run();
+  }
+
+  @Test
+  public void testGroupByRootSingleTypeArrayStringNullsUnnest()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "strings, "
+            + "SUM(cnt) "
+            + "FROM druid.arrays, unnest(arrayStringNulls) as u (strings) GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(
+                                UnnestDataSource.create(
+                                    TableDataSource.create(DATA_SOURCE_ARRAYS),
+                                    expressionVirtualColumn("j0.unnest", "\"arrayStringNulls\"", ColumnType.STRING_ARRAY),
+                                    null
+                                )
+                            )
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("j0.unnest", "d0", ColumnType.STRING)
+                                )
+                            )
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{NullHandling.defaultStringValue(), 5L},
+                new Object[]{"a", 3L},
+                new Object[]{"b", 11L},
+                new Object[]{"d", 2L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("strings", ColumnType.STRING)
+                        .add("EXPR$1", ColumnType.LONG)
+                        .build()
+        )
+        .run();
   }
 
   @Test
   public void testGroupByRootSingleTypeArrayStringNullsFiltered()
   {
     cannotVectorize();
-    testQuery(
-        "SELECT "
-        + "arrayStringNulls, "
-        + "SUM(cnt), "
-        + "SUM(ARRAY_LENGTH(arrayStringNulls)) "
-        + "FROM druid.arrays "
-        + "WHERE ARRAY_CONTAINS(arrayStringNulls, 'b') "
-        + "GROUP BY 1",
-        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(DATA_SOURCE_ARRAYS)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("arrayStringNulls", "d0", ColumnType.STRING_ARRAY)
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "arrayStringNulls, "
+            + "SUM(cnt), "
+            + "SUM(ARRAY_LENGTH(arrayStringNulls)) "
+            + "FROM druid.arrays "
+            + "WHERE ARRAY_CONTAINS(arrayStringNulls, 'b') "
+            + "GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("arrayStringNulls", "d0", ColumnType.STRING_ARRAY)
+                                )
                             )
-                        )
-                        .setVirtualColumns(
-                            new ExpressionVirtualColumn("v0", "array_length(\"arrayStringNulls\")", ColumnType.LONG, queryFramework().macroTable())
-                        )
-                        .setDimFilter(
-                            new ExpressionDimFilter("array_contains(\"arrayStringNulls\",'b')", queryFramework().macroTable())
-                        )
-                        .setAggregatorSpecs(
-                            aggregators(
-                                new LongSumAggregatorFactory("a0", "cnt"),
-                                new LongSumAggregatorFactory("a1", "v0")
+                            .setVirtualColumns(
+                                new ExpressionVirtualColumn("v0", "array_length(\"arrayStringNulls\")", ColumnType.LONG, queryFramework().macroTable())
                             )
-                        )
-                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .setDimFilter(
+                                new ExpressionDimFilter("array_contains(\"arrayStringNulls\",'b')", queryFramework().macroTable())
+                            )
+                            .setAggregatorSpecs(
+                                aggregators(
+                                    new LongSumAggregatorFactory("a0", "cnt"),
+                                    new LongSumAggregatorFactory("a1", "v0")
+                                )
+                            )
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{Arrays.asList(null, "b"), 2L, 4L},
+                new Object[]{Arrays.asList("a", "b"), 3L, 6L},
+                new Object[]{Arrays.asList("b", "b"), 2L, 4L},
+                new Object[]{Arrays.asList("d", null, "b"), 2L, 6L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("arrayStringNulls", ColumnType.STRING_ARRAY)
+                        .add("EXPR$1", ColumnType.LONG)
+                        .add("EXPR$2", ColumnType.LONG)
                         .build()
-        ),
-        ImmutableList.of(
-            new Object[]{Arrays.asList(null, "b"), 2L, 4L},
-            new Object[]{Arrays.asList("a", "b"), 4L, 8L},
-            new Object[]{Arrays.asList("b", "b"), 2L, 4L},
-            new Object[]{Arrays.asList("d", null, "b"), 2L, 6L}
-        ),
-        RowSignature.builder()
-                    .add("arrayStringNulls", ColumnType.STRING_ARRAY)
-                    .add("EXPR$1", ColumnType.LONG)
-                    .add("EXPR$2", ColumnType.LONG)
-                    .build()
-    );
+        )
+        .run();
   }
 
   @Test
   public void testGroupByRootSingleTypeArrayDouble()
   {
     cannotVectorize();
-    testQuery(
-        "SELECT "
-        + "arrayDouble, "
-        + "SUM(cnt) "
-        + "FROM druid.arrays GROUP BY 1",
-        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(DATA_SOURCE_ARRAYS)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("arrayDouble", "d0", ColumnType.DOUBLE_ARRAY)
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "arrayDouble, "
+            + "SUM(cnt) "
+            + "FROM druid.arrays GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("arrayDouble", "d0", ColumnType.DOUBLE_ARRAY)
+                                )
                             )
-                        )
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{null, 4L},
+                new Object[]{Arrays.asList(1.1, 2.2, 3.3), 4L},
+                new Object[]{Arrays.asList(1.1, 3.3), 2L},
+                new Object[]{Arrays.asList(2.2, 3.3, 4.0), 2L},
+                new Object[]{Arrays.asList(3.3, 4.4, 5.5), 2L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("arrayDouble", ColumnType.DOUBLE_ARRAY)
+                        .add("EXPR$1", ColumnType.LONG)
                         .build()
-        ),
-        ImmutableList.of(
-            new Object[]{null, 4L},
-            new Object[]{Arrays.asList(1.1, 2.2, 3.3), 4L},
-            new Object[]{Arrays.asList(1.1, 3.3), 2L},
-            new Object[]{Arrays.asList(2.2, 3.3, 4.0), 2L},
-            new Object[]{Arrays.asList(3.3, 4.4, 5.5), 2L}
-        ),
-        RowSignature.builder()
-                    .add("arrayDouble", ColumnType.DOUBLE_ARRAY)
-                    .add("EXPR$1", ColumnType.LONG)
-                    .build()
-    );
+        )
+        .run();
   }
 
   @Test
   public void testGroupByRootSingleTypeArrayDoubleNulls()
   {
     cannotVectorize();
-    testQuery(
-        "SELECT "
-        + "arrayDoubleNulls, "
-        + "SUM(cnt) "
-        + "FROM druid.arrays GROUP BY 1",
-        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(DATA_SOURCE_ARRAYS)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("arrayDoubleNulls", "d0", ColumnType.DOUBLE_ARRAY)
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "arrayDoubleNulls, "
+            + "SUM(cnt) "
+            + "FROM druid.arrays GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("arrayDoubleNulls", "d0", ColumnType.DOUBLE_ARRAY)
+                                )
                             )
-                        )
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{null, 3L},
+                new Object[]{Collections.emptyList(), 1L},
+                new Object[]{Collections.singletonList(null), 1L},
+                new Object[]{Arrays.asList(null, 1.1), 1L},
+                new Object[]{Arrays.asList(null, 2.2, null), 2L},
+                new Object[]{Arrays.asList(1.1, 2.2, null), 2L},
+                new Object[]{Arrays.asList(999.0, null, 5.5), 2L},
+                new Object[]{Arrays.asList(999.0, 5.5, null), 2L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("arrayDoubleNulls", ColumnType.DOUBLE_ARRAY)
+                        .add("EXPR$1", ColumnType.LONG)
                         .build()
-        ),
-        ImmutableList.of(
-            new Object[]{null, 4L},
-            new Object[]{Arrays.asList(null, 1.1), 2L},
-            new Object[]{Arrays.asList(null, 2.2, null), 2L},
-            new Object[]{Arrays.asList(1.1, 2.2, null), 2L},
-            new Object[]{Arrays.asList(999.0, null, 5.5), 2L},
-            new Object[]{Arrays.asList(999.0, 5.5, null), 2L}
-        ),
-        RowSignature.builder()
-                    .add("arrayDoubleNulls", ColumnType.DOUBLE_ARRAY)
-                    .add("EXPR$1", ColumnType.LONG)
-                    .build()
-    );
+        )
+        .run();
+  }
+
+  @Test
+  public void testGroupByRootSingleTypeArrayDoubleNullsUnnest()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "doubles, "
+            + "SUM(cnt) "
+            + "FROM druid.arrays, UNNEST(arrayDoubleNulls) as u (doubles) GROUP BY doubles"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(
+                                UnnestDataSource.create(
+                                    TableDataSource.create(DATA_SOURCE_ARRAYS),
+                                    expressionVirtualColumn("j0.unnest", "\"arrayDoubleNulls\"", ColumnType.DOUBLE_ARRAY),
+                                    null
+                                )
+                            )
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("j0.unnest", "d0", ColumnType.DOUBLE)
+                                )
+                            )
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{NullHandling.defaultDoubleValue(), 12L},
+                new Object[]{1.1D, 3L},
+                new Object[]{2.2D, 4L},
+                new Object[]{5.5D, 4L},
+                new Object[]{999.0D, 4L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("doubles", ColumnType.DOUBLE)
+                        .add("EXPR$1", ColumnType.LONG)
+                        .build()
+        )
+        .run();
   }
 
   @Test
   public void testGroupByRootSingleTypeArrayDoubleNullsFiltered()
   {
     cannotVectorize();
-    testQuery(
-        "SELECT "
-        + "arrayDoubleNulls, "
-        + "SUM(cnt), "
-        + "SUM(ARRAY_LENGTH(arrayDoubleNulls)) "
-        + "FROM druid.arrays "
-        + "WHERE ARRAY_CONTAINS(arrayDoubleNulls, 2.2)"
-        + "GROUP BY 1",
-        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(DATA_SOURCE_ARRAYS)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("arrayDoubleNulls", "d0", ColumnType.DOUBLE_ARRAY)
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "arrayDoubleNulls, "
+            + "SUM(cnt), "
+            + "SUM(ARRAY_LENGTH(arrayDoubleNulls)) "
+            + "FROM druid.arrays "
+            + "WHERE ARRAY_CONTAINS(arrayDoubleNulls, 2.2)"
+            + "GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("arrayDoubleNulls", "d0", ColumnType.DOUBLE_ARRAY)
+                                )
                             )
-                        )
-                        .setVirtualColumns(
-                            new ExpressionVirtualColumn("v0", "array_length(\"arrayDoubleNulls\")", ColumnType.LONG, queryFramework().macroTable())
-                        )
-                        .setDimFilter(
-                            new ExpressionDimFilter("array_contains(\"arrayDoubleNulls\",2.2)", queryFramework().macroTable())
-                        )
-                        .setAggregatorSpecs(
-                            aggregators(
-                                new LongSumAggregatorFactory("a0", "cnt"),
-                                new LongSumAggregatorFactory("a1", "v0")
+                            .setVirtualColumns(
+                                new ExpressionVirtualColumn("v0", "array_length(\"arrayDoubleNulls\")", ColumnType.LONG, queryFramework().macroTable())
                             )
-                        )
-                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .setDimFilter(
+                                new ExpressionDimFilter("array_contains(\"arrayDoubleNulls\",2.2)", queryFramework().macroTable())
+                            )
+                            .setAggregatorSpecs(
+                                aggregators(
+                                    new LongSumAggregatorFactory("a0", "cnt"),
+                                    new LongSumAggregatorFactory("a1", "v0")
+                                )
+                            )
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{Arrays.asList(null, 2.2, null), 2L, 6L},
+                new Object[]{Arrays.asList(1.1, 2.2, null), 2L, 6L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("arrayDoubleNulls", ColumnType.DOUBLE_ARRAY)
+                        .add("EXPR$1", ColumnType.LONG)
+                        .add("EXPR$2", ColumnType.LONG)
                         .build()
-        ),
-        ImmutableList.of(
-            new Object[]{Arrays.asList(null, 2.2, null), 2L, 6L},
-            new Object[]{Arrays.asList(1.1, 2.2, null), 2L, 6L}
-        ),
-        RowSignature.builder()
-                    .add("arrayDoubleNulls", ColumnType.DOUBLE_ARRAY)
-                    .add("EXPR$1", ColumnType.LONG)
-                    .add("EXPR$2", ColumnType.LONG)
-                    .build()
-    );
+        )
+        .run();
   }
 
   @Test
   public void testGroupByRootSingleTypeArrayLongElement()
   {
     cannotVectorize();
-    testQuery(
-        "SELECT "
-        + "JSON_VALUE(arrayLong, '$[1]' RETURNING BIGINT),"
-        + "SUM(cnt) "
-        + "FROM druid.arrays GROUP BY 1",
-        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(DATA_SOURCE_ARRAYS)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "JSON_VALUE(arrayLong, '$[1]' RETURNING BIGINT),"
+            + "SUM(cnt) "
+            + "FROM druid.arrays GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)
+                                )
                             )
-                        )
-                        .setVirtualColumns(
-                            new NestedFieldVirtualColumn("arrayLong", "$[1]", "v0", ColumnType.LONG)
-                        )
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .setVirtualColumns(
+                                new NestedFieldVirtualColumn("arrayLong", "$[1]", "v0", ColumnType.LONG)
+                            )
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{NullHandling.defaultLongValue(), 4L},
+                new Object[]{2L, 6L},
+                new Object[]{3L, 2L},
+                new Object[]{4L, 2L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.LONG)
+                        .add("EXPR$1", ColumnType.LONG)
                         .build()
-        ),
-        ImmutableList.of(
-            new Object[]{NullHandling.defaultLongValue(), 4L},
-            new Object[]{2L, 6L},
-            new Object[]{3L, 2L},
-            new Object[]{4L, 2L}
-        ),
-        RowSignature.builder()
-                    .add("EXPR$0", ColumnType.LONG)
-                    .add("EXPR$1", ColumnType.LONG)
-                    .build()
-    );
+        )
+        .run();
   }
 
   @Test
   public void testGroupByRootSingleTypeArrayLongElementFiltered()
   {
     cannotVectorize();
-    testQuery(
-        "SELECT "
-        + "JSON_VALUE(arrayLong, '$[1]' RETURNING BIGINT),"
-        + "SUM(cnt) "
-        + "FROM druid.arrays "
-        + "WHERE JSON_VALUE(arrayLong, '$[1]' RETURNING BIGINT) = 2"
-        + "GROUP BY 1",
-        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(DATA_SOURCE_ARRAYS)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "JSON_VALUE(arrayLong, '$[1]' RETURNING BIGINT),"
+            + "SUM(cnt) "
+            + "FROM druid.arrays "
+            + "WHERE JSON_VALUE(arrayLong, '$[1]' RETURNING BIGINT) = 2"
+            + "GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)
+                                )
                             )
-                        )
-                        .setVirtualColumns(
-                            new NestedFieldVirtualColumn("arrayLong", "$[1]", "v0", ColumnType.LONG)
-                        )
-                        .setDimFilter(new SelectorDimFilter("v0", "2", null))
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .setVirtualColumns(
+                                new NestedFieldVirtualColumn("arrayLong", "$[1]", "v0", ColumnType.LONG)
+                            )
+                            .setDimFilter(new SelectorDimFilter("v0", "2", null))
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{2L, 6L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.LONG)
+                        .add("EXPR$1", ColumnType.LONG)
                         .build()
-        ),
-        ImmutableList.of(
-            new Object[]{2L, 6L}
-        ),
-        RowSignature.builder()
-                    .add("EXPR$0", ColumnType.LONG)
-                    .add("EXPR$1", ColumnType.LONG)
-                    .build()
-    );
+        )
+        .run();
   }
 
   @Test
   public void testGroupByRootSingleTypeArrayLongElementDefault()
   {
     cannotVectorize();
-    testQuery(
-        "SELECT "
-        + "JSON_VALUE(arrayLong, '$[1]'),"
-        + "SUM(cnt) "
-        + "FROM druid.arrays GROUP BY 1",
-        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(DATA_SOURCE_ARRAYS)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "JSON_VALUE(arrayLong, '$[1]'),"
+            + "SUM(cnt) "
+            + "FROM druid.arrays GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
+                                )
                             )
-                        )
-                        .setVirtualColumns(
-                            new NestedFieldVirtualColumn("arrayLong", "$[1]", "v0", ColumnType.STRING)
-                        )
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .setVirtualColumns(
+                                new NestedFieldVirtualColumn("arrayLong", "$[1]", "v0", ColumnType.STRING)
+                            )
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{NullHandling.defaultStringValue(), 4L},
+                new Object[]{"2", 6L},
+                new Object[]{"3", 2L},
+                new Object[]{"4", 2L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.STRING)
+                        .add("EXPR$1", ColumnType.LONG)
                         .build()
-        ),
-        ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 4L},
-            new Object[]{"2", 6L},
-            new Object[]{"3", 2L},
-            new Object[]{"4", 2L}
-        ),
-        RowSignature.builder()
-                    .add("EXPR$0", ColumnType.STRING)
-                    .add("EXPR$1", ColumnType.LONG)
-                    .build()
-    );
+        )
+        .run();
   }
 
   @Test
   public void testGroupByRootSingleTypeArrayStringElement()
   {
     cannotVectorize();
-    testQuery(
-        "SELECT "
-        + "JSON_VALUE(arrayStringNulls, '$[1]'),"
-        + "SUM(cnt) "
-        + "FROM druid.arrays GROUP BY 1",
-        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(DATA_SOURCE_ARRAYS)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "JSON_VALUE(arrayStringNulls, '$[1]'),"
+            + "SUM(cnt) "
+            + "FROM druid.arrays GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
+                                )
                             )
-                        )
-                        .setVirtualColumns(
-                            new NestedFieldVirtualColumn("arrayStringNulls", "$[1]", "v0", ColumnType.STRING)
-                        )
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .setVirtualColumns(
+                                new NestedFieldVirtualColumn("arrayStringNulls", "$[1]", "v0", ColumnType.STRING)
+                            )
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{NullHandling.defaultStringValue(), 7L},
+                new Object[]{"b", 7L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.STRING)
+                        .add("EXPR$1", ColumnType.LONG)
                         .build()
-        ),
-        ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 6L},
-            new Object[]{"b", 8L}
-        ),
-        RowSignature.builder()
-                    .add("EXPR$0", ColumnType.STRING)
-                    .add("EXPR$1", ColumnType.LONG)
-                    .build()
-    );
+        )
+        .run();
   }
 
   @Test
   public void testGroupByRootSingleTypeArrayStringElementFiltered()
   {
     cannotVectorize();
-    testQuery(
-        "SELECT "
-        + "JSON_VALUE(arrayStringNulls, '$[1]'),"
-        + "SUM(cnt) "
-        + "FROM druid.arrays "
-        + "WHERE JSON_VALUE(arrayStringNulls, '$[1]') = 'b'"
-        + "GROUP BY 1",
-        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(DATA_SOURCE_ARRAYS)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "JSON_VALUE(arrayStringNulls, '$[1]'),"
+            + "SUM(cnt) "
+            + "FROM druid.arrays "
+            + "WHERE JSON_VALUE(arrayStringNulls, '$[1]') = 'b'"
+            + "GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
+                                )
                             )
-                        )
-                        .setVirtualColumns(
-                            new NestedFieldVirtualColumn("arrayStringNulls", "$[1]", "v0", ColumnType.STRING)
-                        )
-                        .setDimFilter(new SelectorDimFilter("v0", "b", null))
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .setVirtualColumns(
+                                new NestedFieldVirtualColumn("arrayStringNulls", "$[1]", "v0", ColumnType.STRING)
+                            )
+                            .setDimFilter(new SelectorDimFilter("v0", "b", null))
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{"b", 7L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.STRING)
+                        .add("EXPR$1", ColumnType.LONG)
                         .build()
-        ),
-        ImmutableList.of(
-            new Object[]{"b", 8L}
-        ),
-        RowSignature.builder()
-                    .add("EXPR$0", ColumnType.STRING)
-                    .add("EXPR$1", ColumnType.LONG)
-                    .build()
-    );
+        )
+        .run();
   }
 
   @Test
   public void testGroupByRootSingleTypeArrayDoubleElement()
   {
     cannotVectorize();
-    testQuery(
-        "SELECT "
-        + "JSON_VALUE(arrayDoubleNulls, '$[2]' RETURNING DOUBLE),"
-        + "SUM(cnt) "
-        + "FROM druid.arrays GROUP BY 1",
-        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(DATA_SOURCE_ARRAYS)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("v0", "d0", ColumnType.DOUBLE)
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "JSON_VALUE(arrayDoubleNulls, '$[2]' RETURNING DOUBLE),"
+            + "SUM(cnt) "
+            + "FROM druid.arrays GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("v0", "d0", ColumnType.DOUBLE)
+                                )
                             )
-                        )
-                        .setVirtualColumns(
-                            new NestedFieldVirtualColumn("arrayDoubleNulls", "$[2]", "v0", ColumnType.DOUBLE)
-                        )
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .setVirtualColumns(
+                                new NestedFieldVirtualColumn("arrayDoubleNulls", "$[2]", "v0", ColumnType.DOUBLE)
+                            )
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{NullHandling.defaultDoubleValue(), 12L},
+                new Object[]{5.5, 2L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.DOUBLE)
+                        .add("EXPR$1", ColumnType.LONG)
                         .build()
-        ),
-        ImmutableList.of(
-            new Object[]{NullHandling.defaultDoubleValue(), 12L},
-            new Object[]{5.5, 2L}
-        ),
-        RowSignature.builder()
-                    .add("EXPR$0", ColumnType.DOUBLE)
-                    .add("EXPR$1", ColumnType.LONG)
-                    .build()
-    );
+        )
+        .run();
   }
 
   @Test
   public void testGroupByRootSingleTypeArrayDoubleElementFiltered()
   {
     cannotVectorize();
-    testQuery(
-        "SELECT "
-        + "JSON_VALUE(arrayDoubleNulls, '$[2]' RETURNING DOUBLE),"
-        + "SUM(cnt) "
-        + "FROM druid.arrays "
-        + "WHERE JSON_VALUE(arrayDoubleNulls, '$[2]' RETURNING DOUBLE) = 5.5"
-        + "GROUP BY 1",
-        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(DATA_SOURCE_ARRAYS)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("v0", "d0", ColumnType.DOUBLE)
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "JSON_VALUE(arrayDoubleNulls, '$[2]' RETURNING DOUBLE),"
+            + "SUM(cnt) "
+            + "FROM druid.arrays "
+            + "WHERE JSON_VALUE(arrayDoubleNulls, '$[2]' RETURNING DOUBLE) = 5.5"
+            + "GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("v0", "d0", ColumnType.DOUBLE)
+                                )
                             )
-                        )
-                        .setDimFilter(new SelectorDimFilter("v0", "5.5", null))
-                        .setVirtualColumns(
-                            new NestedFieldVirtualColumn("arrayDoubleNulls", "$[2]", "v0", ColumnType.DOUBLE)
-                        )
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .setDimFilter(new SelectorDimFilter("v0", "5.5", null))
+                            .setVirtualColumns(
+                                new NestedFieldVirtualColumn("arrayDoubleNulls", "$[2]", "v0", ColumnType.DOUBLE)
+                            )
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{5.5, 2L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.DOUBLE)
+                        .add("EXPR$1", ColumnType.LONG)
                         .build()
-        ),
-        ImmutableList.of(
-            new Object[]{5.5, 2L}
-        ),
-        RowSignature.builder()
-                    .add("EXPR$0", ColumnType.DOUBLE)
-                    .add("EXPR$1", ColumnType.LONG)
-                    .build()
-    );
+        )
+        .run();
   }
 
 

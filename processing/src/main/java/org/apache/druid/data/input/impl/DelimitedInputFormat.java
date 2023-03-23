@@ -31,7 +31,6 @@ import org.apache.druid.data.input.InputRowSchema;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -43,17 +42,6 @@ public class DelimitedInputFormat extends FlatTextInputFormat
 {
   public static final String TYPE_KEY = "tsv";
 
-  public static DelimitedInputFormat ofColumns(String... columns)
-  {
-    return new DelimitedInputFormat(
-        Arrays.asList(columns),
-        null,
-        null,
-        false,
-        false,
-        0
-    );
-  }
   private static final String DEFAULT_DELIMITER = "\t";
 
   @JsonCreator

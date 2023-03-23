@@ -2830,8 +2830,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{"", ImmutableList.of("a", "b"), useDefault ? null : ImmutableList.of(""), "", "a"},
-            new Object[]{"", ImmutableList.of("a", "b"), useDefault ? null : ImmutableList.of(""), "", "b"},
             new Object[]{"10.1", ImmutableList.of("b", "c"), ImmutableList.of("10", "1"), "10", "b"},
             new Object[]{"10.1", ImmutableList.of("b", "c"), ImmutableList.of("10", "1"), "10", "c"},
             new Object[]{"10.1", ImmutableList.of("b", "c"), ImmutableList.of("10", "1"), "1", "b"},
@@ -3217,8 +3215,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"a"},
-            new Object[]{"b"},
-            new Object[]{""}
+            new Object[]{"b"}
         )
     );
   }
@@ -3266,8 +3263,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{"a"},
-            new Object[]{""}
+            new Object[]{"a"}
         )
     );
   }
