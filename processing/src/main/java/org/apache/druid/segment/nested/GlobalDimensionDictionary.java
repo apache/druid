@@ -286,28 +286,28 @@ public class GlobalDimensionDictionary
         if (array == null) {
           return null;
         }
-        final int[] newIdsWhoDis = new int[array.length];
+        final int[] globalIds = new int[array.length];
         for (int i = 0; i < array.length; i++) {
           if (array[i] == null) {
-            newIdsWhoDis[i] = 0;
+            globalIds[i] = 0;
           } else if (array[i] instanceof String) {
             // offset by 1 because nulls are ignored by the indexer, but always global id 0
-            newIdsWhoDis[i] = 1 + strings.indexOf((String) array[i]);
+            globalIds[i] = 1 + strings.indexOf((String) array[i]);
           } else if (array[i] instanceof Long) {
-            newIdsWhoDis[i] = longs.indexOf((Long) array[i]) + adjustLongs;
+            globalIds[i] = longs.indexOf((Long) array[i]) + adjustLongs;
           } else if (array[i] instanceof Double) {
-            newIdsWhoDis[i] = doubles.indexOf((Double) array[i]) + adjustDoubles;
+            globalIds[i] = doubles.indexOf((Double) array[i]) + adjustDoubles;
           } else {
-            newIdsWhoDis[i] = -1;
+            globalIds[i] = -1;
           }
           Preconditions.checkArgument(
-              newIdsWhoDis[i] >= 0,
+              globalIds[i] >= 0,
               "unknown global id [%s] for value [%s]",
-              newIdsWhoDis[i],
+              globalIds[i],
               array[i]
           );
         }
-        return newIdsWhoDis;
+        return globalIds;
       }
     });
     sortedArrays.addAll(stringArrays);
