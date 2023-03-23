@@ -56,6 +56,9 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * In this implementation, all remote calls to aws s3 are retried {@link S3OutputConfig#getMaxRetry()} times.
+ */
 public class S3StorageConnector implements StorageConnector
 {
   private static final Logger log = new Logger(S3StorageConnector.class);
