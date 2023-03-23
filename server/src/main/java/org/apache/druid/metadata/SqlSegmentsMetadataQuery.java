@@ -161,7 +161,7 @@ public class SqlSegmentsMetadataQuery
     );
   }
 
-  public int markSegmentAsOnceLoaded(final SegmentId segmentId) {
+  public int markSegmentAsHandedOff(final SegmentId segmentId) {
     final String dataSource = segmentId.getDataSource();
 
     final PreparedBatch batch =

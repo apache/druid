@@ -169,7 +169,7 @@ public class CoordinatorServerView implements InventoryView
       }
       segmentLoadInfo.addServer(server);
 
-      sqlSegmentsMetadataManager.markSegmentAsOnceLoaded(segmentId);
+      sqlSegmentsMetadataManager.markSegmentAsHandedOff(segmentId);
     }
   }
 

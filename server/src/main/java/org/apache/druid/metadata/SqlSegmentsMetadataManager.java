@@ -774,12 +774,12 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public int markSegmentAsOnceLoaded(SegmentId segmentId)
+  public int markSegmentAsHandedOff(SegmentId segmentId)
   {
     return connector.getDBI().withHandle(
         handle ->
             SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                    .markSegmentAsOnceLoaded(segmentId)
+                                    .markSegmentAsHandedOff(segmentId)
     );
   }
 
