@@ -32,6 +32,7 @@ import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.column.RowSignature;
@@ -47,6 +48,10 @@ import java.util.Set;
 public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
 {
   private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__subquery__");
+
+  private static final QueryDataSource DUMMY_QUERY_DATA_SOURCE = new QueryDataSource(
+      Druids.newScanQueryBuilder().dataSource("__subquery__").eternityInterval().build()
+  );
 
   private final PartialDruidQuery partialQuery;
   private RelNode sourceRel;
@@ -115,7 +120,7 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
   public DruidQuery toDruidQueryForExplaining()
   {
     return partialQuery.build(
-        DUMMY_DATA_SOURCE,
+        partialQuery.getWindow() == null ? DUMMY_DATA_SOURCE : DUMMY_QUERY_DATA_SOURCE,
         RowSignatures.fromRelDataType(
             sourceRel.getRowType().getFieldNames(),
             sourceRel.getRowType()
