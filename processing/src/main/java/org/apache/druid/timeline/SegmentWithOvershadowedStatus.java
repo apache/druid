@@ -44,11 +44,12 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
 
   @JsonCreator
   public SegmentWithOvershadowedStatus(
-      @JsonProperty("overshadowed") boolean overshadowed
+      @JsonProperty("overshadowed") boolean overshadowed,
+      @JsonProperty("handedOff") boolean handedOff
   )
   {
     // Jackson will overwrite dataSegment if needed (even though the field is final)
-    this(null, overshadowed, false);
+    this(null, overshadowed, handedOff);
   }
 
   public SegmentWithOvershadowedStatus(

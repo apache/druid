@@ -167,7 +167,7 @@ public class SqlSegmentsMetadataQuery
     final PreparedBatch batch =
         handle.prepareBatch(
             StringUtils.format(
-                "UPDATE %s SET everMetadatloaded = true WHERE datasource = ? AND id = ?",
+                "UPDATE %s SET handed_off = true WHERE datasource = ? AND id = ?",
                 dbTables.getSegmentsTable()
             )
         );
