@@ -64,7 +64,7 @@ cp ${DRUID_HOME}/hadoop-dependencies/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${H
 ```
 
 Finally, you need to add the below properties in the `core-site.xml`.
-For more configurations, see the [Hadoop AWS module](https://hadoop.apache.org/stable/hadoop-aws/tools/hadoop-aws/).
+For more configurations, see the [Hadoop AWS module](https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/).
 
 ```xml
 <property>
