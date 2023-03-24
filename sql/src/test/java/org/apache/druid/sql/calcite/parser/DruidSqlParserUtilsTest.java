@@ -148,7 +148,7 @@ public class DruidSqlParserUtilsTest
       selectArgs.add(new SqlIdentifier("__time", new SqlParserPos(0, 1)));
       Assert.assertNull(DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(
           null,
-          new SqlSelect(SqlParserPos.ZERO, null, selectArgs, null, null, null, null, null, null, null, null)
+          new SqlSelect(SqlParserPos.ZERO, null, selectArgs, null, null, null, null, null, null, null, null, null, null)
         )
       );
     }
@@ -186,6 +186,8 @@ public class DruidSqlParserUtilsTest
           null,
           null,
           null,
+          null,
+          null,
           null
       );
 
@@ -212,6 +214,7 @@ public class DruidSqlParserUtilsTest
           SqlParserPos.ZERO,
           null,
           selectArgs,
+          null,
           null,
           null,
           null,
@@ -283,6 +286,7 @@ public class DruidSqlParserUtilsTest
           null,
           null,
           null,
+          null,
           null
       );
 
@@ -311,6 +315,7 @@ public class DruidSqlParserUtilsTest
           SqlParserPos.ZERO,
           null,
           selectArgs,
+          null,
           null,
           null,
           null,

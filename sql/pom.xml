@@ -200,8 +200,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.calcite</groupId>
-      <artifactId>calcite-core</artifactId>
-      <type>test-jar</type>
+      <artifactId>calcite-testkit</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -258,6 +257,11 @@
       <artifactId>jdbi</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.immutables</groupId>
+      <artifactId>value-annotations</artifactId>
+      <version>2.8.8</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -296,6 +300,15 @@
                   <overWrite>true</overWrite>
                   <outputDirectory>${project.build.directory}/</outputDirectory>
                   <includes>**/Parser.jj</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.apache.calcite</groupId>
+                  <artifactId>calcite-core</artifactId>
+                  <version>${calcite.version}</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <outputDirectory>${project.build.directory}/</outputDirectory>
+                  <includes>**/default_config.fmpp</includes>
                 </artifactItem>
               </artifactItems>
             </configuration>

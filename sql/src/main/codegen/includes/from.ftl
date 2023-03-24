@@ -239,13 +239,12 @@
              }
          ]
          {
-             tableRef = unnestOp.createCall(s.end(this), args.toArray());
+             tableRef = unnestOp.createCall(s.end(this), args.getList());
          }
      |
          [<LATERAL> { lateral = true; } ]
-         <TABLE> { s = span(); } <LPAREN>
-         tableRef = TableFunctionCall(s.pos())
-         <RPAREN>
+         tableRef = TableFunctionCall()
+         tableRef = addLateral(tableRef, lateral)
          [
              [ <EXTEND> ]
              extendList = ExtendList()
@@ -254,12 +253,6 @@
                          Span.of(tableRef, extendList).pos(), tableRef, extendList);
              }
          ]
-         {
-             if (lateral) {
-                 tableRef = SqlStdOperatorTable.LATERAL.createCall(
-                     s.end(this), tableRef);
-             }
-         }
      |
          tableRef = ExtendedTableRef()
      )

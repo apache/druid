@@ -141,7 +141,7 @@ public abstract class AbstractStatement implements Closeable
   )
   {
     Set<String> securedKeys = this.sqlToolbox.plannerFactory.getAuthConfig()
-        .contextKeysToAuthorize(queryPlus.context().keySet());
+                                                            .contextKeysToAuthorize(queryPlus.context().keySet());
     Set<ResourceAction> contextResources = new HashSet<>();
     securedKeys.forEach(key -> contextResources.add(
         new ResourceAction(new Resource(key, ResourceType.QUERY_CONTEXT), Action.WRITE)
@@ -162,11 +162,11 @@ public abstract class AbstractStatement implements Closeable
   protected Function<Set<ResourceAction>, Access> authorizer()
   {
     return resourceActions ->
-      AuthorizationUtils.authorizeAllResourceActions(
-          queryPlus.authResult(),
-          resourceActions,
-          sqlToolbox.plannerFactory.getAuthorizerMapper()
-    );
+        AuthorizationUtils.authorizeAllResourceActions(
+            queryPlus.authResult(),
+            resourceActions,
+            sqlToolbox.plannerFactory.getAuthorizerMapper()
+        );
   }
 
   /**

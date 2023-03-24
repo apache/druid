@@ -106,6 +106,7 @@ import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.SafeDivideOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.SearchOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringToArrayOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
@@ -162,7 +163,8 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new GroupingSqlAggregator())
                    .add(new ArraySqlAggregator())
                    .add(new ArrayConcatSqlAggregator())
-                   .add(new StringSqlAggregator())
+                   .add(StringSqlAggregator.STRING_AGG)
+                   .add(StringSqlAggregator.LISTAGG)
                    .add(new BitwiseSqlAggregator(BitwiseSqlAggregator.Op.AND))
                    .add(new BitwiseSqlAggregator(BitwiseSqlAggregator.Op.OR))
                    .add(new BitwiseSqlAggregator(BitwiseSqlAggregator.Op.XOR))
@@ -395,6 +397,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.LESS_THAN_OR_EQUAL, "<="))
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.AND, "&&"))
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.OR, "||"))
+                   .add(new SearchOperatorConversion())
                    .add(new RoundOperatorConversion())
                    .addAll(TIME_OPERATOR_CONVERSIONS)
                    .addAll(STRING_OPERATOR_CONVERSIONS)
@@ -464,23 +467,13 @@ public class DruidOperatorTable implements SqlOperatorTable
   @Nullable
   public SqlAggregator lookupAggregator(final SqlAggFunction aggFunction)
   {
-    final SqlAggregator sqlAggregator = aggregators.get(OperatorKey.of(aggFunction));
-    if (sqlAggregator != null && sqlAggregator.calciteFunction().equals(aggFunction)) {
-      return sqlAggregator;
-    } else {
-      return null;
-    }
+    return aggregators.get(OperatorKey.of(aggFunction));
   }
 
   @Nullable
   public SqlOperatorConversion lookupOperatorConversion(final SqlOperator operator)
   {
-    final SqlOperatorConversion operatorConversion = operatorConversions.get(OperatorKey.of(operator));
-    if (operatorConversion != null && operatorConversion.calciteOperator().equals(operator)) {
-      return operatorConversion;
-    } else {
-      return null;
-    }
+    return operatorConversions.get(OperatorKey.of(operator));
   }
 
   @Override

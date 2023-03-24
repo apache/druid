@@ -27,6 +27,7 @@ import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.avatica.util.Quoting;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
+import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.plan.Context;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.volcano.DruidVolcanoCost;
@@ -54,15 +55,13 @@ import java.util.Properties;
 
 public class PlannerFactory extends PlannerToolbox
 {
-  static final SqlParser.Config PARSER_CONFIG = SqlParser
-      .configBuilder()
-      .setCaseSensitive(true)
-      .setUnquotedCasing(Casing.UNCHANGED)
-      .setQuotedCasing(Casing.UNCHANGED)
-      .setQuoting(Quoting.DOUBLE_QUOTE)
-      .setConformance(DruidConformance.instance())
-      .setParserFactory(new DruidSqlParserImplFactory()) // Custom SQL parser factory
-      .build();
+  static final SqlParser.Config PARSER_CONFIG = SqlParser.config()
+      .withCaseSensitive(true)
+      .withUnquotedCasing(Casing.UNCHANGED)
+      .withQuotedCasing(Casing.UNCHANGED)
+      .withQuoting(Quoting.DOUBLE_QUOTE)
+      .withConformance(DruidConformance.instance())
+      .withParserFactory(new DruidSqlParserImplFactory());
 
   @Inject
   public PlannerFactory(
@@ -138,14 +137,12 @@ public class PlannerFactory extends PlannerToolbox
   private FrameworkConfig buildFrameworkConfig(PlannerContext plannerContext)
   {
     final SqlToRelConverter.Config sqlToRelConverterConfig = SqlToRelConverter
-        .configBuilder()
+        .config()
         .withExpand(false)
         .withDecorrelationEnabled(false)
         .withTrimUnusedFields(false)
-        .withInSubQueryThreshold(
-            plannerContext.queryContext().getInSubQueryThreshold()
-        )
-        .build();
+        .withInSubQueryThreshold(plannerContext.queryContext().getInSubQueryThreshold());
+
     Frameworks.ConfigBuilder frameworkConfigBuilder = Frameworks
         .newConfigBuilder()
         .parserConfig(PARSER_CONFIG)
@@ -186,7 +183,6 @@ public class PlannerFactory extends PlannerToolbox
             }
           }
         });
-
     if (PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED
         .equals(plannerConfig().getNativeQuerySqlPlanningMode())
     ) {
@@ -194,6 +190,5 @@ public class PlannerFactory extends PlannerToolbox
     }
 
     return frameworkConfigBuilder.build();
-
   }
 }
