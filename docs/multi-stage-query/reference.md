@@ -402,6 +402,13 @@ FROM TABLE(
   ) (x VARCHAR, y VARCHAR)
 ```
 
+The JSON function allows columns to be of type `TYPE('COMPLEX<json>')` which indicates that the column contains
+some form of complex JSON: a JSON object, a JSON array, or an array of JSON objects or arrays.
+Note that the case must exactly match that given: upper case `COMPLEX`, lower case `json`.
+The SQL type simply names a native Druid type. However, the actual
+segment column produced may be of some other type if Druid infers that it can use a simpler type
+instead.
+
 ### Parameters
 
 Starting with the Druid 26.0 release, you can use query parameters with MSQ queries. You may find

@@ -24,6 +24,7 @@ import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
+import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Uncollect;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalValues;
@@ -56,16 +57,24 @@ public class DruidUnnestRel extends DruidRel<DruidUnnestRel>
    * {@link org.apache.calcite.rex.RexFieldAccess}.
    */
   private final RexNode inputRexNode;
+  private final Filter unnestFilter;
 
   private DruidUnnestRel(
       final RelOptCluster cluster,
       final RelTraitSet traits,
       final RexNode inputRexNode,
+      final Filter unnestFilter,
       final PlannerContext plannerContext
   )
   {
     super(cluster, traits, plannerContext);
     this.inputRexNode = inputRexNode;
+    this.unnestFilter = unnestFilter;
+  }
+
+  public Filter getUnnestFilter()
+  {
+    return unnestFilter;
   }
 
   public static DruidUnnestRel create(
@@ -83,6 +92,7 @@ public class DruidUnnestRel extends DruidRel<DruidUnnestRel>
         cluster,
         traits,
         unnestRexNode,
+        null,
         plannerContext
     );
   }
@@ -100,6 +110,7 @@ public class DruidUnnestRel extends DruidRel<DruidUnnestRel>
           getCluster(),
           getTraitSet(),
           newInputRexNode,
+          unnestFilter,
           getPlannerContext()
       );
     }
@@ -125,6 +136,11 @@ public class DruidUnnestRel extends DruidRel<DruidUnnestRel>
     throw new UnsupportedOperationException();
   }
 
+  public DruidUnnestRel withFilter(Filter f)
+  {
+    return new DruidUnnestRel(getCluster(), getTraitSet(), inputRexNode, f, getPlannerContext());
+  }
+
   /**
    * Returns a new rel with a new input. The output type is unchanged.
    */
@@ -134,6 +150,7 @@ public class DruidUnnestRel extends DruidRel<DruidUnnestRel>
         getCluster(),
         getTraitSet(),
         newInputRexNode,
+        unnestFilter,
         getPlannerContext()
     );
   }
@@ -160,6 +177,7 @@ public class DruidUnnestRel extends DruidRel<DruidUnnestRel>
         getCluster(),
         getTraitSet().replace(DruidConvention.instance()),
         inputRexNode,
+        unnestFilter,
         getPlannerContext()
     );
   }
@@ -167,7 +185,7 @@ public class DruidUnnestRel extends DruidRel<DruidUnnestRel>
   @Override
   public RelWriter explainTerms(RelWriter pw)
   {
-    return pw.item("expr", inputRexNode);
+    return pw.item("expr", inputRexNode).item("filter", unnestFilter);
   }
 
   @Override
