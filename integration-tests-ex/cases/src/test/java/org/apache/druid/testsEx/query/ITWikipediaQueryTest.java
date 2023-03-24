@@ -19,10 +19,14 @@
 
 package org.apache.druid.testsEx.query;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import junitparams.Parameters;
+
+import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.Druids;
@@ -36,6 +40,7 @@ import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.testsEx.categories.Query;
 import org.apache.druid.testsEx.config.BaseJUnitRule;
 import org.apache.druid.testsEx.config.DruidTestRunner;
+import org.apache.druid.testsEx.indexer.AbstractITBatchIndexTest;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.Assert;
 import org.junit.Before;
@@ -48,15 +53,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Future;
+import java.util.function.Function;
 
 @RunWith(DruidTestRunner.class)
 @Category(Query.class)
-public class ITWikipediaQueryTest extends BaseJUnitRule
+public class ITWikipediaQueryTest extends AbstractITBatchIndexTest
 {
   private static final Logger LOG = new Logger(ITWikipediaQueryTest.class);
 
   public static final String WIKIPEDIA_DATA_SOURCE = "wikipedia_editstream";
   private static final String WIKI_LOOKUP = "wiki-simple";
+  private static final String WIKIPEDIA_INDEX_TASK = "/queries/wikipedia_editstream_index_task.json";
   private static final String WIKIPEDIA_QUERIES_RESOURCE = "/queries/wikipedia_editstream_queries.json";
   private static final String WIKIPEDIA_LOOKUP_RESOURCE = "/queries/wiki-lookup-config.json";
 
@@ -72,10 +79,31 @@ public class ITWikipediaQueryTest extends BaseJUnitRule
   @Before
   public void before() throws Exception
   {
-    // ensure that wikipedia segments are loaded completely
-    ITRetryUtil.retryUntilTrue(
-        () -> coordinatorClient.areSegmentsLoaded(WIKIPEDIA_DATA_SOURCE), "wikipedia segment load"
+    final Function<String, String> transform = spec -> {
+      try {
+        return StringUtils.replace(
+            spec,
+            "%%LOCAL_FILE_NAME%%",
+            jsonMapper.writeValueAsString(WIKIPEDIA_DATA_SOURCE)
+        );
+      }
+      catch (JsonProcessingException e) {
+        throw new RuntimeException(e);
+      }
+    };
+
+    // Ingesting twitterstream data
+    doIndexTest(
+        WIKIPEDIA_DATA_SOURCE,
+        WIKIPEDIA_INDEX_TASK,
+        transform,
+        null,
+        false,
+        true,
+        true,
+        new Pair<>(false, false)
     );
+
     if (!coordinatorClient.areLookupsLoaded(WIKI_LOOKUP)) {
       coordinatorClient.initializeLookups(WIKIPEDIA_LOOKUP_RESOURCE);
       ITRetryUtil.retryUntilTrue(

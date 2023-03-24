@@ -1,0 +1,86 @@
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "local",
+        "baseDir": "/shared",
+        "filter": "%%LOCAL_FILE_NAME%%.csv"
+      },
+      "inputFormat": {
+        "type": "csv",
+        "findColumnsFromHeader": true
+      }
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic"
+      }
+    },
+    "dataSchema": {
+      "dataSource": "%%DATASOURCE%%",
+      "timestampSpec": {
+        "column": "__time",
+        "format": "auto"
+      },
+      "transformSpec": {},
+      "dimensionsSpec": {
+        "dimensions": [
+          "first_hashtag",
+          "has_geo",
+          "has_links",
+          "has_mention",
+          "is_retweet",
+          "is_viral",
+          "reply_to_name",
+          "rt_name",
+          "url_domain",
+          "user_lang",
+          "user_location",
+          "user_mention_name",
+          "user_name",
+          "user_time_zone",
+          {
+            "type": "long",
+            "name": "count"
+          },
+          {
+            "type": "long",
+            "name": "num_favorites"
+          },
+          {
+            "type": "long",
+            "name": "num_followers"
+          },
+          {
+            "type": "long",
+            "name": "num_hashtags"
+          },
+          {
+            "type": "long",
+            "name": "num_links"
+          },
+          {
+            "type": "long",
+            "name": "num_mentions"
+          },
+          {
+            "type": "long",
+            "name": "tweet_length"
+          },
+          {
+            "type": "long",
+            "name": "user_total_tweets"
+          }
+        ]
+      },
+      "granularitySpec": {
+        "queryGranularity": "none",
+        "rollup": false,
+        "segmentGranularity": "day"
+      }
+    }
+  }
+}

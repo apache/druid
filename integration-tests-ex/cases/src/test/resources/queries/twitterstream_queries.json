@@ -28,22 +28,22 @@
             {
                 "timestamp": "2013-01-01T00:00:00.000Z",
                 "result": {
-                    "tweet_length": 2.40241323E8,
-                    "num_tweets": 3754028.0
+                    "tweet_length": 2411267.0,
+                    "num_tweets": 37552.0
                 }
             },
             {
                 "timestamp": "2013-01-02T00:00:00.000Z",
                 "result": {
-                    "tweet_length": 2.46397801E8,
-                    "num_tweets": 3799466.0
+                    "tweet_length": 2462741.0,
+                    "num_tweets": 37996.0
                 }
             },
             {
                 "timestamp": "2013-01-03T00:00:00.000Z",
                 "result": {
-                    "tweet_length": 2.31365019E8,
-                    "num_tweets": 3552419.0
+                    "tweet_length": 2310393.0,
+                    "num_tweets": 35507.0
                 }
             }
         ]
@@ -102,16 +102,16 @@
                 "timestamp": "2013-01-01T00:00:00.000Z",
                 "result": [
                     {
-                        "user_name": "000000000000087",
-                        "tweet_length": 14.0,
+                        "user_name": "00000526",
+                        "tweet_length": 15.0,
                         "num_tweets": 1.0,
-                        "avg_tweet_len": 14.0
+                        "avg_tweet_len": 15.0
                     },
                     {
-                        "user_name": "0000000000mghi",
-                        "tweet_length": 291.0,
-                        "num_tweets": 4.0,
-                        "avg_tweet_len": 72.75
+                        "user_name": "000zeeezy000",
+                        "tweet_length": 88.0,
+                        "num_tweets": 1.0,
+                        "avg_tweet_len": 88.0
                     }
                 ]
             },
@@ -119,16 +119,16 @@
                 "timestamp": "2013-01-02T00:00:00.000Z",
                 "result": [
                     {
-                        "user_name": "000000000037",
-                        "tweet_length": 13.0,
+                        "user_name": "001032004",
+                        "tweet_length": 53.0,
                         "num_tweets": 1.0,
-                        "avg_tweet_len": 13.0
+                        "avg_tweet_len": 53.0
                     },
                     {
-                        "user_name": "0000000000mghi",
-                        "tweet_length": 21.0,
+                        "user_name": "001inci",
+                        "tweet_length": 72.0,
                         "num_tweets": 1.0,
-                        "avg_tweet_len": 21.0
+                        "avg_tweet_len": 72.0
                     }
                 ]
             },
@@ -136,16 +136,16 @@
                 "timestamp": "2013-01-03T00:00:00.000Z",
                 "result": [
                     {
-                        "user_name": "000000007",
-                        "tweet_length": 37.0,
-                        "num_tweets": 1.0,
-                        "avg_tweet_len": 37.0
+                        "user_name": null,
+                        "tweet_length": 0.0,
+                        "num_tweets": 0.0,
+                        "avg_tweet_len": 0.0
                     },
                     {
-                        "user_name": "00000000b",
-                        "tweet_length": 119.0,
+                        "user_name": "00001Saa",
+                        "tweet_length": 99.0,
                         "num_tweets": 1.0,
-                        "avg_tweet_len": 119.0
+                        "avg_tweet_len": 99.0
                     }
                 ]
             }
@@ -206,16 +206,16 @@
                 "timestamp": "2013-01-01T00:00:00.000Z",
                 "result": [
                     {
-                        "user_name": "Favstar_Bot",
-                        "tweet_length": 2002.0,
-                        "num_tweets": 33.0,
-                        "avg_tweet_len": 60.666666666666664
+                        "user_name": "jRabbitBabee",
+                        "tweet_length": 676.0,
+                        "num_tweets": 5.0,
+                        "avg_tweet_len": 135.2
                     },
                     {
-                        "user_name": "SportsAB",
-                        "tweet_length": 1114.0,
-                        "num_tweets": 26.0,
-                        "avg_tweet_len": 42.84615384615385
+                        "user_name": "RadioShababBgd",
+                        "tweet_length": 320.0,
+                        "num_tweets": 4.0,
+                        "avg_tweet_len": 80.0
                     }
                 ]
             },
@@ -223,16 +223,16 @@
                 "timestamp": "2013-01-02T00:00:00.000Z",
                 "result": [
                     {
-                        "user_name": "Favstar_Bot",
-                        "tweet_length": 2185.0,
-                        "num_tweets": 36.0,
-                        "avg_tweet_len": 60.69444444444444
+                        "user_name": "Elviaci9",
+                        "tweet_length": 464.0,
+                        "num_tweets": 4.0,
+                        "avg_tweet_len": 116
                     },
                     {
-                        "user_name": "SportsAB",
-                        "tweet_length": 1148.0,
-                        "num_tweets": 23.0,
-                        "avg_tweet_len": 49.91304347826087
+                        "user_name": "Smeraldakn4",
+                        "tweet_length": 245.0,
+                        "num_tweets": 4.0,
+                        "avg_tweet_len": 61.25
                     }
                 ]
             },
@@ -240,16 +240,16 @@
                 "timestamp": "2013-01-03T00:00:00.000Z",
                 "result": [
                     {
-                        "user_name": "SportsAB",
-                        "tweet_length": 882.0,
-                        "num_tweets": 22.0,
-                        "avg_tweet_len": 40.09090909090909
+                        "user_name": "LoOfying",
+                        "tweet_length": 535.0,
+                        "num_tweets": 6.0,
+                        "avg_tweet_len": 89.16666666666667
                     },
                     {
-                        "user_name": "furin0620",
-                        "tweet_length": 867.0,
-                        "num_tweets": 21.0,
-                        "avg_tweet_len": 41.285714285714285
+                        "user_name": "worldfansalice",
+                        "tweet_length": 95.0,
+                        "num_tweets": 4.0,
+                        "avg_tweet_len": 23.75
                     }
                 ]
             }
@@ -268,7 +268,7 @@
                     {
                         "type": "selector",
                         "dimension": "user_name",
-                        "value": "Favstar_Bot"
+                        "value": "jRabbitBabee"
                     },
                     {
                         "type": "selector",
@@ -330,16 +330,16 @@
                 "timestamp": "2013-01-01T00:00:00.000Z",
                 "result": [
                     {
-                        "user_name": "Favstar_Bot",
-                        "tweet_length": 2002.0,
-                        "num_tweets": 33.0,
-                        "avg_tweet_len": 60.666666666666664
+                        "user_name": "jRabbitBabee",
+                        "tweet_length": 135.2,
+                        "num_tweets": 5.0,
+                        "avg_tweet_len": 676.0
                     },
                     {
-                        "user_name": "SportsAB",
-                        "tweet_length": 1114.0,
-                        "num_tweets": 26.0,
-                        "avg_tweet_len": 42.84615384615385
+                        "user_name": "furin0620",
+                        "tweet_length": 28.0,
+                        "num_tweets": 1.0,
+                        "avg_tweet_len": 28
                     }
                 ]
             },
@@ -347,16 +347,10 @@
                 "timestamp": "2013-01-02T00:00:00.000Z",
                 "result": [
                     {
-                        "user_name": "Favstar_Bot",
-                        "tweet_length": 2185.0,
-                        "num_tweets": 36.0,
-                        "avg_tweet_len": 60.69444444444444
-                    },
-                    {
                         "user_name": "SportsAB",
-                        "tweet_length": 1148.0,
-                        "num_tweets": 23.0,
-                        "avg_tweet_len": 49.91304347826087
+                        "tweet_length": 46.0,
+                        "num_tweets": 1.0,
+                        "avg_tweet_len": 46.0
                     }
                 ]
             },
@@ -365,15 +359,15 @@
                 "result": [
                     {
                         "user_name": "SportsAB",
-                        "tweet_length": 882.0,
-                        "num_tweets": 22.0,
-                        "avg_tweet_len": 40.09090909090909
+                        "tweet_length": 46.0,
+                        "num_tweets": 1.0,
+                        "avg_tweet_len": 46.0
                     },
                     {
                         "user_name": "furin0620",
-                        "tweet_length": 867.0,
-                        "num_tweets": 21.0,
-                        "avg_tweet_len": 41.285714285714285
+                        "tweet_length": 29.0,
+                        "num_tweets": 1.0,
+                        "avg_tweet_len": 29.0
                     }
                 ]
             }
@@ -406,8 +400,8 @@
                 "timestamp": "2013-01-01T00:00:00.000Z",
                 "event": {
                     "has_links": "No",
-                    "tweet_length": 2.08803904E8,
-                    "num_tweets": 3377791.0
+                    "tweet_length": 2091075.0,
+                    "num_tweets": 33745.0
                 }
             },
             {
@@ -415,8 +409,8 @@
                 "timestamp": "2013-01-01T00:00:00.000Z",
                 "event": {
                     "has_links": "Yes",
-                    "tweet_length": 3.1437419E7,
-                    "num_tweets": 376237.0
+                    "tweet_length": 320192.0,
+                    "num_tweets": 3807.0
                 }
             },
             {
@@ -424,8 +418,8 @@
                 "timestamp": "2013-01-02T00:00:00.000Z",
                 "event": {
                     "has_links": "No",
-                    "tweet_length": 2.10402683E8,
-                    "num_tweets": 3375243.0
+                    "tweet_length": 2105024.0,
+                    "num_tweets": 33761.0
                 }
             },
             {
@@ -433,8 +427,8 @@
                 "timestamp": "2013-01-02T00:00:00.000Z",
                 "event": {
                     "has_links": "Yes",
-                    "tweet_length": 3.5995118E7,
-                    "num_tweets": 424223.0
+                    "tweet_length": 357717.0,
+                    "num_tweets": 4235.0
                 }
             },
             {
@@ -442,8 +436,8 @@
                 "timestamp": "2013-01-03T00:00:00.000Z",
                 "event": {
                     "has_links": "No",
-                    "tweet_length": 1.9645145E8,
-                    "num_tweets": 3144985.0
+                    "tweet_length": 1962363.0,
+                    "num_tweets": 31454.0
                 }
             },
             {
@@ -451,8 +445,8 @@
                 "timestamp": "2013-01-03T00:00:00.000Z",
                 "event": {
                     "has_links": "Yes",
-                    "tweet_length": 3.4913569E7,
-                    "num_tweets": 407434.0
+                    "tweet_length": 348030.0,
+                    "num_tweets": 4053.0
                 }
             }
         ]
@@ -484,18 +478,18 @@
                 "result": [
                     {
                         "dimension": "user_name",
-                        "value": "1011Sports",
-			"count":1
+                        "value": "AJonesFoxSports",
+			            "count":1
                     },
                     {
                         "dimension": "user_name",
-                        "value": "11AliveSports",
-			"count":1
+                        "value": "BetfairSports",
+                        "count":1
                     },
                     {
                         "dimension": "user_name",
-                        "value": "1World_Sports",
-			"count":1
+                        "value": "HamTodaySports",
+			            "count":1
                     }
                 ]
             }
@@ -528,8 +522,8 @@
                 "timestamp": "2013-01-01T00:00:00.000Z",
                 "event": {
                     "has_links": "No",
-                    "tweet_length": 7.4820449E7,
-                    "num_tweets": 1170229.0
+                    "tweet_length": 751072.0,
+                    "num_tweets": 11694.0
                 }
             },
             {
@@ -537,8 +531,8 @@
                 "timestamp": "2013-01-01T00:00:00.000Z",
                 "event": {
                     "has_links": "Yes",
-                    "tweet_length": 1.149719E7,
-                    "num_tweets": 136582.0
+                    "tweet_length": 115479.0,
+                    "num_tweets": 1352.0
                 }
             },
             {
@@ -546,8 +540,8 @@
                 "timestamp": "2013-01-02T00:00:00.000Z",
                 "event": {
                     "has_links": "No",
-                    "tweet_length": 2.10402683E8,
-                    "num_tweets": 3375243.0
+                    "tweet_length": 2105024.0,
+                    "num_tweets": 33761.0
                 }
             },
             {
@@ -555,8 +549,8 @@
                 "timestamp": "2013-01-02T00:00:00.000Z",
                 "event": {
                     "has_links": "Yes",
-                    "tweet_length": 3.5995118E7,
-                    "num_tweets": 424223.0
+                    "tweet_length": 357717.0,
+                    "num_tweets": 4235.0
                 }
             },
             {
@@ -564,8 +558,8 @@
                 "timestamp": "2013-01-03T00:00:00.000Z",
                 "event": {
                     "has_links": "No",
-                    "tweet_length": 1.59141096E8,
-                    "num_tweets": 2567986.0
+                    "tweet_length": 1588225.0,
+                    "num_tweets": 25676.0
                 }
             },
             {
@@ -573,92 +567,9 @@
                 "timestamp": "2013-01-03T00:00:00.000Z",
                 "event": {
                     "has_links": "Yes",
-                    "tweet_length": 2.8345444E7,
-                    "num_tweets": 328917.0
+                    "tweet_length": 284189.0,
+                    "num_tweets": 3279.0
                 }
-            }
-        ]
-    },
-    {
-        "description": "segmentMetadata",
-        "query": {
-            "queryType": "segmentMetadata",
-            "dataSource": "twitterstream",
-            "intervals": ["2013-01-01T00:00:00.000/2013-01-04T00:00:00.000"],
-            "toInclude": {
-                "type": "list",
-                "columns": ["has_links", "has_links"]
-            }
-        },
-        "expectedResults": [
-            {
-                "id":"twitterstream_2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z_2013-01-02T04:13:41.980Z_v9",
-                "intervals":["2013-01-01T00:00:00.000Z/2013-01-02T00:00:00.000Z"],
-                "columns":{
-                    "has_links":{
-                        "typeSignature": "STRING",
-                        "type":"STRING",
-                        "hasMultipleValues":false,
-                        "size":0,
-                        "cardinality":2,
-                        "minValue":"No",
-                        "maxValue":"Yes",
-                        "errorMessage":null,
-                        "hasNulls":false
-                    }
-                },
-                "size":0,
-                "numRows":3702583,
-                "aggregators":null,
-                "timestampSpec":null,
-                "queryGranularity":null,
-                "rollup":null
-            },
-            {
-                "id":"twitterstream_2013-01-02T00:00:00.000Z_2013-01-03T00:00:00.000Z_2013-01-03T03:44:58.791Z_v9",
-                "intervals":["2013-01-02T00:00:00.000Z/2013-01-03T00:00:00.000Z"],
-                "columns":{
-                    "has_links":{
-                        "typeSignature": "STRING",
-                        "type":"STRING",
-                        "hasMultipleValues":false,
-                        "size":0,
-                        "cardinality":2,
-                        "minValue":"No",
-                        "maxValue":"Yes",
-                        "errorMessage":null,
-                        "hasNulls":false
-                    }
-                },
-                "size":0,
-                "numRows":3743002,
-                "aggregators":null,
-                "timestampSpec":null,
-                "queryGranularity":null,
-                "rollup":null
-            },
-            {
-                "id":"twitterstream_2013-01-03T00:00:00.000Z_2013-01-04T00:00:00.000Z_2013-01-04T04:09:13.590Z_v9",
-                "intervals":["2013-01-03T00:00:00.000Z/2013-01-04T00:00:00.000Z"],
-                "columns":{
-                    "has_links":{
-                        "typeSignature": "STRING",
-                        "type":"STRING",
-                        "hasMultipleValues":false,
-                        "size":0,
-                        "cardinality":2,
-                        "minValue":"No",
-                        "maxValue":"Yes",
-                        "errorMessage":null,
-                        "hasNulls":false
-                    }
-                },
-                "size":0,
-                "numRows":3502959,
-                "aggregators":null,
-                "timestampSpec":null,
-                "queryGranularity":null,
-                "rollup":null
             }
         ]
     },
@@ -749,20 +660,20 @@
                 "timestamp": "2013-01-01T00:00:00.000Z",
                 "result": [
                     {
-                        "user_name": "___soMALIa___",
-                        "tweet_length": 539.0,
-                        "avg_tweet_len_half": 269.5,
-                        "avg_tweet_len_doubled": 1078.0,
+                        "user_name": "Tlowe14",
+                        "tweet_length": 179.0,
+                        "avg_tweet_len_half": 89.5,
+                        "avg_tweet_len_doubled": 358.0,
                         "num_tweets": 1.0,
-                        "avg_tweet_len": 539.0
+                        "avg_tweet_len": 179.0
                     },
                     {
-                        "user_name": "SophiiiaSlr",
-                        "tweet_length": 530.0,
-                        "avg_tweet_len_half": 265.0,
-                        "avg_tweet_len_doubled": 1060.0,
+                        "user_name": "ItsUniToYou",
+                        "tweet_length": 165.0,
+                        "avg_tweet_len_half": 82.5,
+                        "avg_tweet_len_doubled": 330.0,
                         "num_tweets": 1.0,
-                        "avg_tweet_len": 530.0
+                        "avg_tweet_len": 165.0
                     }
                 ]
             },
@@ -770,20 +681,20 @@
                 "timestamp": "2013-01-02T00:00:00.000Z",
                 "result": [
                     {
-                        "user_name": "FallenReckless",
-                        "tweet_length": 518.0,
-                        "avg_tweet_len_half": 259.0,
-                        "avg_tweet_len_doubled": 1036.0,
-                        "num_tweets": 1.0,
-                        "avg_tweet_len": 518.0
-                    },
-                    {
                         "user_name": "SigaMike",
                         "tweet_length": 514.0,
                         "avg_tweet_len_half": 257.0,
                         "avg_tweet_len_doubled": 1028.0,
                         "num_tweets": 1.0,
                         "avg_tweet_len": 514.0
+                    },
+                    {
+                        "user_name": "wh0sddl",
+                        "tweet_length": 265.0,
+                        "avg_tweet_len_half": 132.5,
+                        "avg_tweet_len_doubled": 530.0,
+                        "num_tweets": 1.0,
+                        "avg_tweet_len": 265.0
                     }
                 ]
             },
@@ -791,20 +702,20 @@
                 "timestamp": "2013-01-03T00:00:00.000Z",
                 "result": [
                     {
-                        "user_name": "Alejo_InReverse",
-                        "tweet_length": 560.0,
-                        "avg_tweet_len_half": 280.0,
-                        "avg_tweet_len_doubled": 1120.0,
+                        "user_name": "jackychan149",
+                        "tweet_length": 260.0,
+                        "avg_tweet_len_half": 130.0,
+                        "avg_tweet_len_doubled": 520.0,
                         "num_tweets": 1.0,
-                        "avg_tweet_len": 560.0
+                        "avg_tweet_len": 260.0
                     },
                     {
-                        "user_name": "GavLeftHome",
-                        "tweet_length": 506.0,
-                        "avg_tweet_len_half": 253.0,
-                        "avg_tweet_len_doubled": 1012.0,
+                        "user_name": "MCroyle2326",
+                        "tweet_length": 220.0,
+                        "avg_tweet_len_half": 110.0,
+                        "avg_tweet_len_doubled": 440.0,
                         "num_tweets": 1.0,
-                        "avg_tweet_len": 506.0
+                        "avg_tweet_len": 220.0
                     }
                 ]
             }

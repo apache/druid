@@ -1,0 +1,91 @@
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "local",
+        "baseDir": "/shared",
+        "filter": "%%LOCAL_FILE_NAME%%.csv"
+      },
+      "inputFormat": {
+        "type": "csv",
+        "findColumnsFromHeader": true
+      }
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic"
+      }
+    },
+    "dataSchema": {
+      "dataSource": "%%DATASOURCE%%",
+      "timestampSpec": {
+        "column": "__time",
+        "format": "auto"
+      },
+      "transformSpec": {},
+      "dimensionsSpec": {
+        "dimensions": [
+          {
+            "type": "long",
+            "name": "anonymous"
+          },
+          "area_code",
+          "city",
+          "continent_code",
+          "country_name",
+          "dma_code",
+          "geo",
+          "language",
+          "namespace",
+          "network",
+          {
+            "type": "long",
+            "name": "newpage"
+          },
+          "page",
+          "postal_code",
+          "region_lookup",
+          {
+            "type": "long",
+            "name": "robot"
+          },
+          {
+            "type": "long",
+            "name": "unpatrolled"
+          },
+          "user",
+          {
+            "type": "long",
+            "name": "added"
+          },
+          {
+            "type": "long",
+            "name": "count"
+          },
+          {
+            "type": "long",
+            "name": "deleted"
+          },
+          {
+            "type": "long",
+            "name": "delta"
+          },
+          "delta_hist",
+          "unique_users",
+          {
+            "type": "long",
+            "name": "variation"
+          }
+        ]
+      },
+      "granularitySpec": {
+        "queryGranularity": "none",
+        "rollup": false,
+        "segmentGranularity": "all"
+      }
+    }
+  }
+}

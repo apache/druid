@@ -19,13 +19,19 @@
 
 package org.apache.druid.testsEx.query;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.inject.Inject;
+import java.io.IOException;
+import java.util.function.Function;
+import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.testsEx.categories.Query;
 import org.apache.druid.testsEx.config.BaseJUnitRule;
 import org.apache.druid.testsEx.config.DruidTestRunner;
+import org.apache.druid.testsEx.indexer.AbstractITBatchIndexTest;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -33,8 +39,9 @@ import org.junit.runner.RunWith;
 
 @RunWith(DruidTestRunner.class)
 @Category(Query.class)
-public class ITTwitterQueryTest extends BaseJUnitRule
+public class ITTwitterQueryTest extends AbstractITBatchIndexTest
 {
+  private static final String TWITTER_INDEX_TASK = "/queries/twitterstream_index_task.json";
   private static final String TWITTER_DATA_SOURCE = "twitterstream";
   private static final String TWITTER_QUERIES_RESOURCE = "/queries/twitterstream_queries.json";
   @Inject
@@ -43,11 +50,31 @@ public class ITTwitterQueryTest extends BaseJUnitRule
   private TestQueryHelper queryHelper;
 
   @Before
-  public void before()
+  public void before() throws IOException
   {
-    // ensure that the twitter segments are loaded completely
-    ITRetryUtil.retryUntilTrue(
-        () -> coordinatorClient.areSegmentsLoaded(TWITTER_DATA_SOURCE), "twitter segment load"
+    final Function<String, String> transform = spec -> {
+      try {
+        return StringUtils.replace(
+            spec,
+            "%%LOCAL_FILE_NAME%%",
+            jsonMapper.writeValueAsString(TWITTER_DATA_SOURCE)
+        );
+      }
+      catch (JsonProcessingException e) {
+        throw new RuntimeException(e);
+      }
+    };
+
+    // Ingesting twitterstream data
+    doIndexTest(
+        TWITTER_DATA_SOURCE,
+        TWITTER_INDEX_TASK,
+        transform,
+        null,
+        false,
+        true,
+        true,
+        new Pair<>(false, false)
     );
   }
 
