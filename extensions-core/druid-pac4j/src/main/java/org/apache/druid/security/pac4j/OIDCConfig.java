@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.metadata.PasswordProvider;
 
+import javax.annotation.Nullable;
+
 public class OIDCConfig
 {
   @JsonProperty
@@ -36,20 +38,20 @@ public class OIDCConfig
   private final String discoveryURI;
 
   @JsonProperty
-  private final String scope;
+  private String scope;
 
   @JsonCreator
   public OIDCConfig(
       @JsonProperty("clientID") String clientID,
       @JsonProperty("clientSecret") PasswordProvider clientSecret,
       @JsonProperty("discoveryURI") String discoveryURI,
-      @JsonProperty("scope") String scope
+      @JsonProperty("scope") @Nullable String scope
   )
   {
     this.clientID = Preconditions.checkNotNull(clientID, "null clientID");
     this.clientSecret = Preconditions.checkNotNull(clientSecret, "null clientSecret");
     this.discoveryURI = Preconditions.checkNotNull(discoveryURI, "null discoveryURI");
-    this.scope = Preconditions.checkNotNull(scope, "null scope");
+    this.scope = scope;
   }
 
   @JsonProperty
