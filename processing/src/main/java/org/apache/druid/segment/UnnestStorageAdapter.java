@@ -477,8 +477,22 @@ public class UnnestStorageAdapter implements StorageAdapter
    */
   private static boolean useDimensionCursor(@Nullable ColumnCapabilities capabilities)
   {
-    return capabilities != null && !capabilities.isArray() && capabilities.isDictionaryEncoded()
-                                                                          .and(capabilities.areDictionaryValuesUnique())
-                                                                          .isTrue();
+    if (capabilities == null) {
+      // capabilities being null here should be indicative of the column not existing or being a virtual column with
+      // no type information, chances are it is not going to be using a very cool dimension selector and so wont work
+      // with this, which requires real dictionary ids for the value matcher to work correctly
+      return false;
+    }
+    // the column needs real, unique value dictionary so that the value matcher id lookup works correctly, otherwise
+    // we must not use the dimension selector
+    if (capabilities.isDictionaryEncoded().and(capabilities.areDictionaryValuesUnique()).isTrue()) {
+      // if we got here, we only actually want to do this for dictionary encoded strings, since no other dictionary
+      // encoded column type should ever have multiple values set. nested and array columns are also dictionary encoded,
+      // but for arrays, the row is always a single dictionary id which maps to the entire array instead of an array
+      // of ids for each element, so we don't want to ever use the dimension selector cursor for that
+      return capabilities.is(ValueType.STRING);
+    }
+    // wasn't a dictionary encoded string, use the value selector
+    return false;
   }
 }
