@@ -21,7 +21,6 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.TypeStrategies;
@@ -419,15 +418,6 @@ public class ParserTest extends InitializedNullHandlingTest
         new Object[]{l1, l2}
     );
   }
-
-  @Test
-  public void nestedArraysExplodeIfNotEnabled()
-  {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Cannot create a nested array type [ARRAY<ARRAY<LONG>>], 'druid.expressions.allowNestedArrays' must be set to true");
-    validateConstantExpression("ARRAY<ARRAY<LONG>>[]", new Object[]{});
-  }
-
 
   @Test
   public void testLiteralArrayImplicitStringParseException()

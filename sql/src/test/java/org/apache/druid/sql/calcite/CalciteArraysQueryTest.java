@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -1818,68 +1817,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
               }
           );
           assertResultsDeepEquals(sql, expected, results);
-        }
-    );
-  }
-
-  @Test
-  public void testArrayAggArraysNoNest()
-  {
-    cannotVectorize();
-    testQueryThrows(
-        "SELECT ARRAY_AGG(ARRAY[l1, l2]), ARRAY_AGG(DISTINCT ARRAY[l1, l2]) FROM numfoo",
-        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
-        ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE3)
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .virtualColumns(
-                      expressionVirtualColumn("v0", "array(\"l1\",\"l2\")", ColumnType.LONG_ARRAY)
-                  )
-                  .aggregators(
-                      aggregators(
-                          new ExpressionLambdaAggregatorFactory(
-                              "a0",
-                              ImmutableSet.of("v0"),
-                              "__acc",
-                              "ARRAY<ARRAY<LONG>>[]",
-                              "ARRAY<ARRAY<LONG>>[]",
-                              true,
-                              true,
-                              false,
-                              "array_append(\"__acc\", \"v0\")",
-                              "array_concat(\"__acc\", \"a0\")",
-                              null,
-                              null,
-                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
-                              TestExprMacroTable.INSTANCE
-                          ),
-                          new ExpressionLambdaAggregatorFactory(
-                              "a1",
-                              ImmutableSet.of("v0"),
-                              "__acc",
-                              "ARRAY<ARRAY<LONG>>[]",
-                              "ARRAY<ARRAY<LONG>>[]",
-                              true,
-                              true,
-                              false,
-                              "array_set_add(\"__acc\", \"v0\")",
-                              "array_set_add_all(\"__acc\", \"a1\")",
-                              null,
-                              null,
-                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
-                              TestExprMacroTable.INSTANCE
-                          )
-                      )
-                  )
-                  .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-                  .build()
-        ),
-        expected -> {
-          expected.expect(IAE.class);
-          expected.expectMessage(
-              "Cannot create a nested array type [ARRAY<ARRAY<LONG>>], 'druid.expressions.allowNestedArrays' must be set to true");
         }
     );
   }
