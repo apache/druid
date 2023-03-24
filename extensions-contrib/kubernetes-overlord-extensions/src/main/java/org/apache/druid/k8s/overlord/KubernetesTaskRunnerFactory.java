@@ -42,11 +42,11 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   public static final String TYPE_NAME = "k8s";
   private final ObjectMapper smileMapper;
   private final KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig;
-  private final TaskConfig taskConfig;
   private final StartupLoggingConfig startupLoggingConfig;
   private final TaskQueueConfig taskQueueConfig;
   private final TaskLogPusher taskLogPusher;
   private final DruidNode druidNode;
+  private final TaskConfig taskConfig;
   private KubernetesTaskRunner runner;
 
 
@@ -54,21 +54,21 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   public KubernetesTaskRunnerFactory(
       @Smile ObjectMapper smileMapper,
       KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig,
-      TaskConfig taskConfig,
       StartupLoggingConfig startupLoggingConfig,
       @JacksonInject TaskQueueConfig taskQueueConfig,
       TaskLogPusher taskLogPusher,
-      @Self DruidNode druidNode
+      @Self DruidNode druidNode,
+      TaskConfig taskConfig
   )
   {
 
     this.smileMapper = smileMapper;
     this.kubernetesTaskRunnerConfig = kubernetesTaskRunnerConfig;
-    this.taskConfig = taskConfig;
     this.startupLoggingConfig = startupLoggingConfig;
     this.taskQueueConfig = taskQueueConfig;
     this.taskLogPusher = taskLogPusher;
     this.druidNode = druidNode;
+    this.taskConfig = taskConfig;
   }
 
   @Override
@@ -86,20 +86,31 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
 
     K8sTaskAdapter adapter;
     if (kubernetesTaskRunnerConfig.sidecarSupport) {
-      adapter = new MultiContainerTaskAdapter(client, kubernetesTaskRunnerConfig, smileMapper);
+      adapter = new MultiContainerTaskAdapter(
+          client,
+          kubernetesTaskRunnerConfig,
+          taskConfig,
+          startupLoggingConfig,
+          druidNode,
+          smileMapper
+      );
     } else {
-      adapter = new SingleContainerTaskAdapter(client, kubernetesTaskRunnerConfig, smileMapper);
+      adapter = new SingleContainerTaskAdapter(
+          client,
+          kubernetesTaskRunnerConfig,
+          taskConfig,
+          startupLoggingConfig,
+          druidNode,
+          smileMapper
+      );
     }
 
     runner = new KubernetesTaskRunner(
-        taskConfig,
-        startupLoggingConfig,
         adapter,
         kubernetesTaskRunnerConfig,
         taskQueueConfig,
         taskLogPusher,
-        new DruidKubernetesPeonClient(client, kubernetesTaskRunnerConfig.namespace, kubernetesTaskRunnerConfig.debugJobs),
-        druidNode
+        new DruidKubernetesPeonClient(client, kubernetesTaskRunnerConfig.namespace, kubernetesTaskRunnerConfig.debugJobs)
     );
     return runner;
   }

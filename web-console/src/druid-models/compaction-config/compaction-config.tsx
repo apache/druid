@@ -19,10 +19,29 @@
 import { Code } from '@blueprintjs/core';
 import React from 'react';
 
-import { Field } from '../../components';
+import type { Field } from '../../components';
 import { deepGet, deepSet, oneOf } from '../../utils';
 
-export type CompactionConfig = Record<string, any>;
+export interface CompactionConfig {
+  dataSource: string;
+  skipOffsetFromLatest?: string;
+  tuningConfig?: any;
+  [key: string]: any;
+
+  // Deprecated:
+  inputSegmentSizeBytes?: number;
+}
+
+export const NOOP_INPUT_SEGMENT_SIZE_BYTES = 100000000000000;
+
+export function compactionConfigHasLegacyInputSegmentSizeBytesSet(
+  config: CompactionConfig,
+): boolean {
+  return (
+    typeof config.inputSegmentSizeBytes === 'number' &&
+    config.inputSegmentSizeBytes < NOOP_INPUT_SEGMENT_SIZE_BYTES
+  );
+}
 
 export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
   {
@@ -182,7 +201,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     defined: t =>
       oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'single_dim', 'range') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
-    required: (t: CompactionConfig) =>
+    required: t =>
       !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
     info: (
@@ -205,7 +224,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     defined: t =>
       oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'single_dim', 'range') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment'),
-    required: (t: CompactionConfig) =>
+    required: t =>
       !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
     info: (
@@ -277,7 +296,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     defaultValue: 1073741824,
     min: 1000000,
     hideInMore: true,
-    adjustment: (t: CompactionConfig) => deepSet(t, 'tuningConfig.splitHintSpec.type', 'maxSize'),
+    adjustment: t => deepSet(t, 'tuningConfig.splitHintSpec.type', 'maxSize'),
     info: (
       <>
         Maximum number of bytes of input segments to process in a single task. If a single segment
@@ -293,7 +312,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     defaultValue: 1000,
     min: 1,
     hideInMore: true,
-    adjustment: (t: CompactionConfig) => deepSet(t, 'tuningConfig.splitHintSpec.type', 'maxSize'),
+    adjustment: t => deepSet(t, 'tuningConfig.splitHintSpec.type', 'maxSize'),
     info: (
       <>
         Maximum number of input segments to process in a single subtask. This limit is to avoid task

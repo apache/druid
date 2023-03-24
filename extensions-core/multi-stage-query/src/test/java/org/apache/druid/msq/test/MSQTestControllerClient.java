@@ -25,7 +25,7 @@ import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
+import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -40,25 +40,25 @@ public class MSQTestControllerClient implements ControllerClient
   }
 
   @Override
-  public void postKeyStatistics(
+  public void postPartialKeyStatistics(
       StageId stageId,
       int workerNumber,
-      ClusterByStatisticsSnapshot keyStatistics
+      PartialKeyStatisticsInformation partialKeyStatisticsInformation
   )
   {
     try {
-      controller.updateStatus(stageId.getStageNumber(), workerNumber, keyStatistics);
+      controller.updatePartialKeyStatisticsInformation(stageId.getStageNumber(), workerNumber, partialKeyStatisticsInformation);
     }
     catch (Exception e) {
-      throw new ISE(e, "unable to post key statistics");
+      throw new ISE(e, "unable to post partial key statistics");
     }
   }
 
   @Override
-  public void postCounters(CounterSnapshotsTree snapshotsTree)
+  public void postCounters(String workerId, CounterSnapshotsTree snapshotsTree)
   {
     if (snapshotsTree != null) {
-      controller.updateCounters(snapshotsTree);
+      controller.updateCounters(workerId, snapshotsTree);
     }
   }
 

@@ -47,7 +47,6 @@ import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -71,7 +70,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -142,7 +140,8 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -218,7 +217,7 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
 
     for (int i = 0; i < 1000; i++) {
       boolean hasTimeline = exec.submit(
-          () -> serverView.getTimeline(DataSourceAnalysis.forDataSource(new TableDataSource(DATASOURCE)))
+          () -> serverView.getTimeline((new TableDataSource(DATASOURCE)).getAnalysis())
                           .isPresent()
       ).get(100, TimeUnit.MILLISECONDS);
       Assert.assertTrue(hasTimeline);
@@ -251,7 +250,8 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        new NoopServiceEmitter()
     )
     {
       @Override

@@ -20,10 +20,9 @@
 package org.apache.druid.indexing.input;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.data.input.InputEntity;
+import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.IntermediateRowParsingReader;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.util.List;
@@ -35,16 +34,14 @@ import java.util.NoSuchElementException;
  */
 public class DruidTombstoneSegmentReader extends IntermediateRowParsingReader<Map<String, Object>>
 {
-  private DruidSegmentInputEntity source;
-
   public DruidTombstoneSegmentReader(
-      InputEntity source
+      DruidSegmentInputEntity source
   )
   {
-    this.source = (DruidSegmentInputEntity) source;
-    if (!this.source.isFromTombstone()) {
-      throw new IAE("DruidSegmentInputEntity must be created from a tombstone but is not.");
-    }
+    Preconditions.checkArgument(
+        source.isFromTombstone(),
+        "DruidSegmentInputEntity must be created from a tombstone."
+    );
   }
 
   @Override

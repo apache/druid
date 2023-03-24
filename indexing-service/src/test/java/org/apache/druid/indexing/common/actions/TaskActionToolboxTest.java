@@ -34,7 +34,7 @@ public class TaskActionToolboxTest
   @Test
   public void testMakeCodeCoverageHappy()
   {
-    TaskActionToolbox toolbox = new TaskActionToolbox(null, null, null, null, null);
+    TaskActionToolbox toolbox = new TaskActionToolbox(null, null, null, null, null, null);
     assertFalse(toolbox.getTaskRunner().isPresent());
     ForkingTaskRunnerFactory factory = mock(ForkingTaskRunnerFactory.class);
     when(factory.get()).thenReturn(mock(ForkingTaskRunner.class));

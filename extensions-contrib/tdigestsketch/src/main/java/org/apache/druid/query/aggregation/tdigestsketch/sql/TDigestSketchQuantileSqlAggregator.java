@@ -81,6 +81,7 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
         plannerContext,
         rowSignature,
         Expressions.fromFieldAccess(
+            rexBuilder.getTypeFactory(),
             rowSignature,
             project,
             aggregateCall.getArgList().get(0)
@@ -95,6 +96,7 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
 
     // this is expected to be quantile fraction
     final RexNode quantileArg = Expressions.fromFieldAccess(
+        rexBuilder.getTypeFactory(),
         rowSignature,
         project,
         aggregateCall.getArgList().get(1)
@@ -109,6 +111,7 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
     Integer compression = TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION;
     if (aggregateCall.getArgList().size() > 2) {
       final RexNode compressionArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(2)

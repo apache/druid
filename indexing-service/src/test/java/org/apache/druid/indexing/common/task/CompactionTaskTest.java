@@ -57,6 +57,7 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
@@ -118,6 +119,7 @@ import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -151,7 +153,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -326,7 +327,7 @@ public class CompactionTaskTest
         null,
         null,
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -626,7 +627,7 @@ public class CompactionTaskTest
             null,
             null,
             new IndexSpec(
-                new RoaringBitmapSerdeFactory(true),
+                RoaringBitmapSerdeFactory.getInstance(),
                 CompressionStrategy.LZ4,
                 CompressionStrategy.LZF,
                 LongEncodingStrategy.LONGS
@@ -689,7 +690,7 @@ public class CompactionTaskTest
         null,
         null,
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -720,7 +721,7 @@ public class CompactionTaskTest
         null,
         null,
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -765,7 +766,7 @@ public class CompactionTaskTest
         null,
         null,
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -804,7 +805,7 @@ public class CompactionTaskTest
         null,
         null,
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -953,7 +954,7 @@ public class CompactionTaskTest
         null,
         null,
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -1028,7 +1029,7 @@ public class CompactionTaskTest
         null,
         null,
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -1103,7 +1104,7 @@ public class CompactionTaskTest
         null,
         new HashedPartitionsSpec(null, 3, null),
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -1851,7 +1852,7 @@ public class CompactionTaskTest
             null,
             new HashedPartitionsSpec(5000000, null, null), // automatically computed targetPartitionSize
             new IndexSpec(
-                new RoaringBitmapSerdeFactory(true),
+                RoaringBitmapSerdeFactory.getInstance(),
                 CompressionStrategy.LZ4,
                 CompressionStrategy.LZF,
                 LongEncodingStrategy.LONGS
@@ -1975,14 +1976,8 @@ public class CompactionTaskTest
       Map<DataSegment, File> segments
   )
   {
-    final SegmentCacheManager segmentCacheManager = new SegmentCacheManager()
+    final SegmentCacheManager segmentCacheManager = new NoopSegmentCacheManager()
     {
-      @Override
-      public boolean isSegmentCached(DataSegment segment)
-      {
-        throw new UnsupportedOperationException();
-      }
-
       @Override
       public File getSegmentFiles(DataSegment segment)
       {
@@ -1990,49 +1985,31 @@ public class CompactionTaskTest
       }
 
       @Override
-      public boolean reserve(DataSegment segment)
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public boolean release(DataSegment segment)
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
       public void cleanup(DataSegment segment)
       {
         // Do nothing.
       }
-
-      @Override
-      public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
-      {
-        throw new UnsupportedOperationException();
-      }
     };
 
+    final TaskConfig config = new TaskConfig(
+        null,
+        null,
+        null,
+        null,
+        null,
+        false,
+        null,
+        null,
+        null,
+        false,
+        false,
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null,
+        false,
+        null
+    );
     return new TaskToolbox.Builder()
-        .config(
-            new TaskConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                false,
-                null,
-                null,
-                null,
-                false,
-                false,
-                TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-                null,
-                false
-            )
-        )
+        .config(config)
         .taskActionClient(taskActionClient)
         .joinableFactory(NoopJoinableFactory.INSTANCE)
         .indexIO(indexIO)
@@ -2051,6 +2028,7 @@ public class CompactionTaskTest
         .segmentCacheManager(segmentCacheManager)
         .taskLogPusher(null)
         .attemptId("1")
+        .dirTracker(new TaskStorageDirTracker(config))
         .build();
   }
 

@@ -769,6 +769,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
       finally {
         try {
+          // To handle cases where tasks stop reading due to stop request or exceptions
+          fireDepartmentMetrics.markProcessingDone();
           driver.persist(committerSupplier.get()); // persist pending data
         }
         catch (Exception e) {
@@ -897,7 +899,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     }
     finally {
       try {
-
         if (driver != null) {
           driver.close();
         }
@@ -1035,7 +1036,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             }
             task.emitMetric(
                 toolbox.getEmitter(),
-                "ingest/segment/count",
+                "ingest/segments/count",
                 segmentCount
             );
           }
@@ -1221,7 +1222,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     sequences.add(sequenceMetadata);
   }
 
-  private SequenceMetadata<PartitionIdType, SequenceOffsetType> getLastSequenceMetadata()
+  @VisibleForTesting
+  public SequenceMetadata<PartitionIdType, SequenceOffsetType> getLastSequenceMetadata()
   {
     Preconditions.checkState(!sequences.isEmpty(), "Empty sequences");
     return sequences.get(sequences.size() - 1);
@@ -1650,6 +1652,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
              && !finish)
             || (latestSequence.getEndOffsets().equals(sequenceNumbers) && finish)) {
           log.warn("Ignoring duplicate request, end offsets already set for sequences [%s]", sequenceNumbers);
+          resetNextCheckpointTime();
           resume();
           return Response.ok(sequenceNumbers).build();
         } else if (latestSequence.isCheckpointed()) {
@@ -1869,6 +1872,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     authorizationCheck(req, Action.WRITE);
     return startTime;
+  }
+
+  @VisibleForTesting
+  public long getNextCheckpointTime()
+  {
+    return nextCheckpointTime;
   }
 
   /**

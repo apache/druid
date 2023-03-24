@@ -32,8 +32,8 @@ import org.apache.druid.java.util.common.concurrent.DirectExecutorService;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.metrics.MetricsVerifier;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.server.coordinator.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.CachingCostBalancerStrategyConfig;
@@ -47,7 +47,9 @@ import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.RandomBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.duty.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
+import org.apache.druid.server.coordinator.duty.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
@@ -78,7 +80,8 @@ public class CoordinatorSimulationBuilder
               DataSegment.PruneSpecsHolder.DEFAULT
           )
       );
-
+  private static final CompactionSegmentSearchPolicy COMPACTION_SEGMENT_SEARCH_POLICY =
+      new NewestSegmentFirstPolicy(OBJECT_MAPPER);
   private String balancerStrategy;
   private CoordinatorDynamicConfig dynamicConfig =
       CoordinatorDynamicConfig.builder()
@@ -176,24 +179,19 @@ public class CoordinatorSimulationBuilder
     final TestServerInventoryView serverInventoryView = new TestServerInventoryView();
     servers.forEach(serverInventoryView::addServer);
 
-    final TestSegmentsMetadataManager segmentManager = new TestSegmentsMetadataManager();
-    if (segments != null) {
-      segments.forEach(segmentManager::addSegment);
-    }
-
-    final TestMetadataRuleManager ruleManager = new TestMetadataRuleManager();
-    datasourceRules.forEach(
-        (datasource, rules) ->
-            ruleManager.overrideRule(datasource, rules, null)
-    );
-
     final Environment env = new Environment(
         serverInventoryView,
-        segmentManager,
-        ruleManager,
         dynamicConfig,
         loadImmediately,
         autoSyncInventory
+    );
+
+    if (segments != null) {
+      segments.forEach(env.segmentManager::addSegment);
+    }
+    datasourceRules.forEach(
+        (datasource, rules) ->
+            env.ruleManager.overrideRule(datasource, rules, null)
     );
 
     // Build the coordinator
@@ -215,7 +213,7 @@ public class CoordinatorSimulationBuilder
         createBalancerStrategy(env),
         env.lookupCoordinatorManager,
         env.leaderSelector,
-        OBJECT_MAPPER
+        COMPACTION_SEGMENT_SEARCH_POLICY
     );
 
     return new SimulationImpl(coordinator, env);
@@ -375,6 +373,14 @@ public class CoordinatorSimulationBuilder
       env.inventory.addServer(server);
     }
 
+    @Override
+    public void addSegments(List<DataSegment> segments)
+    {
+      if (segments != null) {
+        segments.forEach(env.segmentManager::addSegment);
+      }
+    }
+
     private void verifySimulationRunning()
     {
       if (!running.get()) {
@@ -389,9 +395,9 @@ public class CoordinatorSimulationBuilder
     }
 
     @Override
-    public List<ServiceMetricEvent> getMetricEvents()
+    public MetricsVerifier getMetricsVerifier()
     {
-      return new ArrayList<>(env.serviceEmitter.getMetricEvents());
+      return env.serviceEmitter;
     }
   }
 
@@ -409,8 +415,8 @@ public class CoordinatorSimulationBuilder
         = new TestDruidLeaderSelector();
 
     private final ExecutorFactory executorFactory;
-    private final TestSegmentsMetadataManager segmentManager;
-    private final TestMetadataRuleManager ruleManager;
+    private final TestSegmentsMetadataManager segmentManager = new TestSegmentsMetadataManager();
+    private final TestMetadataRuleManager ruleManager = new TestMetadataRuleManager();
 
     private final LoadQueueTaskMaster loadQueueTaskMaster;
 
@@ -437,16 +443,12 @@ public class CoordinatorSimulationBuilder
 
     private Environment(
         TestServerInventoryView clusterInventory,
-        TestSegmentsMetadataManager segmentManager,
-        TestMetadataRuleManager ruleManager,
         CoordinatorDynamicConfig dynamicConfig,
         boolean loadImmediately,
         boolean autoSyncInventory
     )
     {
       this.inventory = clusterInventory;
-      this.segmentManager = segmentManager;
-      this.ruleManager = ruleManager;
       this.loadImmediately = loadImmediately;
       this.autoSyncInventory = autoSyncInventory;
 
@@ -454,7 +456,6 @@ public class CoordinatorSimulationBuilder
           .withCoordinatorStartDelay(new Duration(1L))
           .withCoordinatorPeriod(new Duration(DEFAULT_COORDINATOR_PERIOD))
           .withCoordinatorKillPeriod(new Duration(DEFAULT_COORDINATOR_PERIOD))
-          .withLoadQueuePeonRepeatDelay(new Duration("PT0S"))
           .withLoadQueuePeonType("http")
           .withCoordinatorKillIgnoreDurationToRetain(false)
           .build();

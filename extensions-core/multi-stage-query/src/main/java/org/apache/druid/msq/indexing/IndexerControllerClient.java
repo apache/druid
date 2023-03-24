@@ -29,7 +29,7 @@ import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
+import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
@@ -59,14 +59,14 @@ public class IndexerControllerClient implements ControllerClient
   }
 
   @Override
-  public void postKeyStatistics(
+  public void postPartialKeyStatistics(
       StageId stageId,
       int workerNumber,
-      ClusterByStatisticsSnapshot keyStatistics
+      PartialKeyStatisticsInformation partialKeyStatisticsInformation
   ) throws IOException
   {
     final String path = StringUtils.format(
-        "/keyStatistics/%s/%s/%d",
+        "/partialKeyStatisticsInformation/%s/%d/%d",
         StringUtils.urlEncode(stageId.getQueryId()),
         stageId.getStageNumber(),
         workerNumber
@@ -74,16 +74,17 @@ public class IndexerControllerClient implements ControllerClient
 
     doRequest(
         new RequestBuilder(HttpMethod.POST, path)
-            .jsonContent(jsonMapper, keyStatistics),
+            .jsonContent(jsonMapper, partialKeyStatisticsInformation),
         IgnoreHttpResponseHandler.INSTANCE
     );
   }
 
   @Override
-  public void postCounters(CounterSnapshotsTree snapshotsTree) throws IOException
+  public void postCounters(String workerId, CounterSnapshotsTree snapshotsTree) throws IOException
   {
+    final String path = StringUtils.format("/counters/%s", StringUtils.urlEncode(workerId));
     doRequest(
-        new RequestBuilder(HttpMethod.POST, "/counters")
+        new RequestBuilder(HttpMethod.POST, path)
             .jsonContent(jsonMapper, snapshotsTree),
         IgnoreHttpResponseHandler.INSTANCE
     );

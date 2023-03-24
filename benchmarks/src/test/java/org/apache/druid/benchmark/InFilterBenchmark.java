@@ -83,7 +83,7 @@ public class InFilterBenchmark
   public void setup()
   {
     final BitmapFactory bitmapFactory = new RoaringBitmapFactory();
-    final BitmapSerdeFactory serdeFactory = new RoaringBitmapSerdeFactory(null);
+    final BitmapSerdeFactory serdeFactory = RoaringBitmapSerdeFactory.getInstance();
     final Iterable<Integer> ints = intGenerator();
     final GenericIndexed<String> dictionary = GenericIndexed.fromIterable(
         FluentIterable.from(ints)
@@ -93,7 +93,7 @@ public class InFilterBenchmark
     final GenericIndexed<ByteBuffer> dictionaryUtf8 = GenericIndexed.fromIterable(
         FluentIterable.from(ints)
                       .transform(i -> ByteBuffer.wrap(StringUtils.toUtf8(String.valueOf(i)))),
-        GenericIndexed.BYTE_BUFFER_STRATEGY
+        GenericIndexed.UTF8_STRATEGY
     );
     final GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.fromIterable(
         () -> IntStream.range(0, dictionarySize)

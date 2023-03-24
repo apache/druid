@@ -25,7 +25,7 @@ import org.apache.druid.java.util.common.StringUtils;
 
 /**
  * Exception indicating that an operation failed because it exceeded some configured resource limit.
- *
+ * <p>
  * This is a {@link BadQueryException} because it likely indicates a user's misbehavior when this exception is thrown.
  * The resource limitations set by Druid cluster operators are typically less flexible than the parameters of
  * a user query, so when a user query requires too many resources, the likely remedy is that the user query
@@ -33,8 +33,6 @@ import org.apache.druid.java.util.common.StringUtils;
  */
 public class ResourceLimitExceededException extends BadQueryException
 {
-  public static final String ERROR_CODE = "Resource limit exceeded";
-
   public static ResourceLimitExceededException withMessage(String message, Object... arguments)
   {
     return new ResourceLimitExceededException(StringUtils.nonStrictFormat(message, arguments));
@@ -47,7 +45,7 @@ public class ResourceLimitExceededException extends BadQueryException
 
   public ResourceLimitExceededException(String message)
   {
-    this(ERROR_CODE, message, ResourceLimitExceededException.class.getName());
+    this(RESOURCE_LIMIT_EXCEEDED_ERROR_CODE, message, ResourceLimitExceededException.class.getName());
   }
 
   @JsonCreator

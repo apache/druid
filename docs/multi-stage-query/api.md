@@ -110,7 +110,6 @@ print(response.text)
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-
 #### Response
 
 ```json
@@ -122,15 +121,14 @@ print(response.text)
 
 **Response fields**
 
-|Field|Description|
-|-----|-----------|
-| taskId | Controller task ID. You can use Druid's standard [task APIs](../operations/api-reference.md#overlord) to interact with this controller task.|
-| state | Initial state for the query, which is "RUNNING".|
-
+| Field | Description |
+|---|---|
+| `taskId` | Controller task ID. You can use Druid's standard [task APIs](../operations/api-reference.md#overlord) to interact with this controller task. |
+| `state` | Initial state for the query, which is "RUNNING". |
 
 ## Get the status for a query task
 
-You can retrieve status of a query to see if it is still running, completed successfully, failed, or got canceled. 
+You can retrieve status of a query to see if it is still running, completed successfully, failed, or got canceled.
 
 #### Request
 
@@ -139,7 +137,7 @@ You can retrieve status of a query to see if it is still running, completed succ
 <!--HTTP-->
 
 ```
-GET /druid/indexer/v1/task/<taskId>
+GET /druid/indexer/v1/task/<taskId>/status
 ```
 
 <!--curl-->
@@ -238,7 +236,6 @@ response = requests.request("GET", url, headers=headers)
 print(response.text)
 ```
 
-
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Response
@@ -256,7 +253,9 @@ The response shows an example report for a query.
       "status": {
         "status": "SUCCESS",
         "startTime": "2022-09-14T22:12:09.266Z",
-        "durationMs": 28227
+        "durationMs": 28227,
+        "pendingTasks": 0,
+        "runningTasks": 2
       },
       "stages": [
         {
@@ -512,7 +511,7 @@ The response shows an example report for a query.
                 "0": 1,
                 "1": 1,
                 "2": 1
-              },
+              }, 
               "totalMergersForUltimateLevel": 1,
               "progressDigest": 1
             }
@@ -531,6 +530,12 @@ The response shows an example report for a query.
               "frames": [
                 73
               ]
+            },
+            "segmentGenerationProgress": {
+              "type": "segmentGenerationProgress",
+              "rowsProcessed": 465346,
+              "rowsPersisted": 465346,
+              "rowsMerged": 465346
             }
           }
         }
@@ -546,37 +551,37 @@ The response shows an example report for a query.
 
 The following table describes the response fields when you retrieve a report for a MSQ task engine using the `/druid/indexer/v1/task/<taskId>/reports` endpoint:
 
-|Field|Description|
-|-----|-----------|
-|multiStageQuery.taskId|Controller task ID.|
-|multiStageQuery.payload.status|Query status container.|
-|multiStageQuery.payload.status.status|RUNNING, SUCCESS, or FAILED.|
-|multiStageQuery.payload.status.startTime|Start time of the query in ISO format. Only present if the query has started running.|
-|multiStageQuery.payload.status.durationMs|Milliseconds elapsed after the query has started running. -1 denotes that the query hasn't started running yet.|
-|multiStageQuery.payload.status.pendingTasks|Number of tasks that are not fully started. -1 denotes that the number is currently unknown.|
-|multiStageQuery.payload.status.runningTasks|Number of currently running tasks. Should be at least 1 since the controller is included.|
-|multiStageQuery.payload.status.errorReport|Error object. Only present if there was an error.|
-|multiStageQuery.payload.status.errorReport.taskId|The task that reported the error, if known. May be a controller task or a worker task.|
-|multiStageQuery.payload.status.errorReport.host|The hostname and port of the task that reported the error, if known.|
-|multiStageQuery.payload.status.errorReport.stageNumber|The stage number that reported the error, if it happened during execution of a specific stage.|
-|multiStageQuery.payload.status.errorReport.error|Error object. Contains `errorCode` at a minimum, and may contain other fields as described in the [error code table](./reference.md#error-codes). Always present if there is an error.|
-|multiStageQuery.payload.status.errorReport.error.errorCode|One of the error codes from the [error code table](./reference.md#error-codes). Always present if there is an error.|
-|multiStageQuery.payload.status.errorReport.error.errorMessage|User-friendly error message. Not always present, even if there is an error.|
-|multiStageQuery.payload.status.errorReport.exceptionStackTrace|Java stack trace in string form, if the error was due to a server-side exception.|
-|multiStageQuery.payload.stages|Array of query stages.|
-|multiStageQuery.payload.stages[].stageNumber|Each stage has a number that differentiates it from other stages.|
-|multiStageQuery.payload.stages[].phase|Either NEW, READING_INPUT, POST_READING, RESULTS_COMPLETE, or FAILED. Only present if the stage has started.|
-|multiStageQuery.payload.stages[].workerCount|Number of parallel tasks that this stage is running on. Only present if the stage has started.|
-|multiStageQuery.payload.stages[].partitionCount|Number of output partitions generated by this stage. Only present if the stage has started and has computed its number of output partitions.|
-|multiStageQuery.payload.stages[].startTime|Start time of this stage. Only present if the stage has started.|
-|multiStageQuery.payload.stages[].duration|The number of milliseconds that the stage has been running. Only present if the stage has started.|
-|multiStageQuery.payload.stages[].sort|A boolean that is set to `true` if the stage does a sort as part of its execution.|
-|multiStageQuery.payload.stages[].definition|The object defining what the stage does.|
-|multiStageQuery.payload.stages[].definition.id|The unique identifier of the stage.|
-|multiStageQuery.payload.stages[].definition.input|Array of inputs that the stage has.|
-|multiStageQuery.payload.stages[].definition.broadcast|Array of input indexes that get broadcasted. Only present if there are inputs that get broadcasted.|
-|multiStageQuery.payload.stages[].definition.processor|An object defining the processor logic.|
-|multiStageQuery.payload.stages[].definition.signature|The output signature of the stage.|
+| Field | Description |
+|---|---|
+| `multiStageQuery.taskId` | Controller task ID. |
+| `multiStageQuery.payload.status` | Query status container. |
+| `multiStageQuery.payload.status.status` | RUNNING, SUCCESS, or FAILED. |
+| `multiStageQuery.payload.status.startTime` | Start time of the query in ISO format. Only present if the query has started running. |
+| `multiStageQuery.payload.status.durationMs` | Milliseconds elapsed after the query has started running. -1 denotes that the query hasn't started running yet. |
+| `multiStageQuery.payload.status.pendingTasks` | Number of tasks that are not fully started. -1 denotes that the number is currently unknown. |
+| `multiStageQuery.payload.status.runningTasks` | Number of currently running tasks. Should be at least 1 since the controller is included. |
+| `multiStageQuery.payload.status.errorReport` | Error object. Only present if there was an error. |
+| `multiStageQuery.payload.status.errorReport.taskId` | The task that reported the error, if known. May be a controller task or a worker task. |
+| `multiStageQuery.payload.status.errorReport.host` | The hostname and port of the task that reported the error, if known. |
+| `multiStageQuery.payload.status.errorReport.stageNumber` | The stage number that reported the error, if it happened during execution of a specific stage. |
+| `multiStageQuery.payload.status.errorReport.error` | Error object. Contains `errorCode` at a minimum, and may contain other fields as described in the [error code table](./reference.md#error-codes). Always present if there is an error. |
+| `multiStageQuery.payload.status.errorReport.error.errorCode` | One of the error codes from the [error code table](./reference.md#error-codes). Always present if there is an error. |
+| `multiStageQuery.payload.status.errorReport.error.errorMessage` | User-friendly error message. Not always present, even if there is an error. |
+| `multiStageQuery.payload.status.errorReport.exceptionStackTrace` | Java stack trace in string form, if the error was due to a server-side exception. |
+| `multiStageQuery.payload.stages` | Array of query stages. |
+| `multiStageQuery.payload.stages[].stageNumber` | Each stage has a number that differentiates it from other stages. |
+| `multiStageQuery.payload.stages[].phase` | Either NEW, READING_INPUT, POST_READING, RESULTS_COMPLETE, or FAILED. Only present if the stage has started. |
+| `multiStageQuery.payload.stages[].workerCount` | Number of parallel tasks that this stage is running on. Only present if the stage has started. |
+| `multiStageQuery.payload.stages[].partitionCount` | Number of output partitions generated by this stage. Only present if the stage has started and has computed its number of output partitions. |
+| `multiStageQuery.payload.stages[].startTime` | Start time of this stage. Only present if the stage has started. |
+| `multiStageQuery.payload.stages[].duration` | The number of milliseconds that the stage has been running. Only present if the stage has started. |
+| `multiStageQuery.payload.stages[].sort` | A boolean that is set to `true` if the stage does a sort as part of its execution. |
+| `multiStageQuery.payload.stages[].definition` | The object defining what the stage does. |
+| `multiStageQuery.payload.stages[].definition.id` | The unique identifier of the stage. |
+| `multiStageQuery.payload.stages[].definition.input` | Array of inputs that the stage has. |
+| `multiStageQuery.payload.stages[].definition.broadcast` | Array of input indexes that get broadcasted. Only present if there are inputs that get broadcasted. |
+| `multiStageQuery.payload.stages[].definition.processor` | An object defining the processor logic. |
+| `multiStageQuery.payload.stages[].definition.signature` | The output signature of the stage. |
 
 ## Cancel a query task
 

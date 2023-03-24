@@ -150,16 +150,16 @@ An example configuration:
    # Druid basic security
    druid.auth.authenticatorChain=["MyBasicMetadataAuthenticator"]
    druid.auth.authenticator.MyBasicMetadataAuthenticator.type=basic
-   
+
    # Default password for 'admin' user, should be changed for production.
    druid.auth.authenticator.MyBasicMetadataAuthenticator.initialAdminPassword=password1
 
    # Default password for internal 'druid_system' user, should be changed for production.
    druid.auth.authenticator.MyBasicMetadataAuthenticator.initialInternalClientPassword=password2
-   
+
    # Uses the metadata store for storing users, you can use authentication API to create new users and grant permissions
    druid.auth.authenticator.MyBasicMetadataAuthenticator.credentialsValidator.type=metadata
-   
+
    # If true and the request credential doesn't exists in this credentials store, the request will proceed to next Authenticator in the chain.
    druid.auth.authenticator.MyBasicMetadataAuthenticator.skipOnFailure=false
 
@@ -196,35 +196,29 @@ The following steps walk through a sample setup procedure:
 
 1. Create a user by issuing a POST request to `druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/<USERNAME>`, replacing USERNAME with the *new* username you are trying to create. For example: 
   ```
-   curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authentication/db/basic/users/myname
+   curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/myname
   ```
   >  If you have TLS enabled, be sure to adjust the curl command accordingly. For example, if your Druid servers use self-signed certificates, you may choose to include the `insecure` curl option to forgo certificate checking for the curl command. 
 2. Add a credential for the user by issuing a POST to `druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/<USERNAME>/credentials`. For example:
     ```
-    curl -u admin:password1 -H'Content-Type: application/json' -XPOST --data-binary @pass.json https://my-coordinator-ip:8281/druid-ext/basic-security/authentication/db/basic/users/myname/credentials
-    ```
-    The password is conveyed in the `pass.json` file in the following form:
-   	```
-   	{
-      "password": "myname_password"
-    }
+    curl -u admin:password1 -H'Content-Type: application/json' -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/myname/credentials --data-raw '{"password": "my_password"}'
     ```
 2. For each authenticator user you create, create a corresponding authorizer user by issuing a POST request to `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/<USERNAME>`. For example: 
 	```
-	curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/basic/users/myname
+	curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/myname
 	```
 3. Create authorizer roles to control permissions by issuing a POST request to `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/<ROLENAME>`. For example: 
 	```
-   curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/basic/roles/myrole
+   curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/myrole
    ```
 4. Assign roles to users by issuing a POST request to `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/<USERNAME>/roles/<ROLENAME>`. For example: 
 	```
-	curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/basic/users/myname/roles/myrole | jq
+	curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/myname/roles/myrole | jq
 	```
 5. Finally, attach permissions to the roles to control how they can interact with Druid at `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/<ROLENAME>/permissions`. 
 	For example: 
 	```
-	curl -u admin:password1 -H'Content-Type: application/json' -XPOST --data-binary @perms.json https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/basic/roles/myrole/permissions
+	curl -u admin:password1 -H'Content-Type: application/json' -XPOST --data-binary @perms.json https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/myrole/permissions
 	```
 	The payload of `perms.json` should be in the form:
    	```
@@ -250,80 +244,7 @@ The following steps walk through a sample setup procedure:
 
 ## Configuring an LDAP authenticator
 
-As an alternative to using the basic metadata authenticator, you can use LDAP to authenticate users. The following steps provide an overview of the setup procedure. For more information on these settings, see [Properties for LDAP user authentication](../development/extensions-core/druid-basic-security.md#properties-for-ldap-user-authentication).
-
-1. In `common.runtime.properties`, add LDAP to the authenticator chain in the order in which you want requests to be evaluated. For example:
-   ```
-   # Druid basic security
-   druid.auth.authenticatorChain=["ldap", "MyBasicMetadataAuthenticator"]
-   ```
-
-2. Configure LDAP settings in `common.runtime.properties` as appropriate for your LDAP scheme and system. For example:
-   ```
-   druid.auth.authenticator.ldap.type=basic
-   druid.auth.authenticator.ldap.enableCacheNotifications=true
-   druid.auth.authenticator.ldap.credentialsValidator.type=ldap
-   druid.auth.authenticator.ldap.credentialsValidator.url=ldap://ad_host:389
-   druid.auth.authenticator.ldap.credentialsValidator.bindUser=ad_admin_user
-   druid.auth.authenticator.ldap.credentialsValidator.bindPassword=ad_admin_password
-   druid.auth.authenticator.ldap.credentialsValidator.baseDn=dc=example,dc=com 
-   druid.auth.authenticator.ldap.credentialsValidator.userSearch=(&(sAMAccountName=%s)(objectClass=user))
-   druid.auth.authenticator.ldap.credentialsValidator.userAttribute=sAMAccountName
-   druid.auth.authenticator.ldap.authorizerName=ldapauth
-   druid.escalator.type=basic
-   druid.escalator.internalClientUsername=ad_interal_user
-   druid.escalator.internalClientPassword=Welcome123
-   druid.escalator.authorizerName=ldapauth
-   druid.auth.authorizers=["ldapauth"]
-   druid.auth.authorizer.ldapauth.type=basic
-   druid.auth.authorizer.ldapauth.initialAdminUser=<ad_initial_admin_user>
-   druid.auth.authorizer.ldapauth.initialAdminRole=admin
-   druid.auth.authorizer.ldapauth.roleProvider.type=ldap
-   ```
-
-3. Use the Druid API to create the group mapping and allocate initial roles. For example, using curl and given a group named `group1` in the directory, run: 
-   ```
-   curl -i -v  -H "Content-Type: application/json" -u internal -X POST -d @groupmap.json http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1map
-   ```
-   The `groupmap.json` file contents would be something like:
-   ```
-   {
-     "name": "group1map",
-     "groupPattern": "CN=group1,CN=Users,DC=example,DC=com",
-     "roles": [
-         "readRole"
-     ]
-   }
-   ```
-4. Check if the group mapping is created successfully by executing the following API. This lists all group mappings.
-   ```
-   curl -i -v  -H "Content-Type: application/json" -u internal -X GET http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings
-   ```
-   
-   Alternatively, to check the details of a specific group mapping, use the following API:
-   ```
-   curl -i -v  -H "Content-Type: application/json" -u internal -X GET http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1map
-   ```
-   
-5. To add additional roles to the group mapping, use the following API: 
-   ``` 
-   curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1/roles/<newrole> 
-   ```
-
-6. Add the LDAP user to Druid. To add a user, use the following authentication API:
-   ```
-   curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authentication/db/ldap/users/<ad_user> 
-   ```
-
-7. Use the following command to assign the role to a user:
-   ```
-   curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/users/<ad_user>/roles/<rolename>
-   ```   
-
-
-
-Congratulations, you have configured permissions for user-assigned roles in Druid!
-
+As an alternative to using the basic metadata authenticator, you can use LDAP to authenticate users. See [Configure LDAP authentication](./auth-ldap.md) for information on configuring Druid for LDAP and LDAPS.
 
 ## Druid security trust model
 Within Druid's trust model there users can have different authorization levels:

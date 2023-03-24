@@ -25,7 +25,6 @@ import com.google.common.base.Predicates;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
@@ -40,6 +39,7 @@ import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
+import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ColumnarDoubles;
@@ -81,6 +81,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
   private final TStringDictionary globalDictionary;
   private final FixedIndexed<Long> globalLongDictionary;
   private final FixedIndexed<Double> globalDoubleDictionary;
+
   private final FixedIndexed<Integer> dictionary;
   private final ImmutableBitmap nullBitmap;
 
@@ -144,23 +145,33 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
     final int globalId = dictionary.get(id);
     if (globalId < globalDictionary.size()) {
       return StringUtils.fromUtf8Nullable(globalDictionary.get(globalId));
-    } else if (globalId < adjustLongId + globalLongDictionary.size()) {
+    } else if (globalId < globalDictionary.size() + globalLongDictionary.size()) {
       return String.valueOf(globalLongDictionary.get(globalId - adjustLongId));
-    } else {
+    } else if (globalId < globalDictionary.size() + globalLongDictionary.size() + globalDoubleDictionary.size()) {
       return String.valueOf(globalDoubleDictionary.get(globalId - adjustDoubleId));
     }
+    return null;
   }
 
   @Override
   public int lookupId(String name)
   {
-    return dictionary.indexOf(getIdFromGlobalDictionary(name));
+    final int globalId = getIdFromGlobalDictionary(name);
+    if (globalId < 0) {
+      return -1;
+    }
+    return dictionary.indexOf(globalId);
   }
 
   @Override
   public int getCardinality()
   {
     return dictionary.size();
+  }
+
+  public FixedIndexed<Integer> getDictionary()
+  {
+    return dictionary;
   }
 
   private int getIdFromGlobalDictionary(@Nullable String val)
@@ -172,9 +183,17 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
     if (singleType != null) {
       switch (singleType.getType()) {
         case LONG:
-          return globalLongDictionary.indexOf(GuavaUtils.tryParseLong(val));
+          final int globalLong = globalLongDictionary.indexOf(GuavaUtils.tryParseLong(val));
+          if (globalLong < 0) {
+            return -1;
+          }
+          return globalLong + adjustLongId;
         case DOUBLE:
-          return globalDoubleDictionary.indexOf(Doubles.tryParse(val));
+          final int globalDouble = globalDoubleDictionary.indexOf(Doubles.tryParse(val));
+          if (globalDouble < 0) {
+            return -1;
+          }
+          return globalDouble + adjustDoubleId;
         default:
           return globalDictionary.indexOf(StringUtils.toUtf8ByteBuffer(val));
       }
@@ -182,9 +201,15 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
       int candidate = globalDictionary.indexOf(StringUtils.toUtf8ByteBuffer(val));
       if (candidate < 0) {
         candidate = globalLongDictionary.indexOf(GuavaUtils.tryParseLong(val));
+        if (candidate >= 0) {
+          candidate += adjustLongId;
+        }
       }
       if (candidate < 0) {
         candidate = globalDoubleDictionary.indexOf(Doubles.tryParse(val));
+        if (candidate >= 0) {
+          candidate += adjustDoubleId;
+        }
       }
       return candidate;
     }
@@ -221,7 +246,6 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
         final int globalId = dictionary.get(localId);
         if (globalId == 0) {
           // zero
-          assert NullHandling.replaceWithDefault();
           return 0f;
         } else if (globalId < adjustLongId) {
           // try to convert string to float
@@ -241,7 +265,6 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
         final int globalId = dictionary.get(localId);
         if (globalId == 0) {
           // zero
-          assert NullHandling.replaceWithDefault();
           return 0.0;
         } else if (globalId < adjustLongId) {
           // try to convert string to double
@@ -261,7 +284,6 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
         final int globalId = dictionary.get(localId);
         if (globalId == 0) {
           // zero
-          assert NullHandling.replaceWithDefault();
           return 0L;
         } else if (globalId < adjustLongId) {
           // try to convert string to long
@@ -502,33 +524,132 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
         };
       }
     }
+    if (singleType == null) {
+      return new ColumnValueSelector<Object>()
+      {
+
+        private PeekableIntIterator nullIterator = nullBitmap.peekableIterator();
+        private int nullMark = -1;
+        private int offsetMark = -1;
+
+        @Nullable
+        @Override
+        public Object getObject()
+        {
+          final int localId = column.get(offset.getOffset());
+          final int globalId = dictionary.get(localId);
+          if (globalId < adjustLongId) {
+            return StringUtils.fromUtf8Nullable(globalDictionary.get(globalId));
+          } else if (globalId < adjustDoubleId) {
+            return globalLongDictionary.get(globalId - adjustLongId);
+          } else {
+            return globalDoubleDictionary.get(globalId - adjustDoubleId);
+          }
+        }
+
+        @Override
+        public float getFloat()
+        {
+          final int localId = column.get(offset.getOffset());
+          final int globalId = dictionary.get(localId);
+          if (globalId == 0) {
+            // zero
+            return 0f;
+          } else if (globalId < adjustLongId) {
+            // try to convert string to float
+            Float f = Floats.tryParse(StringUtils.fromUtf8(globalDictionary.get(globalId)));
+            return f == null ? 0f : f;
+          } else if (globalId < adjustDoubleId) {
+            return globalLongDictionary.get(globalId - adjustLongId).floatValue();
+          } else {
+            return globalDoubleDictionary.get(globalId - adjustDoubleId).floatValue();
+          }
+        }
+
+        @Override
+        public double getDouble()
+        {
+          final int localId = column.get(offset.getOffset());
+          final int globalId = dictionary.get(localId);
+          if (globalId == 0) {
+            // zero
+            return 0.0;
+          } else if (globalId < adjustLongId) {
+            // try to convert string to double
+            Double d = Doubles.tryParse(StringUtils.fromUtf8(globalDictionary.get(globalId)));
+            return d == null ? 0.0 : d;
+          } else if (globalId < adjustDoubleId) {
+            return globalLongDictionary.get(globalId - adjustLongId).doubleValue();
+          } else {
+            return globalDoubleDictionary.get(globalId - adjustDoubleId);
+          }
+        }
+
+        @Override
+        public long getLong()
+        {
+          final int localId = column.get(offset.getOffset());
+          final int globalId = dictionary.get(localId);
+          if (globalId == 0) {
+            // zero
+            return 0L;
+          } else if (globalId < adjustLongId) {
+            // try to convert string to long
+            Long l = GuavaUtils.tryParseLong(StringUtils.fromUtf8(globalDictionary.get(globalId)));
+            return l == null ? 0L : l;
+          } else if (globalId < adjustDoubleId) {
+            return globalLongDictionary.get(globalId - adjustLongId);
+          } else {
+            return globalDoubleDictionary.get(globalId - adjustDoubleId).longValue();
+          }
+        }
+
+        @Override
+        public boolean isNull()
+        {
+          final int i = offset.getOffset();
+          if (i < offsetMark) {
+            // offset was reset, reset iterator state
+            nullMark = -1;
+            nullIterator = nullBitmap.peekableIterator();
+          }
+          offsetMark = i;
+          if (nullMark < i) {
+            nullIterator.advanceIfNeeded(offsetMark);
+            if (nullIterator.hasNext()) {
+              nullMark = nullIterator.next();
+            }
+          }
+          return nullMark == offsetMark;
+        }
+
+        @Override
+        public Class<?> classOfObject()
+        {
+          return Object.class;
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("longColumn", longsColumn);
+          inspector.visit("nullBitmap", nullBitmap);
+        }
+      };
+    }
+
+    // single type strings, use a dimension selector
     return makeDimensionSelector(offset, null);
   }
 
   @Override
   public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(ReadableVectorOffset offset)
   {
-    // also copied from StringDictionaryEncodedColumn
-    class QueryableSingleValueDimensionVectorSelector implements SingleValueDimensionVectorSelector, IdLookup
+    final class StringVectorSelector extends StringDictionaryEncodedColumn.StringSingleValueDimensionVectorSelector
     {
-      private final int[] vector = new int[offset.getMaxVectorSize()];
-      private int id = ReadableVectorInspector.NULL_ID;
-
-      @Override
-      public int[] getRowVector()
+      public StringVectorSelector()
       {
-        if (id == offset.getId()) {
-          return vector;
-        }
-
-        if (offset.isContiguous()) {
-          column.get(vector, offset.getStartOffset(), offset.getCurrentVectorSize());
-        } else {
-          column.get(vector, offset.getOffsets(), offset.getCurrentVectorSize());
-        }
-
-        id = offset.getId();
-        return vector;
+        super(column, offset);
       }
 
       @Override
@@ -544,39 +665,28 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
         return NestedFieldLiteralDictionaryEncodedColumn.this.lookupName(id);
       }
 
-      @Override
-      public boolean nameLookupPossibleInAdvance()
-      {
-        return true;
-      }
-
       @Nullable
       @Override
-      public IdLookup idLookup()
+      public ByteBuffer lookupNameUtf8(int id)
       {
-        return this;
+        // only supported for single type string columns
+        return globalDictionary.get(dictionary.indexOf(id));
       }
 
       @Override
-      public int lookupId(@Nullable final String name)
+      public boolean supportsLookupNameUtf8()
+      {
+        return singleType != null && singleType.is(ValueType.STRING);
+      }
+
+      @Override
+      public int lookupId(@Nullable String name)
       {
         return NestedFieldLiteralDictionaryEncodedColumn.this.lookupId(name);
       }
-
-      @Override
-      public int getCurrentVectorSize()
-      {
-        return offset.getCurrentVectorSize();
-      }
-
-      @Override
-      public int getMaxVectorSize()
-      {
-        return offset.getMaxVectorSize();
-      }
     }
 
-    return new QueryableSingleValueDimensionVectorSelector();
+    return new StringVectorSelector();
   }
 
   @Override
@@ -588,48 +698,22 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
   @Override
   public VectorObjectSelector makeVectorObjectSelector(ReadableVectorOffset offset)
   {
-    // also copied from StringDictionaryEncodedColumn
-    class DictionaryEncodedStringSingleValueVectorObjectSelector implements VectorObjectSelector
+    final class StringVectorSelector extends StringDictionaryEncodedColumn.StringVectorObjectSelector
     {
-      private final int[] vector = new int[offset.getMaxVectorSize()];
-      private final String[] strings = new String[offset.getMaxVectorSize()];
-      private int id = ReadableVectorInspector.NULL_ID;
-
-      @Override
-
-      public Object[] getObjectVector()
+      public StringVectorSelector()
       {
-        if (id == offset.getId()) {
-          return strings;
-        }
-
-        if (offset.isContiguous()) {
-          column.get(vector, offset.getStartOffset(), offset.getCurrentVectorSize());
-        } else {
-          column.get(vector, offset.getOffsets(), offset.getCurrentVectorSize());
-        }
-        for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
-          strings[i] = lookupName(vector[i]);
-        }
-        id = offset.getId();
-
-        return strings;
+        super(column, offset);
       }
 
+      @Nullable
       @Override
-      public int getMaxVectorSize()
+      public String lookupName(int id)
       {
-        return offset.getMaxVectorSize();
-      }
-
-      @Override
-      public int getCurrentVectorSize()
-      {
-        return offset.getCurrentVectorSize();
+        return NestedFieldLiteralDictionaryEncodedColumn.this.lookupName(id);
       }
     }
 
-    return new DictionaryEncodedStringSingleValueVectorObjectSelector();
+    return new StringVectorSelector();
   }
 
   @Override

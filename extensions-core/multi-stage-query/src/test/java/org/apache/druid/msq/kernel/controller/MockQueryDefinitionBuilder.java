@@ -22,13 +22,14 @@ package org.apache.druid.msq.kernel.controller;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.frame.key.ClusterBy;
-import org.apache.druid.frame.key.SortColumn;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.FrameProcessorFactory;
-import org.apache.druid.msq.kernel.MaxCountShuffleSpec;
+import org.apache.druid.msq.kernel.GlobalSortMaxCountShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.ShuffleSpec;
@@ -115,10 +116,10 @@ public class MockQueryDefinitionBuilder
     ShuffleSpec shuffleSpec;
 
     if (shuffling) {
-      shuffleSpec = new MaxCountShuffleSpec(
+      shuffleSpec = new GlobalSortMaxCountShuffleSpec(
           new ClusterBy(
               ImmutableList.of(
-                  new SortColumn(SHUFFLE_KEY_COLUMN, false)
+                  new KeyColumn(SHUFFLE_KEY_COLUMN, KeyOrder.ASCENDING)
               ),
               0
           ),
@@ -135,7 +136,9 @@ public class MockQueryDefinitionBuilder
                      .map(StageInputSpec::new).collect(Collectors.toList());
 
     if (inputSpecs.isEmpty()) {
-      inputSpecs.add(new ControllerTestInputSpec());
+      for (int i = 0; i < maxWorkers; i++) {
+        inputSpecs.add(new ControllerTestInputSpec());
+      }
     }
 
     queryDefinitionBuilder.add(

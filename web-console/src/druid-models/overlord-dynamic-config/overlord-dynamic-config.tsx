@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Field } from '../../components';
+import type { Field } from '../../components';
 
 export interface OverlordDynamicConfig {
   selectStrategy?: Record<string, any>;

@@ -20,17 +20,15 @@
 package org.apache.druid.compressedbigdecimal;
 
 import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
+import com.google.inject.Injector;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
@@ -41,10 +39,10 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
@@ -55,33 +53,33 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalciteQueryTest
 {
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TestDataBuilder.TIMESTAMP_COLUMN, "iso", null),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3", "m2"))
-          )
-      )
+  private static final InputRowSchema SCHEMA = new InputRowSchema(
+      new TimestampSpec(TestDataBuilder.TIMESTAMP_COLUMN, "iso", null),
+      new DimensionsSpec(
+          DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3", "m2"))
+      ),
+      null
   );
 
   private static final List<InputRow> ROWS1 =
-      TestDataBuilder.RAW_ROWS1.stream().map(m -> TestDataBuilder.createRow(m, PARSER)).collect(Collectors.toList());
+      TestDataBuilder.RAW_ROWS1.stream().map(m -> TestDataBuilder.createRow(m, SCHEMA)).collect(Collectors.toList());
 
   @Override
-  public Iterable<? extends Module> getJacksonModules()
+  public void configureGuice(DruidInjectorBuilder builder)
   {
-    CompressedBigDecimalModule bigDecimalModule = new CompressedBigDecimalModule();
-    return Iterables.concat(super.getJacksonModules(), bigDecimalModule.getJacksonModules());
+    super.configureGuice(builder);
+    builder.addModule(new CompressedBigDecimalModule());
   }
 
   @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-      QueryRunnerFactoryConglomerate conglomerate
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final JoinableFactoryWrapper joinableFactory,
+      final Injector injector
   ) throws IOException
   {
     QueryableIndex index =
@@ -118,9 +116,6 @@ public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalc
     objectMapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
     objectMapper.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
   }
-
-  @Override
-  public abstract DruidOperatorTable createOperatorTable();
 
   @Test
   public abstract void testCompressedBigDecimalAggWithNumberParse();
@@ -277,5 +272,4 @@ public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalc
         ImmutableList.of(expectedResults)
     );
   }
-
 }

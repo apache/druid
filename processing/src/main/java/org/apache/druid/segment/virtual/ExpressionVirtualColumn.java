@@ -84,7 +84,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   public ExpressionVirtualColumn(
       String name,
       Expr parsedExpression,
-      ColumnType outputType
+      @Nullable ColumnType outputType
   )
   {
     this.name = Preconditions.checkNotNull(name, "name");
@@ -129,6 +129,12 @@ public class ExpressionVirtualColumn implements VirtualColumn
       final ColumnSelectorFactory columnSelectorFactory
   )
   {
+    if (isDirectAccess(columnSelectorFactory)) {
+      return columnSelectorFactory.makeDimensionSelector(
+          dimensionSpec.withDimension(parsedExpression.get().getBindingIfIdentifier())
+      );
+    }
+
     return dimensionSpec.decorate(
         ExpressionSelectors.makeDimensionSelector(
             columnSelectorFactory,
@@ -141,6 +147,10 @@ public class ExpressionVirtualColumn implements VirtualColumn
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelectorFactory factory)
   {
+    if (isDirectAccess(factory)) {
+      return factory.makeColumnValueSelector(parsedExpression.get().getBindingIfIdentifier());
+    }
+
     final ColumnCapabilities capabilities = capabilities(factory, name);
     // we make a special column value selector for values that are expected to be STRING to conform to behavior of
     // other single and multi-value STRING selectors, whose getObject is expected to produce a single STRING value
@@ -154,6 +164,11 @@ public class ExpressionVirtualColumn implements VirtualColumn
   @Override
   public boolean canVectorize(ColumnInspector inspector)
   {
+    if (isDirectAccess(inspector)) {
+      // Can vectorize if the underlying adapter can vectorize.
+      return true;
+    }
+
     final ExpressionPlan plan = ExpressionPlanner.plan(inspector, parsedExpression.get());
     return plan.is(ExpressionPlan.Trait.VECTORIZABLE);
   }
@@ -164,18 +179,32 @@ public class ExpressionVirtualColumn implements VirtualColumn
       VectorColumnSelectorFactory factory
   )
   {
+    if (isDirectAccess(factory)) {
+      return factory.makeSingleValueDimensionSelector(
+          dimensionSpec.withDimension(parsedExpression.get().getBindingIfIdentifier())
+      );
+    }
+
     return ExpressionVectorSelectors.makeSingleValueDimensionVectorSelector(factory, parsedExpression.get());
   }
 
   @Override
   public VectorValueSelector makeVectorValueSelector(String columnName, VectorColumnSelectorFactory factory)
   {
+    if (isDirectAccess(factory)) {
+      return factory.makeValueSelector(parsedExpression.get().getBindingIfIdentifier());
+    }
+
     return ExpressionVectorSelectors.makeVectorValueSelector(factory, parsedExpression.get());
   }
 
   @Override
   public VectorObjectSelector makeVectorObjectSelector(String columnName, VectorColumnSelectorFactory factory)
   {
+    if (isDirectAccess(factory)) {
+      return factory.makeObjectSelector(parsedExpression.get().getBindingIfIdentifier());
+    }
+
     return ExpressionVectorSelectors.makeVectorObjectSelector(factory, parsedExpression.get());
   }
 
@@ -194,9 +223,14 @@ public class ExpressionVirtualColumn implements VirtualColumn
     return new ColumnCapabilitiesImpl().setType(outputType == null ? ColumnType.FLOAT : outputType);
   }
 
+  @Nullable
   @Override
   public ColumnCapabilities capabilities(ColumnInspector inspector, String columnName)
   {
+    if (isDirectAccess(inspector)) {
+      return inspector.getColumnCapabilities(parsedExpression.get().getBindingIfIdentifier());
+    }
+
     final ExpressionPlan plan = ExpressionPlanner.plan(inspector, parsedExpression.get());
     final ColumnCapabilities inferred = plan.inferColumnCapabilities(outputType);
     // if we can infer the column capabilities from the expression plan, then use that
@@ -275,6 +309,28 @@ public class ExpressionVirtualColumn implements VirtualColumn
            ", expression='" + expression + '\'' +
            ", outputType=" + outputType +
            '}';
+  }
+
+  /**
+   * Whether this expression is an identifier that directly accesses an underlying column. In this case we skip
+   * the expression system entirely, and directly return backing columns.
+   */
+  private boolean isDirectAccess(final ColumnInspector inspector)
+  {
+    if (parsedExpression.get().isIdentifier()) {
+      final ColumnCapabilities baseCapabilities =
+          inspector.getColumnCapabilities(parsedExpression.get().getBindingIfIdentifier());
+
+      if (outputType == null) {
+        // No desired output type. Anything from the source is fine.
+        return true;
+      } else if (baseCapabilities != null && outputType.equals(baseCapabilities.toColumnType())) {
+        // Desired output type matches the type from the source.
+        return true;
+      }
+    }
+
+    return false;
   }
 
   private Supplier<byte[]> makeCacheKeySupplier()

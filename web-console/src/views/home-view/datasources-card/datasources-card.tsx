@@ -19,9 +19,10 @@
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
+import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
-import { Capabilities, pluralIfNeeded, queryDruidSql } from '../../../utils';
+import { pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface DatasourcesCardProps {
@@ -31,7 +32,7 @@ export interface DatasourcesCardProps {
 export const DatasourcesCard = React.memo(function DatasourcesCard(props: DatasourcesCardProps) {
   const [datasourceCountState] = useQueryManager<Capabilities, number>({
     processQuery: async capabilities => {
-      let datasources: string[];
+      let datasources: any[];
       if (capabilities.hasSql()) {
         datasources = await queryDruidSql({
           query: `SELECT datasource FROM sys.segments GROUP BY 1`,

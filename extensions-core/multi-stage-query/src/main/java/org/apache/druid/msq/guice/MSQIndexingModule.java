@@ -23,10 +23,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import com.google.inject.Injector;
-import com.google.inject.Key;
 import com.google.inject.Provides;
-import com.google.inject.TypeLiteral;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.guice.LazySingleton;
@@ -34,6 +31,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshotsSerializer;
+import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
 import org.apache.druid.msq.counters.SuperSorterProgressTrackerCounter;
 import org.apache.druid.msq.counters.WarningCounters;
 import org.apache.druid.msq.indexing.MSQControllerTask;
@@ -48,7 +46,6 @@ import org.apache.druid.msq.indexing.error.DurableStorageConfigurationFault;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertCannotOrderByDescendingFault;
-import org.apache.druid.msq.indexing.error.InsertCannotReplaceExistingSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFault;
 import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
@@ -58,10 +55,14 @@ import org.apache.druid.msq.indexing.error.NotEnoughMemoryFault;
 import org.apache.druid.msq.indexing.error.QueryNotSupportedFault;
 import org.apache.druid.msq.indexing.error.RowTooLargeFault;
 import org.apache.druid.msq.indexing.error.TaskStartTimeoutFault;
+import org.apache.druid.msq.indexing.error.TooManyAttemptsForJob;
+import org.apache.druid.msq.indexing.error.TooManyAttemptsForWorker;
 import org.apache.druid.msq.indexing.error.TooManyBucketsFault;
+import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
 import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
+import org.apache.druid.msq.indexing.error.TooManyRowsWithSameKeyFault;
 import org.apache.druid.msq.indexing.error.TooManyWarningsFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
@@ -79,13 +80,12 @@ import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.kernel.NilExtraInfoHolder;
 import org.apache.druid.msq.querykit.InputNumberDataSource;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
+import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
 import org.apache.druid.msq.querykit.groupby.GroupByPostShuffleFrameProcessorFactory;
 import org.apache.druid.msq.querykit.groupby.GroupByPreShuffleFrameProcessorFactory;
 import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessorFactory;
 import org.apache.druid.msq.util.PassthroughAggregatorFactory;
 import org.apache.druid.query.DruidProcessingConfig;
-
-import javax.annotation.Nullable;
 
 import java.util.Collections;
 import java.util.List;
@@ -108,7 +108,6 @@ public class MSQIndexingModule implements DruidModule
       InsertCannotAllocateSegmentFault.class,
       InsertCannotBeEmptyFault.class,
       InsertCannotOrderByDescendingFault.class,
-      InsertCannotReplaceExistingSegmentFault.class,
       InsertLockPreemptedFault.class,
       InsertTimeNullFault.class,
       InsertTimeOutOfBoundsFault.class,
@@ -118,13 +117,17 @@ public class MSQIndexingModule implements DruidModule
       RowTooLargeFault.class,
       TaskStartTimeoutFault.class,
       TooManyBucketsFault.class,
+      TooManyClusteredByColumnsFault.class,
       TooManyColumnsFault.class,
       TooManyInputFilesFault.class,
       TooManyPartitionsFault.class,
+      TooManyRowsWithSameKeyFault.class,
       TooManyWarningsFault.class,
       TooManyWorkersFault.class,
+      TooManyAttemptsForJob.class,
       UnknownFault.class,
       WorkerFailedFault.class,
+      TooManyAttemptsForWorker.class,
       WorkerRpcFailedFault.class
   );
 
@@ -151,6 +154,7 @@ public class MSQIndexingModule implements DruidModule
         ScanQueryFrameProcessorFactory.class,
         GroupByPreShuffleFrameProcessorFactory.class,
         GroupByPostShuffleFrameProcessorFactory.class,
+        SortMergeJoinFrameProcessorFactory.class,
         OffsetLimitFrameProcessorFactory.class,
         NilExtraInfoHolder.class,
 
@@ -164,6 +168,7 @@ public class MSQIndexingModule implements DruidModule
         ChannelCounters.Snapshot.class,
         SuperSorterProgressTrackerCounter.Snapshot.class,
         WarningCounters.Snapshot.class,
+        SegmentGenerationProgressCounter.Snapshot.class,
 
         // InputSpec classes
         ExternalInputSpec.class,
@@ -193,33 +198,14 @@ public class MSQIndexingModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public Bouncer makeBouncer(final DruidProcessingConfig processingConfig, Injector injector)
+  public Bouncer makeBouncer(final DruidProcessingConfig processingConfig, @Self Set<NodeRole> nodeRoles)
   {
-    Set<NodeRole> nodeRoles = getNodeRoles(injector);
-    if (null == nodeRoles || (nodeRoles.contains(NodeRole.PEON) && !nodeRoles.contains(NodeRole.INDEXER))) {
+    if (nodeRoles.contains(NodeRole.PEON) && !nodeRoles.contains(NodeRole.INDEXER)) {
       // CliPeon -> use only one thread regardless of configured # of processing threads. This matches the expected
       // resource usage pattern for CliPeon-based tasks (one task / one working thread per JVM).
       return new Bouncer(1);
     } else {
       return new Bouncer(processingConfig.getNumThreads());
-    }
-  }
-
-  @Nullable
-  private static Set<NodeRole> getNodeRoles(Injector injector)
-  {
-    try {
-      return injector.getInstance(
-          Key.get(
-              new TypeLiteral<Set<NodeRole>>()
-              {
-              },
-              Self.class
-          )
-      );
-    }
-    catch (Exception e) {
-      return null;
     }
   }
 }

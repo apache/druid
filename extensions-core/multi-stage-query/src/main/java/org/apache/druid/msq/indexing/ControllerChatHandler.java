@@ -26,7 +26,8 @@ import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
-import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
+import org.apache.druid.msq.kernel.StageId;
+import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlers;
 import org.apache.druid.server.security.Action;
@@ -58,16 +59,17 @@ public class ControllerChatHandler implements ChatHandler
   }
 
   /**
-   * Used by subtasks to post {@link ClusterByStatisticsSnapshot} for shuffling stages.
+   * Used by subtasks to post {@link PartialKeyStatisticsInformation} for shuffling stages.
    *
-   * See {@link ControllerClient#postKeyStatistics} for the client-side code that calls this API.
+   * See {@link ControllerClient#postPartialKeyStatistics(StageId, int, PartialKeyStatisticsInformation)}
+   * for the client-side code that calls this API.
    */
   @POST
-  @Path("/keyStatistics/{queryId}/{stageNumber}/{workerNumber}")
+  @Path("/partialKeyStatisticsInformation/{queryId}/{stageNumber}/{workerNumber}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  public Response httpPostKeyStatistics(
-      final Object keyStatisticsObject,
+  public Response httpPostPartialKeyStatistics(
+      final Object partialKeyStatisticsObject,
       @PathParam("queryId") final String queryId,
       @PathParam("stageNumber") final int stageNumber,
       @PathParam("workerNumber") final int workerNumber,
@@ -75,7 +77,7 @@ public class ControllerChatHandler implements ChatHandler
   )
   {
     ChatHandlers.authorizationCheck(req, Action.WRITE, task.getDataSource(), toolbox.getAuthorizerMapper());
-    controller.updateStatus(stageNumber, workerNumber, keyStatisticsObject);
+    controller.updatePartialKeyStatisticsInformation(stageNumber, workerNumber, partialKeyStatisticsObject);
     return Response.status(Response.Status.ACCEPTED).build();
   }
 
@@ -126,16 +128,17 @@ public class ControllerChatHandler implements ChatHandler
    * See {@link ControllerClient#postCounters} for the client-side code that calls this API.
    */
   @POST
-  @Path("/counters")
+  @Path("/counters/{taskId}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   public Response httpPostCounters(
+      @PathParam("taskId") final String taskId,
       final CounterSnapshotsTree snapshotsTree,
       @Context final HttpServletRequest req
   )
   {
     ChatHandlers.authorizationCheck(req, Action.WRITE, task.getDataSource(), toolbox.getAuthorizerMapper());
-    controller.updateCounters(snapshotsTree);
+    controller.updateCounters(taskId, snapshotsTree);
     return Response.status(Response.Status.OK).build();
   }
 

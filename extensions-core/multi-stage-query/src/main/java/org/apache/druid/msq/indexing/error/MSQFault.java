@@ -36,14 +36,4 @@ public interface MSQFault
   @Nullable
   String getErrorMessage();
 
-  default String getCodeWithMessage()
-  {
-    final String message = getErrorMessage();
-
-    if (message != null && !message.isEmpty()) {
-      return getErrorCode() + ": " + message;
-    } else {
-      return getErrorCode();
-    }
-  }
 }

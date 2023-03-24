@@ -19,16 +19,15 @@
 import { C, L, RefName, SqlExpression, T } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 
-import {
+import type {
   DimensionSpec,
-  inflateDimensionSpec,
   IngestionSpec,
   MetricSpec,
   QueryWithContext,
   TimestampSpec,
   Transform,
-  upgradeSpec,
 } from '../druid-models';
+import { inflateDimensionSpec, upgradeSpec } from '../druid-models';
 import { deepGet, filterMap, oneOf } from '../utils';
 
 export function getSpecDatasourceName(spec: IngestionSpec): string {
@@ -69,6 +68,11 @@ export function convertSpecToSql(spec: any): QueryWithContext {
     finalizeAggregations: false,
     groupByEnableMultiValueUnnesting: false,
   };
+
+  const indexSpec = deepGet(spec, 'spec.tuningConfig.indexSpec');
+  if (indexSpec) {
+    context.indexSpec = indexSpec;
+  }
 
   const lines: string[] = [];
 

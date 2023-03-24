@@ -45,7 +45,6 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -167,10 +166,10 @@ public class NativeQueryMaker implements QueryMaker
 
   private List<Interval> findBaseDataSourceIntervals(Query<?> query)
   {
-    return DataSourceAnalysis.forDataSource(query.getDataSource())
-                             .getBaseQuerySegmentSpec()
-                             .map(QuerySegmentSpec::getIntervals)
-                             .orElseGet(query::getIntervals);
+    return query.getDataSource().getAnalysis()
+                .getBaseQuerySegmentSpec()
+                .map(QuerySegmentSpec::getIntervals)
+                .orElseGet(query::getIntervals);
   }
 
   @SuppressWarnings("unchecked")
@@ -240,9 +239,8 @@ public class NativeQueryMaker implements QueryMaker
       mapping[i] = idx;
     }
 
-    //noinspection unchecked
     final Sequence<Object[]> sequence = toolChest.resultsAsArrays(query, results.getResults());
-    return new QueryResponse(
+    return new QueryResponse<>(
         Sequences.map(
             sequence,
             array -> {
@@ -267,6 +265,8 @@ public class NativeQueryMaker implements QueryMaker
       } else if (value instanceof NlsString) {
         coercedValue = ((NlsString) value).getValue();
       } else if (value instanceof Number) {
+        coercedValue = String.valueOf(value);
+      } else if (value instanceof Boolean) {
         coercedValue = String.valueOf(value);
       } else if (value instanceof Collection) {
         // Iterate through the collection, coercing each value. Useful for handling selects of multi-value dimensions.

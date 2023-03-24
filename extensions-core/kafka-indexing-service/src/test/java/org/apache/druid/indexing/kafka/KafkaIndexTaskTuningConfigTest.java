@@ -63,7 +63,7 @@ public class KafkaIndexTaskTuningConfigTest
 
     Assert.assertNull(config.getBasePersistDirectory());
     Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
-    Assert.assertEquals(1000000, config.getMaxRowsInMemory());
+    Assert.assertEquals(150000, config.getMaxRowsInMemory());
     Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment().intValue());
     Assert.assertNull(config.getMaxTotalRows());
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
@@ -132,6 +132,7 @@ public class KafkaIndexTaskTuningConfigTest
         new IndexSpec(),
         true,
         5L,
+        null,
         null,
         null,
         null,

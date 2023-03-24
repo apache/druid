@@ -40,6 +40,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TimeChunkLock;
+import org.apache.druid.indexing.common.actions.SegmentAllocationQueue;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -226,7 +227,8 @@ public class OverlordTest
         serviceEmitter,
         supervisorManager,
         EasyMock.createNiceMock(OverlordHelperManager.class),
-        new TestDruidLeaderSelector()
+        new TestDruidLeaderSelector(),
+        EasyMock.createNiceMock(SegmentAllocationQueue.class)
     );
     EmittingLogger.registerEmitter(serviceEmitter);
   }

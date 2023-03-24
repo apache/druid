@@ -31,6 +31,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -574,7 +575,8 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     );
   }
 
-  private void addWorker(final Worker worker)
+  @VisibleForTesting
+  void addWorker(final Worker worker)
   {
     synchronized (workers) {
       log.info("Worker[%s] reportin' for duty!", worker.getHost());
@@ -752,23 +754,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           log.debug("Running the Sync Monitoring.");
 
           try {
-            for (Map.Entry<String, WorkerHolder> e : workers.entrySet()) {
-              WorkerHolder workerHolder = e.getValue();
-              if (!workerHolder.getUnderlyingSyncer().isOK()) {
-                synchronized (workers) {
-                  // check again that server is still there and only then reset.
-                  if (workers.containsKey(e.getKey())) {
-                    log.makeAlert(
-                        "Worker[%s] is not syncing properly. Current state is [%s]. Resetting it.",
-                        workerHolder.getWorker().getHost(),
-                        workerHolder.getUnderlyingSyncer().getDebugInfo()
-                    ).emit();
-                    removeWorker(workerHolder.getWorker());
-                    addWorker(workerHolder.getWorker());
-                  }
-                }
-              }
-            }
+            syncMonitoring();
           }
           catch (Exception ex) {
             if (ex instanceof InterruptedException) {
@@ -782,6 +768,30 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         5,
         TimeUnit.MINUTES
     );
+  }
+
+  @VisibleForTesting
+  void syncMonitoring()
+  {
+    // Ensure that the collection is not being modified during iteration. Iterate over a copy
+    final Set<Map.Entry<String, WorkerHolder>> workerEntrySet = ImmutableSet.copyOf(workers.entrySet());
+    for (Map.Entry<String, WorkerHolder> e : workerEntrySet) {
+      WorkerHolder workerHolder = e.getValue();
+      if (!workerHolder.getUnderlyingSyncer().isOK()) {
+        synchronized (workers) {
+          // check again that server is still there and only then reset.
+          if (workers.containsKey(e.getKey())) {
+            log.makeAlert(
+                "Worker[%s] is not syncing properly. Current state is [%s]. Resetting it.",
+                workerHolder.getWorker().getHost(),
+                workerHolder.getUnderlyingSyncer().getDebugInfo()
+            ).emit();
+            removeWorker(workerHolder.getWorker());
+            addWorker(workerHolder.getWorker());
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -1310,13 +1320,15 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     WorkerHolder workerHolderRunningTask = null;
     synchronized (statusLock) {
       log.info("Shutdown [%s] because: [%s]", taskId, reason);
-      HttpRemoteTaskRunnerWorkItem taskRunnerWorkItem = tasks.remove(taskId);
+      HttpRemoteTaskRunnerWorkItem taskRunnerWorkItem = tasks.get(taskId);
       if (taskRunnerWorkItem != null) {
         if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {
           workerHolderRunningTask = workers.get(taskRunnerWorkItem.getWorker().getHost());
           if (workerHolderRunningTask == null) {
             log.info("Can't shutdown! No worker running task[%s]", taskId);
           }
+        } else if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.COMPLETE) {
+          tasks.remove(taskId);
         }
       } else {
         log.info("Received shutdown task[%s], but can't find it. Ignored.", taskId);
@@ -1466,7 +1478,8 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     return Optional.fromNullable(provisioningService.getStats());
   }
 
-  void taskAddedOrUpdated(final TaskAnnouncement announcement, final WorkerHolder workerHolder)
+  @VisibleForTesting
+  public void taskAddedOrUpdated(final TaskAnnouncement announcement, final WorkerHolder workerHolder)
   {
     final String taskId = announcement.getTaskId();
     final Worker worker = workerHolder.getWorker();

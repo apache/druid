@@ -22,7 +22,7 @@ import classNames from 'classnames';
 import { T } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
-import { Execution, QueryWithContext } from '../../../druid-models';
+import type { Execution, QueryWithContext } from '../../../druid-models';
 import { executionBackgroundStatusCheck, reattachTaskExecution } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { ExecutionProgressBarPane } from '../../workbench-view/execution-progress-bar-pane/execution-progress-bar-pane';
@@ -95,15 +95,22 @@ export const IngestionProgressDialog = React.memo(function IngestionProgressDial
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
           {insertResultState.isLoading() && (
-            <Button
-              icon={IconNames.GANTT_CHART}
-              text="Go to Ingestion view"
-              rightIcon={IconNames.ARROW_TOP_RIGHT}
-              onClick={() => {
-                if (!insertResultState.intermediate) return;
-                goToIngestion(insertResultState.intermediate.id);
-              }}
-            />
+            <>
+              <Button
+                icon={IconNames.RESET}
+                text="Ingest in background (reset data loader)"
+                onClick={onReset}
+              />
+              <Button
+                icon={IconNames.GANTT_CHART}
+                text="Go to Ingestion view"
+                rightIcon={IconNames.ARROW_TOP_RIGHT}
+                onClick={() => {
+                  if (!insertResultState.intermediate) return;
+                  goToIngestion(insertResultState.intermediate.id);
+                }}
+              />
+            </>
           )}
           {insertResultState.isError() && <Button text="Close" onClick={onClose} />}
           {insertResultState.data && (

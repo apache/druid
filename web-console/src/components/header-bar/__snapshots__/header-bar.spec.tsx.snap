@@ -77,6 +77,7 @@ exports[`HeaderBar matches snapshot 1`] = `
       hoverOpenDelay={150}
       inheritDarkTheme={true}
       interactionKind="click"
+      matchTargetWidth={false}
       minimal={false}
       openOnTargetFocus={true}
       position="bottom-left"
@@ -158,6 +159,7 @@ exports[`HeaderBar matches snapshot 1`] = `
       hoverOpenDelay={150}
       inheritDarkTheme={true}
       interactionKind="click"
+      matchTargetWidth={false}
       minimal={false}
       openOnTargetFocus={true}
       position="bottom-left"
@@ -181,6 +183,7 @@ exports[`HeaderBar matches snapshot 1`] = `
     <Memo(RestrictedMode)
       capabilities={
         Capabilities {
+          "clusterCapacity": undefined,
           "coordinator": true,
           "multiStageQuery": true,
           "overlord": true,
@@ -291,6 +294,7 @@ exports[`HeaderBar matches snapshot 1`] = `
       hoverOpenDelay={150}
       inheritDarkTheme={true}
       interactionKind="click"
+      matchTargetWidth={false}
       minimal={false}
       openOnTargetFocus={true}
       position="bottom-right"
@@ -380,6 +384,7 @@ exports[`HeaderBar matches snapshot 1`] = `
       hoverOpenDelay={150}
       inheritDarkTheme={true}
       interactionKind="click"
+      matchTargetWidth={false}
       minimal={false}
       openOnTargetFocus={true}
       position="bottom-right"

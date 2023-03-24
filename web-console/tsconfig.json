@@ -22,5 +22,5 @@
     "useUnknownInCatchVariables": false,
     "target": "es2016"
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "e2e-tests/**/*.ts"]
+  "include": ["src", "e2e-tests", "typings"]
 }

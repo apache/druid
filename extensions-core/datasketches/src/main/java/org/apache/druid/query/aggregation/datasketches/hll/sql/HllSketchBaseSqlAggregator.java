@@ -76,6 +76,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
     // Don't use Aggregations.getArgumentsForSimpleAggregator, since it won't let us use direct column access
     // for string columns.
     final RexNode columnRexNode = Expressions.fromFieldAccess(
+        rexBuilder.getTypeFactory(),
         rowSignature,
         project,
         aggregateCall.getArgList().get(0)
@@ -89,6 +90,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
     final int logK;
     if (aggregateCall.getArgList().size() >= 2) {
       final RexNode logKarg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(1)
@@ -107,6 +109,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
     final String tgtHllType;
     if (aggregateCall.getArgList().size() >= 3) {
       final RexNode tgtHllTypeArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(2)
@@ -160,14 +163,25 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
         dimensionSpec = new DefaultDimensionSpec(virtualColumnName, null, inputType);
       }
 
-      aggregatorFactory = new HllSketchBuildAggregatorFactory(
-          aggregatorName,
-          dimensionSpec.getDimension(),
-          logK,
-          tgtHllType,
-          finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
-          ROUND
-      );
+      if (inputType.is(ValueType.COMPLEX)) {
+        aggregatorFactory = new HllSketchMergeAggregatorFactory(
+            aggregatorName,
+            dimensionSpec.getOutputName(),
+            logK,
+            tgtHllType,
+            finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
+            ROUND
+        );
+      } else {
+        aggregatorFactory = new HllSketchBuildAggregatorFactory(
+            aggregatorName,
+            dimensionSpec.getDimension(),
+            logK,
+            tgtHllType,
+            finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
+            ROUND
+        );
+      }
     }
 
     return toAggregation(

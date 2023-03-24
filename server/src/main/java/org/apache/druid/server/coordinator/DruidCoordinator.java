@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
@@ -65,6 +64,7 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
+import org.apache.druid.server.coordinator.duty.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
@@ -150,7 +150,6 @@ public class DruidCoordinator
   private final BalancerStrategyFactory factory;
   private final LookupCoordinatorManager lookupCoordinatorManager;
   private final DruidLeaderSelector coordLeaderSelector;
-  private final ObjectMapper objectMapper;
   private final CompactSegments compactSegments;
 
   private volatile boolean started = false;
@@ -184,7 +183,7 @@ public class DruidCoordinator
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
-      ObjectMapper objectMapper
+      CompactionSegmentSearchPolicy compactionSegmentSearchPolicy
   )
   {
     this(
@@ -206,7 +205,7 @@ public class DruidCoordinator
         factory,
         lookupCoordinatorManager,
         coordLeaderSelector,
-        objectMapper
+        compactionSegmentSearchPolicy
     );
   }
 
@@ -229,7 +228,7 @@ public class DruidCoordinator
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
       DruidLeaderSelector coordLeaderSelector,
-      ObjectMapper objectMapper
+      CompactionSegmentSearchPolicy compactionSegmentSearchPolicy
   )
   {
     this.config = config;
@@ -253,8 +252,7 @@ public class DruidCoordinator
     this.factory = factory;
     this.lookupCoordinatorManager = lookupCoordinatorManager;
     this.coordLeaderSelector = coordLeaderSelector;
-    this.objectMapper = objectMapper;
-    this.compactSegments = initializeCompactSegmentsDuty();
+    this.compactSegments = initializeCompactSegmentsDuty(compactionSegmentSearchPolicy);
   }
 
   public boolean isLeader()
@@ -790,11 +788,11 @@ public class DruidCoordinator
   }
 
   @VisibleForTesting
-  CompactSegments initializeCompactSegmentsDuty()
+  CompactSegments initializeCompactSegmentsDuty(CompactionSegmentSearchPolicy compactionSegmentSearchPolicy)
   {
     List<CompactSegments> compactSegmentsDutyFromCustomGroups = getCompactSegmentsDutyFromCustomGroups();
     if (compactSegmentsDutyFromCustomGroups.isEmpty()) {
-      return new CompactSegments(config, objectMapper, indexingServiceClient);
+      return new CompactSegments(config, compactionSegmentSearchPolicy, indexingServiceClient);
     } else {
       if (compactSegmentsDutyFromCustomGroups.size() > 1) {
         log.warn("More than one compactSegments duty is configured in the Coordinator Custom Duty Group. The first duty will be picked up.");
@@ -993,10 +991,19 @@ public class DruidCoordinator
 
       stopPeonsForDisappearedServers(currentServers);
 
+      final RoundRobinServerSelector roundRobinServerSelector;
+      if (params.getCoordinatorDynamicConfig().isUseRoundRobinSegmentAssignment()) {
+        roundRobinServerSelector = new RoundRobinServerSelector(cluster);
+        log.info("Using round-robin segment assignment.");
+      } else {
+        roundRobinServerSelector = null;
+      }
+
       return params.buildFromExisting()
                    .withDruidCluster(cluster)
                    .withLoadManagementPeons(loadManagementPeons)
                    .withSegmentReplicantLookup(segmentReplicantLookup)
+                   .withRoundRobinServerSelector(roundRobinServerSelector)
                    .build();
     }
 
@@ -1044,7 +1051,8 @@ public class DruidCoordinator
             new ServerHolder(
                 server,
                 loadManagementPeons.get(server.getName()),
-                decommissioningServers.contains(server.getHost())
+                decommissioningServers.contains(server.getHost()),
+                params.getCoordinatorDynamicConfig().getMaxSegmentsInNodeLoadingQueue()
             )
         );
       }

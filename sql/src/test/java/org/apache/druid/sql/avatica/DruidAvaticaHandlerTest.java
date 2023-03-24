@@ -65,6 +65,7 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -74,6 +75,7 @@ import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcher;
 import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcherFactory;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -121,7 +123,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -291,6 +292,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>(){}).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())));
             binder.bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
             binder.bind(JoinableFactoryWrapper.class).toInstance(CalciteTests.createJoinableFactoryWrapper());
+            binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
           }
          )
         .build();
@@ -558,6 +560,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TABLE_NAME", CalciteTests.USERVISITDATASOURCE),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", "wikipedia"),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
             )
         ),
         getRows(
@@ -630,6 +638,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             row(
                 Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.USERVISITDATASOURCE),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", "wikipedia"),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             )
@@ -807,7 +821,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   {
     final List<ListenableFuture<Integer>> futures = new ArrayList<>();
     final ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-        Executors.newFixedThreadPool(AVATICA_CONFIG.getMaxStatementsPerConnection())
+        Execs.multiThreaded(AVATICA_CONFIG.getMaxStatementsPerConnection(), "DruidAvaticaHandlerTest-%d")
     );
     for (int i = 0; i < 2000; i++) {
       final String query = StringUtils.format("SELECT COUNT(*) + %s AS ci FROM foo", i);
@@ -987,7 +1001,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             CalciteTests.getJsonMapper(),
             CalciteTests.DRUID_SCHEMA_NAME,
             new CalciteRulesManager(ImmutableSet.of()),
-            CalciteTests.createJoinableFactoryWrapper()
+            CalciteTests.createJoinableFactoryWrapper(),
+            CatalogResolver.NULL_RESOLVER
         )
     );
   }
@@ -1567,7 +1582,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   {
     final String query = "SELECT * FROM " + CalciteTests.FORBIDDEN_DATASOURCE;
     final String expectedError = "Error 2 (00002) : Error while executing SQL \"" +
-            query + "\": Remote driver error: Unauthorized";
+            query + "\": Remote driver error: " + Access.DEFAULT_ERROR_MESSAGE;
     try (Statement statement = client.createStatement()) {
       statement.executeQuery(query);
     }

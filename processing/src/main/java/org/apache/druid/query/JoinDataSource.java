@@ -33,6 +33,7 @@ import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.Triple;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -56,6 +57,7 @@ import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -97,8 +99,6 @@ public class JoinDataSource implements DataSource
   private static final Logger log = new Logger(JoinDataSource.class);
   private final DataSourceAnalysis analysis;
 
-
-
   private JoinDataSource(
       DataSource left,
       DataSource right,
@@ -121,7 +121,7 @@ public class JoinDataSource implements DataSource
     );
     this.leftFilter = leftFilter;
     this.joinableFactoryWrapper = joinableFactoryWrapper;
-    this.analysis = DataSourceAnalysis.forDataSource(this);
+    this.analysis = this.getAnalysisForDataSource();
   }
 
   /**
@@ -459,7 +459,7 @@ public class JoinDataSource implements DataSource
   {
     final List<PreJoinableClause> clauses = analysis.getPreJoinableClauses();
     if (clauses.isEmpty()) {
-      throw new IAE("No join clauses to build the cache key for data source [%s]", analysis.getDataSource());
+      throw new IAE("No join clauses to build the cache key for data source [%s]", this);
     }
 
     final CacheKeyBuilder keyBuilder;
@@ -480,5 +480,53 @@ public class JoinDataSource implements DataSource
       keyBuilder.appendString(clause.getJoinType().name());
     }
     return keyBuilder.build();
+  }
+
+  private DataSourceAnalysis getAnalysisForDataSource()
+  {
+    final Triple<DataSource, DimFilter, List<PreJoinableClause>> flattened = flattenJoin(this);
+    return new DataSourceAnalysis(flattened.first, null, flattened.second, flattened.third);
+  }
+
+  @Override
+  public DataSourceAnalysis getAnalysis()
+  {
+    return analysis;
+  }
+
+  /**
+   * Flatten a datasource into two parts: the left-hand side datasource (the 'base' datasource), and a list of join
+   * clauses, if any.
+   *
+   * @throws IllegalArgumentException if dataSource cannot be fully flattened.
+   */
+  private static Triple<DataSource, DimFilter, List<PreJoinableClause>> flattenJoin(final JoinDataSource dataSource)
+  {
+    DataSource current = dataSource;
+    DimFilter currentDimFilter = null;
+    final List<PreJoinableClause> preJoinableClauses = new ArrayList<>();
+
+    while (current instanceof JoinDataSource) {
+      final JoinDataSource joinDataSource = (JoinDataSource) current;
+      current = joinDataSource.getLeft();
+      if (currentDimFilter != null) {
+        throw new IAE("Left filters are only allowed when left child is direct table access");
+      }
+      currentDimFilter = joinDataSource.getLeftFilter();
+      preJoinableClauses.add(
+          new PreJoinableClause(
+              joinDataSource.getRightPrefix(),
+              joinDataSource.getRight(),
+              joinDataSource.getJoinType(),
+              joinDataSource.getConditionAnalysis()
+          )
+      );
+    }
+
+    // Join clauses were added in the order we saw them while traversing down, but we need to apply them in the
+    // going-up order. So reverse them.
+    Collections.reverse(preJoinableClauses);
+
+    return Triple.of(current, currentDimFilter, preJoinableClauses);
   }
 }
