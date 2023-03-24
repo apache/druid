@@ -35,7 +35,7 @@ import java.util.Map;
 
 public class SingleContainerTaskAdapter extends K8sTaskAdapter
 {
-  public static String TYPE = "SingleContainer";
+  public static final String TYPE = "overlordSingleContainer";
 
   public SingleContainerTaskAdapter(
       KubernetesClientApi client,

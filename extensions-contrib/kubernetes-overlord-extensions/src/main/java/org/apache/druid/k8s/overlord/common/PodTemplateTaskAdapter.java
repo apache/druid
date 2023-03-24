@@ -69,7 +69,7 @@ import java.util.Properties;
  */
 public class PodTemplateTaskAdapter implements TaskAdapter
 {
-  public static String TYPE = "PodTemplate";
+  public static final String TYPE = "customTemplateAdapter";
 
   private static final Logger log = new Logger(PodTemplateTaskAdapter.class);
   private static final String TASK_PROPERTY = IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX + ".k8s.podTemplate.%s";
@@ -134,7 +134,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
         .endMetadata()
         .editSpec()
         .editFirstContainer()
-        .addAllToEnv(getEnv())
+        .addAllToEnv(getEnv(task))
         .endContainer()
         .endSpec()
         .endTemplate()
@@ -205,12 +205,16 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     }
   }
 
-  private Collection<EnvVar> getEnv()
+  private Collection<EnvVar> getEnv(Task task)
   {
     return ImmutableList.of(
         new EnvVarBuilder()
             .withName(DruidK8sConstants.TASK_DIR_ENV)
             .withValue(new File(taskConfig.getBaseTaskDirPaths().get(0)).getAbsolutePath())
+            .build(),
+        new EnvVarBuilder()
+            .withName(DruidK8sConstants.TASK_ID_ENV)
+            .withValue(task.getId())
             .build(),
         new EnvVarBuilder()
             .withName(DruidK8sConstants.TASK_JSON_ENV)
