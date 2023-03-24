@@ -1114,7 +1114,6 @@ public abstract class ExprEval<T>
       super(value);
       this.arrayType = arrayType;
       Preconditions.checkArgument(arrayType.isArray(), "Output type %s is not an array", arrayType);
-      ExpressionType.checkNestedArrayAllowed(arrayType);
     }
 
     @Override

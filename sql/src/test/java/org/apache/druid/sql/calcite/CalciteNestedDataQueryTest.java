@@ -866,7 +866,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             "SELECT "
             + "JSON_VALUE(arrayString, '$' RETURNING VARCHAR ARRAY), "
             + "JSON_VALUE(arrayLong, '$' RETURNING BIGINT ARRAY), "
-            + "JSON_VALUE(arrayDouble, '$' RETURNING DOUBLE ARRAY) "
+            + "JSON_VALUE(arrayDouble, '$' RETURNING DOUBLE ARRAY), "
+            + "JSON_VALUE(arrayNestedLong, '$[0]' RETURNING BIGINT ARRAY) "
             + "FROM druid.arrays"
         )
         .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
@@ -878,9 +879,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       .virtualColumns(
                           new NestedFieldVirtualColumn("arrayString", "$", "v0", ColumnType.STRING_ARRAY),
                           new NestedFieldVirtualColumn("arrayLong", "$", "v1", ColumnType.LONG_ARRAY),
-                          new NestedFieldVirtualColumn("arrayDouble", "$", "v2", ColumnType.DOUBLE_ARRAY)
+                          new NestedFieldVirtualColumn("arrayDouble", "$", "v2", ColumnType.DOUBLE_ARRAY),
+                          new NestedFieldVirtualColumn("arrayNestedLong", "$[0]", "v3", ColumnType.LONG_ARRAY)
                       )
-                      .columns("v0", "v1", "v2")
+                      .columns("v0", "v1", "v2", "v3")
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .legacy(false)
                       .build()
@@ -888,20 +890,21 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         )
         .expectedResults(
             ImmutableList.of(
-                new Object[]{null, Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1, 2.2, 3.3)},
-                new Object[]{null, null, null},
-                new Object[]{Arrays.asList("d", "e"), Arrays.asList(1L, 4L), Arrays.asList(2.2, 3.3, 4.0)},
-                new Object[]{Arrays.asList("a", "b"), null, null},
-                new Object[]{Arrays.asList("a", "b"), Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1, 2.2, 3.3)},
-                new Object[]{Arrays.asList("b", "c"), Arrays.asList(1L, 2L, 3L, 4L), Arrays.asList(1.1, 3.3)},
-                new Object[]{Arrays.asList("a", "b", "c"), Arrays.asList(2L, 3L), Arrays.asList(3.3, 4.4, 5.5)},
-                new Object[]{null, Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1, 2.2, 3.3)},
-                new Object[]{null, null, null},
-                new Object[]{Arrays.asList("d", "e"), Arrays.asList(1L, 4L), Arrays.asList(2.2, 3.3, 4.0)},
-                new Object[]{Arrays.asList("a", "b"), null, null},
-                new Object[]{Arrays.asList("a", "b"), Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1, 2.2, 3.3)},
-                new Object[]{Arrays.asList("b", "c"), Arrays.asList(1L, 2L, 3L, 4L), Arrays.asList(1.1, 3.3)},
-                new Object[]{Arrays.asList("a", "b", "c"), Arrays.asList(2L, 3L), Arrays.asList(3.3, 4.4, 5.5)}
+                new Object[]{null, Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1D, 2.2D, 3.3D), null},
+                new Object[]{null, null, null, null},
+                new Object[]{Arrays.asList("d", "e"), Arrays.asList(1L, 4L), Arrays.asList(2.2D, 3.3D, 4.0D), Arrays.asList(1L, 2L)},
+                new Object[]{Arrays.asList("a", "b"), null, null, Collections.singletonList(1L)},
+                new Object[]{Arrays.asList("a", "b"), Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1D, 2.2D, 3.3D), Arrays.asList(1L, 2L, null)},
+                new Object[]{Arrays.asList("b", "c"), Arrays.asList(1L, 2L, 3L, 4L), Arrays.asList(1.1D, 3.3D), Collections.singletonList(1L)},
+                new Object[]{Arrays.asList("a", "b", "c"), Arrays.asList(2L, 3L), Arrays.asList(3.3D, 4.4D, 5.5D), null},
+                new Object[]{null, Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1D, 2.2D, 3.3D), null},
+                new Object[]{null, null, null, null},
+                new Object[]{Arrays.asList("d", "e"), Arrays.asList(1L, 4L), Arrays.asList(2.2D, 3.3D, 4.0D), Arrays.asList(1L, 2L)},
+                new Object[]{Arrays.asList("a", "b"), null, null, null},
+                new Object[]{Arrays.asList("a", "b"), Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1D, 2.2D, 3.3D), Arrays.asList(2L, 3L)},
+                new Object[]{Arrays.asList("b", "c"), Arrays.asList(1L, 2L, 3L, 4L), Arrays.asList(1.1D, 3.3D), Collections.singletonList(1L)},
+                new Object[]{Arrays.asList("a", "b", "c"), Arrays.asList(2L, 3L), Arrays.asList(3.3D, 4.4D, 5.5D), null}
+
             )
         )
         .expectedSignature(
@@ -909,6 +912,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .add("EXPR$0", ColumnType.STRING_ARRAY)
                         .add("EXPR$1", ColumnType.LONG_ARRAY)
                         .add("EXPR$2", ColumnType.DOUBLE_ARRAY)
+                        .add("EXPR$3", ColumnType.LONG_ARRAY)
                         .build()
         )
         .run();

@@ -135,7 +135,6 @@ public class SegmentAnalyzer
           }
           break;
         case ARRAY:
-          final ColumnHolder arrayHolder = index != null ? index.getColumnHolder(columnName) : null;
           analysis = analyzeArrayColumn(capabilities);
           break;
         case COMPLEX:

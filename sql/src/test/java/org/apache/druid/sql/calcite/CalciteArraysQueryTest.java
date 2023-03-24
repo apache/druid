@@ -28,7 +28,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
@@ -181,43 +180,26 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         .context(QUERY_CONTEXT_DEFAULT)
         .build();
 
+    // dim3 is a multi-valued string column, so the automatic translation will turn this
+    // expression into
+    //
+    //    `map((dim3) -> array(concat(dim3,'word'),'up'), dim3)`
+    //
+    // this works, but we still translate the output into a string since that is the current output type
+    // in some future this might not auto-convert to a string type (when we support grouping on arrays maybe?)
 
-    try {
-      ExpressionProcessing.initializeForTests(true);
-      // if nested arrays are allowed, dim3 is a multi-valued string column, so the automatic translation will turn this
-      // expression into
-      //
-      //    `map((dim3) -> array(concat(dim3,'word'),'up'), dim3)`
-      //
-      // this works, but we still translate the output into a string since that is the current output type
-      // in some future this might not auto-convert to a string type (when we support grouping on arrays maybe?)
-
-      testQuery(
-          sql,
-          ImmutableList.of(scanQuery),
-          ImmutableList.of(
-              new Object[]{"[[\"aword\",\"up\"],[\"bword\",\"up\"]]", ""},
-              new Object[]{"[[\"bword\",\"up\"],[\"cword\",\"up\"]]", "10.1"},
-              new Object[]{"[[\"dword\",\"up\"]]", "2"},
-              new Object[]{"[[\"word\",\"up\"]]", "1"},
-              useDefault ? new Object[]{"[[\"word\",\"up\"]]", "def"} : new Object[]{"[[null,\"up\"]]", "def"}
-          )
-      );
-    }
-    finally {
-      ExpressionProcessing.initializeForTests(null);
-    }
-
-    // if nested arrays are not enabled, this doesn't work
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage(
-        "Cannot create a nested array type [ARRAY<ARRAY<STRING>>], 'druid.expressions.allowNestedArrays' must be set to true"
-    );
     testQuery(
         sql,
         ImmutableList.of(scanQuery),
-        ImmutableList.of()
+        ImmutableList.of(
+            new Object[]{"[[\"aword\",\"up\"],[\"bword\",\"up\"]]", ""},
+            new Object[]{"[[\"bword\",\"up\"],[\"cword\",\"up\"]]", "10.1"},
+            new Object[]{"[[\"dword\",\"up\"]]", "2"},
+            new Object[]{"[[\"word\",\"up\"]]", "1"},
+            useDefault ? new Object[]{"[[\"word\",\"up\"]]", "def"} : new Object[]{"[[null,\"up\"]]", "def"}
+        )
     );
+
   }
 
   @Test
@@ -1747,103 +1729,97 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayAggArrays()
   {
-    try {
-      ExpressionProcessing.initializeForTests(true);
-      cannotVectorize();
-      testQuery(
-          "SELECT ARRAY_AGG(ARRAY[l1, l2]), ARRAY_AGG(DISTINCT ARRAY[l1, l2]) FROM numfoo",
-          QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
-          ImmutableList.of(
-              Druids.newTimeseriesQueryBuilder()
-                    .dataSource(CalciteTests.DATASOURCE3)
-                    .intervals(querySegmentSpec(Filtration.eternity()))
-                    .granularity(Granularities.ALL)
-                    .virtualColumns(
-                        expressionVirtualColumn("v0", "array(\"l1\",\"l2\")", ColumnType.LONG_ARRAY)
-                    )
-                    .aggregators(
-                        aggregators(
-                            new ExpressionLambdaAggregatorFactory(
-                                "a0",
-                                ImmutableSet.of("v0"),
-                                "__acc",
-                                "ARRAY<ARRAY<LONG>>[]",
-                                "ARRAY<ARRAY<LONG>>[]",
-                                true,
-                                true,
-                                false,
-                                "array_append(\"__acc\", \"v0\")",
-                                "array_concat(\"__acc\", \"a0\")",
-                                null,
-                                null,
-                                ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
-                                TestExprMacroTable.INSTANCE
-                            ),
-                            new ExpressionLambdaAggregatorFactory(
-                                "a1",
-                                ImmutableSet.of("v0"),
-                                "__acc",
-                                "ARRAY<ARRAY<LONG>>[]",
-                                "ARRAY<ARRAY<LONG>>[]",
-                                true,
-                                true,
-                                false,
-                                "array_set_add(\"__acc\", \"v0\")",
-                                "array_set_add_all(\"__acc\", \"a1\")",
-                                null,
-                                null,
-                                ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
-                                TestExprMacroTable.INSTANCE
-                            )
-                        )
-                    )
-                    .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-                    .build()
-          ),
-          (sql, results) -> {
-            // ordering is not stable in array_agg and array_concat_agg
-            List<Object[]> expected = ImmutableList.of(
-                useDefault ?
-                new Object[]{
-                    Arrays.asList(
-                        Arrays.asList(7L, 0L),
-                        Arrays.asList(325323L, 325323L),
-                        Arrays.asList(0L, 0L),
-                        Arrays.asList(0L, 0L),
-                        Arrays.asList(0L, 0L),
-                        Arrays.asList(0L, 0L)
-                    ),
-                    Arrays.asList(
-                        Arrays.asList(0L, 0L),
-                        Arrays.asList(7L, 0L),
-                        Arrays.asList(325323L, 325323L)
-                    )
-                }
-                           :
-                new Object[]{
-                    Arrays.asList(
-                        Arrays.asList(7L, null),
-                        Arrays.asList(325323L, 325323L),
-                        Arrays.asList(0L, 0L),
-                        Arrays.asList(null, null),
-                        Arrays.asList(null, null),
-                        Arrays.asList(null, null)
-                    ),
-                    Arrays.asList(
-                        Arrays.asList(null, null),
-                        Arrays.asList(0L, 0L),
-                        Arrays.asList(7L, null),
-                        Arrays.asList(325323L, 325323L)
-                    )
-                }
-            );
-            assertResultsDeepEquals(sql, expected, results);
-          }
-      );
-    }
-    finally {
-      ExpressionProcessing.initializeForTests(null);
-    }
+    cannotVectorize();
+    testQuery(
+        "SELECT ARRAY_AGG(ARRAY[l1, l2]), ARRAY_AGG(DISTINCT ARRAY[l1, l2]) FROM numfoo",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "array(\"l1\",\"l2\")", ColumnType.LONG_ARRAY)
+                  )
+                  .aggregators(
+                      aggregators(
+                          new ExpressionLambdaAggregatorFactory(
+                              "a0",
+                              ImmutableSet.of("v0"),
+                              "__acc",
+                              "ARRAY<ARRAY<LONG>>[]",
+                              "ARRAY<ARRAY<LONG>>[]",
+                              true,
+                              true,
+                              false,
+                              "array_append(\"__acc\", \"v0\")",
+                              "array_concat(\"__acc\", \"a0\")",
+                              null,
+                              null,
+                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                              TestExprMacroTable.INSTANCE
+                          ),
+                          new ExpressionLambdaAggregatorFactory(
+                              "a1",
+                              ImmutableSet.of("v0"),
+                              "__acc",
+                              "ARRAY<ARRAY<LONG>>[]",
+                              "ARRAY<ARRAY<LONG>>[]",
+                              true,
+                              true,
+                              false,
+                              "array_set_add(\"__acc\", \"v0\")",
+                              "array_set_add_all(\"__acc\", \"a1\")",
+                              null,
+                              null,
+                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                              TestExprMacroTable.INSTANCE
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                  .build()
+        ),
+        (sql, results) -> {
+          // ordering is not stable in array_agg and array_concat_agg
+          List<Object[]> expected = ImmutableList.of(
+              useDefault ?
+              new Object[]{
+                  Arrays.asList(
+                      Arrays.asList(7L, 0L),
+                      Arrays.asList(325323L, 325323L),
+                      Arrays.asList(0L, 0L),
+                      Arrays.asList(0L, 0L),
+                      Arrays.asList(0L, 0L),
+                      Arrays.asList(0L, 0L)
+                  ),
+                  Arrays.asList(
+                      Arrays.asList(0L, 0L),
+                      Arrays.asList(7L, 0L),
+                      Arrays.asList(325323L, 325323L)
+                  )
+              }
+                         :
+              new Object[]{
+                  Arrays.asList(
+                      Arrays.asList(7L, null),
+                      Arrays.asList(325323L, 325323L),
+                      Arrays.asList(0L, 0L),
+                      Arrays.asList(null, null),
+                      Arrays.asList(null, null),
+                      Arrays.asList(null, null)
+                  ),
+                  Arrays.asList(
+                      Arrays.asList(null, null),
+                      Arrays.asList(0L, 0L),
+                      Arrays.asList(7L, null),
+                      Arrays.asList(325323L, 325323L)
+                  )
+              }
+          );
+          assertResultsDeepEquals(sql, expected, results);
+        }
+    );
   }
 
   @Test

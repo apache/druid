@@ -21,7 +21,6 @@ package org.apache.druid.segment;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.StringRuntimeShape;
 import org.apache.druid.segment.column.ColumnType;
@@ -45,13 +44,11 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
   public static void setUpClass()
   {
     NullHandling.initializeForTests();
-    ExpressionProcessing.initializeForTests(true); // Allow nested arrays
   }
 
   @AfterClass
   public static void tearDownClass()
   {
-    ExpressionProcessing.initializeForTests(null); // Clear special expression-processing config.
   }
 
   @Test
@@ -135,6 +132,40 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
         listCursor,
         listCursor.getColumnSelectorFactory(),
         new ExpressionVirtualColumn("__unnest__", "\"dummy\"", ColumnType.STRING, ExprMacroTable.nil()),
+        OUTPUT_NAME
+    );
+    ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
+                                                                .makeColumnValueSelector(OUTPUT_NAME);
+    int k = 0;
+    while (!unnestCursor.isDone()) {
+      Object valueSelectorVal = unnestColumnValueSelector.getObject();
+      Assert.assertNull(valueSelectorVal);
+      k++;
+      unnestCursor.advance();
+    }
+    // since type is 'STRING', it follows multi-value string rules so single element arrays become scalar values,
+    // so [null] becomes null, meaning we only have 2 rows
+    Assert.assertEquals(k, 2);
+  }
+
+  @Test
+  public void test_list_unnest_cursors_user_supplied_list_only_nulls_mv_to_array()
+  {
+    List<Object> inputList = Arrays.asList(
+        Collections.singletonList(null),
+        Arrays.asList(null, null),
+        Collections.singletonList(null),
+        Collections.emptyList()
+    );
+
+    //Create base cursor
+    ListCursor listCursor = new ListCursor(inputList);
+
+    //Create unnest cursor
+    UnnestColumnValueSelectorCursor unnestCursor = new UnnestColumnValueSelectorCursor(
+        listCursor,
+        listCursor.getColumnSelectorFactory(),
+        new ExpressionVirtualColumn("__unnest__", "mv_to_array(\"dummy\")", ColumnType.STRING, ExprMacroTable.nil()),
         OUTPUT_NAME
     );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
