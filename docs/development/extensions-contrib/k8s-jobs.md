@@ -40,7 +40,7 @@ The overlord single container pod adapter takes the podSpec of your `Overlord` p
 The overlord multi container pod adapter takes the podSpec of your `Overlord` pod and creates a kubernetes job from this podSpec.  It uses kubexit to manage dependency ordering between the main container that runs your druid peon and other sidecars defined in the `Overlord` pod spec.  To enable this pod adapter you can specify the runtime property `druid.indexer.runner.k8s.adapter.type: overlordMultiContainer` 
 
 ### Custom Template Pod Adapter
-The pod template pod adapter allows you to specify a pod template file per task type.  This adapter requires you to specify a `base` pod spec which will be used in the case that a task specifc pod spec has not been defined.  To enable this pod adapter you can specify the runtime property `druid.indexer.runner.k8s.adapter.type: customTemplateAdapter`
+The custom template pod adapter allows you to specify a pod template file per task type.  This adapter requires you to specify a `base` pod spec which will be used in the case that a task specifc pod spec has not been defined.  To enable this pod adapter you can specify the runtime property `druid.indexer.runner.k8s.adapter.type: customTemplateAdapter`
 
 The base pod template must be specified as the runtime property `druid.indexer.runner.k8s.podTemplate.base: /path/to/basePodSpec.yaml`
 Task specific pod templates must be specified as the runtime property `druid.indexer.runner.k8s.podTemplate.{taskType}: /path/to/taskSpecificPodSpec.yaml` where {taskType} is the name of the task type i.e `index_parallel`
