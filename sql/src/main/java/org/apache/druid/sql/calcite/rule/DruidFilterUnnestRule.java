@@ -24,6 +24,7 @@ import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.sql.calcite.rel.DruidUnnestRel;
 
 public class DruidFilterUnnestRule extends RelOptRule
@@ -94,9 +95,15 @@ public class DruidFilterUnnestRule extends RelOptRule
     public boolean matches(RelOptRuleCall call)
     {
       final Project rightP = call.rel(0);
-      final SqlKind rightProjectKind = rightP.getChildExps().get(0).getKind();
-      // allow rule to trigger only if there's a string CAST or numeric literal cast
-      return rightP.getProjects().size() == 1 && (rightProjectKind == SqlKind.CAST || rightProjectKind == SqlKind.LITERAL);
+      if (rightP.getChildExps().size() > 0) {
+        final SqlKind rightProjectKind = rightP.getChildExps().get(0).getKind();
+        final SqlTypeName rightType = rightP.getChildExps().get(0).getType().getSqlTypeName();
+        // allow rule to trigger only if there's a non-decimal CAST or numeric literal cast
+        return rightP.getProjects().size() == 1 && ((rightProjectKind == SqlKind.CAST
+                                                     && rightType != SqlTypeName.DECIMAL)
+                                                    || rightProjectKind == SqlKind.LITERAL);
+      }
+      return false;
     }
 
     @Override
