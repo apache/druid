@@ -97,18 +97,15 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
     root.addFilter(GuiceFilter.class, "/*", null);
 
     final HandlerList handlerList = new HandlerList();
-    handlerList.setHandlers(
-        new Handler[]{
-            JettyServerInitUtils.getJettyRequestLogHandler(),
-            JettyServerInitUtils.wrapWithDefaultGzipHandler(
-                root,
-                serverConfig.getInflateBufferSize(),
-                serverConfig.getCompressionLevel()
-            ),
-            new DefaultHandler()
-        }
-    );
     JettyServerInitUtils.maybeAddHSTSRewriteHandler(serverConfig, handlerList);
+    handlerList.addHandler(JettyServerInitUtils.getJettyRequestLogHandler());
+    handlerList.addHandler(JettyServerInitUtils.wrapWithDefaultGzipHandler(
+        root,
+        serverConfig.getInflateBufferSize(),
+        serverConfig.getCompressionLevel()
+    ));
+    handlerList.addHandler(new DefaultHandler());
+
     server.setHandler(handlerList);
   }
 }
