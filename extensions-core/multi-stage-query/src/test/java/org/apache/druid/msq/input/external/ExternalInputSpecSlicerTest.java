@@ -29,7 +29,6 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.SplittableInputSource;
-import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.Streams;
@@ -109,13 +108,23 @@ public class ExternalInputSpecSlicerTest
   }
 
   @Test
-  public void test_sliceStatic_splittable_empty()
+  public void test_sliceStatic_splittable_someWorkersEmpty()
   {
     Assert.assertEquals(
         ImmutableList.of(
-            NilInputSlice.INSTANCE,
-            NilInputSlice.INSTANCE
+            splittableSlice("foo"),
+            splittableSlice("bar"),
+            splittableSlice("baz")
         ),
+        slicer.sliceStatic(splittableSpec("foo", "bar", "baz"), 5)
+    );
+  }
+
+  @Test
+  public void test_sliceStatic_splittable_empty()
+  {
+    Assert.assertEquals(
+        ImmutableList.of(),
         slicer.sliceStatic(splittableSpec(), 2)
     );
   }

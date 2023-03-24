@@ -193,11 +193,14 @@ public class ExternalInputSpecSlicer implements InputSpecSlicer
         final Function<T, InputFileAttribute> inputAttributeExtractor
     )
     {
-      return SlicerUtils.makeSlicesStatic(
-          inputIterator,
-          item -> inputAttributeExtractor.apply(item).getSize(),
-          maxNumSlices
-      ).iterator();
+      return Iterators.filter(
+          SlicerUtils.makeSlicesStatic(
+              inputIterator,
+              item -> inputAttributeExtractor.apply(item).getSize(),
+              maxNumSlices
+          ).iterator(),
+          xs -> !xs.isEmpty()
+      );
     }
   }
 
@@ -223,13 +226,16 @@ public class ExternalInputSpecSlicer implements InputSpecSlicer
         final Function<T, InputFileAttribute> inputAttributeExtractor
     )
     {
-      return SlicerUtils.makeSlicesDynamic(
-          inputIterator,
-          item -> inputAttributeExtractor.apply(item).getSize(),
-          maxNumSlices,
-          maxFilesPerSlice,
-          maxBytesPerSlice
-      ).iterator();
+      return Iterators.filter(
+          SlicerUtils.makeSlicesDynamic(
+              inputIterator,
+              item -> inputAttributeExtractor.apply(item).getSize(),
+              maxNumSlices,
+              maxFilesPerSlice,
+              maxBytesPerSlice
+          ).iterator(),
+          xs -> !xs.isEmpty()
+      );
     }
   }
 
