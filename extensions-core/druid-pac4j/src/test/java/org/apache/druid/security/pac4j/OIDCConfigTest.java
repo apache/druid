@@ -33,7 +33,8 @@ public class OIDCConfigTest
     String jsonStr = "{\n"
                      + "  \"clientID\": \"testid\",\n"
                      + "  \"clientSecret\": \"testsecret\",\n"
-                     + "  \"discoveryURI\": \"testdiscoveryuri\"\n"
+                     + "  \"discoveryURI\": \"testdiscoveryuri\",\n"
+                     + "  \"scope\": \"testscope\"\n"
                      + "}\n";
 
     OIDCConfig conf = jsonMapper.readValue(
@@ -44,5 +45,6 @@ public class OIDCConfigTest
     Assert.assertEquals("testid", conf.getClientID());
     Assert.assertEquals("testsecret", conf.getClientSecret().getPassword());
     Assert.assertEquals("testdiscoveryuri", conf.getDiscoveryURI());
+    Assert.assertEquals("testscope", conf.getScope());
   }
 }

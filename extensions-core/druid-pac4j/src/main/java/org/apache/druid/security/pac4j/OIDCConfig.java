@@ -35,16 +35,21 @@ public class OIDCConfig
   @JsonProperty
   private final String discoveryURI;
 
+  @JsonProperty
+  private final String scope;
+
   @JsonCreator
   public OIDCConfig(
       @JsonProperty("clientID") String clientID,
       @JsonProperty("clientSecret") PasswordProvider clientSecret,
-      @JsonProperty("discoveryURI") String discoveryURI
+      @JsonProperty("discoveryURI") String discoveryURI,
+      @JsonProperty("scope") String scope
   )
   {
     this.clientID = Preconditions.checkNotNull(clientID, "null clientID");
     this.clientSecret = Preconditions.checkNotNull(clientSecret, "null clientSecret");
     this.discoveryURI = Preconditions.checkNotNull(discoveryURI, "null discoveryURI");
+    this.scope = Preconditions.checkNotNull(scope, "null scope");
   }
 
   @JsonProperty
@@ -63,5 +68,11 @@ public class OIDCConfig
   public String getDiscoveryURI()
   {
     return discoveryURI;
+  }
+
+  @JsonProperty
+  public String getScope()
+  {
+    return scope;
   }
 }
