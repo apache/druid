@@ -36,6 +36,7 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.Optional;
@@ -74,6 +75,7 @@ public class JwtAuthFilter implements Filter
     }
 
     HttpServletRequest httpServletRequest = (HttpServletRequest) servletRequest;
+    HttpServletResponse httpServletResponse = (HttpServletResponse) servletResponse;
     Optional<String> idToken = extractBearerToken(httpServletRequest);
 
     if (idToken.isPresent()) {
@@ -94,7 +96,9 @@ public class JwtAuthFilter implements Filter
             servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
           } else {
             LOG.error(
-                "Authentication failed! Please ensure the validity of the ID token and contains the configured claim.");
+                "Authentication failed! Please ensure that the ID token is valid and it contains the configured claim.");
+            httpServletResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
           }
         }
       }
@@ -116,7 +120,7 @@ public class JwtAuthFilter implements Filter
   {
     String header = request.getHeader(HttpConstants.AUTHORIZATION_HEADER);
     if (header == null || !header.startsWith(HttpConstants.BEARER_HEADER_PREFIX)) {
-      LOG.debug("Invalid prefix for Bearer token");
+      LOG.debug("Request does not contain bearer authentication scheme");
       return Optional.empty();
     }
     String headerWithoutPrefix = header.substring(HttpConstants.BEARER_HEADER_PREFIX.length());
