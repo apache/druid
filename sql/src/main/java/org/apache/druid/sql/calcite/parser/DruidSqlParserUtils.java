@@ -36,6 +36,9 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlTimestampLiteral;
+import org.apache.calcite.sql.SqlUnknownLiteral;
+import org.apache.calcite.sql.parser.SqlParserUtil;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.tools.ValidationException;
@@ -110,7 +113,9 @@ public class DruidSqlParserUtils
    * Since it is to be used primarily while parsing the SqlNode, it is wrapped in {@code convertSqlNodeToGranularityThrowingParseExceptions}
    *
    * @param sqlNode SqlNode representing a call to a function
+   *
    * @return Granularity as intended by the function call
+   *
    * @throws ParseException SqlNode cannot be converted a granularity
    */
   public static Granularity convertSqlNodeToGranularity(SqlNode sqlNode) throws ParseException
@@ -590,6 +595,33 @@ public class DruidSqlParserUtils
                 .collect(Collectors.joining(", "))
       );
     }
+  }
+
+  /**
+   * Get the timestamp string from a TIMESTAMP (or TIMESTAMP WITH LOCAL TIME ZONE) literal.
+   *
+   * @return string, or null if the provided node is not a timestamp literal
+   */
+  @Nullable
+  private static String getTimestampStringFromLiteral(final SqlNode sqlNode)
+  {
+    if (sqlNode instanceof SqlTimestampLiteral) {
+      return ((SqlTimestampLiteral) sqlNode).toFormattedString();
+    }
+
+    if (sqlNode instanceof SqlUnknownLiteral) {
+      // SqlUnknownLiteral represents a type that is unknown until validation time. The tag is resolved to a proper
+      // type name later on; for example TIMESTAMP may become TIMESTAMP WITH LOCAL TIME ZONE.
+      final SqlUnknownLiteral sqlUnknownLiteral = (SqlUnknownLiteral) sqlNode;
+
+      if (SqlTypeName.TIMESTAMP.getSpaceName().equals(sqlUnknownLiteral.tag)
+          || SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE.getSpaceName().equals(sqlUnknownLiteral.tag)) {
+        return SqlParserUtil.parseTimestampLiteral(sqlUnknownLiteral.getValue(), sqlNode.getParserPosition())
+                            .toFormattedString();
+      }
+    }
+
+    return null;
   }
 
   public static DruidException problemParsing(String message)

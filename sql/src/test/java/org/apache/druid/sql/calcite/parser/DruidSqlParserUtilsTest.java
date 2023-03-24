@@ -21,6 +21,8 @@ package org.apache.druid.sql.calcite.parser;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.avatica.util.TimeUnit;
+import org.apache.calcite.runtime.CalciteContextException;
+import org.apache.calcite.runtime.CalciteException;
 import org.apache.calcite.sql.SqlAsOperator;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlIdentifier;
@@ -34,15 +36,26 @@ import org.apache.calcite.sql.SqlPostfixOperator;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.tools.ValidationException;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
+import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
+import org.junit.internal.matchers.ThrowableCauseMatcher;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -148,7 +161,7 @@ public class DruidSqlParserUtilsTest
       selectArgs.add(new SqlIdentifier("__time", new SqlParserPos(0, 1)));
       Assert.assertNull(DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(
           null,
-          new SqlSelect(SqlParserPos.ZERO, null, selectArgs, null, null, null, null, null, null, null, null)
+          new SqlSelect(SqlParserPos.ZERO, null, selectArgs, null, null, null, null, null, null, null, null, null, null)
         )
       );
     }
@@ -186,6 +199,8 @@ public class DruidSqlParserUtilsTest
           null,
           null,
           null,
+          null,
+          null,
           null
       );
 
@@ -212,6 +227,8 @@ public class DruidSqlParserUtilsTest
           SqlParserPos.ZERO,
           null,
           selectArgs,
+          null,
+          null,
           null,
           null,
           null,
@@ -283,6 +300,8 @@ public class DruidSqlParserUtilsTest
           null,
           null,
           null,
+          null,
+          null,
           null
       );
 
@@ -311,6 +330,8 @@ public class DruidSqlParserUtilsTest
           SqlParserPos.ZERO,
           null,
           selectArgs,
+          null,
+          null,
           null,
           null,
           null,
@@ -518,6 +539,175 @@ public class DruidSqlParserUtilsTest
           () -> DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode)
       );
       Assert.assertEquals("'abc' is an invalid period string", e.getMessage());
+    }
+  }
+
+  public static class NonParameterizedTests
+  {
+    private static final DateTimeZone TZ_LOS_ANGELES = DateTimeZone.forID("America/Los_Angeles");
+
+    @Test
+    public void test_parseTimeStampWithTimeZone_timestamp_utc() throws ValidationException
+    {
+      final DateTime ts = DateTimes.of("2000-01-02T03:04:05.678");
+
+      final String s = DruidSqlParserUtils.parseTimeStampWithTimeZone(
+          SqlLiteral.createTimestamp(
+              SqlTypeName.TIMESTAMP,
+              Calcites.jodaToCalciteTimestampString(ts, DateTimeZone.UTC),
+              DruidTypeSystem.DEFAULT_TIMESTAMP_PRECISION,
+              SqlParserPos.ZERO
+          ),
+          DateTimeZone.UTC
+      );
+
+      Assert.assertEquals(String.valueOf(ts.getMillis()), s);
+    }
+
+    @Test
+    public void test_parseTimeStampWithTimeZone_timestamp_losAngeles() throws ValidationException
+    {
+      final DateTime ts = DateTimes.of("2000-01-02T03:04:05.678").withZone(TZ_LOS_ANGELES);
+
+      final String s = DruidSqlParserUtils.parseTimeStampWithTimeZone(
+          SqlLiteral.createTimestamp(
+              SqlTypeName.TIMESTAMP,
+              Calcites.jodaToCalciteTimestampString(ts, TZ_LOS_ANGELES),
+              DruidTypeSystem.DEFAULT_TIMESTAMP_PRECISION,
+              SqlParserPos.ZERO
+          ),
+          TZ_LOS_ANGELES
+      );
+
+      Assert.assertEquals(String.valueOf(ts.getMillis()), s);
+    }
+
+    @Test
+    public void test_parseTimeStampWithTimeZone_timestampWithLocalTimeZone() throws ValidationException
+    {
+      final DateTime ts = DateTimes.of("2000-01-02T03:04:05.678");
+
+      final String s = DruidSqlParserUtils.parseTimeStampWithTimeZone(
+          SqlLiteral.createTimestamp(
+              SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE,
+              Calcites.jodaToCalciteTimestampString(ts, DateTimeZone.UTC),
+              DruidTypeSystem.DEFAULT_TIMESTAMP_PRECISION,
+              SqlParserPos.ZERO
+          ),
+          DateTimeZone.UTC
+      );
+
+      Assert.assertEquals(String.valueOf(ts.getMillis()), s);
+    }
+
+    @Test
+    public void test_parseTimeStampWithTimeZone_timestampWithLocalTimeZone_losAngeles() throws ValidationException
+    {
+      final DateTime ts = DateTimes.of("2000-01-02T03:04:05.678").withZone(TZ_LOS_ANGELES);
+
+      final String s = DruidSqlParserUtils.parseTimeStampWithTimeZone(
+          SqlLiteral.createTimestamp(
+              SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE,
+              Calcites.jodaToCalciteTimestampString(ts, TZ_LOS_ANGELES),
+              DruidTypeSystem.DEFAULT_TIMESTAMP_PRECISION,
+              SqlParserPos.ZERO
+          ),
+          TZ_LOS_ANGELES
+      );
+
+      Assert.assertEquals(String.valueOf(ts.getMillis()), s);
+    }
+
+    @Test
+    public void test_parseTimeStampWithTimeZone_unknownTimestamp() throws ValidationException
+    {
+      final DateTime ts = DateTimes.of("2000-01-02T03:04:05.678");
+
+      final String s = DruidSqlParserUtils.parseTimeStampWithTimeZone(
+          SqlLiteral.createUnknown(
+              SqlTypeName.TIMESTAMP.getSpaceName(),
+              Calcites.jodaToCalciteTimestampString(ts, DateTimeZone.UTC).toString(),
+              SqlParserPos.ZERO
+          ),
+          DateTimeZone.UTC
+      );
+
+      Assert.assertEquals(String.valueOf(ts.getMillis()), s);
+    }
+
+    @Test
+    public void test_parseTimeStampWithTimeZone_unknownTimestampWithLocalTimeZone() throws ValidationException
+    {
+      final DateTime ts = DateTimes.of("2000-01-02T03:04:05.678");
+
+      final String s = DruidSqlParserUtils.parseTimeStampWithTimeZone(
+          SqlLiteral.createUnknown(
+              SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE.getSpaceName(),
+              Calcites.jodaToCalciteTimestampString(ts, DateTimeZone.UTC).toString(),
+              SqlParserPos.ZERO
+          ),
+          DateTimeZone.UTC
+      );
+
+      Assert.assertEquals(String.valueOf(ts.getMillis()), s);
+    }
+
+    @Test
+    public void test_parseTimeStampWithTimeZone_unknownTimestamp_losAngeles() throws ValidationException
+    {
+      final DateTime ts = DateTimes.of("2000-01-02T03:04:05.678").withZone(TZ_LOS_ANGELES);
+
+      final String s = DruidSqlParserUtils.parseTimeStampWithTimeZone(
+          SqlLiteral.createUnknown(
+              SqlTypeName.TIMESTAMP.getSpaceName(),
+              Calcites.jodaToCalciteTimestampString(ts, TZ_LOS_ANGELES).toString(),
+              SqlParserPos.ZERO
+          ),
+          TZ_LOS_ANGELES
+      );
+
+      Assert.assertEquals(String.valueOf(ts.getMillis()), s);
+    }
+
+    @Test
+    public void test_parseTimeStampWithTimeZone_unknownTimestampWithLocalTimeZone_losAngeles()
+        throws ValidationException
+    {
+      final DateTime ts = DateTimes.of("2000-01-02T03:04:05.678").withZone(TZ_LOS_ANGELES);
+
+      final String s = DruidSqlParserUtils.parseTimeStampWithTimeZone(
+          SqlLiteral.createUnknown(
+              SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE.getSpaceName(),
+              Calcites.jodaToCalciteTimestampString(ts, TZ_LOS_ANGELES).toString(),
+              SqlParserPos.ZERO
+          ),
+          TZ_LOS_ANGELES
+      );
+
+      Assert.assertEquals(String.valueOf(ts.getMillis()), s);
+    }
+
+    @Test
+    public void test_parseTimeStampWithTimeZone_unknownTimestamp_invalid() throws ValidationException
+    {
+      final CalciteContextException e = Assert.assertThrows(
+          CalciteContextException.class,
+          () -> DruidSqlParserUtils.parseTimeStampWithTimeZone(
+              SqlLiteral.createUnknown(
+                  SqlTypeName.TIMESTAMP.getSpaceName(),
+                  "not a timestamp",
+                  SqlParserPos.ZERO
+              ),
+              DateTimeZone.UTC
+          )
+      );
+
+      MatcherAssert.assertThat(e, ThrowableCauseMatcher.hasCause(CoreMatchers.instanceOf(CalciteException.class)));
+      MatcherAssert.assertThat(
+          e,
+          ThrowableCauseMatcher.hasCause(ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
+              "Illegal TIMESTAMP literal 'not a timestamp'")))
+      );
     }
   }
 }

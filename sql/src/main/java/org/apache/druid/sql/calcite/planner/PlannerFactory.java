@@ -138,14 +138,14 @@ public class PlannerFactory extends PlannerToolbox
   private FrameworkConfig buildFrameworkConfig(PlannerContext plannerContext)
   {
     final SqlToRelConverter.Config sqlToRelConverterConfig = SqlToRelConverter
-        .configBuilder()
+        .config()
         .withExpand(false)
         .withDecorrelationEnabled(false)
         .withTrimUnusedFields(false)
         .withInSubQueryThreshold(
             plannerContext.queryContext().getInSubQueryThreshold()
-        )
-        .build();
+        );
+
     Frameworks.ConfigBuilder frameworkConfigBuilder = Frameworks
         .newConfigBuilder()
         .parserConfig(PARSER_CONFIG)

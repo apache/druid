@@ -48,6 +48,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
+import org.apache.druid.sql.calcite.expression.BasicOperandTypeChecker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -60,6 +61,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * Implements {@link org.apache.calcite.sql.fun.SqlLibraryOperators#STRING_AGG} and
+ * {@link org.apache.calcite.sql.fun.SqlStdOperatorTable#LISTAGG}, as well as our extended versions of these
+ * functions that include {@code maxSizeBytes}.
+ */
 public class StringSqlAggregator implements SqlAggregator
 {
   private static final String NAME = "STRING_AGG";
@@ -96,37 +102,38 @@ public class StringSqlAggregator implements SqlAggregator
       return null;
     }
 
-    RexNode separatorNode = Expressions.fromFieldAccess(
-        rexBuilder.getTypeFactory(),
-        rowSignature,
-        project,
-        aggregateCall.getArgList().get(1)
-    );
-    if (!separatorNode.isA(SqlKind.LITERAL)) {
-      // separator must be a literal
-      return null;
-    }
-    String separator = RexLiteral.stringValue(separatorNode);
+    final String separator;
 
-    if (separator == null) {
-      // separator must not be null
-      return null;
-    }
-
-    Integer maxSizeBytes = null;
-    if (arguments.size() > 2) {
-      RexNode maxBytes = Expressions.fromFieldAccess(
-          rexBuilder.getTypeFactory(),
-          rowSignature,
-          project,
-          aggregateCall.getArgList().get(2)
+    if (arguments.size() > 1) {
+      separator = RexLiteral.stringValue(
+          Expressions.fromFieldAccess(
+              rexBuilder.getTypeFactory(),
+              rowSignature,
+              project,
+              aggregateCall.getArgList().get(1)
+          )
       );
-      if (!maxBytes.isA(SqlKind.LITERAL)) {
-        // maxBytes must be a literal
-        return null;
-      }
-      maxSizeBytes = ((Number) RexLiteral.value(maxBytes)).intValue();
+    } else {
+      separator = "";
     }
+
+    final HumanReadableBytes maxSizeBytes;
+
+    if (arguments.size() > 2) {
+      maxSizeBytes = HumanReadableBytes.valueOf(
+          RexLiteral.intValue(
+              Expressions.fromFieldAccess(
+                  rexBuilder.getTypeFactory(),
+                  rowSignature,
+                  project,
+                  aggregateCall.getArgList().get(2)
+              )
+          )
+      );
+    } else {
+      maxSizeBytes = null;
+    }
+
     final DruidExpression arg = arguments.get(0);
     final ExprMacroTable macroTable = plannerContext.getPlannerToolbox().exprMacroTable();
 
@@ -139,7 +146,11 @@ public class StringSqlAggregator implements SqlAggregator
       fieldName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, elementType);
     }
 
-    final String finalizer = StringUtils.format("if(array_length(o) == 0, null, array_to_string(o, '%s'))", separator);
+    final String finalizer = StringUtils.format(
+        "if(array_length(o) == 0, null, array_to_string(o, %s))",
+        DruidExpression.ofStringLiteral(separator).getExpression()
+    );
+
     final NotDimFilter dimFilter = new NotDimFilter(new SelectorDimFilter(fieldName, null, null));
     if (aggregateCall.isDistinct()) {
       return Aggregation.create(
@@ -158,7 +169,7 @@ public class StringSqlAggregator implements SqlAggregator
                   StringUtils.format("array_set_add_all(\"__acc\", \"%s\")", name),
                   null,
                   finalizer,
-                  maxSizeBytes != null ? new HumanReadableBytes(maxSizeBytes) : null,
+                  maxSizeBytes != null ? new HumanReadableBytes(maxSizeBytes.getBytes()) : null,
                   macroTable
               ),
               dimFilter
@@ -181,7 +192,7 @@ public class StringSqlAggregator implements SqlAggregator
                   StringUtils.format("array_concat(\"__acc\", \"%s\")", name),
                   null,
                   finalizer,
-                  maxSizeBytes != null ? new HumanReadableBytes(maxSizeBytes) : null,
+                  maxSizeBytes != null ? new HumanReadableBytes(maxSizeBytes.getBytes()) : null,
                   macroTable
               ),
               dimFilter

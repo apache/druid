@@ -82,11 +82,13 @@
         <scala.library.version>2.13.9</scala.library.version>
         <avatica.version>1.17.0</avatica.version>
         <avro.version>1.11.1</avro.version>
-        <!-- sql/src/main/codegen/config.fmpp is based on a file from calcite-core, and needs to be
-          updated when upgrading Calcite. Refer to the top-level comments in that file for details.
-          Also, CalcitePlanner is a clone of Calcite's PlannerImpl and may require updates when
-          Calcite is upgrade. -->
-        <calcite.version>1.21.0</calcite.version>
+        <!-- When updating Calcite, also propagate updates to these files which we've copied and modified:
+             * sql/src/main/codegen/config.fmpp
+               - original: core/src/main/codegen/config.fmpp
+             * sql/src/main/java/org/apache/druid/sql/calcite/planner/CalcitePlanner.java
+               - original: core/src/main/java/org/apache/calcite/prepare/PlannerImpl.java
+          -->
+        <calcite.version>1.35.0-SNAPSHOT</calcite.version>
         <datasketches.version>4.1.0</datasketches.version>
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
@@ -418,6 +420,12 @@
                 <groupId>org.apache.calcite</groupId>
                 <artifactId>calcite-core</artifactId>
                 <version>${calcite.version}</version>
+                <exclusions>
+                  <exclusion>
+                    <groupId>com.google.guava</groupId>
+                    <artifactId>guava</artifactId>
+                  </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.calcite</groupId>
@@ -973,9 +981,8 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.calcite</groupId>
-                <artifactId>calcite-core</artifactId>
+                <artifactId>calcite-testkit</artifactId>
                 <version>${calcite.version}</version>
-                <type>test-jar</type>
                 <scope>test</scope>
             </dependency>
             <dependency>

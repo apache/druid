@@ -26,6 +26,7 @@ import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.java.util.common.StringUtils;
@@ -52,7 +53,7 @@ public class SubstringOperatorConversion implements SqlOperatorConversion
   @Override
   public SqlOperator calciteOperator()
   {
-    return SQL_FUNCTION;
+    return SqlStdOperatorTable.SUBSTRING;
   }
 
   @Override

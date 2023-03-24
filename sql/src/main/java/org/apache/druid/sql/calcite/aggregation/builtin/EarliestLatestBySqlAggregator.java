@@ -28,7 +28,6 @@ import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.InferTypes;
-import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.util.Optionality;
@@ -41,6 +40,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
+import org.apache.druid.sql.calcite.expression.BasicOperandTypeChecker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -108,7 +108,12 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
       );
     }
 
-    final String fieldName = EarliestLatestAnySqlAggregator.getColumnName(plannerContext, virtualColumnRegistry, args.get(0), rexNodes.get(0));
+    final String fieldName = EarliestLatestAnySqlAggregator.getColumnName(
+        plannerContext,
+        virtualColumnRegistry,
+        args.get(0),
+        rexNodes.get(0)
+    );
 
     final AggregatorFactory theAggFactory;
     switch (args.size()) {
@@ -116,7 +121,12 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,
             fieldName,
-            EarliestLatestAnySqlAggregator.getColumnName(plannerContext, virtualColumnRegistry, args.get(1), rexNodes.get(1)),
+            EarliestLatestAnySqlAggregator.getColumnName(
+                plannerContext,
+                virtualColumnRegistry,
+                args.get(1),
+                rexNodes.get(1)
+            ),
             outputType,
             -1
         );
@@ -127,13 +137,22 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
           maxStringBytes = RexLiteral.intValue(rexNodes.get(2));
         }
         catch (AssertionError ae) {
-          plannerContext.setPlanningError("The third argument '%s' to function '%s' is not a number", rexNodes.get(2), aggregateCall.getName());
+          plannerContext.setPlanningError(
+              "The third argument '%s' to function '%s' is not a number",
+              rexNodes.get(2),
+              aggregateCall.getName()
+          );
           return null;
         }
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,
             fieldName,
-            EarliestLatestAnySqlAggregator.getColumnName(plannerContext, virtualColumnRegistry, args.get(1), rexNodes.get(1)),
+            EarliestLatestAnySqlAggregator.getColumnName(
+                plannerContext,
+                virtualColumnRegistry,
+                args.get(1),
+                rexNodes.get(1)
+            ),
             outputType,
             maxStringBytes
         );
