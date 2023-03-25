@@ -139,6 +139,7 @@ JSONPath
 JSSE
 JVM
 JVMs
+JWT
 Joda
 JsonProperty
 Jupyter
@@ -170,6 +171,7 @@ Murmur3
 MVCC
 NFS
 OCF
+OIDC
 OLAP
 OOMs
 OpenJDK
