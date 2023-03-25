@@ -425,6 +425,7 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
   private class NestedStringLiteralLexicographicalRangeIndex implements LexicographicalRangeIndex
   {
     @Override
+    @Nullable
     public BitmapColumnIndex forRange(
         @Nullable String startValue,
         boolean startStrict,
@@ -444,6 +445,7 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
     }
 
     @Override
+    @Nullable
     public BitmapColumnIndex forRange(
         @Nullable String startValue,
         boolean startStrict,
@@ -521,6 +523,7 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
   private class NestedStringLiteralPredicateIndex implements DruidPredicateIndex
   {
     @Override
+    @Nullable
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
       return new SimpleImmutableBitmapIterableIndex()
@@ -702,6 +705,7 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
   private class NestedLongLiteralNumericRangeIndex implements NumericRangeIndex
   {
     @Override
+    @Nullable
     public BitmapColumnIndex forRange(
         @Nullable Number startValue,
         boolean startStrict,
@@ -724,6 +728,7 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
   private class NestedLongLiteralPredicateIndex implements DruidPredicateIndex
   {
     @Override
+    @Nullable
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
       return new SimpleImmutableBitmapIterableIndex()
@@ -909,6 +914,7 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
   private class NestedDoubleLiteralNumericRangeIndex implements NumericRangeIndex
   {
     @Override
+    @Nullable
     public BitmapColumnIndex forRange(
         @Nullable Number startValue,
         boolean startStrict,
@@ -931,6 +937,7 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
   private class NestedDoubleLiteralPredicateIndex implements DruidPredicateIndex
   {
     @Override
+    @Nullable
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
       return new SimpleImmutableBitmapIterableIndex()
@@ -1126,6 +1133,7 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
   private class NestedVariantLiteralPredicateIndex extends NestedVariantLiteralIndex implements DruidPredicateIndex
   {
     @Override
+    @Nullable
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
       return new SimpleImmutableBitmapIterableIndex()

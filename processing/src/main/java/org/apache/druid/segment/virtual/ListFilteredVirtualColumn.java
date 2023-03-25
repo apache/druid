@@ -503,6 +503,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     }
 
     @Override
+    @Nullable
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
       return new SimpleBitmapColumnIndex()
@@ -542,6 +543,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     }
 
     @Override
+    @Nullable
     public BitmapColumnIndex forRange(
         @Nullable String startValue,
         boolean startStrict,
@@ -553,6 +555,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     }
 
     @Override
+    @Nullable
     public BitmapColumnIndex forRange(
         @Nullable String startValue,
         boolean startStrict,

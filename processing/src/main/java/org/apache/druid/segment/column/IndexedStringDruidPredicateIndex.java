@@ -47,6 +47,7 @@ public final class IndexedStringDruidPredicateIndex<TDictionary extends Indexed<
   }
 
   @Override
+  @Nullable
   public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
   {
     return new SimpleImmutableBitmapIterableIndex()

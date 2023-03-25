@@ -59,6 +59,7 @@ public final class IndexedUtf8LexicographicalRangeIndex<TDictionary extends Inde
   }
 
   @Override
+  @Nullable
   public BitmapColumnIndex forRange(
       @Nullable String startValue,
       boolean startStrict,
@@ -94,6 +95,7 @@ public final class IndexedUtf8LexicographicalRangeIndex<TDictionary extends Inde
   }
 
   @Override
+  @Nullable
   public BitmapColumnIndex forRange(
       @Nullable String startValue,
       boolean startStrict,
