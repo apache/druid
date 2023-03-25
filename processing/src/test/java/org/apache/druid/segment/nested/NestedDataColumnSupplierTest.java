@@ -48,6 +48,7 @@ import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnBuilder;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
@@ -88,6 +89,27 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
 
   private static final String NO_MATCH = "no";
 
+  private static final ColumnConfig ALWAYS_USE_INDEXES = new ColumnConfig()
+  {
+    @Override
+    public int columnCacheSizeBytes()
+    {
+      return 0;
+    }
+
+    @Override
+    public double skipValueRangeIndexScale()
+    {
+      return 1.0;
+    }
+
+    @Override
+    public double skipValuePredicateIndexScale()
+    {
+      return 1.0;
+    }
+  };
+
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
@@ -121,8 +143,6 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     TmpFileSegmentWriteOutMediumFactory writeOutMediumFactory = TmpFileSegmentWriteOutMediumFactory.instance();
     final File tmpFile = tempFolder.newFolder();
     try (final FileSmoosher smoosher = new FileSmoosher(tmpFile)) {
-
-
       NestedDataColumnSerializer serializer = new NestedDataColumnSerializer(
           fileNameBase,
           new IndexSpec(),
@@ -175,7 +195,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     NestedDataColumnSupplier supplier = NestedDataColumnSupplier.read(
         baseBuffer,
         bob,
-        () -> 0,
+        ALWAYS_USE_INDEXES,
         NestedDataComplexTypeSerde.OBJECT_MAPPER,
         new OnlyPositionalReadsTypeStrategy<>(ColumnType.LONG.getStrategy()),
         new OnlyPositionalReadsTypeStrategy<>(ColumnType.DOUBLE.getStrategy())
@@ -194,7 +214,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     NestedDataColumnSupplier supplier = NestedDataColumnSupplier.read(
         baseBuffer,
         bob,
-        () -> 0,
+        ALWAYS_USE_INDEXES,
         NestedDataComplexTypeSerde.OBJECT_MAPPER
     );
     final String expectedReason = "none";
