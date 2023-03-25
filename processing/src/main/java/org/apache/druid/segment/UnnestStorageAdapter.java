@@ -183,7 +183,7 @@ public class UnnestStorageAdapter implements StorageAdapter
   @Nullable
   public Filter getUnnestFilter()
   {
-    return unnestFilter.toFilter();
+    return unnestFilter == null ? null : unnestFilter.toFilter();
   }
 
   @Override

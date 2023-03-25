@@ -359,6 +359,59 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       return null;
     });
   }
+
+
+  @Test
+  public void test_pushdown_filters_unnested_dimension_outside()
+  {
+    final UnnestStorageAdapter unnestStorageAdapter = new UnnestStorageAdapter(
+        new TestStorageAdapter(INCREMENTAL_INDEX),
+        new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME, "\"" + COLUMNNAME + "\"", null, ExprMacroTable.nil()),
+        null
+    );
+
+    final VirtualColumn vc = unnestStorageAdapter.getUnnestColumn();
+
+    final String inputColumn = unnestStorageAdapter.getUnnestInputIfDirectAccess(vc);
+
+    final Filter expectedPushDownFilter =
+        new SelectorDimFilter(inputColumn, "1", null).toFilter();
+
+
+    final Filter queryFilter = new SelectorDimFilter(OUTPUT_COLUMN_NAME, "1", null).toFilter();
+    final Sequence<Cursor> cursorSequence = unnestStorageAdapter.makeCursors(
+        queryFilter,
+        unnestStorageAdapter.getInterval(),
+        VirtualColumns.EMPTY,
+        Granularities.ALL,
+        false,
+        null
+    );
+
+    final TestStorageAdapter base = (TestStorageAdapter) unnestStorageAdapter.getBaseAdapter();
+    final Filter pushDownFilter = base.getPushDownFilter();
+
+    Assert.assertEquals(expectedPushDownFilter, pushDownFilter);
+    cursorSequence.accumulate(null, (accumulated, cursor) -> {
+      Assert.assertEquals(cursor.getClass(), PostJoinCursor.class);
+      final Filter postFilter = ((PostJoinCursor) cursor).getPostJoinFilter();
+      Assert.assertEquals(queryFilter, postFilter);
+
+      ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+      DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
+      int count = 0;
+      while (!cursor.isDone()) {
+        Object dimSelectorVal = dimSelector.getObject();
+        if (dimSelectorVal == null) {
+          Assert.assertNull(dimSelectorVal);
+        }
+        cursor.advance();
+        count++;
+      }
+      Assert.assertEquals(1, count);
+      return null;
+    });
+  }
 }
 
 /**
