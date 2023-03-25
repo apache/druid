@@ -765,7 +765,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     @Override
-    public String getType() {
+    public String getType()
+    {
       return TYPE;
     }
   }

@@ -1732,14 +1732,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                   .bind("dataSource", dataSource)
                   .execute();
 
-            final DataSourceMetadataUpdateResult result = updateDataSourceMetadataWithHandle(
+            final DataStoreMetadataUpdateResult result = updateDataSourceMetadataWithHandle(
                 handle,
                 dataSource,
                 dataSourceMetadata,
                 dataSourceMetadata
             );
 
-            return result == DataSourceMetadataUpdateResult.SUCCESS;
+            return result == DataStoreMetadataUpdateResult.SUCCESS;
           }
         }
     );
