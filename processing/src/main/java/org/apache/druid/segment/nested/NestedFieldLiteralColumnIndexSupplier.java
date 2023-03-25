@@ -85,6 +85,8 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
 
   private final int adjustLongId;
   private final int adjustDoubleId;
+  private final int skipRangeIndexThreshold;
+  private final boolean skipPredicateIndex;
 
   public NestedFieldLiteralColumnIndexSupplier(
       NestedLiteralTypeInfo.TypeSet types,
@@ -93,7 +95,10 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
       Supplier<FixedIndexed<Integer>> localDictionarySupplier,
       Supplier<TStringDictionary> globalStringDictionarySupplier,
       Supplier<FixedIndexed<Long>> globalLongDictionarySupplier,
-      Supplier<FixedIndexed<Double>> globalDoubleDictionarySupplier
+      Supplier<FixedIndexed<Double>> globalDoubleDictionarySupplier,
+      int numRows,
+      double skipValueRangeIndexScale,
+      double skipValuePredicateIndexScale
   )
   {
     this.singleType = types.getSingleType();
@@ -105,6 +110,8 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
     this.globalDoubleDictionarySupplier = globalDoubleDictionarySupplier;
     this.adjustLongId = globalStringDictionarySupplier.get().size();
     this.adjustDoubleId = adjustLongId + globalLongDictionarySupplier.get().size();
+    this.skipRangeIndexThreshold = (int) Math.ceil(skipValueRangeIndexScale * numRows);
+    this.skipPredicateIndex = localDictionarySupplier.get().size() > Math.ceil(skipValuePredicateIndexScale * numRows);
   }
 
   @Nullable
@@ -122,6 +129,10 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
       return (T) (NullValueIndex) () -> nullIndex;
     } else if (clazz.equals(DictionaryEncodedStringValueIndex.class) || clazz.equals(DictionaryEncodedValueIndex.class)) {
       return (T) new NestedLiteralDictionaryEncodedStringValueIndex();
+    }
+
+    if (skipPredicateIndex && clazz.equals(DruidPredicateIndex.class)) {
+      return null;
     }
 
     if (singleType != null) {
@@ -244,6 +255,7 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
   }
 
 
+  @Nullable
   private <T> BitmapColumnIndex makeRangeIndex(
       @Nullable T startValue,
       boolean startStrict,
@@ -265,6 +277,10 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
     );
     final int startIndex = localRange.leftInt();
     final int endIndex = localRange.rightInt();
+    final int size = endIndex - startIndex;
+    if (size > skipRangeIndexThreshold) {
+      return null;
+    }
     return new SimpleImmutableBitmapIterableIndex()
     {
       @Override
@@ -436,24 +452,26 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
         Predicate<String> matcher
     )
     {
+      final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
+      final Indexed<ByteBuffer> stringDictionary = globalStringDictionarySupplier.get();
+      final IntIntPair range = getLocalRangeFromDictionary(
+          StringUtils.toUtf8ByteBuffer(startValue),
+          startStrict,
+          StringUtils.toUtf8ByteBuffer(endValue),
+          endStrict,
+          localDictionary,
+          stringDictionary,
+          0
+      );
+      final int start = range.leftInt(), end = range.rightInt();
+      if ((end - start) > skipRangeIndexThreshold) {
+        return null;
+      }
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
         {
-
-          final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
-          final Indexed<ByteBuffer> stringDictionary = globalStringDictionarySupplier.get();
-          final IntIntPair range = getLocalRangeFromDictionary(
-              StringUtils.toUtf8ByteBuffer(startValue),
-              startStrict,
-              StringUtils.toUtf8ByteBuffer(endValue),
-              endStrict,
-              localDictionary,
-              stringDictionary,
-              0
-          );
-          final int start = range.leftInt(), end = range.rightInt();
           return () -> new Iterator<ImmutableBitmap>()
           {
             int currIndex = start;
@@ -510,10 +528,8 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
         {
-
           return () -> new Iterator<ImmutableBitmap>()
           {
-
             final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
             final Indexed<ByteBuffer> stringDictionary = globalStringDictionarySupplier.get();
             final Predicate<String> stringPredicate = matcherFactory.makeStringPredicate();

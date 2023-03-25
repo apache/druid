@@ -83,6 +83,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     extends NestedDataComplexColumn
 {
   private final NestedDataColumnMetadata metadata;
+  private final ColumnConfig columnConfig;
   private final Closer closer;
   private final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
   private CompressedVariableSizedBlobColumn compressedRawColumn;
@@ -104,7 +105,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
 
   public CompressedNestedDataComplexColumn(
       NestedDataColumnMetadata metadata,
-      @SuppressWarnings("unused") ColumnConfig columnConfig,
+      ColumnConfig columnConfig,
       CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
       ImmutableBitmap nullValues,
       GenericIndexed<String> fields,
@@ -127,6 +128,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     this.closer = Closer.create();
     this.compressedRawColumnSupplier = compressedRawColumnSupplier;
     this.rootFieldPath = rootFieldPath;
+    this.columnConfig = columnConfig;
   }
 
   public abstract List<NestedPathPart> parsePath(String path);
@@ -511,6 +513,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
           columnBuilder.getFileMapper()
       );
       final boolean hasNull = localDictionarySupplier.get().get(0) == 0;
+
       Supplier<DictionaryEncodedColumn<?>> columnSupplier = () -> {
         FixedIndexed<Integer> localDict = localDictionarySupplier.get();
         return closer.register(new NestedFieldLiteralDictionaryEncodedColumn(
@@ -530,6 +533,10 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       columnBuilder.setHasMultipleValues(false)
                    .setHasNulls(hasNull)
                    .setDictionaryEncodedColumnSupplier(columnSupplier);
+
+      ColumnarInts intsColumn = ints.get();
+      final int size = intsColumn.size();
+      intsColumn.close();
       columnBuilder.setIndexSupplier(
           new NestedFieldLiteralColumnIndexSupplier(
               types,
@@ -538,7 +545,10 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
               localDictionarySupplier,
               stringDictionarySupplier,
               longDictionarySupplier,
-              doubleDictionarySupplier
+              doubleDictionarySupplier,
+              size,
+              columnConfig.skipValueRangeIndexScale(),
+              columnConfig.skipValuePredicateIndexScale()
           ),
           true,
           false
