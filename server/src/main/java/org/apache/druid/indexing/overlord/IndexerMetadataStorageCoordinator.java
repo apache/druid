@@ -281,6 +281,16 @@ public interface IndexerMetadataStorageCoordinator
   boolean deleteDataSourceMetadata(String dataSource);
 
   /**
+   * Override dataSourceMetadata entry for 'dataSource' to the one supplied.
+   *
+   * @param dataSource         identifier
+   * @param dataSourceMetadata value to override
+   *
+   * @return true if the entry was overrided, false otherwise
+   */
+  boolean overrideDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata);
+
+  /**
    * Resets dataSourceMetadata entry for 'dataSource' to the one supplied.
    *
    * @param dataSource         identifier

@@ -628,6 +628,13 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     throw new UnsupportedOperationException("getPosition() is not supported in Kinesis");
   }
 
+  @Nullable
+  @Override
+  public Map<String, String> getPositionFromTime(long offsetTime)
+  {
+    throw new UnsupportedOperationException("getPositionFromTime() is not supported in Kinesis");
+  }
+
   @Nonnull
   @Override
   public List<OrderedPartitionableRecord<String, String, ByteEntity>> poll(long timeout)

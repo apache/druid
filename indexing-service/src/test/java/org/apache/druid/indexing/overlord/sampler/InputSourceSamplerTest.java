@@ -1697,6 +1697,12 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     }
 
     @Override
+    public Map<Integer, Long> getPositionFromTime(long offsetTime)
+    {
+      return null;
+    }
+
+    @Override
     public Set<Integer> getPartitionIds(String stream)
     {
       return partitions;

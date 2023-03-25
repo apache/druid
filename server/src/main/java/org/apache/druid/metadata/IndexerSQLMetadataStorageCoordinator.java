@@ -1718,6 +1718,34 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
+  public boolean overrideDataSourceMetadata(final String dataSource, final DataSourceMetadata dataSourceMetadata)
+  {
+    return connector.retryWithHandle(
+        new HandleCallback<Boolean>()
+        {
+          @Override
+          public Boolean withHandle(Handle handle) throws Exception
+          {
+            handle.createStatement(
+                StringUtils.format("DELETE from %s WHERE dataSource = :dataSource", dbTables.getDataSourceTable())
+            )
+                  .bind("dataSource", dataSource)
+                  .execute();
+
+            final DataSourceMetadataUpdateResult result = updateDataSourceMetadataWithHandle(
+                handle,
+                dataSource,
+                dataSourceMetadata,
+                dataSourceMetadata
+            );
+
+            return result == DataSourceMetadataUpdateResult.SUCCESS;
+          }
+        }
+    );
+  }
+
+  @Override
   public boolean resetDataSourceMetadata(final String dataSource, final DataSourceMetadata dataSourceMetadata)
       throws IOException
   {

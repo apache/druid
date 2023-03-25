@@ -454,11 +454,14 @@ public class SupervisorResource
   @Path("/{id}/reset")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(SupervisorResourceFilter.class)
-  public Response reset(@PathParam("id") final String id)
+  public Response reset(@PathParam("id") final String id, @QueryParam("timestamp") final Long timestamp)
   {
     return asLeaderWithSupervisorManager(
         manager -> {
-          if (manager.resetSupervisor(id, null)) {
+          boolean success = timestamp != null
+                            ? manager.resetSupervisorToTime(id, timestamp)
+                            : manager.resetSupervisor(id, null);
+          if (success) {
             return Response.ok(ImmutableMap.of("id", id)).build();
           } else {
             return Response.status(Response.Status.NOT_FOUND)

@@ -262,6 +262,12 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
       throw new UnsupportedOperationException();
     }
 
+    @Override
+    public Map<Integer, Integer> getPositionFromTime(long offsetTime)
+    {
+      throw new UnsupportedOperationException();
+    }
+
     private long getMinRowSize()
     {
       return TIMESTAMP_STRING.length() + (NUM_COLS - 1) * STR_LEN;

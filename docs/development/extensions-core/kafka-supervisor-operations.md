@@ -117,6 +117,11 @@ offsets in Kafka (depending on the value of `useEarliestOffset`). After clearing
 offsets, the supervisor kills and recreates any active tasks, so that tasks begin reading 
 from valid offsets. 
 
+The `POST /druid/indexer/v1/supervisor/<supervisorId>/reset?timestamp=<timestamp in millisencond>` operation uses
+the offsets align to this timestamp, causing the supervisor to start reading offsets from
+that offsets in Kafka. After clearing stored offsets, the supervisor kills and recreates any active tasks, 
+so that tasks begin reading from valid offsets.
+
 Use care when using this operation! Resetting the supervisor may cause Kafka messages 
 to be skipped or read twice, resulting in missing or duplicate data. 
 

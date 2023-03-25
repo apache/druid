@@ -27,6 +27,7 @@ import javax.validation.constraints.NotNull;
 import java.io.Closeable;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -122,6 +123,15 @@ public interface RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType 
    * @return sequence number
    */
   SequenceOffsetType getPosition(StreamPartition<PartitionIdType> partition);
+
+  /**
+   * returns the sequence number of all partitions at the specified timestamp
+   *
+   * @param offsetTime target timestamp in millisecond
+   *
+   * @return sequence number of all partitions representing this timestamp
+   */
+  Map<PartitionIdType, SequenceOffsetType> getPositionFromTime(long offsetTime);
 
   /**
    * returns the set of partitions under the given stream

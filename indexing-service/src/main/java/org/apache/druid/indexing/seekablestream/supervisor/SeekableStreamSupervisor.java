@@ -610,6 +610,166 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
+  private class OverrideNotice implements Notice
+  {
+    final DataSourceMetadata dataSourceMetadata;
+    private static final String TYPE = "override_notice";
+
+    OverrideNotice(DataSourceMetadata dataSourceMetadata)
+    {
+      this.dataSourceMetadata = dataSourceMetadata;
+    }
+
+    @Override
+    public void handle()
+    {
+      if (!checkSourceMetadataMatch(dataSourceMetadata)) {
+        throw new IAE(
+            "Datasource metadata instance does not match required, found instance of [%s]",
+            dataSourceMetadata.getClass()
+        );
+      }
+      @SuppressWarnings("unchecked")
+      final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> resetMetadata =
+          (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) dataSourceMetadata;
+
+      if (resetMetadata.getSeekableStreamSequenceNumbers().getStream().equals(ioConfig.getStream())) {
+        final boolean metadataUpdateSuccess = indexerMetadataStorageCoordinator.overrideDataSourceMetadata(dataSource, resetMetadata);
+
+        if (metadataUpdateSuccess) {
+          resetMetadata.getSeekableStreamSequenceNumbers()
+                       .getPartitionSequenceNumberMap()
+                       .keySet()
+                       .forEach(partition -> {
+                         final int groupId = getTaskGroupIdForPartition(partition);
+                         killTaskGroupForPartitions(
+                             ImmutableSet.of(partition),
+                             "DataSourceMetadata is updated while override"
+                         );
+                         activelyReadingTaskGroups.remove(groupId);
+                         // killTaskGroupForPartitions() cleans up partitionGroups.
+                         // Add the removed groups back.
+                         partitionGroups.computeIfAbsent(groupId, k -> new HashSet<>());
+                         partitionOffsets.put(partition, getNotSetMarker());
+                       });
+        } else {
+          throw new ISE("Unable to override metadata");
+        }
+      } else {
+        log.warn(
+            "Override metadata stream [%s] and supervisor's stream name [%s] do not match",
+            resetMetadata.getSeekableStreamSequenceNumbers().getStream(),
+            ioConfig.getStream()
+        );
+      }
+    }
+
+    @VisibleForTesting
+    public void resetInternal(DataSourceMetadata dataSourceMetadata)
+    {
+      if (!checkSourceMetadataMatch(dataSourceMetadata)) {
+        throw new IAE(
+            "Datasource metadata instance does not match required, found instance of [%s]",
+            dataSourceMetadata.getClass()
+        );
+      }
+      log.info("Reset dataSource[%s] with metadata[%s]", dataSource, dataSourceMetadata);
+      // Reset only the partitions in dataSourceMetadata if it has not been reset yet
+      @SuppressWarnings("unchecked")
+      final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> resetMetadata =
+          (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) dataSourceMetadata;
+
+      if (resetMetadata.getSeekableStreamSequenceNumbers().getStream().equals(ioConfig.getStream())) {
+        // metadata can be null
+        final DataSourceMetadata metadata = indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(dataSource);
+        if (metadata != null && !checkSourceMetadataMatch(metadata)) {
+          throw new IAE(
+              "Datasource metadata instance does not match required, found instance of [%s]",
+              metadata.getClass()
+          );
+        }
+
+        @SuppressWarnings("unchecked")
+        final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentMetadata =
+            (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) metadata;
+
+        // defend against consecutive reset requests from replicas
+        // as well as the case where the metadata store do not have an entry for the reset partitions
+        boolean doReset = false;
+        for (Entry<PartitionIdType, SequenceOffsetType> resetPartitionOffset : resetMetadata
+            .getSeekableStreamSequenceNumbers()
+            .getPartitionSequenceNumberMap()
+            .entrySet()) {
+          final SequenceOffsetType partitionOffsetInMetadataStore = currentMetadata == null
+                                                                    ? null
+                                                                    : currentMetadata
+                                                                        .getSeekableStreamSequenceNumbers()
+                                                                        .getPartitionSequenceNumberMap()
+                                                                        .get(resetPartitionOffset.getKey());
+          final TaskGroup partitionTaskGroup = activelyReadingTaskGroups.get(
+              getTaskGroupIdForPartition(resetPartitionOffset.getKey())
+          );
+          final boolean isSameOffset = partitionTaskGroup != null
+                                       && partitionTaskGroup.startingSequences.get(resetPartitionOffset.getKey())
+                                                                              .equals(resetPartitionOffset.getValue());
+          if (partitionOffsetInMetadataStore != null || isSameOffset) {
+            doReset = true;
+            break;
+          }
+        }
+
+        if (!doReset) {
+          log.info("Ignoring duplicate reset request [%s]", dataSourceMetadata);
+          return;
+        }
+
+        boolean metadataUpdateSuccess;
+        if (currentMetadata == null) {
+          metadataUpdateSuccess = true;
+        } else {
+          final DataSourceMetadata newMetadata = currentMetadata.minus(resetMetadata);
+          try {
+            metadataUpdateSuccess = indexerMetadataStorageCoordinator.resetDataSourceMetadata(dataSource, newMetadata);
+          }
+          catch (IOException e) {
+            log.error("Resetting DataSourceMetadata failed [%s]", e.getMessage());
+            throw new RuntimeException(e);
+          }
+        }
+        if (metadataUpdateSuccess) {
+          resetMetadata.getSeekableStreamSequenceNumbers()
+                       .getPartitionSequenceNumberMap()
+                       .keySet()
+                       .forEach(partition -> {
+                         final int groupId = getTaskGroupIdForPartition(partition);
+                         killTaskGroupForPartitions(
+                             ImmutableSet.of(partition),
+                             "DataSourceMetadata is updated while reset"
+                         );
+                         activelyReadingTaskGroups.remove(groupId);
+                         // killTaskGroupForPartitions() cleans up partitionGroups.
+                         // Add the removed groups back.
+                         partitionGroups.computeIfAbsent(groupId, k -> new HashSet<>());
+                         partitionOffsets.put(partition, getNotSetMarker());
+                       });
+        } else {
+          throw new ISE("Unable to reset metadata");
+        }
+      } else {
+        log.warn(
+            "Reset metadata stream [%s] and supervisor's stream name [%s] do not match",
+            resetMetadata.getSeekableStreamSequenceNumbers().getStream(),
+            ioConfig.getStream()
+        );
+      }
+    }
+
+    @Override
+    public String getType() {
+      return TYPE;
+    }
+  }
+
   protected class CheckpointNotice implements Notice
   {
     private final int taskGroupId;
@@ -1004,6 +1164,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     log.info("Posting ResetNotice");
     addNotice(new ResetNotice(dataSourceMetadata));
+  }
+
+  @Override
+  public void resetToTime(long offsetTime)
+  {
+    log.info("Override %s's offset to time %s, posting OverrideNotice", dataSource, offsetTime);
+    Map<PartitionIdType, SequenceOffsetType> offsets = recordSupplier.getPositionFromTime(offsetTime);
+    log.info("The %s offset to reset is %s", dataSource, offsets);
+    notices.add(new OverrideNotice(createDataSourceMetaDataForReset(ioConfig.getStream(), offsets)));
   }
 
   public ReentrantLock getRecordSupplierLock()
