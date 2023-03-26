@@ -120,7 +120,7 @@ public class LikeFilterBenchmark
   {
     step = (END_INT - START_INT) / cardinality;
     final BitmapFactory bitmapFactory = new RoaringBitmapFactory();
-    final BitmapSerdeFactory serdeFactory = new RoaringBitmapSerdeFactory(null);
+    final BitmapSerdeFactory serdeFactory = RoaringBitmapSerdeFactory.getInstance();
     final List<Integer> ints = generateInts();
     final GenericIndexed<String> dictionary = GenericIndexed.fromIterable(
         FluentIterable.from(ints)
@@ -130,7 +130,7 @@ public class LikeFilterBenchmark
     final GenericIndexed<ByteBuffer> dictionaryUtf8 = GenericIndexed.fromIterable(
         FluentIterable.from(ints)
                       .transform(i -> ByteBuffer.wrap(StringUtils.toUtf8(String.valueOf(i)))),
-        GenericIndexed.BYTE_BUFFER_STRATEGY
+        GenericIndexed.UTF8_STRATEGY
     );
     final GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.fromIterable(
         FluentIterable.from(ints)

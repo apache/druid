@@ -85,7 +85,9 @@ public class TestGroupByBuffers implements Closeable
     }
 
     if (mergePool != null) {
-      Assert.assertEquals(0, mergePool.getOutstandingObjectCount());
+      if (mergePool.getOutstandingObjectCount() != 0) {
+        throw mergePool.getOutstandingExceptionsCreated().iterator().next();
+      }
       mergePool = null;
     }
   }

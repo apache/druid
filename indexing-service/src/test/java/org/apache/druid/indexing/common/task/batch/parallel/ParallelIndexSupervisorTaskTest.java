@@ -27,11 +27,15 @@ import org.apache.commons.codec.Charsets;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.rpc.HttpResponseException;
@@ -227,7 +231,7 @@ public class ParallelIndexSupervisorTaskTest
       final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
           null,
           new InlineInputSource("test"),
-          new JsonInputFormat(null, null, null),
+          new JsonInputFormat(null, null, null, null, null),
           appendToExisting,
           null
       );
@@ -243,7 +247,7 @@ public class ParallelIndexSupervisorTaskTest
           null,
           new HashedPartitionsSpec(null, 10, null),
           new IndexSpec(
-              new RoaringBitmapSerdeFactory(true),
+              RoaringBitmapSerdeFactory.getInstance(),
               CompressionStrategy.UNCOMPRESSED,
               CompressionStrategy.LZF,
               LongEncodingStrategy.LONGS
@@ -289,6 +293,83 @@ public class ParallelIndexSupervisorTaskTest
           null,
           indexIngestionSpec,
           null
+      );
+    }
+
+    @Test
+    public void testFailToConstructWhenBothInputSourceAndParserAreSet()
+    {
+      final ObjectMapper mapper = new DefaultObjectMapper();
+      final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
+          null,
+          new InlineInputSource("test"),
+          null,
+          false,
+          null
+      );
+      final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
+          null,
+          null,
+          null,
+          10,
+          1000L,
+          null,
+          null,
+          null,
+          null,
+          new HashedPartitionsSpec(null, 10, null),
+          new IndexSpec(
+              RoaringBitmapSerdeFactory.getInstance(),
+              CompressionStrategy.UNCOMPRESSED,
+              CompressionStrategy.LZF,
+              LongEncodingStrategy.LONGS
+          ),
+          new IndexSpec(),
+          1,
+          true,
+          true,
+          10000L,
+          OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+          null,
+          10,
+          100,
+          20L,
+          new Duration(3600),
+          128,
+          null,
+          null,
+          false,
+          null,
+          null,
+          null,
+          null,
+          null
+      );
+
+      expectedException.expect(IAE.class);
+      expectedException.expectMessage("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
+      new ParallelIndexIngestionSpec(
+          new DataSchema(
+              "datasource",
+              mapper.convertValue(
+                  new StringInputRowParser(
+                      new JSONParseSpec(
+                          new TimestampSpec(null, null, null),
+                          DimensionsSpec.EMPTY,
+                          null,
+                          null,
+                          null
+                      )
+                  ),
+                  Map.class
+              ),
+              null,
+              null,
+              null,
+              mapper
+          ),
+          ioConfig,
+          tuningConfig
       );
     }
   }

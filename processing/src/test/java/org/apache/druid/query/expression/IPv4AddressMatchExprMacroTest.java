@@ -22,6 +22,7 @@ package org.apache.druid.query.expression;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionValidationException;
 import org.apache.druid.math.expr.InputBindings;
 import org.junit.Assert;
 import org.junit.Test;
@@ -50,7 +51,7 @@ public class IPv4AddressMatchExprMacroTest extends MacroTestBase
   @Test
   public void testTooFewArgs()
   {
-    expectException(IllegalArgumentException.class, "must have 2 arguments");
+    expectException(ExpressionValidationException.class, "requires 2 arguments");
 
     apply(Collections.emptyList());
   }
@@ -58,7 +59,7 @@ public class IPv4AddressMatchExprMacroTest extends MacroTestBase
   @Test
   public void testTooManyArgs()
   {
-    expectException(IllegalArgumentException.class, "must have 2 arguments");
+    expectException(ExpressionValidationException.class, "requires 2 arguments");
 
     apply(Arrays.asList(IPV4, SUBNET_192_168, NOT_LITERAL));
   }
@@ -66,7 +67,7 @@ public class IPv4AddressMatchExprMacroTest extends MacroTestBase
   @Test
   public void testSubnetArgNotLiteral()
   {
-    expectException(IllegalArgumentException.class, "subnet arg must be a literal");
+    expectException(ExpressionValidationException.class, "subnet argument must be a literal");
 
     apply(Arrays.asList(IPV4, NOT_LITERAL));
   }

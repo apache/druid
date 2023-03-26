@@ -19,18 +19,16 @@
 
 package org.apache.druid.msq.querykit.scan;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
-import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.FrameRowTooLargeException;
 import org.apache.druid.frame.processor.ReturnOrAwait;
@@ -39,7 +37,6 @@ import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.frame.util.SettableLongVirtualColumn;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
-import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -60,7 +57,6 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.timeline.SegmentId;
@@ -79,8 +75,6 @@ import java.util.concurrent.atomic.AtomicLong;
 public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
 {
   private final ScanQuery query;
-  private final RowSignature signature;
-  private final ClusterBy clusterBy;
   private final AtomicLong runningCountForLimit;
   private final SettableLongVirtualColumn partitionBoostVirtualColumn;
   private final VirtualColumns frameWriterVirtualColumns;
@@ -93,15 +87,14 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
 
   public ScanQueryFrameProcessor(
       final ScanQuery query,
-      final RowSignature signature,
-      final ClusterBy clusterBy,
       final ReadableInput baseInput,
       final Int2ObjectMap<ReadableInput> sideChannels,
       final JoinableFactoryWrapper joinableFactory,
       final ResourceHolder<WritableFrameChannel> outputChannel,
-      final ResourceHolder<MemoryAllocator> allocator,
+      final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       @Nullable final AtomicLong runningCountForLimit,
-      final long memoryReservedForBroadcastJoin
+      final long memoryReservedForBroadcastJoin,
+      final ObjectMapper jsonMapper
   )
   {
     super(
@@ -110,19 +103,18 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         sideChannels,
         joinableFactory,
         outputChannel,
-        allocator,
+        frameWriterFactoryHolder,
         memoryReservedForBroadcastJoin
     );
     this.query = query;
-    this.signature = signature;
-    this.clusterBy = clusterBy;
     this.runningCountForLimit = runningCountForLimit;
     this.partitionBoostVirtualColumn = new SettableLongVirtualColumn(QueryKitUtils.PARTITION_BOOST_COLUMN);
 
     final List<VirtualColumn> frameWriterVirtualColumns = new ArrayList<>();
     frameWriterVirtualColumns.add(partitionBoostVirtualColumn);
 
-    final VirtualColumn segmentGranularityVirtualColumn = QueryKitUtils.makeSegmentGranularityVirtualColumn(query);
+    final VirtualColumn segmentGranularityVirtualColumn =
+        QueryKitUtils.makeSegmentGranularityVirtualColumn(jsonMapper, query);
 
     if (segmentGranularityVirtualColumn != null) {
       frameWriterVirtualColumns.add(segmentGranularityVirtualColumn);
@@ -174,7 +166,8 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         cursorYielder.close();
         return ReturnOrAwait.returnObject(rowsOutput);
       } else {
-        setNextCursor(cursorYielder.get());
+        final long rowsFlushed = setNextCursor(cursorYielder.get());
+        assert rowsFlushed == 0; // There's only ever one cursor when running with a segment
         closer.register(cursorYielder);
       }
     }
@@ -201,9 +194,9 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     if (cursor == null || cursor.isDone()) {
       if (inputChannel.canRead()) {
         final Frame frame = inputChannel.read();
-        final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader, SegmentId.dummy("x"));
+        final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader, SegmentId.dummy("scan"));
 
-        setNextCursor(
+        final long rowsFlushed = setNextCursor(
             Iterables.getOnlyElement(
                 makeCursors(
                     query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY)),
@@ -211,6 +204,10 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
                 ).toList()
             )
         );
+
+        if (rowsFlushed > 0) {
+          return ReturnOrAwait.runAgain();
+        }
       } else if (inputChannel.isFinished()) {
         flushFrameWriter();
         return ReturnOrAwait.returnObject(rowsOutput);
@@ -256,13 +253,11 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   private void createFrameWriterIfNeeded()
   {
     if (frameWriter == null) {
-      final MemoryAllocator allocator = getAllocator();
-      final FrameWriterFactory frameWriterFactory =
-          FrameWriters.makeFrameWriterFactory(FrameType.ROW_BASED, allocator, signature, clusterBy.getColumns());
+      final FrameWriterFactory frameWriterFactory = getFrameWriterFactory();
       final ColumnSelectorFactory frameWriterColumnSelectorFactory =
           frameWriterVirtualColumns.wrap(cursor.getColumnSelectorFactory());
       frameWriter = frameWriterFactory.newFrameWriter(frameWriterColumnSelectorFactory);
-      currentAllocatorCapacity = allocator.capacity();
+      currentAllocatorCapacity = frameWriterFactory.allocatorCapacity();
     }
   }
 
@@ -285,10 +280,11 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     }
   }
 
-  private void setNextCursor(final Cursor cursor) throws IOException
+  private long setNextCursor(final Cursor cursor) throws IOException
   {
-    flushFrameWriter();
+    final long rowsFlushed = flushFrameWriter();
     this.cursor = cursor;
+    return rowsFlushed;
   }
 
   private static Sequence<Cursor> makeCursors(final ScanQuery query, final StorageAdapter adapter)

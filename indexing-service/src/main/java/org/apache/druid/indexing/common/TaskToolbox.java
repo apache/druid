@@ -20,10 +20,8 @@
 package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.inject.Provider;
@@ -34,7 +32,7 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
-import org.apache.druid.indexing.common.actions.SegmentInsertAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
@@ -57,22 +55,23 @@ import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentCacheManager;
-import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.JvmUtils;
+import org.apache.druid.utils.RuntimeInfo;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Stuff that may be needed by a Task in order to conduct its business.
@@ -127,6 +126,11 @@ public class TaskToolbox
   private final ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider;
   private final ShuffleClient shuffleClient;
 
+  private final TaskLogPusher taskLogPusher;
+  private final String attemptId;
+  private final TaskStorageDirTracker dirTracker;
+
+
   public TaskToolbox(
       TaskConfig config,
       DruidNode taskExecutorNode,
@@ -164,7 +168,10 @@ public class TaskToolbox
       OverlordClient overlordClient,
       CoordinatorClient coordinatorClient,
       ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider,
-      ShuffleClient shuffleClient
+      ShuffleClient shuffleClient,
+      TaskLogPusher taskLogPusher,
+      String attemptId,
+      TaskStorageDirTracker dirTracker
   )
   {
     this.config = config;
@@ -205,6 +212,9 @@ public class TaskToolbox
     this.coordinatorClient = coordinatorClient;
     this.supervisorTaskClientProvider = supervisorTaskClientProvider;
     this.shuffleClient = shuffleClient;
+    this.taskLogPusher = taskLogPusher;
+    this.attemptId = attemptId;
+    this.dirTracker = dirTracker;
   }
 
   public TaskConfig getConfig()
@@ -314,15 +324,9 @@ public class TaskToolbox
     return jsonMapper;
   }
 
-  public Map<DataSegment, File> fetchSegments(List<DataSegment> segments)
-      throws SegmentLoadingException
+  public SegmentCacheManager getSegmentCacheManager()
   {
-    Map<DataSegment, File> retVal = Maps.newLinkedHashMap();
-    for (DataSegment segment : segments) {
-      retVal.put(segment, segmentCacheManager.getSegmentFiles(segment));
-    }
-
-    return retVal;
+    return segmentCacheManager;
   }
 
   public void publishSegments(Iterable<DataSegment> segments) throws IOException
@@ -330,17 +334,14 @@ public class TaskToolbox
     // Request segment pushes for each set
     final Multimap<Interval, DataSegment> segmentMultimap = Multimaps.index(
         segments,
-        new Function<DataSegment, Interval>()
-        {
-          @Override
-          public Interval apply(DataSegment segment)
-          {
-            return segment.getInterval();
-          }
-        }
+        DataSegment::getInterval
     );
     for (final Collection<DataSegment> segmentCollection : segmentMultimap.asMap().values()) {
-      getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.copyOf(segmentCollection)));
+      getTaskActionClient().submit(
+          SegmentTransactionalInsertAction.appendAction(
+              ImmutableSet.copyOf(segmentCollection), null, null
+          )
+      );
     }
   }
 
@@ -461,6 +462,55 @@ public class TaskToolbox
     return shuffleClient;
   }
 
+  public TaskLogPusher getTaskLogPusher()
+  {
+    return taskLogPusher;
+  }
+
+  public String getAttemptId()
+  {
+    return attemptId;
+  }
+
+  public TaskStorageDirTracker getDirTracker()
+  {
+    return dirTracker;
+  }
+
+  /**
+   * Get {@link RuntimeInfo} adjusted for this particular task. When running in a task JVM launched by a MiddleManager,
+   * this is the same as the baseline {@link RuntimeInfo}. When running in an Indexer, it is adjusted based on
+   * {@code druid.worker.capacity}.
+   */
+  public RuntimeInfo getAdjustedRuntimeInfo()
+  {
+    return createAdjustedRuntimeInfo(JvmUtils.getRuntimeInfo(), appenderatorsManager);
+  }
+
+  /**
+   * Create {@link AdjustedRuntimeInfo} based on the given {@link RuntimeInfo} and {@link AppenderatorsManager}. This
+   * is a way to allow code to properly apportion the amount of processors and heap available to the entire JVM.
+   * When running in an Indexer, other tasks share the same JVM, so this must be accounted for.
+   */
+  public static RuntimeInfo createAdjustedRuntimeInfo(
+      final RuntimeInfo runtimeInfo,
+      final AppenderatorsManager appenderatorsManager
+  )
+  {
+    if (appenderatorsManager instanceof UnifiedIndexerAppenderatorsManager) {
+      // CliIndexer. Each JVM runs multiple tasks; adjust.
+      return new AdjustedRuntimeInfo(
+          runtimeInfo,
+          ((UnifiedIndexerAppenderatorsManager) appenderatorsManager).getWorkerConfig().getCapacity()
+      );
+    } else {
+      // CliPeon (assumed to be launched by CliMiddleManager).
+      // Each JVM runs a single task. ForkingTaskRunner sets XX:ActiveProcessorCount so each task already sees
+      // an adjusted number of processors from the baseline RuntimeInfo. So, we return it directly.
+      return runtimeInfo;
+    }
+  }
+
   public static class Builder
   {
     private TaskConfig config;
@@ -500,9 +550,54 @@ public class TaskToolbox
     private IntermediaryDataManager intermediaryDataManager;
     private ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider;
     private ShuffleClient shuffleClient;
+    private TaskLogPusher taskLogPusher;
+    private String attemptId;
+    private TaskStorageDirTracker dirTracker;
 
     public Builder()
     {
+    }
+
+    public Builder(TaskToolbox other)
+    {
+      this.config = other.config;
+      this.taskExecutorNode = other.taskExecutorNode;
+      this.taskActionClient = other.taskActionClient;
+      this.emitter = other.emitter;
+      this.segmentPusher = other.segmentPusher;
+      this.dataSegmentKiller = other.dataSegmentKiller;
+      this.dataSegmentMover = other.dataSegmentMover;
+      this.dataSegmentArchiver = other.dataSegmentArchiver;
+      this.segmentAnnouncer = other.segmentAnnouncer;
+      this.serverAnnouncer = other.serverAnnouncer;
+      this.handoffNotifierFactory = other.handoffNotifierFactory;
+      this.queryRunnerFactoryConglomerateProvider = other.queryRunnerFactoryConglomerateProvider;
+      this.queryProcessingPool = other.queryProcessingPool;
+      this.joinableFactory = other.joinableFactory;
+      this.monitorSchedulerProvider = other.monitorSchedulerProvider;
+      this.segmentCacheManager = other.segmentCacheManager;
+      this.jsonMapper = other.jsonMapper;
+      this.taskWorkDir = other.taskWorkDir;
+      this.indexIO = other.indexIO;
+      this.cache = other.cache;
+      this.cacheConfig = other.cacheConfig;
+      this.cachePopulatorStats = other.cachePopulatorStats;
+      this.indexMergerV9 = other.indexMergerV9;
+      this.druidNodeAnnouncer = other.druidNodeAnnouncer;
+      this.druidNode = other.druidNode;
+      this.lookupNodeService = other.lookupNodeService;
+      this.dataNodeService = other.dataNodeService;
+      this.taskReportFileWriter = other.taskReportFileWriter;
+      this.authorizerMapper = other.authorizerMapper;
+      this.chatHandlerProvider = other.chatHandlerProvider;
+      this.rowIngestionMetersFactory = other.rowIngestionMetersFactory;
+      this.appenderatorsManager = other.appenderatorsManager;
+      this.overlordClient = other.overlordClient;
+      this.coordinatorClient = other.coordinatorClient;
+      this.intermediaryDataManager = other.intermediaryDataManager;
+      this.supervisorTaskClientProvider = other.supervisorTaskClientProvider;
+      this.shuffleClient = other.shuffleClient;
+      this.dirTracker = other.getDirTracker();
     }
 
     public Builder config(final TaskConfig config)
@@ -727,6 +822,24 @@ public class TaskToolbox
       return this;
     }
 
+    public Builder taskLogPusher(final TaskLogPusher taskLogPusher)
+    {
+      this.taskLogPusher = taskLogPusher;
+      return this;
+    }
+
+    public Builder attemptId(final String attemptId)
+    {
+      this.attemptId = attemptId;
+      return this;
+    }
+
+    public Builder dirTracker(final TaskStorageDirTracker dirTracker)
+    {
+      this.dirTracker = dirTracker;
+      return this;
+    }
+
     public TaskToolbox build()
     {
       return new TaskToolbox(
@@ -766,7 +879,10 @@ public class TaskToolbox
           overlordClient,
           coordinatorClient,
           supervisorTaskClientProvider,
-          shuffleClient
+          shuffleClient,
+          taskLogPusher,
+          attemptId,
+          dirTracker
       );
     }
   }

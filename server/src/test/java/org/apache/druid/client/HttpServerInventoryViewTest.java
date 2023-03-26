@@ -273,6 +273,50 @@ public class HttpServerInventoryViewTest
     httpServerInventoryView.stop();
   }
 
+  @Test(timeout = 60_000L)
+  public void testSyncMonitoring()
+  {
+    ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+
+    TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
+    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(DataNodeService.DISCOVERY_SERVICE_KEY))
+            .andReturn(druidNodeDiscovery);
+    EasyMock.replay(druidNodeDiscoveryProvider);
+
+    TestHttpClient httpClient = new TestHttpClient(ImmutableList.of());
+
+    HttpServerInventoryView httpServerInventoryView = new HttpServerInventoryView(
+        jsonMapper,
+        httpClient,
+        druidNodeDiscoveryProvider,
+        (pair) -> !pair.rhs.getDataSource().equals("non-loading-datasource"),
+        new HttpServerInventoryViewConfig(null, null, null),
+        "test"
+    );
+
+    httpServerInventoryView.start();
+    httpServerInventoryView.serverAdded(makeServer("abc.com:8080"));
+    httpServerInventoryView.serverAdded(makeServer("xyz.com:8080"));
+    httpServerInventoryView.serverAdded(makeServer("lol.com:8080"));
+    Assert.assertEquals(3, httpServerInventoryView.getDebugInfo().size());
+    httpServerInventoryView.syncMonitoring();
+    Assert.assertEquals(3, httpServerInventoryView.getDebugInfo().size());
+  }
+
+  private DruidServer makeServer(String host)
+  {
+    return new DruidServer(
+        host,
+        host,
+        host,
+        100_000_000L,
+        ServerType.HISTORICAL,
+        "__default_tier",
+        50
+    );
+  }
+
   private static class TestDruidNodeDiscovery implements DruidNodeDiscovery
   {
     Listener listener;

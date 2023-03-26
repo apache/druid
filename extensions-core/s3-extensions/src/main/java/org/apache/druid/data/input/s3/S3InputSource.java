@@ -30,13 +30,13 @@ import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterators;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.druid.common.aws.AWSClientConfig;
 import org.apache.druid.common.aws.AWSEndpointConfig;
 import org.apache.druid.common.aws.AWSProxyConfig;
@@ -58,6 +58,9 @@ import org.apache.druid.utils.Streams;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.URI;
+import java.nio.file.FileSystems;
+import java.nio.file.PathMatcher;
+import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -77,7 +80,6 @@ public class S3InputSource extends CloudObjectInputSource
   private final AWSProxyConfig awsProxyConfig;
   private final AWSClientConfig awsClientConfig;
   private final AWSEndpointConfig awsEndpointConfig;
-  private final AWSCredentialsProvider awsCredentialsProvider;
   private int maxRetries;
 
   /**
@@ -94,6 +96,7 @@ public class S3InputSource extends CloudObjectInputSource
    * @param uris                User provided uris to read input data
    * @param prefixes            User provided prefixes to read input data
    * @param objects             User provided cloud objects values to read input data
+   * @param objectGlob          User provided globbing rule to filter input data path
    * @param s3InputSourceConfig User provided properties for overriding the default S3 credentials
    * @param awsProxyConfig      User provided proxy information for the overridden s3 client
    * @param awsEndpointConfig   User provided s3 endpoint and region for overriding the default S3 endpoint
@@ -104,18 +107,18 @@ public class S3InputSource extends CloudObjectInputSource
       @JacksonInject ServerSideEncryptingAmazonS3 s3Client,
       @JacksonInject ServerSideEncryptingAmazonS3.Builder s3ClientBuilder,
       @JacksonInject S3InputDataConfig inputDataConfig,
+      @JacksonInject AWSCredentialsProvider awsCredentialsProvider,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
-      @JsonProperty("filter") @Nullable String filter,
+      @JsonProperty("objectGlob") @Nullable String objectGlob,
       @JsonProperty("properties") @Nullable S3InputSourceConfig s3InputSourceConfig,
       @JsonProperty("proxyConfig") @Nullable AWSProxyConfig awsProxyConfig,
       @JsonProperty("endpointConfig") @Nullable AWSEndpointConfig awsEndpointConfig,
-      @JsonProperty("clientConfig") @Nullable AWSClientConfig awsClientConfig,
-      @JacksonInject AWSCredentialsProvider awsCredentialsProvider
+      @JsonProperty("clientConfig") @Nullable AWSClientConfig awsClientConfig
   )
   {
-    super(S3StorageDruidModule.SCHEME, uris, prefixes, objects, filter);
+    super(S3StorageDruidModule.SCHEME, uris, prefixes, objects, objectGlob);
     this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "S3DataSegmentPusherConfig");
     Preconditions.checkNotNull(s3Client, "s3Client");
     this.s3InputSourceConfig = s3InputSourceConfig;
@@ -174,36 +177,36 @@ public class S3InputSource extends CloudObjectInputSource
         }
     );
     this.maxRetries = RetryUtils.DEFAULT_MAX_TRIES;
-    this.awsCredentialsProvider = awsCredentialsProvider;
   }
 
   @VisibleForTesting
-  public S3InputSource(
+  S3InputSource(
       ServerSideEncryptingAmazonS3 s3Client,
       ServerSideEncryptingAmazonS3.Builder s3ClientBuilder,
       S3InputDataConfig inputDataConfig,
       List<URI> uris,
       List<URI> prefixes,
       List<CloudObjectLocation> objects,
-      String filter,
+      String objectGlob,
       S3InputSourceConfig s3InputSourceConfig,
       AWSProxyConfig awsProxyConfig,
       AWSEndpointConfig awsEndpointConfig,
       AWSClientConfig awsClientConfig
   )
   {
-    this(s3Client,
-         s3ClientBuilder,
-         inputDataConfig,
-         uris,
-         prefixes,
-         objects,
-         filter,
-         s3InputSourceConfig,
-         awsProxyConfig,
-         awsEndpointConfig,
-         awsClientConfig,
-         null
+    this(
+        s3Client,
+        s3ClientBuilder,
+        inputDataConfig,
+        null,
+        uris,
+        prefixes,
+        objects,
+        objectGlob,
+        s3InputSourceConfig,
+        awsProxyConfig,
+        awsEndpointConfig,
+        awsClientConfig
     );
   }
 
@@ -215,7 +218,7 @@ public class S3InputSource extends CloudObjectInputSource
       List<URI> uris,
       List<URI> prefixes,
       List<CloudObjectLocation> objects,
-      String filter,
+      String objectGlob,
       S3InputSourceConfig s3InputSourceConfig,
       AWSProxyConfig awsProxyConfig,
       AWSEndpointConfig awsEndpointConfig,
@@ -227,15 +230,15 @@ public class S3InputSource extends CloudObjectInputSource
         s3Client,
         s3ClientBuilder,
         inputDataConfig,
+        null,
         uris,
         prefixes,
         objects,
-        filter,
+        objectGlob,
         s3InputSourceConfig,
         awsProxyConfig,
         awsEndpointConfig,
-        awsClientConfig,
-        null
+        awsClientConfig
     );
     this.maxRetries = maxRetries;
   }
@@ -278,6 +281,7 @@ public class S3InputSource extends CloudObjectInputSource
 
   @Nullable
   @JsonProperty("properties")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public S3InputSourceConfig getS3InputSourceConfig()
   {
     return s3InputSourceConfig;
@@ -285,6 +289,7 @@ public class S3InputSource extends CloudObjectInputSource
 
   @Nullable
   @JsonProperty("proxyConfig")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public AWSProxyConfig getAwsProxyConfig()
   {
     return awsProxyConfig;
@@ -292,6 +297,7 @@ public class S3InputSource extends CloudObjectInputSource
 
   @Nullable
   @JsonProperty("clientConfig")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public AWSClientConfig getAwsClientConfig()
   {
     return awsClientConfig;
@@ -299,6 +305,7 @@ public class S3InputSource extends CloudObjectInputSource
 
   @Nullable
   @JsonProperty("endpointConfig")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public AWSEndpointConfig getAwsEndpointConfig()
   {
     return awsEndpointConfig;
@@ -334,13 +341,13 @@ public class S3InputSource extends CloudObjectInputSource
         inputDataConfig,
         null,
         null,
+        null,
         split.get(),
-        getFilter(),
+        getObjectGlob(),
         getS3InputSourceConfig(),
         getAwsProxyConfig(),
         getAwsEndpointConfig(),
-        getAwsClientConfig(),
-        awsCredentialsProvider
+        getAwsClientConfig()
     );
   }
 
@@ -376,7 +383,7 @@ public class S3InputSource extends CloudObjectInputSource
            "uris=" + getUris() +
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
-           ", filter=" + getFilter() +
+           ", objectGlob=" + getObjectGlob() +
            ", s3InputSourceConfig=" + getS3InputSourceConfig() +
            ", awsProxyConfig=" + getAwsProxyConfig() +
            ", awsEndpointConfig=" + getAwsEndpointConfig() +
@@ -395,10 +402,12 @@ public class S3InputSource extends CloudObjectInputSource
       );
 
       // Skip files that didn't match filter.
-      if (org.apache.commons.lang.StringUtils.isNotBlank(getFilter())) {
+      if (org.apache.commons.lang.StringUtils.isNotBlank(getObjectGlob())) {
+        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + getObjectGlob());
+
         iterator = Iterators.filter(
             iterator,
-            object -> FilenameUtils.wildcardMatch(object.getKey(), getFilter())
+            object -> m.matches(Paths.get(object.getKey()))
         );
       }
 

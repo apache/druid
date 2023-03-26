@@ -53,16 +53,20 @@ import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
+import org.apache.druid.server.ResponseContextConfig;
+import org.apache.druid.server.initialization.AuthenticatorMapperModule;
 import org.apache.druid.server.log.NoopRequestLogger;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.NoopEscalator;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.view.DruidViewMacro;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
+import org.apache.druid.sql.http.SqlResourceTest;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.Mock;
@@ -165,12 +169,16 @@ public class SqlModuleTest
 
   private Injector makeInjectorWithProperties(final Properties props)
   {
+    final SqlModule sqlModule = new SqlModule();
+    sqlModule.setProps(props);
+
     return Guice.createInjector(
         ImmutableList.of(
             new DruidGuiceExtensions(),
             new LifecycleModule(),
             new ServerModule(),
             new JacksonModule(),
+            new AuthenticatorMapperModule(),
             (Module) binder -> {
               binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
               binder.bind(JsonConfigurator.class).in(LazySingleton.class);
@@ -196,8 +204,10 @@ public class SqlModuleTest
               binder.bind(QueryScheduler.class)
                     .toProvider(QuerySchedulerProvider.class)
                     .in(LazySingleton.class);
+              binder.bind(ResponseContextConfig.class).toInstance(SqlResourceTest.TEST_RESPONSE_CONTEXT_CONFIG);
+              binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
             },
-            new SqlModule(props),
+            sqlModule,
             new TestViewManagerModule()
         )
     );

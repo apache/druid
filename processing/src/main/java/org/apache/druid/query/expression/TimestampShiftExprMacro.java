@@ -20,7 +20,6 @@
 package org.apache.druid.query.expression;
 
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -50,9 +49,7 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public Expr apply(final List<Expr> args)
   {
-    if (args.size() < 3 || args.size() > 4) {
-      throw new IAE("Function[%s] must have 3 to 4 arguments", name());
-    }
+    validationHelperCheckArgumentRange(args, 3, 4);
 
     if (args.stream().skip(1).allMatch(Expr::isLiteral)) {
       return new TimestampShiftExpr(args);
@@ -122,11 +119,11 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
     {
       ExprVectorProcessor<?> processor;
       processor = new LongOutLongInFunctionVectorValueProcessor(
-          CastToTypeVectorProcessor.cast(args.get(0).buildVectorized(inspector), ExpressionType.LONG),
+          CastToTypeVectorProcessor.cast(args.get(0).asVectorProcessor(inspector), ExpressionType.LONG),
           inspector.getMaxVectorSize()
       )
       {

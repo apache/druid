@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.rel;
 
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 import java.util.Optional;
@@ -63,7 +64,7 @@ public class DruidRels
    * @param canBeJoinOrUnion consider a {@link DruidJoinQueryRel} or {@link DruidUnionDataSourceRel} as possible
    *                         scans-and-mappings too.
    */
-  private static boolean isScanOrProject(final DruidRel<?> druidRel, final boolean canBeJoinOrUnion)
+  public static boolean isScanOrProject(final DruidRel<?> druidRel, final boolean canBeJoinOrUnion)
   {
     if (druidRel instanceof DruidQueryRel || (canBeJoinOrUnion && (druidRel instanceof DruidJoinQueryRel
                                                                    || druidRel instanceof DruidUnionDataSourceRel))) {
@@ -73,6 +74,25 @@ public class DruidRels
              && partialQuery.getWhereFilter() == null;
     } else {
       return false;
+    }
+  }
+
+  /**
+   * Returns the signature of the datasource of a {@link DruidRel}.
+   *
+   * This is not the signature of the {@link DruidRel} itself: in particular, it ignores any operations that are layered
+   * on top of the datasource.
+   */
+  public static RowSignature dataSourceSignature(final DruidRel<?> druidRel)
+  {
+    if (druidRel instanceof DruidQueryRel) {
+      // Get signature directly from the table.
+      return ((DruidQueryRel) druidRel).getDruidTable().getRowSignature();
+    } else {
+      // Build the query with a no-op PartialDruidQuery.
+      return druidRel.withPartialQuery(
+          PartialDruidQuery.create(druidRel.getPartialDruidQuery().getScan())
+      ).toDruidQuery(false).getOutputRowSignature();
     }
   }
 }

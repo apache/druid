@@ -52,6 +52,7 @@ import org.apache.druid.guice.ListProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
@@ -95,6 +96,9 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorModule;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorResource;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager;
+import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
+import org.apache.druid.indexing.worker.shuffle.LocalIntermediaryDataManager;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.lookup.LookupSerdeModule;
@@ -119,6 +123,7 @@ import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.druid.tasklogs.TaskLogs;
+import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -185,6 +190,7 @@ public class CliOverlord extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
             JsonConfigProvider.bind(binder, "druid.indexer.task.default", DefaultTaskConfig.class);
             JsonConfigProvider.bind(binder, "druid.indexer.auditlog", TaskAuditLogConfig.class);
+            binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);
 
             binder.bind(TaskMaster.class).in(ManageLifecycle.class);
             binder.bind(TaskCountStatsProvider.class).to(TaskMaster.class);
@@ -233,6 +239,7 @@ public class CliOverlord extends ServerRunnable
             binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
 
             configureTaskStorage(binder);
+            configureIntermediaryData(binder);
             configureAutoscale(binder);
             configureRunners(binder);
             configureOverlordHelpers(binder);
@@ -291,6 +298,21 @@ public class CliOverlord extends ServerRunnable
             storageBinder.addBinding("metadata").to(MetadataTaskStorage.class).in(ManageLifecycle.class);
             binder.bind(MetadataTaskStorage.class).in(LazySingleton.class);
           }
+          private void configureIntermediaryData(Binder binder)
+          {
+            PolyBind.createChoice(
+                binder,
+                "druid.processing.intermediaryData.storage.type",
+                Key.get(IntermediaryDataManager.class),
+                Key.get(LocalIntermediaryDataManager.class)
+            );
+            final MapBinder<String, IntermediaryDataManager> biddy = PolyBind.optionBinder(
+                binder,
+                Key.get(IntermediaryDataManager.class)
+            );
+            biddy.addBinding("local").to(LocalIntermediaryDataManager.class);
+            biddy.addBinding("deepstore").to(DeepStorageIntermediaryDataManager.class).in(LazySingleton.class);
+          }
 
           private void configureRunners(Binder binder)
           {
@@ -300,7 +322,7 @@ public class CliOverlord extends ServerRunnable
                 binder,
                 "druid.indexer.runner.type",
                 Key.get(TaskRunnerFactory.class),
-                Key.get(ForkingTaskRunnerFactory.class)
+                Key.get(HttpRemoteTaskRunnerFactory.class)
             );
             final MapBinder<String, TaskRunnerFactory> biddy = PolyBind.optionBinder(
                 binder,
@@ -430,10 +452,13 @@ public class CliOverlord extends ServerRunnable
 
       root.addFilter(GuiceFilter.class, "/druid-ext/*", null);
 
+      RewriteHandler rewriteHandler = WebConsoleJettyServerInitializer.createWebConsoleRewriteHandler();
+      JettyServerInitUtils.maybeAddHSTSPatternRule(serverConfig, rewriteHandler);
+
       HandlerList handlerList = new HandlerList();
       handlerList.setHandlers(
           new Handler[]{
-              WebConsoleJettyServerInitializer.createWebConsoleRewriteHandler(),
+              rewriteHandler,
               JettyServerInitUtils.getJettyRequestLogHandler(),
               JettyServerInitUtils.wrapWithDefaultGzipHandler(
                   root,

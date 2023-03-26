@@ -30,7 +30,7 @@ cp -R docker $SHARED_DIR/docker
 
 pushd ../
 rm -rf distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin
-mvn -P skip-static-checks,skip-tests -T1C -Danimal.sniffer.skip=true -Dcheckstyle.skip=true -Ddruid.console.skip=true -Denforcer.skip=true -Dforbiddenapis.skip=true -Dmaven.javadoc.skip=true -Dpmd.skip=true -Dspotbugs.skip=true install -Pintegration-test
+mvn -P skip-static-checks,skip-tests -T1C -Danimal.sniffer.skip=true -Dcheckstyle.skip=true -Dweb.console.skip=true -Denforcer.skip=true -Dforbiddenapis.skip=true -Dmaven.javadoc.skip=true -Dpmd.skip=true -Dspotbugs.skip=true install -Pintegration-test
 mv distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin/lib $SHARED_DIR/docker/lib
 mv distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin/extensions $SHARED_DIR/docker/extensions
 popd

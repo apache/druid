@@ -71,8 +71,8 @@ import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.Interval;
@@ -226,7 +226,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   }
 
   @Override
-  public TaskStatus runTask(final TaskToolbox toolbox)
+  public TaskStatus runTask(final TaskToolbox toolbox) throws Exception
   {
     try {
       if (missingIntervalsInOverwriteMode) {
@@ -247,9 +247,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
           ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
       );
 
-      final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
-          ingestionSchema.getDataSchema().getParser()
-      );
+      final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource();
 
       final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientProvider().build(
           supervisorTaskId,
@@ -267,7 +265,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       // Find inputSegments overshadowed by pushedSegments
       final Set<DataSegment> allSegments = new HashSet<>(getTaskLockHelper().getLockedExistingSegments());
       allSegments.addAll(pushedSegments);
-      final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(allSegments);
+      final SegmentTimeline timeline = SegmentTimeline.forSegments(allSegments);
       final Set<DataSegment> oldSegments = FluentIterable.from(timeline.findFullyOvershadowed())
                                                          .transformAndConcat(TimelineObjectHolder::getObject)
                                                          .transform(PartitionChunk::getObject)
@@ -307,8 +305,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     return findInputSegments(
         getDataSource(),
         taskActionClient,
-        intervals,
-        ingestionSchema.getIOConfig().getFirehoseFactory()
+        intervals
     );
   }
 

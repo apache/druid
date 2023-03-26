@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
-import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 
@@ -46,8 +45,11 @@ import java.nio.channels.WritableByteChannel;
 
 /**
  * Streams arrays of objects out in the binary format described by {@link GenericIndexed}
+ *
+ * The version {@link EncodedStringDictionaryWriter#VERSION} is reserved and must never be specified as the
+ * {@link GenericIndexed} version byte, else it will interfere with string column deserialization.
  */
-public class GenericIndexedWriter<T> implements Serializer
+public class GenericIndexedWriter<T> implements DictionaryWriter<T>
 {
   private static final int PAGE_SIZE = 4096;
 
@@ -213,6 +215,7 @@ public class GenericIndexedWriter<T> implements Serializer
     }
   }
 
+  @Override
   public void open() throws IOException
   {
     headerOut = segmentWriteOutMedium.makeWriteOutBytes();
@@ -224,12 +227,19 @@ public class GenericIndexedWriter<T> implements Serializer
     objectsSorted = false;
   }
 
+  @Override
+  public boolean isSorted()
+  {
+    return objectsSorted;
+  }
+
   @VisibleForTesting
   void setIntMaxForCasting(final int intMaxForCasting)
   {
     this.intMaxForCasting = intMaxForCasting;
   }
 
+  @Override
   public void write(@Nullable T objectToWrite) throws IOException
   {
     if (objectsSorted && prevObject != null && strategy.compare(prevObject, objectToWrite) >= 0) {
@@ -271,6 +281,7 @@ public class GenericIndexedWriter<T> implements Serializer
   }
 
   @Nullable
+  @Override
   public T get(int index) throws IOException
   {
     long startOffset;

@@ -28,6 +28,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.SketchQueryContext;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -48,6 +49,13 @@ import java.util.List;
 
 public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
 {
+  private final boolean finalizeSketch;
+
+  protected ThetaSketchBaseSqlAggregator(boolean finalizeSketch)
+  {
+    this.finalizeSketch = finalizeSketch;
+  }
+
   @Nullable
   @Override
   public Aggregation toDruidAggregation(
@@ -65,6 +73,7 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
     // Don't use Aggregations.getArgumentsForSimpleAggregator, since it won't let us use direct column access
     // for string columns.
     final RexNode columnRexNode = Expressions.fromFieldAccess(
+        rexBuilder.getTypeFactory(),
         rowSignature,
         project,
         aggregateCall.getArgList().get(0)
@@ -78,6 +87,7 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
     final int sketchSize;
     if (aggregateCall.getArgList().size() >= 2) {
       final RexNode sketchSizeArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(1)
@@ -97,12 +107,14 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
     if (columnArg.isDirectColumnAccess()
-        && rowSignature.getColumnType(columnArg.getDirectColumn()).map(type -> type.is(ValueType.COMPLEX)).orElse(false)) {
+        && rowSignature.getColumnType(columnArg.getDirectColumn())
+                       .map(type -> type.is(ValueType.COMPLEX))
+                       .orElse(false)) {
       aggregatorFactory = new SketchMergeAggregatorFactory(
           aggregatorName,
           columnArg.getDirectColumn(),
           sketchSize,
-          null,
+          finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
           null,
           null
       );
@@ -133,7 +145,7 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
           aggregatorName,
           dimensionSpec.getDimension(),
           sketchSize,
-          null,
+          finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
           null,
           null
       );

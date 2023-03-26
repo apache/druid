@@ -112,6 +112,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+@Deprecated
 public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements ChatHandler
 {
   private static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
@@ -242,7 +243,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox)
+  public TaskStatus runTask(final TaskToolbox toolbox)
   {
     runThread = Thread.currentThread();
     authorizerMapper = toolbox.getAuthorizerMapper();

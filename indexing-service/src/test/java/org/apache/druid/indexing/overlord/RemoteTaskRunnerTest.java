@@ -37,7 +37,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IndexingServiceCondition;
-import org.apache.druid.indexing.common.TestRealtimeTask;
+import org.apache.druid.indexing.common.TestIndexTask;
 import org.apache.druid.indexing.common.TestTasks;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.Task;
@@ -251,7 +251,7 @@ public class RemoteTaskRunnerTest
   {
     doSetup();
 
-    TestRealtimeTask task1 = new TestRealtimeTask(
+    TestIndexTask task1 = new TestIndexTask(
         "rt1",
         new TaskResource("rt1", 1),
         "foo",
@@ -262,7 +262,7 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(taskAnnounced(task1.getId()));
     mockWorkerRunningTask(task1);
 
-    TestRealtimeTask task2 = new TestRealtimeTask(
+    TestIndexTask task2 = new TestIndexTask(
         "rt2",
         new TaskResource("rt1", 1),
         "foo",
@@ -271,7 +271,7 @@ public class RemoteTaskRunnerTest
     );
     remoteTaskRunner.run(task2);
 
-    TestRealtimeTask task3 = new TestRealtimeTask(
+    TestIndexTask task3 = new TestIndexTask(
         "rt3",
         new TaskResource("rt2", 1),
         "foo",
@@ -314,7 +314,7 @@ public class RemoteTaskRunnerTest
   {
     doSetup();
 
-    TestRealtimeTask task1 = new TestRealtimeTask(
+    TestIndexTask task1 = new TestIndexTask(
         "rt1",
         new TaskResource("rt1", 1),
         "foo",
@@ -325,7 +325,7 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(taskAnnounced(task1.getId()));
     mockWorkerRunningTask(task1);
 
-    TestRealtimeTask task2 = new TestRealtimeTask(
+    TestIndexTask task2 = new TestIndexTask(
         "rt2",
         new TaskResource("rt2", 3),
         "foo",
@@ -334,7 +334,7 @@ public class RemoteTaskRunnerTest
     );
     remoteTaskRunner.run(task2);
 
-    TestRealtimeTask task3 = new TestRealtimeTask(
+    TestIndexTask task3 = new TestIndexTask(
         "rt3",
         new TaskResource("rt3", 2),
         "foo",
@@ -406,7 +406,7 @@ public class RemoteTaskRunnerTest
 
     makeRemoteTaskRunner(rtrConfig);
 
-    TestRealtimeTask task1 = new TestRealtimeTask(
+    TestIndexTask task1 = new TestIndexTask(
         "first",
         new TaskResource("first", 1),
         "foo",
@@ -417,7 +417,7 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(taskAnnounced(task1.getId()));
     mockWorkerRunningTask(task1);
 
-    TestRealtimeTask task = new TestRealtimeTask(
+    TestIndexTask task = new TestIndexTask(
         "second",
         new TaskResource("task", 2),
         "foo",
@@ -426,7 +426,7 @@ public class RemoteTaskRunnerTest
     );
     remoteTaskRunner.run(task);
 
-    TestRealtimeTask task2 = new TestRealtimeTask(
+    TestIndexTask task2 = new TestIndexTask(
         "second",
         new TaskResource("second", 2),
         "foo",
@@ -457,7 +457,7 @@ public class RemoteTaskRunnerTest
   public void testRunWithTaskComplete() throws Exception
   {
     doSetup();
-    TestRealtimeTask task1 = new TestRealtimeTask(
+    TestIndexTask task1 = new TestIndexTask(
         "testTask",
         new TaskResource("testTask", 2),
         "foo",
@@ -568,6 +568,7 @@ public class RemoteTaskRunnerTest
   public void testRunPendingTaskFailToAssignTask() throws Exception
   {
     doSetup();
+    Thread.sleep(100);
     RemoteTaskRunnerWorkItem originalItem = remoteTaskRunner.addPendingTask(task);
     // modify taskId to make task assignment failed
     RemoteTaskRunnerWorkItem wankyItem = Mockito.mock(RemoteTaskRunnerWorkItem.class);
@@ -816,11 +817,11 @@ public class RemoteTaskRunnerTest
 
     makeRemoteTaskRunner(rtrConfig);
 
-    TestRealtimeTask task1 = new TestRealtimeTask(
-        "realtime1",
-        new TaskResource("realtime1", 1),
+    TestIndexTask task1 = new TestIndexTask(
+        "test_index1",
+        new TaskResource("test_index1", 1),
         "foo",
-        TaskStatus.success("realtime1"),
+        TaskStatus.success("test_index1"),
         jsonMapper
     );
     Future<TaskStatus> taskFuture1 = remoteTaskRunner.run(task1);
@@ -834,11 +835,11 @@ public class RemoteTaskRunnerTest
         remoteTaskRunner.findWorkerRunningTask(task1.getId()).getContinuouslyFailedTasksCount()
     );
 
-    TestRealtimeTask task2 = new TestRealtimeTask(
-        "realtime2",
-        new TaskResource("realtime2", 1),
+    TestIndexTask task2 = new TestIndexTask(
+        "test_index2",
+        new TaskResource("test_index2", 1),
         "foo",
-        TaskStatus.running("realtime2"),
+        TaskStatus.running("test_index2"),
         jsonMapper
     );
     Future<TaskStatus> taskFuture2 = remoteTaskRunner.run(task2);
@@ -869,11 +870,11 @@ public class RemoteTaskRunnerTest
         remoteTaskRunner.findWorkerRunningTask(task2.getId()).getContinuouslyFailedTasksCount()
     );
 
-    TestRealtimeTask task3 = new TestRealtimeTask(
-        "realtime3",
-        new TaskResource("realtime3", 1),
+    TestIndexTask task3 = new TestIndexTask(
+        "test_index3",
+        new TaskResource("test_index3", 1),
         "foo",
-        TaskStatus.running("realtime3"),
+        TaskStatus.running("test_index3"),
         jsonMapper
     );
     Future<TaskStatus> taskFuture3 = remoteTaskRunner.run(task3);
@@ -908,7 +909,7 @@ public class RemoteTaskRunnerTest
 
     for (int i = 1; i < 13; i++) {
       String taskId = StringUtils.format("rt-%d", i);
-      TestRealtimeTask task = new TestRealtimeTask(
+      TestIndexTask task = new TestIndexTask(
           taskId,
           new TaskResource(taskId, 1),
           "foo",
@@ -963,7 +964,7 @@ public class RemoteTaskRunnerTest
 
     for (int i = 1; i < 13; i++) {
       String taskId = StringUtils.format("rt-%d", i);
-      TestRealtimeTask task = new TestRealtimeTask(
+      TestIndexTask task = new TestIndexTask(
           taskId,
           new TaskResource(taskId, 1),
           "foo",
@@ -1008,14 +1009,14 @@ public class RemoteTaskRunnerTest
 
     makeRemoteTaskRunner(rtrConfig);
 
-    TestRealtimeTask task1 = new TestRealtimeTask(
-        "realtime1", new TaskResource("realtime1", 1), "foo", TaskStatus.success("realtime1"), jsonMapper
+    TestIndexTask task1 = new TestIndexTask(
+        "test_index1", new TaskResource("test_index1", 1), "foo", TaskStatus.success("test_index1"), jsonMapper
     );
-    TestRealtimeTask task2 = new TestRealtimeTask(
-        "realtime2", new TaskResource("realtime2", 1), "foo", TaskStatus.success("realtime2"), jsonMapper
+    TestIndexTask task2 = new TestIndexTask(
+        "test_index2", new TaskResource("test_index2", 1), "foo", TaskStatus.success("test_index2"), jsonMapper
     );
-    TestRealtimeTask task3 = new TestRealtimeTask(
-        "realtime3", new TaskResource("realtime3", 1), "foo", TaskStatus.success("realtime3"), jsonMapper
+    TestIndexTask task3 = new TestIndexTask(
+        "test_index3", new TaskResource("test_index3", 1), "foo", TaskStatus.success("test_index3"), jsonMapper
     );
 
     Future<TaskStatus> taskFuture1 = remoteTaskRunner.run(task1);

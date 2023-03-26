@@ -51,6 +51,7 @@ import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -175,7 +176,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     final List<RexNode> rexNodes = aggregateCall
         .getArgList()
         .stream()
-        .map(i -> Expressions.fromFieldAccess(rowSignature, project, i))
+        .map(i -> Expressions.fromFieldAccess(rexBuilder.getTypeFactory(), rowSignature, project, i))
         .collect(Collectors.toList());
 
     final List<DruidExpression> args = Expressions.toDruidExpressions(plannerContext, rowSignature, rexNodes);
@@ -196,18 +197,36 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
 
     final String fieldName = getColumnName(plannerContext, virtualColumnRegistry, args.get(0), rexNodes.get(0));
 
+    if (!rowSignature.contains(ColumnHolder.TIME_COLUMN_NAME) && (aggregatorType == AggregatorType.LATEST || aggregatorType == AggregatorType.EARLIEST)) {
+      plannerContext.setPlanningError("%s() aggregator depends on __time column, the underlying datasource "
+                                      + "or extern function you are querying doesn't contain __time column, "
+                                      + "Please use %s_BY() and specify the time column you want to use",
+                                      aggregatorType.name(),
+                                      aggregatorType.name()
+      );
+      return null;
+    }
+
     final AggregatorFactory theAggFactory;
     switch (args.size()) {
       case 1:
         theAggFactory = aggregatorType.createAggregatorFactory(aggregatorName, fieldName, null, outputType, -1);
         break;
       case 2:
+        int maxStringBytes;
+        try {
+          maxStringBytes = RexLiteral.intValue(rexNodes.get(1));
+        }
+        catch (AssertionError ae) {
+          plannerContext.setPlanningError("The second argument '%s' to function '%s' is not a number", rexNodes.get(1), aggregateCall.getName());
+          return null;
+        }
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,
             fieldName,
             null,
             outputType,
-            RexLiteral.intValue(rexNodes.get(1))
+            maxStringBytes
         );
         break;
       default:

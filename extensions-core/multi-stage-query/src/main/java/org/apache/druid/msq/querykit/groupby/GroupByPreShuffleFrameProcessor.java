@@ -23,12 +23,9 @@ import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
-import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.FrameRowTooLargeException;
 import org.apache.druid.frame.processor.ReturnOrAwait;
@@ -36,7 +33,6 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
-import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -66,8 +62,6 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
 {
   private final GroupByQuery query;
   private final GroupByStrategySelector strategySelector;
-  private final RowSignature aggregationSignature;
-  private final ClusterBy clusterBy;
   private final ColumnSelectorFactory frameWriterColumnSelectorFactory;
   private final Closer closer = Closer.create();
 
@@ -82,10 +76,8 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
       final Int2ObjectMap<ReadableInput> sideChannels,
       final GroupByStrategySelector strategySelector,
       final JoinableFactoryWrapper joinableFactory,
-      final RowSignature aggregationSignature,
-      final ClusterBy clusterBy,
       final ResourceHolder<WritableFrameChannel> outputChannel,
-      final ResourceHolder<MemoryAllocator> allocator,
+      final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       final long memoryReservedForBroadcastJoin
   )
   {
@@ -95,13 +87,11 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
         sideChannels,
         joinableFactory,
         outputChannel,
-        allocator,
+        frameWriterFactoryHolder,
         memoryReservedForBroadcastJoin
     );
     this.query = query;
     this.strategySelector = strategySelector;
-    this.aggregationSignature = aggregationSignature;
-    this.clusterBy = clusterBy;
     this.frameWriterColumnSelectorFactory = RowBasedGrouperHelper.createResultRowBasedColumnSelectorFactory(
         query,
         () -> resultYielder.get(),
@@ -209,16 +199,9 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   private void createFrameWriterIfNeeded()
   {
     if (frameWriter == null) {
-      final MemoryAllocator allocator = getAllocator();
-      final FrameWriterFactory frameWriterFactory =
-          FrameWriters.makeFrameWriterFactory(
-              FrameType.ROW_BASED,
-              allocator,
-              aggregationSignature,
-              clusterBy.getColumns()
-          );
+      final FrameWriterFactory frameWriterFactory = getFrameWriterFactory();
       frameWriter = frameWriterFactory.newFrameWriter(frameWriterColumnSelectorFactory);
-      currentAllocatorCapacity = allocator.capacity();
+      currentAllocatorCapacity = frameWriterFactory.allocatorCapacity();
     }
   }
 

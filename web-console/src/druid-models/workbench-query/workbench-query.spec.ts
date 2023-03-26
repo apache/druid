@@ -157,7 +157,6 @@ describe('WorkbenchQuery', () => {
             '[{"name":"timestamp","type":"string"}]'
           )
         )
-        ORDER BY FLOOR(__time TO HOUR), browser, session
       `);
     });
   });
@@ -423,6 +422,20 @@ describe('WorkbenchQuery', () => {
         sqlPrefixLines: 0,
       });
     });
+
+    it('works with sql with ISSUE comment', () => {
+      const sql = sane`
+        SELECT *
+        --:ISSUE: There is something wrong with this query.
+        FROM wikipedia
+      `;
+
+      const workbenchQuery = WorkbenchQuery.blank().changeQueryString(sql);
+
+      expect(() => workbenchQuery.getApiQuery(makeQueryId)).toThrow(
+        `This query contains an ISSUE comment: There is something wrong with this query. (Please resolve the issue in the comment, delete the ISSUE comment and re-run the query.)`,
+      );
+    });
   });
 
   describe('#getIngestDatasource', () => {
@@ -451,7 +464,7 @@ describe('WorkbenchQuery', () => {
     it('works with INSERT (unparsable)', () => {
       const sql = sane`
         -- Some comment
-        INSERT INTO trips2
+        INSERT into trips2
         SELECT
           TIME_PARSE(pickup_datetime) AS __time,
           *
@@ -486,6 +499,19 @@ describe('WorkbenchQuery', () => {
 
     it('works with REPLACE (unparsable)', () => {
       const sql = sane`
+        REPLACE INTO trips2 OVERWRITE ALL
+        WITH kttm_data AS (SELECT *
+      `;
+
+      const workbenchQuery = WorkbenchQuery.blank().changeQueryString(sql);
+      expect(workbenchQuery.getIngestDatasource()).toEqual('trips2');
+      expect(workbenchQuery.changeEngine('sql-native').getIngestDatasource()).toBeUndefined();
+    });
+
+    it('works with REPLACE (unparsable with comment at start)', () => {
+      const sql = sane`
+        -- Hello world SELECT
+
         REPLACE INTO trips2 OVERWRITE ALL
         WITH kttm_data AS (SELECT *
       `;

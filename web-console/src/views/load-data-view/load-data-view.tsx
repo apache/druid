@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import type { IconName } from '@blueprintjs/core';
 import {
   Alert,
   AnchorButton,
@@ -27,7 +28,6 @@ import {
   FormGroup,
   H5,
   Icon,
-  IconName,
   InputGroup,
   Intent,
   Menu,
@@ -55,6 +55,20 @@ import {
   PopoverText,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
+import type {
+  DimensionMode,
+  DimensionSpec,
+  DruidFilter,
+  FlattenField,
+  IngestionComboTypeWithExtra,
+  IngestionSpec,
+  InputFormat,
+  IoConfig,
+  MetricSpec,
+  TimestampSpec,
+  Transform,
+  TuningConfig,
+} from '../../druid-models';
 import {
   addTimestampTransform,
   adjustForceGuaranteedRollup,
@@ -64,15 +78,11 @@ import {
   CONSTANT_TIMESTAMP_SPEC,
   CONSTANT_TIMESTAMP_SPEC_FIELDS,
   DIMENSION_SPEC_FIELDS,
-  DimensionMode,
-  DimensionSpec,
-  DruidFilter,
   fillDataSourceNameIfNeeded,
   fillInputFormatIfNeeded,
   FILTER_FIELDS,
   FILTERS_FIELDS,
   FLATTEN_FIELD_FIELDS,
-  FlattenField,
   getDimensionMode,
   getDimensionSpecName,
   getIngestionComboType,
@@ -85,40 +95,32 @@ import {
   getRequiredModule,
   getRollup,
   getSecondaryPartitionRelatedFormFields,
-  getSpecType,
   getTimestampExpressionFields,
   getTimestampSchema,
   getTuningFormFields,
-  IngestionComboTypeWithExtra,
-  IngestionSpec,
   INPUT_FORMAT_FIELDS,
-  InputFormat,
-  inputFormatCanFlatten,
+  inputFormatCanProduceNestedData,
   invalidIoConfig,
   invalidPartitionConfig,
-  IoConfig,
   isDruidSource,
   isEmptyIngestionSpec,
+  isStreamingSpec,
   issueWithIoConfig,
   issueWithSampleData,
-  isTask,
   joinFilter,
   KNOWN_FILTER_TYPES,
   MAX_INLINE_DATA_LENGTH,
   METRIC_SPEC_FIELDS,
-  MetricSpec,
   normalizeSpec,
   NUMERIC_TIME_FORMATS,
   possibleDruidFormatForValues,
   PRIMARY_PARTITION_RELATED_FORM_FIELDS,
   removeTimestampTransform,
   splitFilter,
+  STREAMING_INPUT_FORMAT_FIELDS,
   TIME_COLUMN,
   TIMESTAMP_SPEC_FIELDS,
-  TimestampSpec,
-  Transform,
   TRANSFORM_FIELDS,
-  TuningConfig,
   updateIngestionType,
   updateSchemaWithSample,
   upgradeSpec,
@@ -140,17 +142,22 @@ import {
   localStorageSetJson,
   moveElement,
   moveToIndex,
-  oneOf,
   pluralIfNeeded,
   QueryState,
 } from '../../utils';
-import {
+import type {
   CacheRows,
   ExampleManifest,
+  SampleEntry,
+  SampleHeaderAndRows,
+  SampleResponse,
+  SampleResponseWithExtraInfo,
+  SampleStrategy,
+} from '../../utils/sampler';
+import {
   getCacheRowsFromSampleResponse,
   getProxyOverlordModules,
   headerAndRowsFromSampleResponse,
-  SampleEntry,
   sampleForConnect,
   sampleForExampleManifests,
   sampleForFilter,
@@ -158,16 +165,13 @@ import {
   sampleForSchema,
   sampleForTimestamp,
   sampleForTransform,
-  SampleHeaderAndRows,
-  SampleResponse,
-  SampleResponseWithExtraInfo,
-  SampleStrategy,
 } from '../../utils/sampler';
 
 import { ExamplePicker } from './example-picker/example-picker';
 import { FilterTable, filterTableSelectedColumnName } from './filter-table/filter-table';
 import { FormEditor } from './form-editor/form-editor';
 import {
+  AppendToExistingIssue,
   ConnectMessage,
   FilterMessage,
   ParserMessage,
@@ -203,7 +207,7 @@ function showRawLine(line: SampleEntry): string {
     return `[Multi-line row, length: ${raw.length}]`;
   }
   if (raw.length > 1000) {
-    return raw.substr(0, 1000) + '...';
+    return raw.slice(0, 1000) + '...';
   }
   return raw;
 }
@@ -1204,7 +1208,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   renderConnectStep() {
     const { inputQueryState, sampleStrategy } = this.state;
     const spec = this.getEffectiveSpec();
-    const specType = getSpecType(spec);
     const ioConfig: IoConfig = deepGet(spec, 'spec.ioConfig') || EMPTY_OBJECT;
     const inlineMode = deepGet(spec, 'spec.ioConfig.inputSource.type') === 'inline';
     const druidSource = isDruidSource(spec);
@@ -1217,7 +1220,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           placeholder="Paste your data here"
           value={deepGet(spec, 'spec.ioConfig.inputSource.data')}
           onChange={(e: any) => {
-            const stringValue = e.target.value.substr(0, MAX_INLINE_DATA_LENGTH);
+            const stringValue = e.target.value.slice(0, MAX_INLINE_DATA_LENGTH);
             this.updateSpecPreview(deepSet(spec, 'spec.ioConfig.inputSource.data', stringValue));
           }}
         />
@@ -1244,7 +1247,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           )}
           {inputQueryState.isLoading() && <Loader />}
           {inputQueryState.error && (
-            <CenterMessage>{`Error: ${inputQueryState.getErrorMessage()}`}</CenterMessage>
+            <CenterMessage>{inputQueryState.getErrorMessage()}</CenterMessage>
           )}
         </>
       );
@@ -1293,7 +1296,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </Callout>
             </FormGroup>
           )}
-          {oneOf(specType, 'kafka', 'kinesis') && (
+          {isStreamingSpec(spec) && (
             <FormGroup label="Where should the data be sampled from?">
               <RadioGroup
                 selectedValue={sampleStrategy}
@@ -1365,7 +1368,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 l.input ? l.input.raw : undefined,
               );
 
-              const issue = issueWithSampleData(sampleLines);
+              const issue = issueWithSampleData(sampleLines, spec);
               if (issue) {
                 AppToaster.show({
                   icon: IconNames.WARNING_SIGN,
@@ -1440,7 +1443,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const flattenFields: FlattenField[] =
       deepGet(spec, 'spec.ioConfig.inputFormat.flattenSpec.fields') || EMPTY_ARRAY;
 
-    const canFlatten = inputFormatCanFlatten(inputFormat);
+    const canHaveNestedData = inputFormatCanProduceNestedData(inputFormat);
 
     let mainFill: JSX.Element | string;
     if (parserQueryState.isInit()) {
@@ -1459,7 +1462,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               onChange={columnFilter => this.setState({ columnFilter })}
               placeholder="Search columns"
             />
-            {canFlatten && (
+            {canHaveNestedData && (
               <Switch
                 checked={specialColumnsOnly}
                 label="Flattened columns only"
@@ -1472,7 +1475,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <ParseDataTable
               sampleData={data}
               columnFilter={columnFilter}
-              canFlatten={canFlatten}
+              canFlatten={canHaveNestedData}
               flattenedColumnsOnly={specialColumnsOnly}
               flattenFields={flattenFields}
               onFlattenFieldSelect={this.onFlattenFieldSelect}
@@ -1480,30 +1483,32 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           )}
           {parserQueryState.isLoading() && <Loader />}
           {parserQueryState.error && (
-            <CenterMessage>{`Error: ${parserQueryState.getErrorMessage()}`}</CenterMessage>
+            <CenterMessage>{parserQueryState.getErrorMessage()}</CenterMessage>
           )}
         </div>
       );
     }
 
     let suggestedFlattenFields: FlattenField[] | undefined;
-    if (canFlatten && !flattenFields.length && parserQueryState.data) {
+    if (canHaveNestedData && !flattenFields.length && parserQueryState.data) {
       suggestedFlattenFields = computeFlattenPathsForData(
         filterMap(parserQueryState.data.rows, r => r.input),
-        'path',
         'ignore-arrays',
       );
     }
 
+    const inputFormatFields = isStreamingSpec(spec)
+      ? STREAMING_INPUT_FORMAT_FIELDS
+      : INPUT_FORMAT_FIELDS;
     return (
       <>
         <div className="main">{mainFill}</div>
         <div className="control">
-          <ParserMessage canFlatten={canFlatten} />
+          <ParserMessage canHaveNestedData={canHaveNestedData} />
           {!selectedFlattenField && (
             <>
               <AutoForm
-                fields={INPUT_FORMAT_FIELDS}
+                fields={inputFormatFields}
                 model={inputFormat}
                 onChange={p =>
                   this.updateSpecPreview(deepSet(spec, 'spec.ioConfig.inputFormat', p))
@@ -1511,11 +1516,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               />
               {this.renderApplyButtonBar(
                 parserQueryState,
-                AutoForm.issueWithModel(inputFormat, INPUT_FORMAT_FIELDS),
+                AutoForm.issueWithModel(inputFormat, inputFormatFields),
               )}
             </>
           )}
-          {canFlatten && this.renderFlattenControls()}
+          {canHaveNestedData && this.renderFlattenControls()}
           {suggestedFlattenFields && suggestedFlattenFields.length ? (
             <FormGroup>
               <Button
@@ -1563,7 +1568,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   private readonly onFlattenFieldSelect = (field: FlattenField, index: number) => {
     const { spec, unsavedChange } = this.state;
     const inputFormat: InputFormat = deepGet(spec, 'spec.ioConfig.inputFormat') || EMPTY_OBJECT;
-    if (unsavedChange || !inputFormatCanFlatten(inputFormat)) return;
+    if (unsavedChange || !inputFormatCanProduceNestedData(inputFormat)) return;
 
     this.setState({
       selectedFlattenField: { value: field, index },
@@ -1720,7 +1725,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           )}
           {timestampQueryState.isLoading() && <Loader />}
           {timestampQueryState.error && (
-            <CenterMessage>{`Error: ${timestampQueryState.getErrorMessage()}`}</CenterMessage>
+            <CenterMessage>{timestampQueryState.getErrorMessage()}</CenterMessage>
           )}
         </div>
       );
@@ -1899,7 +1904,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           )}
           {transformQueryState.isLoading() && <Loader />}
           {transformQueryState.error && (
-            <CenterMessage>{`Error: ${transformQueryState.getErrorMessage()}`}</CenterMessage>
+            <CenterMessage>{transformQueryState.getErrorMessage()}</CenterMessage>
           )}
         </div>
       );
@@ -2111,7 +2116,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           )}
           {filterQueryState.isLoading() && <Loader />}
           {filterQueryState.error && (
-            <CenterMessage>{`Error: ${filterQueryState.getErrorMessage()}`}</CenterMessage>
+            <CenterMessage>{filterQueryState.getErrorMessage()}</CenterMessage>
           )}
         </div>
       );
@@ -2296,7 +2301,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           )}
           {schemaQueryState.isLoading() && <Loader />}
           {schemaQueryState.error && (
-            <CenterMessage>{`Error: ${schemaQueryState.getErrorMessage()}`}</CenterMessage>
+            <CenterMessage>{schemaQueryState.getErrorMessage()}</CenterMessage>
           )}
         </div>
       );
@@ -3003,6 +3008,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         <div className="control">
           <PartitionMessage />
           {nonsensicalSingleDimPartitioningMessage}
+          <AppendToExistingIssue spec={spec} onChangeSpec={this.updateSpec} />
         </div>
         {this.renderNextBar({
           disabled: invalidPartitionConfig(spec),
@@ -3096,8 +3102,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 label: 'Append to existing',
                 type: 'boolean',
                 defaultValue: false,
-                defined: spec =>
-                  deepGet(spec, 'spec.tuningConfig.partitionsSpec.type') === 'dynamic',
+                // appendToExisting can only be set on 'dynamic' portioning.
+                // We chose to show it always and instead have a specific message, separate from this form, to notify the user of the issue.
                 info: (
                   <>
                     Creates segments as additional shards of the latest version, effectively
@@ -3166,6 +3172,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </div>
         <div className="control">
           <PublishMessage />
+          <AppendToExistingIssue spec={spec} onChangeSpec={this.updateSpec} />
         </div>
         {this.renderNextBar({})}
       </>
@@ -3234,6 +3241,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               >{`There is an issue with the spec: ${issueWithSpec}`}</Callout>
             </FormGroup>
           )}
+          <AppendToExistingIssue spec={spec} onChangeSpec={this.updateSpec} />
         </div>
         <div className="next-bar">
           {!isEmptyIngestionSpec(spec) && (
@@ -3249,7 +3257,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             rightIcon={IconNames.CLOUD_UPLOAD}
             intent={Intent.PRIMARY}
             disabled={submitting || Boolean(issueWithSpec)}
-            onClick={this.handleSubmit}
+            onClick={() => void this.handleSubmit()}
           />
         </div>
       </>
@@ -3262,7 +3270,27 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (submitting) return;
 
     this.setState({ submitting: true });
-    if (isTask(spec)) {
+    if (isStreamingSpec(spec)) {
+      try {
+        await Api.instance.post('/druid/indexer/v1/supervisor', spec);
+      } catch (e) {
+        AppToaster.show({
+          message: `Failed to submit supervisor: ${getDruidErrorMessage(e)}`,
+          intent: Intent.DANGER,
+        });
+        this.setState({ submitting: false });
+        return;
+      }
+
+      AppToaster.show({
+        message: 'Supervisor submitted successfully. Going to task view...',
+        intent: Intent.SUCCESS,
+      });
+
+      setTimeout(() => {
+        goToIngestion(undefined); // Can we get the supervisor ID here?
+      }, 1000);
+    } else {
       let taskResp: any;
       try {
         taskResp = await Api.instance.post('/druid/indexer/v1/task', spec);
@@ -3282,26 +3310,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
       setTimeout(() => {
         goToIngestion(taskResp.data.task);
-      }, 1000);
-    } else {
-      try {
-        await Api.instance.post('/druid/indexer/v1/supervisor', spec);
-      } catch (e) {
-        AppToaster.show({
-          message: `Failed to submit supervisor: ${getDruidErrorMessage(e)}`,
-          intent: Intent.DANGER,
-        });
-        this.setState({ submitting: false });
-        return;
-      }
-
-      AppToaster.show({
-        message: 'Supervisor submitted successfully. Going to task view...',
-        intent: Intent.SUCCESS,
-      });
-
-      setTimeout(() => {
-        goToIngestion(undefined); // Can we get the supervisor ID here?
       }, 1000);
     }
   };

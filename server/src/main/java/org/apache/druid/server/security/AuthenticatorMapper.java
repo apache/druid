@@ -20,12 +20,10 @@
 package org.apache.druid.server.security;
 
 import com.google.common.collect.Lists;
-import org.apache.druid.guice.ManageLifecycle;
 
 import java.util.List;
 import java.util.Map;
 
-@ManageLifecycle
 public class AuthenticatorMapper
 {
   private Map<String, Authenticator> authenticatorMap;

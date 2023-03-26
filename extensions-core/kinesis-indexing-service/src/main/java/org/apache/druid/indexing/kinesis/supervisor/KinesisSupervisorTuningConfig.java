@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.kinesis.supervisor;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
@@ -29,12 +30,12 @@ import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
-import java.io.File;
 
 public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
     implements SeekableStreamSupervisorTuningConfig
 {
   private final Integer workerThreads;
+  private final Boolean chatAsync;
   private final Integer chatThreads;
   private final Long chatRetries;
   private final Duration httpTimeout;
@@ -42,12 +43,10 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   private final Duration repartitionTransitionDuration;
   private final Duration offsetFetchPeriod;
   private final boolean useListShards;
-  private final boolean skipIgnorableShards;
 
   public static KinesisSupervisorTuningConfig defaultConfig()
   {
     return new KinesisSupervisorTuningConfig(
-        null,
         null,
         null,
         null,
@@ -92,7 +91,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("maxRowsPerSegment") Integer maxRowsPerSegment,
       @JsonProperty("maxTotalRows") Long maxTotalRows,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
-      @JsonProperty("basePersistDirectory") File basePersistDirectory,
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
@@ -102,6 +100,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("skipSequenceNumberAvailabilityCheck") Boolean skipSequenceNumberAvailabilityCheck,
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       @JsonProperty("workerThreads") Integer workerThreads,
+      @JsonProperty("chatAsync") Boolean chatAsync,
       @JsonProperty("chatThreads") Integer chatThreads,
       @JsonProperty("chatRetries") Long chatRetries,
       @JsonProperty("httpTimeout") Period httpTimeout,
@@ -117,8 +116,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("intermediateHandoffPeriod") Period intermediateHandoffPeriod,
       @JsonProperty("repartitionTransitionDuration") Period repartitionTransitionDuration,
       @JsonProperty("offsetFetchPeriod") Period offsetFetchPeriod,
-      @JsonProperty("useListShards") Boolean useListShards,
-      @JsonProperty("skipIgnorableShards") Boolean skipIgnorableShards
+      @JsonProperty("useListShards") Boolean useListShards
   )
   {
     super(
@@ -129,7 +127,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         maxRowsPerSegment,
         maxTotalRows,
         intermediatePersistPeriod,
-        basePersistDirectory,
+        null,
         maxPendingPersists,
         indexSpec,
         indexSpecForIntermediatePersists,
@@ -150,6 +148,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
     );
 
     this.workerThreads = workerThreads;
+    this.chatAsync = chatAsync;
     this.chatThreads = chatThreads;
     this.chatRetries = (chatRetries != null ? chatRetries : DEFAULT_CHAT_RETRIES);
     this.httpTimeout = SeekableStreamSupervisorTuningConfig.defaultDuration(httpTimeout, DEFAULT_HTTP_TIMEOUT);
@@ -166,7 +165,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         DEFAULT_OFFSET_FETCH_PERIOD
     );
     this.useListShards = (useListShards != null ? useListShards : false);
-    this.skipIgnorableShards = (skipIgnorableShards != null ? skipIgnorableShards : false);
   }
 
   @Override
@@ -174,6 +172,23 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   public Integer getWorkerThreads()
   {
     return workerThreads;
+  }
+
+  @Override
+  public boolean getChatAsync()
+  {
+    if (chatAsync != null) {
+      return chatAsync;
+    } else {
+      return DEFAULT_ASYNC;
+    }
+  }
+
+  @JsonProperty("chatAsync")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  Boolean getChatAsyncConfigured()
+  {
+    return chatAsync;
   }
 
   @Override
@@ -223,12 +238,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
     return useListShards;
   }
 
-  @JsonProperty
-  public boolean isSkipIgnorableShards()
-  {
-    return skipIgnorableShards;
-  }
-
   @Override
   public String toString()
   {
@@ -239,7 +248,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
            ", maxRowsPerSegment=" + getMaxRowsPerSegment() +
            ", maxTotalRows=" + getMaxTotalRows() +
            ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +
-           ", basePersistDirectory=" + getBasePersistDirectory() +
            ", maxPendingPersists=" + getMaxPendingPersists() +
            ", indexSpec=" + getIndexSpec() +
            ", reportParseExceptions=" + isReportParseExceptions() +
@@ -251,7 +259,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
            ", chatRetries=" + chatRetries +
            ", httpTimeout=" + httpTimeout +
            ", shutdownTimeout=" + shutdownTimeout +
-           ", recordBufferSize=" + getRecordBufferSize() +
+           ", recordBufferSize=" + getRecordBufferSizeConfigured() +
            ", recordBufferOfferTimeout=" + getRecordBufferOfferTimeout() +
            ", recordBufferFullWait=" + getRecordBufferFullWait() +
            ", fetchThreads=" + getFetchThreads() +
@@ -259,11 +267,10 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
            ", logParseExceptions=" + isLogParseExceptions() +
            ", maxParseExceptions=" + getMaxParseExceptions() +
            ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
-           ", maxRecordsPerPoll=" + getMaxRecordsPerPoll() +
+           ", maxRecordsPerPoll=" + getMaxRecordsPerPollConfigured() +
            ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
            ", repartitionTransitionDuration=" + getRepartitionTransitionDuration() +
            ", useListShards=" + isUseListShards() +
-           ", skipIgnorableShards=" + isSkipIgnorableShards() +
            '}';
   }
 
@@ -278,7 +285,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         getMaxRowsPerSegment(),
         getMaxTotalRows(),
         getIntermediatePersistPeriod(),
-        getBasePersistDirectory(),
+        null,
         getMaxPendingPersists(),
         getIndexSpec(),
         getIndexSpecForIntermediatePersists(),
@@ -286,7 +293,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         getHandoffConditionTimeout(),
         isResetOffsetAutomatically(),
         isSkipSequenceNumberAvailabilityCheck(),
-        getRecordBufferSize(),
+        getRecordBufferSizeConfigured(),
         getRecordBufferOfferTimeout(),
         getRecordBufferFullWait(),
         getFetchThreads(),
@@ -294,7 +301,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         isLogParseExceptions(),
         getMaxParseExceptions(),
         getMaxSavedParseExceptions(),
-        getMaxRecordsPerPoll(),
+        getMaxRecordsPerPollConfigured(),
         getIntermediateHandoffPeriod()
     );
   }

@@ -44,6 +44,8 @@ import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
@@ -54,19 +56,19 @@ import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Escalator;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -104,23 +106,23 @@ public class SegmentMetadataCache
   private static final EmittingLogger log = new EmittingLogger(SegmentMetadataCache.class);
   private static final int MAX_SEGMENTS_PER_QUERY = 15000;
   private static final long DEFAULT_NUM_ROWS = 0;
+  private static final Interner<RowSignature> ROW_SIGNATURE_INTERNER = Interners.newWeakInterner();
 
   private final QueryLifecycleFactory queryLifecycleFactory;
-  private final PlannerConfig config;
+  private final SegmentMetadataCacheConfig config;
   // Escalator, so we can attach an authentication result to queries we generate.
   private final Escalator escalator;
   private final SegmentManager segmentManager;
   private final JoinableFactory joinableFactory;
   private final ExecutorService cacheExec;
   private final ExecutorService callbackExec;
+  private final ServiceEmitter emitter;
 
   /**
    * Map of DataSource -> DruidTable.
    * This map can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
    */
   private final ConcurrentMap<String, DatasourceTable.PhysicalDatasourceMetadata> tables = new ConcurrentHashMap<>();
-
-  private static final Interner<RowSignature> ROW_SIGNATURE_INTERNER = Interners.newWeakInterner();
 
   /**
    * DataSource -> Segment -> AvailableSegmentMetadata(contains RowSignature) for that segment.
@@ -216,9 +218,10 @@ public class SegmentMetadataCache
       final TimelineServerView serverView,
       final SegmentManager segmentManager,
       final JoinableFactory joinableFactory,
-      final PlannerConfig config,
+      final SegmentMetadataCacheConfig config,
       final Escalator escalator,
-      final BrokerInternalQueryConfig brokerInternalQueryConfig
+      final BrokerInternalQueryConfig brokerInternalQueryConfig,
+      final ServiceEmitter emitter
   )
   {
     this.queryLifecycleFactory = Preconditions.checkNotNull(queryLifecycleFactory, "queryLifecycleFactory");
@@ -230,6 +233,7 @@ public class SegmentMetadataCache
     this.callbackExec = Execs.singleThreaded("DruidSchema-Callback-%d");
     this.escalator = escalator;
     this.brokerInternalQueryConfig = brokerInternalQueryConfig;
+    this.emitter = emitter;
 
     initServerViewTimelineCallback(serverView);
   }
@@ -315,7 +319,7 @@ public class SegmentMetadataCache
                     }
 
                     // lastFailure != 0L means exceptions happened before and there're some refresh work was not completed.
-                    // so that even ServerView is initialized, we can't let broker complete initialization.
+                    // so that even if ServerView is initialized, we can't let broker complete initialization.
                     if (isServerViewInitialized && lastFailure == 0L) {
                       // Server view is initialized, but we don't need to do a refresh. Could happen if there are
                       // no segments in the system yet. Just mark us as initialized, then.
@@ -379,10 +383,15 @@ public class SegmentMetadataCache
     startCacheExec();
 
     if (config.isAwaitInitializationOnStart()) {
-      final long startNanos = System.nanoTime();
-      log.debug("%s waiting for initialization.", getClass().getSimpleName());
+      final long startMillis = System.currentTimeMillis();
+      log.info("%s waiting for initialization.", getClass().getSimpleName());
       awaitInitialization();
-      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), (System.nanoTime() - startNanos) / 1000000);
+      final long endMillis = System.currentTimeMillis();
+      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), endMillis - startMillis);
+      emitter.emit(ServiceMetricEvent.builder().build(
+          "init/metadatacache/time",
+          endMillis - startMillis
+      ));
     }
   }
 
@@ -799,7 +808,20 @@ public class SegmentMetadataCache
                 rowSignature.getColumnType(column)
                             .orElseThrow(() -> new ISE("Encountered null type for column [%s]", column));
 
-            columnTypes.putIfAbsent(column, columnType);
+            columnTypes.compute(column, (c, existingType) -> {
+              if (existingType == null) {
+                return columnType;
+              }
+              if (columnType == null) {
+                return existingType;
+              }
+              // if any are json, are all json
+              if (NestedDataComplexTypeSerde.TYPE.equals(columnType) || NestedDataComplexTypeSerde.TYPE.equals(existingType)) {
+                return NestedDataComplexTypeSerde.TYPE;
+              }
+              // "existing type" is the 'newest' type, since we iterate the segments list by newest start time
+              return existingType;
+            });
           }
         }
       }
@@ -907,7 +929,7 @@ public class SegmentMetadataCache
 
     return queryLifecycleFactory
         .factorize()
-        .runSimple(segmentMetadataQuery, escalator.createEscalatedAuthenticationResult(), Access.OK);
+        .runSimple(segmentMetadataQuery, escalator.createEscalatedAuthenticationResult(), Access.OK).getResults();
   }
 
   @VisibleForTesting

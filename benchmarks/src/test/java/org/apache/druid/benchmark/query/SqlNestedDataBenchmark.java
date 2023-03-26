@@ -31,12 +31,13 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.NestedDataDimensionSchema;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
@@ -46,6 +47,7 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.calcite.SqlVectorizedExpressionSanityTest;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -72,7 +74,6 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import javax.annotation.Nullable;
-
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -184,6 +185,9 @@ public class SqlNestedDataBenchmark
   })
   private String vectorize;
 
+  @Param({"none", "front-coded-4", "front-coded-16"})
+  private String stringEncoding;
+
   @Param({
       "0",
       "1",
@@ -257,11 +261,30 @@ public class SqlNestedDataBenchmark
                                               .add(new NestedDataDimensionSchema("nested"))
                                               .build();
     DimensionsSpec dimsSpec = new DimensionsSpec(dims);
+
+
+    StringEncodingStrategy encodingStrategy;
+    if (stringEncoding.startsWith("front-coded")) {
+      String[] split = stringEncoding.split("-");
+      int bucketSize = Integer.parseInt(split[2]);
+      encodingStrategy = new StringEncodingStrategy.FrontCoded(bucketSize);
+    } else {
+      encodingStrategy = new StringEncodingStrategy.Utf8();
+    }
     final QueryableIndex index = segmentGenerator.generate(
         dataSegment,
         schemaInfo,
         dimsSpec,
         transformSpec,
+        new IndexSpec(
+            null,
+            null,
+            encodingStrategy,
+            null,
+            null,
+            null,
+            null
+        ),
         Granularities.NONE,
         rowsPerSegment
     );
@@ -288,7 +311,9 @@ public class SqlNestedDataBenchmark
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper(),
         CalciteTests.DRUID_SCHEMA_NAME,
-        new CalciteRulesManager(ImmutableSet.of())
+        new CalciteRulesManager(ImmutableSet.of()),
+        CalciteTests.createJoinableFactoryWrapper(),
+        CatalogResolver.NULL_RESOLVER
     );
 
     try {
@@ -318,9 +343,9 @@ public class SqlNestedDataBenchmark
         QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
     );
     final String sql = QUERIES.get(Integer.parseInt(query));
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, new QueryContext(context))) {
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, context)) {
       final PlannerResult plannerResult = planner.plan();
-      final Sequence<Object[]> resultSequence = plannerResult.run();
+      final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
       final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
       blackhole.consume(lastRow);
     }

@@ -25,14 +25,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.Row;
-import org.apache.druid.java.util.common.NonnullPair;
+import org.apache.druid.data.input.Rows;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 
 import java.util.List;
@@ -78,7 +76,7 @@ public class ExpressionTransform implements Transform
   @Override
   public RowFunction getRowFunction()
   {
-    return new ExpressionRowFunction(parsedExpression.get());
+    return new ExpressionRowFunction(name, parsedExpression.get());
   }
 
   @Override
@@ -89,42 +87,37 @@ public class ExpressionTransform implements Transform
 
   static class ExpressionRowFunction implements RowFunction
   {
+    private final String name;
     private final Expr expr;
 
-    ExpressionRowFunction(final Expr expr)
+    ExpressionRowFunction(final String name, final Expr expr)
     {
+      this.name = name;
       this.expr = expr;
     }
 
     @Override
     public Object eval(final Row row)
     {
-      // this will need adjusted if we want to allow expression transforms to produce true arrays. Currently, calling
-      // this method will coerce any expression output into:
-      //    - the expression value if the value is not an array
-      //    - the single array element if the value is an array with 1 element
-      //    - a list with all of the array elements if the value is an array with more than 1 element
-      // and so is tuned towards multi-value strings
-      return ExpressionSelectors.coerceEvalToObjectOrList(
-          expr.eval(InputBindings.forFunction(name -> getValueFromRow(row, name)))
-      );
-    }
-  }
-
-  private static Object getValueFromRow(final Row row, final String column)
-  {
-    if (column.equals(ColumnHolder.TIME_COLUMN_NAME)) {
-      return row.getTimestampFromEpoch();
-    } else {
-      Object raw = row.getRaw(column);
-      if (raw instanceof List) {
-        NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List) raw, true);
-        if (coerced == null) {
-          return null;
-        }
-        return coerced.rhs;
+      try {
+        return expr.eval(InputBindings.forRow(row)).valueOrDefault();
       }
-      return raw;
+      catch (Throwable t) {
+        throw new ISE(t, "Could not transform value for %s reason: %s", name, t.getMessage());
+      }
+    }
+
+    @Override
+    public List<String> evalDimension(Row row)
+    {
+      try {
+        return Rows.objectToStrings(
+            ExpressionSelectors.coerceEvalToObjectOrList(expr.eval(InputBindings.forRow(row)))
+        );
+      }
+      catch (Throwable t) {
+        throw new ISE(t, "Could not transform dimension value for %s reason: %s", name, t.getMessage());
+      }
     }
   }
 

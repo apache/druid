@@ -21,6 +21,7 @@ import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
+import { isSimpleArray } from '../../utils';
 import { ActionIcon } from '../action-icon/action-icon';
 
 import './table-cell.scss';
@@ -38,8 +39,8 @@ function shortenString(str: string): ShortParts {
   // Print something like:
   // BAAAArAAEiQKpDAEAACwZCBAGSBgiSEAAAAQpAIDwAg...23 omitted...gwiRoQBJIC
   const omit = str.length - (MAX_CHARS_TO_SHOW - 17);
-  const prefix = str.substr(0, str.length - (omit + 10));
-  const suffix = str.substr(str.length - 10);
+  const prefix = str.slice(0, str.length - (omit + 10));
+  const suffix = str.slice(str.length - 10);
   return {
     prefix,
     omitted: `...${omit} omitted...`,
@@ -72,7 +73,7 @@ export const TableCell = React.memo(function TableCell(props: TableCellProps) {
         <div className="table-cell plain">
           {str.length < ABSOLUTE_MAX_CHARS_TO_SHOW
             ? str
-            : `${str.substr(0, ABSOLUTE_MAX_CHARS_TO_SHOW)}...`}
+            : `${str.slice(0, ABSOLUTE_MAX_CHARS_TO_SHOW)}...`}
         </div>
       );
     }
@@ -89,22 +90,22 @@ export const TableCell = React.memo(function TableCell(props: TableCellProps) {
     );
   }
 
-  if (value !== '' && value != null) {
-    if (value instanceof Date) {
-      const dateValue = value.valueOf();
-      return (
-        <div className="table-cell timestamp" title={String(value.valueOf())}>
-          {isNaN(dateValue) ? 'Unusable date' : value.toISOString()}
-        </div>
-      );
-    } else if (Array.isArray(value)) {
-      return renderTruncated(`[${value.join(', ')}]`);
-    } else if (typeof value === 'object') {
-      return renderTruncated(JSONBig.stringify(value));
-    } else {
-      return renderTruncated(String(value));
-    }
-  } else {
+  if (value === '') {
+    return <div className="table-cell empty">empty</div>;
+  } else if (value == null) {
     return <div className="table-cell null">null</div>;
+  } else if (value instanceof Date) {
+    const dateValue = value.valueOf();
+    return (
+      <div className="table-cell timestamp" title={String(value.valueOf())}>
+        {isNaN(dateValue) ? 'Unusable date' : value.toISOString()}
+      </div>
+    );
+  } else if (isSimpleArray(value)) {
+    return renderTruncated(`[${value.join(', ')}]`);
+  } else if (typeof value === 'object') {
+    return renderTruncated(JSONBig.stringify(value));
+  } else {
+    return renderTruncated(String(value));
   }
 });

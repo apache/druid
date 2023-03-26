@@ -26,6 +26,7 @@ interface NumericInputDialogProps {
   message?: JSX.Element;
   minValue?: number;
   initValue: number;
+  integer?: boolean;
   onSubmit(value: number): void;
   onClose(): void;
 }
@@ -33,9 +34,19 @@ interface NumericInputDialogProps {
 export const NumericInputDialog = React.memo(function NumericInputDialog(
   props: NumericInputDialogProps,
 ) {
-  const { title, message, minValue, initValue, onSubmit, onClose } = props;
+  const { title, message, minValue, initValue, integer, onSubmit, onClose } = props;
+  const effectiveMinValue = minValue ?? DEFAULT_MIN_VALUE;
 
-  const [value, setValue] = useState<number>(initValue);
+  const [valueString, setValueString] = useState<string>(String(initValue));
+
+  function done() {
+    let value = Math.max(Number(valueString) || 0, effectiveMinValue);
+    if (integer) {
+      value = Math.round(value);
+    }
+    onSubmit(value);
+    onClose();
+  }
 
   return (
     <Dialog
@@ -48,30 +59,41 @@ export const NumericInputDialog = React.memo(function NumericInputDialog(
       <div className={Classes.DIALOG_BODY}>
         {message}
         <NumericInput
-          value={value}
-          onValueChange={(v: number) => {
-            if (isNaN(v)) return;
-            setValue(Math.max(v, DEFAULT_MIN_VALUE));
+          value={valueString}
+          onValueChange={(_, v) => {
+            // Constrain to only simple numeric characters
+            v = v.replace(/[^\d\-.]/, '');
+
+            if (integer) {
+              // If in integer mode throw away the decimal point
+              v = v.replace(/\./, '');
+            }
+
+            if (effectiveMinValue >= 0) {
+              // If in non-negative mode throw away the minus
+              v = v.replace(/-/, '');
+            }
+
+            setValueString(v);
           }}
-          min={minValue ?? DEFAULT_MIN_VALUE}
+          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key !== 'Enter') return;
+            done();
+          }}
+          min={effectiveMinValue}
           stepSize={1}
           minorStepSize={null}
           majorStepSize={10}
           fill
           autoFocus
+          selectAllOnFocus
+          allowNumericCharactersOnly
         />
       </div>
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
           <Button text="Close" onClick={onClose} />
-          <Button
-            text="OK"
-            intent={Intent.PRIMARY}
-            onClick={() => {
-              onSubmit(value);
-              onClose();
-            }}
-          />
+          <Button text="OK" intent={Intent.PRIMARY} onClick={done} />
         </div>
       </div>
     </Dialog>

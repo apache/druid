@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.avatica.util.Quoting;
@@ -38,8 +39,7 @@ import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
@@ -49,9 +49,10 @@ import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 
+import java.util.Map;
 import java.util.Properties;
 
-public class PlannerFactory
+public class PlannerFactory extends PlannerToolbox
 {
   static final SqlParser.Config PARSER_CONFIG = SqlParser
       .configBuilder()
@@ -60,17 +61,8 @@ public class PlannerFactory
       .setQuotedCasing(Casing.UNCHANGED)
       .setQuoting(Quoting.DOUBLE_QUOTE)
       .setConformance(DruidConformance.instance())
-      .setParserFactory(new DruidSqlParserImplFactory()) // Custom sql parser factory
+      .setParserFactory(new DruidSqlParserImplFactory()) // Custom SQL parser factory
       .build();
-
-  private final DruidSchemaCatalog rootSchema;
-  private final DruidOperatorTable operatorTable;
-  private final ExprMacroTable macroTable;
-  private final PlannerConfig plannerConfig;
-  private final ObjectMapper jsonMapper;
-  private final AuthorizerMapper authorizerMapper;
-  private final String druidSchemaName;
-  private final CalciteRulesManager calciteRuleManager;
 
   @Inject
   public PlannerFactory(
@@ -81,36 +73,44 @@ public class PlannerFactory
       final AuthorizerMapper authorizerMapper,
       final @Json ObjectMapper jsonMapper,
       final @DruidSchemaName String druidSchemaName,
-      final CalciteRulesManager calciteRuleManager
+      final CalciteRulesManager calciteRuleManager,
+      final JoinableFactoryWrapper joinableFactoryWrapper,
+      final CatalogResolver catalog
   )
   {
-    this.rootSchema = rootSchema;
-    this.operatorTable = operatorTable;
-    this.macroTable = macroTable;
-    this.plannerConfig = plannerConfig;
-    this.authorizerMapper = authorizerMapper;
-    this.jsonMapper = jsonMapper;
-    this.druidSchemaName = druidSchemaName;
-    this.calciteRuleManager = calciteRuleManager;
-  }
-
-  /**
-   * Create a Druid query planner from an initial query context
-   */
-  public DruidPlanner createPlanner(final SqlEngine engine, final String sql, final QueryContext queryContext)
-  {
-    final PlannerContext context = PlannerContext.create(
-        sql,
+    super(
         operatorTable,
         macroTable,
         jsonMapper,
         plannerConfig,
         rootSchema,
+        joinableFactoryWrapper,
+        catalog,
+        druidSchemaName,
+        calciteRuleManager,
+        authorizerMapper
+    );
+  }
+
+  /**
+   * Create a Druid query planner from an initial query context
+   */
+  public DruidPlanner createPlanner(
+      final SqlEngine engine,
+      final String sql,
+      final Map<String, Object> queryContext,
+      final PlannerHook hook
+  )
+  {
+    final PlannerContext context = PlannerContext.create(
+        this,
+        sql,
         engine,
-        queryContext
+        queryContext,
+        hook
     );
 
-    return new DruidPlanner(buildFrameworkConfig(context), context, engine);
+    return new DruidPlanner(buildFrameworkConfig(context), context, engine, hook);
   }
 
   /**
@@ -118,9 +118,9 @@ public class PlannerFactory
    * and ready to go authorization result.
    */
   @VisibleForTesting
-  public DruidPlanner createPlannerForTesting(final SqlEngine engine, final String sql, final QueryContext queryContext)
+  public DruidPlanner createPlannerForTesting(final SqlEngine engine, final String sql, final Map<String, Object> queryContext)
   {
-    final DruidPlanner thePlanner = createPlanner(engine, sql, queryContext);
+    final DruidPlanner thePlanner = createPlanner(engine, sql, queryContext, null);
     thePlanner.getPlannerContext()
               .setAuthenticationResult(NoopEscalator.getInstance().createEscalatedAuthenticationResult());
     try {
@@ -129,7 +129,7 @@ public class PlannerFactory
     catch (SqlParseException | ValidationException e) {
       throw new RuntimeException(e);
     }
-    thePlanner.authorize(ra -> Access.OK, false);
+    thePlanner.authorize(ra -> Access.OK, ImmutableSet.of());
     return thePlanner;
   }
 
@@ -146,7 +146,7 @@ public class PlannerFactory
         .withDecorrelationEnabled(false)
         .withTrimUnusedFields(false)
         .withInSubQueryThreshold(
-            QueryContexts.getInSubQueryThreshold(plannerContext.getQueryContext().getMergedParams())
+            plannerContext.queryContext().getInSubQueryThreshold()
         )
         .build();
     return Frameworks

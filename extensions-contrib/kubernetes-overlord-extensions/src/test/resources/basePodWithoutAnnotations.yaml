@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "id-kmwkw"
+  labels:
+    job-name: "id"
+  annotations:
+spec:
+  containers:
+    - command:
+        - sleep
+        - "3600"
+      env:
+        - name: "TASK_DIR"
+          value: "/tmp/id"
+        - name: "TASK_JSON"
+          valueFrom:
+            fieldRef:
+              fieldPath: "metadata.annotations['task']"
+      image: one
+      name: primary

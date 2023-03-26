@@ -1,7 +1,7 @@
 ---
 id: caching
 title: "Query caching"
-description: "Describes Apache Druid per-segment and whole-query cache types. Identifies services where you can enable caching and suggestions for caching strategy." 
+description: "Describes Apache Druid per-segment and whole-query cache types. Identifies services where you can enable caching and suggestions for caching strategy."
 ---
 
 <!--

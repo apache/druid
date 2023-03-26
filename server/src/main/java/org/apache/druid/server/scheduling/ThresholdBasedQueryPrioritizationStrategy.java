@@ -25,7 +25,6 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.server.QueryPrioritizationStrategy;
 import org.joda.time.DateTime;
@@ -33,6 +32,7 @@ import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+
 import java.util.Optional;
 import java.util.Set;
 
@@ -87,7 +87,7 @@ public class ThresholdBasedQueryPrioritizationStrategy implements QueryPrioritiz
     boolean violatesSegmentThreshold = segments.size() > segmentCountThreshold;
 
     if (violatesPeriodThreshold || violatesDurationThreshold || violatesSegmentThreshold) {
-      final int adjustedPriority = QueryContexts.getPriority(theQuery) - adjustment;
+      final int adjustedPriority = theQuery.context().getPriority() - adjustment;
       return Optional.of(adjustedPriority);
     }
     return Optional.empty();

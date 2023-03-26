@@ -40,14 +40,17 @@ milliseconds since 1970-01-01 00:00:00 UTC, not counting leap seconds. Therefore
 timezone information, but only carry information about the exact moment in time they represent. See the
 [Time functions](sql-scalar.md#date-and-time-functions) section for more information about timestamp handling.
 
-The following table describes how Druid maps SQL types onto native types at query runtime. Casts between two SQL types
-that have the same Druid runtime type will have no effect, other than exceptions noted in the table. Casts between two
-SQL types that have different Druid runtime types will generate a runtime cast in Druid. If a value cannot be properly
-cast to another value, as in `CAST('foo' AS BIGINT)`, the runtime will substitute a default value. NULL values cast
-to non-nullable types will also be substituted with a default value (for example, nulls cast to numbers will be
-converted to zeroes).
+Casts between two SQL types with the same Druid runtime type (see below table) have no effect, other than exceptions
+noted in the table. Casts between two SQL types that have different Druid runtime types generate a runtime cast in
+Druid. If a value cannot be cast to the target type, as in `CAST('foo' AS BIGINT)`, Druid either substitutes a default
+value (when `druid.generic.useDefaultValueForNull = true`, the default mode), or substitutes [NULL](#null-values) (when
+`druid.generic.useDefaultValueForNull = false`). NULL values cast to non-nullable types are also substituted with a
+default value. For example, if `druid.generic.useDefaultValueForNull = true`, a null VARCHAR cast to BIGINT is converted
+to a zero.
 
-|SQL type|Druid runtime type|Default value|Notes|
+The following table describes how Druid maps SQL types onto native types when running queries.
+
+|SQL type|Druid runtime type|Default value<sup>*</sup>|Notes|
 |--------|------------------|-------------|-----|
 |CHAR|STRING|`''`||
 |VARCHAR|STRING|`''`|Druid STRING columns are reported as VARCHAR. Can include [multi-value strings](#multi-value-strings) as well.|
@@ -64,21 +67,23 @@ converted to zeroes).
 |DATE|LONG|`0`, meaning 1970-01-01|Casting TIMESTAMP to DATE rounds down the timestamp to the nearest day. Casts between string and date types assume standard SQL formatting, e.g. `2000-01-02`. For handling other formats, use one of the [time functions](sql-scalar.md#date-and-time-functions).|
 |OTHER|COMPLEX|none|May represent various Druid column types such as hyperUnique, approxHistogram, etc.|
 
+<sup>*</sup> Default value applies if `druid.generic.useDefaultValueForNull = true` (the default mode). Otherwise, the default value is `NULL` for all types.
+
 ## Multi-value strings
 
 Druid's native type system allows strings to potentially have multiple values. These
-[multi-value string dimensions](multi-value-dimensions.md) will be reported in SQL as `VARCHAR` typed, and can be
-syntactically used like any other VARCHAR. Regular string functions that refer to multi-value string dimensions will be
+[multi-value string dimensions](multi-value-dimensions.md) are reported in SQL as `VARCHAR` typed, and can be
+syntactically used like any other VARCHAR. Regular string functions that refer to multi-value string dimensions are
 applied to all values for each row individually. Multi-value string dimensions can also be treated as arrays via special
 [multi-value string functions](sql-multivalue-string-functions.md), which can perform powerful array-aware operations.
 
-Grouping by a multi-value expression will observe the native Druid multi-value aggregation behavior, which is similar to
-the `UNNEST` functionality available in some other SQL dialects. Refer to the documentation on
-[multi-value string dimensions](multi-value-dimensions.md) for additional details.
+Grouping by a multi-value expression observes the native Druid multi-value aggregation behavior, which is similar to
+an implicit SQL `UNNEST`. Refer to the documentation on [multi-value string dimensions](multi-value-dimensions.md)
+for additional details.
 
 > Because multi-value dimensions are treated by the SQL planner as `VARCHAR`, there are some inconsistencies between how
 > they are handled in Druid SQL and in native queries. For example, expressions involving multi-value dimensions may be
-> incorrectly optimized by the Druid SQL planner: `multi_val_dim = 'a' AND multi_val_dim = 'b'` will be optimized to
+> incorrectly optimized by the Druid SQL planner: `multi_val_dim = 'a' AND multi_val_dim = 'b'` is optimized to
 > `false`, even though it is possible for a single row to have both "a" and "b" as values for `multi_val_dim`. The
 > SQL behavior of multi-value dimensions will change in a future release to more closely align with their behavior
 > in native queries.
@@ -90,11 +95,11 @@ runtime property controls Druid's NULL handling mode. For the most SQL compliant
 
 When `druid.generic.useDefaultValueForNull = true` (the default mode), Druid treats NULLs and empty strings
 interchangeably, rather than according to the SQL standard. In this mode Druid SQL only has partial support for NULLs.
-For example, the expressions `col IS NULL` and `col = ''` are equivalent, and both will evaluate to true if `col`
-contains an empty string. Similarly, the expression `COALESCE(col1, col2)` will return `col2` if `col1` is an empty
-string. While the `COUNT(*)` aggregator counts all rows, the `COUNT(expr)` aggregator will count the number of rows
+For example, the expressions `col IS NULL` and `col = ''` are equivalent, and both evaluate to true if `col`
+contains an empty string. Similarly, the expression `COALESCE(col1, col2)` returns `col2` if `col1` is an empty
+string. While the `COUNT(*)` aggregator counts all rows, the `COUNT(expr)` aggregator counts the number of rows
 where `expr` is neither null nor the empty string. Numeric columns in this mode are not nullable; any null or missing
-values will be treated as zeroes.
+values are treated as zeroes.
 
 When `druid.generic.useDefaultValueForNull = false`, NULLs are treated more closely to the SQL standard. In this mode,
 numeric NULL is permitted, and NULLs and empty strings are no longer treated as interchangeable. This property
@@ -114,15 +119,15 @@ When `druid.expressions.useStrictBooleans = true`, Druid uses three-valued logic
 However, even in this mode, Druid uses two-valued logic for filter types other than `expression`.
 
 ## Nested columns
-Druid supports storing nested data structures in segments using the native `COMPLEX<json>` type. You can interact
-with this data using [JSON functions](sql-json-functions.md), which can extract nested values, parse from string,
-serialize to string, and create new `COMPLEX<json>` structures.
 
-`COMPLEX` types in general currently have limited functionality outside of the use of the specialized functions which
-understand them, and so have undefined behavior when:
-* grouping on complex values
-* filtered directly on complex values, such as `WHERE json is NULL`
-* used as inputs to aggregators without specialized handling for a specific complex type
+Druid supports storing nested data structures in segments using the native `COMPLEX<json>` type. See [Nested columns](./nested-columns.md) for more information.
 
-In many cases, functions are provided to translate `COMPLEX` value types to `STRING`, which serves as a workaround
-solution until `COMPLEX` type functionality can be improved.
+You can interact with nested data using [JSON functions](./sql-json-functions.md), which can extract nested values, parse from string, serialize to string, and create new `COMPLEX<json>` structures.
+
+`COMPLEX` types have limited functionality outside the specialized functions that use them, so their behavior is undefined when:
+
+* Grouping on complex values.
+* Filtering directly on complex values, such as `WHERE json is NULL`.
+* Used as inputs to aggregators without specialized handling for a specific complex type.
+
+In many cases, functions are provided to translate `COMPLEX` value types to `STRING`, which serves as a workaround solution until `COMPLEX` type functionality can be improved.

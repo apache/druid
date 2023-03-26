@@ -61,7 +61,7 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
   @Test
   public void testLimitAndBufferSwapping()
   {
-    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     final LimitedBufferHashGrouper<IntKey> grouper = makeGrouper(columnSelectorFactory, 20000);
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
@@ -147,14 +147,14 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
   {
     expectedException.expect(IAE.class);
     expectedException.expectMessage("LimitedBufferHashGrouper initialized with insufficient buffer capacity");
-    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     makeGrouper(columnSelectorFactory, 10);
   }
 
   @Test
   public void testMinBufferSize()
   {
-    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     final LimitedBufferHashGrouper<IntKey> grouper = makeGrouper(columnSelectorFactory, 12120);
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
@@ -212,7 +212,7 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
     expectedException.expect(IllegalStateException.class);
     expectedException.expectMessage("attempted to add offset after grouper was iterated");
 
-    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     final LimitedBufferHashGrouper<IntKey> grouper = makeGrouper(columnSelectorFactory, 12120);
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
@@ -229,7 +229,7 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
   @Test
   public void testIteratorOrderByDim()
   {
-    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     final LimitedBufferHashGrouper<IntKey> grouper = makeGrouperWithOrderBy(
         columnSelectorFactory,
         "value",
@@ -261,7 +261,7 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
   @Test
   public void testIteratorOrderByDimDesc()
   {
-    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     final LimitedBufferHashGrouper<IntKey> grouper = makeGrouperWithOrderBy(
         columnSelectorFactory,
         "value",
@@ -288,7 +288,7 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
   @Test
   public void testIteratorOrderByAggs()
   {
-    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     final LimitedBufferHashGrouper<IntKey> grouper = makeGrouperWithOrderBy(
         columnSelectorFactory,
         "valueSum",
@@ -320,7 +320,7 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
   @Test
   public void testIteratorOrderByAggsDesc()
   {
-    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     final LimitedBufferHashGrouper<IntKey> grouper = makeGrouperWithOrderBy(
         columnSelectorFactory,
         "valueSum",
@@ -350,7 +350,7 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
   }
 
   private static LimitedBufferHashGrouper<IntKey> makeGrouper(
-      TestColumnSelectorFactory columnSelectorFactory,
+      GroupByTestColumnSelectorFactory columnSelectorFactory,
       int bufferSize
   )
   {
@@ -376,7 +376,7 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
   }
 
   private static LimitedBufferHashGrouper<IntKey> makeGrouperWithOrderBy(
-      TestColumnSelectorFactory columnSelectorFactory,
+      GroupByTestColumnSelectorFactory columnSelectorFactory,
       String orderByColumn,
       OrderByColumnSpec.Direction direction
   )

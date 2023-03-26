@@ -33,8 +33,9 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ResourceAction;
@@ -42,12 +43,12 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -56,36 +57,47 @@ import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Like {@link PlannerConfig}, but that has static configuration and this class contains dynamic, per-query
- * configuration.
+ * Like {@link PlannerConfig}, but that has static configuration and this class
+ * contains dynamic, per-query configuration. Additional Druid-specific static
+ * configuration resides in the {@link PlannerToolbox} class.
  */
 public class PlannerContext
 {
-  // query context keys
-  public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;
+  // Query context keys
   public static final String CTX_SQL_CURRENT_TIMESTAMP = "sqlCurrentTimestamp";
   public static final String CTX_SQL_TIME_ZONE = "sqlTimeZone";
-  public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
+  public static final String CTX_SQL_JOIN_ALGORITHM = "sqlJoinAlgorithm";
+  private static final JoinAlgorithm DEFAULT_SQL_JOIN_ALGORITHM = JoinAlgorithm.BROADCAST;
 
-  // This context parameter is an undocumented parameter, used internally, to allow the web console to
-  // apply a limit without having to rewrite the SQL query.
+  /**
+   * Undocumented context key, used internally, to allow the web console to
+   * apply a limit without having to rewrite the SQL query.
+   */
   public static final String CTX_SQL_OUTER_LIMIT = "sqlOuterLimit";
+
+  /**
+   * Undocumented context key, used to enable window functions.
+   */
+  public static final String CTX_ENABLE_WINDOW_FNS = "windowsAreForClosers";
+
+  /**
+   * Undocumented context key, used to enable {@link org.apache.calcite.sql.fun.SqlStdOperatorTable#UNNEST}.
+   */
+  public static final String CTX_ENABLE_UNNEST = "enableUnnest";
 
   // DataContext keys
   public static final String DATA_CTX_AUTHENTICATION_RESULT = "authenticationResult";
 
+  private final PlannerToolbox plannerToolbox;
   private final String sql;
-  private final DruidOperatorTable operatorTable;
-  private final ExprMacroTable macroTable;
-  private final ObjectMapper jsonMapper;
   private final PlannerConfig plannerConfig;
   private final DateTime localNow;
-  private final DruidSchemaCatalog rootSchema;
   private final SqlEngine engine;
-  private final QueryContext queryContext;
+  private final Map<String, Object> queryContext;
   private final String sqlQueryId;
   private final boolean stringifyArrays;
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
+  private final PlannerHook hook;
   // bindings for dynamic parameters to bind during planning
   private List<TypedValue> parameters = Collections.emptyList();
   // result of authentication, providing identity to authorize set of resources produced by validation
@@ -101,30 +113,26 @@ public class PlannerContext
   private VirtualColumnRegistry joinExpressionVirtualColumnRegistry;
 
   private PlannerContext(
+      final PlannerToolbox plannerToolbox,
       final String sql,
-      final DruidOperatorTable operatorTable,
-      final ExprMacroTable macroTable,
-      final ObjectMapper jsonMapper,
       final PlannerConfig plannerConfig,
       final DateTime localNow,
       final boolean stringifyArrays,
-      final DruidSchemaCatalog rootSchema,
       final SqlEngine engine,
-      final QueryContext queryContext
+      final Map<String, Object> queryContext,
+      final PlannerHook hook
   )
   {
+    this.plannerToolbox = plannerToolbox;
     this.sql = sql;
-    this.operatorTable = operatorTable;
-    this.macroTable = macroTable;
-    this.jsonMapper = jsonMapper;
     this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
-    this.rootSchema = rootSchema;
     this.engine = engine;
     this.queryContext = queryContext;
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
     this.stringifyArrays = stringifyArrays;
+    this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
 
-    String sqlQueryId = (String) this.queryContext.get(CTX_SQL_QUERY_ID);
+    String sqlQueryId = (String) this.queryContext.get(QueryContexts.CTX_SQL_QUERY_ID);
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
     if (Strings.isNullOrEmpty(sqlQueryId)) {
       sqlQueryId = UUID.randomUUID().toString();
@@ -133,21 +141,18 @@ public class PlannerContext
   }
 
   public static PlannerContext create(
+      final PlannerToolbox plannerToolbox,
       final String sql,
-      final DruidOperatorTable operatorTable,
-      final ExprMacroTable macroTable,
-      final ObjectMapper jsonMapper,
-      final PlannerConfig plannerConfig,
-      final DruidSchemaCatalog rootSchema,
       final SqlEngine engine,
-      final QueryContext queryContext
+      final Map<String, Object> queryContext,
+      final PlannerHook hook
   )
   {
     final DateTime utcNow;
     final DateTimeZone timeZone;
     final boolean stringifyArrays;
 
-    final Object stringifyParam = queryContext.get(CTX_SQL_STRINGIFY_ARRAYS);
+    final Object stringifyParam = queryContext.get(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS);
     final Object tsParam = queryContext.get(CTX_SQL_CURRENT_TIMESTAMP);
     final Object tzParam = queryContext.get(CTX_SQL_TIME_ZONE);
 
@@ -160,7 +165,7 @@ public class PlannerContext
     if (tzParam != null) {
       timeZone = DateTimes.inferTzFromString(String.valueOf(tzParam));
     } else {
-      timeZone = plannerConfig.getSqlTimeZone();
+      timeZone = plannerToolbox.plannerConfig().getSqlTimeZone();
     }
 
     if (stringifyParam != null) {
@@ -170,32 +175,68 @@ public class PlannerContext
     }
 
     return new PlannerContext(
+        plannerToolbox,
         sql,
-        operatorTable,
-        macroTable,
-        jsonMapper,
-        plannerConfig.withOverrides(queryContext),
+        plannerToolbox.plannerConfig().withOverrides(queryContext),
         utcNow.withZone(timeZone),
         stringifyArrays,
-        rootSchema,
         engine,
-        queryContext
+        queryContext,
+        hook
     );
   }
 
-  public DruidOperatorTable getOperatorTable()
+  /**
+   * Returns the join algorithm specified in a query context.
+   */
+  public static JoinAlgorithm getJoinAlgorithm(QueryContext queryContext)
   {
-    return operatorTable;
+    return getJoinAlgorithmFromContextValue(queryContext.get(CTX_SQL_JOIN_ALGORITHM));
   }
 
+  /**
+   * Returns the join algorithm specified in a query context.
+   */
+  public static JoinAlgorithm getJoinAlgorithm(Map<String, Object> queryContext)
+  {
+    return getJoinAlgorithmFromContextValue(queryContext.get(CTX_SQL_JOIN_ALGORITHM));
+  }
+
+  private static JoinAlgorithm getJoinAlgorithmFromContextValue(final Object object)
+  {
+    final String s = QueryContexts.getAsString(
+        CTX_SQL_JOIN_ALGORITHM,
+        object,
+        DEFAULT_SQL_JOIN_ALGORITHM.toString()
+    );
+
+    try {
+      return JoinAlgorithm.fromString(s);
+    }
+    catch (IllegalArgumentException e) {
+      throw QueryContexts.badValueException(
+          CTX_SQL_JOIN_ALGORITHM,
+          StringUtils.format("one of %s", Arrays.toString(JoinAlgorithm.values())),
+          object
+      );
+    }
+  }
+
+  public PlannerToolbox getPlannerToolbox()
+  {
+    return plannerToolbox;
+  }
+
+  // Deprecated: prefer using the toolbox
   public ExprMacroTable getExprMacroTable()
   {
-    return macroTable;
+    return plannerToolbox.exprMacroTable();
   }
 
+  // Deprecated: prefer using the toolbox
   public ObjectMapper getJsonMapper()
   {
-    return jsonMapper;
+    return plannerToolbox.jsonMapper();
   }
 
   public PlannerConfig getPlannerConfig()
@@ -213,15 +254,33 @@ public class PlannerContext
     return localNow.getZone();
   }
 
+  public JoinableFactoryWrapper getJoinableFactoryWrapper()
+  {
+    return plannerToolbox.joinableFactoryWrapper();
+  }
+
   @Nullable
   public String getSchemaResourceType(String schema, String resourceName)
   {
-    return rootSchema.getResourceType(schema, resourceName);
+    return plannerToolbox.rootSchema().getResourceType(schema, resourceName);
   }
 
-  public QueryContext getQueryContext()
+  /**
+   * Return the query context as a mutable map. Use this form when
+   * modifying the context during planning.
+   */
+  public Map<String, Object> queryContextMap()
   {
     return queryContext;
+  }
+
+  /**
+   * Return the query context as an immutable object. Use this form
+   * when querying the context as it provides type-safe accessors.
+   */
+  public QueryContext queryContext()
+  {
+    return QueryContext.of(queryContext);
   }
 
   public boolean isStringifyArrays()
@@ -239,9 +298,19 @@ public class PlannerContext
     return Preconditions.checkNotNull(authenticationResult, "Authentication result not available");
   }
 
+  public JoinAlgorithm getJoinAlgorithm()
+  {
+    return getJoinAlgorithm(queryContext);
+  }
+
   public String getSql()
   {
     return sql;
+  }
+
+  public PlannerHook getPlannerHook()
+  {
+    return hook;
   }
 
   public String getSqlQueryId()
@@ -395,9 +464,28 @@ public class PlannerContext
     return engine;
   }
 
-  public boolean engineHasFeature(final EngineFeature feature)
+  /**
+   * Checks if the current {@link SqlEngine} supports a particular feature.
+   *
+   * When executing a specific query, use this method instead of
+   * {@link SqlEngine#featureAvailable(EngineFeature, PlannerContext)}, because it also verifies feature flags such as
+   * {@link #CTX_ENABLE_WINDOW_FNS}.
+   */
+  public boolean featureAvailable(final EngineFeature feature)
   {
-    return engine.feature(feature, this);
+    if (feature == EngineFeature.WINDOW_FUNCTIONS &&
+        !QueryContexts.getAsBoolean(CTX_ENABLE_WINDOW_FNS, queryContext.get(CTX_ENABLE_WINDOW_FNS), false)) {
+      // Short-circuit: feature requires context flag.
+      return false;
+    }
+
+    if (feature == EngineFeature.UNNEST &&
+        !QueryContexts.getAsBoolean(CTX_ENABLE_UNNEST, queryContext.get(CTX_ENABLE_UNNEST), false)) {
+      // Short-circuit: feature requires context flag.
+      return false;
+    }
+
+    return engine.featureAvailable(feature, this);
   }
 
   public QueryMaker getQueryMaker()

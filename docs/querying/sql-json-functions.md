@@ -30,8 +30,9 @@ sidebar_label: "JSON functions"
   patterns in this markdown file and parse it to TypeScript file for web console
 -->
 
-Druid supports nested columns, which provide optimized storage and indexes for nested data structures.  Use
-the following JSON functions to extract, transform, and create `COMPLEX<json>` values.
+Druid supports nested columns, which provide optimized storage and indexes for nested data structures. See [Nested columns](./nested-columns.md) for more information.
+
+You can use the following JSON functions to extract, transform, and create `COMPLEX<json>` values.
 
 | Function | Notes |
 | --- | --- |
@@ -61,11 +62,11 @@ Consider the following example input JSON:
 {"x":1, "y":[1, 2, 3]}
 ```
 
-- To return the entire JSON object:<br>
+- To return the entire JSON object:<br />
   `$`      -> `{"x":1, "y":[1, 2, 3]}`
-- To return the value of the key "x":<br>
+- To return the value of the key "x":<br />
   `$.x`    -> `1`
-- For a key that contains an array, to return the entire array:<br>
+- For a key that contains an array, to return the entire array:<br />
   `$['y']` -> `[1, 2, 3]`
-- For a key that contains an array, to return an item in the array:<br>
+- For a key that contains an array, to return an item in the array:<br />
   `$.y[1]` -> `2`

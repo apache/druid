@@ -20,10 +20,13 @@
 package org.apache.druid.server.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.AlertBuilder;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.QueryResource;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -64,7 +67,6 @@ public class PreResponseAuthorizationCheckFilter implements Filter
   @Override
   public void init(FilterConfig filterConfig)
   {
-
   }
 
   @Override
@@ -82,12 +84,15 @@ public class PreResponseAuthorizationCheckFilter implements Filter
     filterChain.doFilter(servletRequest, servletResponse);
 
     Boolean authInfoChecked = (Boolean) servletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED);
-    if (authInfoChecked == null && statusIsSuccess(response.getStatus())) {
+    if (authInfoChecked == null && statusShouldBeHidden(response.getStatus())) {
       // Note: rather than throwing an exception here, it would be nice to blank out the original response
       // since the request didn't have any authorization checks performed. However, this breaks proxying
       // (e.g. OverlordServletProxy), so this is not implemented for now.
       handleAuthorizationCheckError(
-          "Request did not have an authorization check performed.",
+          StringUtils.format(
+              "Request did not have an authorization check performed, original response status [%s].",
+              response.getStatus()
+          ),
           request,
           response
       );
@@ -105,7 +110,6 @@ public class PreResponseAuthorizationCheckFilter implements Filter
   @Override
   public void destroy()
   {
-
   }
 
   private void handleUnauthenticatedRequest(
@@ -126,7 +130,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
       response.addHeader("WWW-Authenticate", authScheme);
     }
     QueryInterruptedException unauthorizedError = new QueryInterruptedException(
-        QueryInterruptedException.UNAUTHORIZED,
+        QueryException.UNAUTHORIZED_ERROR_CODE,
         null,
         null,
         DruidNode.getDefaultHost()
@@ -135,7 +139,6 @@ public class PreResponseAuthorizationCheckFilter implements Filter
     OutputStream out = response.getOutputStream();
     sendJsonError(response, HttpServletResponse.SC_UNAUTHORIZED, jsonMapper.writeValueAsString(unauthorizedError), out);
     out.close();
-    return;
   }
 
   private void handleAuthorizationCheckError(
@@ -145,18 +148,28 @@ public class PreResponseAuthorizationCheckFilter implements Filter
   )
   {
     // Send out an alert so there's a centralized collection point for seeing errors of this nature
-    log.makeAlert(errorMsg)
-       .addData("uri", servletRequest.getRequestURI())
-       .addData("method", servletRequest.getMethod())
-       .addData("remoteAddr", servletRequest.getRemoteAddr())
-       .addData("remoteHost", servletRequest.getRemoteHost())
-       .emit();
+    AlertBuilder builder = log.makeAlert(errorMsg)
+        .addData("uri", servletRequest.getRequestURI())
+        .addData("method", servletRequest.getMethod())
+        .addData("remoteAddr", servletRequest.getRemoteAddr());
 
-    if (servletResponse.isCommitted()) {
-      throw new ISE(errorMsg);
-    } else {
+    // Omit the host name if it just repeats the IP address.
+    String remoteHost = servletRequest.getRemoteHost();
+    if (remoteHost != null && !remoteHost.equals(servletRequest.getRemoteAddr())) {
+      builder.addData("remoteHost", remoteHost);
+    }
+
+    // Omit the query ID if there is no ID.
+    final String queryId = servletResponse.getHeader(QueryResource.QUERY_ID_RESPONSE_HEADER);
+    if (queryId != null) {
+      builder.addData("queryId", queryId);
+    }
+    builder.emit();
+
+    if (!servletResponse.isCommitted()) {
       try {
-        servletResponse.sendError(HttpServletResponse.SC_FORBIDDEN);
+        servletResponse.reset();
+        servletResponse.setStatus(HttpServletResponse.SC_FORBIDDEN);
       }
       catch (Exception e) {
         throw new RuntimeException(e);
@@ -164,9 +177,23 @@ public class PreResponseAuthorizationCheckFilter implements Filter
     }
   }
 
-  private static boolean statusIsSuccess(int status)
+  private static boolean statusShouldBeHidden(int status)
   {
-    return 200 <= status && status < 300;
+    // We allow 404s (not found) to not be rewritten to forbidden because consistently returning 404s is a way to leak
+    // less information when something wasn't able to be done anyway.  I.e. if we pretend that the thing didn't exist
+    // when the authorization fails, then there is no information about whether the thing existed.  If we return
+    // a 403 when authorization fails and a 404 when authorization succeeds, but it doesn't exist, then we have
+    // leaked that it could maybe exist, if the authentication credentials were good.
+    //
+    // We also allow 307s (temporary redirect) to not be hidden as they are used to redirect to the leader.
+    switch (status) {
+      case HttpServletResponse.SC_FORBIDDEN:
+      case HttpServletResponse.SC_NOT_FOUND:
+      case HttpServletResponse.SC_TEMPORARY_REDIRECT:
+        return false;
+      default:
+        return true;
+    }
   }
 
   public static void sendJsonError(HttpServletResponse resp, int error, String errorJson, OutputStream outputStream)

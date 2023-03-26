@@ -20,12 +20,17 @@
 package org.apache.druid.msq.statistics;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
+import org.apache.druid.frame.key.KeyTestUtils;
 import org.apache.druid.frame.key.RowKey;
-import org.apache.druid.frame.key.SortColumn;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -37,9 +42,13 @@ import java.util.NoSuchElementException;
 
 public class QuantilesSketchKeyCollectorTest
 {
-  private final ClusterBy clusterBy = new ClusterBy(ImmutableList.of(new SortColumn("x", false)), 0);
+  private final ClusterBy clusterBy = new ClusterBy(ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING)), 0);
   private final Comparator<RowKey> comparator = clusterBy.keyComparator();
   private final int numKeys = 500_000;
+
+  static {
+    NullHandling.initializeForTests();
+  }
 
   @Test
   public void test_empty()
@@ -114,7 +123,7 @@ public class QuantilesSketchKeyCollectorTest
           }
 
           Assert.assertEquals(testName, 2, collector.getSketch().getK());
-          Assert.assertEquals(testName, 22, collector.estimatedRetainedKeys());
+          Assert.assertEquals(testName, 14, collector.estimatedRetainedKeys());
 
           // Don't use verifyCollector, since this collector is downsampled so aggressively that it can't possibly
           // hope to pass those tests. Grade on a curve.
@@ -153,6 +162,51 @@ public class QuantilesSketchKeyCollectorTest
           );
           verifyCollector(collector, clusterBy, comparator, sortedKeyWeights);
         }
+    );
+  }
+
+  @Test
+  public void testAverageKeyLength()
+  {
+    final QuantilesSketchKeyCollector collector =
+        QuantilesSketchKeyCollectorFactory.create(clusterBy).newKeyCollector();
+    final QuantilesSketchKeyCollector other = QuantilesSketchKeyCollectorFactory.create(clusterBy).newKeyCollector();
+
+    RowSignature smallKeySignature = KeyTestUtils.createKeySignature(
+        new ClusterBy(ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING)), 0).getColumns(),
+        RowSignature.builder().add("x", ColumnType.LONG).build()
+    );
+    RowKey smallKey = KeyTestUtils.createKey(smallKeySignature, 1L);
+
+    RowSignature largeKeySignature = KeyTestUtils.createKeySignature(
+        new ClusterBy(
+            ImmutableList.of(
+                new KeyColumn("x", KeyOrder.ASCENDING),
+                new KeyColumn("y", KeyOrder.ASCENDING),
+                new KeyColumn("z", KeyOrder.ASCENDING)
+            ),
+            0
+        ).getColumns(),
+        RowSignature.builder()
+                    .add("x", ColumnType.LONG)
+                    .add("y", ColumnType.LONG)
+                    .add("z", ColumnType.LONG)
+                    .build()
+    );
+    RowKey largeKey = KeyTestUtils.createKey(largeKeySignature, 1L, 2L, 3L);
+
+
+    collector.add(smallKey, 3);
+    Assert.assertEquals(smallKey.estimatedObjectSizeBytes(), collector.getAverageKeyLength(), 0);
+
+    other.add(largeKey, 5);
+    Assert.assertEquals(largeKey.estimatedObjectSizeBytes(), other.getAverageKeyLength(), 0);
+
+    collector.addAll(other);
+    Assert.assertEquals(
+        (smallKey.estimatedObjectSizeBytes() * 3 + largeKey.estimatedObjectSizeBytes() * 5) / 8.0,
+        collector.getAverageKeyLength(),
+        0
     );
   }
 

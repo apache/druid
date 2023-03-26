@@ -23,7 +23,6 @@ import inet.ipaddr.AddressStringException;
 import inet.ipaddr.IPAddress;
 import inet.ipaddr.IPAddressString;
 import inet.ipaddr.ipv4.IPv4Address;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -69,9 +68,7 @@ public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public Expr apply(final List<Expr> args)
   {
-    if (args.size() != 2) {
-      throw new IAE(ExprUtils.createErrMsg(name(), "must have 2 arguments"));
-    }
+    validationHelperCheckArgumentCount(args, 2);
 
     try {
       final Expr arg = args.get(0);
@@ -142,7 +139,7 @@ public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
     }
 
     catch (AddressStringException e) {
-      throw new RuntimeException(e);
+      throw processingFailed(e, "failed to parse address");
     }
   }
 
@@ -150,10 +147,10 @@ public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
   {
     String subnetArgName = "subnet";
     Expr arg = args.get(ARG_SUBNET);
-    ExprUtils.checkLiteralArgument(name(), arg, subnetArgName);
+    validationHelperCheckArgIsLiteral(arg, subnetArgName);
     String subnet = (String) arg.getLiteralValue();
     if (!IPv4AddressExprUtils.isValidIPv4Subnet(subnet)) {
-      throw new IAE(ExprUtils.createErrMsg(name(), subnetArgName + " arg has an invalid format: " + subnet));
+      throw validationFailed(subnetArgName + " arg has an invalid format: " + subnet);
     }
     return new IPAddressString(subnet);
   }

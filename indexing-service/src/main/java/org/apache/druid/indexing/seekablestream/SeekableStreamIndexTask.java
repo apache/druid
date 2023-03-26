@@ -145,7 +145,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox)
+  public TaskStatus runTask(final TaskToolbox toolbox)
   {
     emitMetric(toolbox.getEmitter(), "ingest/count", 1);
     return getRunner().run(toolbox);

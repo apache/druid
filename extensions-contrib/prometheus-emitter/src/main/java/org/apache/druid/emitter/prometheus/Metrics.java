@@ -36,6 +36,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedSet;
@@ -45,7 +46,7 @@ public class Metrics
 {
 
   private static final Logger log = new Logger(Metrics.class);
-  private final Map<String, DimensionsAndCollector> registeredMetrics = new HashMap<>();
+  private final Map<String, DimensionsAndCollector> registeredMetrics;
   private final ObjectMapper mapper = new ObjectMapper();
   public static final Pattern PATTERN = Pattern.compile("[^a-zA-Z_:][^a-zA-Z0-9_:]*");
 
@@ -63,6 +64,7 @@ public class Metrics
 
   public Metrics(String namespace, String path, boolean isAddHostAsLabel, boolean isAddServiceAsLabel)
   {
+    Map<String, DimensionsAndCollector> registeredMetrics = new HashMap<>();
     Map<String, Metric> metrics = readConfig(path);
     for (Map.Entry<String, Metric> entry : metrics.entrySet()) {
       String name = entry.getKey();
@@ -110,7 +112,7 @@ public class Metrics
         registeredMetrics.put(name, new DimensionsAndCollector(dimensions, collector, metric.conversionFactor));
       }
     }
-
+    this.registeredMetrics = Collections.unmodifiableMap(registeredMetrics);
   }
 
   private Map<String, Metric> readConfig(String path)

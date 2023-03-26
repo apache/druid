@@ -18,10 +18,12 @@
 
 import { Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
 import { Popover2 } from '@blueprintjs/popover2';
-import React, { ReactNode } from 'react';
-import { Filter } from 'react-table';
+import type { ReactNode } from 'react';
+import React from 'react';
+import type { Filter } from 'react-table';
 
-import { addFilter, FilterMode, filterModeToIcon } from '../../react-table';
+import type { FilterMode } from '../../react-table';
+import { addFilter, filterModeToIcon } from '../../react-table';
 import { Deferred } from '../deferred/deferred';
 
 import './table-filterable-cell.scss';
@@ -34,14 +36,14 @@ export interface TableFilterableCellProps {
   value: string;
   filters: Filter[];
   onFiltersChange(filters: Filter[]): void;
-  disableComparisons?: boolean;
+  enableComparisons?: boolean;
   children?: ReactNode;
 }
 
 export const TableFilterableCell = React.memo(function TableFilterableCell(
   props: TableFilterableCellProps,
 ) {
-  const { field, value, children, filters, disableComparisons, onFiltersChange } = props;
+  const { field, value, children, filters, enableComparisons, onFiltersChange } = props;
 
   return (
     <Popover2
@@ -51,7 +53,7 @@ export const TableFilterableCell = React.memo(function TableFilterableCell(
           content={() => (
             <Menu>
               <MenuDivider title="Filter" />
-              {(disableComparisons ? FILTER_MODES_NO_COMPARISONS : FILTER_MODES).map((mode, i) => (
+              {(enableComparisons ? FILTER_MODES : FILTER_MODES_NO_COMPARISONS).map((mode, i) => (
                 <MenuItem
                   key={i}
                   icon={filterModeToIcon(mode)}

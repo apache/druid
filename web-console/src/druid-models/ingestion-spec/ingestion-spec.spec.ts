@@ -18,13 +18,13 @@
 
 import { CSV_SAMPLE } from '../../utils/sampler.mock';
 
+import type { IngestionSpec } from './ingestion-spec';
 import {
   adjustId,
   cleanSpec,
   guessColumnTypeFromHeaderAndRows,
   guessColumnTypeFromInput,
   guessInputFormat,
-  IngestionSpec,
   updateSchemaWithSample,
   upgradeSpec,
 } from './ingestion-spec';
@@ -725,6 +725,15 @@ describe('spec utils', () => {
     it('works for multi-value', () => {
       expect(guessColumnTypeFromInput(['a', ['b'], 'c'], false)).toEqual('string');
       expect(guessColumnTypeFromInput([1, [2], 3], false)).toEqual('string');
+      expect(guessColumnTypeFromInput([true, [true, 7, false], false, 'x'], false)).toEqual(
+        'string',
+      );
+    });
+
+    it('works for complex arrays', () => {
+      expect(guessColumnTypeFromInput([{ type: 'Dogs' }, { type: 'JavaScript' }], false)).toEqual(
+        'COMPLEX<json>',
+      );
     });
 
     it('works for strange json', () => {

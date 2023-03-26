@@ -19,10 +19,10 @@
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import { SqlTableRef } from 'druid-query-toolkit';
+import { T } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
-import { Execution, QueryWithContext } from '../../../druid-models';
+import type { Execution, QueryWithContext } from '../../../druid-models';
 import { executionBackgroundStatusCheck, reattachTaskExecution } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { ExecutionProgressBarPane } from '../../workbench-view/execution-progress-bar-pane/execution-progress-bar-pane';
@@ -68,8 +68,8 @@ export const IngestionProgressDialog = React.memo(function IngestionProgressDial
         {insertResultState.isLoading() && (
           <>
             <p>
-              The data is now being loaded. You can say here or do something else. The task can be
-              tracked from both the Query view and the Ingestion views.
+              The data is now being loaded. You can track the task from both the Query and the
+              Ingestion views.
             </p>
             <ExecutionProgressBarPane
               execution={insertResultState.intermediate}
@@ -95,15 +95,22 @@ export const IngestionProgressDialog = React.memo(function IngestionProgressDial
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
           {insertResultState.isLoading() && (
-            <Button
-              icon={IconNames.GANTT_CHART}
-              text="Go to Ingestion view"
-              rightIcon={IconNames.ARROW_TOP_RIGHT}
-              onClick={() => {
-                if (!insertResultState.intermediate) return;
-                goToIngestion(insertResultState.intermediate.id);
-              }}
-            />
+            <>
+              <Button
+                icon={IconNames.RESET}
+                text="Ingest in background (reset data loader)"
+                onClick={onReset}
+              />
+              <Button
+                icon={IconNames.GANTT_CHART}
+                text="Go to Ingestion view"
+                rightIcon={IconNames.ARROW_TOP_RIGHT}
+                onClick={() => {
+                  if (!insertResultState.intermediate) return;
+                  goToIngestion(insertResultState.intermediate.id);
+                }}
+              />
+            </>
           )}
           {insertResultState.isError() && <Button text="Close" onClick={onClose} />}
           {insertResultState.data && (
@@ -117,7 +124,7 @@ export const IngestionProgressDialog = React.memo(function IngestionProgressDial
                 onClick={() => {
                   if (!insertResultState.data) return;
                   goToQuery({
-                    queryString: `SELECT * FROM ${SqlTableRef.create(
+                    queryString: `SELECT * FROM ${T(
                       insertResultState.data.getIngestDatasource()!,
                     )}`,
                   });

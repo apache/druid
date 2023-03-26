@@ -64,6 +64,10 @@ ace.define(
       this.$rules = {
         start: [
           {
+            token: 'comment.issue',
+            regex: '--:ISSUE:.*$',
+          },
+          {
             token: 'comment',
             regex: '--.*$',
           },
@@ -73,16 +77,12 @@ ace.define(
             end: '\\*/',
           },
           {
-            token: 'string', // " string
+            token: 'variable.column', // " quoted reference
             regex: '".*?"',
           },
           {
-            token: 'string', // ' string
+            token: 'string', // ' string literal
             regex: "'.*?'",
-          },
-          {
-            token: 'string', // ` string (apache drill)
-            regex: '`.*?`',
           },
           {
             token: 'constant.numeric', // float

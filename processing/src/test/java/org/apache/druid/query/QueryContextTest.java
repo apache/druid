@@ -19,32 +19,45 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
-import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
+
 public class QueryContextTest
 {
+  private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
+
   @Test
   public void testEquals()
   {
@@ -52,266 +65,297 @@ public class QueryContextTest
                   .suppress(Warning.NONFINAL_FIELDS, Warning.ALL_FIELDS_SHOULD_BE_USED)
                   .usingGetClass()
                   .forClass(QueryContext.class)
-                  .withNonnullFields("defaultParams", "userParams", "systemParams")
+                  .withNonnullFields("context")
                   .verify();
   }
 
+  /**
+   * Verify that a context with an null map is the same as a context with
+   * an empty map.
+   */
   @Test
-  public void testEmptyParam()
+  public void testEmptyContext()
   {
-    final QueryContext context = new QueryContext();
-    Assert.assertEquals(ImmutableMap.of(), context.getMergedParams());
+    {
+      final QueryContext context = new QueryContext(null);
+      assertEquals(ImmutableMap.of(), context.asMap());
+    }
+    {
+      final QueryContext context = new QueryContext(new HashMap<>());
+      assertEquals(ImmutableMap.of(), context.asMap());
+    }
+    {
+      final QueryContext context = QueryContext.of(null);
+      assertEquals(ImmutableMap.of(), context.asMap());
+    }
+    {
+      final QueryContext context = QueryContext.of(new HashMap<>());
+      assertEquals(ImmutableMap.of(), context.asMap());
+    }
+    {
+      final QueryContext context = QueryContext.empty();
+      assertEquals(ImmutableMap.of(), context.asMap());
+    }
   }
 
   @Test
   public void testIsEmpty()
   {
-    Assert.assertTrue(new QueryContext().isEmpty());
-    Assert.assertFalse(new QueryContext(ImmutableMap.of("k", "v")).isEmpty());
-    QueryContext context = new QueryContext();
-    context.addDefaultParam("k", "v");
-    Assert.assertFalse(context.isEmpty());
-    context = new QueryContext();
-    context.addSystemParam("k", "v");
-    Assert.assertFalse(context.isEmpty());
+    assertTrue(QueryContext.empty().isEmpty());
+    assertFalse(QueryContext.of(ImmutableMap.of("k", "v")).isEmpty());
   }
 
   @Test
   public void testGetString()
   {
-    final QueryContext context = new QueryContext(
-        ImmutableMap.of("key", "val")
+    final QueryContext context = QueryContext.of(
+        ImmutableMap.of("key", "val",
+                        "key2", 2)
     );
 
-    Assert.assertEquals("val", context.get("key"));
-    Assert.assertEquals("val", context.getAsString("key"));
-    Assert.assertNull(context.getAsString("non-exist"));
+    assertEquals("val", context.get("key"));
+    assertEquals("val", context.getString("key"));
+    assertNull(context.getString("non-exist"));
+    assertEquals("foo", context.getString("non-exist", "foo"));
+
+    assertThrows(BadQueryContextException.class, () -> context.getString("key2"));
   }
 
   @Test
   public void testGetBoolean()
   {
-    final QueryContext context = new QueryContext(
+    final QueryContext context = QueryContext.of(
         ImmutableMap.of(
             "key1", "true",
             "key2", true
         )
     );
 
-    Assert.assertTrue(context.getAsBoolean("key1", false));
-    Assert.assertTrue(context.getAsBoolean("key2", false));
-    Assert.assertFalse(context.getAsBoolean("non-exist", false));
+    assertTrue(context.getBoolean("key1", false));
+    assertTrue(context.getBoolean("key2", false));
+    assertTrue(context.getBoolean("key1"));
+    assertFalse(context.getBoolean("non-exist", false));
+    assertNull(context.getBoolean("non-exist"));
   }
 
   @Test
   public void testGetInt()
   {
-    final QueryContext context = new QueryContext(
+    final QueryContext context = QueryContext.of(
         ImmutableMap.of(
             "key1", "100",
-            "key2", 100
+            "key2", 100,
+            "key3", "abc"
         )
     );
 
-    Assert.assertEquals(100, context.getAsInt("key1", 0));
-    Assert.assertEquals(100, context.getAsInt("key2", 0));
-    Assert.assertEquals(0, context.getAsInt("non-exist", 0));
+    assertEquals(100, context.getInt("key1", 0));
+    assertEquals(100, context.getInt("key2", 0));
+    assertEquals(0, context.getInt("non-exist", 0));
+
+    assertThrows(BadQueryContextException.class, () -> context.getInt("key3", 5));
   }
 
   @Test
   public void testGetLong()
   {
-    final QueryContext context = new QueryContext(
+    final QueryContext context = QueryContext.of(
         ImmutableMap.of(
             "key1", "100",
-            "key2", 100
+            "key2", 100,
+            "key3", "abc"
         )
     );
 
-    Assert.assertEquals(100L, context.getAsLong("key1", 0));
-    Assert.assertEquals(100L, context.getAsLong("key2", 0));
-    Assert.assertEquals(0L, context.getAsLong("non-exist", 0));
+    assertEquals(100L, context.getLong("key1", 0));
+    assertEquals(100L, context.getLong("key2", 0));
+    assertEquals(0L, context.getLong("non-exist", 0));
+
+    assertThrows(BadQueryContextException.class, () -> context.getLong("key3", 5));
+  }
+
+  /**
+   * Tests the several ways that Druid code parses context strings into Long
+   * values. The desired behavior is that "x" is parsed exactly the same as Jackson
+   * would parse x (where x is a valid number.) The context methods must emulate
+   * Jackson. The dimension utility method is included because some code used that
+   * for long parsing, and we must maintain backward compatibility.
+   * <p>
+   * The exceptions in the {@code assertThrows} are not critical: the key thing is
+   * that we're documenting what works and what doesn't. If an exception changes,
+   * just update the tests. If something no longer throws an exception, we'll want
+   * to verify that we support the new use case consistently in all three paths.
+   */
+  @Test
+  public void testGetLongCompatibility() throws JsonProcessingException
+  {
+    {
+      String value = null;
+
+      // Only the context methods allow {"foo": null} to be parsed as a null Long.
+      assertNull(getContextLong(value));
+      // Nulls not legal on this path.
+      assertThrows(NullPointerException.class, () -> getDimensionLong(value));
+      // Nulls not legal on this path.
+      assertThrows(IllegalArgumentException.class, () -> getJsonLong(value));
+    }
+
+    {
+      String value = "";
+      // Blank string not legal on this path.
+      assertThrows(BadQueryContextException.class, () -> getContextLong(value));
+      assertNull(getDimensionLong(value));
+      // Blank string not allowed where a value is expected.
+      assertThrows(MismatchedInputException.class, () -> getJsonLong(value));
+    }
+
+    {
+      String value = "0";
+      assertEquals(0L, (long) getContextLong(value));
+      assertEquals(0L, (long) getDimensionLong(value));
+      assertEquals(0L, (long) getJsonLong(value));
+    }
+
+    {
+      String value = "+1";
+      assertEquals(1L, (long) getContextLong(value));
+      assertEquals(1L, (long) getDimensionLong(value));
+      assertThrows(JsonParseException.class, () -> getJsonLong(value));
+    }
+
+    {
+      String value = "-1";
+      assertEquals(-1L, (long) getContextLong(value));
+      assertEquals(-1L, (long) getDimensionLong(value));
+      assertEquals(-1L, (long) getJsonLong(value));
+    }
+
+    {
+      // Hexadecimal numbers are not supported in JSON. Druid also does not support
+      // them in strings.
+      String value = "0xabcd";
+      assertThrows(BadQueryContextException.class, () -> getContextLong(value));
+      // The dimension utils have a funny way of handling hex: they return null
+      assertNull(getDimensionLong(value));
+      assertThrows(JsonParseException.class, () -> getJsonLong(value));
+    }
+
+    {
+      // Leading zeros supported by Druid parsing, but not by JSON.
+      String value = "05";
+      assertEquals(5L, (long) getContextLong(value));
+      assertEquals(5L, (long) getDimensionLong(value));
+      assertThrows(JsonParseException.class, () -> getJsonLong(value));
+    }
+
+    {
+      // The dimension utils allow a float where a long is expected.
+      // Jackson can do this conversion. This test verifies that the context
+      // functions can handle the same conversion.
+      String value = "10.00";
+      assertEquals(10L, (long) getContextLong(value));
+      assertEquals(10L, (long) getDimensionLong(value));
+      assertEquals(10L, (long) getJsonLong(value));
+    }
+
+    {
+      // None of the conversion methods allow a (thousands) separator. The comma
+      // would be ambiguous in JSON. Java allows the underscore, but JSON does
+      // not support this syntax, and neither does Druid's string-to-long conversion.
+      String value = "1_234";
+      assertThrows(BadQueryContextException.class, () -> getContextLong(value));
+      assertNull(getDimensionLong(value));
+      assertThrows(JsonParseException.class, () -> getJsonLong(value));
+    }
+  }
+
+  private static Long getContextLong(String value)
+  {
+    return QueryContexts.getAsLong("dummy", value);
+  }
+
+  private static Long getJsonLong(String value) throws JsonProcessingException
+  {
+    return JSON_MAPPER.readValue(value, Long.class);
+  }
+
+  private static Long getDimensionLong(String value)
+  {
+    return DimensionHandlerUtils.getExactLongFromDecimalString(value);
+  }
+
+  @Test
+  public void testGetFloat()
+  {
+    final QueryContext context = QueryContext.of(
+        ImmutableMap.of(
+            "f1", "500",
+            "f2", 500,
+            "f3", 500.1,
+            "f4", "ab"
+        )
+    );
+
+    assertEquals(0, Float.compare(500, context.getFloat("f1", 100)));
+    assertEquals(0, Float.compare(500, context.getFloat("f2", 100)));
+    assertEquals(0, Float.compare(500.1f, context.getFloat("f3", 100)));
+
+    assertThrows(BadQueryContextException.class, () -> context.getFloat("f4", 5));
   }
 
   @Test
   public void testGetHumanReadableBytes()
   {
     final QueryContext context = new QueryContext(
-        ImmutableMap.of(
-            "maxOnDiskStorage", "500M"
-        )
+        ImmutableMap.<String, Object>builder()
+                    .put("m1", 500_000_000)
+                    .put("m2", "500M")
+                    .put("m3", "500Mi")
+                    .put("m4", "500MiB")
+                    .put("m5", "500000000")
+                    .put("m6", "abc")
+                    .build()
     );
-    Assert.assertEquals(500_000_000, context.getAsHumanReadableBytes("maxOnDiskStorage", HumanReadableBytes.ZERO).getBytes());
+    assertEquals(500_000_000, context.getHumanReadableBytes("m1", HumanReadableBytes.ZERO).getBytes());
+    assertEquals(500_000_000, context.getHumanReadableBytes("m2", HumanReadableBytes.ZERO).getBytes());
+    assertEquals(500 * 1024 * 1024L, context.getHumanReadableBytes("m3", HumanReadableBytes.ZERO).getBytes());
+    assertEquals(500 * 1024 * 1024L, context.getHumanReadableBytes("m4", HumanReadableBytes.ZERO).getBytes());
+    assertEquals(500_000_000, context.getHumanReadableBytes("m5", HumanReadableBytes.ZERO).getBytes());
+
+    assertThrows(BadQueryContextException.class, () -> context.getHumanReadableBytes("m6", HumanReadableBytes.ZERO));
   }
 
   @Test
-  public void testAddSystemParamOverrideUserParam()
+  public void testDefaultEnableQueryDebugging()
   {
-    final QueryContext context = new QueryContext(
-        ImmutableMap.of(
-            "user1", "userVal1",
-            "conflict", "userVal2"
-        )
-    );
-    context.addSystemParam("sys1", "sysVal1");
-    context.addSystemParam("conflict", "sysVal2");
-
-    Assert.assertEquals(
-        ImmutableMap.of(
-            "user1", "userVal1",
-            "conflict", "userVal2"
-        ),
-        context.getUserParams()
-    );
-
-    Assert.assertEquals(
-        ImmutableMap.of(
-            "user1", "userVal1",
-            "sys1", "sysVal1",
-            "conflict", "sysVal2"
-        ),
-        context.getMergedParams()
-    );
+    assertFalse(QueryContext.empty().isDebug());
+    assertTrue(QueryContext.of(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true)).isDebug());
   }
 
-  @Test
-  public void testUserParamOverrideDefaultParam()
-  {
-    final QueryContext context = new QueryContext(
-        ImmutableMap.of(
-            "user1", "userVal1",
-            "conflict", "userVal2"
-        )
-    );
-    context.addDefaultParams(
-        ImmutableMap.of(
-            "default1", "defaultVal1"
-        )
-    );
-    context.addDefaultParam("conflict", "defaultVal2");
-
-    Assert.assertEquals(
-        ImmutableMap.of(
-            "user1", "userVal1",
-            "conflict", "userVal2"
-        ),
-        context.getUserParams()
-    );
-
-    Assert.assertEquals(
-        ImmutableMap.of(
-            "user1", "userVal1",
-            "default1", "defaultVal1",
-            "conflict", "userVal2"
-        ),
-        context.getMergedParams()
-    );
-  }
-
-  @Test
-  public void testRemoveUserParam()
-  {
-    final QueryContext context = new QueryContext(
-        ImmutableMap.of(
-            "user1", "userVal1",
-            "conflict", "userVal2"
-        )
-    );
-    context.addDefaultParams(
-        ImmutableMap.of(
-            "default1", "defaultVal1",
-            "conflict", "defaultVal2"
-        )
-    );
-
-    Assert.assertEquals(
-        ImmutableMap.of(
-            "user1", "userVal1",
-            "default1", "defaultVal1",
-            "conflict", "userVal2"
-        ),
-        context.getMergedParams()
-    );
-    Assert.assertEquals("userVal2", context.removeUserParam("conflict"));
-    Assert.assertEquals(
-        ImmutableMap.of(
-            "user1", "userVal1",
-            "default1", "defaultVal1",
-            "conflict", "defaultVal2"
-        ),
-        context.getMergedParams()
-    );
-  }
-
-  @Test
-  public void testGetMergedParams()
-  {
-    final QueryContext context = new QueryContext(
-        ImmutableMap.of(
-            "user1", "userVal1",
-            "conflict", "userVal2"
-        )
-    );
-    context.addDefaultParams(
-        ImmutableMap.of(
-            "default1", "defaultVal1",
-            "conflict", "defaultVal2"
-        )
-    );
-
-    Assert.assertSame(context.getMergedParams(), context.getMergedParams());
-  }
-
-  @Test
-  public void testCopy()
-  {
-    final QueryContext context = new QueryContext(
-        ImmutableMap.of(
-            "user1", "userVal1",
-            "conflict", "userVal2"
-        )
-    );
-
-    context.addDefaultParams(
-        ImmutableMap.of(
-            "default1", "defaultVal1",
-            "conflict", "defaultVal2"
-        )
-    );
-
-    context.addSystemParam("sys1", "val1");
-
-    final Map<String, Object> merged = ImmutableMap.copyOf(context.getMergedParams());
-
-    final QueryContext context2 = context.copy();
-    context2.removeUserParam("conflict");
-    context2.addSystemParam("sys2", "val2");
-    context2.addDefaultParam("default3", "defaultVal3");
-
-    Assert.assertEquals(merged, context.getMergedParams());
-  }
-
+  // This test is a bit silly. It is retained because another test uses the
+  // LegacyContextQuery test.
   @Test
   public void testLegacyReturnsLegacy()
   {
-    Query<?> legacy = new LegacyContextQuery(ImmutableMap.of("foo", "bar"));
-    Assert.assertNull(legacy.getQueryContext());
+    Map<String, Object> context = ImmutableMap.of("foo", "bar");
+    Query<?> legacy = new LegacyContextQuery(context);
+    assertEquals(context, legacy.getContext());
   }
 
   @Test
   public void testNonLegacyIsNotLegacyContext()
   {
     Query<?> timeseries = Druids.newTimeseriesQueryBuilder()
-                             .dataSource("test")
-                             .intervals("2015-01-02/2015-01-03")
-                             .granularity(Granularities.DAY)
-                             .aggregators(Collections.singletonList(new CountAggregatorFactory("theCount")))
-                             .context(ImmutableMap.of("foo", "bar"))
-                             .build();
-    Assert.assertNotNull(timeseries.getQueryContext());
+                                .dataSource("test")
+                                .intervals("2015-01-02/2015-01-03")
+                                .granularity(Granularities.DAY)
+                                .aggregators(Collections.singletonList(new CountAggregatorFactory("theCount")))
+                                .context(ImmutableMap.of("foo", "bar"))
+                                .build();
+    assertNotNull(timeseries.getContext());
   }
 
-  public static class LegacyContextQuery implements Query
+  public static class LegacyContextQuery implements Query<Integer>
   {
     private final Map<String, Object> context;
 
@@ -345,9 +389,9 @@ public class QueryContextTest
     }
 
     @Override
-    public QueryRunner getRunner(QuerySegmentWalker walker)
+    public QueryRunner<Integer> getRunner(QuerySegmentWalker walker)
     {
-      return new NoopQueryRunner();
+      return new NoopQueryRunner<>();
     }
 
     @Override
@@ -381,50 +425,25 @@ public class QueryContextTest
     }
 
     @Override
-    public boolean getContextBoolean(String key, boolean defaultValue)
-    {
-      if (context == null || !context.containsKey(key)) {
-        return defaultValue;
-      }
-      return (boolean) context.get(key);
-    }
-
-    @Override
-    public HumanReadableBytes getContextHumanReadableBytes(String key, HumanReadableBytes defaultValue)
-    {
-      if (null == context || !context.containsKey(key)) {
-        return defaultValue;
-      }
-      Object value = context.get(key);
-      if (value instanceof Number) {
-        return HumanReadableBytes.valueOf(Numbers.parseLong(value));
-      } else if (value instanceof String) {
-        return new HumanReadableBytes((String) value);
-      } else {
-        throw new IAE("Expected parameter [%s] to be in human readable format", key);
-      }
-    }
-
-    @Override
     public boolean isDescending()
     {
       return false;
     }
 
     @Override
-    public Ordering getResultOrdering()
+    public Ordering<Integer> getResultOrdering()
     {
       return Ordering.natural();
     }
 
     @Override
-    public Query withQuerySegmentSpec(QuerySegmentSpec spec)
+    public Query<Integer> withQuerySegmentSpec(QuerySegmentSpec spec)
     {
       return new LegacyContextQuery(context);
     }
 
     @Override
-    public Query withId(String id)
+    public Query<Integer> withId(String id)
     {
       context.put(BaseQuery.QUERY_ID, id);
       return this;
@@ -438,7 +457,7 @@ public class QueryContextTest
     }
 
     @Override
-    public Query withSubQueryId(String subQueryId)
+    public Query<Integer> withSubQueryId(String subQueryId)
     {
       context.put(BaseQuery.SUB_QUERY_ID, subQueryId);
       return this;
@@ -452,30 +471,15 @@ public class QueryContextTest
     }
 
     @Override
-    public Query withDataSource(DataSource dataSource)
+    public Query<Integer> withDataSource(DataSource dataSource)
     {
       return this;
     }
 
     @Override
-    public Query withOverriddenContext(Map contextOverride)
+    public Query<Integer> withOverriddenContext(Map<String, Object> contextOverride)
     {
       return new LegacyContextQuery(contextOverride);
-    }
-
-    @Override
-    public Object getContextValue(String key, Object defaultValue)
-    {
-      if (!context.containsKey(key)) {
-        return defaultValue;
-      }
-      return context.get(key);
-    }
-
-    @Override
-    public Object getContextValue(String key)
-    {
-      return context.get(key);
     }
   }
 }

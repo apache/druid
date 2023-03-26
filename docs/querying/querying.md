@@ -37,7 +37,7 @@ curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:applica
 
 > Replace `<queryable_host>:<port>` with the appropriate address and port for your system. For example, if running the quickstart configuration, replace `<queryable_host>:<port>` with localhost:8888. 
 
-You can also enter them directly in the Druid console's Query view. Simply pasting a native query into the console switches the editor into JSON mode.
+You can also enter them directly in the web console's Query view. Simply pasting a native query into the console switches the editor into JSON mode.
 
 ![Native query](../assets/native-queries-01.png "Native query")
 

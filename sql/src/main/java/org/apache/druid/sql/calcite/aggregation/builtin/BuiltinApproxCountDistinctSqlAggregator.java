@@ -39,6 +39,7 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostA
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -85,11 +86,14 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
   {
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
     final List<DimensionSpec> specs = new ArrayList<>();
+    final List<DimFilter> nonNullFilterList = new ArrayList<>();
+
     AggregatorFactory aggregatorFactory = null;
     for (int fieldNumber : aggregateCall.getArgList()) {
       // Don't use Aggregations.getArgumentsForSimpleAggregator, since it won't let us use direct column access
       // for string columns.
       final RexNode rexNode = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           fieldNumber
@@ -98,16 +102,6 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
       final DruidExpression arg = Expressions.toDruidExpression(plannerContext, rowSignature, rexNode);
       if (arg == null) {
         return null;
-      }
-
-      if (arg.isDirectColumnAccess()
-          && rowSignature.getColumnType(arg.getDirectColumn()).map(type -> type.is(ValueType.COMPLEX)).orElse(false)) {
-        if (aggregateCall.getArgList().size() > 1) {
-          throw new UnsupportedSQLQueryException("cannot use count distinct on multiple fields since one field '%s' is complex: %s",
-              arg.getDirectColumn(),
-              rowSignature.getColumnType(arg.getDirectColumn()));
-        }
-        aggregatorFactory = new HyperUniquesAggregatorFactory(aggregatorName, arg.getDirectColumn(), false, true);
       }
 
       final RelDataType dataType = rexNode.getType();
@@ -128,6 +122,21 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
         String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, dataType);
         dimensionSpec = new DefaultDimensionSpec(virtualColumnName, null, inputType);
       }
+
+      if (inputType.is(ValueType.COMPLEX)) {
+        if (aggregateCall.getArgList().size() > 1) {
+          throw new UnsupportedSQLQueryException("cannot use count distinct on multiple fields since one field '%s' is complex: %s",
+              dimensionSpec.getOutputName(),
+              inputType);
+        }
+
+        aggregatorFactory = new HyperUniquesAggregatorFactory(
+            aggregatorName,
+            dimensionSpec.getOutputName(),
+            false,
+            true
+        );
+      }
       specs.add(dimensionSpec);
     }
 
@@ -136,7 +145,7 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
           aggregatorName,
           null,
           specs,
-          true,
+          false,
           true
       );
     }

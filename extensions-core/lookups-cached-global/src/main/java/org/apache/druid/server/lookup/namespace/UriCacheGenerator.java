@@ -156,7 +156,7 @@ public final class UriCacheGenerator implements CacheGenerator<UriExtractionName
             );
             final long duration = System.nanoTime() - startNs;
             log.info(
-                "Finished loading %,d values (%d bytes) from %,d lines for [%s] in %,d ns",
+                "Finished loading %d values (%d bytes) from %d lines for [%s] in %d ns",
                 populateResult.getEntries(),
                 populateResult.getBytes(),
                 populateResult.getLines(),

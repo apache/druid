@@ -1,7 +1,7 @@
 ---
 id: native-batch-firehose
-title: "Native batch ingestion with firehose"
-sidebar_label: "Firehose"
+title: "Native batch ingestion with firehose (Deprecated)"
+sidebar_label: "Firehose (deprecated)"
 ---
 
 <!--
@@ -23,14 +23,13 @@ sidebar_label: "Firehose"
   ~ under the License.
   -->
 
-
-Firehoses are deprecated in 0.17.0. It's highly recommended to use the [Native batch ingestion input sources](./native-batch-input-source.md) instead.
+> Firehose ingestion is deprecated. See [Migrate from firehose to input source ingestion](./migrate-from-firehose-ingestion.md) for instructions on migrating from firehose ingestion to using native batch ingestion input sources.
 
 There are several firehoses readily available in Druid, some are meant for examples, others can be used directly in a production environment.
 
 ## StaticS3Firehose
 
-> You need to include the [`druid-s3-extensions`](../development/extensions-core/s3.md) as an extension to use the StaticS3Firehose.
+You need to include the [`druid-s3-extensions`](../development/extensions-core/s3.md) as an extension to use the StaticS3Firehose.
 
 This firehose ingests events from a predefined list of S3 objects.
 This firehose is _splittable_ and can be used by the [Parallel task](./native-batch.md).
@@ -62,7 +61,7 @@ Note that prefetching or caching isn't that useful in the Parallel task.
 
 ## StaticGoogleBlobStoreFirehose
 
-> You need to include the [`druid-google-extensions`](../development/extensions-core/google.md) as an extension to use the StaticGoogleBlobStoreFirehose.
+You need to include the [`druid-google-extensions`](../development/extensions-core/google.md) as an extension to use the StaticGoogleBlobStoreFirehose.
 
 This firehose ingests events, similar to the StaticS3Firehose, but from an Google Cloud Store.
 
@@ -112,7 +111,7 @@ Google Blobs:
 
 ## HDFSFirehose
 
-> You need to include the [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) as an extension to use the HDFSFirehose.
+You need to include the [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) as an extension to use the HDFSFirehose.
 
 This firehose ingests events from a predefined list of files from the HDFS storage.
 This firehose is _splittable_ and can be used by the [Parallel task](./native-batch.md).

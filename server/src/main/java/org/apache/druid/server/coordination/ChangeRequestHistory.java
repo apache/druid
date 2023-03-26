@@ -32,6 +32,7 @@ import org.apache.druid.utils.CircularBuffer;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -43,6 +44,7 @@ import java.util.concurrent.ExecutorService;
  *
  * Clients call {@link #getRequestsSince} to get updates since given counter.
  */
+
 public class ChangeRequestHistory<T>
 {
   private static int MAX_SIZE = 1000;
@@ -74,11 +76,29 @@ public class ChangeRequestHistory<T>
     this.singleThreadedExecutor = Execs.singleThreaded("SegmentChangeRequestHistory");
   }
 
+  public void stop()
+  {
+    singleThreadedExecutor.shutdownNow();
+    final LinkedHashSet<CustomSettableFuture<?>> futures = new LinkedHashSet<>(waitingFutures.keySet());
+    waitingFutures.clear();
+    for (CustomSettableFuture<?> theFuture : futures) {
+      theFuture.setException(new IllegalStateException("Server is shutting down."));
+    }
+  }
+
   /**
    * Add batch of segment changes update.
    */
   public synchronized void addChangeRequests(List<T> requests)
   {
+    if (singleThreadedExecutor.isShutdown()) {
+      return;
+    }
+    // We don't want to resolve our futures if there aren't actually any change requests being added!
+    if (requests.isEmpty()) {
+      return;
+    }
+
     for (T request : requests) {
       changes.add(new Holder<>(request, getLastCounter().inc()));
     }
@@ -108,6 +128,10 @@ public class ChangeRequestHistory<T>
   public synchronized ListenableFuture<ChangeRequestsSnapshot<T>> getRequestsSince(final Counter counter)
   {
     final CustomSettableFuture<T> future = new CustomSettableFuture<>(waitingFutures);
+    if (singleThreadedExecutor.isShutdown()) {
+      future.setException(new IllegalStateException("Server is shutting down."));
+      return future;
+    }
 
     if (counter.counter < 0) {
       future.setException(new IAE("counter[%s] must be >= 0", counter));
@@ -143,10 +167,20 @@ public class ChangeRequestHistory<T>
   {
     Counter lastCounter = getLastCounter();
 
-    if (counter.counter >= lastCounter.counter) {
+    if (counter.counter == lastCounter.counter) {
+      // We don't want to trigger a counter reset if the client counter matches the last counter! Return an empty list
+      // of changes instead.
+      if (counter.matches(lastCounter)) {
+        return ChangeRequestsSnapshot.success(counter, new ArrayList<>());
+      } else {
+        return ChangeRequestsSnapshot.fail(
+            StringUtils.format("counter[%s] failed to match with [%s]", counter, lastCounter)
+        );
+      }
+    } else if (counter.counter > lastCounter.counter) {
       return ChangeRequestsSnapshot.fail(
           StringUtils.format(
-              "counter[%s] >= last counter[%s]",
+              "counter[%s] > last counter[%s]",
               counter,
               lastCounter
           )

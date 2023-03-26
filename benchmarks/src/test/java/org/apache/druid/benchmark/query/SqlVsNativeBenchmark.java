@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -41,6 +40,7 @@ import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -66,6 +66,7 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -127,7 +128,9 @@ public class SqlVsNativeBenchmark
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper(),
         CalciteTests.DRUID_SCHEMA_NAME,
-        new CalciteRulesManager(ImmutableSet.of())
+        new CalciteRulesManager(ImmutableSet.of()),
+        CalciteTests.createJoinableFactoryWrapper(),
+        CatalogResolver.NULL_RESOLVER
     );
     groupByQuery = GroupByQuery
         .builder()
@@ -167,9 +170,9 @@ public class SqlVsNativeBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryPlanner(Blackhole blackhole) throws Exception
   {
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sqlQuery, new QueryContext())) {
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sqlQuery, Collections.emptyMap())) {
       final PlannerResult plannerResult = planner.plan();
-      final Sequence<Object[]> resultSequence = plannerResult.run();
+      final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
       final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
       blackhole.consume(lastRow);
     }

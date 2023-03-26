@@ -27,18 +27,15 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.guice.annotations.ExtensionPoint;
-import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -89,7 +86,7 @@ public abstract class BaseQuery<T> implements Query<T>
     Preconditions.checkNotNull(granularity, "Must specify a granularity");
 
     this.dataSource = dataSource;
-    this.context = new QueryContext(context);
+    this.context = QueryContext.of(context);
     this.querySegmentSpec = querySegmentSpec;
     this.descending = descending;
     this.granularity = granularity;
@@ -125,7 +122,8 @@ public abstract class BaseQuery<T> implements Query<T>
   @VisibleForTesting
   public static QuerySegmentSpec getQuerySegmentSpecForLookUp(BaseQuery<?> query)
   {
-    return DataSourceAnalysis.forDataSource(query.getDataSource())
+    DataSource queryDataSource = query.getDataSource();
+    return queryDataSource.getAnalysis()
                              .getBaseQuerySegmentSpec()
                              .orElseGet(query::getQuerySegmentSpec);
   }
@@ -172,38 +170,13 @@ public abstract class BaseQuery<T> implements Query<T>
   @JsonInclude(Include.NON_DEFAULT)
   public Map<String, Object> getContext()
   {
-    return context.getMergedParams();
+    return context.asMap();
   }
 
   @Override
-  public QueryContext getQueryContext()
+  public QueryContext context()
   {
     return context;
-  }
-
-  @Override
-  public <ContextType> ContextType getContextValue(String key)
-  {
-    return (ContextType) context.get(key);
-  }
-
-  @Override
-  public <ContextType> ContextType getContextValue(String key, ContextType defaultValue)
-  {
-    ContextType retVal = getContextValue(key);
-    return retVal == null ? defaultValue : retVal;
-  }
-
-  @Override
-  public boolean getContextBoolean(String key, boolean defaultValue)
-  {
-    return context.getAsBoolean(key, defaultValue);
-  }
-
-  @Override
-  public HumanReadableBytes getContextHumanReadableBytes(String key, HumanReadableBytes defaultValue)
-  {
-    return context.getAsHumanReadableBytes(key, defaultValue);
   }
 
   /**
@@ -241,7 +214,7 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public String getId()
   {
-    return context.getAsString(QUERY_ID);
+    return context().getString(QUERY_ID);
   }
 
   @Override
@@ -254,7 +227,7 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public String getSubQueryId()
   {
-    return context.getAsString(SUB_QUERY_ID);
+    return context().getString(SUB_QUERY_ID);
   }
 
   @Override

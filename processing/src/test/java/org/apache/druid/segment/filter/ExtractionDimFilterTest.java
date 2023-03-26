@@ -69,7 +69,7 @@ public class ExtractionDimFilterTest extends InitializedNullHandlingTest
   {
     return ImmutableList.of(
         new Object[]{new ConciseBitmapFactory(), new ConciseBitmapSerdeFactory()},
-        new Object[]{new RoaringBitmapFactory(), new RoaringBitmapSerdeFactory(null)}
+        new Object[]{new RoaringBitmapFactory(), RoaringBitmapSerdeFactory.getInstance()}
     );
   }
 
@@ -121,7 +121,7 @@ public class ExtractionDimFilterTest extends InitializedNullHandlingTest
             GenericIndexed.fromIterable(Collections.singletonList("foo1"), GenericIndexed.STRING_STRATEGY),
             GenericIndexed.fromIterable(
                 Collections.singletonList(ByteBuffer.wrap(StringUtils.toUtf8("foo1"))),
-                GenericIndexed.BYTE_BUFFER_STRATEGY
+                GenericIndexed.UTF8_STRATEGY
             ),
             GenericIndexed.fromIterable(Collections.singletonList(foo1BitMap), serdeFactory.getObjectStrategy()),
             null

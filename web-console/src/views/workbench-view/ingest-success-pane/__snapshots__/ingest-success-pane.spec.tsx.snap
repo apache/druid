@@ -5,10 +5,10 @@ exports[`IngestSuccessPane matches snapshot 1`] = `
   className="ingest-success-pane"
 >
   <p>
-    465,346 rows inserted into 'kttm_simple'.
+    465,346 rows inserted into "kttm_simple".
   </p>
   <p>
-    Insert query took 0:00:25. 
+    Insert query took 0:00:09. 
     <span
       className="action"
       onClick={[Function]}
@@ -23,7 +23,7 @@ exports[`IngestSuccessPane matches snapshot 1`] = `
       className="action"
       onClick={[Function]}
     >
-      SELECT * FROM kttm_simple
+      SELECT * FROM "kttm_simple"
     </span>
   </p>
 </div>

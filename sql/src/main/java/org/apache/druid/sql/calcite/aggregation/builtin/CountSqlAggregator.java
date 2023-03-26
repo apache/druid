@@ -78,6 +78,7 @@ public class CountSqlAggregator implements SqlAggregator
     List<DimFilter> nonNullFilterList = new ArrayList<>();
     for (int field : aggregateCall.getArgList()) {
       final RexNode rexNode = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           field
@@ -127,6 +128,7 @@ public class CountSqlAggregator implements SqlAggregator
   )
   {
     final List<DruidExpression> args = Aggregations.getArgumentsForSimpleAggregator(
+        rexBuilder,
         plannerContext,
         rowSignature,
         aggregateCall,

@@ -26,11 +26,11 @@ import com.google.common.base.Optional;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.sql.http.SqlQuery;
 
 import javax.annotation.Nullable;
-import java.util.Map;
 
 /**
  * Implementation of {@link TieredBrokerSelectorStrategy} which uses the parameter
@@ -58,15 +58,15 @@ public class ManualTieredBrokerSelectorStrategy implements TieredBrokerSelectorS
   }
 
   @Override
-  public Optional<String> getBrokerServiceName(TieredBrokerConfig tierConfig, Query query)
+  public Optional<String> getBrokerServiceName(TieredBrokerConfig tierConfig, Query<?> query)
   {
-    return getBrokerServiceName(tierConfig, query.getContext());
+    return getBrokerServiceName(tierConfig, query.context());
   }
 
   @Override
   public Optional<String> getBrokerServiceName(TieredBrokerConfig config, SqlQuery sqlQuery)
   {
-    return getBrokerServiceName(config, sqlQuery.getContext());
+    return getBrokerServiceName(config, sqlQuery.queryContext());
   }
 
   /**
@@ -74,11 +74,11 @@ public class ManualTieredBrokerSelectorStrategy implements TieredBrokerSelectorS
    */
   private Optional<String> getBrokerServiceName(
       TieredBrokerConfig tierConfig,
-      Map<String, Object> queryContext
+      QueryContext queryContext
   )
   {
     try {
-      final String contextBrokerService = QueryContexts.getBrokerServiceName(queryContext);
+      final String contextBrokerService = queryContext.getBrokerServiceName();
 
       if (isValidBrokerService(contextBrokerService, tierConfig)) {
         // If the broker service in the query context is valid, use that

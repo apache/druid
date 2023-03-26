@@ -84,30 +84,30 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
       Object {
         "Cell": [Function],
         "Header": <React.Fragment>
-          Data processed
+          Rows processed
           <br />
           <i>
-            rows   (size or files)
+            rows   (input files)
           </i>
         </React.Fragment>,
         "accessor": [Function],
         "className": "padded",
-        "id": "data_processed",
-        "width": 220,
+        "id": "rows_processed",
+        "width": 160,
       },
       Object {
         "Cell": [Function],
         "Header": <React.Fragment>
-          Data processing rate
+          Processing rate
           <br />
           <i>
-            rows/s   (data rate)
+            rows/s
           </i>
         </React.Fragment>,
         "accessor": [Function],
         "className": "padded",
-        "id": "data_processing_rate",
-        "width": 200,
+        "id": "processing_rate",
+        "width": 150,
       },
       Object {
         "Header": "Phase",
@@ -158,18 +158,16 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
     Array [
       Object {
         "definition": Object {
-          "id": "0b353011-6ea1-480a-8ca8-386771621672_0",
+          "id": "b94caff0-f693-47ed-a242-ccf837550383_0",
           "input": Array [
             Object {
               "inputFormat": Object {
-                "featureSpec": Object {},
-                "flattenSpec": null,
+                "assumeNewlineDelimited": false,
                 "keepNullColumns": false,
                 "type": "json",
+                "useJsonNodeReader": false,
               },
               "inputSource": Object {
-                "httpAuthenticationPassword": null,
-                "httpAuthenticationUsername": null,
                 "type": "http",
                 "uris": Array [
                   "https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz",
@@ -200,9 +198,10 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
                 "finalize": false,
                 "finalizeAggregations": false,
                 "groupByEnableMultiValueUnnesting": false,
+                "queryId": "09af0c1e-1c0f-4539-917c-b0458849d0d9",
                 "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
                 "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-                "sqlQueryId": "32ced762-7679-4a25-9220-3915c5976961",
+                "sqlQueryId": "09af0c1e-1c0f-4539-917c-b0458849d0d9",
                 "sqlReplaceTimeChunks": "all",
               },
               "dataSource": Object {
@@ -259,17 +258,17 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
             },
           ],
         },
-        "duration": 20229,
+        "duration": 4887,
         "partitionCount": 1,
         "phase": "FINISHED",
         "sort": true,
         "stageNumber": 0,
-        "startTime": "2022-08-22T20:12:53.790Z",
+        "startTime": "2022-10-31T16:11:15.380Z",
         "workerCount": 1,
       },
       Object {
         "definition": Object {
-          "id": "0b353011-6ea1-480a-8ca8-386771621672_1",
+          "id": "b94caff0-f693-47ed-a242-ccf837550383_1",
           "input": Array [
             Object {
               "stage": 0,
@@ -334,11 +333,11 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
           },
           "signature": Array [],
         },
-        "duration": 2497,
+        "duration": 1908,
         "partitionCount": 1,
         "phase": "FINISHED",
         "stageNumber": 1,
-        "startTime": "2022-08-22T20:13:13.991Z",
+        "startTime": "2022-10-31T16:11:20.264Z",
         "workerCount": 1,
       },
     ]

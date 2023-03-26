@@ -480,4 +480,23 @@ public class S3TaskLogsTest extends EasyMockSupport
 
     return aclExpected.getGrantsAsList();
   }
+
+  @Test
+  public void testEnsureQuotated()
+  {
+    Assert.assertEquals("\"etag\"", S3TaskLogs.ensureQuotated("etag"));
+    Assert.assertNull(S3TaskLogs.ensureQuotated(null));
+    Assert.assertEquals("\"etag", S3TaskLogs.ensureQuotated("\"etag"));
+    Assert.assertEquals("etag\"", S3TaskLogs.ensureQuotated("etag\""));
+  }
+
+  @Test
+  public void testMatchingEtagConstraintWithEnsureQuotated()
+  {
+    String eTag = "etag";
+    final GetObjectRequest request = new GetObjectRequest(null, null)
+        .withMatchingETagConstraint(S3TaskLogs.ensureQuotated(eTag))
+        .withRange(0, 1);
+    Assert.assertEquals("\"" + eTag + "\"", request.getMatchingETagConstraints().get(0));
+  }
 }

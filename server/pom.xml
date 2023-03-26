@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>25.0.0-SNAPSHOT</version>
+        <version>26.0.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -48,23 +48,6 @@
             <artifactId>druid-gcp-common</artifactId>
             <version>${project.parent.version}</version>
             <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <!-- This is needed to bundle the web console -->
-            <groupId>org.apache.druid</groupId>
-            <artifactId>druid-console</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid</groupId>
-            <artifactId>druid-core</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid</groupId>
-            <artifactId>druid-hll</artifactId>
-            <version>${project.parent.version}</version>
         </dependency>
 
         <dependency>
@@ -137,6 +120,10 @@
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-proxy</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-rewrite</artifactId>
         </dependency>
         <dependency>
             <groupId>com.google.code.findbugs</groupId>
@@ -320,16 +307,15 @@
             <groupId>com.fasterxml.jackson.module</groupId>
             <artifactId>jackson-module-guice</artifactId>
         </dependency>
+    	<dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+    	</dependency>
 
         <!-- Tests -->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -355,13 +341,6 @@
         <dependency>
             <groupId>org.easymock</groupId>
             <artifactId>easymock</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid</groupId>
-            <artifactId>druid-core</artifactId>
-            <version>${project.parent.version}</version>
-            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -448,7 +427,6 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-text</artifactId>
-            <version>1.3</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -463,6 +441,9 @@
                     <excludes>
                         <!-- There are UTs for this class but it is very difficult to get required branch coverage -->
                         <exclude>org/apache/druid/metadata/BasicDataSourceExt.class</exclude>
+                      <!-- Tested in the SQL layer, but, oddly, not in this module. -->
+                        <exclude>org/apache/druid/server/QueryResponse.class</exclude>
+                        <exclude>org/apache/druid/curator/CuratorModule.class</exclude>
                     </excludes>
                 </configuration>
             </plugin>

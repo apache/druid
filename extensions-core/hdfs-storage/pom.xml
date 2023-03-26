@@ -29,14 +29,14 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>25.0.0-SNAPSHOT</version>
+        <version>26.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <dependencies>
         <dependency>
             <groupId>org.apache.druid</groupId>
-            <artifactId>druid-core</artifactId>
+            <artifactId>druid-processing</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -130,19 +130,6 @@
         <groupId>org.apache.druid</groupId>
         <artifactId>druid-indexing-hadoop</artifactId>
         <version>${project.parent.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.druid</groupId>
-        <artifactId>druid-processing</artifactId>
-        <version>${project.parent.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.druid</groupId>
-        <artifactId>druid-core</artifactId>
-        <version>${project.parent.version}</version>
-        <classifier>tests</classifier>
         <scope>test</scope>
       </dependency>
     </dependencies>

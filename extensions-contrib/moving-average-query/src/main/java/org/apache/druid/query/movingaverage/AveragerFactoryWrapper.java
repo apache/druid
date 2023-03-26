@@ -38,14 +38,13 @@ import java.util.Objects;
  *
  * NOTE: The {@link AggregatorFactory} abstract class is only partially extended.
  * Most methods are not implemented and throw {@link UnsupportedOperationException} if called.
- * This is becsuse these methods are invalid for the AveragerFactoryWrapper.
+ * This is because these methods are invalid for the AveragerFactoryWrapper.
  *
  * @param <T> Result type
  * @param <R> Finalized Result type
  */
 public class AveragerFactoryWrapper<T, R> extends AggregatorFactory
 {
-
   private final AveragerFactory<T, R> af;
   private final String prefix;
 

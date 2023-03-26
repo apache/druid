@@ -21,11 +21,9 @@ package org.apache.druid.query.select;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.collect.Ordering;
-import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.filter.DimFilter;
@@ -35,6 +33,7 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 
@@ -107,36 +106,6 @@ public class SelectQuery implements Query<Object>
 
   @Override
   public Map<String, Object> getContext()
-  {
-    throw new RuntimeException(REMOVED_ERROR_MESSAGE);
-  }
-
-  @Override
-  public QueryContext getQueryContext()
-  {
-    throw new RuntimeException(REMOVED_ERROR_MESSAGE);
-  }
-
-  @Override
-  public <ContextType> ContextType getContextValue(String key)
-  {
-    throw new RuntimeException(REMOVED_ERROR_MESSAGE);
-  }
-
-  @Override
-  public <ContextType> ContextType getContextValue(String key, ContextType defaultValue)
-  {
-    throw new RuntimeException(REMOVED_ERROR_MESSAGE);
-  }
-
-  @Override
-  public boolean getContextBoolean(String key, boolean defaultValue)
-  {
-    throw new RuntimeException(REMOVED_ERROR_MESSAGE);
-  }
-
-  @Override
-  public HumanReadableBytes getContextHumanReadableBytes(String key, HumanReadableBytes defaultValue)
   {
     throw new RuntimeException(REMOVED_ERROR_MESSAGE);
   }
