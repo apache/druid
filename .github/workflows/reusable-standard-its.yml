@@ -78,6 +78,7 @@ jobs:
           ./it.sh ci
 
       - name: Run IT
+        id: run-it
         env:
           MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }}
         run: |
@@ -85,3 +86,11 @@ jobs:
           echo "Mysql driver: ${MYSQL_DRIVER_CLASSNAME}"
           echo "${MVN} verify -pl integration-tests -P integration-tests ${{ inputs.testing_groups }} -Djvm.runtime=${{ inputs.runtime_jdk }} -Dit.indexer=${{ inputs.use_indexer }} ${MAVEN_SKIP} -Doverride.config.path=${{ inputs.override_config_path }}"
           ${MVN} verify -pl integration-tests -P integration-tests ${{ inputs.testing_groups }} -Djvm.runtime=${{ inputs.runtime_jdk }} -Dit.indexer=${{ inputs.use_indexer }} ${MAVEN_SKIP} -Doverride.config.path=${{ inputs.override_config_path }}
+
+      - name: Debug IT
+        if: steps.run-it.conclusion == 'failure'
+        run: |
+          for v in broker router ${{ inputs.use_indexer }} historical coordinator overlord; do
+            echo "------------------------druid-"$v"-------------------------";
+            sudo docker exec druid-"$v" tail -1000 /shared/logs/"$v".log;
+          done
