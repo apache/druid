@@ -387,6 +387,9 @@ public abstract class ExprEval<T>
    */
   public static ExprEval bestEffortOf(@Nullable Object val)
   {
+    if (val == null) {
+      return new StringExprEval(null);
+    }
     if (val instanceof ExprEval) {
       return (ExprEval) val;
     }
@@ -490,12 +493,8 @@ public abstract class ExprEval<T>
       return new StringExprEval(StringUtils.encodeBase64String((byte[]) val));
     }
 
-    if (val != null) {
-      // is this cool?
-      return new ComplexExprEval(ExpressionType.UNKNOWN_COMPLEX, val);
-    }
-
-    return new StringExprEval(null);
+    // is this cool?
+    return new ComplexExprEval(ExpressionType.UNKNOWN_COMPLEX, val);
   }
 
   public static ExprEval ofType(@Nullable ExpressionType type, @Nullable Object value)

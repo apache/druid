@@ -105,7 +105,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
           return ProcessedValue.NULL_LITERAL;
         }
         catch (IOException e) {
-          throw new RE(e, "Failed to write field [%s] value [%s]", fieldPath, fieldValue);
+          throw new RE(e, "Failed to write field [%s], unhandled value", fieldPath);
         }
       }
       return ProcessedValue.NULL_LITERAL;

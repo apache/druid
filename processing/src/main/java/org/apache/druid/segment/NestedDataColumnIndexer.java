@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Preconditions;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.java.util.common.IAE;
@@ -497,12 +496,12 @@ public class NestedDataColumnIndexer implements DimensionIndexer<StructuredData,
           return new StructuredDataProcessor.ProcessedValue<>(eval.asDouble(), sizeEstimate);
         case ARRAY:
           // sanity check, this should never happen
-          Preconditions.checkNotNull(
-              columnType.getElementType(),
-              "Array type [%s] for value [%s] missing element type, how did this possibly happen?",
-              eval.type(),
-              eval.valueOrDefault()
-          );
+          if (columnType.getElementType() == null) {
+            throw new IAE(
+                "Array type [%s] missing element type, how did this possibly happen?",
+                eval.type()
+            );
+          }
           switch (columnType.getElementType().getType()) {
             case LONG:
               typeSet.add(ColumnType.LONG_ARRAY);
@@ -527,11 +526,12 @@ public class NestedDataColumnIndexer implements DimensionIndexer<StructuredData,
               throw new IAE("Unhandled type: %s", columnType);
           }
         case STRING:
-        default:
           typeSet.add(ColumnType.STRING);
           final String asString = eval.asString();
           sizeEstimate = globalDimensionDictionary.addStringValue(asString);
-          return new StructuredDataProcessor.ProcessedValue<>(eval.asString(), sizeEstimate);
+          return new StructuredDataProcessor.ProcessedValue<>(asString, sizeEstimate);
+        default:
+          throw new IAE("Unhandled type: %s", columnType);
       }
     }
 

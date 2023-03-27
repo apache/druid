@@ -207,7 +207,7 @@ public class NestedDataColumnMerger implements DimensionMergerV9
           System.currentTimeMillis() - dimStartTime
       );
     }
-    catch (Throwable ioe) {
+    catch (IOException ioe) {
       log.error(ioe, "Failed to merge dictionary for column [%s]", name);
       throw ioe;
     }
