@@ -57,7 +57,7 @@ public class SlicerUtils
    * Creates "numSlices" lists from "iterator", trying to keep each one as evenly-weighted as possible. Some lists may
    * be empty.
    *
-   * Each item is assigned to the split list that has the lowest weight at the time that item is encountered, which
+   * Items are assigned to the slice that has the lowest weight at the time that item is encountered, which
    * leads to pseudo-round-robin assignment.
    */
   public static <T> List<List<T>> makeSlicesStatic(
@@ -103,9 +103,12 @@ public class SlicerUtils
    *
    * This method creates as few slices as possible, while keeping each slice under the provided limits.
    *
-   * If there is a conflict between maxNumSlices and maxFilesPerSlice or maxWeightPerSlice, then maxNumSlices wins.
-   * This means that for small values of maxNumSlices, slices may have more than maxFilesPerSlice files, or more
-   * than maxWeightPerSlice weight.
+   * This function uses a greedy algorithm that starts out with a single empty slice. Items are assigned to the slice
+   * that has the lowest weight at the time that item is encountered. New slices are created, up to maxNumSlices, when
+   * the lightest existing slice exceeds either maxFilesPerSlice or maxWeightPerSlice.
+   *
+   * Slices may have more than maxFilesPerSlice files, or more than maxWeightPerSlice weight, if necessary to
+   * keep the total number of slices at or below maxNumSlices.
    */
   public static <T> List<List<T>> makeSlicesDynamic(
       final Iterator<T> iterator,

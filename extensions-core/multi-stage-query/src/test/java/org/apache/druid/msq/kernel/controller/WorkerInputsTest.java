@@ -229,6 +229,38 @@ public class WorkerInputsTest
   }
 
   @Test
+  public void test_auto_tenSmallAndOneBigInputs_twoWorkers()
+  {
+    final StageDefinition stageDef =
+        StageDefinition.builder(0)
+                       .inputs(new TestInputSpec(1, 2, 30_000_000_000L, 4, 5, 6, 7, 8, 9, 10, 11))
+                       .maxWorkerCount(2)
+                       .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
+                       .build(QUERY_ID);
+
+    final WorkerInputs inputs = WorkerInputs.create(
+        stageDef,
+        Int2IntMaps.EMPTY_MAP,
+        new TestInputSpecSlicer(true),
+        WorkerAssignmentStrategy.AUTO
+    );
+
+    Assert.assertEquals(
+        ImmutableMap.<Integer, List<InputSlice>>builder()
+                    .put(
+                        0,
+                        Collections.singletonList(new TestInputSlice(1, 2, 4, 5, 6, 7, 8, 9, 10, 11))
+                    )
+                    .put(
+                        1,
+                        Collections.singletonList(new TestInputSlice(30_000_000_000L))
+                    )
+                    .build(),
+        inputs.assignmentsMap()
+    );
+  }
+
+  @Test
   public void test_auto_threeBigInputs_oneWorker()
   {
     final StageDefinition stageDef =
@@ -265,11 +297,6 @@ public class WorkerInputsTest
   private static class TestInputSpec implements InputSpec
   {
     private final LongList values;
-
-    public TestInputSpec(LongList values)
-    {
-      this.values = values;
-    }
 
     public TestInputSpec(long... values)
     {
