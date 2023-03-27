@@ -16,12 +16,12 @@ exports[`ExecutionErrorPane matches snapshot 1`] = `
       </Memo(ExternalLink)>
       : 
     </React.Fragment>
-    Too many warnings of type CannotParseExternalData generated (max = 10)
+    Too many warnings of type CannotParseExternalData generated (max = 2)
   </p>
   <div>
     Failed task ID: 
     <Memo(ClickToCopy)
-      text="query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a"
+      text="query-614dc100-a4b9-40a3-95ce-1227fa7ea765-worker0_0"
     />
     <React.Fragment>
        (on host: 

@@ -121,7 +121,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
   let possibleTimeExpression: PossibleTimeExpression | undefined;
   if (previewData) {
     possibleTimeExpression = filterMap(previewData.header, column => {
-      const values = previewData.rows.map(row => row.input[column]);
+      const values = filterMap(previewData.rows, row => row.input?.[column]);
       const possibleDruidFormat = possibleDruidFormatForValues(values);
       if (!possibleDruidFormat) return;
 
