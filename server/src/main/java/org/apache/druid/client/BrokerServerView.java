@@ -180,10 +180,10 @@ public class BrokerServerView implements TimelineServerView
   {
     if (segmentWatcherConfig.isAwaitInitializationOnStart()) {
       final long startMillis = System.currentTimeMillis();
-      log.info("[%s] waiting for initialization.", getClass().getSimpleName());
+      log.info("BrokerServerView waiting for initialization.");
       awaitInitialization();
       final long endMillis = System.currentTimeMillis();
-      log.info("[%s] initialized in [%,d] ms.", getClass().getSimpleName(), endMillis - startMillis);
+      log.info("BrokerServerView initialized in [%,d] ms.", endMillis - startMillis);
       emitter.emit(ServiceMetricEvent.builder().build(
           "init/serverview/time",
           endMillis - startMillis
