@@ -274,7 +274,7 @@ public class HttpServerInventoryViewTest
   }
 
   @Test(timeout = 60_000L)
-  public void testSyncMonitoring() throws InterruptedException
+  public void testSyncMonitoring()
   {
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
