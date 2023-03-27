@@ -45,8 +45,7 @@ Individual tutorials may require additional Python packages, such as for visuali
 ### Run Jupyter and Druid in Docker
 
 > Jupyter in Docker requires that you have **Docker** and **Docker Compose**.
-We recommend installing [Docker Desktop](https://docs.docker.com/desktop/),
-which includes Docker Compose along with Docker Engine and Docker CLI.
+We recommend installing these through [Docker Desktop](https://docs.docker.com/desktop/).
 
 Apache Druid provides a custom Jupyter container that contains the prerequisites
 for all Jupyter-based Druid tutorials, as well as all of the tutorials themselves.
@@ -78,6 +77,8 @@ You can override the port number by setting the `JUPYTER_PORT` environment varia
 #### Start Jupyter and Druid
 
 Running Druid in Docker requires the `environment` file as well as the `DRUID_VERSION` environment variable.
+`DRUID_VERSION` supplies the Docker tag that specifies which version of Druid to pull from the
+[Apache Druid Docker Hub](https://hub.docker.com/r/apache/druid/tags).
 
 In the same directory as `docker-compose.yaml` and `environment`, start the application:
 
