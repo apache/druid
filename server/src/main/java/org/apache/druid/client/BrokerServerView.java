@@ -291,7 +291,17 @@ public class BrokerServerView implements TimelineServerView
 
         QueryableDruidServer queryableDruidServer = clients.get(server.getName());
         if (queryableDruidServer == null) {
-          queryableDruidServer = addServer(baseView.getInventoryValue(server.getName()));
+          DruidServer inventoryValue = baseView.getInventoryValue(server.getName());
+          if (inventoryValue == null) {
+            log.error(
+                "Could not find server[%s] in inventory. Skipping addition of segment[%s].",
+                server.getName(),
+                segment.getId()
+            );
+            return;
+          } else {
+            queryableDruidServer = addServer(inventoryValue);
+          }
         }
         selector.addServerAndUpdateSegment(queryableDruidServer, segment);
       }
