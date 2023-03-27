@@ -267,7 +267,7 @@ public class BrokerServerView implements TimelineServerView
 
   private void serverAddedSegment(final DruidServerMetadata server, final DataSegment segment)
   {
-    SegmentId segmentId = segment.getId();
+    final SegmentId segmentId = segment.getId();
     synchronized (lock) {
       // in theory we could probably just filter this to ensure we don't put ourselves in here, to make broker tree
       // query topologies, but for now just skip all brokers, so we don't create some sort of wild infinite query
@@ -296,7 +296,7 @@ public class BrokerServerView implements TimelineServerView
             log.error(
                 "Could not find server[%s] in inventory. Skipping addition of segment[%s].",
                 server.getName(),
-                segment.getId()
+                segmentId
             );
             return;
           } else {
@@ -312,8 +312,7 @@ public class BrokerServerView implements TimelineServerView
 
   private void serverRemovedSegment(DruidServerMetadata server, DataSegment segment)
   {
-
-    SegmentId segmentId = segment.getId();
+    final SegmentId segmentId = segment.getId();
     final ServerSelector selector;
 
     synchronized (lock) {
@@ -333,7 +332,13 @@ public class BrokerServerView implements TimelineServerView
       }
 
       QueryableDruidServer queryableDruidServer = clients.get(server.getName());
-      if (!selector.removeServer(queryableDruidServer)) {
+      if (queryableDruidServer == null) {
+        log.error(
+            "Could not find server[%s] in inventory. Skipping removal of segment[%s].",
+            server.getName(),
+            segmentId
+        );
+      } else if (!selector.removeServer(queryableDruidServer)) {
         log.warn(
             "Asked to disassociate non-existant association between server[%s] and segment[%s]",
             server,
@@ -388,7 +393,7 @@ public class BrokerServerView implements TimelineServerView
     synchronized (lock) {
       QueryableDruidServer queryableDruidServer = clients.get(server.getName());
       if (queryableDruidServer == null) {
-        log.error("No QueryableDruidServer found for %s", server.getName());
+        log.error("No QueryableDruidServer found for server [%s].", server.getName());
         return null;
       }
       return queryableDruidServer.getQueryRunner();
