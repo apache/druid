@@ -40,6 +40,7 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
 {
+  private boolean toStart = true;
   private final InputStream inputStream;
   private final ReadableByteChunksFrameChannel delegate;
   private final Object lock = new Object();
@@ -96,20 +97,18 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
       boolean framesOnly
   )
   {
-    final ReadableInputStreamFrameChannel channel = new ReadableInputStreamFrameChannel(
+    return new ReadableInputStreamFrameChannel(
         inputStream,
         ReadableByteChunksFrameChannel.create(id, framesOnly),
         executorService
     );
-
-    channel.startReading();
-    return channel;
   }
 
   @Override
   public boolean isFinished()
   {
     synchronized (lock) {
+      startReading();
       return delegate.isFinished();
     }
   }
@@ -118,6 +117,7 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
   public boolean canRead()
   {
     synchronized (lock) {
+      startReading();
       return delegate.canRead();
     }
   }
@@ -126,6 +126,7 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
   public Frame read()
   {
     synchronized (lock) {
+      startReading();
       return delegate.read();
     }
   }
@@ -134,6 +135,7 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
   public ListenableFuture<?> readabilityFuture()
   {
     synchronized (lock) {
+      startReading();
       return delegate.readabilityFuture();
     }
   }
@@ -150,6 +152,10 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
 
   private void startReading()
   {
+    if (!toStart) {
+      return;
+    }
+    toStart = false;
     executorService.submit(() -> {
       int nTry = 1;
       while (true) {
@@ -168,7 +174,7 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
             ++nTry;
           }
           catch (InterruptedException e) {
-            // close inputstream anyway if the thread interrups
+            // close input stream anyway if the thread interrupts
             IOUtils.closeQuietly(inputStream);
             throw new ISE(e, Thread.currentThread().getName() + "interrupted");
           }
@@ -187,6 +193,8 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
               if (bytesRead == -1) {
                 inputStreamFinished = true;
                 delegate.doneWriting();
+                // eagerly release input stream resources since everything is read.
+                IOUtils.closeQuietly(inputStream);
                 break;
               } else {
                 ListenableFuture<?> backpressureFuture = delegate.addChunk(Arrays.copyOfRange(buffer, 0, bytesRead));
@@ -233,8 +241,7 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
   private static long nextRetrySleepMillis(final int nTry)
   {
     final double fuzzyMultiplier = Math.min(Math.max(1 + 0.2 * ThreadLocalRandom.current().nextGaussian(), 0), 2);
-    final long sleepMillis = (long) (Math.min(MAX_SLEEP_MILLIS, BASE_SLEEP_MILLIS * Math.pow(2, nTry - 1))
-                                     * fuzzyMultiplier);
-    return sleepMillis;
+    return (long) (Math.min(MAX_SLEEP_MILLIS, BASE_SLEEP_MILLIS * Math.pow(2, nTry - 1))
+                   * fuzzyMultiplier);
   }
 }
