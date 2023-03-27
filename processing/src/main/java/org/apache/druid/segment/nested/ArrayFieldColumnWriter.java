@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.nested;
 
-import org.apache.druid.common.config.NullHandling;
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
@@ -27,12 +27,10 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
-/**
- * Literal field writer for string type nested columns of {@link NestedDataColumnSerializer}
- */
-public final class StringFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<String>
+public class ArrayFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<int[]>
 {
-  public StringFieldColumnWriter(
+
+  protected ArrayFieldColumnWriter(
       String columnName,
       String fieldName,
       SegmentWriteOutMedium segmentWriteOutMedium,
@@ -44,18 +42,38 @@ public final class StringFieldColumnWriter extends GlobalDictionaryEncodedFieldC
   }
 
   @Override
-  String processValue(int row, Object value)
+  int[] processValue(int row, Object value)
   {
-    if (value == null) {
-      return null;
+    if (value instanceof Object[]) {
+      Object[] array = (Object[]) value;
+      final int[] globalIds = new int[array.length];
+      for (int i = 0; i < array.length; i++) {
+        if (array[i] == null) {
+          globalIds[i] = 0;
+        } else if (array[i] instanceof String) {
+          globalIds[i] = globalDictionaryIdLookup.lookupString((String) array[i]);
+        } else if (array[i] instanceof Long) {
+          globalIds[i] = globalDictionaryIdLookup.lookupLong((Long) array[i]);
+        } else if (array[i] instanceof Double) {
+          globalIds[i] = globalDictionaryIdLookup.lookupDouble((Double) array[i]);
+        } else {
+          globalIds[i] = -1;
+        }
+        Preconditions.checkArgument(globalIds[i] >= 0, "unknown global id [%s] for value [%s]", globalIds[i], array[i]);
+        arrayElements.computeIfAbsent(
+            globalIds[i],
+            (id) -> indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap()
+        ).add(row);
+      }
+      return globalIds;
     }
-    return NullHandling.emptyToNullIfNeeded(String.valueOf(value));
+    return null;
   }
 
   @Override
-  int lookupGlobalId(String value)
+  int lookupGlobalId(int[] value)
   {
-    return globalDictionaryIdLookup.lookupString(value);
+    return globalDictionaryIdLookup.lookupArray(value);
   }
 
   @Override

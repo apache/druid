@@ -25,16 +25,17 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
+import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 
 import java.nio.ByteBuffer;
 import java.util.List;
 
-public final class NestedDataColumnV4<TStringDictionary extends Indexed<ByteBuffer>>
+public class NestedDataColumnV5<TStringDictionary extends Indexed<ByteBuffer>>
     extends CompressedNestedDataComplexColumn<TStringDictionary>
 {
-  public NestedDataColumnV4(
+  public NestedDataColumnV5(
       NestedDataColumnMetadata metadata,
       ColumnConfig columnConfig,
       CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
@@ -44,6 +45,7 @@ public final class NestedDataColumnV4<TStringDictionary extends Indexed<ByteBuff
       Supplier<TStringDictionary> stringDictionary,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
+      Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
       SmooshedFileMapper fileMapper
   )
   {
@@ -57,7 +59,7 @@ public final class NestedDataColumnV4<TStringDictionary extends Indexed<ByteBuff
         stringDictionary,
         longDictionarySupplier,
         doubleDictionarySupplier,
-        null,
+        arrayDictionarySupplier,
         fileMapper,
         NestedPathFinder.JSON_PATH_ROOT
     );
