@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .rest import DruidRestClient
-from .status import StatusClient
-from .catalog import CatalogClient
-from .sql import QueryClient
-from .tasks import TaskClient
-from .datasource import DatasourceClient
+from druidapi.rest import DruidRestClient
+from druidapi.status import StatusClient
+from druidapi.catalog import CatalogClient
+from druidapi.sql import QueryClient
+from druidapi.tasks import TaskClient
+from druidapi.datasource import DatasourceClient
 
 class DruidClient:
     '''
@@ -36,7 +36,7 @@ class DruidClient:
         if display_client:
             self.display_client = display_client
         else:
-            from .text import TextDisplayClient
+            from druidapi.text_display import TextDisplayClient
             self.display_client = TextDisplayClient()
         self.display_client._druid = self
 
@@ -58,7 +58,7 @@ class DruidClient:
         to learn what the code does so you can replicate it in your own client.
         '''
         self.rest_client.enable_trace(enable)
-    
+
     @property
     def status(self) -> StatusClient:
         '''
@@ -67,7 +67,7 @@ class DruidClient:
         if not self.status_client:
             self.status_client = StatusClient(self.rest_client)
         return self.status_client
-    
+
     def status_for(self, endpoint) -> StatusClient:
         '''
         Returns the status client for a Druid service.
@@ -116,11 +116,11 @@ class DruidClient:
         if not self.datasource_client:
             self.datasource_client = DatasourceClient(self.rest_client)
         return self.datasource_client
-    
+
     @property
     def display(self):
         return self.display_client
-    
+
     def close(self):
         self.rest_client.close()
         self.rest_client = None

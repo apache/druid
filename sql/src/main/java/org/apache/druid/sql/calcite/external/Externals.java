@@ -238,11 +238,15 @@ public class Externals
     if (spec == null) {
       throw unsupportedType(name, dataType);
     }
-    SqlIdentifier typeName = spec.getTypeName();
-    if (typeName == null || !typeName.isSimple()) {
+    SqlIdentifier typeNameIdentifier = spec.getTypeName();
+    if (typeNameIdentifier == null || !typeNameIdentifier.isSimple()) {
       throw unsupportedType(name, dataType);
     }
-    SqlTypeName type = SqlTypeName.get(typeName.getSimple());
+    String simpleName = typeNameIdentifier.getSimple();
+    if (StringUtils.toLowerCase(simpleName).startsWith(("complex<"))) {
+      return simpleName;
+    }
+    SqlTypeName type = SqlTypeName.get(simpleName);
     if (type == null) {
       throw unsupportedType(name, dataType);
     }

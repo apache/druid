@@ -515,6 +515,9 @@ public abstract class ExprEval<T>
         if (value instanceof List) {
           return bestEffortOf(value);
         }
+        if (value instanceof byte[]) {
+          return new StringExprEval(StringUtils.encodeBase64String((byte[]) value));
+        }
         return of(Evals.asString(value));
       case LONG:
         if (value instanceof Number) {

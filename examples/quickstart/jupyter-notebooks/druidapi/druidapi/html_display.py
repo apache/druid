@@ -15,8 +15,8 @@
 
 from IPython.display import display, HTML
 from html import escape
-from .display import DisplayClient
-from .base_table import BaseTable
+from druidapi.display import DisplayClient
+from druidapi.base_table import BaseTable
 
 STYLES = '''
 <style>
@@ -124,7 +124,7 @@ class HtmlDisplayClient(DisplayClient):
         if not initialized:
             display(HTML(STYLES))
             initialized = True
-    
+
     def text(self, msg):
         html('<div class="druid">' + escape_for_html(msg) + '</div>')
 
@@ -136,6 +136,6 @@ class HtmlDisplayClient(DisplayClient):
 
     def new_table(self):
         return HtmlTable()
-    
+
     def show_table(self, table):
         self.text(table.format())

@@ -70,6 +70,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.input.InputSourceModule;
+import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.counters.QueryCounterSnapshot;
@@ -894,6 +895,18 @@ public class MSQTestBase extends BaseCalciteQueryTest
       this.expectedStageWorkerChannelToCounters.computeIfAbsent(stage, s -> new HashMap<>())
                                                .computeIfAbsent(worker, w -> new HashMap<>())
                                                .put(channel, counterSnapshot);
+      return asBuilder();
+    }
+
+    public Builder setExpectedSegmentGenerationProgressCountersForStageWorker(
+        CounterSnapshotMatcher counterSnapshot,
+        int stage,
+        int worker
+    )
+    {
+      this.expectedStageWorkerChannelToCounters.computeIfAbsent(stage, s -> new HashMap<>())
+                                               .computeIfAbsent(worker, w -> new HashMap<>())
+                                               .put(CounterNames.getSegmentGenerationProgress(), counterSnapshot);
       return asBuilder();
     }
 

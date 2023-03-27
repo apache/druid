@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .consts import OVERLORD_BASE
+from druidapi.consts import OVERLORD_BASE
 
 REQ_TASKS = OVERLORD_BASE + '/tasks'
 REQ_POST_TASK = OVERLORD_BASE + '/task'
@@ -29,7 +29,7 @@ class TaskClient:
 
     See https://druid.apache.org/docs/latest/operations/api-reference.html#tasks
     '''
-    
+
     def __init__(self, rest_client):
         self.client = rest_client
 
@@ -40,7 +40,7 @@ class TaskClient:
         Parameters
         ----------
         state: str, default = None
-            Filter list of tasks by task state. Valid options are "running", 
+            Filter list of tasks by task state. Valid options are "running",
             "complete", "waiting", and "pending". Constants are defined for
             each of these in the `consts` file.
 
@@ -134,7 +134,7 @@ class TaskClient:
     def submit_task(self, payload):
         '''
         Submits a task to the Overlord.
-        
+
         Returns the `taskId` of the submitted task.
 
         Parameters
@@ -164,7 +164,7 @@ class TaskClient:
         Returns
         -------
             The REST response.
-        
+
         Reference
         ---------
         `POST /druid/indexer/v1/task/{taskId}/shutdown`
@@ -183,7 +183,7 @@ class TaskClient:
         Returns
         -------
         The REST response.
-        
+
         Reference
         ---------
         `POST /druid/indexer/v1/datasources/{dataSource}/shutdownAllTasks`
