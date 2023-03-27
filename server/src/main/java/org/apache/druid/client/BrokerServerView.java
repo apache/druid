@@ -71,9 +71,9 @@ public class BrokerServerView implements TimelineServerView
 
   private final Object lock = new Object();
 
-  private final ConcurrentMap<String, QueryableDruidServer> clients;
-  private final Map<SegmentId, ServerSelector> selectors;
-  private final Map<String, VersionedIntervalTimeline<String, ServerSelector>> timelines;
+  private final ConcurrentMap<String, QueryableDruidServer> clients = new ConcurrentHashMap<>();
+  private final Map<SegmentId, ServerSelector> selectors = new HashMap<>();
+  private final Map<String, VersionedIntervalTimeline<String, ServerSelector>> timelines = new HashMap<>();
   private final ConcurrentMap<TimelineCallback, Executor> timelineCallbacks = new ConcurrentHashMap<>();
 
   private final QueryToolChestWarehouse warehouse;
@@ -107,9 +107,6 @@ public class BrokerServerView implements TimelineServerView
     this.baseView = baseView;
     this.tierSelectorStrategy = tierSelectorStrategy;
     this.emitter = emitter;
-    this.clients = new ConcurrentHashMap<>();
-    this.selectors = new HashMap<>();
-    this.timelines = new HashMap<>();
 
     // Validate and set the segment watcher config
     validateSegmentWatcherConfig(segmentWatcherConfig);
@@ -183,10 +180,10 @@ public class BrokerServerView implements TimelineServerView
   {
     if (segmentWatcherConfig.isAwaitInitializationOnStart()) {
       final long startMillis = System.currentTimeMillis();
-      log.info("%s waiting for initialization.", getClass().getSimpleName());
+      log.info("[%s] waiting for initialization.", getClass().getSimpleName());
       awaitInitialization();
       final long endMillis = System.currentTimeMillis();
-      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), endMillis - startMillis);
+      log.info("[%s] initialized in [%,d] ms.", getClass().getSimpleName(), endMillis - startMillis);
       emitter.emit(ServiceMetricEvent.builder().build(
           "init/serverview/time",
           endMillis - startMillis
@@ -393,7 +390,7 @@ public class BrokerServerView implements TimelineServerView
     synchronized (lock) {
       QueryableDruidServer queryableDruidServer = clients.get(server.getName());
       if (queryableDruidServer == null) {
-        log.error("No QueryableDruidServer found for server [%s].", server.getName());
+        log.error("No QueryRunner found for server name[%s].", server.getName());
         return null;
       }
       return queryableDruidServer.getQueryRunner();
