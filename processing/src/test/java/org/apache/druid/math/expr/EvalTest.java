@@ -102,7 +102,7 @@ public class EvalTest extends InitializedNullHandlingTest
       Assert.assertFalse(evalDouble("!2.0", bindings) > 0.0);
     }
     finally {
-      ExpressionProcessing.initializeForTests(null);
+      ExpressionProcessing.initializeForTests();
     }
     try {
       ExpressionProcessing.initializeForStrictBooleansTests(true);
@@ -137,7 +137,7 @@ public class EvalTest extends InitializedNullHandlingTest
       assertEquals(3.0, evalDouble("if(0.0, 2.0, 3.0)", bindings), 0.0001);
     }
     finally {
-      ExpressionProcessing.initializeForTests(null);
+      ExpressionProcessing.initializeForTests();
     }
   }
 
@@ -435,7 +435,7 @@ public class EvalTest extends InitializedNullHandlingTest
       assertEquals(ExpressionType.DOUBLE, eval.type());
     }
     finally {
-      ExpressionProcessing.initializeForTests(null);
+      ExpressionProcessing.initializeForTests();
     }
     try {
       ExpressionProcessing.initializeForStrictBooleansTests(true);
@@ -464,7 +464,7 @@ public class EvalTest extends InitializedNullHandlingTest
       assertEquals(ExpressionType.LONG, eval.type());
     }
     finally {
-      ExpressionProcessing.initializeForTests(null);
+      ExpressionProcessing.initializeForTests();
     }
   }
 
@@ -532,7 +532,7 @@ public class EvalTest extends InitializedNullHandlingTest
     }
     finally {
       // reset
-      ExpressionProcessing.initializeForTests(null);
+      ExpressionProcessing.initializeForTests();
     }
 
     try {
@@ -607,7 +607,7 @@ public class EvalTest extends InitializedNullHandlingTest
     }
     finally {
       // reset
-      ExpressionProcessing.initializeForTests(null);
+      ExpressionProcessing.initializeForTests();
     }
   }
 
@@ -664,7 +664,7 @@ public class EvalTest extends InitializedNullHandlingTest
     }
     finally {
       // reset
-      ExpressionProcessing.initializeForTests(null);
+      ExpressionProcessing.initializeForTests();
     }
 
     try {
@@ -703,7 +703,7 @@ public class EvalTest extends InitializedNullHandlingTest
     }
     finally {
       // reset
-      ExpressionProcessing.initializeForTests(null);
+      ExpressionProcessing.initializeForTests();
     }
   }
 
@@ -948,102 +948,94 @@ public class EvalTest extends InitializedNullHandlingTest
     Assert.assertArrayEquals(new Object[] {"1.0", "2", "3", "true", "false"}, (Object[]) eval.value());
 
     // nested arrays
-    try {
-      ExpressionProcessing.initializeForTests(true);
+    ExpressionType nestedLongArray = ExpressionTypeFactory.getInstance().ofArray(ExpressionType.LONG_ARRAY);
+    final Object[] expectedLongArray = new Object[]{
+        new Object[] {1L, 2L, 3L},
+        new Object[] {5L, null, 9L},
+        null,
+        new Object[] {2L, 4L, 6L}
+    };
 
-      ExpressionType nestedLongArray = ExpressionTypeFactory.getInstance().ofArray(ExpressionType.LONG_ARRAY);
-      final Object[] expectedLongArray = new Object[]{
-          new Object[] {1L, 2L, 3L},
-          new Object[] {5L, null, 9L},
-          null,
-          new Object[] {2L, 4L, 6L}
-      };
+    List<?> longArrayInputs = Arrays.asList(
+        new Object[]{
+            new Object[] {1L, 2L, 3L},
+            new Object[] {5L, null, 9L},
+            null,
+            new Object[] {2L, 4L, 6L}
+        },
+        Arrays.asList(
+            new Object[] {1L, 2L, 3L},
+            new Object[] {5L, null, 9L},
+            null,
+            new Object[] {2L, 4L, 6L}
+        ),
+        Arrays.asList(
+            Arrays.asList(1L, 2L, 3L),
+            Arrays.asList(5L, null, 9L),
+            null,
+            Arrays.asList(2L, 4L, 6L)
+        ),
+        Arrays.asList(
+            Arrays.asList(1L, 2L, 3L),
+            Arrays.asList("5", "hello", "9"),
+            null,
+            new Object[]{2.2, 4.4, 6.6}
+        )
+    );
 
-      List<?> longArrayInputs = Arrays.asList(
-          new Object[]{
-              new Object[] {1L, 2L, 3L},
-              new Object[] {5L, null, 9L},
-              null,
-              new Object[] {2L, 4L, 6L}
-          },
-          Arrays.asList(
-              new Object[] {1L, 2L, 3L},
-              new Object[] {5L, null, 9L},
-              null,
-              new Object[] {2L, 4L, 6L}
-          ),
-          Arrays.asList(
-              Arrays.asList(1L, 2L, 3L),
-              Arrays.asList(5L, null, 9L),
-              null,
-              Arrays.asList(2L, 4L, 6L)
-          ),
-          Arrays.asList(
-              Arrays.asList(1L, 2L, 3L),
-              Arrays.asList("5", "hello", "9"),
-              null,
-              new Object[]{2.2, 4.4, 6.6}
-          )
-      );
-
-      for (Object o : longArrayInputs) {
-        eval = ExprEval.ofType(nestedLongArray, o);
-        Assert.assertEquals(nestedLongArray, eval.type());
-        Object[] val = (Object[]) eval.value();
-        Assert.assertEquals(expectedLongArray.length, val.length);
-        for (int i = 0; i < expectedLongArray.length; i++) {
-          Assert.assertArrayEquals((Object[]) expectedLongArray[i], (Object[]) val[i]);
-        }
-      }
-
-      ExpressionType nestedDoubleArray = ExpressionTypeFactory.getInstance().ofArray(ExpressionType.DOUBLE_ARRAY);
-      final Object[] expectedDoubleArray = new Object[]{
-          new Object[] {1.1, 2.2, 3.3},
-          new Object[] {5.5, null, 9.9},
-          null,
-          new Object[] {2.2, 4.4, 6.6}
-      };
-
-      List<?> doubleArrayInputs = Arrays.asList(
-          new Object[]{
-              new Object[] {1.1, 2.2, 3.3},
-              new Object[] {5.5, null, 9.9},
-              null,
-              new Object[] {2.2, 4.4, 6.6}
-          },
-          new Object[]{
-              Arrays.asList(1.1, 2.2, 3.3),
-              Arrays.asList(5.5, null, 9.9),
-              null,
-              Arrays.asList(2.2, 4.4, 6.6)
-          },
-          Arrays.asList(
-              Arrays.asList(1.1, 2.2, 3.3),
-              Arrays.asList(5.5, null, 9.9),
-              null,
-              Arrays.asList(2.2, 4.4, 6.6)
-          ),
-          new Object[]{
-              new Object[] {"1.1", "2.2", "3.3"},
-              Arrays.asList("5.5", null, "9.9"),
-              null,
-              new String[] {"2.2", "4.4", "6.6"}
-          }
-      );
-
-      for (Object o : doubleArrayInputs) {
-        eval = ExprEval.ofType(nestedDoubleArray, o);
-        Assert.assertEquals(nestedDoubleArray, eval.type());
-        Object[] val = (Object[]) eval.value();
-        Assert.assertEquals(expectedLongArray.length, val.length);
-        for (int i = 0; i < expectedLongArray.length; i++) {
-          Assert.assertArrayEquals((Object[]) expectedDoubleArray[i], (Object[]) val[i]);
-        }
+    for (Object o : longArrayInputs) {
+      eval = ExprEval.ofType(nestedLongArray, o);
+      Assert.assertEquals(nestedLongArray, eval.type());
+      Object[] val = (Object[]) eval.value();
+      Assert.assertEquals(expectedLongArray.length, val.length);
+      for (int i = 0; i < expectedLongArray.length; i++) {
+        Assert.assertArrayEquals((Object[]) expectedLongArray[i], (Object[]) val[i]);
       }
     }
-    finally {
-      // reset
-      ExpressionProcessing.initializeForTests(null);
+
+    ExpressionType nestedDoubleArray = ExpressionTypeFactory.getInstance().ofArray(ExpressionType.DOUBLE_ARRAY);
+    final Object[] expectedDoubleArray = new Object[]{
+        new Object[] {1.1, 2.2, 3.3},
+        new Object[] {5.5, null, 9.9},
+        null,
+        new Object[] {2.2, 4.4, 6.6}
+    };
+
+    List<?> doubleArrayInputs = Arrays.asList(
+        new Object[]{
+            new Object[] {1.1, 2.2, 3.3},
+            new Object[] {5.5, null, 9.9},
+            null,
+            new Object[] {2.2, 4.4, 6.6}
+        },
+        new Object[]{
+            Arrays.asList(1.1, 2.2, 3.3),
+            Arrays.asList(5.5, null, 9.9),
+            null,
+            Arrays.asList(2.2, 4.4, 6.6)
+        },
+        Arrays.asList(
+            Arrays.asList(1.1, 2.2, 3.3),
+            Arrays.asList(5.5, null, 9.9),
+            null,
+            Arrays.asList(2.2, 4.4, 6.6)
+        ),
+        new Object[]{
+            new Object[] {"1.1", "2.2", "3.3"},
+            Arrays.asList("5.5", null, "9.9"),
+            null,
+            new String[] {"2.2", "4.4", "6.6"}
+        }
+    );
+
+    for (Object o : doubleArrayInputs) {
+      eval = ExprEval.ofType(nestedDoubleArray, o);
+      Assert.assertEquals(nestedDoubleArray, eval.type());
+      Object[] val = (Object[]) eval.value();
+      Assert.assertEquals(expectedLongArray.length, val.length);
+      for (int i = 0; i < expectedLongArray.length; i++) {
+        Assert.assertArrayEquals((Object[]) expectedDoubleArray[i], (Object[]) val[i]);
+      }
     }
   }
 
@@ -1073,7 +1065,7 @@ public class EvalTest extends InitializedNullHandlingTest
     }
     finally {
       // reset
-      ExpressionProcessing.initializeForTests(null);
+      ExpressionProcessing.initializeForTests();
     }
 
     // doubles

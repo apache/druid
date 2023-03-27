@@ -128,7 +128,7 @@ public class ExpressionFilterTest extends BaseFilterTest
   @After
   public void teardown()
   {
-    ExpressionProcessing.initializeForTests(null);
+    ExpressionProcessing.initializeForTests();
   }
 
   @AfterClass

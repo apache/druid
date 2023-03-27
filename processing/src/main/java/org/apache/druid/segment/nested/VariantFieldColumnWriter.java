@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.nested;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
@@ -29,9 +30,9 @@ import java.nio.channels.WritableByteChannel;
 /**
  * Literal field writer for mixed type nested columns of {@link NestedDataColumnSerializer}
  */
-public final class VariantLiteralFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<Object>
+public final class VariantFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<Object>
 {
-  public VariantLiteralFieldColumnWriter(
+  public VariantFieldColumnWriter(
       String columnName,
       String fieldName,
       SegmentWriteOutMedium segmentWriteOutMedium,
@@ -40,6 +41,32 @@ public final class VariantLiteralFieldColumnWriter extends GlobalDictionaryEncod
   )
   {
     super(columnName, fieldName, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);
+  }
+
+
+  @Override
+  Object processValue(int row, Object value)
+  {
+    if (value instanceof Object[]) {
+      Object[] array = (Object[]) value;
+      final int[] globalIds = new int[array.length];
+      for (int i = 0; i < array.length; i++) {
+        if (array[i] == null) {
+          globalIds[i] = 0;
+        } else if (array[i] instanceof String) {
+          globalIds[i] = globalDictionaryIdLookup.lookupString((String) array[i]);
+        } else if (array[i] instanceof Long) {
+          globalIds[i] = globalDictionaryIdLookup.lookupLong((Long) array[i]);
+        } else if (array[i] instanceof Double) {
+          globalIds[i] = globalDictionaryIdLookup.lookupDouble((Double) array[i]);
+        } else {
+          globalIds[i] = -1;
+        }
+        Preconditions.checkArgument(globalIds[i] >= 0, "unknown global id [%s] for value [%s]", globalIds[i], array[i]);
+      }
+      return globalIds;
+    }
+    return super.processValue(row, value);
   }
 
   @Override
@@ -52,6 +79,8 @@ public final class VariantLiteralFieldColumnWriter extends GlobalDictionaryEncod
       return globalDictionaryIdLookup.lookupLong((Long) value);
     } else if (value instanceof Double) {
       return globalDictionaryIdLookup.lookupDouble((Double) value);
+    } else if (value instanceof int[]) {
+      return globalDictionaryIdLookup.lookupArray((int[]) value);
     } else {
       return globalDictionaryIdLookup.lookupString(String.valueOf(value));
     }
