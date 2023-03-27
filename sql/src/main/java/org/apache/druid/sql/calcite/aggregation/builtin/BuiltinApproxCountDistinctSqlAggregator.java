@@ -39,7 +39,6 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostA
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -86,7 +85,6 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
   {
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
     final List<DimensionSpec> specs = new ArrayList<>();
-    final List<DimFilter> nonNullFilterList = new ArrayList<>();
 
     AggregatorFactory aggregatorFactory = null;
     for (int fieldNumber : aggregateCall.getArgList()) {
