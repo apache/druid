@@ -82,6 +82,8 @@ public class QueryContexts
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
   public static final String MIN_TOP_N_THRESHOLD = "minTopNThreshold";
 
+  public static final String INPUT_SOURCE_TYPE_AUTHORIZATION_ENABLED = "inputSourceTypeAuthorizationEnabled";
+
   // SQL query context keys
   public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;
   public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
@@ -110,6 +112,8 @@ public class QueryContexts
   public static final boolean DEFAULT_ENABLE_DEBUG = false;
   public static final int DEFAULT_IN_SUB_QUERY_THRESHOLD = Integer.MAX_VALUE;
   public static final boolean DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING = false;
+
+  public static final boolean DEFAULT_INPUT_SOURCE_TYPE_AUTHORIZATION_ENABLED = false;
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize

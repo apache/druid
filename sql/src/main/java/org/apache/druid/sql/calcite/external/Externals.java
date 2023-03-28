@@ -55,6 +55,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -275,7 +276,10 @@ public class Externals
    * Create an MSQ ExternalTable given an external table spec. Enforces type restructions
    * (which should be revisited.)
    */
-  public static ExternalTable buildExternalTable(ExternalTableSpec spec, ObjectMapper jsonMapper)
+  public static ExternalTable buildExternalTable(
+      ExternalTableSpec spec,
+      ObjectMapper jsonMapper
+  )
   {
     // Prevent a RowSignature that has a ColumnSignature with name "__time" and type that is not LONG because it
     // will be automatically cast to LONG while processing in RowBasedColumnSelectorFactory.
@@ -290,7 +294,7 @@ public class Externals
                     + "Please change the column name to something other than __time");
     }
 
-    return toExternalTable(spec, jsonMapper);
+    return toExternalTable(spec, jsonMapper, spec.resourceActions);
   }
 
   public static ResourceAction externalRead(String name)
@@ -298,7 +302,11 @@ public class Externals
     return new ResourceAction(new Resource(name, ResourceType.EXTERNAL), Action.READ);
   }
 
-  public static ExternalTable toExternalTable(ExternalTableSpec spec, ObjectMapper jsonMapper)
+  public static ExternalTable toExternalTable(
+      ExternalTableSpec spec,
+      ObjectMapper jsonMapper,
+      Set<ResourceAction> resourceActions
+  )
   {
     return new ExternalTable(
         new ExternalDataSource(
@@ -307,7 +315,8 @@ public class Externals
             spec.signature
           ),
         spec.signature,
-        jsonMapper
+        jsonMapper,
+        resourceActions
     );
   }
 

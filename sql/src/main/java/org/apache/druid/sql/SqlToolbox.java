@@ -38,7 +38,6 @@ public class SqlToolbox
   final ServiceEmitter emitter;
   final RequestLogger requestLogger;
   final QueryScheduler queryScheduler;
-  final AuthConfig authConfig;
   final DefaultQueryConfig defaultQueryConfig;
   final SqlLifecycleManager sqlLifecycleManager;
 
@@ -48,7 +47,6 @@ public class SqlToolbox
       final ServiceEmitter emitter,
       final RequestLogger requestLogger,
       final QueryScheduler queryScheduler,
-      final AuthConfig authConfig,
       final DefaultQueryConfig defaultQueryConfig,
       final SqlLifecycleManager sqlLifecycleManager
   )
@@ -58,7 +56,6 @@ public class SqlToolbox
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.queryScheduler = queryScheduler;
-    this.authConfig = authConfig;
     this.defaultQueryConfig = defaultQueryConfig;
     this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
   }
@@ -71,7 +68,6 @@ public class SqlToolbox
         emitter,
         requestLogger,
         queryScheduler,
-        authConfig,
         defaultQueryConfig,
         sqlLifecycleManager
     );

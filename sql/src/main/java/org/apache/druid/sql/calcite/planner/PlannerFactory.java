@@ -41,6 +41,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.parser.DruidSqlParserImplFactory;
@@ -75,7 +76,8 @@ public class PlannerFactory extends PlannerToolbox
       final @DruidSchemaName String druidSchemaName,
       final CalciteRulesManager calciteRuleManager,
       final JoinableFactoryWrapper joinableFactoryWrapper,
-      final CatalogResolver catalog
+      final CatalogResolver catalog,
+      final AuthConfig authConfig
   )
   {
     super(
@@ -88,7 +90,8 @@ public class PlannerFactory extends PlannerToolbox
         catalog,
         druidSchemaName,
         calciteRuleManager,
-        authorizerMapper
+        authorizerMapper,
+        authConfig
     );
   }
 

@@ -32,6 +32,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -69,7 +70,8 @@ public class ExternalTableMacro implements TableMacro
       ExternalTableSpec spec = new ExternalTableSpec(
           jsonMapper.readValue((String) arguments.get(0), InputSource.class),
           jsonMapper.readValue((String) arguments.get(1), InputFormat.class),
-          jsonMapper.readValue((String) arguments.get(2), RowSignature.class)
+          jsonMapper.readValue((String) arguments.get(2), RowSignature.class),
+          Collections.singleton(Externals.EXTERNAL_RESOURCE_ACTION)
       );
       return Externals.buildExternalTable(spec, jsonMapper);
     }

@@ -32,8 +32,13 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -54,7 +59,7 @@ import java.util.Map;
  * a Druid JSON signature, or an SQL {@code EXTEND} list of columns.
  * As with all table functions, the {@code EXTEND} is optional.
  */
-public class ExternalOperatorConversion extends DruidUserDefinedTableMacroConversion
+public class ExternalOperatorConversion extends DruidExternTableMacroConversion
 {
   public static final String FUNCTION_NAME = "EXTERN";
 
@@ -113,7 +118,11 @@ public class ExternalOperatorConversion extends DruidUserDefinedTableMacroConver
         return new ExternalTableSpec(
             jsonMapper.readValue(CatalogUtils.getString(args, INPUT_SOURCE_PARAM), InputSource.class),
             jsonMapper.readValue(CatalogUtils.getString(args, INPUT_FORMAT_PARAM), InputFormat.class),
-            rowSignature
+            rowSignature,
+            Collections.singleton(new ResourceAction(
+                new Resource(ResourceType.EXTERNAL, ResourceType.EXTERNAL),
+                Action.READ
+            ))
         );
       }
       catch (JsonProcessingException e) {

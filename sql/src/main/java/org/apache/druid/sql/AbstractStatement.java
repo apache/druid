@@ -95,6 +95,10 @@ public abstract class AbstractStatement implements Closeable
     for (Map.Entry<String, Object> entry : sqlToolbox.defaultQueryConfig.getContext().entrySet()) {
       this.queryContext.putIfAbsent(entry.getKey(), entry.getValue());
     }
+    this.queryContext.put(
+        QueryContexts.INPUT_SOURCE_TYPE_AUTHORIZATION_ENABLED,
+        sqlToolbox.plannerFactory.getAuthConfig().isInputSourceTypeSecurityEnabled()
+    );
   }
 
   public String sqlQueryId()
@@ -152,7 +156,8 @@ public abstract class AbstractStatement implements Closeable
       final Function<Set<ResourceAction>, Access> authorizer
   )
   {
-    Set<String> securedKeys = this.sqlToolbox.authConfig.contextKeysToAuthorize(queryPlus.context().keySet());
+    Set<String> securedKeys = this.sqlToolbox.plannerFactory.getAuthConfig()
+        .contextKeysToAuthorize(queryPlus.context().keySet());
     Set<ResourceAction> contextResources = new HashSet<>();
     securedKeys.forEach(key -> contextResources.add(
         new ResourceAction(new Resource(key, ResourceType.QUERY_CONTEXT), Action.WRITE)

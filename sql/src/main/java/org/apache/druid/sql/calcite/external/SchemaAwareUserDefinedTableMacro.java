@@ -40,7 +40,9 @@ import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.expression.AuthorizableOperator;
+import org.apache.druid.sql.calcite.table.ExternalTable;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -163,9 +165,14 @@ public abstract class SchemaAwareUserDefinedTableMacro
     }
 
     @Override
-    public Set<ResourceAction> computeResources(final SqlCall call)
+    public Set<ResourceAction> computeResources(final SqlCall call, final boolean inputSourceTypeSecurityEnabled)
     {
-      return base.computeResources(call);
+      Set<ResourceAction> resourceActions = new HashSet<>();
+      if (table instanceof ExternalTable && inputSourceTypeSecurityEnabled) {
+        resourceActions.addAll(((ExternalTable) table).getResourceActions());
+      }
+      resourceActions.addAll(base.computeResources(call, inputSourceTypeSecurityEnabled));
+      return resourceActions;
     }
   }
 

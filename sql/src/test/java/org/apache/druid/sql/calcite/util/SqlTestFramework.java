@@ -429,7 +429,8 @@ public class SqlTestFramework
           CalciteTests.DRUID_SCHEMA_NAME,
           new CalciteRulesManager(componentSupplier.extensionCalciteRules()),
           framework.injector.getInstance(JoinableFactoryWrapper.class),
-          framework.builder.catalogResolver
+          framework.builder.catalogResolver,
+          new AuthConfig()
       );
       componentSupplier.finalizePlanner(this);
       this.statementFactory = QueryFrameworkUtils.createSqlStatementFactory(

@@ -27,8 +27,13 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.utils.CollectionUtils;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -151,7 +156,11 @@ public abstract class BaseInputSourceDefn implements InputSourceDefn
     return new ExternalTableSpec(
         convertArgsToSource(args, jsonMapper),
         convertArgsToFormat(args, columns, jsonMapper),
-        Columns.convertSignature(columns)
+        Columns.convertSignature(columns),
+        Collections.singleton(new ResourceAction(
+            new Resource(ResourceType.EXTERNAL, ResourceType.EXTERNAL),
+            Action.READ
+        ))
     );
   }
 
@@ -207,7 +216,11 @@ public abstract class BaseInputSourceDefn implements InputSourceDefn
     return new ExternalTableSpec(
         convertTableToSource(table),
         convertTableToFormat(table),
-        Columns.convertSignature(table.resolvedTable().spec().columns())
+        Columns.convertSignature(table.resolvedTable().spec().columns()),
+        Collections.singleton(new ResourceAction(
+            new Resource(ResourceType.EXTERNAL, ResourceType.EXTERNAL),
+            Action.READ
+        ))
     );
   }
 

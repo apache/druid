@@ -30,9 +30,14 @@ import org.apache.druid.catalog.model.table.TableFunction.ParameterType;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -193,7 +198,11 @@ public abstract class FormattedInputSourceDefn extends BaseInputSourceDefn
     return new ExternalTableSpec(
         convertSource(sourceMap, jsonMapper),
         inputFormat,
-        Columns.convertSignature(completedCols)
+        Columns.convertSignature(completedCols),
+        Collections.singleton(new ResourceAction(
+            new Resource(ResourceType.EXTERNAL, ResourceType.EXTERNAL),
+            Action.READ
+        ))
     );
   }
 }

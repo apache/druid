@@ -30,6 +30,7 @@ import org.apache.druid.catalog.model.table.TableFunction;
 import org.apache.druid.sql.calcite.external.SchemaAwareUserDefinedTableMacro.ExtendedTableMacro;
 
 import java.util.List;
+import java.util.TreeSet;
 
 /**
  * Table macro which wraps a catalog table function and which accepts
@@ -97,5 +98,10 @@ public class DruidTableMacro implements ExtendedTableMacro
   public List<FunctionParameter> getParameters()
   {
     return parameters;
+  }
+
+  public ObjectMapper getJsonMapper()
+  {
+    return jsonMapper;
   }
 }

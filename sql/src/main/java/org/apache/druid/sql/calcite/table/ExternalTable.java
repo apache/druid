@@ -28,7 +28,10 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.external.ExternalTableScan;
+
+import java.util.Set;
 
 /**
  * Represents an source of data external to Druid: a CSV file, an HTTP request, etc.
@@ -42,6 +45,8 @@ public class ExternalTable extends DruidTable
   private final DataSource dataSource;
   private final ObjectMapper objectMapper;
 
+  private final Set<ResourceAction> resourceActions;
+
   /**
    * Cached row type, to avoid recreating types multiple times.
    */
@@ -50,12 +55,14 @@ public class ExternalTable extends DruidTable
   public ExternalTable(
       final DataSource dataSource,
       final RowSignature rowSignature,
-      final ObjectMapper objectMapper
+      final ObjectMapper objectMapper,
+      final Set<ResourceAction> resourceActions
   )
   {
     super(rowSignature);
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.objectMapper = objectMapper;
+    this.resourceActions = resourceActions;
   }
 
   @Override
@@ -87,6 +94,10 @@ public class ExternalTable extends DruidTable
       rowType = RowSignatures.toRelDataType(getRowSignature(), typeFactory, true);
     }
     return rowType;
+  }
+
+  public Set<ResourceAction> getResourceActions() {
+    return resourceActions;
   }
 
   @Override
