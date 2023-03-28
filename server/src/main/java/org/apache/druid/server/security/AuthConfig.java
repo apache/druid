@@ -295,7 +295,8 @@ public class AuthConfig
       return this;
     }
 
-    public Builder setInputSourceTypeSecurityEnabled(boolean inputSourceTypeSecurityEnabled) {
+    public Builder setInputSourceTypeSecurityEnabled(boolean inputSourceTypeSecurityEnabled)
+    {
       this.inputSourceTypeSecurityEnabled = inputSourceTypeSecurityEnabled;
       return this;
     }

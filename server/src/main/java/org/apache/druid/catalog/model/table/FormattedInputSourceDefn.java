@@ -28,7 +28,6 @@ import org.apache.druid.catalog.model.table.BaseTableFunction.Parameter;
 import org.apache.druid.catalog.model.table.TableFunction.ParameterDefn;
 import org.apache.druid.catalog.model.table.TableFunction.ParameterType;
 import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.InputSource;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.security.Action;

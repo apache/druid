@@ -34,6 +34,10 @@ import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.metadata.EnvironmentVariablePasswordProvider;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -398,6 +402,10 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         CatalogUtils.stringListToUriList(Arrays.asList("http://foo.com/foo.csv", "http://foo.com/bar.csv")),
         sourceSpec.getUris()
     );
+    assertEquals(
+        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "http"), Action.READ)),
+        externSpec.resourceActions
+    );
   }
 
   @Test
@@ -441,6 +449,10 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         CatalogUtils.stringListToUriList(Arrays.asList("http://foo.com/my.csv", "http://foo.com/bar.csv")),
         sourceSpec.getUris()
     );
+    assertEquals(
+        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "http"), Action.READ)),
+        externSpec.resourceActions
+    );
   }
 
   @Test
@@ -463,6 +475,10 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     assertEquals(
         CatalogUtils.stringListToUriList(Arrays.asList("http://foo.com/foo.csv", "http://foo.com/bar.csv")),
         sourceSpec.getUris()
+    );
+    assertEquals(
+        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "http"), Action.READ)),
+        externSpec.resourceActions
     );
   }
 
@@ -492,7 +508,14 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
 
     HttpInputSource sourceSpec = (HttpInputSource) externSpec.inputSource;
     assertEquals("bob", sourceSpec.getHttpAuthenticationUsername());
-    assertEquals("SECRET", ((EnvironmentVariablePasswordProvider) sourceSpec.getHttpAuthenticationPasswordProvider()).getVariable());
+    assertEquals(
+        "SECRET",
+        ((EnvironmentVariablePasswordProvider) sourceSpec.getHttpAuthenticationPasswordProvider()).getVariable()
+    );
+    assertEquals(
+        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "http"), Action.READ)),
+        externSpec.resourceActions
+    );
   }
 
   private void validateHappyPath(ExternalTableSpec externSpec, boolean withUser)
@@ -512,6 +535,10 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     assertEquals(Arrays.asList("x", "y"), sig.getColumnNames());
     assertEquals(ColumnType.STRING, sig.getColumnType(0).get());
     assertEquals(ColumnType.LONG, sig.getColumnType(1).get());
+    assertEquals(
+        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "http"), Action.READ)),
+        externSpec.resourceActions
+    );
   }
 
   private Map<String, Object> httpToMap(HttpInputSource source)

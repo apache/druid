@@ -29,6 +29,10 @@ import org.apache.druid.catalog.model.table.ExternalTableSpec;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
@@ -67,11 +71,13 @@ public class ExternalTableMacro implements TableMacro
   public TranslatableTable apply(final List<Object> arguments)
   {
     try {
+      String inputSrcStr = (String) arguments.get(0);
+      String inputSrcType = jsonMapper.readTree(inputSrcStr).get("type").asText();
       ExternalTableSpec spec = new ExternalTableSpec(
           jsonMapper.readValue((String) arguments.get(0), InputSource.class),
           jsonMapper.readValue((String) arguments.get(1), InputFormat.class),
           jsonMapper.readValue((String) arguments.get(2), RowSignature.class),
-          Collections.singleton(Externals.EXTERNAL_RESOURCE_ACTION)
+          Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, inputSrcType), Action.READ))
       );
       return Externals.buildExternalTable(spec, jsonMapper);
     }

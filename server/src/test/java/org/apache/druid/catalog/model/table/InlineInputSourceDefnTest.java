@@ -29,6 +29,10 @@ import org.apache.druid.catalog.model.table.InputFormats.FlatTextFormatDefn;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -144,6 +148,10 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
     CsvInputFormat format = (CsvInputFormat) extern.inputFormat;
     assertEquals(Arrays.asList("a", "b"), format.getColumns());
     assertEquals(2, extern.signature.size());
+    assertEquals(
+        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "inline"), Action.READ)),
+        extern.resourceActions
+    );
 
     // Fails if no columns are provided.
     assertThrows(IAE.class, () -> fn.apply("x", new HashMap<>(), Collections.emptyList(), mapper));
@@ -178,6 +186,10 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
     CsvInputFormat actualFormat = (CsvInputFormat) extern.inputFormat;
     assertEquals(Arrays.asList("a", "b"), actualFormat.getColumns());
     assertEquals(2, extern.signature.size());
+    assertEquals(
+        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "inline"), Action.READ)),
+        extern.resourceActions
+    );
 
     // Cannot supply columns with the function
     List<ColumnSpec> columns = Arrays.asList(
@@ -213,5 +225,9 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
     CsvInputFormat actualFormat = (CsvInputFormat) extern.inputFormat;
     assertEquals(Arrays.asList("a", "b"), actualFormat.getColumns());
     assertEquals(2, extern.signature.size());
+    assertEquals(
+        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "inline"), Action.READ)),
+        extern.resourceActions
+    );
   }
 }
