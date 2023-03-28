@@ -86,7 +86,7 @@ public class OutputTypeTest extends InitializedNullHandlingTest
     }
     finally {
       // reset
-      ExpressionProcessing.initializeForTests(null);
+      ExpressionProcessing.initializeForTests();
     }
 
     try {
@@ -96,7 +96,7 @@ public class OutputTypeTest extends InitializedNullHandlingTest
     }
     finally {
       // reset
-      ExpressionProcessing.initializeForTests(null);
+      ExpressionProcessing.initializeForTests();
     }
   }
 
@@ -161,7 +161,7 @@ public class OutputTypeTest extends InitializedNullHandlingTest
       assertOutputType("z_ || z", inspector, ExpressionType.LONG);
     }
     finally {
-      ExpressionProcessing.initializeForTests(null);
+      ExpressionProcessing.initializeForTests();
     }
     try {
       ExpressionProcessing.initializeForStrictBooleansTests(false);
@@ -184,7 +184,7 @@ public class OutputTypeTest extends InitializedNullHandlingTest
       assertOutputType("z_ || z", inspector, ExpressionType.DOUBLE);
     }
     finally {
-      ExpressionProcessing.initializeForTests(null);
+      ExpressionProcessing.initializeForTests();
     }
     assertOutputType("1*(2 + 3.0)", inspector, ExpressionType.DOUBLE);
   }

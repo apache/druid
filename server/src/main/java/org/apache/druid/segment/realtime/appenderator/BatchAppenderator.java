@@ -780,11 +780,15 @@ public class BatchAppenderator implements Appenderator
       final long mergeFinishTime;
       final long startTime = System.nanoTime();
       List<QueryableIndex> indexes = new ArrayList<>();
+      long rowsinMergedSegment = 0L;
       Closer closer = Closer.create();
       try {
         for (FireHydrant fireHydrant : sink) {
           Pair<ReferenceCountingSegment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
           final QueryableIndex queryableIndex = segmentAndCloseable.lhs.asQueryableIndex();
+          if (queryableIndex != null) {
+            rowsinMergedSegment += queryableIndex.getNumRows();
+          }
           log.debug("Segment[%s] adding hydrant[%s]", identifier, fireHydrant);
           indexes.add(queryableIndex);
           closer.register(segmentAndCloseable.rhs);
@@ -804,6 +808,7 @@ public class BatchAppenderator implements Appenderator
         );
 
         mergeFinishTime = System.nanoTime();
+        metrics.incrementMergedRows(rowsinMergedSegment);
 
         log.debug("Segment[%s] built in %,dms.", identifier, (mergeFinishTime - startTime) / 1000000);
       }
@@ -841,6 +846,7 @@ public class BatchAppenderator implements Appenderator
       removeDirectory(computePersistDir(identifier));
 
       final long pushFinishTime = System.nanoTime();
+      metrics.incrementPushedRows(rowsinMergedSegment);
 
       log.info(
           "Segment[%s] of %,d bytes "

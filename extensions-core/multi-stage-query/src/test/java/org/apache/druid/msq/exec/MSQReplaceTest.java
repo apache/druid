@@ -126,6 +126,11 @@ public class MSQReplaceTest extends MSQTestBase
                              .with().rows(1, 1, 1, 1, 1, 1).frames(1, 1, 1, 1, 1, 1),
                          1, 0, "input0"
                      )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(6),
+                         1, 0
+                     )
                      .verifyResults();
   }
 
@@ -169,6 +174,11 @@ public class MSQReplaceTest extends MSQTestBase
                          CounterSnapshotMatcher
                              .with().rows(1).frames(1),
                          1, 0, "input0"
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(1),
+                         1, 0
                      )
                      .verifyResults();
   }
@@ -306,6 +316,11 @@ public class MSQReplaceTest extends MSQTestBase
                              .with().rows(4).frames(1),
                          1, 0, "input0"
                      )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(4),
+                         1, 0
+                     )
                      .verifyResults();
   }
 
@@ -374,6 +389,11 @@ public class MSQReplaceTest extends MSQTestBase
                              .with().rows(6).frames(1),
                          1, 0, "input0"
                      )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(6),
+                         1, 0
+                     )
                      .verifyResults();
   }
 
@@ -430,6 +450,11 @@ public class MSQReplaceTest extends MSQTestBase
                              .with().rows(3, 3).frames(1, 1),
                          1, 0, "input0"
                      )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(6),
+                         1, 0
+                     )
                      .verifyResults();
   }
 
@@ -484,6 +509,11 @@ public class MSQReplaceTest extends MSQTestBase
                              .with().rows(2).frames(1),
                          1, 0, "input0"
                      )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(2),
+                         1, 0
+                     )
                      .verifyResults();
   }
 
@@ -532,6 +562,11 @@ public class MSQReplaceTest extends MSQTestBase
                          CounterSnapshotMatcher
                              .with().rows(2).frames(1),
                          1, 0, "input0"
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(2),
+                         1, 0
                      )
                      .verifyResults();
   }

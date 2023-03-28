@@ -218,11 +218,11 @@ export function formatMillions(n: NumberLike): string {
 }
 
 function pad2(str: string | number): string {
-  return ('00' + str).substr(-2);
+  return ('00' + str).slice(-2);
 }
 
 function pad3(str: string | number): string {
-  return ('000' + str).substr(-3);
+  return ('000' + str).slice(-3);
 }
 
 export function formatDuration(ms: NumberLike): string {
@@ -252,7 +252,7 @@ export function formatDurationHybrid(ms: NumberLike): string {
     const timeInMs = Math.floor(n) % 1000;
     return `${timeInMin ? `${timeInMin}:` : ''}${timeInMin ? pad2(timeInSec) : timeInSec}.${pad3(
       timeInMs,
-    ).substring(0, 2)}s`;
+    ).slice(0, 2)}s`;
   } else {
     return formatDuration(n);
   }
@@ -413,7 +413,7 @@ export function parseCsvLine(line: string): string[] {
   let m: RegExpExecArray | null;
   while ((m = /^,(?:"([^"]*(?:""[^"]*)*)"|([^,\r\n]*))/m.exec(line))) {
     parts.push(typeof m[1] === 'string' ? m[1].replace(/""/g, '"') : m[2]);
-    line = line.substr(m[0].length);
+    line = line.slice(m[0].length);
   }
   return parts;
 }
@@ -456,5 +456,5 @@ export function tickIcon(checked: boolean): IconName {
 }
 
 export function generate8HexId(): string {
-  return (Math.random() * 1e10).toString(16).replace('.', '').substr(0, 8);
+  return (Math.random() * 1e10).toString(16).replace('.', '').slice(0, 8);
 }

@@ -81,7 +81,7 @@ public class DruidCoordinatorRuntimeParams
       @Nullable DataSourcesSnapshot dataSourcesSnapshot,
       Map<String, LoadQueuePeon> loadManagementPeons,
       ReplicationThrottler replicationManager,
-      RoundRobinServerSelector roundRobinServerSelector,
+      @Nullable RoundRobinServerSelector roundRobinServerSelector,
       ServiceEmitter emitter,
       CoordinatorDynamicConfig coordinatorDynamicConfig,
       CoordinatorCompactionConfig coordinatorCompactionConfig,
@@ -296,7 +296,7 @@ public class DruidCoordinatorRuntimeParams
         @Nullable DataSourcesSnapshot dataSourcesSnapshot,
         Map<String, LoadQueuePeon> loadManagementPeons,
         ReplicationThrottler replicationManager,
-        RoundRobinServerSelector roundRobinServerSelector,
+        @Nullable RoundRobinServerSelector roundRobinServerSelector,
         ServiceEmitter emitter,
         CoordinatorDynamicConfig coordinatorDynamicConfig,
         CoordinatorCompactionConfig coordinatorCompactionConfig,
@@ -334,7 +334,7 @@ public class DruidCoordinatorRuntimeParams
           dataSourcesSnapshot,
           loadManagementPeons,
           replicationManager,
-          roundRobinServerSelector,
+          getOrCreateRoundRobinServerSelector(),
           emitter,
           coordinatorDynamicConfig,
           coordinatorCompactionConfig,
@@ -342,6 +342,18 @@ public class DruidCoordinatorRuntimeParams
           balancerStrategy,
           broadcastDatasources
       );
+    }
+
+    private RoundRobinServerSelector getOrCreateRoundRobinServerSelector()
+    {
+      if (druidCluster == null || coordinatorDynamicConfig == null
+          || !coordinatorDynamicConfig.isUseRoundRobinSegmentAssignment()) {
+        return null;
+      } else if (roundRobinServerSelector == null) {
+        return new RoundRobinServerSelector(druidCluster);
+      } else {
+        return roundRobinServerSelector;
+      }
     }
 
     public Builder withStartTimeNanos(long startTimeNanos)
