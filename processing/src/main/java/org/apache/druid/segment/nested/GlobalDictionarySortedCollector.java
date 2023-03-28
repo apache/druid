@@ -32,16 +32,22 @@ public class GlobalDictionarySortedCollector
   private final Indexed<String> sortedStrings;
   private final Indexed<Long> sortedLongs;
   private final Indexed<Double> sortedDoubles;
+  private final Iterable<Object[]> sortedArrays;
+  private final int arrayCount;
 
   public GlobalDictionarySortedCollector(
       Indexed<String> sortedStrings,
       Indexed<Long> sortedLongs,
-      Indexed<Double> sortedDoubles
+      Indexed<Double> sortedDoubles,
+      Iterable<Object[]> sortedArrays,
+      int arrayCount
   )
   {
     this.sortedStrings = sortedStrings;
     this.sortedLongs = sortedLongs;
     this.sortedDoubles = sortedDoubles;
+    this.sortedArrays = sortedArrays;
+    this.arrayCount = arrayCount;
   }
 
   public Indexed<String> getSortedStrings()
@@ -59,8 +65,44 @@ public class GlobalDictionarySortedCollector
     return sortedDoubles;
   }
 
-  public int size()
+  public Iterable<Object[]> getSortedArrays()
   {
-    return sortedStrings.size() + sortedLongs.size() + sortedDoubles.size();
+    return sortedArrays;
+  }
+
+  public int getStringCardinality()
+  {
+    return sortedStrings.size();
+  }
+
+  public int getLongCardinality()
+  {
+    return sortedLongs.size();
+  }
+
+  public int getDoubleCardinality()
+  {
+    return sortedDoubles.size();
+  }
+
+  public int getArrayCardinality()
+  {
+    return arrayCount;
+  }
+
+  public boolean allNull()
+  {
+    for (String s : sortedStrings) {
+      if (s != null) {
+        return false;
+      }
+    }
+    if (sortedLongs.size() > 0) {
+      return false;
+    }
+    if (sortedDoubles.size() > 0) {
+      return false;
+    }
+    return arrayCount == 0;
   }
 }

@@ -106,7 +106,6 @@ public class AvroStreamInputFormatTest extends InitializedNullHandlingTest
   private static final String TOPIC = "aTopic";
   static final List<String> DIMENSIONS = Arrays.asList(EVENT_TYPE, ID, SOME_OTHER_ID, IS_VALID);
   private static final List<String> DIMENSIONS_SCHEMALESS = Arrays.asList(
-      "nested",
       SOME_OTHER_ID,
       "someIntArray",
       "someFloat",

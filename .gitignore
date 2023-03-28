@@ -34,3 +34,8 @@ integration-tests/gen-scripts/
 **/.jupyter/
 **/.local/
 **/druidapi.egg-info/
+
+# ignore NetBeans IDE specific files
+nbproject
+nbactions.xml
+nb-configuration.xml

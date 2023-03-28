@@ -179,8 +179,9 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     }
     Indexed.checkIndex(index, adjustedNumValues);
 
-    // due to vbyte encoding, the null value is not actually stored in the bucket (no negative values), so we adjust
-    // the index
+    // due to vbyte encoding, the null value is not actually stored in the bucket. we would typically represent it as a
+    // length of -1, since 0 is the empty string, but VByte encoding cannot have negative values, so if the null value
+    // is present, we adjust the index by 1 since it is always stored as position 0 due to sorting first
     final int adjustedIndex = index - adjustIndex;
     // find the bucket which contains the value with maths
     final int bucket = adjustedIndex >> div;
@@ -197,6 +198,10 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     // a linear scan to find the value within the bucket
     if (value == null) {
       return hasNull ? 0 : -1;
+    }
+
+    if (numBuckets == 0) {
+      return hasNull ? -2 : -1;
     }
 
     int minBucketIndex = 0;
@@ -298,6 +303,9 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
   @Override
   public Iterator<ByteBuffer> iterator()
   {
+    if (adjustedNumValues == 0) {
+      return Collections.emptyIterator();
+    }
     if (hasNull && adjustedNumValues == 1) {
       return Collections.<ByteBuffer>singletonList(null).iterator();
     }

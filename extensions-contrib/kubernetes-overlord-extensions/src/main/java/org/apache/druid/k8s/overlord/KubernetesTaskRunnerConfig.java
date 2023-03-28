@@ -38,6 +38,12 @@ public class KubernetesTaskRunnerConfig
   @JsonProperty
   public boolean debugJobs = false;
 
+  /**
+   * Deprecated, please specify adapter type runtime property instead
+   *
+   * I.E `druid.indexer.runner.k8s.adapter.type: overlordMultiContainer`
+   */
+  @Deprecated
   @JsonProperty
   public boolean sidecarSupport = false;
 

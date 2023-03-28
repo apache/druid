@@ -41,6 +41,9 @@ public class PostJoinCursor implements Cursor
   @Nullable
   private final ValueMatcher valueMatcher;
 
+  @Nullable
+  private final Filter postJoinFilter;
+
   private PostJoinCursor(Cursor baseCursor, VirtualColumns virtualColumns, @Nullable Filter filter)
   {
     this.baseCursor = baseCursor;
@@ -52,6 +55,7 @@ public class PostJoinCursor implements Cursor
     } else {
       this.valueMatcher = filter.makeMatcher(this.columnSelectorFactory);
     }
+    this.postJoinFilter = filter;
   }
 
   public static PostJoinCursor wrap(
@@ -84,6 +88,12 @@ public class PostJoinCursor implements Cursor
   public DateTime getTime()
   {
     return baseCursor.getTime();
+  }
+
+  @Nullable
+  public Filter getPostJoinFilter()
+  {
+    return postJoinFilter;
   }
 
   @Override
