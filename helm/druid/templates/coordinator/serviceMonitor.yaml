@@ -16,33 +16,26 @@
  limitations under the License.
 
 */}}
-
-{{- if .Values.broker.enabled -}}
-apiVersion: v1
-kind: Service
+{{- if and .Values.coordinator.enabled .Values.coordinator.metrics.port .Values.coordinator.metrics.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
 metadata:
-  name: {{ include "druid.broker.fullname" . }}
+  name: {{ include "druid.coordinator.fullname" . }}
   labels:
     app: {{ include "druid.name" . }}
     chart: {{ include "druid.chart" . }}
-    component: {{ .Values.broker.name }}
+    component: {{ .Values.coordinator.name }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
-  type: {{ .Values.broker.serviceType }}
-  ports:
-    - port: {{ .Values.broker.port }}
-      targetPort: http
-      protocol: TCP
-      name: http
-  {{- if and .Values.broker.metrics.port (or .Values.broker.config.druid_emitter_prometheus_port .Values.configVars.druid_emitter_prometheus_port) }}
-    - port: {{ .Values.broker.metrics.port }}
-      targetPort: {{ default .Values.configVars.druid_emitter_prometheus_port .Values.broker.config.druid_emitter_prometheus_port }}
-      protocol: TCP
-      name: druid-metrics
-  {{- end }}
   selector:
-    app: {{ include "druid.name" . }}
-    release: {{ .Release.Name }}
-    component: {{ .Values.broker.name }}
+    matchLabels:
+      app: {{ include "druid.name" . }}
+      component: {{ .Values.coordinator.name }}
+  endpoints:
+    - port: druid-metrics
+      interval: 20s
+      path: /metrics
+      scheme: http
+      honorLabels: true
 {{- end }}
