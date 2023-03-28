@@ -22,7 +22,6 @@ package org.apache.druid.catalog.model.table;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.server.security.ResourceAction;
 
 import javax.annotation.Nullable;
 import java.util.Set;
