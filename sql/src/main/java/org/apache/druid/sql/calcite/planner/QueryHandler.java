@@ -617,6 +617,9 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
             handlerContext.engine().name())
         );
       }
+      if (handlerContext.queryContext().isMsqDenySelect()) {
+        throw new ValidationException("Cannot execute MSQ SELECT");
+      }
       super.validate();
     }
 
