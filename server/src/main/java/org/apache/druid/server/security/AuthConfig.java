@@ -98,7 +98,7 @@ public class AuthConfig
   private final Set<String> securedContextKeys;
 
   @JsonProperty
-  private boolean inputSourceTypeSecurityEnabled;
+  private final boolean inputSourceTypeSecurityEnabled;
 
   @JsonCreator
   public AuthConfig(
