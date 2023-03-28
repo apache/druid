@@ -1246,9 +1246,34 @@ http://<OVERLORD_IP>:<port>/druid/indexer/v1/worker/history?count=<n>
 
 ##### Worker select strategy
 
-The select strategy controls how Druid assigns tasks to MiddleManagers.
-Tasks can be assigend in an effort to diftribute work equaly (`equalDistribution`, `equalDistributionWithCategorySpec`)
-or to fill as much capacity as possible on the smallest set of MiddleManagers (`fillCapacity`, `fillCapacityWithCategorySpec`).
+The select strategy controls how Druid assigns tasks to workers (MiddleManagers).
+At a high level a select strategy determines the list of possible workers that the task can be assigned to using
+either an `affinityConfig` or a `categorySpec` and then it assigns the task by either trying to distribute load equally
+(`equalDistribution`) or to fill as many workers as possible to capacity (`fillCapacity`).
+This forms 4 possible options for supported select strategies.
+A `javascript` option is also available which should only be used for prototyping new strategies.
+
+If an `affinityConfig` is provided (as part of `fillCapacity` and `equalDistribution` strategies) for a given task the list of workers eligible to be assigned is determined as follows:
+
+- a non-affinity worker, if no affinity is specified for that datasource (any worker not listed in the `affinityConfig` is known as a "Non-affinity worker")
+- a non-affinity worker, if preferred workers are not available and affinity is `weak`
+- a preferred worker (based on affinityConfig), if available
+- not assigned at all (i.e. remains pending), if preferred MMs are not available and affinity is `strong`
+
+Note that every worker listed in the `affinityConfig` will only be used for the assigned datasources and no other.
+
+If a `categorySpec` is provided (as part of `fillCapacityWithCategorySpec` and `equalDistributionWithCategorySpec` strategies) for a given task the list of workers eligible to be assigned is determined as follows:
+
+- any worker, if no categoryConfig given for task type
+- any worker, if categoryConfig given for task type but no category given for datasource and no default category either
+- a preferred worker (based on categoryConfig + category for datasource), if available
+- any worker, if categoryConfig given and category given but no preferred worker is available and categoryConfig is `weak`
+- not assigned at all, if preferred workers are not available and `categoryConfig` is `strong`
+
+In either case, after the eligible worker list is constructed one will be selected depending on their load with the goal of either distributing the load equally or filling as few workers as possible.
+
+If you are using auto-scaling it only makes sense to use the `fillCapacity` select strategy since auto-scaled nodes can
+not be assigned a category, and you want the work to be concentrated on the fewest number of workers to allow the empty ones to scale down.
 
 ###### `equalDistribution`
 
@@ -1813,7 +1838,7 @@ This laning strategy is best suited for cases where one or more external applica
 
 ##### Server Configuration
 
-Druid uses Jetty to serve HTTP requests. Each query being processed consumes a single thread from `druid.server.http.numThreads`, so consider defining `druid.query.scheduler.numThreads` to a lower value in order to reserve HTTP threads for responding to health checks, lookup loading, and other non-query, and in most cases comparatively very short lived, HTTP requests.
+Druid uses Jetty to serve HTTP requests. Each query being processed consumes a single thread from `druid.server.http.numThreads`, so consider defining `druid.query.scheduler.numThreads` to a lower value in order to reserve HTTP threads for responding to health checks, lookup loading, and other non-query, and in most cases comparatively very short-lived, HTTP requests.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1833,7 +1858,7 @@ Druid uses Jetty to serve HTTP requests. Each query being processed consumes a s
 
 ##### Client Configuration
 
-Druid Brokers use an HTTP client to communicate with with data servers (Historical servers and real-time tasks). This
+Druid Brokers use an HTTP client to communicate with data servers (Historical servers and real-time tasks). This
 client has the following configuration options.
 
 |Property|Description|Default|

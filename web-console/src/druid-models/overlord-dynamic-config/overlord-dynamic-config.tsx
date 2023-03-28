@@ -43,27 +43,16 @@ export interface AutoScalerConfig {
   minNumWorkers: number;
   maxNumWorkers: number;
   envConfig: {
-    // ToDo: verify
-    // availabilityZone: 'us-east-1a';
-    // nodeData: {
-    //   amiId: '${AMI}';
-    //   instanceType: 'c3.8xlarge';
-    //   minInstances: 1;
-    //   maxInstances: 1;
-    //   securityGroupIds: ['${IDs}'];
-    //   keyName: '${KEY_NAME}';
-    // };
-    // userData: {
-    //   impl: 'string';
-    //   data: '${SCRIPT_COMMAND}';
-    //   versionReplacementString: ':VERSION:';
-    //   version: null;
-    // };
+    // ec2
+    availabilityZone?: string;
+    nodeData?: Record<string, any>;
+    userData?: Record<string, any>;
 
-    numInstances: number;
-    projectId: string;
-    zoneName: string;
-    managedInstanceGroupName: string;
+    // gce
+    numInstances?: number;
+    projectId?: string;
+    zoneName?: string;
+    managedInstanceGroupName?: string;
   };
 }
 
@@ -133,13 +122,7 @@ export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
     label: 'Auto scaler type',
     type: 'string',
     suggestions: [undefined, 'ec2', 'gce'],
-    defined: c =>
-      oneOf(
-        deepGet(c, 'selectStrategy.type'),
-        'fillCapacity',
-        // 'fillCapacityWithCategorySpec',
-        'javascript',
-      ),
+    defined: c => oneOf(deepGet(c, 'selectStrategy.type'), 'fillCapacity', 'javascript'),
   },
   {
     name: 'autoScaler.minNumWorkers',
