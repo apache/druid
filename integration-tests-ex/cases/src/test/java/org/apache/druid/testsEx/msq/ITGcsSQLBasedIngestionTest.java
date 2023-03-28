@@ -31,6 +31,15 @@ import org.junit.runner.RunWith;
 
 import java.util.List;
 
+/**
+ * IMPORTANT:
+ * To run this test, you must set the following env variables in the build environment -
+ * GOOGLE_PREFIX - path inside the bucket where the test data files will be uploaded
+ * GOOGLE_BUCKET - Google cloud bucket name
+ * GOOGLE_APPLICATION_CREDENTIALS - path to the json file containing google cloud credentials
+ * <a href="https://druid.apache.org/docs/latest/development/extensions-core/google.html">Google Cloud Storage setup in druid</a>
+ */
+
 @RunWith(DruidTestRunner.class)
 @Category(GcsDeepStorage.class)
 public class ITGcsSQLBasedIngestionTest extends AbstractGcsInputSourceParallelIndexTest

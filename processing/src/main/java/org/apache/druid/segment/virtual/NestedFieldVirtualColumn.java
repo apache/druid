@@ -57,6 +57,7 @@ import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.nested.CompressedNestedDataComplexColumn;
 import org.apache.druid.segment.nested.NestedDataComplexColumn;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
+import org.apache.druid.segment.nested.NestedFieldDictionaryEncodedColumn;
 import org.apache.druid.segment.nested.NestedPathArrayElement;
 import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
@@ -78,7 +79,7 @@ import java.util.Objects;
 
 /**
  * Optimized virtual column that can make direct selectors into a {@link NestedDataComplexColumn} or any associated
- * nested fields ({@link org.apache.druid.segment.nested.NestedFieldLiteralDictionaryEncodedColumn}) including using
+ * nested fields ({@link NestedFieldDictionaryEncodedColumn}) including using
  * their indexes.
  * <p>
  * This virtual column is used for the SQL operators JSON_VALUE (if {@link #processFromRaw} is set to false) or
@@ -655,12 +656,13 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       if (capabilities.is(ValueType.COMPLEX) &&
           capabilities.getComplexTypeName().equals(NestedDataComplexTypeSerde.TYPE_NAME) &&
           capabilities.isDictionaryEncoded().isTrue()) {
+        final boolean useDictionary = parts.isEmpty() || !(parts.get(parts.size() - 1) instanceof NestedPathArrayElement);
         return ColumnCapabilitiesImpl.createDefault()
                                      .setType(expectedType != null ? expectedType : ColumnType.STRING)
-                                     .setDictionaryEncoded(true)
-                                     .setDictionaryValuesSorted(true)
-                                     .setDictionaryValuesUnique(true)
-                                     .setHasBitmapIndexes(true)
+                                     .setDictionaryEncoded(useDictionary)
+                                     .setDictionaryValuesSorted(useDictionary)
+                                     .setDictionaryValuesUnique(useDictionary)
+                                     .setHasBitmapIndexes(useDictionary)
                                      .setHasNulls(expectedType == null || (expectedType.isNumeric()
                                                                            && NullHandling.sqlCompatible()));
       }

@@ -22,17 +22,22 @@ package org.apache.druid.k8s.overlord.common;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.google.common.collect.ImmutableList;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexing.common.TestUtils;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.log.StartupLoggingConfig;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -43,12 +48,14 @@ import java.util.Collections;
 @EnableKubernetesMockClient(crud = true)
 class SingleContainerTaskAdapterTest
 {
-
-  KubernetesClient client;
-
+  private KubernetesClient client;
+  private StartupLoggingConfig startupLoggingConfig;
+  private TaskConfig taskConfig;
+  private DruidNode druidNode;
   private ObjectMapper jsonMapper;
 
-  public SingleContainerTaskAdapterTest()
+  @BeforeEach
+  public void setup()
   {
     TestUtils utils = new TestUtils();
     jsonMapper = utils.getTestObjectMapper();
@@ -59,6 +66,33 @@ class SingleContainerTaskAdapterTest
         new NamedType(ParallelIndexTuningConfig.class, "index_parallel"),
         new NamedType(IndexTask.IndexTuningConfig.class, "index")
     );
+    druidNode = new DruidNode(
+        "test",
+        null,
+        false,
+        null,
+        null,
+        true,
+        false
+    );
+    startupLoggingConfig = new StartupLoggingConfig();
+    taskConfig = new TaskConfig(
+        "src/test/resources",
+        null,
+        null,
+        null,
+        null,
+        false,
+        null,
+        null,
+        null,
+        false,
+        false,
+        null,
+        null,
+        false,
+        ImmutableList.of("src/test/resources")
+    );
   }
 
   @Test
@@ -68,7 +102,14 @@ class SingleContainerTaskAdapterTest
     Pod pod = K8sTestUtils.fileToResource("multiContainerPodSpec.yaml", Pod.class);
     KubernetesTaskRunnerConfig config = new KubernetesTaskRunnerConfig();
     config.namespace = "test";
-    SingleContainerTaskAdapter adapter = new SingleContainerTaskAdapter(testClient, config, jsonMapper);
+    SingleContainerTaskAdapter adapter = new SingleContainerTaskAdapter(
+        testClient,
+        config,
+        taskConfig,
+        startupLoggingConfig,
+        druidNode,
+        jsonMapper
+    );
     NoopTask task = NoopTask.create("id", 1);
     Job actual = adapter.createJobFromPodSpec(
         pod.getSpec(),
