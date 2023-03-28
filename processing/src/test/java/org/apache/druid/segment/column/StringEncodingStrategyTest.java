@@ -50,6 +50,11 @@ public class StringEncodingStrategyTest
     Assert.assertEquals(frontCoded, andBackAgain);
     Assert.assertEquals(FrontCodedIndexed.DEFAULT_BUCKET_SIZE, ((StringEncodingStrategy.FrontCoded) andBackAgain).getBucketSize());
     Assert.assertEquals(FrontCodedIndexed.DEFAULT_VERSION, ((StringEncodingStrategy.FrontCoded) andBackAgain).getFormatVersion());
+
+    // this next assert seems silly, but its a sanity check to make us think hard before changing the default version,
+    // to make us think of the backwards compatibility implications, as new versions of segment format stuff cannot be
+    // downgraded to older versions of Druid and still read
+    Assert.assertEquals(FrontCodedIndexed.V1, FrontCodedIndexed.DEFAULT_VERSION);
   }
 
   @Test
