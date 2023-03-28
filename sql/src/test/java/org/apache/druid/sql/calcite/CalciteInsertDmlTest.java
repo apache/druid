@@ -419,6 +419,49 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  public void testInsertFromExternalFunctionalStyleWithSchemaWithInputsourceSecurity()
+  {
+    String extern;
+    ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
+    try {
+      extern = StringUtils.format(
+          "TABLE(extern("
+          + "inputSource => '%s',"
+          + "inputFormat => '%s'))",
+          queryJsonMapper.writeValueAsString(
+              new InlineInputSource("a,b,1\nc,d,2\n")
+          ),
+          queryJsonMapper.writeValueAsString(
+              new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0)
+          )
+      );
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT * FROM %s\n" +
+             "  (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME",
+             extern
+        )
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .authConfig(AuthConfig.newBuilder().setInputSourceTypeSecurityEnabled(true).build())
+        .expectTarget("dst", externalDataSource.getSignature())
+        .expectResources(dataSourceWrite("dst"), externalRead("inline"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(externalDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("x", "y", "z")
+                .context(PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .expectLogicalPlanFrom("insertFromExternal")
+        .verify();
+  }
+
+  @Test
   public void testInsertWithPartitionedBy()
   {
     // Test correctness of the query when only PARTITIONED BY clause is present

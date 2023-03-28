@@ -31,7 +31,7 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
-import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.util.Collections;
 import java.util.Set;
 
@@ -52,11 +52,6 @@ public class DruidExternTableMacro extends DruidUserDefinedTableMacro
     }
     String inputSourceStr = getInputSourceArgument(call);
 
-    if (inputSourceStr == null) {
-      // this shouldn't happen, the input source paraemeter should have been validated before this
-      return Collections.singleton(Externals.EXTERNAL_RESOURCE_ACTION);
-    }
-
     try {
       JsonNode jsonNode = ((DruidTableMacro) macro).getJsonMapper().readTree(inputSourceStr);
       return Collections.singleton(new ResourceAction(new Resource(
@@ -66,12 +61,11 @@ public class DruidExternTableMacro extends DruidUserDefinedTableMacro
     }
     catch (JsonProcessingException e) {
       // this shouldn't happen, the input source paraemeter should have been validated before this
-      LOG.error(e, "Error when serializing inputSource parameter found in EXTERN macro");
+      throw new RuntimeException(e);
     }
-    return Collections.singleton(Externals.EXTERNAL_RESOURCE_ACTION);
   }
 
-  @Nullable
+  @NotNull
   private String getInputSourceArgument(final SqlCall call)
   {
     if (call.getOperandList().size() > 0) {
@@ -93,6 +87,8 @@ public class DruidExternTableMacro extends DruidUserDefinedTableMacro
         }
       }
     }
-    return null;
+    // this shouldn't happen, as the sqlCall should have been validated by this point,
+    // and be guarenteed to have this parameter.
+    throw new RuntimeException("inputSource paramter not found in extern function");
   }
 }
