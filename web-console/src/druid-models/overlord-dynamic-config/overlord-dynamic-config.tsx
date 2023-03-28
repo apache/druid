@@ -16,6 +16,9 @@
  * limitations under the License.
  */
 
+import { Callout } from '@blueprintjs/core';
+import React from 'react';
+
 import type { Field } from '../../components';
 import { deepGet, oneOf } from '../../utils';
 
@@ -80,6 +83,17 @@ export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
         'equalDistribution',
         'fillCapacity',
       ),
+    info: (
+      <>
+        <p>An example affinity config might look like:</p>
+        <Callout>
+          <pre>{`{
+  "datasource1": ["host1:port", "host2:port"],
+  "datasource2": ["host3:port"]
+}`}</pre>
+        </Callout>
+      </>
+    ),
   },
   {
     name: 'selectStrategy.affinityConfig.strong',
@@ -104,6 +118,21 @@ export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
         'equalDistributionWithCategorySpec',
         'fillCapacityWithCategorySpec',
       ),
+    info: (
+      <>
+        <p>An example category map might look like:</p>
+        <Callout>
+          <pre>{`{
+  "index_kafka": {
+    "defaultCategory": "category1",
+    "categoryAffinity": {
+      "datasource1": "category2"
+    }
+  }
+}`}</pre>
+        </Callout>
+      </>
+    ),
   },
   {
     name: 'selectStrategy.workerCategorySpec.strong',
@@ -115,6 +144,15 @@ export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
         'equalDistributionWithCategorySpec',
         'fillCapacityWithCategorySpec',
       ),
+  },
+
+  // javascript
+  {
+    name: 'selectStrategy.workerCategorySpec.function',
+    type: 'string',
+    multiline: true,
+    placeholder: `function(config, zkWorkers, task) { ... }`,
+    defined: c => deepGet(c, 'selectStrategy.type') === 'javascript',
   },
 
   {
