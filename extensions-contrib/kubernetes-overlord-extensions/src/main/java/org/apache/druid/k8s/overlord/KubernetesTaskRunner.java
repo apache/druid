@@ -471,6 +471,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         );
       }
       catch (KubernetesResourceNotFoundException e) {
+        log.debug(e, "Error getting task location for task %s", taskId);
         return TaskLocation.unknown();
       }
       catch (Exception e) {
