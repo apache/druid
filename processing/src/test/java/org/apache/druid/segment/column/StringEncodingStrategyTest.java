@@ -48,15 +48,22 @@ public class StringEncodingStrategyTest
     String there = JSON_MAPPER.writeValueAsString(frontCoded);
     StringEncodingStrategy andBackAgain = JSON_MAPPER.readValue(there, StringEncodingStrategy.class);
     Assert.assertEquals(frontCoded, andBackAgain);
+    Assert.assertEquals(FrontCodedIndexed.DEFAULT_BUCKET_SIZE, ((StringEncodingStrategy.FrontCoded) andBackAgain).getBucketSize());
+    Assert.assertEquals(FrontCodedIndexed.DEFAULT_VERSION, ((StringEncodingStrategy.FrontCoded) andBackAgain).getFormatVersion());
   }
 
   @Test
   public void testFrontCodedFormatSerde() throws JsonProcessingException
   {
-    StringEncodingStrategy frontCoded = new StringEncodingStrategy.FrontCoded(16, FrontCodedIndexed.V0);
-    String there = JSON_MAPPER.writeValueAsString(frontCoded);
+    StringEncodingStrategy frontCodedV0 = new StringEncodingStrategy.FrontCoded(16, FrontCodedIndexed.V0);
+    String there = JSON_MAPPER.writeValueAsString(frontCodedV0);
     StringEncodingStrategy andBackAgain = JSON_MAPPER.readValue(there, StringEncodingStrategy.class);
-    Assert.assertEquals(frontCoded, andBackAgain);
+    Assert.assertEquals(frontCodedV0, andBackAgain);
+
+    StringEncodingStrategy frontCodedV1 = new StringEncodingStrategy.FrontCoded(8, FrontCodedIndexed.V1);
+    there = JSON_MAPPER.writeValueAsString(frontCodedV1);
+    andBackAgain = JSON_MAPPER.readValue(there, StringEncodingStrategy.class);
+    Assert.assertEquals(frontCodedV1, andBackAgain);
   }
 
   @Test
