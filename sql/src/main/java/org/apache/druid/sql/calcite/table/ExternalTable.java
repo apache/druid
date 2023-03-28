@@ -96,7 +96,8 @@ public class ExternalTable extends DruidTable
     return rowType;
   }
 
-  public Set<ResourceAction> getResourceActions() {
+  public Set<ResourceAction> getResourceActions()
+  {
     return resourceActions;
   }
 

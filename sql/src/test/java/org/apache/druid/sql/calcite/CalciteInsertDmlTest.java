@@ -38,6 +38,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
@@ -308,6 +309,27 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  public void testInsertFromExternalWithInputSourceSecurityEnabled()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME", externSql(externalDataSource))
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .authConfig(AuthConfig.newBuilder().setInputSourceTypeSecurityEnabled(true).build())
+        .expectTarget("dst", externalDataSource.getSignature())
+        .expectResources(dataSourceWrite("dst"), externalRead("inline"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(externalDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("x", "y", "z")
+                .context(PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .expectLogicalPlanFrom("insertFromExternal")
+        .verify();
+  }
+
+  @Test
   public void testInsertFromExternalWithSchema()
   {
     String extern;
@@ -339,6 +361,51 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", externalDataSource.getSignature())
         .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(externalDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("x", "y", "z")
+                .context(PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .expectLogicalPlanFrom("insertFromExternal")
+        .verify();
+  }
+
+  @Test
+  public void testInsertFromExternalWithSchemaWithInputsourceSecurity()
+  {
+    String extern;
+    ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
+    try {
+      extern = StringUtils.format(
+          "TABLE(extern(%s, %s))",
+          Calcites.escapeStringLiteral(
+              queryJsonMapper.writeValueAsString(
+                  new InlineInputSource("a,b,1\nc,d,2\n")
+              )
+          ),
+          Calcites.escapeStringLiteral(
+              queryJsonMapper.writeValueAsString(
+                  new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0)
+              )
+          )
+      );
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT * FROM %s\n" +
+             "  (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME",
+             extern
+        )
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .authConfig(AuthConfig.newBuilder().setInputSourceTypeSecurityEnabled(true).build())
+        .expectTarget("dst", externalDataSource.getSignature())
+        .expectResources(dataSourceWrite("dst"), externalRead("inline"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(externalDataSource)

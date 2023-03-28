@@ -430,7 +430,7 @@ public class SqlTestFramework
           new CalciteRulesManager(componentSupplier.extensionCalciteRules()),
           framework.injector.getInstance(JoinableFactoryWrapper.class),
           framework.builder.catalogResolver,
-          new AuthConfig()
+          authConfig != null ? authConfig : new AuthConfig()
       );
       componentSupplier.finalizePlanner(this);
       this.statementFactory = QueryFrameworkUtils.createSqlStatementFactory(

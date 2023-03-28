@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.external;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.catalog.model.CatalogUtils;
@@ -115,12 +116,14 @@ public class ExternalOperatorConversion extends DruidExternTableMacroConversion
           rowSignature = jsonMapper.readValue(sigValue, RowSignature.class);
         }
 
+        String inputSrcStr = CatalogUtils.getString(args, INPUT_SOURCE_PARAM);
+        String inputSrcType = jsonMapper.readTree(inputSrcStr).get("type").asText();
         return new ExternalTableSpec(
-            jsonMapper.readValue(CatalogUtils.getString(args, INPUT_SOURCE_PARAM), InputSource.class),
+            jsonMapper.readValue(inputSrcStr, InputSource.class),
             jsonMapper.readValue(CatalogUtils.getString(args, INPUT_FORMAT_PARAM), InputFormat.class),
             rowSignature,
             Collections.singleton(new ResourceAction(
-                new Resource(ResourceType.EXTERNAL, ResourceType.EXTERNAL),
+                new Resource(ResourceType.EXTERNAL, inputSrcType),
                 Action.READ
             ))
         );
