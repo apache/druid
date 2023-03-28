@@ -188,7 +188,7 @@ public class JsonLineReaderTest
       int numActualIterations = 0;
       while (iterator.hasNext()) {
         final InputRow row = iterator.next();
-        Assert.assertEquals(Arrays.asList("path_omg", "tree_omg", "timestamp", "bar", "foo"), row.getDimensions());
+        Assert.assertEquals(Arrays.asList("path_omg", "tree_omg", "bar", "foo"), row.getDimensions());
         Assert.assertTrue(row.getDimension("bar").isEmpty());
         Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
         Assert.assertTrue(row.getDimension("path_omg").isEmpty());
@@ -234,7 +234,7 @@ public class JsonLineReaderTest
       int numActualIterations = 0;
       while (iterator.hasNext()) {
         final InputRow row = iterator.next();
-        Assert.assertEquals(Arrays.asList("path_omg", "tree_omg", "timestamp", "bar", "foo"), row.getDimensions());
+        Assert.assertEquals(Arrays.asList("path_omg", "tree_omg", "bar", "foo"), row.getDimensions());
         Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("bar")));
         Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
         Assert.assertEquals("a", Iterables.getOnlyElement(row.getDimension("path_omg")));
@@ -280,7 +280,7 @@ public class JsonLineReaderTest
       int numActualIterations = 0;
       while (iterator.hasNext()) {
         final InputRow row = iterator.next();
-        Assert.assertEquals(Arrays.asList("path_omg", "tree_omg", "timestamp", "foo"), row.getDimensions());
+        Assert.assertEquals(Arrays.asList("path_omg", "tree_omg", "foo"), row.getDimensions());
         Assert.assertTrue(row.getDimension("bar").isEmpty());
         Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
         Assert.assertEquals("a", Iterables.getOnlyElement(row.getDimension("path_omg")));

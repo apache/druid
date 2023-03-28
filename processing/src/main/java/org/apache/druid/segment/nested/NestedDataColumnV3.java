@@ -41,7 +41,7 @@ public final class NestedDataColumnV3<TStringDictionary extends Indexed<ByteBuff
       CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
       ImmutableBitmap nullValues,
       GenericIndexed<String> fields,
-      NestedLiteralTypeInfo fieldInfo,
+      NestedFieldTypeInfo fieldInfo,
       Supplier<TStringDictionary> stringDictionary,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
@@ -58,6 +58,7 @@ public final class NestedDataColumnV3<TStringDictionary extends Indexed<ByteBuff
         stringDictionary,
         longDictionarySupplier,
         doubleDictionarySupplier,
+        null,
         fileMapper,
         NestedPathFinder.JQ_PATH_ROOT
     );

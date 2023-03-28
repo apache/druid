@@ -33,6 +33,7 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AbstractDimensionSelector;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.IdLookup;
@@ -46,6 +47,7 @@ import org.apache.druid.segment.data.ColumnarDoubles;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarLongs;
 import org.apache.druid.segment.data.FixedIndexed;
+import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
@@ -69,10 +71,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.BitSet;
 
-public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends Indexed<ByteBuffer>>
+public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexed<ByteBuffer>>
     implements DictionaryEncodedColumn<String>
 {
-  private final NestedLiteralTypeInfo.TypeSet types;
+  private final NestedFieldTypeInfo.TypeSet types;
   @Nullable
   private final ColumnType singleType;
   private final ColumnarLongs longsColumn;
@@ -82,20 +84,25 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
   private final FixedIndexed<Long> globalLongDictionary;
   private final FixedIndexed<Double> globalDoubleDictionary;
 
+  private final FrontCodedIntArrayIndexed globalArrayDictionary;
+
   private final FixedIndexed<Integer> dictionary;
   private final ImmutableBitmap nullBitmap;
 
   private final int adjustLongId;
   private final int adjustDoubleId;
+  private final int adjustArrayId;
 
-  public NestedFieldLiteralDictionaryEncodedColumn(
-      NestedLiteralTypeInfo.TypeSet types,
+
+  public NestedFieldDictionaryEncodedColumn(
+      NestedFieldTypeInfo.TypeSet types,
       ColumnarLongs longsColumn,
       ColumnarDoubles doublesColumn,
       ColumnarInts column,
       TStringDictionary globalDictionary,
       FixedIndexed<Long> globalLongDictionary,
       FixedIndexed<Double> globalDoubleDictionary,
+      @Nullable FrontCodedIntArrayIndexed globalArrayDictionary,
       FixedIndexed<Integer> dictionary,
       ImmutableBitmap nullBitmap
   )
@@ -108,10 +115,12 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
     this.globalDictionary = globalDictionary;
     this.globalLongDictionary = globalLongDictionary;
     this.globalDoubleDictionary = globalDoubleDictionary;
+    this.globalArrayDictionary = globalArrayDictionary;
     this.dictionary = dictionary;
     this.nullBitmap = nullBitmap;
     this.adjustLongId = globalDictionary.size();
     this.adjustDoubleId = adjustLongId + globalLongDictionary.size();
+    this.adjustArrayId = adjustDoubleId + globalDoubleDictionary.size();
   }
 
   @Override
@@ -215,6 +224,18 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
     }
   }
 
+  private Object lookupGlobalScalarObject(int globalId)
+  {
+    if (globalId < globalDictionary.size()) {
+      return StringUtils.fromUtf8Nullable(globalDictionary.get(globalId));
+    } else if (globalId < globalDictionary.size() + globalLongDictionary.size()) {
+      return globalLongDictionary.get(globalId - adjustLongId);
+    } else if (globalId < globalDictionary.size() + globalLongDictionary.size() + globalDoubleDictionary.size()) {
+      return globalDoubleDictionary.get(globalId - adjustDoubleId);
+    }
+    throw new IllegalArgumentException("not a scalar in the dictionary");
+  }
+
   @Override
   public DimensionSelector makeDimensionSelector(
       ReadableOffset offset,
@@ -299,7 +320,10 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
       @Override
       public boolean isNull()
       {
-        return dictionary.get(getRowValue()) == 0;
+        if (dictionary.get(getRowValue()) == 0) {
+          return true;
+        }
+        return DimensionHandlerUtils.isNumericNull(getObject());
       }
 
       @Override
@@ -332,7 +356,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
               @Override
               public void inspectRuntimeShape(RuntimeShapeInspector inspector)
               {
-                inspector.visit("column", NestedFieldLiteralDictionaryEncodedColumn.this);
+                inspector.visit("column", NestedFieldDictionaryEncodedColumn.this);
               }
             };
           } else {
@@ -373,7 +397,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
           @Override
           public void inspectRuntimeShape(RuntimeShapeInspector inspector)
           {
-            inspector.visit("column", NestedFieldLiteralDictionaryEncodedColumn.this);
+            inspector.visit("column", NestedFieldDictionaryEncodedColumn.this);
           }
         };
       }
@@ -381,7 +405,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
       @Override
       public Object getObject()
       {
-        return NestedFieldLiteralDictionaryEncodedColumn.this.lookupName(getRowValue());
+        return NestedFieldDictionaryEncodedColumn.this.lookupName(getRowValue());
       }
 
       @Override
@@ -407,7 +431,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
       @Override
       public String lookupName(int id)
       {
-        final String value = NestedFieldLiteralDictionaryEncodedColumn.this.lookupName(id);
+        final String value = NestedFieldDictionaryEncodedColumn.this.lookupName(id);
         return extractionFn == null ? value : extractionFn.apply(value);
       }
 
@@ -428,7 +452,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
       public int lookupId(String name)
       {
         if (extractionFn == null) {
-          return NestedFieldLiteralDictionaryEncodedColumn.this.lookupId(name);
+          return NestedFieldDictionaryEncodedColumn.this.lookupId(name);
         }
         throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
       }
@@ -524,7 +548,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
         };
       }
     }
-    if (singleType == null) {
+    if (singleType == null || singleType.isArray()) {
       return new ColumnValueSelector<Object>()
       {
 
@@ -538,12 +562,18 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
         {
           final int localId = column.get(offset.getOffset());
           final int globalId = dictionary.get(localId);
-          if (globalId < adjustLongId) {
-            return StringUtils.fromUtf8Nullable(globalDictionary.get(globalId));
-          } else if (globalId < adjustDoubleId) {
-            return globalLongDictionary.get(globalId - adjustLongId);
+          if (globalId < adjustArrayId) {
+            return lookupGlobalScalarObject(globalId);
           } else {
-            return globalDoubleDictionary.get(globalId - adjustDoubleId);
+            int[] arr = globalArrayDictionary.get(globalId - adjustArrayId);
+            if (arr == null) {
+              return null;
+            }
+            final Object[] array = new Object[arr.length];
+            for (int i = 0; i < arr.length; i++) {
+              array[i] = lookupGlobalScalarObject(arr[i]);
+            }
+            return array;
           }
         }
 
@@ -620,7 +650,10 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
               nullMark = nullIterator.next();
             }
           }
-          return nullMark == offsetMark;
+          if (nullMark == offsetMark) {
+            return true;
+          }
+          return DimensionHandlerUtils.isNumericNull(getObject());
         }
 
         @Override
@@ -662,7 +695,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
       @Override
       public String lookupName(final int id)
       {
-        return NestedFieldLiteralDictionaryEncodedColumn.this.lookupName(id);
+        return NestedFieldDictionaryEncodedColumn.this.lookupName(id);
       }
 
       @Nullable
@@ -682,7 +715,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
       @Override
       public int lookupId(@Nullable String name)
       {
-        return NestedFieldLiteralDictionaryEncodedColumn.this.lookupId(name);
+        return NestedFieldDictionaryEncodedColumn.this.lookupId(name);
       }
     }
 
@@ -698,6 +731,61 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
   @Override
   public VectorObjectSelector makeVectorObjectSelector(ReadableVectorOffset offset)
   {
+    if (singleType != null && singleType.isArray()) {
+      return new VectorObjectSelector()
+      {
+        private final int[] vector = new int[offset.getMaxVectorSize()];
+        private final Object[] objects = new Object[offset.getMaxVectorSize()];
+        private int id = ReadableVectorInspector.NULL_ID;
+
+        @Override
+
+        public Object[] getObjectVector()
+        {
+          if (id == offset.getId()) {
+            return objects;
+          }
+
+          if (offset.isContiguous()) {
+            column.get(vector, offset.getStartOffset(), offset.getCurrentVectorSize());
+          } else {
+            column.get(vector, offset.getOffsets(), offset.getCurrentVectorSize());
+          }
+          for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
+            final int globalId = dictionary.get(vector[i]);
+            if (globalId < adjustArrayId) {
+              objects[i] = lookupGlobalScalarObject(globalId);
+            } else {
+              int[] arr = globalArrayDictionary.get(globalId - adjustArrayId);
+              if (arr == null) {
+                objects[i] = null;
+              } else {
+                final Object[] array = new Object[arr.length];
+                for (int j = 0; j < arr.length; j++) {
+                  array[j] = lookupGlobalScalarObject(arr[j]);
+                }
+                objects[i] = array;
+              }
+            }
+          }
+          id = offset.getId();
+
+          return objects;
+        }
+
+        @Override
+        public int getMaxVectorSize()
+        {
+          return offset.getMaxVectorSize();
+        }
+
+        @Override
+        public int getCurrentVectorSize()
+        {
+          return offset.getCurrentVectorSize();
+        }
+      };
+    }
     final class StringVectorSelector extends StringDictionaryEncodedColumn.StringVectorObjectSelector
     {
       public StringVectorSelector()
@@ -709,7 +797,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
       @Override
       public String lookupName(int id)
       {
-        return NestedFieldLiteralDictionaryEncodedColumn.this.lookupName(id);
+        return NestedFieldDictionaryEncodedColumn.this.lookupName(id);
       }
     }
 

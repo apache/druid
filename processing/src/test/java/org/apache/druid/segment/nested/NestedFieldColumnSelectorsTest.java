@@ -41,6 +41,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.vector.BaseDoubleVectorValueSelector;
 import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
@@ -58,7 +59,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.IOException;
 import java.util.List;
 
-public class NestedFieldLiteralColumnSelectorsTest
+public class NestedFieldColumnSelectorsTest
 {
   private static final String NESTED_LONG_FIELD = "long";
   private static final String NESTED_DOUBLE_FIELD = "double";
@@ -76,7 +77,7 @@ public class NestedFieldLiteralColumnSelectorsTest
   private final AggregationTestHelper helper;
   private final Closer closer;
 
-  public NestedFieldLiteralColumnSelectorsTest()
+  public NestedFieldColumnSelectorsTest()
   {
     NestedDataModule.registerHandlersAndSerde();
     List<? extends Module> mods = NestedDataModule.getJacksonModulesList();
@@ -326,15 +327,16 @@ public class NestedFieldLiteralColumnSelectorsTest
   private ColumnSelectorFactory getNumericColumnSelectorFactory(VirtualColumns virtualColumns) throws Exception
   {
     List<Segment> segments = NestedDataTestUtils.createSegments(
-        helper,
         tempFolder,
         closer,
         NestedDataTestUtils.NUMERIC_DATA_FILE,
-        NestedDataTestUtils.NUMERIC_PARSER_FILE,
-        NestedDataTestUtils.SIMPLE_AGG_FILE,
-        Granularities.DAY,
-        true,
-        1000
+        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+        NestedDataTestUtils.TIMESTAMP_SPEC,
+        NestedDataTestUtils.AUTO_DISCOVERY,
+        TransformSpec.NONE,
+        NestedDataTestUtils.COUNT,
+        Granularities.NONE,
+        true
     );
     Assert.assertEquals(1, segments.size());
     StorageAdapter storageAdapter = segments.get(0).asStorageAdapter();
@@ -355,15 +357,16 @@ public class NestedFieldLiteralColumnSelectorsTest
   private VectorColumnSelectorFactory getVectorColumnSelectorFactory(VirtualColumns virtualColumns) throws Exception
   {
     List<Segment> segments = NestedDataTestUtils.createSegments(
-        helper,
         tempFolder,
         closer,
         NestedDataTestUtils.NUMERIC_DATA_FILE,
-        NestedDataTestUtils.NUMERIC_PARSER_FILE,
-        NestedDataTestUtils.SIMPLE_AGG_FILE,
-        Granularities.DAY,
-        true,
-        1000
+        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+        NestedDataTestUtils.TIMESTAMP_SPEC,
+        NestedDataTestUtils.AUTO_DISCOVERY,
+        TransformSpec.NONE,
+        NestedDataTestUtils.COUNT,
+        Granularities.NONE,
+        true
     );
     Assert.assertEquals(1, segments.size());
     StorageAdapter storageAdapter = segments.get(0).asStorageAdapter();

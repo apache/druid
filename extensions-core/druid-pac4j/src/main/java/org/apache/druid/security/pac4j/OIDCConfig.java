@@ -26,6 +26,7 @@ import org.apache.druid.metadata.PasswordProvider;
 
 public class OIDCConfig
 {
+  private final String DEFAULT_SCOPE = "name";
   @JsonProperty
   private final String clientID;
 
@@ -35,16 +36,21 @@ public class OIDCConfig
   @JsonProperty
   private final String discoveryURI;
 
+  @JsonProperty
+  private final String oidcClaim;
+
   @JsonCreator
   public OIDCConfig(
       @JsonProperty("clientID") String clientID,
       @JsonProperty("clientSecret") PasswordProvider clientSecret,
-      @JsonProperty("discoveryURI") String discoveryURI
+      @JsonProperty("discoveryURI") String discoveryURI,
+      @JsonProperty("oidcClaim") String oidcClaim
   )
   {
     this.clientID = Preconditions.checkNotNull(clientID, "null clientID");
     this.clientSecret = Preconditions.checkNotNull(clientSecret, "null clientSecret");
     this.discoveryURI = Preconditions.checkNotNull(discoveryURI, "null discoveryURI");
+    this.oidcClaim = oidcClaim == null ? DEFAULT_SCOPE : oidcClaim;
   }
 
   @JsonProperty
@@ -63,5 +69,11 @@ public class OIDCConfig
   public String getDiscoveryURI()
   {
     return discoveryURI;
+  }
+
+  @JsonProperty
+  public String getOidcClaim()
+  {
+    return oidcClaim;
   }
 }
