@@ -22,7 +22,7 @@ package org.apache.druid.segment;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.IterableBackedInlineDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -34,14 +34,14 @@ import org.junit.rules.ExpectedException;
 
 import java.util.List;
 
-public class InlineSegmentWranglerTest
+public class IterableBasedInlineSegmentWranglerTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  private final InlineSegmentWrangler factory = new InlineSegmentWrangler();
+  private final IterableBasedInlineSegmentWrangler factory = new IterableBasedInlineSegmentWrangler();
 
-  private final InlineDataSource inlineDataSource = InlineDataSource.fromIterable(
+  private final IterableBackedInlineDataSource iterableBackedInlineDataSource = IterableBackedInlineDataSource.fromIterable(
       ImmutableList.of(
           new Object[]{"foo", 1L},
           new Object[]{"bar", 2L}
@@ -66,7 +66,7 @@ public class InlineSegmentWranglerTest
   {
     final List<Segment> segments = ImmutableList.copyOf(
         factory.getSegmentsForIntervals(
-            inlineDataSource,
+            iterableBackedInlineDataSource,
             Intervals.ONLY_ETERNITY
         )
     );

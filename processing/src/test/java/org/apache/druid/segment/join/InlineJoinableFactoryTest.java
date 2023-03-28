@@ -21,7 +21,7 @@ package org.apache.druid.segment.join;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.IterableBackedInlineDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -43,7 +43,7 @@ public class InlineJoinableFactoryTest
 
   private final InlineJoinableFactory factory = new InlineJoinableFactory();
 
-  private final InlineDataSource inlineDataSource = InlineDataSource.fromIterable(
+  private final IterableBackedInlineDataSource iterableBackedInlineDataSource = IterableBackedInlineDataSource.fromIterable(
       ImmutableList.of(
           new Object[]{"foo", 1L},
           new Object[]{"bar", 2L}
@@ -65,14 +65,14 @@ public class InlineJoinableFactoryTest
   {
     Assert.assertEquals(
         Optional.empty(),
-        factory.build(inlineDataSource, makeCondition("x > \"j.y\""))
+        factory.build(iterableBackedInlineDataSource, makeCondition("x > \"j.y\""))
     );
   }
 
   @Test
   public void testBuild()
   {
-    final Joinable joinable = factory.build(inlineDataSource, makeCondition("x == \"j.long\"")).get();
+    final Joinable joinable = factory.build(iterableBackedInlineDataSource, makeCondition("x == \"j.long\"")).get();
 
     Assert.assertThat(joinable, CoreMatchers.instanceOf(IndexedTableJoinable.class));
     Assert.assertEquals(ImmutableList.of("str", "long"), joinable.getAvailableColumns());
@@ -83,7 +83,7 @@ public class InlineJoinableFactoryTest
   @Test
   public void testIsDirectlyJoinable()
   {
-    Assert.assertTrue(factory.isDirectlyJoinable(inlineDataSource));
+    Assert.assertTrue(factory.isDirectlyJoinable(iterableBackedInlineDataSource));
     Assert.assertFalse(factory.isDirectlyJoinable(new TableDataSource("foo")));
   }
 

@@ -28,7 +28,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.IterableBackedInlineDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -373,7 +373,7 @@ public class QueryStackTests
     ImmutableMap.Builder<Class<? extends JoinableFactory>, Class<? extends DataSource>> mapBuilder =
         ImmutableMap.builder();
     setBuilder.add(new InlineJoinableFactory());
-    mapBuilder.put(InlineJoinableFactory.class, InlineDataSource.class);
+    mapBuilder.put(InlineJoinableFactory.class, IterableBackedInlineDataSource.class);
     if (lookupProvider != null) {
       setBuilder.add(new LookupJoinableFactory(lookupProvider));
       mapBuilder.put(LookupJoinableFactory.class, LookupDataSource.class);

@@ -42,7 +42,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
-import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.IterableBackedInlineDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -553,7 +553,7 @@ public class TestDataBuilder
       toRow("2021-01-03T01:00:00Z", USER_VISIT_DIMS, ImmutableMap.of("user", "foo", "country", "USA", "city", "M"))
   );
 
-  private static final InlineDataSource JOINABLE_BACKING_DATA = InlineDataSource.fromIterable(
+  private static final IterableBackedInlineDataSource JOINABLE_BACKING_DATA = IterableBackedInlineDataSource.fromIterable(
       RAW_ROWS1_WITH_NUMERIC_DIMS.stream().map(x -> new Object[]{
           x.get("dim1"),
           x.get("dim2"),

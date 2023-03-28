@@ -30,12 +30,22 @@ import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.MapBasedRow;
+import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.allocation.HeapMemoryAllocator;
+import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
+import org.apache.druid.frame.processor.FrameRowTooLargeException;
+import org.apache.druid.frame.write.FrameWriter;
+import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
+import org.apache.druid.query.FrameSignaturePair;
+import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -49,12 +59,14 @@ import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -431,7 +443,6 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   )
   {
     final List<String> fields = resultArraySignature(query).getColumnNames();
-
     return Sequences.map(
         resultSequence,
         result -> {
@@ -449,6 +460,43 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
           return retVal;
         }
     );
+  }
+
+  @Override
+  public Sequence<FrameSignaturePair> resultsAsFrames(
+      TimeseriesQuery query,
+      Sequence<Result<TimeseriesResultValue>> resultSequence
+  )
+  {
+    final RowSignature rowSignature = resultArraySignature(query);
+    final Cursor cursor = IterableRowsCursorHelper.getCursorFromSequence(
+        resultsAsArrays(query, resultSequence),
+        rowSignature
+    );
+
+    FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
+        FrameType.ROW_BASED,
+        new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+        rowSignature,
+        new ArrayList<>(),
+        true
+    );
+
+    Frame frame;
+
+    try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
+      while (!cursor.isDone()) {
+        if (!frameWriter.addSelection()) {
+          throw new FrameRowTooLargeException(frameWriterFactory.allocatorCapacity());
+        }
+
+        cursor.advance();
+      }
+
+      frame = Frame.wrap(frameWriter.toByteArray());
+    }
+
+    return Sequences.simple(ImmutableList.of(new FrameSignaturePair(frame, rowSignature)));
   }
 
   private Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>> makeComputeManipulatorFn(

@@ -30,7 +30,7 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.msq.indexing.error.BroadcastTablesTooLargeFault;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.IterableBackedInlineDataSource;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
@@ -141,7 +141,7 @@ public class BroadcastJoinHelper
         final int channelNumber = inputNumberToProcessorChannelMap.get(inputNumber);
 
         if (sideChannelNumbers.contains(channelNumber)) {
-          return InlineDataSource.fromIterable(
+          return IterableBackedInlineDataSource.fromIterable(
               channelData.get(channelNumber),
               channelReaders.get(channelNumber).signature()
           );

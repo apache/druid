@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.IterableBackedInlineDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -69,7 +69,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                 .dataSource(
-                    InlineDataSource.fromIterable(
+                    IterableBackedInlineDataSource.fromIterable(
                         ImmutableList.of(new Object[]{0L}),
                         RowSignature.builder().add("ZERO", ColumnType.LONG).build()
                     )
@@ -103,7 +103,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                 .dataSource(
-                    InlineDataSource.fromIterable(
+                    IterableBackedInlineDataSource.fromIterable(
                         ImmutableList.of(new Object[]{0L}),
                         RowSignature.builder().add("ZERO", ColumnType.LONG).build()
                     )
@@ -135,7 +135,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                 .dataSource(
-                    InlineDataSource.fromIterable(
+                    IterableBackedInlineDataSource.fromIterable(
                         ImmutableList.of(new Object[]{null, "United States"}),
                         RowSignature
                             .builder()
@@ -163,7 +163,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                 .dataSource(
-                    InlineDataSource.fromIterable(
+                    IterableBackedInlineDataSource.fromIterable(
                         ImmutableList.of(new Object[]{null, "United States"}, new Object[]{"Delhi", "India"}),
                         RowSignature
                             .builder()
@@ -191,7 +191,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                 .dataSource(
-                    InlineDataSource.fromIterable(
+                    IterableBackedInlineDataSource.fromIterable(
                         ImmutableList.of(new Object[]{null, "United States"}, new Object[]{50L, "India"}),
                         RowSignature
                             .builder()
@@ -225,7 +225,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                 .dataSource(
-                    InlineDataSource.fromIterable(
+                    IterableBackedInlineDataSource.fromIterable(
                         ImmutableList.of(
                             new Object[]{Long.MAX_VALUE, Long.MAX_VALUE, Long.MIN_VALUE, Long.MIN_VALUE, 0L}
                         ),
@@ -265,7 +265,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         "SELECT FLOOR(123), CEIL(123), CAST(123.0 AS INTEGER)",
         ImmutableList.of(
             newScanQueryBuilder()
-                .dataSource(InlineDataSource.fromIterable(
+                .dataSource(IterableBackedInlineDataSource.fromIterable(
                     ImmutableList.of(new Object[]{123L, 123L, 123L}),
                     RowSignature.builder()
                                 .add("EXPR$0", ColumnType.LONG)
@@ -813,7 +813,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                 .dataSource(
-                    InlineDataSource.fromIterable(
+                    IterableBackedInlineDataSource.fromIterable(
                         ImmutableList.of(),
                         RowSignature.builder().add("dim2", ColumnType.STRING).build()
                     )
@@ -839,7 +839,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                 .dataSource(
-                    InlineDataSource.fromIterable(
+                    IterableBackedInlineDataSource.fromIterable(
                         ImmutableList.of(),
                         RowSignature.builder().add("dim2", ColumnType.STRING).build()
                     )
@@ -864,7 +864,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                 .dataSource(
-                    InlineDataSource.fromIterable(
+                    IterableBackedInlineDataSource.fromIterable(
                         ImmutableList.of(),
                         RowSignature.builder().add("dim2", ColumnType.STRING).build()
                     )
@@ -902,7 +902,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                 .dataSource(
-                    InlineDataSource.fromIterable(
+                    IterableBackedInlineDataSource.fromIterable(
                         ImmutableList.of(
                             new Object[]{
                                 // milliseconds of timestamps as if they were in UTC. This looks strange

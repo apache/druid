@@ -36,7 +36,7 @@ import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
-import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.IterableBackedInlineDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -119,7 +119,7 @@ public class MSQSelectTest extends MSQTestBase
                    .query(
                        newScanQueryBuilder()
                            .dataSource(
-                               InlineDataSource.fromIterable(
+                               IterableBackedInlineDataSource.fromIterable(
                                    ImmutableList.of(new Object[]{2L}),
                                    resultSignature
                                )

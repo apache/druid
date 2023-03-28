@@ -22,16 +22,27 @@ package org.apache.druid.query.topn;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.allocation.HeapMemoryAllocator;
+import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
+import org.apache.druid.frame.processor.FrameRowTooLargeException;
+import org.apache.druid.frame.write.FrameWriter;
+import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.CacheStrategy;
+import org.apache.druid.query.FrameSignaturePair;
+import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
@@ -47,10 +58,12 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -546,6 +559,40 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
           );
         }
     );
+  }
+
+  @Override
+  public Sequence<FrameSignaturePair> resultsAsFrames(TopNQuery query, Sequence<Result<TopNResultValue>> resultSequence)
+  {
+    final RowSignature rowSignature = resultArraySignature(query);
+    final Cursor cursor = IterableRowsCursorHelper.getCursorFromSequence(
+        resultsAsArrays(query, resultSequence),
+        rowSignature
+    );
+
+    FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
+        FrameType.ROW_BASED,
+        new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+        rowSignature,
+        new ArrayList<>(),
+        true
+    );
+
+    Frame frame;
+
+    try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
+      while (!cursor.isDone()) {
+        if (!frameWriter.addSelection()) {
+          throw new FrameRowTooLargeException(frameWriterFactory.allocatorCapacity());
+        }
+
+        cursor.advance();
+      }
+
+      frame = Frame.wrap(frameWriter.toByteArray());
+    }
+
+    return Sequences.simple(ImmutableList.of(new FrameSignaturePair(frame, rowSignature)));
   }
 
   static class ThresholdAdjustingQueryRunner implements QueryRunner<Result<TopNResultValue>>

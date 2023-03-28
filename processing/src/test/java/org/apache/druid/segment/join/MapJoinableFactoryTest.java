@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.IterableBackedInlineDataSource;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.Mock;
@@ -41,7 +41,7 @@ import java.util.Optional;
 public class MapJoinableFactoryTest
 {
   @Mock
-  private InlineDataSource inlineDataSource;
+  private IterableBackedInlineDataSource iterableBackedInlineDataSource;
   @Mock(MockType.NICE)
   private JoinableFactory noopJoinableFactory;
   private NoopDataSource noopDataSource;
@@ -69,7 +69,7 @@ public class MapJoinableFactoryTest
   @Test
   public void testBuildDataSourceNotRegisteredShouldReturnAbsent()
   {
-    Optional<Joinable> joinable = target.build(inlineDataSource, condition);
+    Optional<Joinable> joinable = target.build(iterableBackedInlineDataSource, condition);
     Assert.assertFalse(joinable.isPresent());
   }
 
@@ -129,7 +129,7 @@ public class MapJoinableFactoryTest
   @Test
   public void testIsDirectShouldBeFalseForNotRegistered()
   {
-    Assert.assertFalse(target.isDirectlyJoinable(inlineDataSource));
+    Assert.assertFalse(target.isDirectlyJoinable(iterableBackedInlineDataSource));
   }
 
   @Test

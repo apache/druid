@@ -50,12 +50,11 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.MappedSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.IterableRowsCursor;
+import org.apache.druid.query.FrameSignaturePair;
+import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
@@ -74,6 +73,7 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.groupby.resource.GroupByQueryResource;
 import org.apache.druid.query.groupby.strategy.GroupByStrategy;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
+import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
@@ -718,7 +718,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   }
 
   @Override
-  public Sequence<Frame> resultsAsFrames(GroupByQuery query, Sequence<ResultRow> resultSequence)
+  public Sequence<FrameSignaturePair> resultsAsFrames(GroupByQuery query, Sequence<ResultRow> resultSequence)
   {
     RowSignature rowSignature = query.getResultRowSignature(RowSignature.Finalization.YES);
 
@@ -732,35 +732,10 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
 
     Frame frame;
 
-    IterableRowsCursor cursor = new IterableRowsCursor(
-        new Iterable<Object[]>()
-        {
-          Yielder<Object[]> yielder = Yielders.each(resultSequence.map(ResultRow::getArray));
-
-          @Override
-          public Iterator<Object[]> iterator()
-          {
-            return new Iterator<Object[]>()
-            {
-              @Override
-              public boolean hasNext()
-              {
-                return !yielder.isDone();
-              }
-
-              @Override
-              public Object[] next()
-              {
-                Object[] retVal = yielder.get();
-                yielder = yielder.next(null);
-                return retVal;
-              }
-            };
-          }
-        },
+    Cursor cursor = IterableRowsCursorHelper.getCursorFromSequence(
+        resultSequence.map(ResultRow::getArray),
         rowSignature
     );
-
     try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
       while (!cursor.isDone()) {
         if (!frameWriter.addSelection()) {
@@ -773,7 +748,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       frame = Frame.wrap(frameWriter.toByteArray());
     }
 
-    return Sequences.simple(ImmutableList.of(frame));
+    return Sequences.simple(ImmutableList.of(new FrameSignaturePair(frame, rowSignature)));
   }
 
   /**

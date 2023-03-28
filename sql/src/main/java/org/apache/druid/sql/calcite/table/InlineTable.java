@@ -25,7 +25,7 @@ import org.apache.calcite.plan.RelOptTable.ToRelContext;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.IterableBackedInlineDataSource;
 
 /**
  * Represents a specialized table used within Druid's Calcite-based planner.
@@ -37,7 +37,7 @@ public class InlineTable extends DruidTable
 {
   private final DataSource dataSource;
 
-  public InlineTable(final InlineDataSource dataSource)
+  public InlineTable(final IterableBackedInlineDataSource dataSource)
   {
     super(dataSource.getRowSignature());
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");

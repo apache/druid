@@ -48,7 +48,7 @@ public class RowBasedCursor<RowType> implements Cursor
 
   private long rowId = 0;
 
-  RowBasedCursor(
+  public RowBasedCursor(
       final RowWalker<RowType> rowWalker,
       final RowAdapter<RowType> rowAdapter,
       @Nullable final Filter filter,

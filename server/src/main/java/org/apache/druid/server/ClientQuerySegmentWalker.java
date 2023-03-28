@@ -28,14 +28,6 @@ import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
-import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.allocation.HeapMemoryAllocator;
-import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
-import org.apache.druid.frame.processor.FrameRowTooLargeException;
-import org.apache.druid.frame.write.FrameWriter;
-import org.apache.druid.frame.write.FrameWriterFactory;
-import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -44,8 +36,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FluentQueryRunnerBuilder;
+import org.apache.druid.query.FrameSignaturePair;
+import org.apache.druid.query.FramesBackedInlineDataSource;
 import org.apache.druid.query.GlobalTableDataSource;
-import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.PostProcessingOperator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
@@ -62,8 +55,6 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.joda.time.Interval;
@@ -600,7 +591,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   }
 
   /**
-   * Convert the results of a particular query into a materialized (List-based) InlineDataSource.
+   * Convert the results of a particular query into a materialized (List-based) IterableBackedInlineDataSource.
    *
    * @param query            the query
    * @param results          query results
@@ -611,7 +602,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    *                         If zero, this method will throw an error immediately.
    * @throws ResourceLimitExceededException if the limit is exceeded
    */
-  private static <T, QueryType extends Query<T>> InlineDataSource toInlineDataSource(
+  private static <T, QueryType extends Query<T>> DataSource toInlineDataSource(
       final QueryType query,
       final Sequence<T> results,
       final QueryToolChest<T, QueryType> toolChest,
@@ -639,8 +630,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       );
     }
 
-    final RowSignature signature = toolChest.resultArraySignature(query);
-
     final List<Object[]> resultList = toolChest.resultsAsArrays(query, results).toList();
 
     if (limitAccumulator.addAndGet(resultList.size()) >= limitToUse) {
@@ -650,37 +639,18 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       );
     }
 
-    Frame frame = null;
-
+    FramesBackedInlineDataSource dataSource = null;
     // Try to serialize the results into a frame only if the memory limit is set on the server or the query
-    if (memoryLimitSet) {
+    if (memoryLimitSet || true) {
       try {
-        FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
-            FrameType.ROW_BASED,
-            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
-            signature,
-            new ArrayList<>()
-        );
+        Sequence<FrameSignaturePair> frames = toolChest.resultsAsFrames(query, results);
+        Long memoryUsed = frames.accumulate(0L, ((accumulated, in) -> accumulated + in.getFrame().numBytes()));
+        dataSource = new FramesBackedInlineDataSource(frames);
 
-        final Cursor cursor = new InlineResultsCursor(resultList, signature);
-
-        try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
-          while (!cursor.isDone()) {
-            if (!frameWriter.addSelection()) {
-              throw new FrameRowTooLargeException(frameWriterFactory.allocatorCapacity());
-            }
-
-            cursor.advance();
-          }
-
-          frame = Frame.wrap(frameWriter.toByteArray());
-        }
-
-
-        if (memoryLimitAccumulator.addAndGet(frame.numBytes()) >= memoryLimitToUse) {
+        if (memoryLimitAccumulator.addAndGet(memoryUsed) >= memoryLimitToUse) {
           throw ResourceLimitExceededException.withMessage(
               "Subquery generated results beyond maximum[%d] bytes",
-              memoryLimit
+              memoryLimitToUse
           );
         }
       }
@@ -692,11 +662,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                  + "calculation");
       }
     }
+    return dataSource;
 
-    if (frame == null) {
-      return InlineDataSource.fromIterable(resultList, signature);
-    }
-    return InlineDataSource.fromFrame(frame, signature);
   }
 
   /**

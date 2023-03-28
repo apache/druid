@@ -39,12 +39,13 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.GenericQueryMetricsFactory;
-import org.apache.druid.query.IterableRowsCursor;
+import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.segment.RowBasedCursor;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
@@ -207,8 +208,16 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
     return resultSequence.map(
         result -> {
           final List rows = (List) result.getEvents();
-          final Iterable<Object[]> formattedRows = Iterables.transform(rows, getResultFormatMapper(query));
-          IterableRowsCursor cursor = new IterableRowsCursor(formattedRows, result.getRowSignature());
+          final Function<?, Object[]> mapper = getResultFormatMapper(query);
+          final Iterable<Object[]> formattedRows = Iterables.transform(rows, (Function) mapper);
+
+          // 1. objectMapper() -> non performant,
+          // 2. Represent those types as Complex<Json> objects
+
+          RowBasedCursor cursor = IterableRowsCursorHelper.getCursorFromIterable(
+              formattedRows,
+              result.getRowSignature()
+          );
 
           FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
               FrameType.ROW_BASED,

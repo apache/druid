@@ -30,7 +30,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.IterableBackedInlineDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
@@ -2671,7 +2671,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(
-                      InlineDataSource.fromIterable(
+                      IterableBackedInlineDataSource.fromIterable(
                           ImmutableList.of(
                               new Object[]{1L},
                               new Object[]{2L},
@@ -2708,7 +2708,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(
-                      InlineDataSource.fromIterable(
+                      IterableBackedInlineDataSource.fromIterable(
                           ImmutableList.of(
                               new Object[]{1L},
                               new Object[]{2L},
@@ -3516,7 +3516,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .dataSource(
                       join(
                           new TableDataSource(CalciteTests.DATASOURCE3),
-                          InlineDataSource.fromIterable(
+                          IterableBackedInlineDataSource.fromIterable(
                               ImmutableList.of(
                                   new Object[]{1L},
                                   new Object[]{2L},

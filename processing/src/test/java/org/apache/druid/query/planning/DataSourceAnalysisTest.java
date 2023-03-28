@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.IterableBackedInlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryDataSource;
@@ -54,7 +54,7 @@ public class DataSourceAnalysisTest
   private static final TableDataSource TABLE_FOO = new TableDataSource("foo");
   private static final TableDataSource TABLE_BAR = new TableDataSource("bar");
   private static final LookupDataSource LOOKUP_LOOKYLOO = new LookupDataSource("lookyloo");
-  private static final InlineDataSource INLINE = InlineDataSource.fromIterable(
+  private static final IterableBackedInlineDataSource INLINE = IterableBackedInlineDataSource.fromIterable(
       ImmutableList.of(new Object[0]),
       RowSignature.builder().add("column", ColumnType.STRING).build()
   );

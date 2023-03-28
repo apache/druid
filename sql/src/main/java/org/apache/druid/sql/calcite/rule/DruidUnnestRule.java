@@ -30,7 +30,7 @@ import org.apache.calcite.rex.RexUtil;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.InputBindings;
-import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.IterableBackedInlineDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -108,17 +108,17 @@ public class DruidUnnestRule extends RelOptRule
     final RexNode exprToUnnest = projectRel.getProjects().get(0);
     if (RexUtil.isConstant(exprToUnnest)) {
       // Constant expression: transform to DruidQueryRel on an inline datasource.
-      final InlineDataSource inlineDataSource = toInlineDataSource(
+      final IterableBackedInlineDataSource iterableBackedInlineDataSource = toInlineDataSource(
           uncollectRel,
           exprToUnnest,
           plannerContext
       );
 
-      if (inlineDataSource != null) {
+      if (iterableBackedInlineDataSource != null) {
         call.transformTo(
             DruidQueryRel.scanConstantRel(
                 uncollectRel,
-                inlineDataSource,
+                iterableBackedInlineDataSource,
                 plannerContext
             )
         );
@@ -137,7 +137,7 @@ public class DruidUnnestRule extends RelOptRule
   }
 
   @Nullable
-  private static InlineDataSource toInlineDataSource(
+  private static IterableBackedInlineDataSource toInlineDataSource(
       final Uncollect uncollectRel,
       final RexNode projectExpr,
       final PlannerContext plannerContext
@@ -175,6 +175,6 @@ public class DruidUnnestRule extends RelOptRule
         uncollectRel.getRowType()
     );
 
-    return InlineDataSource.fromIterable(rows, rowSignature);
+    return IterableBackedInlineDataSource.fromIterable(rows, rowSignature);
   }
 }

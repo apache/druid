@@ -19,11 +19,9 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.IterableBackedInlineDataSource;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
@@ -31,11 +29,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 /**
- * A {@link SegmentWrangler} for {@link InlineDataSource}.
+ * A {@link SegmentWrangler} for {@link IterableBackedInlineDataSource}.
  *
  * It is not valid to pass any other DataSource type to the "getSegmentsForIntervals" method.
  */
-public class InlineSegmentWrangler implements SegmentWrangler
+public class IterableBasedInlineSegmentWrangler implements SegmentWrangler
 {
   private static final String SEGMENT_ID = "inline";
 
@@ -43,23 +41,15 @@ public class InlineSegmentWrangler implements SegmentWrangler
   @SuppressWarnings("unchecked")
   public Iterable<Segment> getSegmentsForIntervals(final DataSource dataSource, final Iterable<Interval> intervals)
   {
-    final InlineDataSource inlineDataSource = (InlineDataSource) dataSource;
+    final IterableBackedInlineDataSource iterableBackedInlineDataSource = (IterableBackedInlineDataSource) dataSource;
 
-    if (inlineDataSource.isBackedByFrame()) {
-      return Collections.singletonList(new FrameSegment(
-          inlineDataSource.getBackingFrame(),
-          FrameReader.create(inlineDataSource.getRowSignature()),
-          SegmentId.dummy(SEGMENT_ID)
-      ));
-    }
-
-    if (inlineDataSource.rowsAreArrayList()) {
+    if (iterableBackedInlineDataSource.rowsAreArrayList()) {
       return Collections.singletonList(
           new ArrayListSegment<>(
               SegmentId.dummy(SEGMENT_ID),
-              (ArrayList<Object[]>) inlineDataSource.getRowsAsList(),
-              inlineDataSource.rowAdapter(),
-              inlineDataSource.getRowSignature()
+              (ArrayList<Object[]>) iterableBackedInlineDataSource.getRowsAsList(),
+              iterableBackedInlineDataSource.rowAdapter(),
+              iterableBackedInlineDataSource.getRowSignature()
           )
       );
     }
@@ -67,9 +57,9 @@ public class InlineSegmentWrangler implements SegmentWrangler
     return Collections.singletonList(
         new RowBasedSegment<>(
             SegmentId.dummy(SEGMENT_ID),
-            Sequences.simple(inlineDataSource.getRows()),
-            inlineDataSource.rowAdapter(),
-            inlineDataSource.getRowSignature()
+            Sequences.simple(iterableBackedInlineDataSource.getRows()),
+            iterableBackedInlineDataSource.rowAdapter(),
+            iterableBackedInlineDataSource.getRowSignature()
         )
     );
   }

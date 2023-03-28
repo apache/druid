@@ -1,29 +1,150 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.RowAdapter;
+import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-public class IterableBackedInlineDataSource extends InlineDataSource
+/**
+ * Represents an inline datasource, where the rows are embedded within the DataSource object itself.
+ * <p>
+ * The rows are backed by either one of the following:
+ * 1. Iterable, which can be lazy or not. Lazy datasources will only be iterated if someone calls
+ *    {@link #getRows()} and iterates the result, or until someone calls {@link #getRowsAsList()}.
+ *
+ * 2. {@link Frame} which is useful in calculating the memory that the data source takes up, since
+ *    frames are backed by exact-memory semantics ({@link Frame#numBytes()})
+ */
+public class IterableBackedInlineDataSource implements DataSource
 {
   private final Iterable<Object[]> rows;
   private final RowSignature signature;
 
-  public IterableBackedInlineDataSource(
+  private IterableBackedInlineDataSource(
       final Iterable<Object[]> rows,
       final RowSignature signature
   )
   {
-    this.rows = Preconditions.checkNotNull(rows, "'rows' must be non null");
-    this.signature = Preconditions.checkNotNull(signature, "'signature' must be non null");
+    this.rows = Preconditions.checkNotNull(rows, "'rows' must be nonnull");
+    this.signature = Preconditions.checkNotNull(signature, "'signature' must be nonnull");
   }
 
+  /**
+   * Factory method for Jackson. Used for inline datasources that were originally encoded as JSON. Private because
+   * non-Jackson callers should use {@link #fromIterable}.
+   */
+  @JsonCreator
+  private static IterableBackedInlineDataSource fromJson(
+      @JsonProperty("columnNames") List<String> columnNames,
+      @JsonProperty("columnTypes") List<ColumnType> columnTypes,
+      @JsonProperty("rows") ArrayList<Object[]> rows
+  )
+  {
+    Preconditions.checkNotNull(columnNames, "'columnNames' must be nonnull");
+
+    if (columnTypes != null && columnNames.size() != columnTypes.size()) {
+      throw new IAE("columnNames and columnTypes must be the same length");
+    }
+
+    final RowSignature.Builder builder = RowSignature.builder();
+
+    for (int i = 0; i < columnNames.size(); i++) {
+      final String name = columnNames.get(i);
+      final ColumnType type = columnTypes != null ? columnTypes.get(i) : null;
+      builder.add(name, type);
+    }
+
+    return new IterableBackedInlineDataSource(rows, builder.build());
+  }
+
+  /**
+   * Creates an inline datasource from an Iterable. The Iterable will not be iterated until someone calls
+   * {@link #getRows()} and iterates the result, or until someone calls {@link #getRowsAsList()}.
+   *
+   * @param rows      rows, each of the same length as {@code signature.size()}
+   * @param signature row signature
+   */
+  public static IterableBackedInlineDataSource fromIterable(
+      final Iterable<Object[]> rows,
+      final RowSignature signature
+  )
+  {
+    return new IterableBackedInlineDataSource(rows, signature);
+  }
+
+  /**
+   * A very zealous equality checker for "rows" that respects deep equality of arrays, but nevertheless refrains
+   * from materializing things needlessly. Useful for unit tests that want to compare equality of different
+   * IterableBackedInlineDataSource instances.
+   */
+  private static boolean rowsEqual(final Iterable<Object[]> rowsA, final Iterable<Object[]> rowsB)
+  {
+    if (rowsA instanceof List && rowsB instanceof List) {
+      final List<Object[]> listA = (List<Object[]>) rowsA;
+      final List<Object[]> listB = (List<Object[]>) rowsB;
+
+      if (listA.size() != listB.size()) {
+        return false;
+      }
+
+      for (int i = 0; i < listA.size(); i++) {
+        final Object[] rowA = listA.get(i);
+        final Object[] rowB = listB.get(i);
+
+        if (!Arrays.equals(rowA, rowB)) {
+          return false;
+        }
+      }
+
+      return true;
+    } else {
+      return Objects.equals(rowsA, rowsB);
+    }
+  }
+
+  /**
+   * A very zealous hash code computer for "rows" that is compatible with {@link #rowsEqual}.
+   */
   private static int rowsHashCode(final Iterable<Object[]> rows)
   {
     if (rows instanceof List) {
@@ -40,17 +161,158 @@ public class IterableBackedInlineDataSource extends InlineDataSource
     }
   }
 
-  @JsonIgnore
   @Override
+  public Set<String> getTableNames()
+  {
+    return Collections.emptySet();
+  }
+
+  @JsonProperty
+  public List<String> getColumnNames()
+  {
+    return signature.getColumnNames();
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public List<ColumnType> getColumnTypes()
+  {
+    if (IntStream.range(0, signature.size()).noneMatch(i -> signature.getColumnType(i).isPresent())) {
+      // All types are null; return null for columnTypes so it doesn't show up in serialized JSON.
+      return null;
+    } else {
+      return IntStream.range(0, signature.size())
+                      .mapToObj(i -> signature.getColumnType(i).orElse(null))
+                      .collect(Collectors.toList());
+    }
+  }
+
+  /**
+   * Returns rows as a list. If the original Iterable behind this datasource was a List, this method will return it
+   * as-is, without copying it. Otherwise, this method will walk the iterable and copy it into a List before returning.
+   */
+  @JsonProperty("rows")
+  public List<Object[]> getRowsAsList()
+  {
+    Iterable<Object[]> rows = getRows();
+    return rows instanceof List ? ((List<Object[]>) rows) : Lists.newArrayList(rows);
+  }
+
+  /**
+   * Returns rows as an Iterable.
+   */
+  @JsonIgnore
   public Iterable<Object[]> getRows()
   {
     return rows;
+
+    // The inline data source is backed by a frame, therefore extract the rows from the frame
+    /**
+    List<Object[]> frameRows = new ArrayList<>();
+    FrameReader frameReader = FrameReader.create(signature);
+    final Sequence<Cursor> cursorSequence = new FrameStorageAdapter(
+        frame,
+        frameReader,
+        Intervals.ETERNITY
+    ).makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null);
+    cursorSequence.accumulate(
+        null,
+        (accumulated, cursor) -> {
+          final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+          final List<BaseObjectColumnValueSelector> selectors = frameReader.signature()
+                                                                           .getColumnNames()
+                                                                           .stream()
+                                                                           .map(columnSelectorFactory::makeColumnValueSelector)
+                                                                           .collect(Collectors.toList());
+          while (!cursor.isDone()) {
+            Object[] row = new Object[signature.size()];
+            for (int i = 0; i < signature.size(); ++i) {
+              row[i] = selectors.get(i).getObject();
+            }
+            frameRows.add(row);
+            cursor.advance();
+          }
+          return null;
+        }
+    );
+    return frameRows;
+     **/
+  }
+
+  public boolean rowsAreArrayList()
+  {
+    return rows instanceof ArrayList;
   }
 
   @Override
-  public RowSignature getRowSignature()
+  public List<DataSource> getChildren()
+  {
+    return Collections.emptyList();
+  }
+
+  @Override
+  public DataSource withChildren(List<DataSource> children)
+  {
+    if (!children.isEmpty()) {
+      throw new IAE("Cannot accept children");
+    }
+
+    return this;
+  }
+
+  @Override
+  public boolean isCacheable(boolean isBroker)
+  {
+    return false;
+  }
+
+  @Override
+  public boolean isGlobal()
+  {
+    return true;
+  }
+
+  @Override
+  public boolean isConcrete()
+  {
+    return true;
+  }
+
+  @Override
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
+      Query query,
+      AtomicLong cpuTimeAcc
+  )
+  {
+    return Function.identity();
+  }
+
+  @Override
+  public DataSource withUpdatedDataSource(DataSource newSource)
+  {
+    return newSource;
+  }
+
+  @Override
+  public byte[] getCacheKey()
   {
     return null;
+  }
+
+  @Override
+  public DataSourceAnalysis getAnalysis()
+  {
+    return new DataSourceAnalysis(this, null, null, Collections.emptyList());
+  }
+
+  /**
+   * Returns the row signature (map of column name to type) for this inline datasource. Note that types may
+   * be null, meaning we know we have a column with a certain name, but we don't know what its type is.
+   */
+  public RowSignature getRowSignature()
+  {
+    return signature;
   }
 
   public RowAdapter<Object[]> rowAdapter()
@@ -66,6 +328,19 @@ public class IterableBackedInlineDataSource extends InlineDataSource
     };
   }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    IterableBackedInlineDataSource that = (IterableBackedInlineDataSource) o;
+    return rowsEqual(getRowsAsList(), that.getRowsAsList()) &&
+           Objects.equals(signature, that.signature);
+  }
 
   @Override
   public int hashCode()
@@ -73,4 +348,12 @@ public class IterableBackedInlineDataSource extends InlineDataSource
     return Objects.hash(rowsHashCode(rows), signature);
   }
 
+  @Override
+  public String toString()
+  {
+    // Don't include 'rows' in stringification, because it might be long and/or lazy.
+    return "IterableBackedInlineDataSource{" +
+           "signature=" + signature +
+           '}';
+  }
 }

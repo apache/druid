@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.IterableBackedInlineDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.filter.DimFilter;
@@ -71,7 +71,7 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
     // partitioning at least aligns with the ordering coming from the underlying query.  We unfortunately don't
     // have enough information to validate that the underlying ordering aligns with expectations for the actual
     // window operator queries, but maybe we could get that and validate it here too.
-    if (!(dataSource instanceof QueryDataSource || dataSource instanceof InlineDataSource)) {
+    if (!(dataSource instanceof QueryDataSource || dataSource instanceof IterableBackedInlineDataSource)) {
       throw new IAE("WindowOperatorQuery must run on top of a query or inline data source, got [%s]", dataSource);
     }
   }

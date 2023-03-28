@@ -40,7 +40,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.error.BroadcastTablesTooLargeFault;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.IterableBackedInlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
@@ -166,7 +166,7 @@ public class BroadcastJoinHelperTest extends InitializedNullHandlingTest
     );
 
     final List<Object[]> rowsFromStage3 =
-        ((InlineDataSource) broadcastJoinHelper.inlineChannelData(new InputNumberDataSource(3))).getRowsAsList();
+        ((IterableBackedInlineDataSource) broadcastJoinHelper.inlineChannelData(new InputNumberDataSource(3))).getRowsAsList();
     Assert.assertEquals(1209, rowsFromStage3.size());
 
     FrameTestUtil.assertRowsEqual(
@@ -175,7 +175,7 @@ public class BroadcastJoinHelperTest extends InitializedNullHandlingTest
     );
 
     final List<Object[]> rowsFromStage4 =
-        ((InlineDataSource) broadcastJoinHelper.inlineChannelData(new InputNumberDataSource(4))).getRowsAsList();
+        ((IterableBackedInlineDataSource) broadcastJoinHelper.inlineChannelData(new InputNumberDataSource(4))).getRowsAsList();
     Assert.assertEquals(2, rowsFromStage4.size());
 
     FrameTestUtil.assertRowsEqual(
@@ -197,12 +197,12 @@ public class BroadcastJoinHelperTest extends InitializedNullHandlingTest
 
     MatcherAssert.assertThat(
         ((JoinDataSource) inlinedJoinDataSource).getRight(),
-        CoreMatchers.instanceOf(InlineDataSource.class)
+        CoreMatchers.instanceOf(IterableBackedInlineDataSource.class)
     );
 
     Assert.assertEquals(
         2,
-        ((InlineDataSource) ((JoinDataSource) inlinedJoinDataSource).getRight()).getRowsAsList().size()
+        ((IterableBackedInlineDataSource) ((JoinDataSource) inlinedJoinDataSource).getRight()).getRowsAsList().size()
     );
   }
 

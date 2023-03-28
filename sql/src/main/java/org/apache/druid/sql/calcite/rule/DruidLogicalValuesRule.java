@@ -25,7 +25,7 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rex.RexLiteral;
-import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.IterableBackedInlineDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -38,7 +38,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * A {@link RelOptRule} that converts {@link LogicalValues} into {@link InlineDataSource}.
+ * A {@link RelOptRule} that converts {@link LogicalValues} into {@link IterableBackedInlineDataSource}.
  * This rule is used when the query directly reads in-memory tuples. For example, given a query of
  * `SELECT 1 + 1`, the query planner will create {@link LogicalValues} that contains one tuple,
  * which in turn containing one column of value 2.
@@ -78,7 +78,7 @@ public class DruidLogicalValuesRule extends RelOptRule
     call.transformTo(
         DruidQueryRel.scanConstantRel(
             values,
-            InlineDataSource.fromIterable(objectTuples, rowSignature),
+            IterableBackedInlineDataSource.fromIterable(objectTuples, rowSignature),
             plannerContext
         )
     );

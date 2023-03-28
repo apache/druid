@@ -41,7 +41,7 @@ public class RowWalker<T>
   @Nullable // null = closed
   private Yielder<T> rowYielder;
 
-  RowWalker(final Sequence<T> rowSequence, final RowAdapter<T> rowAdapter)
+  public RowWalker(final Sequence<T> rowSequence, final RowAdapter<T> rowAdapter)
   {
     this.rowSequence = rowSequence;
     this.timestampFunction = rowAdapter.timestampFunction();

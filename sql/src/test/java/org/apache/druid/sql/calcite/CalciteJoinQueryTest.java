@@ -36,7 +36,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.GlobalTableDataSource;
-import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.IterableBackedInlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
@@ -3207,7 +3207,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
     final DataSource rightTable;
     if (useDefault) {
-      rightTable = InlineDataSource.fromIterable(
+      rightTable = IterableBackedInlineDataSource.fromIterable(
           ImmutableList.of(),
           RowSignature.builder().add("dim2", ColumnType.STRING).add("m2", ColumnType.DOUBLE).build()
       );
@@ -5050,7 +5050,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                   .dataSource(
                       JoinDataSource.create(
                           new TableDataSource(CalciteTests.DATASOURCE3),
-                          InlineDataSource.fromIterable(
+                          IterableBackedInlineDataSource.fromIterable(
                               ImmutableList.of(
                                   new Object[]{4842L},
                                   new Object[]{4844L},

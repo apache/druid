@@ -39,7 +39,7 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.Evals;
-import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.IterableBackedInlineDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.filter.BoundDimFilter;
@@ -98,7 +98,7 @@ public class NativeQueryMaker implements QueryMaker
     final Query<?> query = druidQuery.getQuery();
 
     if (plannerContext.getPlannerConfig().isRequireTimeCondition()
-        && !(druidQuery.getDataSource() instanceof InlineDataSource)) {
+        && !(druidQuery.getDataSource() instanceof IterableBackedInlineDataSource)) {
       if (Intervals.ONLY_ETERNITY.equals(findBaseDataSourceIntervals(query))) {
         throw new CannotBuildQueryException(
             "requireTimeCondition is enabled, all queries must include a filter condition on the __time column"

@@ -34,8 +34,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.FramesBackedInlineDataSource;
 import org.apache.druid.query.GlobalTableDataSource;
-import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.IterableBackedInlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
@@ -62,7 +63,8 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
-import org.apache.druid.segment.InlineSegmentWrangler;
+import org.apache.druid.segment.FrameBasedInlineSegmentWrangler;
+import org.apache.druid.segment.IterableBasedInlineSegmentWrangler;
 import org.apache.druid.segment.MapSegmentWrangler;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.RowBasedSegment;
@@ -128,7 +130,7 @@ public class ClientQuerySegmentWalkerTest
   private static final ShardSpec SHARD_SPEC = new NumberedShardSpec(0, 1);
 
 
-  private static final InlineDataSource FOO_INLINE = InlineDataSource.fromIterable(
+  private static final IterableBackedInlineDataSource FOO_INLINE = IterableBackedInlineDataSource.fromIterable(
       ImmutableList.<Object[]>builder()
           .add(new Object[]{INTERVAL.getStartMillis(), "x", 1})
           .add(new Object[]{INTERVAL.getStartMillis(), "x", 2})
@@ -142,7 +144,7 @@ public class ClientQuerySegmentWalkerTest
                   .build()
   );
 
-  private static final InlineDataSource BAR_INLINE = InlineDataSource.fromIterable(
+  private static final IterableBackedInlineDataSource BAR_INLINE = IterableBackedInlineDataSource.fromIterable(
       ImmutableList.<Object[]>builder()
           .add(new Object[]{INTERVAL.getStartMillis(), "a", 1})
           .add(new Object[]{INTERVAL.getStartMillis(), "a", 2})
@@ -156,7 +158,7 @@ public class ClientQuerySegmentWalkerTest
                   .build()
   );
 
-  private static final InlineDataSource MULTI_VALUE_INLINE = InlineDataSource.fromIterable(
+  private static final IterableBackedInlineDataSource MULTI_VALUE_INLINE = IterableBackedInlineDataSource.fromIterable(
       ImmutableList.<Object[]>builder()
           .add(new Object[]{INTERVAL.getStartMillis(), ImmutableList.of("a", "b"), 1})
           .add(new Object[]{INTERVAL.getStartMillis(), ImmutableList.of("a", "c"), 2})
@@ -179,7 +181,7 @@ public class ClientQuerySegmentWalkerTest
           .add(new Object[]{INTERVAL.getStartMillis(), "z", 4, ImmutableList.of(4.0, 8.0), ImmutableList.of(4L, 8L), ImmutableList.of("4.0", "8.0")})
           .build();
 
-  private static final InlineDataSource ARRAY_INLINE = InlineDataSource.fromIterable(
+  private static final IterableBackedInlineDataSource ARRAY_INLINE = IterableBackedInlineDataSource.fromIterable(
       ARRAY_INLINE_ROWS,
       RowSignature.builder()
                   .addTimeColumn()
@@ -192,7 +194,7 @@ public class ClientQuerySegmentWalkerTest
   );
 
 
-  private static final InlineDataSource ARRAY_INLINE_UNKNOWN = InlineDataSource.fromIterable(
+  private static final IterableBackedInlineDataSource ARRAY_INLINE_UNKNOWN = IterableBackedInlineDataSource.fromIterable(
       ARRAY_INLINE_ROWS,
       RowSignature.builder()
                   .addTimeColumn()
@@ -352,7 +354,7 @@ public class ClientQuerySegmentWalkerTest
             ExpectedQuery.cluster(subquery.withId(DUMMY_QUERY_ID).withSubQueryId("1.1")),
             ExpectedQuery.local(
                 query.withDataSource(
-                    InlineDataSource.fromIterable(
+                    IterableBackedInlineDataSource.fromIterable(
                         ImmutableList.of(new Object[]{"x"}, new Object[]{"y"}, new Object[]{"z"}),
                         RowSignature.builder().add("s", ColumnType.STRING).build()
                     )
@@ -526,7 +528,7 @@ public class ClientQuerySegmentWalkerTest
                     query.getDataSource().withChildren(
                         ImmutableList.of(
                             query.getDataSource().getChildren().get(0),
-                            InlineDataSource.fromIterable(
+                            IterableBackedInlineDataSource.fromIterable(
                                 ImmutableList.of(new Object[]{"y"}),
                                 RowSignature.builder().add("s", ColumnType.STRING).build()
                             )
@@ -609,7 +611,7 @@ public class ClientQuerySegmentWalkerTest
                     query.getDataSource().withChildren(
                         ImmutableList.of(
                             unionDataSource.getChildren().get(0),
-                            InlineDataSource.fromIterable(
+                            IterableBackedInlineDataSource.fromIterable(
                                 ImmutableList.of(new Object[]{"y"}),
                                 RowSignature.builder().add("s", ColumnType.STRING).build()
                             )
@@ -622,7 +624,7 @@ public class ClientQuerySegmentWalkerTest
                     query.getDataSource().withChildren(
                         ImmutableList.of(
                             unionDataSource.getChildren().get(1),
-                            InlineDataSource.fromIterable(
+                            IterableBackedInlineDataSource.fromIterable(
                                 ImmutableList.of(new Object[]{"y"}),
                                 RowSignature.builder().add("s", ColumnType.STRING).build()
                             )
@@ -668,7 +670,7 @@ public class ClientQuerySegmentWalkerTest
             ExpectedQuery.cluster(subquery.withId(DUMMY_QUERY_ID).withSubQueryId("1.1")),
             ExpectedQuery.local(
                 query.withDataSource(
-                    InlineDataSource.fromIterable(
+                    IterableBackedInlineDataSource.fromIterable(
                         ImmutableList.of(
                             new Object[]{ImmutableList.of("a", "b"), 1},
                             new Object[]{ImmutableList.of("a", "c"), 2},
@@ -720,7 +722,7 @@ public class ClientQuerySegmentWalkerTest
             ExpectedQuery.cluster(subquery.withId(DUMMY_QUERY_ID).withSubQueryId("1.1")),
             ExpectedQuery.local(
                 query.withDataSource(
-                    InlineDataSource.fromIterable(
+                    IterableBackedInlineDataSource.fromIterable(
                         ImmutableList.of(
                             new Object[]{ImmutableList.of("a", "b"), 1},
                             new Object[]{ImmutableList.of("a", "c"), 2},
@@ -1345,8 +1347,9 @@ public class ClientQuerySegmentWalkerTest
 
     final SegmentWrangler segmentWrangler = new MapSegmentWrangler(
         ImmutableMap.<Class<? extends DataSource>, SegmentWrangler>builder()
-            .put(InlineDataSource.class, new InlineSegmentWrangler())
-            .build()
+                    .put(IterableBackedInlineDataSource.class, new IterableBasedInlineSegmentWrangler())
+                    .put(FramesBackedInlineDataSource.class, new FrameBasedInlineSegmentWrangler())
+                    .build()
     );
 
     final JoinableFactory globalFactory = new JoinableFactory()
@@ -1367,7 +1370,7 @@ public class ClientQuerySegmentWalkerTest
     final JoinableFactory joinableFactory = new MapJoinableFactory(
         ImmutableSet.of(globalFactory, new InlineJoinableFactory()),
         ImmutableMap.<Class<? extends JoinableFactory>, Class<? extends DataSource>>builder()
-            .put(InlineJoinableFactory.class, InlineDataSource.class)
+            .put(InlineJoinableFactory.class, IterableBackedInlineDataSource.class)
             .put(globalFactory.getClass(), GlobalTableDataSource.class)
             .build()
     );
@@ -1479,8 +1482,9 @@ public class ClientQuerySegmentWalkerTest
 
     ExpectedQuery(Query<?> query, ClusterOrLocal how)
     {
+      Query<?> modifiedQuery;
       // Need to blast various parameters that will vary and aren't important to test for.
-      this.query = query.withOverriddenContext(
+      modifiedQuery = query.withOverriddenContext(
           ImmutableMap.<String, Object>builder()
               .put(DirectDruidClient.QUERY_FAIL_TIME, 0L)
               .put(QueryContexts.DEFAULT_TIMEOUT_KEY, 0L)
@@ -1496,6 +1500,11 @@ public class ClientQuerySegmentWalkerTest
               .build()
       );
 
+      if (modifiedQuery.getDataSource() instanceof FramesBackedInlineDataSource) {
+        // Do this recursively for if the query's datasource is a query datasource
+      }
+
+      this.query = modifiedQuery;
       this.how = how;
     }
 
@@ -1541,7 +1550,7 @@ public class ClientQuerySegmentWalkerTest
 
   private static VersionedIntervalTimeline<String, ReferenceCountingSegment> makeTimeline(
       final String name,
-      final InlineDataSource dataSource
+      final IterableBackedInlineDataSource dataSource
   )
   {
     final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline =
