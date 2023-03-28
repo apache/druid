@@ -29,10 +29,6 @@ import org.apache.druid.catalog.model.table.InputFormats.FlatTextFormatDefn;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.Resource;
-import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 import org.junit.Test;
 
 import java.util.Arrays;

@@ -29,11 +29,16 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.calcite.table.DruidTable;
 
 import javax.validation.constraints.NotNull;
 import java.util.Collections;
 import java.util.Set;
 
+/**
+ * Used by {@link ExternalOperatorConversion} to generate a {@link DruidTable}
+ * that references an {@link ExternalDataSource}.
+ */
 public class DruidExternTableMacro extends DruidUserDefinedTableMacro
 {
   public DruidExternTableMacro(DruidTableMacro macro)

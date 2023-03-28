@@ -31,6 +31,10 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
 
+/**
+ * Operator conversion for the `EXTERN` table macros (functions) based on the
+ * {@link TableFunction} abstraction defined by the catalog.
+ */
 public class DruidExternTableMacroConversion implements SqlOperatorConversion
 {
   private final SqlUserDefinedTableMacro operator;

@@ -34,10 +34,6 @@ import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.metadata.EnvironmentVariablePasswordProvider;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.Resource;
-import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 import org.junit.Before;
 import org.junit.Test;
 

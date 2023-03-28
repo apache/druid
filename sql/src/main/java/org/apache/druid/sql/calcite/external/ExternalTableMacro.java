@@ -29,10 +29,6 @@ import org.apache.druid.catalog.model.table.ExternalTableSpec;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.Resource;
-import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
