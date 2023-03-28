@@ -78,8 +78,8 @@ FROM TABLE(
   EXTERN(
     inputSource => '<Druid input source>',
     inputFormat => '<Druid input format>'
-  ) (<columns>)
-)
+  )) (<columns>)
+
 ```
 
 The input source and format are as above. The columns are expressed as in a SQL `CREATE TABLE`.
@@ -106,7 +106,7 @@ FROM TABLE(
   http(
     userName => 'bob',
     password => 'secret',
-    uris => ARRAY['http:example.com/foo.csv', 'http:example.com/bar.csv'],
+    uris => ARRAY['http://example.com/foo.csv', 'http://example.com/bar.csv'],
     format => 'csv'
     )
   ) EXTEND (x VARCHAR, y VARCHAR, z BIGINT)
@@ -129,7 +129,7 @@ FROM TABLE(
   http(
     userName => 'bob',
     password => 'secret',
-    uris => ARRAY['http:example.com/foo.csv', 'http:example.com/bar.csv'],
+    uris => ARRAY['http://example.com/foo.csv', 'http://example.com/bar.csv'],
     format => 'csv'
     )
   ) (x VARCHAR, y VARCHAR, z BIGINT)
