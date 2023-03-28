@@ -98,7 +98,7 @@ public class AuthConfig
   private final Set<String> securedContextKeys;
 
   @JsonProperty
-  private final boolean inputSourceTypeSecurityEnabled;
+  private final boolean enableInputSourceSecurity;
 
   @JsonCreator
   public AuthConfig(
@@ -109,7 +109,7 @@ public class AuthConfig
       @JsonProperty("authorizeQueryContextParams") boolean authorizeQueryContextParams,
       @JsonProperty("unsecuredContextKeys") Set<String> unsecuredContextKeys,
       @JsonProperty("securedContextKeys") Set<String> securedContextKeys,
-      @JsonProperty("inputSourceTypeSecurityEnabled") boolean inputSourceTypeSecurityEnabled
+      @JsonProperty("enableInputSourceSecurity") boolean enableInputSourceSecurity
   )
   {
     this.authenticatorChain = authenticatorChain;
@@ -121,7 +121,7 @@ public class AuthConfig
         ? Collections.emptySet()
         : unsecuredContextKeys;
     this.securedContextKeys = securedContextKeys;
-    this.inputSourceTypeSecurityEnabled = inputSourceTypeSecurityEnabled;
+    this.enableInputSourceSecurity = enableInputSourceSecurity;
   }
 
   public List<String> getAuthenticatorChain()
@@ -149,9 +149,9 @@ public class AuthConfig
     return authorizeQueryContextParams;
   }
 
-  public boolean isInputSourceTypeSecurityEnabled()
+  public boolean isEnableInputSourceSecurity()
   {
-    return inputSourceTypeSecurityEnabled;
+    return enableInputSourceSecurity;
   }
 
   /**
@@ -201,7 +201,7 @@ public class AuthConfig
            && Objects.equals(unsecuredPaths, that.unsecuredPaths)
            && Objects.equals(unsecuredContextKeys, that.unsecuredContextKeys)
            && Objects.equals(securedContextKeys, that.securedContextKeys)
-           && Objects.equals(inputSourceTypeSecurityEnabled, that.inputSourceTypeSecurityEnabled);
+           && Objects.equals(enableInputSourceSecurity, that.enableInputSourceSecurity);
   }
 
   @Override
@@ -215,7 +215,7 @@ public class AuthConfig
         authorizeQueryContextParams,
         unsecuredContextKeys,
         securedContextKeys,
-        inputSourceTypeSecurityEnabled
+        enableInputSourceSecurity
     );
   }
 
@@ -230,7 +230,7 @@ public class AuthConfig
            ", enableQueryContextAuthorization=" + authorizeQueryContextParams +
            ", unsecuredContextKeys=" + unsecuredContextKeys +
            ", securedContextKeys=" + securedContextKeys +
-           ", inputSourceTypeSecurityEnabled=" + inputSourceTypeSecurityEnabled +
+           ", enableInputSourceSecurity=" + enableInputSourceSecurity +
            '}';
   }
 
@@ -251,7 +251,7 @@ public class AuthConfig
     private boolean authorizeQueryContextParams;
     private Set<String> unsecuredContextKeys;
     private Set<String> securedContextKeys;
-    private boolean inputSourceTypeSecurityEnabled;
+    private boolean enableInputSourceSecurity;
 
     public Builder setAuthenticatorChain(List<String> authenticatorChain)
     {
@@ -295,9 +295,9 @@ public class AuthConfig
       return this;
     }
 
-    public Builder setInputSourceTypeSecurityEnabled(boolean inputSourceTypeSecurityEnabled)
+    public Builder setEnableInputSourceSecurity(boolean enableInputSourceSecurity)
     {
-      this.inputSourceTypeSecurityEnabled = inputSourceTypeSecurityEnabled;
+      this.enableInputSourceSecurity = enableInputSourceSecurity;
       return this;
     }
 
@@ -311,7 +311,7 @@ public class AuthConfig
           authorizeQueryContextParams,
           unsecuredContextKeys,
           securedContextKeys,
-          inputSourceTypeSecurityEnabled
+          enableInputSourceSecurity
       );
     }
   }

@@ -195,7 +195,7 @@ public abstract class FormattedInputSourceDefn extends BaseInputSourceDefn
         convertSource(sourceMap, jsonMapper),
         inputFormat,
         Columns.convertSignature(completedCols),
-        Collections.singleton(typeValue())
+        typeValue()
     );
   }
 }

@@ -58,7 +58,7 @@ public class SqlResourceCollectorShuttle extends SqlShuttle
     this.validator = validator;
     this.resourceActions = new HashSet<>();
     this.plannerContext = plannerContext;
-    inputSourceTypeSecurityEnabled = plannerContext.getPlannerToolbox().getAuthConfig().isInputSourceTypeSecurityEnabled();
+    inputSourceTypeSecurityEnabled = plannerContext.getPlannerToolbox().getAuthConfig().isEnableInputSourceSecurity();
   }
 
   @Override

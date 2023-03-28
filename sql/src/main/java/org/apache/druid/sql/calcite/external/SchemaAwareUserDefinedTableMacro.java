@@ -173,12 +173,10 @@ public abstract class SchemaAwareUserDefinedTableMacro
     {
       Set<ResourceAction> resourceActions = new HashSet<>();
       if (table instanceof ExternalTable && inputSourceTypeSecurityEnabled) {
-        resourceActions.addAll(((ExternalTable) table)
-                        .getInputSourceTypes()
-                        .stream()
-                        .map(s -> new ResourceAction(
-                            new Resource(ResourceType.EXTERNAL, s), Action.READ))
-                        .collect(Collectors.toList()));
+        resourceActions.add(new ResourceAction(new Resource(
+            ResourceType.EXTERNAL,
+            ((ExternalTable) table).getInputSourceType()
+        ), Action.READ));
       }
       resourceActions.addAll(base.computeResources(call, inputSourceTypeSecurityEnabled));
       return resourceActions;

@@ -94,6 +94,6 @@ public class DruidExternTableMacro extends DruidUserDefinedTableMacro
     }
     // this shouldn't happen, as the sqlCall should have been validated by this point,
     // and be guarenteed to have this parameter.
-    throw new RuntimeException("inputSource paramter not found in extern function");
+    throw new RuntimeException("inputSource parameter not found in extern function");
   }
 }

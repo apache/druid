@@ -314,7 +314,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME", externSql(externalDataSource))
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
-        .authConfig(AuthConfig.newBuilder().setInputSourceTypeSecurityEnabled(true).build())
+        .authConfig(AuthConfig.newBuilder().setEnableInputSourceSecurity(true).build())
         .expectTarget("dst", externalDataSource.getSignature())
         .expectResources(dataSourceWrite("dst"), externalRead("inline"))
         .expectQuery(
@@ -326,6 +326,18 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 .build()
         )
         .expectLogicalPlanFrom("insertFromExternal")
+        .verify();
+  }
+
+  @Test
+  public void testUnauthorizedInsertFromExternalWithInputSourceSecurityEnabled()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME", externSql(externalDataSource))
+        .authentication(CalciteTests.REGULAR_USER_AUTH_RESULT)
+        .authConfig(AuthConfig.newBuilder().setEnableInputSourceSecurity(true).build())
+        .expectLogicalPlanFrom("insertFromExternal")
+        .expectValidationError(ForbiddenException.class)
         .verify();
   }
 
@@ -403,7 +415,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
              extern
         )
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
-        .authConfig(AuthConfig.newBuilder().setInputSourceTypeSecurityEnabled(true).build())
+        .authConfig(AuthConfig.newBuilder().setEnableInputSourceSecurity(true).build())
         .expectTarget("dst", externalDataSource.getSignature())
         .expectResources(dataSourceWrite("dst"), externalRead("inline"))
         .expectQuery(
@@ -446,7 +458,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
              extern
         )
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
-        .authConfig(AuthConfig.newBuilder().setInputSourceTypeSecurityEnabled(true).build())
+        .authConfig(AuthConfig.newBuilder().setEnableInputSourceSecurity(true).build())
         .expectTarget("dst", externalDataSource.getSignature())
         .expectResources(dataSourceWrite("dst"), externalRead("inline"))
         .expectQuery(

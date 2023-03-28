@@ -117,7 +117,7 @@ public class ExternalOperatorConversion extends DruidExternTableMacroConversion
             jsonMapper.readValue(inputSrcStr, InputSource.class),
             jsonMapper.readValue(CatalogUtils.getString(args, INPUT_FORMAT_PARAM), InputFormat.class),
             rowSignature,
-            Collections.singleton(inputSrcType)
+            inputSrcType
         );
       }
       catch (JsonProcessingException e) {
