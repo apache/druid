@@ -77,7 +77,7 @@ public class ExternalTableMacro implements TableMacro
           jsonMapper.readValue((String) arguments.get(0), InputSource.class),
           jsonMapper.readValue((String) arguments.get(1), InputFormat.class),
           jsonMapper.readValue((String) arguments.get(2), RowSignature.class),
-          Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, inputSrcType), Action.READ))
+          Collections.singleton(inputSrcType)
       );
       return Externals.buildExternalTable(spec, jsonMapper);
     }

@@ -402,10 +402,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         CatalogUtils.stringListToUriList(Arrays.asList("http://foo.com/foo.csv", "http://foo.com/bar.csv")),
         sourceSpec.getUris()
     );
-    assertEquals(
-        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "http"), Action.READ)),
-        externSpec.resourceActions
-    );
+    assertEquals(Collections.singleton(HttpInputSourceDefn.TYPE_KEY), externSpec.inputSourceTypes);
   }
 
   @Test
@@ -449,10 +446,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         CatalogUtils.stringListToUriList(Arrays.asList("http://foo.com/my.csv", "http://foo.com/bar.csv")),
         sourceSpec.getUris()
     );
-    assertEquals(
-        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "http"), Action.READ)),
-        externSpec.resourceActions
-    );
+    assertEquals(Collections.singleton(HttpInputSourceDefn.TYPE_KEY), externSpec.inputSourceTypes);
   }
 
   @Test
@@ -476,10 +470,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         CatalogUtils.stringListToUriList(Arrays.asList("http://foo.com/foo.csv", "http://foo.com/bar.csv")),
         sourceSpec.getUris()
     );
-    assertEquals(
-        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "http"), Action.READ)),
-        externSpec.resourceActions
-    );
+    assertEquals(Collections.singleton(HttpInputSourceDefn.TYPE_KEY), externSpec.inputSourceTypes);
   }
 
   @Test
@@ -512,10 +503,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         "SECRET",
         ((EnvironmentVariablePasswordProvider) sourceSpec.getHttpAuthenticationPasswordProvider()).getVariable()
     );
-    assertEquals(
-        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "http"), Action.READ)),
-        externSpec.resourceActions
-    );
+    assertEquals(Collections.singleton(HttpInputSourceDefn.TYPE_KEY), externSpec.inputSourceTypes);
   }
 
   private void validateHappyPath(ExternalTableSpec externSpec, boolean withUser)
@@ -535,10 +523,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     assertEquals(Arrays.asList("x", "y"), sig.getColumnNames());
     assertEquals(ColumnType.STRING, sig.getColumnType(0).get());
     assertEquals(ColumnType.LONG, sig.getColumnType(1).get());
-    assertEquals(
-        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "http"), Action.READ)),
-        externSpec.resourceActions
-    );
+    assertEquals(Collections.singleton(HttpInputSourceDefn.TYPE_KEY), externSpec.inputSourceTypes);
   }
 
   private Map<String, Object> httpToMap(HttpInputSource source)

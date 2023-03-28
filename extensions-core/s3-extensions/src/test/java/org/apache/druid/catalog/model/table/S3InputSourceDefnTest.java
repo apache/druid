@@ -349,10 +349,7 @@ public class S3InputSourceDefnTest
         CatalogUtils.stringListToUriList(uris),
         s3InputSource.getUris()
     );
-    assertEquals(
-        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "s3"), Action.READ)),
-        externSpec.resourceActions
-    );
+    assertEquals(Collections.singleton(S3StorageDruidModule.SCHEME), externSpec.inputSourceTypes);
 
     // But, it fails if there are no columns.
     assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
@@ -373,10 +370,7 @@ public class S3InputSourceDefnTest
         CatalogUtils.stringListToUriList(uris),
         s3InputSource.getUris()
     );
-    assertEquals(
-        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "s3"), Action.READ)),
-        externSpec.resourceActions
-    );
+    assertEquals(Collections.singleton(S3StorageDruidModule.SCHEME), externSpec.inputSourceTypes);
   }
 
   @Test
@@ -409,10 +403,7 @@ public class S3InputSourceDefnTest
         s3InputSource.getUris()
     );
     assertEquals("*.csv", s3InputSource.getObjectGlob());
-    assertEquals(
-        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "s3"), Action.READ)),
-        externSpec.resourceActions
-    );
+    assertEquals(Collections.singleton(S3StorageDruidModule.SCHEME), externSpec.inputSourceTypes);
   }
 
   @Test
@@ -432,10 +423,7 @@ public class S3InputSourceDefnTest
         CatalogUtils.stringListToUriList(prefixes),
         s3InputSource.getPrefixes()
     );
-    assertEquals(
-        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "s3"), Action.READ)),
-        externSpec.resourceActions
-    );
+    assertEquals(Collections.singleton(S3StorageDruidModule.SCHEME), externSpec.inputSourceTypes);
 
     // But, it fails if there are no columns.
     assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
@@ -458,10 +446,7 @@ public class S3InputSourceDefnTest
         CatalogUtils.stringListToUriList(prefixes),
         s3InputSource.getPrefixes()
     );
-    assertEquals(
-        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "s3"), Action.READ)),
-        externSpec.resourceActions
-    );
+    assertEquals(Collections.singleton(S3StorageDruidModule.SCHEME), externSpec.inputSourceTypes);
   }
 
   @Test
@@ -481,10 +466,7 @@ public class S3InputSourceDefnTest
     CloudObjectLocation obj = s3InputSource.getObjects().get(0);
     assertEquals("foo.com", obj.getBucket());
     assertEquals("bar/file.csv", obj.getPath());
-    assertEquals(
-        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "s3"), Action.READ)),
-        externSpec.resourceActions
-    );
+    assertEquals(Collections.singleton(S3StorageDruidModule.SCHEME), externSpec.inputSourceTypes);
 
     // But, it fails if there are no columns.
     assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
@@ -532,10 +514,7 @@ public class S3InputSourceDefnTest
     obj = s3InputSource.getObjects().get(1);
     assertEquals("foo.com", obj.getBucket());
     assertEquals("mumble/file2.csv", obj.getPath());
-    assertEquals(
-        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "s3"), Action.READ)),
-        externSpec.resourceActions
-    );
+    assertEquals(Collections.singleton(S3StorageDruidModule.SCHEME), externSpec.inputSourceTypes);
   }
 
   @Test
@@ -603,10 +582,7 @@ public class S3InputSourceDefnTest
     ExternalTableDefn externDefn = (ExternalTableDefn) resolved.defn();
     ExternalTableSpec externSpec = externDefn.convert(resolved);
     assertEquals(s3InputSource, externSpec.inputSource);
-    assertEquals(
-        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "s3"), Action.READ)),
-        externSpec.resourceActions
-    );
+    assertEquals(Collections.singleton(S3StorageDruidModule.SCHEME), externSpec.inputSourceTypes);
 
     // Get the partial table function
     TableFunction fn = externDefn.tableFn(resolved);
@@ -641,10 +617,7 @@ public class S3InputSourceDefnTest
     ExternalTableDefn externDefn = (ExternalTableDefn) resolved.defn();
     ExternalTableSpec externSpec = externDefn.convert(resolved);
     assertEquals(s3InputSource, externSpec.inputSource);
-    assertEquals(
-        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "s3"), Action.READ)),
-        externSpec.resourceActions
-    );
+    assertEquals(Collections.singleton(S3StorageDruidModule.SCHEME), externSpec.inputSourceTypes);
 
     // Get the partial table function
     TableFunction fn = externDefn.tableFn(resolved);
@@ -703,10 +676,7 @@ public class S3InputSourceDefnTest
     CloudObjectLocation obj = s3InputSource.getObjects().get(0);
     assertEquals("foo.com", obj.getBucket());
     assertEquals("bar/file.csv", obj.getPath());
-    assertEquals(
-        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "s3"), Action.READ)),
-        externSpec.resourceActions
-    );
+    assertEquals(Collections.singleton(S3StorageDruidModule.SCHEME), externSpec.inputSourceTypes);
 
     // But, it fails columns are provided since the table already has them.
     assertThrows(IAE.class, () -> fn.apply("x", args, COLUMNS, mapper));
@@ -748,10 +718,7 @@ public class S3InputSourceDefnTest
     assertEquals("foo.com", obj.getBucket());
     assertEquals("bar/file.csv", obj.getPath());
     assertTrue(externSpec.inputFormat instanceof CsvInputFormat);
-    assertEquals(
-        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "s3"), Action.READ)),
-        externSpec.resourceActions
-    );
+    assertEquals(Collections.singleton(S3StorageDruidModule.SCHEME), externSpec.inputSourceTypes);
 
     // But, it fails columns are not provided since the table does not have them.
     assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));

@@ -294,7 +294,7 @@ public class Externals
                     + "Please change the column name to something other than __time");
     }
 
-    return toExternalTable(spec, jsonMapper, spec.resourceActions);
+    return toExternalTable(spec, jsonMapper, spec.inputSourceTypes);
   }
 
   public static ResourceAction externalRead(String name)
@@ -305,7 +305,7 @@ public class Externals
   public static ExternalTable toExternalTable(
       ExternalTableSpec spec,
       ObjectMapper jsonMapper,
-      Set<ResourceAction> resourceActions
+      Set<String> inputSourceTypes
   )
   {
     return new ExternalTable(
@@ -316,7 +316,7 @@ public class Externals
           ),
         spec.signature,
         jsonMapper,
-        resourceActions
+        inputSourceTypes
     );
   }
 

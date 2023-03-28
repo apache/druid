@@ -540,9 +540,6 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     assertEquals(Arrays.asList("x", "y"), sig.getColumnNames());
     assertEquals(ColumnType.STRING, sig.getColumnType(0).get());
     assertEquals(ColumnType.LONG, sig.getColumnType(1).get());
-    assertEquals(
-        Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "local"), Action.READ)),
-        externSpec.resourceActions
-    );
+    assertEquals(Collections.singleton(LocalInputSourceDefn.TYPE_KEY), externSpec.inputSourceTypes);
   }
 }

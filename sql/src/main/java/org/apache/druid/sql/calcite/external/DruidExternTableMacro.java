@@ -25,7 +25,6 @@ import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.util.NlsString;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -37,8 +36,6 @@ import java.util.Set;
 
 public class DruidExternTableMacro extends DruidUserDefinedTableMacro
 {
-  private static final Logger LOG = new Logger(DruidExternTableMacro.class);
-
   public DruidExternTableMacro(DruidTableMacro macro)
   {
     super(macro);
@@ -68,11 +65,14 @@ public class DruidExternTableMacro extends DruidUserDefinedTableMacro
   @NotNull
   private String getInputSourceArgument(final SqlCall call)
   {
+    // this covers case where parameters are used positionally
     if (call.getOperandList().size() > 0) {
       if (call.getOperandList().get(0) instanceof SqlCharStringLiteral) {
         return ((SqlCharStringLiteral) call.getOperandList().get(0)).toValue();
       }
     }
+
+    // this covers case where named parameters are used.
     for (SqlNode sqlNode : call.getOperandList()) {
       if (sqlNode instanceof SqlCall) {
         String argumentName = ((SqlCall) sqlNode).getOperandList().size() > 1 ?

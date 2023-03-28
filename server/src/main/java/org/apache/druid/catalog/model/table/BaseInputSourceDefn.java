@@ -157,10 +157,7 @@ public abstract class BaseInputSourceDefn implements InputSourceDefn
         convertArgsToSource(args, jsonMapper),
         convertArgsToFormat(args, columns, jsonMapper),
         Columns.convertSignature(columns),
-        Collections.singleton(new ResourceAction(
-            new Resource(ResourceType.EXTERNAL, typeValue()),
-            Action.READ
-        ))
+        Collections.singleton(typeValue())
     );
   }
 
@@ -217,10 +214,7 @@ public abstract class BaseInputSourceDefn implements InputSourceDefn
         convertTableToSource(table),
         convertTableToFormat(table),
         Columns.convertSignature(table.resolvedTable().spec().columns()),
-        Collections.singleton(new ResourceAction(
-            new Resource(ResourceType.EXTERNAL, typeValue()),
-            Action.READ
-        ))
+        Collections.singleton(typeValue())
     );
   }
 
