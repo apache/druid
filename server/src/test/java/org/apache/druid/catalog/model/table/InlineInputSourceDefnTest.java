@@ -144,7 +144,7 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
     CsvInputFormat format = (CsvInputFormat) extern.inputFormat;
     assertEquals(Arrays.asList("a", "b"), format.getColumns());
     assertEquals(2, extern.signature.size());
-    assertEquals(Collections.singleton(InlineInputSourceDefn.TYPE_KEY), extern.inputSourceType);
+    assertEquals(InlineInputSourceDefn.TYPE_KEY, extern.inputSourceType);
 
     // Fails if no columns are provided.
     assertThrows(IAE.class, () -> fn.apply("x", new HashMap<>(), Collections.emptyList(), mapper));
@@ -179,7 +179,7 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
     CsvInputFormat actualFormat = (CsvInputFormat) extern.inputFormat;
     assertEquals(Arrays.asList("a", "b"), actualFormat.getColumns());
     assertEquals(2, extern.signature.size());
-    assertEquals(Collections.singleton(InlineInputSourceDefn.TYPE_KEY), extern.inputSourceType);
+    assertEquals(InlineInputSourceDefn.TYPE_KEY, extern.inputSourceType);
 
     // Cannot supply columns with the function
     List<ColumnSpec> columns = Arrays.asList(
@@ -215,6 +215,6 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
     CsvInputFormat actualFormat = (CsvInputFormat) extern.inputFormat;
     assertEquals(Arrays.asList("a", "b"), actualFormat.getColumns());
     assertEquals(2, extern.signature.size());
-    assertEquals(Collections.singleton(InlineInputSourceDefn.TYPE_KEY), extern.inputSourceType);
+    assertEquals(InlineInputSourceDefn.TYPE_KEY, extern.inputSourceType);
   }
 }
