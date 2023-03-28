@@ -1645,7 +1645,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         expectedException -> {
           expectedException.expect(SqlPlanningException.class);
           expectedException.expectMessage(
-              "SELECT queries with ingest only set"
+              "Cannot execute MSQ SELECT"
           );
         }
     );

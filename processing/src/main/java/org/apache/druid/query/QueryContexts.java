@@ -113,7 +113,6 @@ public class QueryContexts
   public static final boolean DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING = false;
   public static final boolean DEFAULT_MSQ_DENY_SELECT = false;
 
-
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize
   {
