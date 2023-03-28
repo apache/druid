@@ -84,7 +84,7 @@ public class ITWikipediaQueryTest extends AbstractITBatchIndexTest
         return StringUtils.replace(
             spec,
             "%%LOCAL_FILE_NAME%%",
-            jsonMapper.writeValueAsString(WIKIPEDIA_DATA_SOURCE)
+            jsonMapper.writeValueAsString(WIKIPEDIA_DATA_SOURCE + ".csv")
         );
       }
       catch (JsonProcessingException e) {
@@ -98,8 +98,8 @@ public class ITWikipediaQueryTest extends AbstractITBatchIndexTest
         WIKIPEDIA_INDEX_TASK,
         transform,
         null,
-        false,
         true,
+        false,
         true,
         new Pair<>(false, false)
     );

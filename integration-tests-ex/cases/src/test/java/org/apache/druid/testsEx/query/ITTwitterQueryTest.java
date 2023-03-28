@@ -57,7 +57,7 @@ public class ITTwitterQueryTest extends AbstractITBatchIndexTest
         return StringUtils.replace(
             spec,
             "%%LOCAL_FILE_NAME%%",
-            jsonMapper.writeValueAsString(TWITTER_DATA_SOURCE)
+            jsonMapper.writeValueAsString(TWITTER_DATA_SOURCE + ".csv")
         );
       }
       catch (JsonProcessingException e) {
@@ -71,8 +71,8 @@ public class ITTwitterQueryTest extends AbstractITBatchIndexTest
         TWITTER_INDEX_TASK,
         transform,
         null,
-        false,
         true,
+        false,
         true,
         new Pair<>(false, false)
     );

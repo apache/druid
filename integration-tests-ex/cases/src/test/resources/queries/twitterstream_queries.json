@@ -226,7 +226,7 @@
                         "user_name": "Elviaci9",
                         "tweet_length": 464.0,
                         "num_tweets": 4.0,
-                        "avg_tweet_len": 116
+                        "avg_tweet_len": 116.0
                     },
                     {
                         "user_name": "Smeraldakn4",
@@ -331,15 +331,15 @@
                 "result": [
                     {
                         "user_name": "jRabbitBabee",
-                        "tweet_length": 135.2,
+                        "tweet_length": 676.0,
                         "num_tweets": 5.0,
-                        "avg_tweet_len": 676.0
+                        "avg_tweet_len": 135.2
                     },
                     {
                         "user_name": "furin0620",
                         "tweet_length": 28.0,
                         "num_tweets": 1.0,
-                        "avg_tweet_len": 28
+                        "avg_tweet_len": 28.0
                     }
                 ]
             },

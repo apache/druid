@@ -37,7 +37,7 @@ jobs:
       it: ${{ matrix.it }}
       mysql_driver: com.mysql.jdbc.Driver
 
-  query-it:
+  query-its-middleManager:
     strategy:
       fail-fast: false
       matrix:
@@ -49,5 +49,21 @@ jobs:
       build_jdk: ${{ matrix.jdk }}
       runtime_jdk: ${{ matrix.jdk }}
       use_indexer: ${{ matrix.indexer }}
+      script: ./it.sh github ${{ matrix.it }}
+      it: ${{ matrix.it }}
+
+  query-its-middleManager-mariaDB:
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: [ 8, 11 ]
+        it: [ Query, QueryRetry, QueryError ]
+        indexer: [ middleManager ]
+    uses: ./.github/workflows/reusable-revised-its.yml
+    with:
+      build_jdk: 8
+      runtime_jdk: ${{ matrix.jdk }}
+      use_indexer: middleManager
+      mysql_driver: org.mariadb.jdbc.Driver
       script: ./it.sh github ${{ matrix.it }}
       it: ${{ matrix.it }}

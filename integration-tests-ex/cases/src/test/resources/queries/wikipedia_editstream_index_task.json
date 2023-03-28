@@ -1,12 +1,12 @@
 {
-  "type": "index_parallel",
+  "type": "index",
   "spec": {
     "ioConfig": {
-      "type": "index_parallel",
+      "type": "index",
       "inputSource": {
         "type": "local",
         "baseDir": "/shared",
-        "filter": "%%LOCAL_FILE_NAME%%.csv"
+        "filter": %%LOCAL_FILE_NAME%%
       },
       "inputFormat": {
         "type": "csv",
@@ -14,7 +14,7 @@
       }
     },
     "tuningConfig": {
-      "type": "index_parallel",
+      "type": "index",
       "partitionsSpec": {
         "type": "dynamic"
       }

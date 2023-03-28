@@ -135,6 +135,9 @@ function build_shared_dir {
     cp $MODULE_DIR/../../examples/quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz $SHARED_DIR/wikiticker-it/wikiticker-2015-09-12-sampled.json.gz
     cp $MODULE_DIR/resources/data/query/wiki-simple-lookup.json $SHARED_DIR/wikiticker-it/wiki-simple-lookup.json
     cp $MODULE_DIR/resources/data/query/wikipedia.desc $SHARED_DIR/wikiticker-it/wikipedia.desc
+    cp $MODULE_DIR/resources/data/query/wikipedia.csv $SHARED_DIR/wikipedia.csv
+    cp $MODULE_DIR/resources/data/query/wikipedia_editstream.csv $SHARED_DIR/wikipedia_editstream.csv
+    cp $MODULE_DIR/resources/data/query/twitterstream.csv $SHARED_DIR/twitterstream.csv
   fi
 
   # Permissions in some build setups are screwed up. See above. The user

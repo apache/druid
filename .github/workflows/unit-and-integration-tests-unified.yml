@@ -100,33 +100,34 @@ jobs:
           echo $DRUID_IT_IMAGE_NAME
           docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ matrix.jdk }}.tar.gz
 
-  unit-tests-phase2:
-    strategy:
-      fail-fast: false
-      matrix:
-        jdk: [ 11, 17 ]
-    name: unit tests (jdk${{ matrix.jdk }}, sql-compat=true)
-    uses: ./.github/workflows/unit-tests.yml
-    needs: unit-tests
-    with:
-      jdk: ${{ matrix.jdk }}
-      sql_compatibility: true
-
-  unit-tests:
-    strategy:
-      fail-fast: false
-      matrix:
-        sql_compatibility: [ false, true ]
-    name: unit tests (jdk8, sql-compat=${{ matrix.sql_compatibility }})
-    uses: ./.github/workflows/unit-tests.yml
-    needs: build
-    with:
-      jdk: 8
-      sql_compatibility: ${{ matrix.sql_compatibility }}
-
-  standard-its:
-    needs: unit-tests
-    uses: ./.github/workflows/standard-its.yml
+# Have commented out to get faster feedback on changes to revised ITs - will revert once the testing is done.
+#  unit-tests-phase2:
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        jdk: [ 11, 17 ]
+#    name: unit tests (jdk${{ matrix.jdk }}, sql-compat=true)
+#    uses: ./.github/workflows/unit-tests.yml
+#    needs: unit-tests
+#    with:
+#      jdk: ${{ matrix.jdk }}
+#      sql_compatibility: true
+#
+#  unit-tests:
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        sql_compatibility: [ false, true ]
+#    name: unit tests (jdk8, sql-compat=${{ matrix.sql_compatibility }})
+#    uses: ./.github/workflows/unit-tests.yml
+#    needs: build
+#    with:
+#      jdk: 8
+#      sql_compatibility: ${{ matrix.sql_compatibility }}
+#
+#  standard-its:
+#    needs: unit-tests
+#    uses: ./.github/workflows/standard-its.yml
 
   revised-its:
     needs: unit-tests
