@@ -138,6 +138,12 @@
         <skipTests>false</skipTests>
         <skipUTs>${skipTests}</skipUTs>
         <skipITs>${skipTests}</skipITs>
+
+        <!-- NetBeans has a problem when we use late binding with @ in the surefire arg line.
+             Therefore we set this empty property here.
+             ref: https://github.com/mapstruct/mapstruct/pull/1241
+             -->
+         <jacocoArgLine />
     </properties>
 
     <modules>
