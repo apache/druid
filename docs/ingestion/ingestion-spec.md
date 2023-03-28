@@ -188,12 +188,12 @@ Treat `__time` as a millisecond timestamp: the number of milliseconds since Jan 
 The `dimensionsSpec` is located in `dataSchema` → `dimensionsSpec` and is responsible for
 configuring [dimensions](./data-model.md#dimensions). 
 
-You can either manually specify the dimensions or allow Druid to discover the schema for your data and perform a schemaless ingestion. To do schemaless ingestion, configure the following properties:
+You can either manually specify the dimensions or take advantage of Schema auto-discovery where you allow Druid to discover the schema for the data. This means that you don't have to explicitly To do schemaless ingestion, configure the following properties:
 
 - Set `dimensionsSpec` to empty 
 - Set `spec.tuningConfig.appendableIndexSpec.useSchemaDiscovery` to `true`.
 
-Keep in mind that you cannot partially define a schema
+Keep in mind that you cannot partially define a schema for Schema auto-discovery.
 
 
 `dimensionsSpec` examples:
@@ -213,9 +213,9 @@ Keep in mind that you cannot partially define a schema
 }
 ```
 
-<!--Schemaless-->
+<!--Schema auto-discovery-->
 
-```
+```json
     "tuningConfig": {
       ...
       "appendableIndexSpec": {
@@ -241,7 +241,7 @@ A `dimensionsSpec` can have the following components:
 | `dimensions`           | A list of [dimension names or objects](#dimension-objects). You cannot include the same column in both `dimensions` and `dimensionExclusions`.<br /><br />If `dimensions` and `spatialDimensions` are both null or empty arrays, Druid treats all columns other than timestamp or metrics that do not appear in `dimensionExclusions` as String-typed dimension columns. See [inclusions and exclusions](#inclusions-and-exclusions) for details.<br /><br />As a best practice, put the most frequently filtered dimensions at the beginning of the dimensions list. In this case, it would also be good to consider [`partitioning`](partitioning.md) by those same dimensions.                                                                                                                                                                                                                                  | `[]`    |
 | `dimensionExclusions`  | The names of dimensions to exclude from ingestion. Only names are supported here, not objects.<br /><br />This list is only used if the `dimensions` and `spatialDimensions` lists are both null or empty arrays; otherwise it is ignored. See [inclusions and exclusions](#inclusions-and-exclusions) below for details.                                                                                                                                                                                                                                                                                                                                               | `[]`    |
 | `spatialDimensions`    | An array of [spatial dimensions](../development/geo.md).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `[]`    |
-| `includeAllDimensions` | You can set `includeAllDimensions` to true to ingest both explicit dimensions in the `dimensions` field and other dimensions that the ingestion task discovers from input data. In this case, the explicit dimensions will appear first in order that you specify them and the dimensions dynamically discovered will come after. This flag can be useful especially with auto schema discovery using [`flattenSpec`](./data-formats.html#flattenspec). If this is not set and the `dimensions` field is not empty, Druid will ingest only explicit dimensions. If this is not set and the `dimensions` field is empty, all discovered dimensions will be ingested. | false   |
+
 
 #### Dimension objects
 
@@ -496,7 +496,7 @@ is:
 |skipBytesInMemoryOverheadCheck|The calculation of maxBytesInMemory takes into account overhead objects created during ingestion and each intermediate persist. Setting this to true can exclude the bytes of these overhead objects from maxBytesInMemory check.|false|
 |indexSpec|Defines segment storage format options to use at indexing time.|See [`indexSpec`](#indexspec) for more information.|
 |indexSpecForIntermediatePersists|Defines segment storage format options to use at indexing time for intermediate persisted temporary segments.|See [`indexSpec`](#indexspec) for more information.|
-| appendableIndexSpec.useSchemaDiscovery | Configure Druid to discover the schema for your ingestion to perform schemaless ingestion. You can use this for native batch or streaming ingestion. To use this feature, set this property to true along with an empty `dimensionsSpec`. For an example, see [`dimensionsSpec`](#dimensionsspec). |false  | 
+| appendableIndexSpec.useSchemaDiscovery | Configure Druid to use Schema auto-discoveyr to discover the schema for your ingestion. You can use this for native batch or streaming ingestion. To use this feature, set this property to true along with an empty `dimensionsSpec`. For an example, see [`dimensionsSpec`](#dimensionsspec). | false  | 
 |Other properties|Each ingestion method has its own list of additional tuning properties. See the documentation for each method for a full list: [Kafka indexing service](../development/extensions-core/kafka-supervisor-reference.md#tuningconfig), [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md#tuningconfig), [Native batch](native-batch.md#tuningconfig), and [Hadoop-based](hadoop.md#tuningconfig).||
 
 ### `indexSpec`
