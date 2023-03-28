@@ -2,7 +2,6 @@
 id: tls-support
 title: "TLS support"
 ---
-
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -37,10 +36,10 @@ and `druid.tlsPort` properties on each process. Please see `Configuration` secti
 Apache Druid uses Jetty as its embedded web server. 
 
 To get familiar with TLS/SSL, along with related concepts like keys and certificates,
-read [Configuring SSL/TLS](https://www.eclipse.org/jetty/documentation/current/configuring-ssl.html) in the Jetty documentation.
+read [Configuring Secure Protocols](https://www.eclipse.org/jetty/documentation/jetty-12/operations-guide/index.html#og-protocols-ssl) in the Jetty documentation.
 To get more in-depth knowledge of TLS/SSL support in Java in general, refer to the [Java Secure Socket Extension (JSSE) Reference Guide](http://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html).
-The [Configuring the Jetty SslContextFactory](https://www.eclipse.org/jetty/documentation/current/configuring-ssl.html#configuring-sslcontextfactory)
-section can help in understanding TLS/SSL configurations listed below. Finally, [Java Cryptography Architecture
+The [Class SslContextFactory](https://www.eclipse.org/jetty/javadoc/jetty-11/org/eclipse/jetty/util/ssl/SslContextFactory.html)
+reference doc can help in understanding TLS/SSL configurations listed below. Finally, [Java Cryptography Architecture
 Standard Algorithm Name Documentation for JDK 8](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html) lists all possible
 values for the configs below, among others provided by Java implementation.
 

@@ -31,6 +31,7 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.Correlate;
 import org.apache.calcite.rel.core.CorrelationId;
+import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexCall;
@@ -44,10 +45,12 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnnestDataSource;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringToArrayOperatorConversion;
+import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
@@ -63,7 +66,7 @@ import java.util.stream.Collectors;
  * Each correlate can be perceived as a join with the join type being inner
  * the left of a correlate as seen in the rule {@link org.apache.druid.sql.calcite.rule.DruidCorrelateUnnestRule}
  * is the {@link DruidQueryRel} while the right will always be an {@link DruidUnnestRel}.
- *
+ * <p>
  * Since this is a subclass of DruidRel it is automatically considered by other rules that involves DruidRels.
  * Some example being SELECT_PROJECT and SORT_PROJECT rules in {@link org.apache.druid.sql.calcite.rule.DruidRules.DruidQueryRule}
  */
@@ -136,10 +139,12 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     final DruidUnnestRel unnestDatasourceRel = (DruidUnnestRel) right;
     final DataSource leftDataSource;
     final RowSignature leftDataSourceSignature;
+    final Filter unnestFilter = unnestDatasourceRel.getUnnestFilter();
 
     if (right.getRowType().getFieldNames().size() != 1) {
       throw new CannotBuildQueryException("Cannot perform correlated join + UNNEST with more than one column");
     }
+
 
     if (computeLeftRequiresSubquery(leftDruidRel)) {
       // Left side is doing more than simple scan: generate a subquery.
@@ -164,6 +169,20 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
 
     // Final output row signature.
     final RowSignature correlateRowSignature = getCorrelateRowSignature(correlateRel, leftQuery);
+    final DimFilter unnestFilterOnDataSource;
+    if (unnestFilter != null) {
+      RowSignature filterRowSignature = RowSignatures.fromRelDataType(ImmutableList.of(correlateRowSignature.getColumnName(
+          correlateRowSignature.size() - 1)), unnestFilter.getInput().getRowType());
+      unnestFilterOnDataSource = Filtration.create(DruidQuery.getDimFilter(
+                                               getPlannerContext(),
+                                               filterRowSignature,
+                                               null,
+                                               unnestFilter
+                                           ))
+                                           .optimizeFilterOnly(filterRowSignature).getDimFilter();
+    } else {
+      unnestFilterOnDataSource = null;
+    }
 
     return partialQuery.build(
         UnnestDataSource.create(
@@ -173,7 +192,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
                 Calcites.getColumnTypeForRelDataType(rexNodeToUnnest.getType()),
                 getPlannerContext().getExprMacroTable()
             ),
-            null
+            unnestFilterOnDataSource
         ),
         correlateRowSignature,
         getPlannerContext(),
@@ -283,7 +302,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   /**
    * Computes whether a particular left-side rel requires a subquery, or if we can operate on its underlying
    * datasource directly.
-   *
+   * <p>
    * Stricter than {@link DruidJoinQueryRel#computeLeftRequiresSubquery}: this method only allows scans (not mappings).
    * This is OK because any mapping or other simple projection would have been pulled above the {@link Correlate} by
    * {@link org.apache.druid.sql.calcite.rule.DruidCorrelateUnnestRule}.
@@ -337,7 +356,8 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
         RowSignature.builder().add(
             BASE_UNNEST_OUTPUT_COLUMN,
             Calcites.getColumnTypeForRelDataType(unnestedType)
-        ).build()
+        ).build(),
+        DruidJoinQueryRel.findExistingJoinPrefixes(leftQuery.getDataSource())
     ).rhs;
   }
 

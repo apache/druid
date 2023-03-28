@@ -31,3 +31,12 @@ integration-tests/gen-scripts/
 **/.ipynb_checkpoints/
 helm/druid/charts
 *.pyc
+**/.ipython/
+**/.jupyter/
+**/.local/
+
+# ignore NetBeans IDE specific files
+nbproject
+nbactions.xml
+nb-configuration.xml
+
