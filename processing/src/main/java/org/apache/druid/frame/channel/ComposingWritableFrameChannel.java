@@ -131,9 +131,7 @@ public class ComposingWritableFrameChannel implements WritableFrameChannel
   @Override
   public boolean isClosed()
   {
-    return currentIndex == writableChannelSuppliers.size() || writableChannelSuppliers.get(currentIndex)
-                                                                                      .get()
-                                                                                      .isClosed();
+    return currentIndex == writableChannelSuppliers.size();
   }
 
   @Override
