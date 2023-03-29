@@ -92,7 +92,7 @@ setupConfig()
       setKey $DRUID_SERVICE "$var" "$val"
   done
 
-  env |grep ^s3service | while read evar
+  env | grep ^s3service | while read evar
   do
       val=$(echo "$evar" | sed -e 's?[^=]*=??')
       var=$(echo "$evar" | sed -e 's?^\([^=]*\)=.*?\1?g' -e 's?_?.?' -e 's?_?-?g')
