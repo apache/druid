@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Github workflow that runs revised/new ITs
+# GitHub workflow that runs revised/new ITs
 on:
   workflow_call:
   workflow_dispatch:

@@ -883,6 +883,9 @@ class ControllerStageTracker
             workerCount,
             resultPartitionBoundaries.size()
         );
+      } else if (shuffleSpec.kind() == ShuffleKind.MIX) {
+        resultPartitionBoundaries = ClusterByPartitions.oneUniversalPartition();
+        resultPartitions = ReadablePartitions.striped(stageNumber, workerCount, shuffleSpec.partitionCount());
       } else {
         resultPartitions = ReadablePartitions.striped(stageNumber, workerCount, shuffleSpec.partitionCount());
       }

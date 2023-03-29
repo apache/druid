@@ -1087,7 +1087,7 @@ public class ExpressionsTest extends ExpressionTestBase
                 DruidExpression.ofColumn(ColumnType.LONG, "y")
             )
         ),
-        3.0
+        3L
     );
 
     testHelper.testExpression(

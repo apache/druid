@@ -413,7 +413,8 @@ The `unnest` datasource uses the following syntax:
       "name": "output_column",
       "expression": "\"column_reference\""
     },
-  },
+    "outputName": "unnested_target_column"
+  }
 ```
 
 * `dataSource.type`: Set this to `unnest`.

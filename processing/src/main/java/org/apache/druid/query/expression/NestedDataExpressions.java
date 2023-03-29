@@ -480,10 +480,25 @@ public class NestedDataExpressions
       final StructuredDataProcessor processor = new StructuredDataProcessor()
       {
         @Override
-        public StructuredDataProcessor.ProcessedLiteral<?> processLiteralField(ArrayList<NestedPathPart> fieldPath, Object fieldValue)
+        public ProcessedValue<?> processField(ArrayList<NestedPathPart> fieldPath, @Nullable Object fieldValue)
         {
           // do nothing, we only want the list of fields returned by this processor
-          return StructuredDataProcessor.ProcessedLiteral.NULL_LITERAL;
+          return ProcessedValue.NULL_LITERAL;
+        }
+
+        @Nullable
+        @Override
+        public ProcessedValue<?> processArrayField(
+            ArrayList<NestedPathPart> fieldPath,
+            @Nullable List<?> array
+        )
+        {
+          // we only want to return a non-null value here if the value is an array of primitive values
+          ExprEval<?> eval = ExprEval.bestEffortArray(array);
+          if (eval.type().isArray() && eval.type().getElementType().isPrimitive()) {
+            return ProcessedValue.NULL_LITERAL;
+          }
+          return null;
         }
       };
 
