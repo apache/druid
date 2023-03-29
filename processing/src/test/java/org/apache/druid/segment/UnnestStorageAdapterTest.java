@@ -63,7 +63,6 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   private static IncrementalIndexStorageAdapter INCREMENTAL_INDEX_STORAGE_ADAPTER;
   private static UnnestStorageAdapter UNNEST_STORAGE_ADAPTER;
   private static UnnestStorageAdapter UNNEST_STORAGE_ADAPTER1;
-  private static UnnestStorageAdapter UNNEST_STORAGE_ADAPTER2;
   private static List<StorageAdapter> ADAPTERS;
   private static String COLUMNNAME = "multi-string1";
   private static String OUTPUT_COLUMN_NAME = "unnested-multi-string1";
@@ -100,13 +99,6 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME1, "\"" + COLUMNNAME + "\"", null, ExprMacroTable.nil()),
         null
     );
-
-    UNNEST_STORAGE_ADAPTER2 = new UnnestStorageAdapter(
-        INCREMENTAL_INDEX_STORAGE_ADAPTER,
-        new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME, "\"" + COLUMNNAME + "\"", null, ExprMacroTable.nil()),
-        new SelectorDimFilter(OUTPUT_COLUMN_NAME, "1", null)
-    );
-
 
     ADAPTERS = ImmutableList.of(
         UNNEST_STORAGE_ADAPTER,
@@ -344,14 +336,8 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       final Filter postFilter = ((PostJoinCursor) cursor).getPostJoinFilter();
       Assert.assertEquals(unnestStorageAdapter.getUnnestFilter(), postFilter);
 
-      ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
-      DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
       int count = 0;
       while (!cursor.isDone()) {
-        Object dimSelectorVal = dimSelector.getObject();
-        if (dimSelectorVal == null) {
-          Assert.assertNull(dimSelectorVal);
-        }
         cursor.advance();
         count++;
       }
