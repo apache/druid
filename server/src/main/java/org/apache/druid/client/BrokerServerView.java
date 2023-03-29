@@ -290,7 +290,7 @@ public class BrokerServerView implements TimelineServerView
         if (queryableDruidServer == null) {
           DruidServer inventoryValue = baseView.getInventoryValue(server.getName());
           if (inventoryValue == null) {
-            log.error(
+            log.warn(
                 "Could not find server[%s] in inventory. Skipping addition of segment[%s].",
                 server.getName(),
                 segmentId
@@ -330,7 +330,7 @@ public class BrokerServerView implements TimelineServerView
 
       QueryableDruidServer queryableDruidServer = clients.get(server.getName());
       if (queryableDruidServer == null) {
-        log.error(
+        log.warn(
             "Could not find server[%s] in inventory. Skipping removal of segment[%s].",
             server.getName(),
             segmentId
