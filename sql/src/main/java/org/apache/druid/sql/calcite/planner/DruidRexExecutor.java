@@ -76,14 +76,7 @@ public class DruidRexExecutor implements RexExecutor
             plannerContext.getPlannerToolbox().exprMacroTable()
         );
 
-        final ExprEval exprResult = expr.eval(
-            InputBindings.forFunction(
-                name -> {
-                  // Sanity check. Bindings should not be used for a constant expression.
-                  throw new UnsupportedOperationException();
-                }
-            )
-        );
+        final ExprEval exprResult = expr.eval(InputBindings.validateConstant(expr));
 
         final RexNode literal;
 

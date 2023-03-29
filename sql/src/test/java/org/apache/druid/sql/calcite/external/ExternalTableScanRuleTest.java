@@ -87,7 +87,7 @@ public class ExternalTableScanRuleTest
     ExternalTableScanRule rule = new ExternalTableScanRule(plannerContext);
     rule.matches(EasyMock.createMock(RelOptRuleCall.class));
     Assert.assertEquals(
-        "Cannot use 'EXTERN' with SQL engine 'native'.",
+        "Cannot use [EXTERN] with SQL engine [native].",
         plannerContext.getPlanningError()
     );
   }

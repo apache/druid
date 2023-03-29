@@ -43,7 +43,7 @@ public abstract class CalciteTestBase
   public static void setupCalciteProperties()
   {
     NullHandling.initializeForTests();
-    ExpressionProcessing.initializeForTests(null);
+    ExpressionProcessing.initializeForTests();
   }
 
   /**

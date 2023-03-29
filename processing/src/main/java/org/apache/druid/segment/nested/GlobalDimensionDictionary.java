@@ -19,18 +19,23 @@
 
 package org.apache.druid.segment.nested;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ComparatorDimensionDictionary;
 import org.apache.druid.segment.ComparatorSortedDimensionDictionary;
 import org.apache.druid.segment.DimensionDictionary;
 import org.apache.druid.segment.NestedDataColumnIndexer;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.data.FrontCodedIntArrayIndexedWriter;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedIterable;
 
 import javax.annotation.Nullable;
+import java.util.Comparator;
 import java.util.Iterator;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Used by {@link NestedDataColumnIndexer} to build the global value dictionary, which can be converted into a
@@ -42,45 +47,107 @@ public class GlobalDimensionDictionary
   private final ComparatorDimensionDictionary<String> stringDictionary;
   private final ComparatorDimensionDictionary<Long> longDictionary;
   private final ComparatorDimensionDictionary<Double> doubleDictionary;
+  private final Set<Object[]> stringArrays;
+  private final Set<Object[]> longArrays;
+  private final Set<Object[]> doubleArrays;
+
+  private int arrayBytesSizeEstimate;
 
   public GlobalDimensionDictionary()
   {
-    this.stringDictionary = new ComparatorDimensionDictionary<String>(GenericIndexed.STRING_STRATEGY) {
+    this.stringDictionary = new ComparatorDimensionDictionary<String>(GenericIndexed.STRING_STRATEGY)
+    {
       @Override
       public long estimateSizeOfValue(String value)
       {
         return StructuredDataProcessor.estimateStringSize(value);
       }
     };
-    this.longDictionary = new ComparatorDimensionDictionary<Long>(ColumnType.LONG.getNullableStrategy()) {
+    this.longDictionary = new ComparatorDimensionDictionary<Long>(ColumnType.LONG.getNullableStrategy())
+    {
       @Override
       public long estimateSizeOfValue(Long value)
       {
         return StructuredDataProcessor.getLongObjectEstimateSize();
       }
     };
-    this.doubleDictionary = new ComparatorDimensionDictionary<Double>(ColumnType.DOUBLE.getNullableStrategy()) {
+    this.doubleDictionary = new ComparatorDimensionDictionary<Double>(ColumnType.DOUBLE.getNullableStrategy())
+    {
       @Override
       public long estimateSizeOfValue(Double value)
       {
         return StructuredDataProcessor.getDoubleObjectEstimateSize();
       }
     };
+    this.stringArrays = new TreeSet<>(ColumnType.STRING_ARRAY.getNullableStrategy());
+    this.longArrays = new TreeSet<>(ColumnType.LONG_ARRAY.getNullableStrategy());
+    this.doubleArrays = new TreeSet<>(ColumnType.DOUBLE_ARRAY.getNullableStrategy());
   }
 
-  public void addLongValue(@Nullable Long value)
+  public int addLongValue(@Nullable Long value)
   {
     longDictionary.add(value);
+    return StructuredDataProcessor.getLongObjectEstimateSize();
   }
 
-  public void addDoubleValue(@Nullable Double value)
+  public int addDoubleValue(@Nullable Double value)
   {
     doubleDictionary.add(value);
+    return StructuredDataProcessor.getDoubleObjectEstimateSize();
   }
 
-  public void addStringValue(@Nullable String value)
+  public int addStringValue(@Nullable String value)
   {
     stringDictionary.add(value);
+    return StructuredDataProcessor.estimateStringSize(value);
+  }
+
+  public int addStringArray(@Nullable Object[] value)
+  {
+    if (value == null) {
+      return 0;
+    }
+    stringArrays.add(value);
+    int sizeEstimate = 0;
+    for (Object o : value) {
+      if (o != null) {
+        sizeEstimate += addStringValue((String) o);
+      }
+    }
+    arrayBytesSizeEstimate += sizeEstimate;
+    return sizeEstimate;
+  }
+
+  public int addLongArray(@Nullable Object[] value)
+  {
+    if (value == null) {
+      return 0;
+    }
+    longArrays.add(value);
+    int sizeEstimate = 0;
+    for (Object o : value) {
+      if (o != null) {
+        sizeEstimate += addLongValue((Long) o);
+      }
+    }
+    arrayBytesSizeEstimate += sizeEstimate;
+    return sizeEstimate;
+  }
+
+  public int addDoubleArray(@Nullable Object[] value)
+  {
+    if (value == null) {
+      return 0;
+    }
+    doubleArrays.add(value);
+    int sizeEstimate = 0;
+    for (Object o : value) {
+      if (o != null) {
+        sizeEstimate += addDoubleValue((Double) o);
+      }
+    }
+    arrayBytesSizeEstimate += sizeEstimate;
+    return sizeEstimate;
   }
 
   public GlobalDictionarySortedCollector getSortedCollector()
@@ -184,7 +251,9 @@ public class GlobalDimensionDictionary
       public int indexOf(Double value)
       {
         int id = doubleDictionary.getId(value);
-        return id < 0 ? DimensionDictionary.ABSENT_VALUE_ID : sortedDoubleDimensionDictionary.getSortedIdFromUnsortedId(id);
+        return id < 0
+               ? DimensionDictionary.ABSENT_VALUE_ID
+               : sortedDoubleDimensionDictionary.getSortedIdFromUnsortedId(id);
       }
 
       @Override
@@ -199,16 +268,70 @@ public class GlobalDimensionDictionary
         // nothing to inspect
       }
     };
-    return new GlobalDictionarySortedCollector(strings, longs, doubles);
+
+    // offset by 1 because nulls are ignored by the indexer, but always global id 0
+    final int adjustLongs = 1 + strings.size();
+    final int adjustDoubles = adjustLongs + longs.size();
+    TreeSet<Object[]> sortedArrays = new TreeSet<>(new Comparator<Object[]>()
+    {
+      @Override
+      public int compare(Object[] o1, Object[] o2)
+      {
+        return FrontCodedIntArrayIndexedWriter.ARRAY_COMPARATOR.compare(convertArray(o1), convertArray(o2));
+      }
+
+      @Nullable
+      private int[] convertArray(Object[] array)
+      {
+        if (array == null) {
+          return null;
+        }
+        final int[] globalIds = new int[array.length];
+        for (int i = 0; i < array.length; i++) {
+          if (array[i] == null) {
+            globalIds[i] = 0;
+          } else if (array[i] instanceof String) {
+            // offset by 1 because nulls are ignored by the indexer, but always global id 0
+            globalIds[i] = 1 + strings.indexOf((String) array[i]);
+          } else if (array[i] instanceof Long) {
+            globalIds[i] = longs.indexOf((Long) array[i]) + adjustLongs;
+          } else if (array[i] instanceof Double) {
+            globalIds[i] = doubles.indexOf((Double) array[i]) + adjustDoubles;
+          } else {
+            globalIds[i] = -1;
+          }
+          Preconditions.checkArgument(
+              globalIds[i] >= 0,
+              "unknown global id [%s] for value [%s]",
+              globalIds[i],
+              array[i]
+          );
+        }
+        return globalIds;
+      }
+    });
+    sortedArrays.addAll(stringArrays);
+    sortedArrays.addAll(longArrays);
+    sortedArrays.addAll(doubleArrays);
+
+    return new GlobalDictionarySortedCollector(strings, longs, doubles, sortedArrays, sortedArrays.size());
   }
 
   public long sizeInBytes()
   {
-    return stringDictionary.sizeInBytes() + longDictionary.sizeInBytes() + doubleDictionary.sizeInBytes();
+    return stringDictionary.sizeInBytes()
+           + longDictionary.sizeInBytes()
+           + doubleDictionary.sizeInBytes()
+           + arrayBytesSizeEstimate;
   }
 
   public int getCardinality()
   {
-    return stringDictionary.size() + longDictionary.size() + doubleDictionary.size();
+    return stringDictionary.size()
+           + longDictionary.size()
+           + doubleDictionary.size()
+           + stringArrays.size()
+           + longArrays.size()
+           + doubleArrays.size();
   }
 }

@@ -1770,7 +1770,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   /**
    * Signals the ingestion loop to pause.
    *
-   * @return one of the following Responses: 400 Bad Request if the task has started publishing; 202 Accepted if the
+   * @return one of the following Responses: 409 Bad Request if the task has started publishing; 202 Accepted if the
    * method has timed out and returned before the task has paused; 200 OK with a map of the current partition sequences
    * in the response body if the task successfully paused
    */
@@ -1789,7 +1789,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   public Response pause() throws InterruptedException
   {
     if (!(status == Status.PAUSED || status == Status.READING)) {
-      return Response.status(Response.Status.BAD_REQUEST)
+      return Response.status(Response.Status.CONFLICT)
                      .type(MediaType.TEXT_PLAIN)
                      .entity(StringUtils.format("Can't pause, task is not in a pausable state (state: [%s])", status))
                      .build();

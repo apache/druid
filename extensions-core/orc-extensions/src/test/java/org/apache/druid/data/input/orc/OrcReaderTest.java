@@ -36,7 +36,6 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.NestedDataDimensionSchema;
 import org.apache.druid.segment.transform.ExpressionTransform;
@@ -453,7 +452,6 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         "middle",
         "list",
         "map",
-        "ts",
         "decimal1"
     );
     try (CloseableIterator<InputRow> iterator = reader.read()) {
@@ -593,7 +591,6 @@ public class OrcReaderTest extends InitializedNullHandlingTest
   @Test
   public void testNestedArray() throws IOException
   {
-    ExpressionProcessing.initializeForTests(true);
     final InputFormat inputFormat = new OrcInputFormat(
         new JSONPathSpec(
             true,
@@ -668,9 +665,6 @@ public class OrcReaderTest extends InitializedNullHandlingTest
       );
       Assert.assertArrayEquals(new Object[]{1L, 2L}, (Object[]) row.getRaw("t_d_0"));
       Assert.assertFalse(iterator.hasNext());
-    }
-    finally {
-      ExpressionProcessing.initializeForTests(null);
     }
   }
 

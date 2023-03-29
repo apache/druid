@@ -164,7 +164,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   public static void teardownClass() throws IOException
   {
     CLOSER.close();
-    ExpressionProcessing.initializeForTests(null);
+    ExpressionProcessing.initializeForTests();
   }
 
   @Parameterized.Parameters(name = "query = {0}")

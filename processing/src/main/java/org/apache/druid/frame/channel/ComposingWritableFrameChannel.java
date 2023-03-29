@@ -90,18 +90,23 @@ public class ComposingWritableFrameChannel implements WritableFrameChannel
 
       // We are converting the corresponding channel to read only after exhausting it because that channel won't be used
       // for writes anymore
-      if (outputChannelSuppliers != null) {
-        outputChannelSuppliers.get(currentIndex).get().convertToReadOnly();
-      }
-      if (partitionedOutputChannelSuppliers != null) {
-        partitionedOutputChannelSuppliers.get(currentIndex).get().convertToReadOnly();
-      }
+      convertChannelSuppliersToReadOnly(currentIndex);
 
       currentIndex++;
       if (currentIndex >= writableChannelSuppliers.size()) {
         throw rlee;
       }
       write(frameWithPartition);
+    }
+  }
+
+  private void convertChannelSuppliersToReadOnly(int index)
+  {
+    if (outputChannelSuppliers != null) {
+      outputChannelSuppliers.get(index).get().convertToReadOnly();
+    }
+    if (partitionedOutputChannelSuppliers != null) {
+      partitionedOutputChannelSuppliers.get(index).get().convertToReadOnly();
     }
   }
 
@@ -118,6 +123,7 @@ public class ComposingWritableFrameChannel implements WritableFrameChannel
   {
     if (currentIndex < writableChannelSuppliers.size()) {
       writableChannelSuppliers.get(currentIndex).get().close();
+      convertChannelSuppliersToReadOnly(currentIndex);
       currentIndex = writableChannelSuppliers.size();
     }
   }

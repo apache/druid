@@ -183,7 +183,7 @@ public class MSQTasksTest
     }
     catch (Exception e) {
       Assert.assertEquals(
-          MSQFaultUtils.generateMessageWithErrorCode(new TaskStartTimeoutFault(numTasks + 1)),
+          MSQFaultUtils.generateMessageWithErrorCode(new TaskStartTimeoutFault(numTasks + 1, 5000)),
           MSQFaultUtils.generateMessageWithErrorCode(((MSQException) e.getCause()).getFault())
       );
     }

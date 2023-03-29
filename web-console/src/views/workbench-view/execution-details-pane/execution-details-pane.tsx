@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 import { IconNames } from '@blueprintjs/icons';
-import { RefName } from 'druid-query-toolkit';
+import { T } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
@@ -51,7 +51,7 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
         return (
           <div>
             <p>{`General info for ${execution.id}${
-              ingestDatasource ? ` ingesting into ${RefName.create(ingestDatasource, true)}` : ''
+              ingestDatasource ? ` ingesting into ${T(ingestDatasource)}` : ''
             }`}</p>
             {execution.error && <ExecutionErrorPane execution={execution} />}
             {execution.stages ? (
