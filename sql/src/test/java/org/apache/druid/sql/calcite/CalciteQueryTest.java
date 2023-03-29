@@ -6597,6 +6597,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnplannableCountDistinctMultiplelFields()
   {
+    msqCompatible();
     assertQueryIsUnplannable(
         "SELECT SUM(cnt), COUNT(distinct dim2, unique_dim1) FROM druid.foo",
         "Possible error: cannot use count distinct on multiple fields since one field 'unique_dim1' is complex: " +
