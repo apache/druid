@@ -130,5 +130,4 @@ jobs:
 #    uses: ./.github/workflows/standard-its.yml
 
   revised-its:
-    needs: unit-tests
     uses: ./.github/workflows/revised-its.yml

@@ -24,7 +24,6 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import junitparams.Parameters;
-
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -38,7 +37,6 @@ import org.apache.druid.testing.clients.QueryResourceTestClient;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.testsEx.categories.Query;
-import org.apache.druid.testsEx.config.BaseJUnitRule;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.apache.druid.testsEx.indexer.AbstractITBatchIndexTest;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
