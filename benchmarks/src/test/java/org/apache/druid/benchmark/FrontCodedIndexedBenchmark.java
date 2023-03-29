@@ -139,7 +139,7 @@ public class FrontCodedIndexedBenchmark
         new OnHeapMemorySegmentWriteOutMedium(),
         ByteOrder.nativeOrder(),
         "front-coded-4".equals(indexType) ? 4 : 16,
-        false
+        FrontCodedIndexed.V0
     );
     frontCodedIndexedWriter.open();
 
@@ -147,7 +147,7 @@ public class FrontCodedIndexedBenchmark
         new OnHeapMemorySegmentWriteOutMedium(),
         ByteOrder.nativeOrder(),
         "front-coded-incremental-buckets-4".equals(indexType) ? 4 : 16,
-        true
+        FrontCodedIndexed.V1
     );
     frontCodedIndexedWriterIncrementalBuckets.open();
 
