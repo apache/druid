@@ -4227,7 +4227,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithSumOnColumn()
+  public void testUnnestWithSumOnUnnestedVirtualColumn()
   {
     skipVectorize();
     cannotVectorize();
@@ -4253,7 +4253,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithSumOnColumn1()
+  public void testUnnestWithSumOnUnnestedColumn()
   {
     skipVectorize();
     cannotVectorize();
@@ -4283,4 +4283,64 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testUnnestWithGroupByHavingWithWhereOnAggCol()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "SELECT d3, COUNT(*) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) AS unnested(d3) WHERE d3 IN ('a','c') GROUP BY d3 HAVING COUNT(*) = 1",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(UnnestDataSource.create(
+                            new TableDataSource(CalciteTests.DATASOURCE3),
+                            expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                            new InDimFilter("j0.unnest", ImmutableSet.of("a", "c"), null)
+                        ))
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setContext(QUERY_CONTEXT_UNNEST)
+                        .setDimensions(new DefaultDimensionSpec("j0.unnest", "_d0", ColumnType.STRING))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .setHavingSpec(new DimFilterHavingSpec(selector("a0", "1", null), true))
+                        .setContext(QUERY_CONTEXT_UNNEST)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a", 1L},
+            new Object[]{"c", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithGroupByHavingWithWhereOnUnnestCol()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "SELECT d3, COUNT(*) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) AS unnested(d3) WHERE d3 IN ('a','c') GROUP BY d3 HAVING d3='a'",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(UnnestDataSource.create(
+                            new TableDataSource(CalciteTests.DATASOURCE3),
+                            expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                            new InDimFilter("j0.unnest", ImmutableSet.of("a", "c"), null)
+                        ))
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setContext(QUERY_CONTEXT_UNNEST)
+                        .setDimensions(new DefaultDimensionSpec("j0.unnest", "_d0", ColumnType.STRING))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .setDimFilter(selector("j0.unnest", "a", null))
+                        .setContext(QUERY_CONTEXT_UNNEST)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a", 1L}
+        )
+    );
+  }
 }
