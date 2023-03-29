@@ -30,6 +30,7 @@ import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.JobStatus;
+import io.fabric8.kubernetes.api.model.batch.v1.JobStatusBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
@@ -62,6 +63,24 @@ public class DruidKubernetesPeonClientTest
     JobResponse jobResponse = client.waitForJobCompletion(new K8sTaskId("some-task"), 1, TimeUnit.SECONDS);
     Assertions.assertEquals(PeonPhase.FAILED, jobResponse.getPhase());
     Assertions.assertNull(jobResponse.getJob());
+  }
+
+  @Test
+  void testWaitingForAPodToGetReadySuccess()
+  {
+    DruidKubernetesPeonClient peonClient = new DruidKubernetesPeonClient(new TestKubernetesClient(this.client), "test",
+        false
+    );
+    Job job = new JobBuilder()
+        .withNewMetadata()
+        .withName("sometask")
+        .endMetadata()
+        .withStatus(new JobStatusBuilder().withActive(null).withSucceeded(1).build())
+        .build();
+    client.batch().v1().jobs().inNamespace("test").create(job);
+    JobResponse jobResponse = peonClient.waitForJobCompletion(new K8sTaskId("sometask"), 1, TimeUnit.SECONDS);
+    Assertions.assertEquals(PeonPhase.SUCCEEDED, jobResponse.getPhase());
+    Assertions.assertEquals(job.getStatus().getSucceeded(), jobResponse.getJob().getStatus().getSucceeded());
   }
 
   @Test
