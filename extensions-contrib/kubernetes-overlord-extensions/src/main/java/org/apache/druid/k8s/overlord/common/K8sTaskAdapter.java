@@ -40,12 +40,20 @@ import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.ForkingTaskRunner;
+import org.apache.druid.indexing.overlord.QuotableWhiteSpaceSplitter;
+import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.log.StartupLoggingConfig;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -63,33 +71,48 @@ import java.util.Optional;
  * to add some extra coordination to shut down sidecar containers when the main pod exits.
  */
 
-public abstract class K8sTaskAdapter implements TaskAdapter<Pod, Job>
+public abstract class K8sTaskAdapter implements TaskAdapter
 {
 
   private static final EmittingLogger log = new EmittingLogger(K8sTaskAdapter.class);
 
   protected final KubernetesClientApi client;
-  protected final KubernetesTaskRunnerConfig config;
+  protected final KubernetesTaskRunnerConfig taskRunnerConfig;
+  protected final TaskConfig taskConfig;
+  protected final StartupLoggingConfig startupLoggingConfig;
+  protected final DruidNode node;
   protected final ObjectMapper mapper;
 
   public K8sTaskAdapter(
       KubernetesClientApi client,
-      KubernetesTaskRunnerConfig config,
+      KubernetesTaskRunnerConfig taskRunnerConfig,
+      TaskConfig taskConfig,
+      StartupLoggingConfig startupLoggingConfig,
+      DruidNode node,
       ObjectMapper mapper
   )
   {
     this.client = client;
-    this.config = config;
+    this.taskRunnerConfig = taskRunnerConfig;
+    this.taskConfig = taskConfig;
+    this.startupLoggingConfig = startupLoggingConfig;
+    this.node = node;
     this.mapper = mapper;
   }
 
   @Override
-  public Job fromTask(Task task, PeonCommandContext context) throws IOException
+  public Job fromTask(Task task) throws IOException
   {
     String myPodName = System.getenv("HOSTNAME");
-    Pod pod = client.executeRequest(client -> client.pods().inNamespace(config.namespace).withName(myPodName).get());
+    Pod pod = client.executeRequest(client -> client.pods().inNamespace(taskRunnerConfig.namespace).withName(myPodName).get());
+    PeonCommandContext context = new PeonCommandContext(
+        generateCommand(task),
+        javaOpts(task),
+        new File(taskConfig.getBaseTaskDirPaths().get(0)),
+        node.isEnableTlsPort()
+    );
     PodSpec podSpec = pod.getSpec();
-    massageSpec(podSpec, config.primaryContainerName);
+    massageSpec(podSpec, taskRunnerConfig.primaryContainerName);
     return createJobFromPodSpec(podSpec, task, context);
   }
 
@@ -125,9 +148,9 @@ public abstract class K8sTaskAdapter implements TaskAdapter<Pod, Job>
         .endMetadata()
         .withNewSpec()
         .withTemplate(podTemplate)
-        .withActiveDeadlineSeconds(config.maxTaskDuration.toStandardDuration().getStandardSeconds())
+        .withActiveDeadlineSeconds(taskRunnerConfig.maxTaskDuration.toStandardDuration().getStandardSeconds())
         .withBackoffLimit(0)
-        .withTtlSecondsAfterFinished((int) config.taskCleanupDelay.toStandardDuration().getStandardSeconds())
+        .withTtlSecondsAfterFinished((int) taskRunnerConfig.taskCleanupDelay.toStandardDuration().getStandardSeconds())
         .endSpec()
         .build();
   }
@@ -245,7 +268,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter<Pod, Job>
 
   protected Map<String, String> addJobSpecificAnnotations(PeonCommandContext context, K8sTaskId k8sTaskId)
   {
-    Map<String, String> annotations = config.annotations;
+    Map<String, String> annotations = taskRunnerConfig.annotations;
     annotations.put(DruidK8sConstants.TASK_ID, k8sTaskId.getOriginalTaskId());
     annotations.put(DruidK8sConstants.TLS_ENABLED, String.valueOf(context.isEnableTls()));
     return annotations;
@@ -253,7 +276,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter<Pod, Job>
 
   protected Map<String, String> addJobSpecificLabels()
   {
-    Map<String, String> labels = config.labels;
+    Map<String, String> labels = taskRunnerConfig.labels;
     labels.put(DruidK8sConstants.LABEL_KEY, "true");
     return labels;
   }
@@ -269,7 +292,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter<Pod, Job>
     podSpec.setNodeName(null);
     podSpec.setRestartPolicy("Never");
     podSpec.setHostname(k8sTaskId.getK8sTaskId());
-    podSpec.setTerminationGracePeriodSeconds(config.graceTerminationPeriodSeconds);
+    podSpec.setTerminationGracePeriodSeconds(taskRunnerConfig.graceTerminationPeriodSeconds);
 
     PodTemplateSpec podTemplate = new PodTemplateSpec();
     ObjectMeta objectMeta = new ObjectMeta();
@@ -304,4 +327,57 @@ public abstract class K8sTaskAdapter implements TaskAdapter<Pod, Job>
     }
   }
 
+  private List<String> javaOpts(Task task)
+  {
+    final List<String> javaOpts = new ArrayList<>();
+    Iterables.addAll(javaOpts, taskRunnerConfig.javaOptsArray);
+
+    // Override task specific javaOpts
+    Object taskJavaOpts = task.getContextValue(
+        ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY
+    );
+    if (taskJavaOpts != null) {
+      Iterables.addAll(
+          javaOpts,
+          new QuotableWhiteSpaceSplitter((String) taskJavaOpts)
+      );
+    }
+
+    javaOpts.add(org.apache.druid.java.util.common.StringUtils.format("-Ddruid.port=%d", DruidK8sConstants.PORT));
+    javaOpts.add(org.apache.druid.java.util.common.StringUtils.format("-Ddruid.plaintextPort=%d", DruidK8sConstants.PORT));
+    javaOpts.add(org.apache.druid.java.util.common.StringUtils.format("-Ddruid.tlsPort=%d", node.isEnableTlsPort() ? DruidK8sConstants.TLS_PORT : -1));
+    javaOpts.add(org.apache.druid.java.util.common.StringUtils.format(
+        "-Ddruid.task.executor.tlsPort=%d",
+        node.isEnableTlsPort() ? DruidK8sConstants.TLS_PORT : -1
+    ));
+    javaOpts.add(org.apache.druid.java.util.common.StringUtils.format("-Ddruid.task.executor.enableTlsPort=%s", node.isEnableTlsPort())
+    );
+    return javaOpts;
+  }
+
+  private List<String> generateCommand(Task task)
+  {
+    final List<String> command = new ArrayList<>();
+    command.add("/peon.sh");
+    command.add(new File(taskConfig.getBaseTaskDirPaths().get(0)).getAbsolutePath());
+    command.add("1"); // the attemptId is always 1, we never run the task twice on the same pod.
+
+    String nodeType = task.getNodeType();
+    if (nodeType != null) {
+      command.add("--nodeType");
+      command.add(nodeType);
+    }
+
+    // If the task type is queryable, we need to load broadcast segments on the peon, used for
+    // join queries
+    if (task.supportsQueries()) {
+      command.add("--loadBroadcastSegments");
+      command.add("true");
+    }
+    log.info(
+        "Peon Command for K8s job: %s",
+        ForkingTaskRunner.getMaskedCommand(startupLoggingConfig.getMaskProperties(), command)
+    );
+    return command;
+  }
 }

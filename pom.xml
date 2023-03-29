@@ -138,6 +138,12 @@
         <skipTests>false</skipTests>
         <skipUTs>${skipTests}</skipUTs>
         <skipITs>${skipTests}</skipITs>
+
+        <!-- NetBeans has a problem when we use late binding with @ in the surefire arg line.
+             Therefore we set this empty property here.
+             ref: https://github.com/mapstruct/mapstruct/pull/1241
+             -->
+         <jacocoArgLine />
     </properties>
 
     <modules>
@@ -237,7 +243,7 @@
                <enabled>false</enabled>
             </snapshots>
         </repository>
-
+        
         <!-- Only used by core, but moved to root for parallel build dependency resolution -->
         <repository>
             <id>sigar</id>
@@ -247,6 +253,17 @@
             </snapshots>
         </repository>
     </repositories>
+    
+    <pluginRepositories>
+        <pluginRepository>
+            <id>${repoOrgId}</id>
+            <name>${repoOrgName}</name>
+            <url>${repoOrgUrl}</url>
+            <snapshots>
+               <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
 
     <dependencyManagement>
         <dependencies>
@@ -534,8 +551,8 @@
             </dependency>
             <dependency>
                 <groupId>org.glassfish</groupId>
-                <artifactId>javax.el</artifactId>
-                <version>3.0.0</version>
+                <artifactId>jakarta.el</artifactId>
+                <version>3.0.4</version>
             </dependency>
             <dependency>
                 <groupId>org.glassfish.grizzly</groupId>

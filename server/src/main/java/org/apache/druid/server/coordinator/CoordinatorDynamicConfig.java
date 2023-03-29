@@ -530,7 +530,7 @@ public class CoordinatorDynamicConfig
     private static final boolean DEFAULT_PAUSE_COORDINATION = false;
     private static final boolean DEFAULT_REPLICATE_AFTER_LOAD_TIMEOUT = false;
     private static final int DEFAULT_MAX_NON_PRIMARY_REPLICANTS_TO_LOAD = Integer.MAX_VALUE;
-    private static final boolean DEFAULT_USE_ROUND_ROBIN_ASSIGNMENT = false;
+    private static final boolean DEFAULT_USE_ROUND_ROBIN_ASSIGNMENT = true;
 
     private Long leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments;
     private Long mergeBytesLimit;

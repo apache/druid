@@ -38,7 +38,6 @@ import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TestUtils;
-import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
@@ -53,7 +52,6 @@ import org.apache.druid.k8s.overlord.common.JobResponse;
 import org.apache.druid.k8s.overlord.common.K8sTaskAdapter;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
-import org.apache.druid.k8s.overlord.common.PeonCommandContext;
 import org.apache.druid.k8s.overlord.common.PeonPhase;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
@@ -83,16 +81,15 @@ import static org.mockito.Mockito.when;
 
 public class KubernetesTaskRunnerTest
 {
-
   private TaskQueueConfig taskQueueConfig;
   private StartupLoggingConfig startupLoggingConfig;
   private ObjectMapper jsonMapper;
   private KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig;
-  private TaskConfig taskConfig;
   private TaskLogPusher taskLogPusher;
-  private DruidNode node;
+  private DruidNode druidNode;
 
-  public KubernetesTaskRunnerTest()
+  @Before
+  public void setUp()
   {
     TestUtils utils = new TestUtils();
     jsonMapper = utils.getTestObjectMapper();
@@ -103,36 +100,14 @@ public class KubernetesTaskRunnerTest
         new NamedType(ParallelIndexTuningConfig.class, "index_parallel"),
         new NamedType(IndexTask.IndexTuningConfig.class, "index")
     );
-  }
-
-  @Before
-  public void setUp()
-  {
-    taskConfig = new TaskConfig(
-        "src/test/resources",
-        "src/test/resources",
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        null,
-        null,
-        false,
-        null
-    );
     kubernetesTaskRunnerConfig = new KubernetesTaskRunnerConfig();
     kubernetesTaskRunnerConfig.namespace = "test";
     kubernetesTaskRunnerConfig.javaOptsArray = Collections.singletonList("-Xmx2g");
     taskQueueConfig = new TaskQueueConfig(1, Period.millis(1), Period.millis(1), Period.millis(1));
     startupLoggingConfig = new StartupLoggingConfig();
     taskLogPusher = mock(TaskLogPusher.class);
-    node = mock(DruidNode.class);
-    when(node.isEnableTlsPort()).thenReturn(false);
+    druidNode = mock(DruidNode.class);
+    when(druidNode.isEnableTlsPort()).thenReturn(false);
   }
 
   @Test
@@ -157,7 +132,7 @@ public class KubernetesTaskRunnerTest
     when(peonPod.getStatus()).thenReturn(podStatus);
 
     K8sTaskAdapter adapter = mock(K8sTaskAdapter.class);
-    when(adapter.fromTask(eq(task), any())).thenReturn(job);
+    when(adapter.fromTask(eq(task))).thenReturn(job);
 
     DruidKubernetesPeonClient peonClient = mock(DruidKubernetesPeonClient.class);
 
@@ -171,14 +146,11 @@ public class KubernetesTaskRunnerTest
     when(peonClient.cleanUpJob(eq(k8sTaskId))).thenReturn(true);
 
     KubernetesTaskRunner taskRunner = new KubernetesTaskRunner(
-        startupLoggingConfig,
         adapter,
         kubernetesTaskRunnerConfig,
         taskQueueConfig,
         taskLogPusher,
-        peonClient,
-        node,
-        taskConfig
+        peonClient
     );
     KubernetesTaskRunner spyRunner = spy(taskRunner);
 
@@ -213,7 +185,7 @@ public class KubernetesTaskRunnerTest
     when(peonPod.getStatus()).thenReturn(podStatus);
 
     K8sTaskAdapter adapter = mock(K8sTaskAdapter.class);
-    when(adapter.fromTask(eq(task), isA(PeonCommandContext.class))).thenReturn(job);
+    when(adapter.fromTask(eq(task))).thenReturn(job);
 
     DruidKubernetesPeonClient peonClient = mock(DruidKubernetesPeonClient.class);
 
@@ -228,14 +200,11 @@ public class KubernetesTaskRunnerTest
     when(peonClient.cleanUpJob(eq(k8sTaskId))).thenReturn(true);
 
     KubernetesTaskRunner taskRunner = new KubernetesTaskRunner(
-        startupLoggingConfig,
         adapter,
         kubernetesTaskRunnerConfig,
         taskQueueConfig,
         taskLogPusher,
-        peonClient,
-        node,
-        taskConfig
+        peonClient
     );
     KubernetesTaskRunner spyRunner = spy(taskRunner);
 
@@ -249,7 +218,7 @@ public class KubernetesTaskRunnerTest
         peonPod.getStatus().getPodIP(),
         DruidK8sConstants.PORT,
         DruidK8sConstants.TLS_PORT,
-        node.isEnableTlsPort()
+        druidNode.isEnableTlsPort()
     );
     verify(spyRunner, times(1)).updateStatus(eq(task), eq(TaskStatus.success(task.getId(), expectedTaskLocation)));
   }
@@ -279,7 +248,7 @@ public class KubernetesTaskRunnerTest
     when(peonPod.getStatus()).thenReturn(podStatus);
 
     K8sTaskAdapter adapter = mock(K8sTaskAdapter.class);
-    when(adapter.fromTask(eq(task), isA(PeonCommandContext.class))).thenReturn(job);
+    when(adapter.fromTask(eq(task))).thenReturn(job);
     when(adapter.toTask(eq(peonPod))).thenReturn(task);
 
     DruidKubernetesPeonClient peonClient = mock(DruidKubernetesPeonClient.class);
@@ -296,14 +265,11 @@ public class KubernetesTaskRunnerTest
     when(peonClient.cleanUpJob(eq(k8sTaskId))).thenReturn(true);
 
     KubernetesTaskRunner taskRunner = new KubernetesTaskRunner(
-        startupLoggingConfig,
         adapter,
         kubernetesTaskRunnerConfig,
         taskQueueConfig,
         taskLogPusher,
-        peonClient,
-        node,
-        taskConfig
+        peonClient
     );
     KubernetesTaskRunner spyRunner = spy(taskRunner);
     Collection<? extends TaskRunnerWorkItem> workItems = spyRunner.getKnownTasks();
@@ -344,7 +310,7 @@ public class KubernetesTaskRunnerTest
     when(peonPod.getStatus()).thenReturn(podStatus);
 
     K8sTaskAdapter adapter = mock(K8sTaskAdapter.class);
-    when(adapter.fromTask(eq(task), isA(PeonCommandContext.class))).thenReturn(job);
+    when(adapter.fromTask(eq(task))).thenReturn(job);
     when(adapter.toTask(eq(peonPod))).thenReturn(task);
 
     DruidKubernetesPeonClient peonClient = mock(DruidKubernetesPeonClient.class);
@@ -361,14 +327,11 @@ public class KubernetesTaskRunnerTest
     when(peonClient.cleanUpJob(eq(k8sTaskId))).thenReturn(true);
 
     KubernetesTaskRunner taskRunner = new KubernetesTaskRunner(
-        startupLoggingConfig,
         adapter,
         kubernetesTaskRunnerConfig,
         taskQueueConfig,
         taskLogPusher,
-        peonClient,
-        node,
-        taskConfig
+        peonClient
     );
     KubernetesTaskRunner spyRunner = spy(taskRunner);
     Collection<? extends TaskRunnerWorkItem> workItems = spyRunner.getKnownTasks();
@@ -404,14 +367,11 @@ public class KubernetesTaskRunnerTest
     when(peonClient.getMainJobPod(any())).thenReturn(null).thenReturn(pod);
 
     KubernetesTaskRunner taskRunner = new KubernetesTaskRunner(
-        startupLoggingConfig,
         mock(K8sTaskAdapter.class),
         kubernetesTaskRunnerConfig,
         taskQueueConfig,
         taskLogPusher,
-        peonClient,
-        node,
-        taskConfig
+        peonClient
     );
 
     RunnerTaskState state = taskRunner.getRunnerTaskState("foo");
@@ -434,14 +394,11 @@ public class KubernetesTaskRunnerTest
         Period.millis(1)
     );
     assertThrows(IllegalArgumentException.class, () -> new KubernetesTaskRunner(
-        startupLoggingConfig,
         mock(K8sTaskAdapter.class),
         kubernetesTaskRunnerConfig,
         taskQueueConfig,
         taskLogPusher,
-        mock(DruidKubernetesPeonClient.class),
-        node,
-        taskConfig
+        mock(DruidKubernetesPeonClient.class)
     ));
   }
 

@@ -56,7 +56,7 @@ export const IngestSuccessPane = React.memo(function IngestSuccessPane(
   return (
     <div className="ingest-success-pane">
       <p>
-        {`${rows < 0 ? 'Data' : pluralIfNeeded(rows, 'row')} inserted into '${datasource}'.`}
+        {`${rows < 0 ? 'Data' : pluralIfNeeded(rows, 'row')} inserted into ${T(datasource)}.`}
         {warnings > 0 && (
           <>
             {' '}

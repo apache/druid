@@ -28,6 +28,9 @@ in any Python environment, but is optimized for use in Jupyter, providing a comp
 environment which complements the UI-based Druid console. The primary use of `druidapi` at present
 is to support the set of tutorial notebooks provided in the parent directory.
 
+`druidapi` works against any version of Druid. Operations that make use of newer features obviously work
+only against versions of Druid that support those features.
+
 ## Install
 
 At present, the best way to use `druidapi` is to clone the Druid repo itself:
@@ -36,21 +39,29 @@ At present, the best way to use `druidapi` is to clone the Druid repo itself:
 git clone git@github.com:apache/druid.git
 ```
 
-`druidapi` is located in `examples/quickstart/jupyter-notebooks/druidapi/`
+`druidapi` is located in `examples/quickstart/jupyter-notebooks/druidapi/`.
+From this directory, install the package and its dependencies with pip using the following command:
 
-Eventually we would like to create a Python package that can be installed with `pip`. Contributions
-in that area are welcome.
+```
+pip install .
+```
 
-Dependencies are listed in `requirements.txt`.
+Note that there is a second level `druidapi` directory that contains the modules. Do not run
+the install command in the subdirectory.
 
-`druidapi` works against any version of Druid. Operations that exploit newer features obviously work
-only against versions of Druid that support those features.
+Verify your installation by checking that the following command runs in Python:
 
-## Getting Started
+```python
+import druidapi
+```
+
+The import statement should not return anything if it runs successfully.
+
+## Getting started
 
 To use `druidapi`, first import the library, then connect to your cluster by providing the URL to your Router instance. The way that is done differs a bit between consumers.
 
-### From a Tutorial Jupyter Notebook
+### From a tutorial Jupyter notebook
 
 The tutorial Jupyter notebooks in `examples/quickstart/jupyter-notebooks` reside in the same directory tree
 as this library. We start the library using the Jupyter-oriented API which is able to render tables in
@@ -70,40 +81,17 @@ druid = druidapi.jupyter_client(router_endpoint)
 The `jupyter_client` call defines a number of CSS styles to aid in displaying tabular results. It also
 provides a "display" client that renders information as HTML tables.
 
-### From Any Other Juypter Notebook
-
-If you create a Jupyter notebook outside of the `jupyter-notebooks` directory then you must tell Python where
-to find the `druidapi` library. (This step is temporary until `druidapi` is properly packaged.)
-
-First, set a variable to point to the location where you cloned the Druid git repo:
-
-```python
-druid_dev = '/path/to/Druid-repo'
-```
-
-Then, add the notebooks directory to Python's module search path:
-
-```python
-import sys
-sys.path.append(druid_dev + '/examples/quickstart/jupyter-notebooks/')
-```
-
-Now you can import `druidapi` and create a client as shown in the previous section.
-
-### From a Python Script
+### From a Python script
 
 `druidapi` works in any Python script. When run outside of a Jupyter notebook, the various "display"
 commands revert to displaying a text (not HTML) format. The steps are similar to those above:
 
 ```python
-druid_dev = '/path/to/Druid-repo'
-import sys
-sys.path.append(druid_dev + '/examples/quickstart/jupyter-notebooks/')
 import druidapi
 druid = druidapi.client(router_endpoint)
 ```
 
-## Library Organization
+## Library organization
 
 `druidapi` organizes Druid REST operations into various "clients," each of which provides operations
 for one of Druid's functional areas. Obtain a client from the `druid` client created above. For
@@ -127,7 +115,7 @@ available as properties on the `druid` object created above.
 * `display` - A set of convenience operations to display results as lightly formatted tables
   in either HTML (for Jupyter notebooks) or text (for other Python scripts).
 
-## Assumed Cluster Architecture
+## Assumed cluster architecture
 
 `druidapi` assumes that you run a standard Druid cluster with a Router in front of the other nodes.
 This design works well for most Druid clusters:
@@ -148,7 +136,7 @@ The one exception to this rule is if you want to perform a health check (i.e. th
 on a service other than the Router. These checks are _not_ proxied by the Router: you must connect to
 the target service directly.
 
-## Status Operations
+## Status operations
 
 When working with tutorials, a local Druid cluster, or a Druid integration test cluster, it is common
 to start your cluster then immediately start performing `druidapi` operations. However, because Druid
@@ -183,7 +171,7 @@ extension is loaded:
 status_client.properties['druid.extensions.loadList']
 ```
 
-## Display Client
+## Display client
 
 When run in a Jupyter notebook, it is often handy to format results for display. A special display
 client performs operations _and_ formats them for display as HTML tables within the notebook.
@@ -204,7 +192,7 @@ The most common methods are:
 The display client also has other methods to format data as a table, to display various kinds
 of messages and so on.
 
-## Interactive Queries
+## Interactive queries
 
 The original [`pydruid`](https://pythonhosted.org/pydruid/) library revolves around Druid 
 "native" queries. Most new applications now use SQL. `druidapi` provides two ways to run
@@ -264,7 +252,7 @@ channel        count
 
 Within Jupyter, the results are formatted as an HTML table.
 
-### Advanced Queries
+### Advanced queries
 
 In addition to the SQL text, Druid also lets you specify:
 
@@ -350,7 +338,7 @@ resp.show()
 In fact, the display client `sql()` method uses the `resp.show()` method internally, which in turn uses the
 `rows` and `schema` properties.
 
-### Run a Query and Return Results
+### Run a query and return results
 
 The above forms are handy for interactive use in a notebook. If you just need to run a query to use the results
 in code, just do the following:
@@ -366,7 +354,7 @@ sql = 'SELECT * FROM {}'
 rows = sql_client.sql(sql, ['myTable'])
 ```
 
-## MSQ Queries
+## MSQ queries
 
 The SQL client can also run an MSQ query. See the `sql-tutorial.ipynb` notebook for examples. First define the
 query:
@@ -408,7 +396,7 @@ while for Druid to load the resulting segments, so you must wait for the table t
 sql_client.wait_until_ready('myTable')
 ```
 
-## Datasource Operations
+## Datasource operations
 
 To get information about a datasource, prefer to query the `INFORMATION_SCHEMA` tables, or use the methods
 in the display client. Use the datasource client for other operations.
@@ -425,7 +413,7 @@ datasources.drop('myWiki', True)
 
 The True argument asks for "if exists" semantics so you don't get an error if the datasource does not exist.
 
-## REST Client
+## REST client
 
 The `druidapi` is based on a simple REST client which is itself based on the Requests library. If you
 need to use Druid REST APIs not yet wrapped by this library, you can use the REST client directly.
@@ -495,3 +483,28 @@ Druid has a large number of special constants: type names, options, etc. The con
 from druidapi import consts
 help(consts)
 ```
+
+## Contributing
+
+We encourage you to contribute to the `druidapi` package.
+Set up an editable installation for development by running the following command
+in a local clone of your `apache/druid` repo in
+`examples/quickstart/jupyter-notebooks/druidapi/`:
+
+```
+pip install -e .
+```
+
+An editable installation allows you to implement and test changes iteratively
+without having to reinstall the package with every change.
+
+When you update the package, also increment the version field in `setup.py` following the
+[PEP 440 semantic versioning scheme](https://peps.python.org/pep-0440/#semantic-versioning).
+
+Use the following guidelines for incrementing the version number:
+* Increment the third position for a patch or bug fix.
+* Increment the second position for new features, such as adding new method wrappers.
+* Increment the first position for major changes and changes that are not backwards compatible.
+
+Submit your contribution by opening a pull request to the `apache/druid` GitHub repository.
+
