@@ -60,6 +60,11 @@ on:
 
 env:
   MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }} # Used by tests to connect to metadata store directly.
+  DRUID_CLOUD_BUCKET: ${{ inputs.DRUID_CLOUD_BUCKET }}
+  DRUID_CLOUD_PATH: ${{ inputs.DRUID_CLOUD_PATH }}
+  AWS_REGION: ${{ inputs.AWS_REGION }}
+  AWS_ACCESS_KEY_ID: ${{ inputs.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ inputs.AWS_SECRET_ACCESS_KEY }}
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
 
 jobs:
