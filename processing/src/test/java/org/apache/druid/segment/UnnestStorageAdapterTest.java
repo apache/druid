@@ -397,14 +397,8 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       final Filter postFilter = ((PostJoinCursor) cursor).getPostJoinFilter();
       Assert.assertEquals(queryFilter, postFilter);
 
-      ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
-      DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
       int count = 0;
       while (!cursor.isDone()) {
-        Object dimSelectorVal = dimSelector.getObject();
-        if (dimSelectorVal == null) {
-          Assert.assertNull(dimSelectorVal);
-        }
         cursor.advance();
         count++;
       }
