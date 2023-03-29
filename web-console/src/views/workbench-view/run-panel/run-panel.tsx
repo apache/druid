@@ -313,6 +313,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                           key={o}
                           icon={tickIcon(sqlJoinAlgorithm === o)}
                           text={o}
+                          shouldDismissPopover={false}
                           onClick={() =>
                             changeQueryContext(deepSet(queryContext, 'sqlJoinAlgorithm', o))
                           }
