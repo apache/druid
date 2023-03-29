@@ -42,12 +42,8 @@ class Template(BaseTemplate):
         # Adding the following to make druid work with MinIO
         # See https://blog.min.io/how-to-druid-superset-minio/ for more details
         self.add_property(service, 'druid.s3.protocol', 'http')
-        self.add_property(service, 'druid.s3.enabePathStyleAccess', 'true')
-        self.add_property(service, 'druid.s3.endpoint.url', 'http://localhost:9000/')
-        self.add_property(service, 's3service.s3-endpoint', 'localhost')
-        self.add_property(service, 's3service.s3-endpoint-http-port', '9000')
-        self.add_property(service, 's3service.disable-dns-buckets', 'true')
-        self.add_property(service, 's3service.https-only', 'false')
+        self.add_property(service, 'druid.s3.enablePathStyleAccess', 'true')
+        self.add_property(service, 'druid.s3.endpoint.url', 'http://172.172.172.5:9000/')
 
     # This test uses different data than the default.
     def define_data_dir(self, service):

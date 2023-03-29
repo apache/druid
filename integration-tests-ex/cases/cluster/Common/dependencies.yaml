@@ -89,26 +89,31 @@ services:
   minio:
     container_name: minio
     command: server /data --console-address ":9001"
-    environment:
-      - MINIO_ROOT_USER=${AWS_ACCESS_KEY_ID}
-      - MINIO_ROOT_PASSWORD=${AWS_SECRET_ACCESS_KEY}
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.5
     image: minio/minio:latest
     ports:
       - '9000:9000'
       - '9001:9001'
     volumes:
       - ${SHARED_DIR}/minio:/data
+    environment:
+      - MINIO_ROOT_USER=${AWS_ACCESS_KEY_ID}
+      - MINIO_ROOT_PASSWORD=${AWS_SECRET_ACCESS_KEY}
 
   create_minio_buckets:
     image: minio/mc
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.6
     depends_on:
       - minio
     entrypoint: >
       /bin/sh -c "
       /usr/bin/mc alias set s3 http://minio:9000 ${AWS_ACCESS_KEY_ID} ${AWS_SECRET_ACCESS_KEY};
       /usr/bin/mc mb s3/${DRUID_CLOUD_BUCKET};
-      /usr/bin/mc policy set public s3/${DRUID_CLOUD_BUCKET};
-      exit 0;
+      /usr/bin/mc anonymous set public s3/${DRUID_CLOUD_BUCKET};
       "
 
   ## TODO: Not yet retested
