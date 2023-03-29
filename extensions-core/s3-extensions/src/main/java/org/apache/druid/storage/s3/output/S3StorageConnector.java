@@ -21,13 +21,14 @@ package org.apache.druid.storage.s3.output;
 
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
 import org.apache.commons.io.input.NullInputStream;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.RetryingInputStream;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
 import org.apache.druid.java.util.common.FileUtils;
@@ -35,6 +36,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
@@ -49,14 +51,18 @@ import java.io.OutputStream;
 import java.io.SequenceInputStream;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 
+/**
+ * In this implementation, all remote calls to aws s3 are retried {@link S3OutputConfig#getMaxRetry()} times.
+ */
 public class S3StorageConnector implements StorageConnector
 {
+  private static final Logger log = new Logger(S3StorageConnector.class);
 
   private final S3OutputConfig config;
   private final ServerSideEncryptingAmazonS3 s3Client;
@@ -64,6 +70,7 @@ public class S3StorageConnector implements StorageConnector
   private static final String DELIM = "/";
   private static final Joiner JOINER = Joiner.on(DELIM).skipNulls();
   private static final long DOWNLOAD_MAX_CHUNK_SIZE = 100_000_000;
+  private static final int MAX_NUMBER_OF_LISTINGS = 1000;
 
   public S3StorageConnector(S3OutputConfig config, ServerSideEncryptingAmazonS3 serverSideEncryptingAmazonS3)
   {
@@ -83,9 +90,18 @@ public class S3StorageConnector implements StorageConnector
   }
 
   @Override
-  public boolean pathExists(String path)
+  public boolean pathExists(String path) throws IOException
   {
-    return s3Client.doesObjectExist(config.getBucket(), objectPath(path));
+    try {
+      return S3Utils.retryS3Operation(
+          () -> s3Client.doesObjectExist(config.getBucket(), objectPath(path)),
+          config.getMaxRetry()
+      );
+    }
+    catch (Exception e) {
+      log.error("Error occurred while checking if file [%s] exists. Error: [%s]", path, e.getMessage());
+      throw new IOException(e);
+    }
   }
 
   @Override
@@ -120,7 +136,15 @@ public class S3StorageConnector implements StorageConnector
       currReadStart.set(getObjectRequest.getRange()[0]);
       readEnd = getObjectRequest.getRange()[1] + 1;
     } else {
-      readEnd = this.s3Client.getObjectMetadata(config.getBucket(), objectPath(path)).getInstanceLength();
+      try {
+        readEnd = S3Utils.retryS3Operation(
+            () -> this.s3Client.getObjectMetadata(config.getBucket(), objectPath(path)).getInstanceLength(),
+            config.getMaxRetry()
+        );
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
     }
     AtomicBoolean isSequenceStreamClosed = new AtomicBoolean(false);
 
@@ -174,7 +198,15 @@ public class S3StorageConnector implements StorageConnector
                     @Override
                     public InputStream open(GetObjectRequest object)
                     {
-                      return s3Client.getObject(object).getObjectContent();
+                      try {
+                        return S3Utils.retryS3Operation(
+                            () -> s3Client.getObject(object).getObjectContent(),
+                            config.getMaxRetry()
+                        );
+                      }
+                      catch (Exception e) {
+                        throw new RuntimeException(e);
+                      }
                     }
 
                     @Override
@@ -190,7 +222,7 @@ public class S3StorageConnector implements StorageConnector
                     }
                   },
                   S3Utils.S3RETRY,
-                  3
+                  config.getMaxRetry()
               ),
               outFile,
               new byte[8 * 1024],
@@ -245,71 +277,102 @@ public class S3StorageConnector implements StorageConnector
   }
 
   @Override
-  public void deleteFile(String path)
+  public void deleteFile(String path) throws IOException
   {
-    s3Client.deleteObject(config.getBucket(), objectPath(path));
-  }
-
-  @Override
-  public void deleteRecursively(String dirName)
-  {
-    ListObjectsV2Request listObjectsRequest = new ListObjectsV2Request()
-        .withBucketName(config.getBucket())
-        .withPrefix(objectPath(dirName));
-    ListObjectsV2Result objectListing = s3Client.listObjectsV2(listObjectsRequest);
-
-    while (objectListing.getObjectSummaries().size() > 0) {
-      List<DeleteObjectsRequest.KeyVersion> deleteObjectsRequestKeys = objectListing.getObjectSummaries()
-                                                                                    .stream()
-                                                                                    .map(S3ObjectSummary::getKey)
-                                                                                    .map(DeleteObjectsRequest.KeyVersion::new)
-                                                                                    .collect(Collectors.toList());
-      DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(config.getBucket()).withKeys(
-          deleteObjectsRequestKeys);
-      s3Client.deleteObjects(deleteObjectsRequest);
-
-      // If the listing is truncated, all S3 objects have been deleted, otherwise, fetch more using the continuation token
-      if (objectListing.isTruncated()) {
-        listObjectsRequest.withContinuationToken(objectListing.getContinuationToken());
-        objectListing = s3Client.listObjectsV2(listObjectsRequest);
-      } else {
-        break;
-      }
+    try {
+      S3Utils.retryS3Operation(() -> {
+        s3Client.deleteObject(config.getBucket(), objectPath(path));
+        return null;
+      }, config.getMaxRetry());
+    }
+    catch (Exception e) {
+      log.error("Error occurred while deleting file at path [%s]. Error: [%s]", path, e.getMessage());
+      throw new IOException(e);
     }
   }
 
   @Override
-  public List<String> listDir(String dirName)
+  public void deleteFiles(Iterable<String> paths) throws IOException
   {
-    ListObjectsV2Request listObjectsRequest = new ListObjectsV2Request()
-        .withBucketName(config.getBucket())
-        .withPrefix(objectPath(dirName))
-        .withDelimiter(DELIM);
+    int currentItemSize = 0;
+    List<DeleteObjectsRequest.KeyVersion> versions = new ArrayList<>();
 
-    List<String> lsResult = new ArrayList<>();
-
-    ListObjectsV2Result objectListing = s3Client.listObjectsV2(listObjectsRequest);
-
-    while (objectListing.getObjectSummaries().size() > 0) {
-      objectListing.getObjectSummaries()
-                   .stream().map(S3ObjectSummary::getKey)
-                   .map(
-                       key -> {
-                         int index = key.lastIndexOf(DELIM);
-                         return key.substring(index + 1);
-                       }
-                   )
-                   .filter(keyPart -> !keyPart.isEmpty())
-                   .forEach(lsResult::add);
-
-      if (objectListing.isTruncated()) {
-        listObjectsRequest.withContinuationToken(objectListing.getContinuationToken());
-        objectListing = s3Client.listObjectsV2(listObjectsRequest);
-      } else {
-        break;
+    for (String path : paths) {
+      // appending base path to each path
+      versions.add(new DeleteObjectsRequest.KeyVersion(objectPath(path)));
+      currentItemSize++;
+      if (currentItemSize == MAX_NUMBER_OF_LISTINGS) {
+        deleteKeys(versions);
+        // resetting trackers
+        versions.clear();
+        currentItemSize = 0;
       }
     }
-    return lsResult;
+    // deleting remaining elements
+    if (currentItemSize != 0) {
+      deleteKeys(versions);
+    }
+  }
+
+  private void deleteKeys(List<DeleteObjectsRequest.KeyVersion> versions) throws IOException
+  {
+    try {
+      S3Utils.deleteBucketKeys(s3Client, config.getBucket(), versions, config.getMaxRetry());
+    }
+    catch (Exception e) {
+      throw new IOException(e);
+    }
+  }
+
+
+  @Override
+  public void deleteRecursively(String dirName) throws IOException
+  {
+    try {
+      S3Utils.deleteObjectsInPath(
+          s3Client,
+          MAX_NUMBER_OF_LISTINGS,
+          config.getBucket(),
+          objectPath(dirName),
+          Predicates.alwaysTrue(),
+          config.getMaxRetry()
+      );
+    }
+    catch (Exception e) {
+      log.error("Error occurred while deleting files in path [%s]. Error: [%s]", dirName, e.getMessage());
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public Iterator<String> listDir(String dirName) throws IOException
+  {
+    final String prefixBasePath = objectPath(dirName);
+    try {
+
+      Iterator<S3ObjectSummary> files = S3Utils.objectSummaryIterator(
+          s3Client,
+          ImmutableList.of(new CloudObjectLocation(
+              config.getBucket(),
+              prefixBasePath
+          ).toUri("s3")),
+          MAX_NUMBER_OF_LISTINGS,
+          config.getMaxRetry()
+      );
+
+      return Iterators.transform(files, summary -> {
+        String[] size = summary.getKey().split(prefixBasePath, 2);
+        if (size.length > 1) {
+          return size[1];
+        } else {
+          return "";
+        }
+      });
+    }
+    catch (Exception e) {
+      log.error("Error occoured while listing files at path [%s]. Error: [%s]", dirName, e.getMessage());
+      throw new IOException(e);
+    }
   }
 
   @Nonnull

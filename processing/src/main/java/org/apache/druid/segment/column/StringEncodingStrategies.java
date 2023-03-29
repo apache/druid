@@ -58,7 +58,7 @@ public class StringEncodingStrategies
             writeoutMedium,
             IndexIO.BYTE_ORDER,
             strategy.getBucketSize(),
-            true
+            strategy.getFormatVersion()
         );
       } else {
         throw new ISE("Unknown encoding strategy: %s", encodingStrategy.getType());

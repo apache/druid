@@ -68,10 +68,10 @@ import java.util.NoSuchElementException;
 import java.util.SortedSet;
 
 /**
- * Supplies indexes for nested field columns {@link NestedFieldLiteralDictionaryEncodedColumn} of
+ * Supplies indexes for nested field columns {@link NestedFieldDictionaryEncodedColumn} of
  * {@link NestedDataComplexColumn}.
  */
-public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Indexed<ByteBuffer>>
+public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<ByteBuffer>>
     implements ColumnIndexSupplier
 {
   @Nullable
@@ -83,17 +83,26 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
   private final Supplier<FixedIndexed<Long>> globalLongDictionarySupplier;
   private final Supplier<FixedIndexed<Double>> globalDoubleDictionarySupplier;
 
+  @SuppressWarnings({"FieldCanBeLocal", "unused"})
+  @Nullable
+  private final GenericIndexed<ImmutableBitmap> arrayElementBitmaps;
+  @SuppressWarnings({"FieldCanBeLocal", "unused"})
+  @Nullable
+  private final Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier;
+
   private final int adjustLongId;
   private final int adjustDoubleId;
 
-  public NestedFieldLiteralColumnIndexSupplier(
-      NestedLiteralTypeInfo.TypeSet types,
+  public NestedFieldColumnIndexSupplier(
+      NestedFieldTypeInfo.TypeSet types,
       BitmapFactory bitmapFactory,
       GenericIndexed<ImmutableBitmap> bitmaps,
       Supplier<FixedIndexed<Integer>> localDictionarySupplier,
       Supplier<TStringDictionary> globalStringDictionarySupplier,
       Supplier<FixedIndexed<Long>> globalLongDictionarySupplier,
-      Supplier<FixedIndexed<Double>> globalDoubleDictionarySupplier
+      Supplier<FixedIndexed<Double>> globalDoubleDictionarySupplier,
+      @Nullable Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier,
+      @Nullable GenericIndexed<ImmutableBitmap> arrayElementBitmaps
   )
   {
     this.singleType = types.getSingleType();
@@ -103,6 +112,8 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
     this.globalStringDictionarySupplier = globalStringDictionarySupplier;
     this.globalLongDictionarySupplier = globalLongDictionarySupplier;
     this.globalDoubleDictionarySupplier = globalDoubleDictionarySupplier;
+    this.arrayElementDictionarySupplier = arrayElementDictionarySupplier;
+    this.arrayElementBitmaps = arrayElementBitmaps;
     this.adjustLongId = globalStringDictionarySupplier.get().size();
     this.adjustDoubleId = adjustLongId + globalLongDictionarySupplier.get().size();
   }
@@ -320,7 +331,7 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
     @Override
     public ImmutableBitmap getBitmap(int idx)
     {
-      return NestedFieldLiteralColumnIndexSupplier.this.getBitmap(idx);
+      return NestedFieldColumnIndexSupplier.this.getBitmap(idx);
     }
   }
 

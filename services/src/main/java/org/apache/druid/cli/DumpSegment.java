@@ -93,7 +93,7 @@ import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.nested.CompressedNestedDataComplexColumn;
-import org.apache.druid.segment.nested.NestedFieldLiteralDictionaryEncodedColumn;
+import org.apache.druid.segment.nested.NestedFieldDictionaryEncodedColumn;
 import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.timeline.SegmentId;
@@ -590,8 +590,8 @@ public class DumpSegment extends GuiceRunnable
                 final ColumnIndexSupplier indexSupplier = nestedDataColumn.getColumnIndexSupplier(pathParts);
 
                 final ColumnHolder nestedPathColumnHolder = nestedDataColumn.getColumnHolder(pathParts);
-                final NestedFieldLiteralDictionaryEncodedColumn<?> nestedPathColumn =
-                    (NestedFieldLiteralDictionaryEncodedColumn<?>) nestedPathColumnHolder.getColumn();
+                final NestedFieldDictionaryEncodedColumn<?> nestedPathColumn =
+                    (NestedFieldDictionaryEncodedColumn<?>) nestedPathColumnHolder.getColumn();
                 final FixedIndexed<Integer> nestedPathDictionary = nestedPathColumn.getDictionary();
 
                 SimpleAscendingOffset offset = new SimpleAscendingOffset(index.getNumRows());

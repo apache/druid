@@ -52,6 +52,7 @@ import org.apache.druid.k8s.overlord.common.JobResponse;
 import org.apache.druid.k8s.overlord.common.K8sTaskAdapter;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
+import org.apache.druid.k8s.overlord.common.KubernetesResourceNotFoundException;
 import org.apache.druid.k8s.overlord.common.PeonPhase;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
@@ -425,6 +426,20 @@ public class KubernetesTaskRunnerTest
 
     TaskLocation realLocation = k8sWorkItem.getLocation();
     assertEquals(TaskLocation.create("tweak", DruidK8sConstants.PORT, DruidK8sConstants.TLS_PORT, false), realLocation);
+  }
+
+  @Test
+  public void testWorkItemGetLocation_withKubernetesResourceNotFoundException_returnsUnknownLocation()
+  {
+    KubernetesPeonClient client = mock(KubernetesPeonClient.class);
+
+    when(client.getMainJobPod(any())).thenThrow(KubernetesResourceNotFoundException.class);
+
+    Task task = mock(Task.class);
+    when(task.getId()).thenReturn("id");
+    KubernetesTaskRunner.K8sWorkItem k8sWorkItem = new KubernetesTaskRunner.K8sWorkItem(client, task, null);
+    TaskLocation location = k8sWorkItem.getLocation();
+    assertEquals(TaskLocation.unknown(), location);
   }
 
   private Task makeTask()

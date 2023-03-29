@@ -370,11 +370,26 @@ public abstract class ExprEval<T>
     return new ComplexExprEval(outputType, value);
   }
 
+  public static ExprEval bestEffortArray(@Nullable List<?> theList)
+  {
+    // do not convert empty lists to arrays with a single null element here, because that should have been done
+    // by the selectors preparing their ObjectBindings if necessary. If we get to this point it was legitimately
+    // empty
+    NonnullPair<ExpressionType, Object[]> coerced = coerceListToArray(theList, false);
+    if (coerced == null) {
+      return bestEffortOf(null);
+    }
+    return ofArray(coerced.lhs, coerced.rhs);
+  }
+
   /**
    * Examine java type to find most appropriate expression type
    */
   public static ExprEval bestEffortOf(@Nullable Object val)
   {
+    if (val == null) {
+      return new StringExprEval(null);
+    }
     if (val instanceof ExprEval) {
       return (ExprEval) val;
     }
@@ -468,14 +483,7 @@ public abstract class ExprEval<T>
 
     if (val instanceof List || val instanceof Object[]) {
       final List<?> theList = val instanceof List ? ((List<?>) val) : Arrays.asList((Object[]) val);
-      // do not convert empty lists to arrays with a single null element here, because that should have been done
-      // by the selectors preparing their ObjectBindings if necessary. If we get to this point it was legitimately
-      // empty
-      NonnullPair<ExpressionType, Object[]> coerced = coerceListToArray(theList, false);
-      if (coerced == null) {
-        return bestEffortOf(null);
-      }
-      return ofArray(coerced.lhs, coerced.rhs);
+      return bestEffortArray(theList);
     }
 
     // in 'best effort' mode, we couldn't possibly use byte[] as a complex or anything else useful without type
@@ -485,12 +493,8 @@ public abstract class ExprEval<T>
       return new StringExprEval(StringUtils.encodeBase64String((byte[]) val));
     }
 
-    if (val != null) {
-      // is this cool?
-      return new ComplexExprEval(ExpressionType.UNKNOWN_COMPLEX, val);
-    }
-
-    return new StringExprEval(null);
+    // is this cool?
+    return new ComplexExprEval(ExpressionType.UNKNOWN_COMPLEX, val);
   }
 
   public static ExprEval ofType(@Nullable ExpressionType type, @Nullable Object value)
@@ -1109,7 +1113,6 @@ public abstract class ExprEval<T>
       super(value);
       this.arrayType = arrayType;
       Preconditions.checkArgument(arrayType.isArray(), "Output type %s is not an array", arrayType);
-      ExpressionType.checkNestedArrayAllowed(arrayType);
     }
 
     @Override
