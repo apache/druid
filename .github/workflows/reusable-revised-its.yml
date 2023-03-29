@@ -42,6 +42,19 @@ on:
         required: false
         type: string
         default: com.mysql.jdbc.Driver
+      DRUID_CLOUD_BUCKET:
+        required: false
+        type: string
+      DRUID_CLOUD_PATH:
+        required: false
+        type: string
+      AWS_REGION:
+        required: false
+        type: string
+      AWS_ACCESS_KEY_ID:
+        required: false
+      AWS_SECRET_ACCESS_KEY:
+        required: false
 
 env:
   MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }} # Used by tests to connect to metadata store directly.

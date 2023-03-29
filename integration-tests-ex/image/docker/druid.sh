@@ -77,6 +77,7 @@ setupConfig()
   mkdir -p $SERVICE_CONF_DIR
   touch $COMMON_CONF_DIR/common.runtime.properties
   touch $SERVICE_CONF_DIR/runtime.properties
+  touch $COMMON_CONF_DIR/jets3t.properties
 
   setKey $DRUID_SERVICE druid.host $(hostname -i)
   setKey $DRUID_SERVICE druid.worker.ip $(hostname -i)
@@ -89,5 +90,12 @@ setupConfig()
       val=$(echo "$evar" | sed -e 's?[^=]*=??')
       var=$(echo "$evar" | sed -e 's?^\([^=]*\)=.*?\1?g' -e 's?_?.?g')
       setKey $DRUID_SERVICE "$var" "$val"
+  done
+
+  env |grep ^s3service | while read evar
+  do
+      val=$(echo "$evar" | sed -e 's?[^=]*=??')
+      var=$(echo "$evar" | sed -e 's?^\([^=]*\)=.*?\1?g' -e 's?_?.?' -e 's?_?-?g')
+      echo "$var=$val" >>$COMMON_CONF_DIR/jets3t.properties
   done
 }
