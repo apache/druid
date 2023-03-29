@@ -33,14 +33,13 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Channel backed by an {@link InputStream}.
- *
+ * <p>
  * Frame channels are expected to be nonblocking, but InputStreams cannot be read in nonblocking fashion.
  * This implementation deals with that by using an {@link ExecutorService} to read from the stream in a
  * separate thread.
  */
 public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
 {
-  private boolean toStart = true;
   private final InputStream inputStream;
   private final ReadableByteChunksFrameChannel delegate;
   private final Object lock = new Object();
@@ -56,6 +55,8 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
 
   @GuardedBy("lock")
   private boolean inputStreamError = false;
+
+  private boolean isStarted = false;
 
   private volatile boolean keepReading = true;
 
@@ -152,10 +153,12 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
 
   private void startReading()
   {
-    if (!toStart) {
+
+    // the task to the executor service is submitted only once.
+    if (isStarted) {
       return;
     }
-    toStart = false;
+    isStarted = true;
     executorService.submit(() -> {
       int nTry = 1;
       while (true) {
