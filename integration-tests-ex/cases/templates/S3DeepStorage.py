@@ -39,8 +39,25 @@ class Template(BaseTemplate):
         self.add_property(service, 'druid.storage.baseKey', '${DRUID_CLOUD_PATH}')
         self.add_env(service, 'AWS_REGION', '${AWS_REGION}')
 
+        # Adding the following to make druid work with MinIO
+        # See https://blog.min.io/how-to-druid-superset-minio/ for more details
+        self.add_property(service, 'druid.s3.protocol', 'http')
+        self.add_property(service, 'druid.s3.enabePathStyleAccess', 'true')
+        self.add_property(service, 'druid.s3.endpoint.url', 'http://localhost:9000/')
+
     # This test uses different data than the default.
     def define_data_dir(self, service):
         self.add_volume(service, '../data', '/resources')
+
+    def create_minio_container(self):
+        return self.define_external_service("minio")
+
+    def create_minio_bucket(self):
+        return self.define_external_service("create_minio_buckets")
+
+    def define_custom_services(self):
+        self.create_minio_container()
+        self.create_minio_bucket()
+
 
 generate(__file__, Template())
