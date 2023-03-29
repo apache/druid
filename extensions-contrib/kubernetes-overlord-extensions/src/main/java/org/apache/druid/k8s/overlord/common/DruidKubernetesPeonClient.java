@@ -106,7 +106,7 @@ public class DruidKubernetesPeonClient implements KubernetesPeonClient
                       .inNamespace(namespace)
                       .withName(taskId.getK8sTaskId())
                       .waitUntilCondition(
-                          x -> x == null || x.getStatus() != null && x.getStatus().getActive() == null,
+                          x -> (x == null) || (x.getStatus() != null && x.getStatus().getActive() == null),
                           howLong,
                           unit
                       );
