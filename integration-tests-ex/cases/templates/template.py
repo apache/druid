@@ -32,6 +32,7 @@ DRUID_NETWORK = 'druid-it-net'
 DRUID_SUBNET = '172.172.172'
 ZOO_KEEPER = 'zookeeper'
 METADATA = 'metadata'
+KAFKA = 'kafka'
 COORDINATOR = 'coordinator'
 OVERLORD = 'overlord'
 ROUTER = 'router'
@@ -255,6 +256,12 @@ class BaseTemplate:
         Defines the metadata (MySQL) service. Returns the service
         '''
         return self.define_external_service(METADATA)
+
+    def define_kafka(self) -> dict:
+        '''
+        Defines the Kafka service. Returns the service
+        '''
+        return self.define_external_service(KAFKA)
 
     def define_druid_service(self, name, base) -> dict:
         '''

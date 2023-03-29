@@ -449,6 +449,15 @@
             </properties>
         </profile>
         <profile>
+            <id>IT-TransactionalKafkaIndexSlow</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <it.category>TransactionalKafkaIndexSlow</it.category>
+            </properties>
+        </profile>
+        <profile>
             <id>docker-tests</id>
             <activation>
                 <activeByDefault>false</activeByDefault>

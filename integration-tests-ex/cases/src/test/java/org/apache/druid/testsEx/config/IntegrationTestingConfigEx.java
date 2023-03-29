@@ -21,8 +21,10 @@ package org.apache.druid.testsEx.config;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.IntegrationTestingConfigProvider;
+import org.apache.druid.testsEx.config.ResolvedService.ResolvedInstance;
 
 import javax.inject.Inject;
 import java.util.Map;
@@ -62,13 +64,23 @@ class IntegrationTestingConfigEx implements IntegrationTestingConfig
   @Override
   public String getKafkaHost()
   {
-    return config.requireKafka().instance().clientHost();
+    ResolvedInstance instance = config.requireKafka().instance();
+    return StringUtils.format(
+        "%s:%d",
+        instance.clientHost(),
+        instance.clientPort()
+    );
   }
 
   @Override
   public String getKafkaInternalHost()
   {
-    return config.requireKafka().instance().host();
+    ResolvedInstance instance = config.requireKafka().instance();
+    return StringUtils.format(
+        "%s:%d",
+        instance.host(),
+        instance.port()
+    );
   }
 
   @Override

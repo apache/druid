@@ -97,6 +97,9 @@ function category {
     "Catalog")
       export DRUID_INTEGRATION_TEST_GROUP=BatchIndex
       ;;
+    "TransactionalKafkaIndexSlow")
+      export DRUID_INTEGRATION_TEST_GROUP=KafkaIndex
+      ;;
     *)
       export DRUID_INTEGRATION_TEST_GROUP=$CATEGORY
       ;;

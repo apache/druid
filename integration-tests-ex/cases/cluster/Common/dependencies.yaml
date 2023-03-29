@@ -43,7 +43,9 @@ services:
     image: bitnami/kafka:${KAFKA_VERSION}
     container_name: kafka
     ports:
+      # Internal nodes from other Docker containers
       - 9092:9092
+      # External connections, from tests.
       - 9093:9093
     networks:
       druid-it-net:
