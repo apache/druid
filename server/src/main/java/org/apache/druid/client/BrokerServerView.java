@@ -188,7 +188,7 @@ public class BrokerServerView implements TimelineServerView
         exec,
         polledSegments ->
           {
-            polledSegmentsFromCoordinator(polledSegments);
+            addHandedOffSegmentsToTimeline(polledSegments);
             return CallbackAction.CONTINUE;
           }
     );
@@ -281,7 +281,7 @@ public class BrokerServerView implements TimelineServerView
     return clients.remove(server.getName());
   }
 
-  private void polledSegmentsFromCoordinator(final ImmutableSortedSet<SegmentWithOvershadowedStatus> segmentWithOvershadowedStatusSet) {
+  private void addHandedOffSegmentsToTimeline(final ImmutableSortedSet<SegmentWithOvershadowedStatus> segmentWithOvershadowedStatusSet) {
     // filter out handed off segments
     // group by data source
     Map<String, Map<SegmentId, SegmentWithOvershadowedStatus>> polledSegmentsPerDataSource =
@@ -311,7 +311,7 @@ public class BrokerServerView implements TimelineServerView
         VersionedIntervalTimeline<String, ServerSelector> versionedIntervalTimeline = timelines.get(dataSource);
 
         Map<SegmentId, VersionedIntervalTimeline.PartitionChunkEntry<String, ServerSelector>> segmentIdPartitionChunkEntryMap =
-            versionedIntervalTimeline.getAllPartitionChunkEntry().stream().collect(
+            versionedIntervalTimeline.getAllPartitionChunkEntries().stream().collect(
                 Collectors.toMap(pce -> pce.getChunk().getObject().getSegment().getId(), pce -> pce));
 
         Set<SegmentId> segmentIdsToRemoveFromTimeline = Sets.difference(segmentIdPartitionChunkEntryMap.keySet(), segments.keySet());

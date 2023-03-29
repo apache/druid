@@ -19,8 +19,13 @@
 
 package org.apache.druid.discovery;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.util.concurrent.Futures;
+import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
@@ -33,6 +38,8 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.FullResponseHolder;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.jboss.netty.channel.ChannelException;
@@ -40,6 +47,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -253,6 +261,49 @@ public class DruidLeaderClient
         "Couldn't find leader, failed response status is [%s] and content [%s].",
         responseHolder.getStatus().getCode(),
         responseHolder.getContent()
+    );
+  }
+
+  public <T> JsonParserIterator<T> getThingsFromLeaderNode(
+      String query,
+      TypeReference<T> typeRef,
+      ObjectMapper jsonMapper
+  )
+  {
+    Request request;
+    InputStreamFullResponseHolder responseHolder;
+    try {
+      request = makeRequest(
+          HttpMethod.GET,
+          query
+      );
+
+      responseHolder = go(
+          request,
+          new InputStreamFullResponseHandler()
+      );
+
+      if (responseHolder.getStatus().getCode() != HttpServletResponse.SC_OK) {
+        throw new RE(
+            "Failed to talk to leader node at [%s]. Error code [%d], description [%s].",
+            query,
+            responseHolder.getStatus().getCode(),
+            responseHolder.getStatus().getReasonPhrase()
+        );
+      }
+    }
+    catch (IOException | InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+
+    final JavaType javaType = jsonMapper.getTypeFactory().constructType(typeRef);
+    return new JsonParserIterator<>(
+        javaType,
+        Futures.immediateFuture(responseHolder.getContent()),
+        request.getUrl().toString(),
+        null,
+        request.getUrl().getHost(),
+        jsonMapper
     );
   }
 

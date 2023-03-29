@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.planner;
+package org.apache.druid.client;
 
 import org.apache.druid.client.SegmentMetadataCacheConfig;
 import org.joda.time.Period;

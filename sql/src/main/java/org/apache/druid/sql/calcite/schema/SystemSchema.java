@@ -893,12 +893,11 @@ public class SystemSchema extends AbstractSchema
       ObjectMapper jsonMapper
   )
   {
-    return MetadataSegmentView.getThingsFromLeaderNode(
+    return indexingServiceClient.getThingsFromLeaderNode(
         "/druid/indexer/v1/tasks",
         new TypeReference<TaskStatusPlus>()
         {
         },
-        indexingServiceClient,
         jsonMapper
     );
   }
@@ -1035,12 +1034,11 @@ public class SystemSchema extends AbstractSchema
       ObjectMapper jsonMapper
   )
   {
-    return MetadataSegmentView.getThingsFromLeaderNode(
+    return indexingServiceClient.getThingsFromLeaderNode(
         "/druid/indexer/v1/supervisor?system",
         new TypeReference<SupervisorStatus>()
         {
         },
-        indexingServiceClient,
         jsonMapper
     );
   }

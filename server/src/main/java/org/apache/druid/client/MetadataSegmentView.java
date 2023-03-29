@@ -224,56 +224,11 @@ public class MetadataSegmentView
       query = "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&" + sb;
     }
 
-    return getThingsFromLeaderNode(
+    return coordinatorClient.getThingsFromLeaderNode(
         query,
         new TypeReference<SegmentWithOvershadowedStatus>()
         {
         },
-        coordinatorClient,
-        jsonMapper
-    );
-  }
-
-  public static <T> JsonParserIterator<T> getThingsFromLeaderNode(
-      String query,
-      TypeReference<T> typeRef,
-      DruidLeaderClient leaderClient,
-      ObjectMapper jsonMapper
-  )
-  {
-    Request request;
-    InputStreamFullResponseHolder responseHolder;
-    try {
-      request = leaderClient.makeRequest(
-          HttpMethod.GET,
-          query
-      );
-
-      responseHolder = leaderClient.go(
-          request,
-          new InputStreamFullResponseHandler()
-      );
-
-      if (responseHolder.getStatus().getCode() != HttpServletResponse.SC_OK) {
-        throw new RE(
-            "Failed to talk to leader node at [%s]. Error code [%d], description [%s].",
-            query,
-            responseHolder.getStatus().getCode(),
-            responseHolder.getStatus().getReasonPhrase()
-        );
-      }
-    }
-    catch (IOException | InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-
-    final JavaType javaType = jsonMapper.getTypeFactory().constructType(typeRef);
-    return new JsonParserIterator<>(
-        javaType,
-        Futures.immediateFuture(responseHolder.getContent()),
-        request.getUrl().toString(),
-        null,
-        request.getUrl().getHost(),
         jsonMapper
     );
   }
