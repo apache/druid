@@ -30,8 +30,6 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.external.ExternalTableScan;
 
-import java.util.Set;
-
 /**
  * Represents an source of data external to Druid: a CSV file, an HTTP request, etc.
  * Each such table represents one of Druid's {@link DataSource} types. Since SQL

@@ -48,7 +48,6 @@ import org.apache.druid.sql.calcite.table.ExternalTable;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Table macro designed for use with the Druid EXTEND operator. Example:
