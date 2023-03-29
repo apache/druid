@@ -67,6 +67,12 @@ public class DoubleFieldReader implements FieldReader
   }
 
   @Override
+  public boolean isNull(Memory memory, long position)
+  {
+    return memory.getByte(position) == DoubleFieldWriter.NULL_BYTE;
+  }
+
+  @Override
   public boolean isComparable()
   {
     return true;

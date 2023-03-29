@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.kernel.ShuffleKind;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
@@ -70,11 +71,12 @@ public class WorkerStageKernel
     this.workOrder = workOrder;
 
     if (workOrder.getStageDefinition().doesShuffle()
+        && workOrder.getStageDefinition().getShuffleSpec().kind() == ShuffleKind.GLOBAL_SORT
         && !workOrder.getStageDefinition().mustGatherResultKeyStatistics()) {
       // Use valueOrThrow instead of a nicer error collection mechanism, because we really don't expect the
       // MAX_PARTITIONS to be exceeded here. It would involve having a shuffleSpec that was statically configured
       // to use a huge number of partitions.
-      resultPartitionBoundaries = workOrder.getStageDefinition().generatePartitionsForShuffle(null).valueOrThrow();
+      resultPartitionBoundaries = workOrder.getStageDefinition().generatePartitionBoundariesForShuffle(null).valueOrThrow();
     }
   }
 

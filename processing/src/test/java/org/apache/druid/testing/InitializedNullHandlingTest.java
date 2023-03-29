@@ -26,6 +26,6 @@ public class InitializedNullHandlingTest
 {
   static {
     NullHandling.initializeForTests();
-    ExpressionProcessing.initializeForTests(null);
+    ExpressionProcessing.initializeForTests();
   }
 }

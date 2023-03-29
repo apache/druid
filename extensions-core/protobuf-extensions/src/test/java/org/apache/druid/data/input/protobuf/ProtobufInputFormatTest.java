@@ -75,7 +75,7 @@ public class ProtobufInputFormatTest
   public void setUp() throws Exception
   {
     NullHandling.initializeForTests();
-    ExpressionProcessing.initializeForTests(null);
+    ExpressionProcessing.initializeForTests();
     timestampSpec = new TimestampSpec("timestamp", "iso", null);
     dimensionsSpec = new DimensionsSpec(Lists.newArrayList(
         new StringDimensionSchema("event"),
@@ -243,7 +243,6 @@ public class ProtobufInputFormatTest
                      .add("someFloatColumn")
                      .add("id")
                      .add("someBytesColumn")
-                     .add("timestamp")
                      .build(),
         row.getDimensions()
     );
@@ -380,8 +379,7 @@ public class ProtobufInputFormatTest
             "someFloatColumn",
             "eventType",
             "id",
-            "someBytesColumn",
-            "timestamp"
+            "someBytesColumn"
         ),
         row.getDimensions()
     );

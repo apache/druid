@@ -1558,7 +1558,7 @@ name: Joda-Time
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.10.5
+version: 2.12.4
 libraries:
   - joda-time: joda-time
 notices:
@@ -1963,7 +1963,7 @@ name: Apache Zookeeper
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.5.9
+version: 3.5.10
 libraries:
   - org.apache.zookeeper: zookeeper
   - org.apache.zookeeper: zookeeper-jute
