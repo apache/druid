@@ -25,13 +25,20 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.CalciteQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -182,5 +189,54 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
           e.getMessage().contains("Cannot handle column [a0] with type [ARRAY<COMPLEX<hyperUnique>>]")
       );
     }
+  }
+
+  @Test
+  public void testMsqDenySelectEnabledQuery()
+  {
+    msqCompatible();
+    try {
+      testQuery(
+          PlannerConfig.builder().msqDenySelect(true).build(),
+          "SELECT COUNT(*) FROM druid.foo "
+          + "WHERE dim2 <> 'a' "
+          + "and __time BETWEEN TIMESTAMP '2000-01-01 00:00:00' AND TIMESTAMP '2000-12-31 23:59:59.999'",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+      Assert.fail("query execution should fail");
+    }
+    catch (SqlPlanningException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Cannot execute SELECT with SQL engine 'msq-task'")
+      );
+    }
+  }
+
+  @Test
+  public void testMsqDenySelectDisabledQuery()
+  {
+    msqCompatible();
+    testQuery(
+        PlannerConfig.builder().msqDenySelect(false).build(),
+        "SELECT COUNT(*) FROM druid.foo "
+        + "WHERE dim2 <> 'a' "
+        + "and __time BETWEEN TIMESTAMP '2000-01-01 00:00:00' AND TIMESTAMP '2000-12-31 23:59:59.999'",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Intervals.of("2000-01-01/2001-01-01")))
+                  .filters(not(selector("dim2", "a", null)))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{2L}
+        )
+    );
   }
 }

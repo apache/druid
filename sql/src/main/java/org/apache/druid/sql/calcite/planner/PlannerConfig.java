@@ -71,6 +71,9 @@ public class PlannerConfig
   @JsonProperty
   private int maxNumericInFilters = NUM_FILTER_NOT_USED;
 
+  @JsonProperty
+  private boolean msqDenySelect = false;
+
   private boolean serializeComplexValues = true;
 
   public int getMaxNumericInFilters()
@@ -137,6 +140,14 @@ public class PlannerConfig
     return forceExpressionVirtualColumns;
   }
 
+  /**
+   * @return true if MSQ deny select is set, false otherwise.
+   */
+  public boolean isMsqDenySelect()
+  {
+    return msqDenySelect;
+  }
+
   public PlannerConfig withOverrides(final Map<String, Object> queryContext)
   {
     if (queryContext.isEmpty()) {
@@ -168,7 +179,8 @@ public class PlannerConfig
            useGroupingSetForExactDistinct == that.useGroupingSetForExactDistinct &&
            computeInnerJoinCostAsFilter == that.computeInnerJoinCostAsFilter &&
            authorizeSystemTablesDirectly == that.authorizeSystemTablesDirectly &&
-           maxNumericInFilters == that.maxNumericInFilters;
+           maxNumericInFilters == that.maxNumericInFilters &&
+           msqDenySelect == that.msqDenySelect;
   }
 
   @Override
@@ -183,7 +195,8 @@ public class PlannerConfig
         sqlTimeZone,
         serializeComplexValues,
         useNativeQueryExplain,
-        forceExpressionVirtualColumns
+        forceExpressionVirtualColumns,
+        msqDenySelect
     );
   }
 
@@ -198,6 +211,7 @@ public class PlannerConfig
            ", sqlTimeZone=" + sqlTimeZone +
            ", serializeComplexValues=" + serializeComplexValues +
            ", useNativeQueryExplain=" + useNativeQueryExplain +
+           ", msqDenySelect=" + msqDenySelect +
            '}';
   }
 
@@ -231,6 +245,7 @@ public class PlannerConfig
     private boolean forceExpressionVirtualColumns;
     private int maxNumericInFilters;
     private boolean serializeComplexValues;
+    private boolean msqDenySelect;
 
     public Builder(PlannerConfig base)
     {
@@ -249,6 +264,7 @@ public class PlannerConfig
       forceExpressionVirtualColumns = base.isForceExpressionVirtualColumns();
       maxNumericInFilters = base.getMaxNumericInFilters();
       serializeComplexValues = base.shouldSerializeComplexValues();
+      msqDenySelect = base.isMsqDenySelect();
     }
 
     public Builder requireTimeCondition(boolean option)
@@ -314,6 +330,12 @@ public class PlannerConfig
     public Builder useNativeQueryExplain(boolean option)
     {
       this.useNativeQueryExplain = option;
+      return this;
+    }
+
+    public Builder msqDenySelect(boolean option)
+    {
+      this.msqDenySelect = option;
       return this;
     }
 
@@ -397,6 +419,7 @@ public class PlannerConfig
       config.maxNumericInFilters = maxNumericInFilters;
       config.forceExpressionVirtualColumns = forceExpressionVirtualColumns;
       config.serializeComplexValues = serializeComplexValues;
+      config.msqDenySelect = msqDenySelect;
       return config;
     }
   }

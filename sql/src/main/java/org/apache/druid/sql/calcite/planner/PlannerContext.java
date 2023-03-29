@@ -485,6 +485,10 @@ public class PlannerContext
       return false;
     }
 
+    if (feature == EngineFeature.CAN_SELECT && "msq-task".equals(engine.name()) && plannerConfig.isMsqDenySelect()) {
+      return false;
+    }
+
     return engine.featureAvailable(feature, this);
   }
 

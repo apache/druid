@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -29,7 +28,6 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -1590,64 +1588,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             new Object[]{"def"},
             new Object[]{"1"}
         )
-    );
-  }
-
-  @Test
-  public void testMsqDenySelectDisabled()
-  {
-    final Map<String, Object> ingestQueriesOnlyDisabled = ImmutableMap.of(
-        QueryContexts.MSQ_DENY_SELECT_QUERY, false
-    );
-
-    testQuery(
-        "SELECT dim1 FROM druid.foo ORDER BY __time DESC LIMIT 2",
-        ingestQueriesOnlyDisabled,
-        ImmutableList.of(
-            newScanQueryBuilder()
-                .dataSource(CalciteTests.DATASOURCE1)
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns(ImmutableList.of("__time", "dim1"))
-                .limit(2)
-                .order(ScanQuery.Order.DESCENDING)
-                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .context(ingestQueriesOnlyDisabled)
-                .build()
-        ),
-        ImmutableList.of(
-            new Object[]{"abc"},
-            new Object[]{"def"}
-        )
-    );
-  }
-
-  @Test
-  public void testMsqDenySelectEnabled()
-  {
-    final Map<String, Object> ingestQueriesOnlyEnabled = ImmutableMap.of(
-        QueryContexts.MSQ_DENY_SELECT_QUERY, true
-    );
-
-    testQueryThrows(
-        "SELECT dim1 FROM druid.foo ORDER BY __time DESC LIMIT 2",
-        ingestQueriesOnlyEnabled,
-        ImmutableList.of(
-            newScanQueryBuilder()
-                .dataSource(CalciteTests.DATASOURCE1)
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns(ImmutableList.of("__time", "dim1"))
-                .limit(2)
-                .order(ScanQuery.Order.DESCENDING)
-                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .context(ingestQueriesOnlyEnabled)
-                .build()
-        ),
-        expectedException -> {
-          expectedException.expect(SqlPlanningException.class);
-          expectedException.expectMessage(
-              "Cannot execute MSQ SELECT"
-          );
-        }
     );
   }
 

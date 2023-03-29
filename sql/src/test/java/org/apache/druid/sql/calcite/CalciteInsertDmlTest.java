@@ -29,7 +29,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -162,28 +161,6 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("INSERT INTO foo SELECT * FROM foo PARTITIONED BY ALL TIME")
-        .expectTarget("foo", FOO_TABLE_SIGNATURE)
-        .expectResources(dataSourceRead("foo"), dataSourceWrite("foo"))
-        .expectQuery(
-            newScanQueryBuilder()
-                .dataSource("foo")
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
-                .context(PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
-                .build()
-        )
-        .verify();
-  }
-
-  @Test
-  public void testInsertWithSelectDisabledShouldStillPlan()
-  {
-    // With MSQ SELECT disabled, INSERT statements should still be planned.
-    testIngestionQuery()
-        .sql("INSERT INTO foo SELECT * FROM foo PARTITIONED BY ALL TIME")
-        .context(ImmutableMap.of(
-            QueryContexts.MSQ_DENY_SELECT_QUERY, true
-        ))
         .expectTarget("foo", FOO_TABLE_SIGNATURE)
         .expectResources(dataSourceRead("foo"), dataSourceWrite("foo"))
         .expectQuery(

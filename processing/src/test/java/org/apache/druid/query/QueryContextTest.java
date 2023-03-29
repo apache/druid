@@ -332,14 +332,6 @@ public class QueryContextTest
     assertTrue(QueryContext.of(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true)).isDebug());
   }
 
-  @Test
-  public void testMsqDenySelectContextParameter()
-  {
-    assertFalse(QueryContext.empty().isMsqDenySelect());
-    assertFalse(QueryContext.of(ImmutableMap.of(QueryContexts.MSQ_DENY_SELECT_QUERY, false)).isMsqDenySelect());
-    assertTrue(QueryContext.of(ImmutableMap.of(QueryContexts.MSQ_DENY_SELECT_QUERY, true)).isMsqDenySelect());
-  }
-
   // This test is a bit silly. It is retained because another test uses the
   // LegacyContextQuery test.
   @Test
