@@ -206,11 +206,11 @@ public abstract class K8sTaskAdapter implements TaskAdapter
       throws JsonProcessingException
   {
     // if the peon monitors are set, override the overlord's monitors (if set) with the peon monitors
-    if (!config.peonMonitors.isEmpty()) {
+    if (!taskRunnerConfig.peonMonitors.isEmpty()) {
       mainContainer.getEnv().removeIf(x -> "druid_monitoring_monitors".equals(x.getName()));
       mainContainer.getEnv().add(new EnvVarBuilder()
                                      .withName("druid_monitoring_monitors")
-                                     .withValue(mapper.writeValueAsString(config.peonMonitors))
+                                     .withValue(mapper.writeValueAsString(taskRunnerConfig.peonMonitors))
                                      .build());
     }
 

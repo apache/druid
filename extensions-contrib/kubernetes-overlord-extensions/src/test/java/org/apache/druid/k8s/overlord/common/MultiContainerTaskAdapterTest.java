@@ -201,7 +201,12 @@ class MultiContainerTaskAdapterTest
     config.namespace = "test";
     config.primaryContainerName = "primary";
     config.peonMonitors = jsonMapper.readValue("[\"org.apache.druid.java.util.metrics.JvmMonitor\"]", List.class);
-    MultiContainerTaskAdapter adapter = new MultiContainerTaskAdapter(testClient, config, jsonMapper);
+    MultiContainerTaskAdapter adapter = new MultiContainerTaskAdapter(testClient,
+                                                                       config,
+                                                                       taskConfig,
+                                                                       startupLoggingConfig,
+                                                                       druidNode,
+                                                                       jsonMapper);
     NoopTask task = NoopTask.create("id", 1);
     PodSpec spec = pod.getSpec();
     K8sTaskAdapter.massageSpec(spec, config.primaryContainerName);
