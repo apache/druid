@@ -29,12 +29,10 @@ import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.security.basic.BasicAuthUtils;
-import org.apache.druid.security.basic.BasicSecurityAuthenticationException;
-import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.Authenticator;
 
 import javax.inject.Inject;
 
@@ -69,10 +67,11 @@ public class BasicAuthServerInterceptor implements ServerInterceptor
       Metadata.Key.of(AUTHORIZATION_HEADER, Metadata.ASCII_STRING_MARSHALLER);
   private static final Logger LOG = new Logger(BasicAuthServerInterceptor.class);
 
-  private final BasicHTTPAuthenticator authenticator;
+  // Want BasicHTTPAuthenticator, but it is not visible here.
+  private final Authenticator authenticator;
 
   @Inject
-  public BasicAuthServerInterceptor(BasicHTTPAuthenticator authenticator)
+  public BasicAuthServerInterceptor(Authenticator authenticator)
   {
     this.authenticator = authenticator;
   }
@@ -104,16 +103,20 @@ public class BasicAuthServerInterceptor implements ServerInterceptor
       throw new StatusRuntimeException(Status.PERMISSION_DENIED);
     }
 
-    if (!StringUtils.startsWith(encodedUserSecret, BASIC_PREFIX)) {
+    if (!encodedUserSecret.startsWith(BASIC_PREFIX)) {
       throw new StatusRuntimeException(Status.PERMISSION_DENIED);
     }
     encodedUserSecret = encodedUserSecret.substring(BASIC_PREFIX.length());
 
     // At this point, encodedUserSecret is not null, indicating that the request intends to perform
     // Basic HTTP authentication.
-    String decodedUserSecret = BasicAuthUtils.decodeUserSecret(encodedUserSecret);
-    if (decodedUserSecret == null) {
-      // We recognized a Basic auth header, but could not decode the user secret.
+    // Copy of BasicAuthUtils.decodeUserSecret() which is not visible here.
+    String decodedUserSecret;
+    try {
+      decodedUserSecret = StringUtils.fromUtf8(StringUtils.decodeBase64String(encodedUserSecret));
+    }
+    catch (IllegalArgumentException iae) {
+      LOG.warn(iae, "Malformed user secret: [%s]", encodedUserSecret);
       throw new StatusRuntimeException(Status.PERMISSION_DENIED);
     }
 
@@ -126,10 +129,8 @@ public class BasicAuthServerInterceptor implements ServerInterceptor
     final String user = splits[0];
     final String password = splits[1];
 
-    // If any authentication error occurs we send a 401 response immediately and do not proceed further down the filter chain.
-    // If the authentication result is null and skipOnFailure property is false, we send a 401 response and do not proceed
-    // further down the filter chain. If the authentication result is null and skipOnFailure is true then move on to the next filter.
-    // Authentication results, for instance, can be null if a user doesn't exist within a user store.
+    // Fail fast for any authentication error. If the authentication result is null we also fail
+    // as this indicates a non-existent user.
     try {
       AuthenticationResult authenticationResult = authenticator.authenticateJDBCContext(
           ImmutableMap.of("user", user, "password", password)
@@ -139,7 +140,8 @@ public class BasicAuthServerInterceptor implements ServerInterceptor
       }
       return authenticationResult;
     }
-    catch (BasicSecurityAuthenticationException ex) {
+    // Want BasicSecurityAuthenticationException, but it is not visible here.
+    catch (IllegalArgumentException ex) {
       LOG.info("Exception authenticating user [%s] - [%s]", user, ex.getMessage());
       throw new StatusRuntimeException(Status.PERMISSION_DENIED);
     }

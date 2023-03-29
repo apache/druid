@@ -27,7 +27,6 @@ import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AnonymousAuthenticator;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -87,9 +86,11 @@ public class QueryServer
   {
     // First look for a Basic authenticator
     for (Authenticator authenticator : authMapper.getAuthenticatorChain()) {
-      if (authenticator instanceof BasicHTTPAuthenticator) {
+      // Want authenticator instanceof BasicHTTPAuthenticator, but
+      // BasicHTTPAuthenticator is not visible here.
+      if ("BasicHTTPAuthenticator".equals(authenticator.getClass().getSimpleName())) {
         log.info("Using Basic authentication");
-        return new BasicAuthServerInterceptor((BasicHTTPAuthenticator) authenticator);
+        return new BasicAuthServerInterceptor(authenticator);
       }
     }
 
