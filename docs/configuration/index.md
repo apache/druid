@@ -1253,7 +1253,7 @@ either an `affinityConfig` or a `categorySpec`. Then, Druid assigns the task by 
 There are 4  options for select strategies:
 
 - [`equalDistribution`](#equaldistribution)
-- [`equalDistributionWithCategorySpec`](#equalDistributionWithCategorySpec)
+- [`equalDistributionWithCategorySpec`](#equaldistributionwithcategoryspec)
 - [`fillCapacity`](#fillcapacity)
 - [`fillCapacityWithCategorySpec`](#fillcapacitywithcategoryspec)
 
