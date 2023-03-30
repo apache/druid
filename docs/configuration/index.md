@@ -1227,7 +1227,7 @@ Issuing a GET request at the same URL returns the current Overlord dynamic confi
 
 |Property| Description                                                                                                                                                                                  | Default                       |
 |--------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------|
-|`selectStrategy`| Desctibes how to assign tasks to MiddleManagers. The type can be `equalDistribution`, `equalDistributionWithCategorySpec`, `fillCapacity`, `fillCapacityWithCategorySpec`, and `javascript`. | `{"type":"equalDistribution"} |
+|`selectStrategy`| Describes how to assign tasks to MiddleManagers. The type can be `equalDistribution`, `equalDistributionWithCategorySpec`, `fillCapacity`, `fillCapacityWithCategorySpec`, and `javascript`. | `{"type":"equalDistribution"} |
 |`autoScaler`| Only used if autoscaling is enabled. See below.                                                                                                                                              | null                          |
 
 To view the audit history of worker config issue a GET request to the URL -
