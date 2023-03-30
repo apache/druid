@@ -1288,7 +1288,7 @@ This will evenly distribute work across your MiddleManagers.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`type`|`equalDistribution`|required; must be `equalDistribution`|
-|`affinityConfig`|[Affinity config](#affinity) object|null (no affinity)|
+|`affinityConfig`|[Affinity config](#affinityconfig) object|null (no affinity)|
 
 ###### `equalDistributionWithCategorySpec`
 
