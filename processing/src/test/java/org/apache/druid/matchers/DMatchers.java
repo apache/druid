@@ -17,12 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.error;
+package org.apache.druid.matchers;
 
-import javax.ws.rs.core.Response;
+import org.hamcrest.Matcher;
 
-public interface RestExceptionEncoder
+import java.util.function.Function;
+
+public class DMatchers
 {
-  Response encode(DruidException e);
-  Response.ResponseBuilder builder(DruidException e);
+  public static <T, S> LambdaMatcher<T, S> fn(String name, Function<T, S> fn, Matcher<S> matcher)
+  {
+    return new LambdaMatcher<>(name + ": ", fn, matcher);
+  }
 }

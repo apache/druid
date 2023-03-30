@@ -29,7 +29,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.SqlShuttle;
 import org.apache.calcite.util.TimestampString;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.SqlValidationError;
+import org.apache.druid.error.InvalidSqlInput;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,7 +39,7 @@ import java.util.List;
  * Replaces all {@link SqlDynamicParam} encountered in an {@link SqlNode} tree
  * with a {@link SqlLiteral} if a value binding exists for the parameter, if
  * possible. This is used in tandem with {@link RelParameterizerShuttle}.
- *
+ * <p>
  * It is preferable that all parameters are placed here to pick up as many
  * optimizations as possible, but the facilities to convert jdbc types to
  * {@link SqlLiteral} are a bit less rich here than exist for converting a
@@ -47,7 +47,7 @@ import java.util.List;
  * {@link org.apache.calcite.rex.RexLiteral}, which is why
  * {@link SqlParameterizerShuttle} and {@link RelParameterizerShuttle}
  * both exist.
- *
+ * <p>
  * As it turns out, most parameters will be replaced in this shuttle.
  * The one exception are DATE types expressed as integers. For reasons
  * known only to Calcite, the {@code RexBuilder.clean()} method, used by
@@ -108,11 +108,7 @@ public class SqlParameterizerShuttle extends SqlShuttle
 
   private static DruidException unbound(SqlDynamicParam param)
   {
-    return new SqlValidationError(
-            "UnboundParameter",
-            "Parameter at position [${index}] is not bound"
-         )
-        .withValue("index", param.getIndex() + 1);
+    return InvalidSqlInput.exception("No value bound for parameter (position [%s])", param.getIndex() + 1);
   }
 
   /**
@@ -133,11 +129,7 @@ public class SqlParameterizerShuttle extends SqlShuttle
     List<SqlNode> args = new ArrayList<>(list.size());
     for (Object element : list) {
       if (element == null) {
-        throw new SqlValidationError(
-                "NullParameter",
-                "Parameter [${posn}]: An array parameter cannot contain null values"
-             )
-            .withValue("posn", posn + 1);
+        throw InvalidSqlInput.exception("An array parameter [%s] cannot contain null values", posn + 1);
       }
       SqlNode node;
       if (element instanceof String) {
@@ -149,12 +141,11 @@ public class SqlParameterizerShuttle extends SqlShuttle
       } else if (element instanceof Boolean) {
         node = SqlLiteral.createBoolean((Boolean) value, SqlParserPos.ZERO);
       } else {
-        throw new SqlValidationError(
-                "InvalidParameter",
-                "Parameter [${posn}]: An array parameter does not allow values of type[${type}]"
-             )
-            .withValue("posn", posn + 1)
-            .withValue("type", value.getClass().getSimpleName());
+        throw InvalidSqlInput.exception(
+            "An array parameter [%s] cannot contain values of type [%s]",
+            posn + 1,
+            value.getClass()
+        );
       }
       args.add(node);
     }

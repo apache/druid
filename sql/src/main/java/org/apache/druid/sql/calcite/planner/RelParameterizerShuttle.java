@@ -44,7 +44,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.SqlValidationError;
+import org.apache.druid.error.InvalidSqlInput;
 
 /**
  * Traverse {@link RelNode} tree and replaces all {@link RexDynamicParam} with {@link org.apache.calcite.rex.RexLiteral}
@@ -220,10 +220,6 @@ public class RelParameterizerShuttle implements RelShuttle
 
   private static DruidException unbound(RexDynamicParam dynamicParam)
   {
-    return new SqlValidationError(
-            "UnboundParameter",
-            "Parameter at position [${index}] is not bound"
-         )
-        .withValue("index", dynamicParam.getIndex() + 1);
+    return InvalidSqlInput.exception("No value bound for parameter (position [%s])", dynamicParam.getIndex() + 1);
   }
 }

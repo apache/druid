@@ -21,7 +21,8 @@ package org.apache.druid.sql;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.calcite.plan.RelOptPlanner;
-import org.apache.druid.error.DruidAssertionError;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -228,12 +229,19 @@ public class DirectStatement extends AbstractStatement implements Cancelable
     }
     catch (RelOptPlanner.CannotPlanException e) {
       // Not sure if this is even thrown here.
-      throw new DruidAssertionError(e, "Cannot plan SQL query");
+      throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+          .ofCategory(DruidException.Category.UNCATEGORIZED)
+          .build(e, "Problem planning SQL query");
     }
     catch (RuntimeException e) {
       state = State.FAILED;
       reporter.failed(e);
       throw e;
+    }
+    catch (AssertionError e) {
+      state = State.FAILED;
+      reporter.failed(e);
+      throw InvalidSqlInput.exception(e, "Calcite assertion violated: [%s]", e.getMessage());
     }
   }
 

@@ -31,14 +31,12 @@ import org.apache.calcite.sql.SqlSplittableAggFunction;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.util.Optionality;
-import org.apache.druid.error.SqlUnsupportedError;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.planner.Calcites;
 
@@ -70,17 +68,17 @@ public class SumSqlAggregator extends SimpleSqlAggregator
     if (valueType == null) {
       return null;
     }
-    return Aggregation.create(createSumAggregatorFactory(valueType.getType(), name, fieldName, macroTable));
+    return Aggregation.create(createSumAggregatorFactory(valueType, name, fieldName, macroTable));
   }
 
   static AggregatorFactory createSumAggregatorFactory(
-      final ValueType aggregationType,
+      final ColumnType aggregationType,
       final String name,
       final String fieldName,
       final ExprMacroTable macroTable
   )
   {
-    switch (aggregationType) {
+    switch (aggregationType.getType()) {
       case LONG:
         return new LongSumAggregatorFactory(name, fieldName, null, macroTable);
       case FLOAT:
@@ -88,7 +86,7 @@ public class SumSqlAggregator extends SimpleSqlAggregator
       case DOUBLE:
         return new DoubleSumAggregatorFactory(name, fieldName, null, macroTable);
       default:
-        throw SqlUnsupportedError.unsupportedAggType("SUM", aggregationType);
+        throw SimpleSqlAggregator.badTypeException(fieldName, "SUM", aggregationType);
     }
   }
 

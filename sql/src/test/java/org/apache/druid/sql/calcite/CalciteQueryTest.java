@@ -25,8 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.error.SqlUnsupportedError;
-import org.apache.druid.error.SqlValidationError;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
@@ -43,7 +42,6 @@ import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.QueryException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
@@ -372,8 +370,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testCannotInsertWithNativeEngine()
   {
     notMsqCompatible();
-    final SqlUnsupportedError e = Assert.assertThrows(
-        SqlUnsupportedError.class,
+    final DruidException e = Assert.assertThrows(
+        DruidException.class,
         () -> testQuery(
             "INSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL",
             ImmutableList.of(),
@@ -383,9 +381,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     MatcherAssert.assertThat(
         e,
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.equalTo("SQL-Unsupported-UnsupportedEngineOp: op=[INSERT], engine=[native]")
-        )
+        invalidSqlIs("INSERT operations are not supported by requested SQL engine [native], consider using MSQ.")
     );
   }
 
@@ -393,8 +389,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testCannotReplaceWithNativeEngine()
   {
     notMsqCompatible();
-    final SqlUnsupportedError e = Assert.assertThrows(
-        SqlUnsupportedError.class,
+    final DruidException e = Assert.assertThrows(
+        DruidException.class,
         () -> testQuery(
             "REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL",
             ImmutableList.of(),
@@ -404,9 +400,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     MatcherAssert.assertThat(
         e,
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.equalTo("SQL-Unsupported-UnsupportedEngineOp: op=[REPLACE], engine=[native]")
-        )
+        invalidSqlIs("REPLACE operations are not supported by the requested SQL engine [native].  Consider using MSQ.")
     );
   }
 
@@ -814,7 +808,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testEarliestByInvalidTimestamp()
   {
-    expectedException.expect(SqlValidationError.class);
+    expectedException.expect(DruidException.class);
     expectedException.expectMessage("Cannot apply 'EARLIEST_BY' to arguments of type 'EARLIEST_BY(<FLOAT>, <BIGINT>)");
 
     testQuery(
@@ -827,8 +821,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testLatestByInvalidTimestamp()
   {
-    expectedException.expect(SqlValidationError.class);
-    expectedException.expectMessage("Cannot apply 'LATEST_BY' to arguments of type 'LATEST_BY(<FLOAT>, <BIGINT>)");
+    expectedException.expect(
+        invalidSqlContains("Cannot apply 'LATEST_BY' to arguments of type 'LATEST_BY(<FLOAT>, <BIGINT>)")
+    );
 
     testQuery(
         "SELECT LATEST_BY(m1, l1) FROM druid.numfoo",
@@ -1070,19 +1065,19 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT LATEST(dim4, 10), dim2 FROM numfoo WHERE (dim1 = 'something' AND dim1 IN('something else')) GROUP BY dim2",
         ImmutableList.of(
             Druids.newScanQueryBuilder()
-                .dataSource(InlineDataSource.fromIterable(
-                    ImmutableList.of(),
-                    RowSignature.builder()
-                        .add("EXPR$0", ColumnType.STRING)
-                        .add("dim2", ColumnType.STRING)
-                        .build()
-                ))
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("EXPR$0", "dim2")
-                .context(QUERY_CONTEXT_DEFAULT)
-                .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
-                .build()
+                  .dataSource(InlineDataSource.fromIterable(
+                      ImmutableList.of(),
+                      RowSignature.builder()
+                                  .add("EXPR$0", ColumnType.STRING)
+                                  .add("dim2", ColumnType.STRING)
+                                  .build()
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("EXPR$0", "dim2")
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
         ),
         ImmutableList.of()
     );
@@ -1095,19 +1090,19 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT LATEST_BY(dim4, __time, 10), dim2 FROM numfoo WHERE (dim1 = 'something' AND dim1 IN('something else')) GROUP BY dim2",
         ImmutableList.of(
             Druids.newScanQueryBuilder()
-                .dataSource(InlineDataSource.fromIterable(
-                    ImmutableList.of(),
-                    RowSignature.builder()
-                        .add("EXPR$0", ColumnType.STRING)
-                        .add("dim2", ColumnType.STRING)
-                        .build()
-                ))
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("EXPR$0", "dim2")
-                .context(QUERY_CONTEXT_DEFAULT)
-                .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
-                .build()
+                  .dataSource(InlineDataSource.fromIterable(
+                      ImmutableList.of(),
+                      RowSignature.builder()
+                                  .add("EXPR$0", ColumnType.STRING)
+                                  .add("dim2", ColumnType.STRING)
+                                  .build()
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("EXPR$0", "dim2")
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
         ),
         ImmutableList.of()
     );
@@ -2903,18 +2898,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       );
       Assert.fail("query execution should fail");
     }
-    catch (SqlValidationError e) {
-      Assert.assertTrue(
-          e.toString().contains("Column count mismatch in UNION ALL")
-      );
-      Assert.assertEquals(
-          "SQL-Validation-General",
-          e.errorCode()
-      );
-      Assert.assertEquals(
-          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.getErrorCode()
-      );
+    catch (DruidException e) {
+      MatcherAssert.assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [42])"));
     }
   }
 
@@ -2978,7 +2963,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "WHERE dim2 = 'a' OR dim2 = 'en'\n"
         + "GROUP BY 1, 2",
         "SQL requires union between inputs that are not simple table scans and involve a " +
-            "filter or aliasing. Or column types of tables being unioned are not of same type.");
+        "filter or aliasing. Or column types of tables being unioned are not of same type."
+    );
   }
 
   @Test
@@ -2986,6 +2972,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     // Cannot plan this UNION ALL operation, because the column swap would require generating a subquery.
 
+    msqCompatible();
     assertQueryIsUnplannable(
         "SELECT\n"
         + "c, COUNT(*)\n"
@@ -2993,7 +2980,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "WHERE c = 'a' OR c = 'def'\n"
         + "GROUP BY 1",
         "SQL requires union between two tables " +
-            "and column names queried for each table are different Left: [dim1], Right: [dim2]."
+        "and column names queried for each table are different Left: [dim1], Right: [dim2]."
     );
   }
 
@@ -3018,7 +3005,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "WHERE c = 'a' OR c = 'def'\n"
         + "GROUP BY 1",
         "SQL requires union between inputs that are not simple table scans and involve " +
-            "a filter or aliasing. Or column types of tables being unioned are not of same type."
+        "a filter or aliasing. Or column types of tables being unioned are not of same type."
     );
   }
 
@@ -3181,14 +3168,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       );
       Assert.fail("query execution should fail");
     }
-    catch (SqlValidationError e) {
-      Assert.assertTrue(
-          e.getMessage().contains("Column count mismatch in UNION ALL")
-      );
-      Assert.assertEquals(
-          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.getErrorCode()
-      );
+    catch (DruidException e) {
+      MatcherAssert.assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [45])"));
     }
   }
 
@@ -3207,18 +3188,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       );
       Assert.fail("query execution should fail");
     }
-    catch (SqlValidationError e) {
-      Assert.assertTrue(
-          e.toString().contains("Column count mismatch in UNION ALL")
-      );
-      Assert.assertEquals(
-          "SQL-Validation-General",
-          e.errorCode()
-      );
-      Assert.assertEquals(
-          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.getErrorCode()
-      );
+    catch (DruidException e) {
+      MatcherAssert.assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [45])"));
     }
   }
 
@@ -3237,18 +3208,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       );
       Assert.fail("query execution should fail");
     }
-    catch (SqlValidationError e) {
-      Assert.assertTrue(
-          e.toString().contains("Column count mismatch in UNION ALL")
-      );
-      Assert.assertEquals(
-          "SQL-Validation-General",
-          e.errorCode()
-      );
-      Assert.assertEquals(
-          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.getErrorCode()
-      );
+    catch (DruidException e) {
+      MatcherAssert.assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [70])"));
     }
   }
 
@@ -5655,7 +5616,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     final Map<String, String> queries = ImmutableMap.of(
         // SELECT query with order by non-__time.
         "SELECT dim1 FROM druid.foo ORDER BY dim1",
-        "Possible error: SQL query requires order by non-time column [dim1 ASC], which is not supported.",
+        "SQL query requires order by non-time column [[dim1 ASC]], which is not supported.",
 
         // JOIN condition with not-equals (<>).
         "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
@@ -5777,7 +5738,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{"[\"AQAAAEAAAA==\",\"AQAAAQAAAAHNBA==\",\"AQAAAQAAAAOzAg==\",\"AQAAAQAAAAFREA==\",\"AQAAAQAAAACyEA==\",\"AQAAAQAAAAEkAQ==\"]"}
+            new Object[]{
+                "[\"AQAAAEAAAA==\",\"AQAAAQAAAAHNBA==\",\"AQAAAQAAAAOzAg==\",\"AQAAAQAAAAFREA==\",\"AQAAAQAAAACyEA==\",\"AQAAAQAAAAEkAQ==\"]"
+            }
         )
     );
   }
@@ -5789,17 +5752,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       testQuery("SELECT STRING_AGG(unique_dim1, ',') FROM druid.foo", ImmutableList.of(), ImmutableList.of());
       Assert.fail("query execution should fail");
     }
-    catch (SqlValidationError e) {
-      Assert.assertTrue(
-          e.toString().contains("STRING_AGG aggregation is not supported for type [COMPLEX<hyperUnique>]")
-      );
-      Assert.assertEquals(
-          "SQL-Validation-General",
-          e.errorCode()
-      );
-      Assert.assertEquals(
-          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.getErrorCode()
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          invalidSqlIs("Aggregation [STRING_AGG] does not support type [COMPLEX<hyperUnique>], column [foo.unique_dim1]")
       );
     }
   }
@@ -5936,10 +5892,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT COUNT(*) FROM druid.foo "
         + "WHERE TIME_IN_INTERVAL(__time, dim1)",
         expected -> {
-          expected.expect(CoreMatchers.instanceOf(SqlValidationError.class));
-          expected.expect(ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-              "SQL-Validation-General: line=[1], column=[38], " +
-              "message=[Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(<TIMESTAMP(3)>, <VARCHAR>)'. Supported form(s): TIME_IN_INTERVAL(<TIMESTAMP>, <LITERAL ISO8601 INTERVAL>)]"))
+          expected.expect(
+              invalidSqlIs(
+                  "Cannot apply 'TIME_IN_INTERVAL' to arguments of type "
+                  + "'TIME_IN_INTERVAL(<TIMESTAMP(3)>, <VARCHAR>)'. Supported form(s): "
+                  + "TIME_IN_INTERVAL(<TIMESTAMP>, <LITERAL ISO8601 INTERVAL>) (line [1], column [38])"
+              )
           );
         }
     );
@@ -6078,15 +6036,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     // Strings are implicitly cast to timestamps. Test an invalid string.
     // This error message isn't ideal but it is at least better than silently ignoring the problem.
     String sql = "SELECT COUNT(*) FROM druid.foo\n"
-        + "WHERE __time >= 'z2000-01-01 00:00:00' AND __time < '2001-01-01 00:00:00'\n";
+                 + "WHERE __time >= 'z2000-01-01 00:00:00' AND __time < '2001-01-01 00:00:00'\n";
     try {
       testBuilder().sql(sql).run();
     }
-    catch (SqlValidationError e) {
-      Assert.assertEquals(
-          sql,
-          "Illegal TIMESTAMP constant [CAST('z2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL]",
-          e.toString()
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          invalidSqlIs("Illegal TIMESTAMP constant [CAST('z2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL]")
       );
     }
     catch (Exception e) {
@@ -7586,7 +7543,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     notMsqCompatible();
     expectedException.expect(UOE.class);
-    expectedException.expectMessage("The number of values in the IN clause for [dim6] in query exceeds configured maxNumericFilter limit of [2] for INs. Cast [3] values of IN clause to String");
+    expectedException.expectMessage(
+        "The number of values in the IN clause for [dim6] in query exceeds configured maxNumericFilter limit of [2] for INs. Cast [3] values of IN clause to String");
 
     testQuery(
         PLANNER_CONFIG_MAX_NUMERIC_IN_FILTER,
@@ -11339,17 +11297,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       testQuery("SELECT TIME_EXTRACT(__time) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
       Assert.fail("query execution should fail");
     }
-    catch (SqlValidationError e) {
-      Assert.assertTrue(
-          e.toString().contains("Invalid number of arguments to function 'TIME_EXTRACT'. Was expecting 2 arguments")
-      );
-      Assert.assertEquals(
-          "SQL-Validation-General",
-          e.errorCode()
-      );
-      Assert.assertEquals(
-          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.getErrorCode()
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          invalidSqlIs(
+              "Invalid number of arguments to function 'TIME_EXTRACT'. Was expecting 2 arguments (line [1], column [8])"
+          )
       );
     }
   }
@@ -12872,8 +12825,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
         //Since adding a zero period does not change the timestamp, just compare the stamp with the orignal
         TestDataBuilder.ROWS1.stream()
-                          .map(row -> new Object[]{row.getTimestampFromEpoch()})
-                          .collect(Collectors.toList())
+                             .map(row -> new Object[]{row.getTimestampFromEpoch()})
+                             .collect(Collectors.toList())
     );
   }
 
@@ -12901,8 +12854,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
         //Since adding a zero period does not change the timestamp, just compare the stamp with the orignal
         TestDataBuilder.ROWS1.stream()
-                          .map(row -> new Object[]{row.getTimestampFromEpoch()})
-                          .collect(Collectors.toList())
+                             .map(row -> new Object[]{row.getTimestampFromEpoch()})
+                             .collect(Collectors.toList())
     );
   }
 
@@ -12932,8 +12885,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
         //Since adding a zero period does not change the timestamp, just compare the stamp with the orignal
         TestDataBuilder.ROWS1.stream()
-                          .map(row -> new Object[]{row.getTimestampFromEpoch()})
-                          .collect(Collectors.toList())
+                             .map(row -> new Object[]{row.getTimestampFromEpoch()})
+                             .collect(Collectors.toList())
     );
   }
 
@@ -12970,8 +12923,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
         // verify if query results match the given
         TestDataBuilder.ROWS1.stream()
-                          .map(r -> new Object[]{periodGranularity.increment(r.getTimestamp()).getMillis()})
-                          .collect(Collectors.toList())
+                             .map(r -> new Object[]{periodGranularity.increment(r.getTimestamp()).getMillis()})
+                             .collect(Collectors.toList())
     );
 
     //
@@ -12999,8 +12952,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         // verify if query results match the given
         // "cnt" for each row is 1
         TestDataBuilder.ROWS1.stream()
-                          .map(row -> new Object[]{periodGranularity.increment(row.getTimestamp()).getMillis()})
-                          .collect(Collectors.toList())
+                             .map(row -> new Object[]{periodGranularity.increment(row.getTimestamp()).getMillis()})
+                             .collect(Collectors.toList())
     );
   }
 
@@ -14005,7 +13958,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test(expected = SqlUnsupportedError.class)
+  @Test(expected = DruidException.class)
   public void testStringAggExpressionNonConstantSeparator()
   {
     testQuery(
@@ -14154,7 +14107,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testHumanReadableFormatFunctionExceptionWithWrongNumberType()
   {
-    this.expectedException.expect(SqlValidationError.class);
+    this.expectedException.expect(DruidException.class);
     this.expectedException.expectMessage("Supported form(s): HUMAN_READABLE_BINARY_BYTE_FORMAT(Number, [Precision])");
     testQuery(
         "SELECT HUMAN_READABLE_BINARY_BYTE_FORMAT('45678')",
@@ -14166,7 +14119,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testHumanReadableFormatFunctionWithWrongPrecisionType()
   {
-    this.expectedException.expect(SqlValidationError.class);
+    this.expectedException.expect(DruidException.class);
     this.expectedException.expectMessage("Supported form(s): HUMAN_READABLE_BINARY_BYTE_FORMAT(Number, [Precision])");
     testQuery(
         "SELECT HUMAN_READABLE_BINARY_BYTE_FORMAT(45678, '2')",
@@ -14178,7 +14131,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testHumanReadableFormatFunctionWithInvalidNumberOfArguments()
   {
-    this.expectedException.expect(SqlValidationError.class);
+    this.expectedException.expect(DruidException.class);
 
     /*
      * frankly speaking, the exception message thrown here is a little bit confusing
@@ -14589,21 +14542,21 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT COMPLEX_DECODE_BASE64('hyperUnique',PARSE_JSON(TO_JSON_STRING(unique_dim1))) from druid.foo LIMIT 10",
         ImmutableList.of(
-          Druids.newScanQueryBuilder()
-                .dataSource(CalciteTests.DATASOURCE1)
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("v0")
-                .virtualColumns(
-                    expressionVirtualColumn(
-                        "v0",
-                        "complex_decode_base64('hyperUnique',parse_json(to_json_string(\"unique_dim1\")))",
-                        ColumnType.ofComplex("hyperUnique")
-                    )
-                )
-                .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
-                .limit(10)
-                .build()
+            Druids.newScanQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("v0")
+                  .virtualColumns(
+                      expressionVirtualColumn(
+                          "v0",
+                          "complex_decode_base64('hyperUnique',parse_json(to_json_string(\"unique_dim1\")))",
+                          ColumnType.ofComplex("hyperUnique")
+                      )
+                  )
+                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .limit(10)
+                  .build()
         ),
         ImmutableList.of(
             new Object[]{"\"AQAAAEAAAA==\""},

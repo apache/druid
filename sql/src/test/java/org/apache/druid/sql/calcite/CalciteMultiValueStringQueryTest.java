@@ -22,7 +22,7 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.error.SqlValidationError;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExpressionProcessing;
@@ -801,7 +801,11 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE3)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(expressionVirtualColumn("v0", "array_ordinal(\"dim3\",2)", ColumnType.STRING))
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "array_ordinal(\"dim3\",2)",
+                            ColumnType.STRING
+                        ))
                         .setDimensions(
                             dimensions(
                                 new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
@@ -1797,7 +1801,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     testQueryThrows(
         "SELECT MV_TO_ARRAY(dim3,dim3) FROM druid.numfoo",
         exception -> {
-          exception.expect(SqlValidationError.class);
+          exception.expect(DruidException.class);
           exception.expectMessage("Invalid number of arguments to function");
         }
     );
@@ -1809,7 +1813,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     testQueryThrows(
         "SELECT MV_TO_ARRAY() FROM druid.numfoo",
         exception -> {
-          exception.expect(SqlValidationError.class);
+          exception.expect(DruidException.class);
           exception.expectMessage("Invalid number of arguments to function");
         }
     );
@@ -2008,8 +2012,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
         "SELECT COALESCE(dim3, 'other') FROM druid.numfoo "
         + "WHERE MV_OVERLAP(COALESCE(dim3, ARRAY['other']), ARRAY['a', 'b', 'other']) LIMIT 5",
         e -> {
-          e.expect(SqlPlanningException.class);
-          e.expectMessage("Illegal mixing of types in CASE or COALESCE statement");
+          e.expect(invalidSqlContains("Illegal mixing of types in CASE or COALESCE statement"));
         }
 
     );

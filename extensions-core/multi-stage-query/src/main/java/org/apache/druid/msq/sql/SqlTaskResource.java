@@ -25,7 +25,7 @@ import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.StandardRestExceptionEncoder;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.guice.annotations.MSQ;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -65,21 +65,20 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
-
 import java.io.IOException;
 import java.util.Collections;
 
 /**
  * Endpoint for SQL execution using MSQ tasks.
- *
+ * <p>
  * Unlike the SQL endpoint in {@link SqlResource}, this endpoint returns task IDs instead of inline results. Queries
  * are executed asynchronously using MSQ tasks via the indexing service (Overlord + MM or Indexer). This endpoint
  * does not provide a way for users to get the status or results of a query. That must be done using Overlord APIs
  * for status and reports.
- *
+ * <p>
  * One exception: EXPLAIN query results are returned inline by this endpoint, in the same way as {@link SqlResource}
  * would return them.
- *
+ * <p>
  * This endpoint does not support system tables or INFORMATION_SCHEMA. Queries on those tables result in errors.
  */
 @Path("/druid/v2/sql/task/")
@@ -131,7 +130,7 @@ public class SqlTaskResource
 
   /**
    * Post a query task.
-   *
+   * <p>
    * Execution uses {@link MSQTaskSqlEngine} to ship the query off to the Overlord as an indexing task using
    * {@link org.apache.druid.msq.indexing.MSQControllerTask}. The task ID is returned immediately to the caller,
    * and execution proceeds asynchronously.
@@ -163,7 +162,10 @@ public class SqlTaskResource
     }
     catch (DruidException e) {
       stmt.reporter().failed(e);
-      return StandardRestExceptionEncoder.instance().encode(e);
+      return Response.status(e.getStatusCode())
+                     .type(MediaType.APPLICATION_JSON_TYPE)
+                     .entity(new ErrorResponse(e))
+                     .build();
     }
     // Kitchen-sinking the errors since they are all unchecked.
     // Just copied from SqlResource.

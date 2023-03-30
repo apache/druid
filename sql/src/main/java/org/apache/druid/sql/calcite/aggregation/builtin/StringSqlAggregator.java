@@ -27,6 +27,7 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
+import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperatorBinding;
@@ -36,7 +37,6 @@ import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Optionality;
-import org.apache.druid.error.SqlUnsupportedError;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -56,7 +56,6 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
-
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -198,7 +197,16 @@ public class StringSqlAggregator implements SqlAggregator
     {
       RelDataType type = sqlOperatorBinding.getOperandType(0);
       if (type instanceof RowSignatures.ComplexSqlType) {
-        throw SqlUnsupportedError.unsupportedAggType("STRING_AGG", type);
+        String columnName = "";
+        if (sqlOperatorBinding instanceof SqlCallBinding) {
+          columnName = ((SqlCallBinding) sqlOperatorBinding).getCall().operand(0).toString();
+        }
+
+        throw SimpleSqlAggregator.badTypeException(
+            columnName,
+            "STRING_AGG",
+            ((RowSignatures.ComplexSqlType) type).getColumnType()
+        );
       }
       return Calcites.createSqlTypeWithNullability(
           sqlOperatorBinding.getTypeFactory(),

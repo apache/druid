@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.rel.RelRoot;
@@ -36,8 +35,8 @@ import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.error.SqlUnsupportedError;
-import org.apache.druid.error.SqlValidationError;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -56,12 +55,6 @@ import java.util.regex.Pattern;
 public abstract class IngestHandler extends QueryHandler
 {
   private static final Pattern UNNAMED_COLUMN_PATTERN = Pattern.compile("^EXPR\\$\\d+$", Pattern.CASE_INSENSITIVE);
-  @VisibleForTesting
-  public static final String UNNAMED_INGESTION_COLUMN_ERROR =
-      "Cannot ingest expressions that do not have an alias "
-          + "or columns with names like EXPR$[digit].\n"
-          + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
-          + "\"func(X) as myColumn\"";
 
   protected final Granularity ingestionGranularity;
   protected String targetDatasource;
@@ -87,12 +80,10 @@ public abstract class IngestHandler extends QueryHandler
       SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
       SqlNodeList orderByList = sqlOrderBy.orderList;
       if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
-        String opName = sqlNode.getOperator().getName();
-        throw new SqlValidationError(
-              "InsertOrderBy",
-              "Cannot use ORDER BY with ${op}, use CLUSTERED BY instead"
-           )
-          .withValue("op", opName);
+        throw InvalidSqlInput.exception(
+            "Cannot use an ORDER BY clause on a Query of type [%s], use CLUSTERED BY instead",
+            sqlNode.getOperator().getName()
+        );
       }
     }
     if (sqlNode.getClusteredBy() != null) {
@@ -100,11 +91,7 @@ public abstract class IngestHandler extends QueryHandler
     }
 
     if (!query.isA(SqlKind.QUERY)) {
-      throw new SqlValidationError(
-              "Unsupported",
-              "Cannot execute SQL statement [%{op}]"
-           )
-          .withValue("op", query.getKind());
+      throw InvalidSqlInput.exception("Unexpected SQL statement type [%s], expected it to be a QUERY", query.getKind());
     }
     return query;
   }
@@ -120,11 +107,10 @@ public abstract class IngestHandler extends QueryHandler
   public void validate()
   {
     if (ingestNode().getPartitionedBy() == null) {
-      throw new SqlValidationError(
-              "InsertWithoutPartitionBy",
-              "${op} statements must specify the PARTITIONED BY clause explicitly"
-           )
-          .withValue("op", operationName());
+      throw InvalidSqlInput.exception(
+          "Operation [%s] requires a PARTITIONED BY to be explicitly defined, but none was found.",
+          operationName()
+      );
     }
     try {
       PlannerContext plannerContext = handlerContext.plannerContext();
@@ -136,22 +122,17 @@ public abstract class IngestHandler extends QueryHandler
       }
     }
     catch (JsonProcessingException e) {
-      throw new SqlValidationError(
-              "PartitionGrain",
-              "Invalid partition granularity [${grain}]"
-           )
-          .withValue("grain", ingestionGranularity);
+      throw InvalidSqlInput.exception(e, "Invalid partition granularity [%s]", ingestionGranularity);
     }
     super.validate();
     // Check if CTX_SQL_OUTER_LIMIT is specified and fail the query if it is. CTX_SQL_OUTER_LIMIT being provided causes
     // the number of rows inserted to be limited which is likely to be confusing and unintended.
     if (handlerContext.queryContextMap().get(PlannerContext.CTX_SQL_OUTER_LIMIT) != null) {
-      throw new SqlValidationError(
-              "InsertContext",
-              "Context parameter [%{param}] cannot be provided with [${op}]"
-           )
-          .withValue("param", PlannerContext.CTX_SQL_OUTER_LIMIT)
-          .withValue("op", operationName());
+      throw InvalidSqlInput.exception(
+          "Context parameter [%s] cannot be provided on operator [%s]",
+          PlannerContext.CTX_SQL_OUTER_LIMIT,
+          operationName()
+      );
     }
     targetDatasource = validateAndGetDataSourceForIngest();
     resourceActions.add(new ResourceAction(new Resource(targetDatasource, ResourceType.DATASOURCE), Action.WRITE));
@@ -163,7 +144,8 @@ public abstract class IngestHandler extends QueryHandler
     final RelDataTypeFactory typeFactory = rootQueryRel.rel.getCluster().getTypeFactory();
     return handlerContext.engine().resultTypeForInsert(
         typeFactory,
-        rootQueryRel.validatedRowType);
+        rootQueryRel.validatedRowType
+    );
   }
 
   /**
@@ -174,15 +156,15 @@ public abstract class IngestHandler extends QueryHandler
   {
     final SqlInsert insert = ingestNode();
     if (insert.isUpsert()) {
-      throw new SqlUnsupportedError("UPSERT", "UPSERT is not supported.");
+      throw InvalidSqlInput.exception("UPSERT is not supported.");
     }
 
     if (insert.getTargetColumnList() != null) {
-      throw new SqlUnsupportedError(
-              "InsertList",
-              "[${op}] with a target column list is not supported"
-           )
-          .withValue("op", operationName());
+      throw InvalidSqlInput.exception(
+          "Operation [%s] cannot be run with a target column list, given [%s (%s)]",
+          operationName(),
+          insert.getTargetTable(), insert.getTargetColumnList()
+      );
     }
 
     final SqlIdentifier tableIdentifier = (SqlIdentifier) insert.getTargetTable();
@@ -190,11 +172,9 @@ public abstract class IngestHandler extends QueryHandler
 
     if (tableIdentifier.names.isEmpty()) {
       // I don't think this can happen, but include a branch for it just in case.
-      throw new SqlValidationError(
-              "NoInsertTarget",
-              "[${op}] requires a target table"
-           )
-          .withValue("op", operationName());
+      throw DruidException.forPersona(DruidException.Persona.USER)
+          .ofCategory(DruidException.Category.DEFENSIVE)
+          .build("Operation [%s] requires a target table", operationName());
     } else if (tableIdentifier.names.size() == 1) {
       // Unqualified name.
       dataSource = Iterables.getOnlyElement(tableIdentifier.names);
@@ -206,21 +186,15 @@ public abstract class IngestHandler extends QueryHandler
       if (tableIdentifier.names.size() == 2 && defaultSchemaName.equals(tableIdentifier.names.get(0))) {
         dataSource = tableIdentifier.names.get(1);
       } else {
-        throw new SqlValidationError(
-                "InsertNotDatasource",
-                "Cannot [${op}] into [${table}] because it is not a Druid datasource"
-             )
-            .withValue("op", operationName())
-            .withValue("table", tableIdentifier);
+        throw InvalidSqlInput.exception(
+            "Table [%s] does not support operation [%s] because it is not a Druid datasource",
+            tableIdentifier,
+            operationName()
+        );
       }
     }
 
-    try {
-      IdUtils.validateId(operationName() + " dataSource", dataSource);
-    }
-    catch (IllegalArgumentException e) {
-      throw SqlValidationError.forCause(e);
-    }
+    IdUtils.validateId("table", dataSource);
 
     return dataSource;
   }
@@ -238,15 +212,20 @@ public abstract class IngestHandler extends QueryHandler
     return handlerContext.engine().buildQueryMakerForInsert(
         targetDatasource,
         rootQueryRel,
-        handlerContext.plannerContext());
+        handlerContext.plannerContext()
+    );
   }
 
-  private void validateColumnsForIngestion(RelRoot rootQueryRel) throws ValidationException
+  private void validateColumnsForIngestion(RelRoot rootQueryRel)
   {
     // Check that there are no unnamed columns in the insert.
     for (Pair<Integer, String> field : rootQueryRel.fields) {
       if (UNNAMED_COLUMN_PATTERN.matcher(field.right).matches()) {
-        throw new ValidationException(UNNAMED_INGESTION_COLUMN_ERROR);
+        throw InvalidSqlInput.exception(
+            "Insertion requires columns to be named, but at least one of the columns was unnamed.  This is usually "
+            + "the result of applying a function without having an AS clause, please ensure that all function calls"
+            + "are named with an AS clause as in \"func(X) as myColumn\"."
+        );
       }
     }
   }
@@ -268,7 +247,8 @@ public abstract class IngestHandler extends QueryHandler
           handlerContext,
           sqlNode,
           convertQuery(sqlNode),
-          explain);
+          explain
+      );
       this.sqlNode = sqlNode;
     }
 
@@ -282,12 +262,10 @@ public abstract class IngestHandler extends QueryHandler
     public void validate()
     {
       if (!handlerContext.plannerContext().featureAvailable(EngineFeature.CAN_INSERT)) {
-        throw new SqlUnsupportedError(
-                "UnsupportedEngineOp",
-                "Cannot execute ${op} with SQL engine [${engine}]"
-             )
-            .withValue("op", "INSERT")
-            .withValue("engine", handlerContext.engine().name());
+        throw InvalidSqlInput.exception(
+            "INSERT operations are not supported by requested SQL engine [%s], consider using MSQ.",
+            handlerContext.engine().name()
+        );
       }
       super.validate();
     }
@@ -338,17 +316,14 @@ public abstract class IngestHandler extends QueryHandler
     public void validate()
     {
       if (!handlerContext.plannerContext().featureAvailable(EngineFeature.CAN_REPLACE)) {
-        throw new SqlUnsupportedError(
-                "UnsupportedEngineOp",
-                "Cannot execute ${op} with SQL engine [${engine}]"
-             )
-            .withValue("op", "REPLACE")
-            .withValue("engine", handlerContext.engine().name());
+        throw InvalidSqlInput.exception(
+            "REPLACE operations are not supported by the requested SQL engine [%s].  Consider using MSQ.",
+            handlerContext.engine().name()
+        );
       }
       SqlNode replaceTimeQuery = sqlNode.getReplaceTimeQuery();
       if (replaceTimeQuery == null) {
-        throw new SqlValidationError(
-            "OverwriteTimeRange",
+        throw InvalidSqlInput.exception(
             "Missing time chunk information in OVERWRITE clause for REPLACE. Use "
             + "OVERWRITE WHERE <__time based condition> or OVERWRITE ALL to overwrite the entire table."
         );
@@ -357,7 +332,8 @@ public abstract class IngestHandler extends QueryHandler
       replaceIntervals = DruidSqlParserUtils.validateQueryAndConvertToIntervals(
           replaceTimeQuery,
           ingestionGranularity,
-          handlerContext.timeZone());
+          handlerContext.timeZone()
+      );
       super.validate();
       if (replaceIntervals != null) {
         handlerContext.queryContextMap().put(

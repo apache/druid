@@ -31,10 +31,12 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlPostfixOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.tools.ValidationException;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
@@ -199,13 +201,18 @@ public class DruidSqlParserUtilsTest
     public void testConvertSqlNodeToGranularityWithIncorrectNode()
     {
       SqlNode sqlNode = SqlLiteral.createCharString("day", SqlParserPos.ZERO);
-      ParseException e = Assert.assertThrows(
-          ParseException.class,
+      DruidException e = Assert.assertThrows(
+          DruidException.class,
           () -> DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode)
       );
-      Assert.assertEquals(
-          "Encountered 'day' after PARTITIONED BY. Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR function or TIME_FLOOR function",
-          e.getMessage()
+      MatcherAssert.assertThat(
+          e,
+          DruidExceptionMatcher
+              .invalidSqlInput()
+              .expectMessageIs(
+                  "Invalid granularity ['day'] after PARTITIONED BY.  "
+                  + "Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR() or TIME_FLOOR()"
+              )
       );
     }
 

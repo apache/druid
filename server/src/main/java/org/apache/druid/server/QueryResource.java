@@ -34,7 +34,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.client.DirectDruidClient;
-import org.apache.druid.error.StandardRestExceptionEncoder;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
@@ -538,8 +537,7 @@ public class QueryResource implements QueryCountStatsProvider
           QueryResource.this.counter,
           queryLifecycle.getQueryId(),
           MediaType.valueOf(io.getResponseWriter().getResponseType()),
-          ImmutableMap.of(),
-          StandardRestExceptionEncoder.instance()
+          ImmutableMap.of()
       );
       this.req = req;
       this.queryLifecycle = queryLifecycle;

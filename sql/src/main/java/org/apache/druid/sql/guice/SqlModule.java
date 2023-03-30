@@ -27,8 +27,6 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import org.apache.druid.catalog.model.TableDefnRegistry;
-import org.apache.druid.error.RestExceptionEncoder;
-import org.apache.druid.error.StandardRestExceptionEncoder;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.NativeQuery;
@@ -126,9 +124,6 @@ public class SqlModule implements Module
 
     // Default do-nothing catalog resolver
     binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
-
-    // Default exception encoder
-    binder.bind(RestExceptionEncoder.class).toInstance(StandardRestExceptionEncoder.instance());
   }
 
   private boolean isEnabled()

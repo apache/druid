@@ -21,10 +21,7 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.error.SqlValidationError;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.error.SqlValidationError;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
@@ -33,20 +30,16 @@ import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
-import org.hamcrest.CoreMatchers;
 import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -331,17 +324,15 @@ public class MSQReplaceTest extends MSQTestBase
   @Test
   public void testReplaceIncorrectSyntax()
   {
-    testIngestQuery().setSql("REPLACE INTO foo1 OVERWRITE SELECT * FROM foo PARTITIONED BY ALL TIME")
-                     .setExpectedDataSource("foo1")
-                     .setQueryContext(context)
-                     .setExpectedValidationErrorMatcher(
-                         CoreMatchers.allOf(
-                             CoreMatchers.instanceOf(SqlValidationError.class),
-                             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                                 "Missing time chunk information in OVERWRITE clause for REPLACE. Use OVERWRITE WHERE <__time based condition> or OVERWRITE ALL to overwrite the entire table."))
-                         )
-                     )
-                     .verifyPlanningErrors();
+    testIngestQuery()
+        .setSql("REPLACE INTO foo1 OVERWRITE SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .setExpectedDataSource("foo1")
+        .setQueryContext(context)
+        .setExpectedValidationErrorMatcher(invalidSqlContains(
+            "Missing time chunk information in OVERWRITE clause for REPLACE. "
+            + "Use OVERWRITE WHERE <__time based condition> or OVERWRITE ALL to overwrite the entire table."
+        ))
+        .verifyPlanningErrors();
   }
 
   @Test
@@ -585,10 +576,8 @@ public class MSQReplaceTest extends MSQTestBase
                              + "LIMIT 50"
                              + "PARTITIONED BY MONTH")
                      .setQueryContext(context)
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlValidationError.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""))
+                     .setExpectedValidationErrorMatcher(invalidSqlContains(
+                             "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""
                      ))
                      .verifyPlanningErrors();
   }
@@ -603,10 +592,8 @@ public class MSQReplaceTest extends MSQTestBase
                              + "LIMIT 50 "
                              + "OFFSET 10"
                              + "PARTITIONED BY ALL TIME")
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlValidationError.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "INSERT and REPLACE queries cannot have an OFFSET"))
+                     .setExpectedValidationErrorMatcher(invalidSqlContains(
+                             "INSERT and REPLACE queries cannot have an OFFSET"
                      ))
                      .setQueryContext(context)
                      .verifyPlanningErrors();

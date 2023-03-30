@@ -25,8 +25,8 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
-import org.apache.druid.error.SqlParseError;
-import org.apache.druid.error.SqlValidationError;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
@@ -36,7 +36,6 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryScheduler;
@@ -62,17 +61,18 @@ import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.http.SqlQuery;
 import org.easymock.EasyMock;
+import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import javax.servlet.http.HttpServletRequest;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -88,12 +88,12 @@ import static org.junit.Assert.fail;
 public class SqlStatementTest
 {
   private static QueryRunnerFactoryConglomerate conglomerate;
+  private static SpecificSegmentsQuerySegmentWalker walker;
   private static Closer resourceCloser;
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @ClassRule
+  public static TemporaryFolder temporaryFolder = new TemporaryFolder();
   @Rule
   public QueryLogHook queryLogHook = QueryLogHook.create();
-  private SpecificSegmentsQuerySegmentWalker walker;
   private TestRequestLogger testRequestLogger;
   private ListeningExecutorService executorService;
   private SqlStatementFactory sqlStatementFactory;
@@ -101,21 +101,11 @@ public class SqlStatementTest
       ImmutableMap.of("DEFAULT_KEY", "DEFAULT_VALUE"));
 
   @BeforeClass
-  public static void setUpClass()
+  public static void setUpClass() throws Exception
   {
     resourceCloser = Closer.create();
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
-  }
 
-  @AfterClass
-  public static void tearDownClass() throws IOException
-  {
-    resourceCloser.close();
-  }
-
-  @Before
-  public void setUp() throws Exception
-  {
     final QueryScheduler scheduler = new QueryScheduler(
         5,
         ManualQueryPrioritizationStrategy.INSTANCE,
@@ -128,15 +118,25 @@ public class SqlStatementTest
       {
         return super.run(
             query,
-            new LazySequence<T>(() -> {
-              return resultSequence;
-            })
+            new LazySequence<T>(() -> resultSequence)
         );
       }
     };
 
-    executorService = MoreExecutors.listeningDecorator(Execs.multiThreaded(8, "test_sql_resource_%s"));
     walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder(), scheduler);
+    resourceCloser.register(walker);
+  }
+
+  @AfterClass
+  public static void tearDownClass() throws IOException
+  {
+    resourceCloser.close();
+  }
+
+  @Before
+  public void setUp() throws Exception
+  {
+    executorService = MoreExecutors.listeningDecorator(Execs.multiThreaded(8, "test_sql_resource_%s"));
 
     final PlannerConfig plannerConfig = PlannerConfig.builder().serializeComplexValues(false).build();
     final DruidSchemaCatalog rootSchema = CalciteTests.createMockRootSchema(
@@ -181,8 +181,6 @@ public class SqlStatementTest
   @After
   public void tearDown() throws Exception
   {
-    walker.close();
-    walker = null;
     executorService.shutdownNow();
     executorService.awaitTermination(2, TimeUnit.SECONDS);
   }
@@ -225,7 +223,8 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT);
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     ResultSet resultSet = stmt.plan();
     assertTrue(resultSet.runnable());
@@ -246,7 +245,8 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT);
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     stmt.plan();
     try {
@@ -263,7 +263,8 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT);
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     ResultSet resultSet = stmt.plan();
     resultSet.run();
@@ -281,21 +282,19 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS",
-        CalciteTests.REGULAR_USER_AUTH_RESULT);
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     try {
       stmt.execute();
       fail();
     }
-    catch (SqlParseError e) {
-      // Expected
-      Assert.assertEquals(
-          "SQL-Parse-UnexpectedToken",
-          e.errorCode()
-      );
-      Assert.assertEquals(
-          QueryException.SQL_PARSE_FAILED_ERROR_CODE,
-          e.getErrorCode()
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          DruidExceptionMatcher
+              .invalidSqlInput()
+              .expectMessageContains("Received an unexpected token [AS <EOF>]")
       );
     }
   }
@@ -305,21 +304,19 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.bogus",
-        CalciteTests.REGULAR_USER_AUTH_RESULT);
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     try {
       stmt.execute();
       fail();
     }
-    catch (SqlValidationError e) {
-      // Expected
-      Assert.assertEquals(
-          "SQL-Validation-General",
-          e.errorCode()
-      );
-      Assert.assertEquals(
-          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.getErrorCode()
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          DruidExceptionMatcher
+              .invalidSqlInput()
+              .expectMessageContains("Object 'bogus' not found within 'druid'")
       );
     }
   }
@@ -329,7 +326,8 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = queryPlus(
         "select count(*) from forbiddenDatasource",
-        CalciteTests.REGULAR_USER_AUTH_RESULT);
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     try {
       stmt.execute();
@@ -353,7 +351,7 @@ public class SqlStatementTest
         false,
         null,
         null
-        );
+    );
   }
 
   @Test
@@ -362,7 +360,7 @@ public class SqlStatementTest
     HttpStatement stmt = sqlStatementFactory.httpStatement(
         makeQuery("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo"),
         request(true)
-        );
+    );
     List<Object[]> results = stmt.execute().getResults().toList();
     assertEquals(1, results.size());
     assertEquals(6L, results.get(0)[0]);
@@ -375,16 +373,17 @@ public class SqlStatementTest
     HttpStatement stmt = sqlStatementFactory.httpStatement(
         makeQuery("SELECT COUNT(*) AS cnt, 'foo' AS"),
         request(true)
-        );
+    );
     try {
       stmt.execute();
       fail();
     }
-    catch (SqlParseError e) {
-      // Expected
-      Assert.assertEquals(
-          QueryException.SQL_PARSE_FAILED_ERROR_CODE,
-          e.getErrorCode()
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          DruidExceptionMatcher
+              .invalidSqlInput()
+              .expectMessageContains("Received an unexpected token [AS <EOF>]")
       );
     }
   }
@@ -395,20 +394,17 @@ public class SqlStatementTest
     HttpStatement stmt = sqlStatementFactory.httpStatement(
         makeQuery("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.bogus"),
         request(true)
-        );
+    );
     try {
       stmt.execute();
       fail();
     }
-    catch (SqlValidationError e) {
-      // Expected
-      Assert.assertEquals(
-          "SQL-Validation-General",
-          e.errorCode()
-      );
-      Assert.assertEquals(
-          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.getErrorCode()
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          DruidExceptionMatcher
+              .invalidSqlInput()
+              .expectMessageContains("Object 'bogus' not found within 'druid'")
       );
     }
   }
@@ -419,7 +415,7 @@ public class SqlStatementTest
     HttpStatement stmt = sqlStatementFactory.httpStatement(
         makeQuery("select count(*) from forbiddenDatasource"),
         request(false)
-        );
+    );
     try {
       stmt.execute();
       fail();
@@ -437,7 +433,8 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT);
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
     PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlReq);
 
     PrepareResult prepareResult = stmt.prepare();
@@ -467,17 +464,19 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS",
-        CalciteTests.REGULAR_USER_AUTH_RESULT);
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
     PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlReq);
     try {
       stmt.prepare();
       fail();
     }
-    catch (SqlParseError e) {
-      // Expected
-      Assert.assertEquals(
-          QueryException.SQL_PARSE_FAILED_ERROR_CODE,
-          e.getErrorCode()
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          DruidExceptionMatcher
+              .invalidSqlInput()
+              .expectMessageContains("Received an unexpected token [AS <EOF>]")
       );
     }
   }
@@ -487,21 +486,19 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.bogus",
-        CalciteTests.REGULAR_USER_AUTH_RESULT);
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
     PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlReq);
     try {
       stmt.prepare();
       fail();
     }
-    catch (SqlValidationError e) {
-      // Expected
-      Assert.assertEquals(
-          "SQL-Validation-General",
-          e.errorCode()
-      );
-      Assert.assertEquals(
-          QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE,
-          e.getErrorCode()
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          DruidExceptionMatcher
+              .invalidSqlInput()
+              .expectMessageContains("Object 'bogus' not found within 'druid'")
       );
     }
   }
@@ -511,7 +508,8 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = queryPlus(
         "select count(*) from forbiddenDatasource",
-        CalciteTests.REGULAR_USER_AUTH_RESULT);
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
     PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlReq);
     try {
       stmt.prepare();

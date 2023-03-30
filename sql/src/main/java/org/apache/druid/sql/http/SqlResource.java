@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import org.apache.druid.common.exception.SanitizableException;
-import org.apache.druid.error.RestExceptionEncoder;
 import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
@@ -57,7 +56,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.LinkedHashMap;
@@ -82,7 +80,6 @@ public class SqlResource
   private final ServerConfig serverConfig;
   private final ResponseContextConfig responseContextConfig;
   private final DruidNode selfNode;
-  private final RestExceptionEncoder exceptionEncoder;
 
   @Inject
   SqlResource(
@@ -92,8 +89,7 @@ public class SqlResource
       final SqlLifecycleManager sqlLifecycleManager,
       final ServerConfig serverConfig,
       ResponseContextConfig responseContextConfig,
-      @Self DruidNode selfNode,
-      RestExceptionEncoder exceptionEncoder
+      @Self DruidNode selfNode
   )
   {
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
@@ -103,7 +99,6 @@ public class SqlResource
     this.serverConfig = Preconditions.checkNotNull(serverConfig, "serverConfig");
     this.responseContextConfig = responseContextConfig;
     this.selfNode = selfNode;
-    this.exceptionEncoder = exceptionEncoder;
   }
 
   @POST
@@ -231,8 +226,7 @@ public class SqlResource
           SqlResource.QUERY_METRIC_COUNTER,
           sqlQueryId,
           MediaType.APPLICATION_JSON_TYPE,
-          headers,
-          exceptionEncoder
+          headers
       );
       this.sqlQueryId = sqlQueryId;
       this.stmt = stmt;
@@ -346,6 +340,5 @@ public class SqlResource
       }
       out.write(jsonMapper.writeValueAsBytes(ex));
     }
-
   }
 }

@@ -25,7 +25,7 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rex.RexLiteral;
-import org.apache.druid.error.SqlUnsupportedError;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
  * This rule is used when the query directly reads in-memory tuples. For example, given a query of
  * `SELECT 1 + 1`, the query planner will create {@link LogicalValues} that contains one tuple,
  * which in turn containing one column of value 2.
- *
+ * <p>
  * The query planner can sometimes reduce a regular query to a query that reads in-memory tuples.
  * For example, `SELECT count(*) FROM foo WHERE 1 = 0` is reduced to `SELECT 0`. This rule will
  * be used for this case as well.
@@ -126,23 +126,18 @@ public class DruidLogicalValuesRule extends RelOptRule
         return Calcites.calciteDateTimeLiteralToJoda(literal, plannerContext.getTimeZone()).getMillis();
       case NULL:
         if (!literal.isNull()) {
-          throw new SqlUnsupportedError(
-                  "NonNullConst",
-                  "Non-null constant [${expr}] for a NULL literal"
-               )
-              .withValue("expr", literal);
+          throw InvalidSqlInput.exception("Expected a NULL literal, but got non-null constant [%s]", literal);
         }
         return null;
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
       case TIME:
       case TIME_WITH_LOCAL_TIME_ZONE:
       default:
-        throw new SqlUnsupportedError(
-                "Literal",
-                "Literal [${expr}] type [${type}] is not supported"
-             )
-            .withValue("expr", literal)
-            .withValue("type", literal.getType().getSqlTypeName());
+        throw InvalidSqlInput.exception(
+            "Cannot handle literal [%s] of unsupported type [%s].",
+            literal,
+            literal.getType().getSqlTypeName()
+        );
     }
   }
 }

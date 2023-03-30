@@ -19,19 +19,32 @@
 
 package org.apache.druid.error;
 
-public class ErrorCode
+public class InvalidSqlInput extends InvalidInput
 {
-  public static final String SQL_GROUP = "SQL";
-  public static final String INTERNAL_GROUP = "INTERNAL";
-
-  public static final String SQL_VALIDATION_GROUP = SQL_GROUP + "-Validation";
-  public static final String SQL_PARSE_GROUP = SQL_GROUP + "-Parse";
-  public static final String SQL_UNSUPPORTED_GROUP = SQL_GROUP + "-Unsupported";
-
-  public static final String GENERAL_TAIL = "General";
-
-  public static String fullCode(String base, String tail)
+  public static DruidException exception(String msg, Object... args)
   {
-    return base + "-" + tail;
+    return exception(null, msg, args);
+  }
+
+  public static DruidException exception(Throwable t, String msg, Object... args)
+  {
+    return DruidException.fromFailure(new InvalidSqlInput(t, msg, args));
+  }
+
+  public InvalidSqlInput(
+      Throwable t,
+      String msg,
+      Object... args
+  )
+  {
+    super(t, msg, args);
+  }
+
+  @Override
+  public DruidException makeException(DruidException.DruidExceptionBuilder bob)
+  {
+    final DruidException retVal = super.makeException(bob);
+    retVal.withContext("sourceType", "sql");
+    return retVal;
   }
 }
