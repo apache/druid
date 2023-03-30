@@ -1247,8 +1247,8 @@ http://<OVERLORD_IP>:<port>/druid/indexer/v1/worker/history?count=<n>
 ##### Worker select strategy
 
 The select strategy controls how Druid assigns tasks to workers (MiddleManagers).
-At a high level a select strategy determines the list of possible workers that the task can be assigned to using
-either an `affinityConfig` or a `categorySpec` and then it assigns the task by either trying to distribute load equally
+At a high level, the select strategy determines the list of possible workers that a task can be assigned to using
+either an `affinityConfig` or a `categorySpec`. Then, Druid assigns the task by either trying to distribute load equally
 (`equalDistribution`) or to fill as many workers as possible to capacity (`fillCapacity`).
 This forms 4 possible options for supported select strategies.
 A `javascript` option is also available which should only be used for prototyping new strategies.
