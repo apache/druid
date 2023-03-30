@@ -44,6 +44,7 @@ import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -488,7 +489,8 @@ public class SqlBenchmark
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.createJoinableFactoryWrapper(),
-        CatalogResolver.NULL_RESOLVER
+        CatalogResolver.NULL_RESOLVER,
+        new AuthConfig()
     );
   }
 

@@ -165,10 +165,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
       // Casts
       if (selectExpression) {
         const underlyingExpression = selectExpression.getUnderlyingExpression();
-        if (
-          underlyingExpression instanceof SqlFunction &&
-          underlyingExpression.getEffectiveFunctionName() === 'CAST'
-        ) {
+        if (underlyingExpression instanceof SqlFunction && underlyingExpression.getCastType()) {
           menuItems.push(
             <MenuItem
               key="uncast"

@@ -45,6 +45,7 @@ import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.calcite.SqlVectorizedExpressionSanityTest;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
@@ -314,7 +315,8 @@ public class SqlNestedDataBenchmark
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.createJoinableFactoryWrapper(),
-        CatalogResolver.NULL_RESOLVER
+        CatalogResolver.NULL_RESOLVER,
+        new AuthConfig()
     );
 
     try {
