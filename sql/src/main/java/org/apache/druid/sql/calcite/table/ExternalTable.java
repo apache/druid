@@ -42,6 +42,8 @@ public class ExternalTable extends DruidTable
   private final DataSource dataSource;
   private final ObjectMapper objectMapper;
 
+  private final String inputSourceType;
+
   /**
    * Cached row type, to avoid recreating types multiple times.
    */
@@ -50,12 +52,14 @@ public class ExternalTable extends DruidTable
   public ExternalTable(
       final DataSource dataSource,
       final RowSignature rowSignature,
-      final ObjectMapper objectMapper
+      final ObjectMapper objectMapper,
+      final String inputSourceType
   )
   {
     super(rowSignature);
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.objectMapper = objectMapper;
+    this.inputSourceType = inputSourceType;
   }
 
   @Override
@@ -89,6 +93,11 @@ public class ExternalTable extends DruidTable
     return rowType;
   }
 
+  public String getInputSourceType()
+  {
+    return inputSourceType;
+  }
+
   @Override
   public RelNode toRel(ToRelContext context, RelOptTable relOptTable)
   {
@@ -101,6 +110,7 @@ public class ExternalTable extends DruidTable
     return "ExternalTable{" +
            "dataSource=" + dataSource +
            ", rowSignature=" + getRowSignature() +
+           ", inputSourceType=" + getInputSourceType() +
            '}';
   }
 }

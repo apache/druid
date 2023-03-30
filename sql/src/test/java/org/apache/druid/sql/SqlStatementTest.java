@@ -158,7 +158,8 @@ public class SqlStatementTest
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of()),
         joinableFactoryWrapper,
-        CatalogResolver.NULL_RESOLVER
+        CatalogResolver.NULL_RESOLVER,
+        new AuthConfig()
     );
 
     this.sqlStatementFactory = new SqlStatementFactory(
@@ -168,7 +169,6 @@ public class SqlStatementTest
             new NoopServiceEmitter(),
             testRequestLogger,
             QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-            new AuthConfig(),
             defaultQueryConfig,
             new SqlLifecycleManager()
         )
