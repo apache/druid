@@ -1275,7 +1275,7 @@ If a `categorySpec` is provided (as part of `fillCapacityWithCategorySpec` and `
 - any worker, if categoryConfig given and category given but no preferred worker is available and categoryConfig is `weak`
 - not assigned at all, if preferred workers are not available and `categoryConfig` is `strong`
 
-In either case, after the eligible worker list is constructed one will be selected depending on their load with the goal of either distributing the load equally or filling as few workers as possible.
+In both cases, Druid constructs the eligible worker and selects one depending on their load with the goal of either distributing the load equally or filling as few workers as possible.
 
 If you are using auto-scaling it only makes sense to use the `fillCapacity` select strategy since auto-scaled nodes can
 not be assigned a category, and you want the work to be concentrated on the fewest number of workers to allow the empty ones to scale down.
