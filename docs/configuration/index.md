@@ -1269,11 +1269,11 @@ Note that every worker listed in the `affinityConfig` will only be used for the 
 
 If a `categorySpec` is provided (as part of `fillCapacityWithCategorySpec` and `equalDistributionWithCategorySpec` strategies) for a given task, the list of workers eligible to be assigned is determined as follows:
 
-- any worker, if no categoryConfig given for task type
-- any worker, if categoryConfig given for task type but no category given for datasource and no default category either
-- a preferred worker (based on categoryConfig + category for datasource), if available
-- any worker, if categoryConfig given and category given but no preferred worker is available and categoryConfig is `weak`
-- not assigned at all, if preferred workers are not available and `categoryConfig` is `strong`
+- any worker if no categoryConfig is given for task type
+- any worker if categoryConfig is given for task type but no category is given for datasource and there's no default category
+- a preferred worker (based on categoryConfig and category for datasource) if available
+- any worker if categoryConfig and category are given but no preferred worker is available and categoryConfig is `weak`
+- not assigned at all if preferred workers are not available and `categoryConfig` is `strong`
 
 In both cases, Druid constructs the eligible worker and selects one depending on their load with the goal of either distributing the load equally or filling as few workers as possible.
 
