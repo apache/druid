@@ -21,7 +21,6 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.TypeStrategies;
@@ -353,36 +352,28 @@ public class ParserTest extends InitializedNullHandlingTest
   @Test
   public void testLiteralExplicitTypedArrays()
   {
-    ExpressionProcessing.initializeForTests(true);
+    validateConstantExpression("ARRAY<DOUBLE>[1.0, 2.0, null, 3.0]", new Object[]{1.0, 2.0, null, 3.0});
+    validateConstantExpression("ARRAY<LONG>[1, 2, null, 3]", new Object[]{1L, 2L, null, 3L});
+    validateConstantExpression("ARRAY<STRING>['1', '2', null, '3.0']", new Object[]{"1", "2", null, "3.0"});
 
-    try {
-      validateConstantExpression("ARRAY<DOUBLE>[1.0, 2.0, null, 3.0]", new Object[]{1.0, 2.0, null, 3.0});
-      validateConstantExpression("ARRAY<LONG>[1, 2, null, 3]", new Object[]{1L, 2L, null, 3L});
-      validateConstantExpression("ARRAY<STRING>['1', '2', null, '3.0']", new Object[]{"1", "2", null, "3.0"});
+    // mixed type tests
+    validateConstantExpression("ARRAY<DOUBLE>[3, null, 4, 2.345]", new Object[]{3.0, null, 4.0, 2.345});
+    validateConstantExpression("ARRAY<LONG>[1.0, null, 2000.0]", new Object[]{1L, null, 2000L});
 
-      // mixed type tests
-      validateConstantExpression("ARRAY<DOUBLE>[3, null, 4, 2.345]", new Object[]{3.0, null, 4.0, 2.345});
-      validateConstantExpression("ARRAY<LONG>[1.0, null, 2000.0]", new Object[]{1L, null, 2000L});
+    // explicit typed string arrays should accept any literal and convert
+    validateConstantExpression("ARRAY<STRING>['1', null, 2000, 1.1]", new Object[]{"1", null, "2000", "1.1"});
+    validateConstantExpression("ARRAY<LONG>['1', null, 2000, 1.1]", new Object[]{1L, null, 2000L, 1L});
+    validateConstantExpression("ARRAY<DOUBLE>['1', null, 2000, 1.1]", new Object[]{1.0, null, 2000.0, 1.1});
 
-      // explicit typed string arrays should accept any literal and convert
-      validateConstantExpression("ARRAY<STRING>['1', null, 2000, 1.1]", new Object[]{"1", null, "2000", "1.1"});
-      validateConstantExpression("ARRAY<LONG>['1', null, 2000, 1.1]", new Object[]{1L, null, 2000L, 1L});
-      validateConstantExpression("ARRAY<DOUBLE>['1', null, 2000, 1.1]", new Object[]{1.0, null, 2000.0, 1.1});
-
-      // the gramar isn't cool enough yet to parse populated nested-arrays or complex arrays..., but empty ones can
-      // be defined...
-      validateConstantExpression("ARRAY<COMPLEX<nullableLongPair>>[]", new Object[]{});
-      validateConstantExpression("ARRAY<ARRAY<LONG>>[]", new Object[]{});
-    }
-    finally {
-      ExpressionProcessing.initializeForTests(null);
-    }
+    // the gramar isn't cool enough yet to parse populated nested-arrays or complex arrays..., but empty ones can
+    // be defined...
+    validateConstantExpression("ARRAY<COMPLEX<nullableLongPair>>[]", new Object[]{});
+    validateConstantExpression("ARRAY<ARRAY<LONG>>[]", new Object[]{});
   }
 
   @Test
   public void testConstantComplexAndNestedArrays()
   {
-    ExpressionProcessing.initializeForTests(true);
     // they can be built with array builder functions though...
     validateConstantExpression(
         "array(['foo', 'bar', 'baz'], ['baz','foo','bar'])",
@@ -426,17 +417,7 @@ public class ParserTest extends InitializedNullHandlingTest
         StringUtils.format("array(%s,%s)", l1String, l2String),
         new Object[]{l1, l2}
     );
-    ExpressionProcessing.initializeForTests(null);
   }
-
-  @Test
-  public void nestedArraysExplodeIfNotEnabled()
-  {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Cannot create a nested array type [ARRAY<ARRAY<LONG>>], 'druid.expressions.allowNestedArrays' must be set to true");
-    validateConstantExpression("ARRAY<ARRAY<LONG>>[]", new Object[]{});
-  }
-
 
   @Test
   public void testLiteralArrayImplicitStringParseException()

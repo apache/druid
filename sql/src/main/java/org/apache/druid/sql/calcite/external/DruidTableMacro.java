@@ -98,4 +98,9 @@ public class DruidTableMacro implements ExtendedTableMacro
   {
     return parameters;
   }
+
+  public ObjectMapper getJsonMapper()
+  {
+    return jsonMapper;
+  }
 }

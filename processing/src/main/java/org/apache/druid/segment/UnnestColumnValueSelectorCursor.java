@@ -187,10 +187,7 @@ public class UnnestColumnValueSelectorCursor implements Cursor
           @Override
           public Object getObject()
           {
-            if (!unnestListForCurrentRow.isEmpty()) {
-              return unnestListForCurrentRow.get(index);
-            }
-            return null;
+            return unnestListForCurrentRow.get(index);
           }
 
           @Override
@@ -279,7 +276,7 @@ public class UnnestColumnValueSelectorCursor implements Cursor
   {
     currentVal = this.columnValueSelector.getObject();
     if (currentVal == null) {
-      unnestListForCurrentRow = Collections.singletonList(null);
+      unnestListForCurrentRow = Collections.emptyList();
     } else if (currentVal instanceof List) {
       unnestListForCurrentRow = (List<Object>) currentVal;
     } else if (currentVal instanceof Object[]) {
@@ -296,7 +293,23 @@ public class UnnestColumnValueSelectorCursor implements Cursor
   private void initialize()
   {
     getNextRow();
+    if (unnestListForCurrentRow.isEmpty()) {
+      moveToNextNonEmptyRow();
+    }
     needInitialization = false;
+  }
+
+  private void moveToNextNonEmptyRow()
+  {
+    index = 0;
+    do {
+      baseCursor.advance();
+      if (!baseCursor.isDone()) {
+        getNextRow();
+      } else {
+        return;
+      }
+    } while (unnestListForCurrentRow.isEmpty());
   }
 
   /**
@@ -307,14 +320,8 @@ public class UnnestColumnValueSelectorCursor implements Cursor
    */
   private void advanceAndUpdate()
   {
-    if (unnestListForCurrentRow.isEmpty() || index >= unnestListForCurrentRow.size() - 1) {
-      index = 0;
-      baseCursor.advance();
-      if (!baseCursor.isDone()) {
-        getNextRow();
-      }
-    } else {
-      index++;
+    if (++index >= unnestListForCurrentRow.size()) {
+      moveToNextNonEmptyRow();
     }
   }
 }

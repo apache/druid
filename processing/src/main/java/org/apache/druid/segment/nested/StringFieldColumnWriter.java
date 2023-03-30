@@ -44,7 +44,7 @@ public final class StringFieldColumnWriter extends GlobalDictionaryEncodedFieldC
   }
 
   @Override
-  String processValue(Object value)
+  String processValue(int row, Object value)
   {
     if (value == null) {
       return null;
