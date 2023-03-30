@@ -107,8 +107,6 @@ services:
     networks:
       druid-it-net:
         ipv4_address: 172.172.172.6
-    depends_on:
-      - minio
     entrypoint: >
       /bin/sh -c "
       /usr/bin/mc alias set s3 http://minio:9000 ${AWS_ACCESS_KEY_ID} ${AWS_SECRET_ACCESS_KEY};

@@ -59,7 +59,9 @@ class Template(BaseTemplate):
         return self.define_external_service("minio")
 
     def create_minio_bucket(self):
-        return self.define_external_service("create_minio_buckets")
+        service = self.define_external_service("create_minio_buckets")
+        self.add_depends(service, ["minio"])
+        return service
 
     def define_custom_services(self):
         self.create_minio_container()
