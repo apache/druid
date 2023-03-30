@@ -97,11 +97,11 @@ public class DruidFilterUnnestRule extends RelOptRule
       final Project rightP = call.rel(0);
       if (rightP.getChildExps().size() > 0) {
         final SqlKind rightProjectKind = rightP.getChildExps().get(0).getKind();
-        final SqlTypeName rightType = rightP.getChildExps().get(0).getType().getSqlTypeName();
-        // allow rule to trigger only if there's a non-decimal CAST or numeric literal cast
-        return rightP.getProjects().size() == 1 && ((rightProjectKind == SqlKind.CAST
-                                                     && rightType != SqlTypeName.DECIMAL)
-                                                    || rightProjectKind == SqlKind.LITERAL);
+        final SqlTypeName projectType = rightP.getChildExps().get(0).getType().getSqlTypeName();
+        final SqlTypeName unnestDataType = call.rel(1).getRowType().getFieldList().get(0).getType().getSqlTypeName();
+        // allow rule to trigger only if project involves a cast on the same row type
+        return rightP.getProjects().size() == 1 && ((rightProjectKind == SqlKind.CAST || rightProjectKind == SqlKind.LITERAL)
+                                                     && projectType == unnestDataType);
       }
       return false;
     }
