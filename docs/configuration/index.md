@@ -1258,7 +1258,7 @@ There are 4  options for select strategies:
 - [`fillCapacityWithCategorySpec`](#fillcapacitywithcategoryspec)
 A `javascript` option is also available but should only be used for prototyping new strategies.
 
-If an `affinityConfig` is provided (as part of `fillCapacity` and `equalDistribution` strategies) for a given task the list of workers eligible to be assigned is determined as follows:
+If an `affinityConfig` is provided (as part of `fillCapacity` and `equalDistribution` strategies) for a given task, the list of workers eligible to be assigned is determined as follows:
 
 - a non-affinity worker, if no affinity is specified for that datasource (any worker not listed in the `affinityConfig` is known as a "Non-affinity worker")
 - a non-affinity worker, if preferred workers are not available and affinity is `weak`
