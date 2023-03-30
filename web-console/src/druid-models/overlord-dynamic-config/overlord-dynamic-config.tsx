@@ -86,11 +86,11 @@ export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
     info: (
       <>
         <p>An example affinity config might look like:</p>
-        <Callout>
-          <pre>{`{
+        <Callout className="code-block">
+          {`{
   "datasource1": ["host1:port", "host2:port"],
   "datasource2": ["host3:port"]
-}`}</pre>
+}`}
         </Callout>
       </>
     ),
@@ -121,15 +121,15 @@ export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
     info: (
       <>
         <p>An example category map might look like:</p>
-        <Callout>
-          <pre>{`{
+        <Callout className="code-block">
+          {`{
   "index_kafka": {
     "defaultCategory": "category1",
     "categoryAffinity": {
       "datasource1": "category2"
     }
   }
-}`}</pre>
+}`}
         </Callout>
       </>
     ),
