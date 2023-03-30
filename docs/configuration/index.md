@@ -1268,7 +1268,7 @@ If an `affinityConfig` is provided (as part of `fillCapacity` and `equalDistribu
 
 Note that every worker listed in the `affinityConfig` will only be used for the assigned datasources and no other.
 
-If a `categorySpec` is provided (as part of `fillCapacityWithCategorySpec` and `equalDistributionWithCategorySpec` strategies) for a given task, the list of workers eligible to be assigned is determined as follows:
+If a `categorySpec` is provided (as part of `fillCapacityWithCategorySpec` and `equalDistributionWithCategorySpec` strategies), then a task of a given datasource may be assigned to:
 
 - any worker if no categoryConfig is given for task type
 - any worker if categoryConfig is given for task type but no category is given for datasource and there's no default category
