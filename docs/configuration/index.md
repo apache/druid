@@ -1339,8 +1339,8 @@ MiddleManagers up to capacity simultaneously, rather than a single MiddleManager
 ###### `fillCapacityWithCategorySpec`
 
 This strategy is a variant of `fillCapacity`, which supports `workerCategorySpec` instead of an `affinityConfig`.
-The usage is the same with _equalDistributionWithCategorySpec_ strategy.
-This strategy can't work with `AutoScaler` since the behavior is undefined.
+The usage is the same as `equalDistributionWithCategorySpec` strategy.
+This strategy doesn't work with `AutoScaler` since the behavior is undefined.
 
 |Property|Description|Default|
 |--------|-----------|-------|
