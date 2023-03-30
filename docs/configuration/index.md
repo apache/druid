@@ -1292,9 +1292,9 @@ This evenly distributes work across your MiddleManagers.
 
 ###### `equalDistributionWithCategorySpec`
 
-This strategy is a variant of `equalDistribution`, which support `workerCategorySpec` field rather than `affinityConfig`.
-By specifying `workerCategorySpec`, you can assign tasks to run on different categories of MiddleManagers based on the tasks' **type** and **dataSource**.
-This strategy can't work with `AutoScaler` since the behavior is undefined.
+This strategy is a variant of `equalDistribution`, which supports `workerCategorySpec` field rather than `affinityConfig`.
+By specifying `workerCategorySpec`, you can assign tasks to run on different categories of MiddleManagers based on the task's **type** and **dataSource**.
+This strategy doesn't work with `AutoScaler` since the behavior is undefined.
 
 |Property|Description|Default|
 |--------|-----------|-------|
