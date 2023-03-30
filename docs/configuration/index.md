@@ -1260,10 +1260,10 @@ A `javascript` option is also available but should only be used for prototyping 
 
 If an `affinityConfig` is provided (as part of `fillCapacity` and `equalDistribution` strategies) for a given task, the list of workers eligible to be assigned is determined as follows:
 
-- a non-affinity worker, if no affinity is specified for that datasource (any worker not listed in the `affinityConfig` is known as a "Non-affinity worker")
-- a non-affinity worker, if preferred workers are not available and affinity is `weak`
-- a preferred worker (based on affinityConfig), if available
-- not assigned at all (i.e. remains pending), if preferred MMs are not available and affinity is `strong`
+- a non-affinity worker if no affinity is specified for that datasource. Any worker not listed in the `affinityConfig` is considered a non-affinity worker.
+- a non-affinity worker if preferred workers are not available and affinity is `weak`
+- a preferred worker  (a worker listed in `affinityConfig`) if available
+- not assigned at all (remains pending) if preferred MiddleManagers are not available and affinity is `strong`
 
 Note that every worker listed in the `affinityConfig` will only be used for the assigned datasources and no other.
 
