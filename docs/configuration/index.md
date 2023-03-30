@@ -1256,7 +1256,7 @@ There are 4  options for select strategies:
 - [`equalDistributionWithCategorySpec`](#equalDistributionWithCategorySpec)
 - [`fillCapacity`](#fillcapacity)
 - [`fillCapacityWithCategorySpec`](#fillcapacitywithcategoryspec)
-A `javascript` option is also available which should only be used for prototyping new strategies.
+A `javascript` option is also available but should only be used for prototyping new strategies.
 
 If an `affinityConfig` is provided (as part of `fillCapacity` and `equalDistribution` strategies) for a given task the list of workers eligible to be assigned is determined as follows:
 
