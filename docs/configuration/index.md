@@ -1373,7 +1373,7 @@ Example: a function that sends batch_index_task to workers 10.0.0.1 and 10.0.0.2
 
 > JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
 
-###### AffinityConfig
+###### affinityConfig
 
 Use the `affinityConfig` field to pass affinity configuration to the `equalDistribution` and `fillCapacity` strategies.
 If not provided, the default is to have no affinity.
