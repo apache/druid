@@ -1325,7 +1325,7 @@ Example: for tasks of type "index_kafka" default to running on middle managers o
 ###### `fillCapacity`
 
 Tasks are assigned to the worker with the most currently-running tasks. This is
-useful when you are auto-scaling MiddleManagers, since it will tend to pack some full and
+useful when you are auto-scaling MiddleManagers since it tends to pack some full and
 leave others empty. The empty ones can be safely terminated.
 
 Note that if `druid.indexer.runner.pendingTasksRunnerNumThreads` is set to _N_ > 1, then this strategy will fill _N_
