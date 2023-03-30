@@ -1250,7 +1250,7 @@ The select strategy controls how Druid assigns tasks to workers (MiddleManagers)
 At a high level, the select strategy determines the list of possible workers that a task can be assigned to using
 either an `affinityConfig` or a `categorySpec`. Then, Druid assigns the task by either trying to distribute load equally
 (`equalDistribution`) or to fill as many workers as possible to capacity (`fillCapacity`).
-There are 4  options for select strategies:
+There are 4 options for select strategies:
 
 - [`equalDistribution`](#equaldistribution)
 - [`equalDistributionWithCategorySpec`](#equaldistributionwithcategoryspec)
