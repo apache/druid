@@ -1283,7 +1283,7 @@ not be assigned a category, and you want the work to be concentrated on the fewe
 ###### `equalDistribution`
 
 Tasks are assigned to the MiddleManager with the most free slots at the time the task begins running.
-This will evenly distribute work across your MiddleManagers.
+This evenly distributes work across your MiddleManagers.
 
 |Property|Description|Default|
 |--------|-----------|-------|
