@@ -444,6 +444,15 @@
       </properties>
     </profile>
     <profile>
+      <id>IT-BasicAuth</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <it.category>BasicAuth</it.category>
+      </properties>
+    </profile>
+    <profile>
       <!-- Run the integration tests in Docker. Assumes that the cluster has been
            started via $DRUID_DEV/it.sh up <Category> or $DRUID_DEV/it.sh test <Category>
            Cluster start/stop is not done here to avoid duplicating functionality.

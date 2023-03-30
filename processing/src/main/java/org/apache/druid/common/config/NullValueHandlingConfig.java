@@ -27,7 +27,7 @@ public class NullValueHandlingConfig
   public static final String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
 
   //added to preserve backward compatibility
-  //and not count nulls during cardinality aggrgation over strings
+  //and not count nulls during cardinality aggregation over strings
 
   public static final String NULL_HANDLING_DURING_STRING_CARDINALITY = "druid.generic.ignoreNullsForStringCardinality";
 
@@ -36,7 +36,6 @@ public class NullValueHandlingConfig
 
   @JsonProperty("ignoreNullsForStringCardinality")
   private final boolean ignoreNullsForStringCardinality;
-
 
   @JsonCreator
   public NullValueHandlingConfig(

@@ -202,10 +202,17 @@ class BaseTemplate:
 
     def add_env(self, service, var, value):
         '''
+        Adds an environment variable & value to a service.
+        '''
+        self.add_env_pair(service, var + '=' + value)
+
+    def add_env_pair(self, service, pair):
+        '''
         Adds an environment variable to a service.
+        Entry is of the form var=value.
         '''
         vars = service.setdefault('environment', [])
-        vars.append(var + '=' + value)
+        vars.append(pair)
 
     def add_property(self, service, prop, value):
         '''

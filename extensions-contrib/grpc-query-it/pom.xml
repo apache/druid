@@ -116,6 +116,15 @@
         <it.category>GrpcQuery</it.category>
       </properties>
     </profile>
+    <profile>
+      <id>IT-GrpcQueryBasicAuth</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <it.category>GrpcQueryBasicAuth</it.category>
+      </properties>
+    </profile>
     <!-- Run the actual IT tests using the one-and-only test category declared above. -->
     <profile>
       <id>docker-tests</id>

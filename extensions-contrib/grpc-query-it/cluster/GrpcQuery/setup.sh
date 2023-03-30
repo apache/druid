@@ -33,7 +33,7 @@
 
 #set -x
 
-EXTENSION_DIR=$MODULE_DIR/target/GrpcQuery/extensions
+EXTENSION_DIR=$SHARED_DIR/extensions
 mkdir -p $EXTENSION_DIR
 
 # Expand the grpc-query artifact into the extensions directory

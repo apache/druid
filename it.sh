@@ -42,20 +42,26 @@ Usage: $0 cmd [category] [module]
   image
       Build the test image
   up <category> [<module>]
-      Start the cluster for category
+      Start the cluster for category.
   down <category> [<module>]
-      Stop the cluster for category
+      Stop the cluster for category.
+  run <category> [<module>]
+      Run the tests for the given module on an alread-running cluster.
+      Does not stop the cluster. Primarily for debugging.
   test <category> [<module>]
-      Start the cluster, run the test for category, and stop the cluster
+      Start the cluster, run the test for category, and stop the cluster.
   tail <category> [<module>]
-      Show the last 20 lines of each container log
+      Show the last 20 lines of each container log.
   gen <category> [<module>]
       Generate docker-compose.yaml files (done automatically on up)
-      run one IT in Travis (build dist, image, run test, tail logs)
+      run one IT in Travis (build dist, image, run test, tail logs).
   github <category> [<module>]
-      Run one IT in Github Workflows (run test, tail logs)
-  prune
-      prune Docker volumes
+      Run one IT in Github Workflows (run test, tail logs).
+  prune-containers
+      Stop all running Docker containers. Do this if "down" won't work
+      because the "docker-compose.yaml" file is no longer available.
+  prune-volumes
+      prune Docker volumes.
 
 Arguments:
   category: A defined IT JUnit category, and IT-<category> profile
@@ -209,22 +215,27 @@ else
   MODULE_DIR=$IT_MODULE_DIR
   shift
 fi
+
 IT_CASES_DIR="$DRUID_DEV/integration-tests-ex/cases"
 
+# Added -Dcyclonedx.skip=true to avoid ISO-8859-1 [ERROR]s
+# May be fixed in the future
 MAVEN_IGNORE="-P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -Dcyclonedx.skip=true"
+TEST_OPTIONS="verify -P skip-static-checks,docker-tests \
+            -Dmaven.javadoc.skip=true -Dcyclonedx.skip=true -DskipUTs=true"
 
 case $CMD in
   "help" )
     usage
     ;;
   "ci" )
-    mvn -q clean package dependency:go-offline -P dist $MAVEN_IGNORE
+    mvn -q clean install dependency:go-offline -P dist $MAVEN_IGNORE
     ;;
   "build" )
-    mvn clean package -P dist $MAVEN_IGNORE -T1.0C $*
+    mvn clean install -P dist $MAVEN_IGNORE -T1.0C $*
     ;;
   "dist" )
-    mvn package -P dist $MAVEN_IGNORE -pl :distribution
+    mvn install -P dist $MAVEN_IGNORE -pl :distribution
     ;;
   "tools" )
     mvn install -pl :druid-it-tools
@@ -250,28 +261,53 @@ case $CMD in
     reuse_override
     $IT_CASES_DIR/cluster.sh down $CATEGORY
     ;;
+  "run" )
+    require_category
+    reuse_override
+    mvn $TEST_OPTIONS -P IT-$CATEGORY -pl $MAVEN_PROJECT
+    ;;
   "test" )
     require_category
     build_override
     verify_env_vars
     $IT_CASES_DIR/cluster.sh up $CATEGORY
-    mvn verify -P skip-static-checks,docker-tests,IT-$CATEGORY \
-            -Dmaven.javadoc.skip=true -DskipUTs=true \
-            -pl $MAVEN_PROJECT
+
+    # Run the test. On failure, still shut down the cluster.
+    # Return Maven's return code as the script's return code.
+    set +e
+    mvn $TEST_OPTIONS -P IT-$CATEGORY -pl $MAVEN_PROJECT
+    RESULT=$?
+    set -e
     $IT_CASES_DIR/cluster.sh down $CATEGORY
+    exit $RESULT
     ;;
   "tail" )
     require_category
     tail_logs
     ;;
   "github" )
+    set +e
     $0 test $CATEGORY
-    $0 tail $CATEGORY
+    RESULT=$?
+
+    # Include logs, but only for failures.
+    if [ $RESULT -ne 0 ]; then
+      $0 tail $CATEGORY
+    fi
+    exit $RESULT
     ;;
-  "prune" )
+  # Name is deliberately long to avoid accidental use.
+  "prune-containers" )
+    if [ $(docker ps | wc -l) -ne 1 ]; then
+      echo "Cleaning running containers"
+      docker ps
+      docker ps -aq | xargs -r docker rm -f
+    fi
+    ;;
+  "prune-volumes" )
     # Caution: this removes all volumes, which is generally what you
     # want when testing.
-    docker system prune --volumes
+    docker system prune -af --volumes
     ;;
   * )
     usage
