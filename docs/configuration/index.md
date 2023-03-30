@@ -1223,7 +1223,7 @@ An example Overlord dynamic config is shown below:
 }
 ```
 
-Issuing a GET request at the same URL will return the current Overlord dynamic config spec.
+Issuing a GET request at the same URL returns the current Overlord dynamic config spec.
 
 |Property| Description                                                                                                                                                                                  | Default                       |
 |--------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------|
