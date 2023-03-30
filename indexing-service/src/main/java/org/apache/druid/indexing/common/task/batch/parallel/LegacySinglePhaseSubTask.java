@@ -25,6 +25,7 @@ import org.apache.druid.indexing.common.task.TaskResource;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.Set;
 
 public class LegacySinglePhaseSubTask extends SinglePhaseSubTask
 {
@@ -59,10 +60,10 @@ public class LegacySinglePhaseSubTask extends SinglePhaseSubTask
 
   @Nullable
   @Override
-  public String getInputSourceType()
+  public Set<String> getInputSourceTypes()
   {
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
-           getIngestionSchema().getIOConfig().getInputSource().getType() :
+           getIngestionSchema().getIOConfig().getInputSource().getTypes() :
            null;
   }
 

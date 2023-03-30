@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -103,7 +104,7 @@ public class NoopTask extends AbstractTask
 
   @Nullable
   @Override
-  public String getInputSourceType()
+  public Set<String> getInputSourceTypes()
   {
     return null;
   }

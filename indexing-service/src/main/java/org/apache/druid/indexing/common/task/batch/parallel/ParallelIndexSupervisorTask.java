@@ -272,10 +272,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   @Nullable
   @Override
-  public String getInputSourceType()
+  public Set<String> getInputSourceTypes()
   {
     return ingestionSchema.getIOConfig().getInputSource() != null ?
-           ingestionSchema.getIOConfig().getInputSource().getType() :
+           ingestionSchema.getIOConfig().getInputSource().getTypes() :
            null;
   }
 

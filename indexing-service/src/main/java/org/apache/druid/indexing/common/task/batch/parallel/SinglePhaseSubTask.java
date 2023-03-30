@@ -192,10 +192,10 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
 
   @Nullable
   @Override
-  public String getInputSourceType()
+  public Set<String> getInputSourceTypes()
   {
     return ingestionSchema.getIOConfig().getInputSource() != null ?
-           ingestionSchema.getIOConfig().getInputSource().getType() :
+           ingestionSchema.getIOConfig().getInputSource().getTypes() :
            null;
   }
 

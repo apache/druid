@@ -32,8 +32,10 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.segment.indexing.DataSchema;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long, KafkaRecordEntity>
 {
@@ -135,9 +137,9 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long, Kafka
 
   @Nullable
   @Override
-  public String getInputSourceType()
+  public Set<String> getInputSourceTypes()
   {
-    return "kafka";
+    return Collections.singleton("kafka");
   }
 
   @Override

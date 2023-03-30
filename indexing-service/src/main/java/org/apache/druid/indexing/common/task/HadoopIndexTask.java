@@ -85,9 +85,11 @@ import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class HadoopIndexTask extends HadoopTask implements ChatHandler
@@ -195,9 +197,9 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
   @Nullable
   @Override
-  public String getInputSourceType()
+  public Set<String> getInputSourceTypes()
   {
-    return "hadoop";
+    return Collections.singleton("hadoop");
   }
 
   @Override

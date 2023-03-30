@@ -42,6 +42,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -133,10 +134,10 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
 
   @Nullable
   @Override
-  public String getInputSourceType()
+  public Set<String> getInputSourceTypes()
   {
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
-           getIngestionSchema().getIOConfig().getInputSource().getType() :
+           getIngestionSchema().getIOConfig().getInputSource().getTypes() :
            null;
   }
 

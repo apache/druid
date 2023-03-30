@@ -74,6 +74,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
@@ -182,7 +183,7 @@ public class RealtimeIndexTask extends AbstractTask
 
   @Nullable
   @Override
-  public String getInputSourceType()
+  public Set<String> getInputSourceTypes()
   {
     return null;
   }

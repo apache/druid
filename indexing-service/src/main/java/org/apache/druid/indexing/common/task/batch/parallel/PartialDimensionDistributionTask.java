@@ -56,6 +56,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Supplier;
 
 /**
@@ -176,10 +177,10 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
 
   @Nullable
   @Override
-  public String getInputSourceType()
+  public Set<String> getInputSourceTypes()
   {
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
-           getIngestionSchema().getIOConfig().getInputSource().getType() :
+           getIngestionSchema().getIOConfig().getInputSource().getTypes() :
            null;
   }
 

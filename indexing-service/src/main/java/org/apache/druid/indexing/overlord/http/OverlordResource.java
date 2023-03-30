@@ -211,11 +211,13 @@ public class OverlordResource
             )
             .build();
       }
-      if (null != task.getInputSourceType()) {
-        resourceActions.add(new ResourceAction(
-            new Resource(ResourceType.EXTERNAL, task.getInputSourceType()),
-            Action.READ
-        ));
+      if (null != task.getInputSourceTypes()) {
+        for (String inputSourceType : task.getInputSourceTypes()) {
+          resourceActions.add(new ResourceAction(
+              new Resource(ResourceType.EXTERNAL, inputSourceType),
+              Action.READ
+          ));
+        }
       }
     }
 

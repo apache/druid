@@ -403,7 +403,7 @@ public class CompactionTask extends AbstractBatchIndexTask
 
   @Nullable
   @Override
-  public String getInputSourceType()
+  public Set<String> getInputSourceTypes()
   {
     return null;
   }

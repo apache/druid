@@ -40,8 +40,8 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.Null;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Represents a task that can run on a worker. The general contracts surrounding Tasks are:
@@ -141,7 +141,7 @@ public interface Task
   String getDataSource();
 
   @Nullable
-  default String getInputSourceType() {
+  default Set<String> getInputSourceTypes() {
     return null;
   }
 

@@ -290,10 +290,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   @Nullable
   @Override
-  public String getInputSourceType()
+  public Set<String> getInputSourceTypes()
   {
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
-           getIngestionSchema().getIOConfig().getInputSource().getType() :
+           getIngestionSchema().getIOConfig().getInputSource().getTypes() :
            null;
   }
 
