@@ -1301,7 +1301,7 @@ This strategy doesn't work with `AutoScaler` since the behavior is undefined.
 |`type`|`equalDistributionWithCategorySpec`|required; must be `equalDistributionWithCategorySpec`|
 |`workerCategorySpec`|[Worker Category Spec](#workercategoryspec) object|null (no worker category spec)|
 
-Example: for tasks of type "index_kafka" default to running on middle managers of category `c1`, except tasks writing to datasource "ds1" which should run on middle managers of category `c2`.
+Example: tasks of type "index_kafka" default to running on MiddleManagers of category `c1`, except for tasks that write to datasource "ds1," which  run on MiddleManagers of category `c2`.
 
 ```json
 {
