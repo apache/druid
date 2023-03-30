@@ -1263,7 +1263,7 @@ If an `affinityConfig` is provided (as part of `fillCapacity` and `equalDistribu
 
 - a non-affinity worker if no affinity is specified for that datasource. Any worker not listed in the `affinityConfig` is considered a non-affinity worker.
 - a non-affinity worker if preferred workers are not available and the affinity is _weak_ i.e. `strong: false`.
-- a preferred worker  (a worker listed in `affinityConfig`) if available
+- a preferred worker listed in the `affinityConfig` for this datasource if it has available capacity
 - no worker if preferred workers are not available and affinity is _strong_ i.e. `strong: true`. In this case, the task remains in "pending" state. The chosen provisioning strategy (e.g. `pendingTaskBased`) may then use the total number of pending tasks to determine if a new node should be provisioned.
 
 Note that every worker listed in the `affinityConfig` will only be used for the assigned datasources and no other.
