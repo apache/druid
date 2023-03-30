@@ -270,6 +270,20 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return TYPE;
   }
 
+  @Nullable
+  @Override
+  public String getInputSourceType()
+  {
+    return ingestionSchema.getIOConfig().getInputSource() != null ?
+           ingestionSchema.getIOConfig().getInputSource().getType() :
+           null;
+  }
+
+  @Override
+  public boolean usesFirehose() {
+    return ingestionSchema.getIOConfig().getFirehoseFactory() != null;
+  }
+
   @JsonProperty("spec")
   public ParallelIndexIngestionSpec getIngestionSchema()
   {

@@ -148,6 +148,20 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
     return TYPE;
   }
 
+  @Nullable
+  @Override
+  public String getInputSourceType()
+  {
+    return getIngestionSchema().getIOConfig().getInputSource() != null ?
+           getIngestionSchema().getIOConfig().getInputSource().getType() :
+           null;
+  }
+
+  @Override
+  public boolean usesFirehose() {
+    return getIngestionSchema().getIOConfig().getFirehoseFactory() != null;
+  }
+
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws IOException
   {

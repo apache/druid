@@ -56,4 +56,18 @@ public class LegacySinglePhaseSubTask extends SinglePhaseSubTask
   {
     return SinglePhaseSubTask.OLD_TYPE_NAME;
   }
+
+  @Nullable
+  @Override
+  public String getInputSourceType()
+  {
+    return getIngestionSchema().getIOConfig().getInputSource() != null ?
+           getIngestionSchema().getIOConfig().getInputSource().getType() :
+           null;
+  }
+
+  @Override
+  public boolean usesFirehose() {
+    return getIngestionSchema().getIOConfig().getFirehoseFactory() != null;
+  }
 }

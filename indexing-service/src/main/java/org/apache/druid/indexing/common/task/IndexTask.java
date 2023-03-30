@@ -288,6 +288,20 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
   }
 
+  @Nullable
+  @Override
+  public String getInputSourceType()
+  {
+    return getIngestionSchema().getIOConfig().getInputSource() != null ?
+           getIngestionSchema().getIOConfig().getInputSource().getType() :
+           null;
+  }
+
+  @Override
+  public boolean usesFirehose() {
+    return ingestionSchema.getIOConfig().firehoseFactory != null;
+  }
+
   @GET
   @Path("/unparseableEvents")
   @Produces(MediaType.APPLICATION_JSON)

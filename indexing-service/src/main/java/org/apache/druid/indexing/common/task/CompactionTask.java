@@ -401,6 +401,18 @@ public class CompactionTask extends AbstractBatchIndexTask
     return TYPE;
   }
 
+  @Nullable
+  @Override
+  public String getInputSourceType()
+  {
+    return null;
+  }
+
+  @Override
+  public boolean usesFirehose() {
+    return false;
+  }
+
   @Override
   public int getPriority()
   {

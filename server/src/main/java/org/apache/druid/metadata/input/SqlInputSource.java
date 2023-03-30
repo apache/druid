@@ -40,10 +40,12 @@ import java.io.File;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 public class SqlInputSource extends AbstractInputSource implements SplittableInputSource<String>
 {
+  static final String TYPE_KEY = "sql";
   private final List<String> sqls;
   private final SQLFirehoseDatabaseConnector sqlFirehoseDatabaseConnector;
   private final ObjectMapper objectMapper;
@@ -66,6 +68,11 @@ public class SqlInputSource extends AbstractInputSource implements SplittableInp
         "SQL Metadata Connector not configured!"
     );
     this.objectMapper = objectMapper;
+  }
+
+  @Override
+  public Set<String> getTypes() {
+    return Collections.singleton(TYPE_KEY);
   }
 
   @JsonProperty

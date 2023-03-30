@@ -32,7 +32,9 @@ import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.Collections;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 public class InlineInputSource extends AbstractInputSource
@@ -46,6 +48,11 @@ public class InlineInputSource extends AbstractInputSource
   {
     Preconditions.checkArgument(!Strings.isNullOrEmpty(data), "empty data");
     this.data = data;
+  }
+
+  @Override
+  public Set<String> getTypes() {
+    return Collections.singleton(TYPE_KEY);
   }
 
   @JsonProperty

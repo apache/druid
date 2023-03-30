@@ -115,6 +115,16 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
   }
 
   @Override
+  public String getInputSourceType() {
+    return SUPERVISOR_TYPE;
+  }
+
+  @Override
+  public boolean usesFirehose() {
+    return false;
+  }
+
+  @Override
   public String getSource()
   {
     return getIoConfig() != null ? getIoConfig().getStream() : null;

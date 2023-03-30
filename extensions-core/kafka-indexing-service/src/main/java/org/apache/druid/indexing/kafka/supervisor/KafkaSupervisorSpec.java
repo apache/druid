@@ -93,6 +93,17 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
   }
 
   @Override
+  public String getInputSourceType()
+  {
+    return TASK_TYPE;
+  }
+
+  @Override
+  public boolean usesFirehose() {
+    return false;
+  }
+
+  @Override
   public String getSource()
   {
     return getIoConfig() != null ? getIoConfig().getTopic() : null;

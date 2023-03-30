@@ -31,6 +31,7 @@ import org.apache.druid.guice.annotations.UnstableApi;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.Set;
 
 /**
  * InputSource abstracts the storage system where input data is stored. It creates an {@link InputSourceReader}
@@ -87,4 +88,9 @@ public interface InputSource
       @Nullable InputFormat inputFormat,
       File temporaryDirectory
   );
+
+  @Nullable
+  default Set<String> getTypes() {
+    return null;
+  }
 }

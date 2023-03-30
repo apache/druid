@@ -46,13 +46,16 @@ import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class GoogleCloudStorageInputSource extends CloudObjectInputSource
 {
+  static final String TYPE_KEY = GoogleStorageDruidModule.SCHEME;
   private static final Logger LOG = new Logger(GoogleCloudStorageInputSource.class);
 
   private final GoogleStorage storage;
@@ -71,6 +74,11 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
     super(GoogleStorageDruidModule.SCHEME_GS, uris, prefixes, objects, objectGlob);
     this.storage = storage;
     this.inputDataConfig = inputDataConfig;
+  }
+
+  @Override
+  public Set<String> getTypes() {
+    return Collections.singleton(TYPE_KEY);
   }
 
   @Override

@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -98,6 +99,18 @@ public class NoopTask extends AbstractTask
   public String getType()
   {
     return "noop";
+  }
+
+  @Nullable
+  @Override
+  public String getInputSourceType()
+  {
+    return null;
+  }
+
+  @Override
+  public boolean usesFirehose() {
+    return firehoseFactory != null;
   }
 
   @JsonProperty

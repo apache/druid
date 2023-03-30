@@ -71,6 +71,7 @@ import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Timer;
@@ -177,6 +178,18 @@ public class RealtimeIndexTask extends AbstractTask
   public String getType()
   {
     return "index_realtime";
+  }
+
+  @Nullable
+  @Override
+  public String getInputSourceType()
+  {
+    return null;
+  }
+
+  @Override
+  public boolean usesFirehose() {
+    return true;
   }
 
   @Override

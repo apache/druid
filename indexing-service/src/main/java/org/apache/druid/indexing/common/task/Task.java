@@ -39,6 +39,8 @@ import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 
+import javax.annotation.Nullable;
+import javax.validation.constraints.Null;
 import java.util.Map;
 
 /**
@@ -137,6 +139,15 @@ public interface Task
    * Returns the datasource this task operates on. Each task can operate on only one datasource.
    */
   String getDataSource();
+
+  @Nullable
+  default String getInputSourceType() {
+    return null;
+  }
+
+  default boolean usesFirehose() {
+    return false;
+  }
 
   /**
    * Returns query runners for this task. If this task is not meant to answer queries over its datasource, this method

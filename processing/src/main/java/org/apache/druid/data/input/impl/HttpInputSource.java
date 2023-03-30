@@ -40,6 +40,7 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 public class HttpInputSource extends AbstractInputSource implements SplittableInputSource<URI>
@@ -67,6 +68,11 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
     this.httpAuthenticationUsername = httpAuthenticationUsername;
     this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;
     this.config = config;
+  }
+
+  @Override
+  public Set<String> getTypes() {
+    return Collections.singleton(TYPE_KEY);
   }
 
   public static void throwIfInvalidProtocols(HttpInputSourceConfig config, List<URI> uris)

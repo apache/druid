@@ -51,6 +51,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -79,6 +80,11 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
     if (baseDir == null && CollectionUtils.isNullOrEmpty(files)) {
       throw new IAE("At least one of baseDir or files should be specified");
     }
+  }
+
+  @Override
+  public Set<String> getTypes() {
+    return Collections.singleton(TYPE_KEY);
   }
 
   public LocalInputSource(File baseDir, String filter)

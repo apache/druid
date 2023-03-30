@@ -190,6 +190,20 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     return TYPE;
   }
 
+  @Nullable
+  @Override
+  public String getInputSourceType()
+  {
+    return ingestionSchema.getIOConfig().getInputSource() != null ?
+           ingestionSchema.getIOConfig().getInputSource().getType() :
+           null;
+  }
+
+  @Override
+  public boolean usesFirehose() {
+    return ingestionSchema.getIOConfig().getFirehoseFactory() != null;
+  }
+
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws IOException
   {

@@ -31,8 +31,12 @@ import org.apache.druid.java.util.common.Pair;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -59,6 +63,18 @@ public class CombiningInputSource extends AbstractInputSource implements Splitta
         "Must specify atleast one delegate inputSource"
     );
     this.delegates = delegates;
+  }
+
+  @Override
+  public Set<String> getTypes() {
+    Set<String> types = new HashSet<>();
+    for (InputSource delegate : delegates) {
+      Set<String> delegateTypes = delegate.getTypes();
+      if (null != delegateTypes) {
+        types.addAll(delegateTypes);
+      }
+    }
+    return types;
   }
 
   @JsonProperty

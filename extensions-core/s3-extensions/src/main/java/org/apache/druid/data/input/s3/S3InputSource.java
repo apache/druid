@@ -61,15 +61,18 @@ import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class S3InputSource extends CloudObjectInputSource
 {
+  public static final String TYPE_KEY = S3StorageDruidModule.SCHEME;
   // We lazily initialize ServerSideEncryptingAmazonS3 to avoid costly s3 operation when we only need S3InputSource
   // for stored information (such as for task logs) and not for ingestion.
   // (This cost only applies for new ServerSideEncryptingAmazonS3 created with s3InputSourceConfig given).
@@ -241,6 +244,11 @@ public class S3InputSource extends CloudObjectInputSource
         awsClientConfig
     );
     this.maxRetries = maxRetries;
+  }
+
+  @Override
+  public Set<String> getTypes() {
+    return Collections.singleton(TYPE_KEY);
   }
 
   private void applyAssumeRole(

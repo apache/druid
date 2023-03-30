@@ -193,6 +193,18 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     return "index_hadoop";
   }
 
+  @Nullable
+  @Override
+  public String getInputSourceType()
+  {
+    return "hadoop";
+  }
+
+  @Override
+  public boolean usesFirehose() {
+    return false;
+  }
+
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {

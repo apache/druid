@@ -162,7 +162,8 @@ public class OverlordResourceTest
         null,
         authMapper,
         workerTaskRunnerQueryAdapter,
-        provisioningStrategy
+        provisioningStrategy,
+        new AuthConfig()
     );
   }
 

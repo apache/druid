@@ -91,6 +91,7 @@ import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.utils.CloseableUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -211,6 +212,18 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   public String getType()
   {
     return "index_realtime_appenderator";
+  }
+
+  @Nullable
+  @Override
+  public String getInputSourceType()
+  {
+    return null;
+  }
+
+  @Override
+  public boolean usesFirehose() {
+    return true;
   }
 
   @Override

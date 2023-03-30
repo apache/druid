@@ -31,6 +31,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.segment.indexing.DataSchema;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -130,6 +131,18 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long, Kafka
   public String getType()
   {
     return TYPE;
+  }
+
+  @Nullable
+  @Override
+  public String getInputSourceType()
+  {
+    return "kafka";
+  }
+
+  @Override
+  public boolean usesFirehose() {
+    return false;
   }
 
   @Override
