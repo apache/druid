@@ -183,7 +183,7 @@ You can unnest into a virtual column (multiple columns treated as one). The foll
 SELECT dim4,dim5,d45 FROM nested_data, UNNEST(ARRAY[dim4,dim5]) AS example_table(d45)
 ```
 
-This virtual column is the product of the two source columns. Notice how the total number of rows has grown. The table `nested_data` had only seven rows originally.
+The virtual column `d45` is the product of the two source columns. Notice how the total number of rows has grown. The table `nested_data` had only seven rows originally.
 
 Another way to unnest a virtual column is to concatenate them with ARRAY_CONCAT:
 
@@ -210,7 +210,7 @@ The example query returns the following from  the `nested_data` datasource:
 - an unnested virtual column composed of `dim4` and `dim5` aliased to `d45`
 
 ```sql
-SELECT dim3,dim4,dim5,d3,d45 FROM "nested_data", UNNEST(MV_TO_ARRAY("dim3")) AS ud(d3), UNNEST(ARRAY[dim4,dim5]) AS foo(d45)
+SELECT dim3,dim4,dim5,d3,d45 FROM "nested_data", UNNEST(MV_TO_ARRAY("dim3")) AS foo1(d3), UNNEST(ARRAY[dim4,dim5]) AS foo2(d45)
 ```
 
 
@@ -219,7 +219,7 @@ SELECT dim3,dim4,dim5,d3,d45 FROM "nested_data", UNNEST(MV_TO_ARRAY("dim3")) AS 
 The following query uses only three columns from the `nested_data` table as the datasource. From that subset, it unnests the column `dim3` into `d3` and returns `d3`.
 
 ```sql
-SELECT d3 FROM (select dim1, dim2, dim3 from "nested_data"), UNNEST(MV_TO_ARRAY(dim3)) AS example_table(d3)
+SELECT d3 FROM (SELECT dim1, dim2, dim3 FROM "nested_data"), UNNEST(MV_TO_ARRAY(dim3)) AS example_table(d3)
 ```
 
 ### Unnest with a filter
@@ -237,7 +237,7 @@ SELECT d3 FROM (SELECT * FROM nested_data WHERE dim2 IN ('abc')), UNNEST(MV_TO_A
 You can also filter the results of an UNNEST clause. The following example unnests the inline array `[1,2,3]` but only returns the rows that match the filter:
 
 ```sql
-SELECT * FROM UNNEST(ARRAY[1,2,3]) AS ud(d1) WHERE d1 IN ('1','2')
+SELECT * FROM UNNEST(ARRAY[1,2,3]) AS example_table(d1) WHERE d1 IN ('1','2')
 ```
 
 This means that you can run a query like the following where Druid only return rows that meet the following conditions: 

@@ -104,12 +104,13 @@ SELECT column_alias_name FROM datasource, UNNEST(source_expression1) AS table_al
   * `ARRAY_CONCAT(dim1,dim2)` if you want to concatenate two multi-value dimensions. 
 * The `AS table_alias_name(column_alias_name)` clause  is not required but is highly recommended. Use it to specify the output, which can be an existing column or a new one. Replace `table_alias_name` and `column_alias_name` with a table and column name you want to alias the unnested results to. If you don't provide this, Druid uses a nondescriptive name, such as `EXPR$0`.
 
-Keep these two things in mind when writing your query:
+Keep the following things in mind when writing your query:
 
 - You must include the context parameter `"enableUnnest": true`.
 - You can unnest multiple source expressions in a single query.
 - Notice the comma between the datasource and the UNNEST function. This is needed in most cases of the UNNEST function. Specifically, it is not needed when you're unnesting an inline array since the array itself is the datasource.
 - If you view the native explanation of a SQL UNNEST, you'll notice that Druid uses `j0.unnest` as a virtual column to perform the unnest. An underscore is added for each unnest, so you may notice virtual columns named `_j0.unnest` or `__j0.unnest`.
+- UNNEST preserves the ordering of the source array that is being unnested.
 
 For examples, see the [Unnest arrays tutorial](../tutorials/tutorial-unnest-arrays.md).
 
@@ -118,7 +119,6 @@ The UNNEST function has the following limitations:
 - The function does not remove any duplicates or nulls in an array. Nulls will be treated as any other value in an array. If there are multiple nulls within the array, a record corresponding to each of the nulls gets created.
 - Arrays inside complex JSON types are not supported.
 - You cannot perform an UNNEST at ingestion time, including SQL-based ingestion using the MSQ task engine.
-- UNNEST preserves the ordering in the source array that is being unnested.
 
 ## WHERE
 
