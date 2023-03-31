@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -288,6 +289,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
   }
 
+  @JsonIgnore
   @Nullable
   @Override
   public Set<String> getInputSourceTypes()
@@ -297,6 +299,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
            null;
   }
 
+  @JsonIgnore
   @Override
   public boolean usesFirehose() {
     return ingestionSchema.getIOConfig().firehoseFactory != null;

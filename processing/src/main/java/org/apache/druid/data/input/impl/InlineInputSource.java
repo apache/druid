@@ -51,7 +51,8 @@ public class InlineInputSource extends AbstractInputSource
   }
 
   @Override
-  public Set<String> getTypes() {
+  public Set<String> getTypes()
+  {
     return Collections.singleton(TYPE_KEY);
   }
 

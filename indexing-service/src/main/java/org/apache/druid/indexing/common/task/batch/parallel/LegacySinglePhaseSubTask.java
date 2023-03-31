@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.common.task.TaskResource;
 
@@ -58,6 +59,7 @@ public class LegacySinglePhaseSubTask extends SinglePhaseSubTask
     return SinglePhaseSubTask.OLD_TYPE_NAME;
   }
 
+  @JsonIgnore
   @Nullable
   @Override
   public Set<String> getInputSourceTypes()
@@ -67,6 +69,7 @@ public class LegacySinglePhaseSubTask extends SinglePhaseSubTask
            null;
   }
 
+  @JsonIgnore
   @Override
   public boolean usesFirehose() {
     return getIngestionSchema().getIOConfig().getFirehoseFactory() != null;

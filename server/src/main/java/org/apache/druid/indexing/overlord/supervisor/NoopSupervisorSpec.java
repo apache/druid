@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.overlord.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -29,6 +30,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Used as a tombstone marker in the supervisors metadata table to indicate that the supervisor has been removed.
@@ -109,6 +111,19 @@ public class NoopSupervisorSpec implements SupervisorSpec
   public String getType()
   {
     return type;
+  }
+
+  @JsonIgnore
+  @Nullable
+  @Override
+  public Set<String> getInputSourceTypes() {
+    return null;
+  }
+
+  @JsonIgnore
+  @Override
+  public boolean usesFirehose() {
+    return false;
   }
 
   @Override

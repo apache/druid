@@ -83,7 +83,8 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   }
 
   @Override
-  public Set<String> getTypes() {
+  public Set<String> getTypes()
+  {
     return Collections.singleton(TYPE_KEY);
   }
 

@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
@@ -270,6 +271,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return TYPE;
   }
 
+  @JsonIgnore
   @Nullable
   @Override
   public Set<String> getInputSourceTypes()
@@ -279,6 +281,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
            null;
   }
 
+  @JsonIgnore
   @Override
   public boolean usesFirehose() {
     return ingestionSchema.getIOConfig().getFirehoseFactory() != null;

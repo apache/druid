@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -134,6 +135,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
     return TYPE;
   }
 
+  @JsonIgnore
   @Nullable
   @Override
   public Set<String> getInputSourceTypes()
@@ -143,6 +145,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
            null;
   }
 
+  @JsonIgnore
   @Override
   public boolean usesFirehose() {
     return getIngestionSchema().getIOConfig().getFirehoseFactory() != null;

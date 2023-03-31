@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
@@ -175,6 +176,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     return TYPE;
   }
 
+  @JsonIgnore
   @Nullable
   @Override
   public Set<String> getInputSourceTypes()
@@ -184,6 +186,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
            null;
   }
 
+  @JsonIgnore
   @Override
   public boolean usesFirehose() {
     return getIngestionSchema().getIOConfig().getFirehoseFactory() != null;

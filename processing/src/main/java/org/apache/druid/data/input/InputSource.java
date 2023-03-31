@@ -90,7 +90,8 @@ public interface InputSource
   );
 
   @Nullable
-  default Set<String> getTypes() {
+  default Set<String> getTypes()
+  {
     return null;
   }
 }

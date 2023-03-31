@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
@@ -135,6 +136,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long, Kafka
     return TYPE;
   }
 
+  @JsonIgnore
   @Nullable
   @Override
   public Set<String> getInputSourceTypes()
@@ -142,6 +144,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long, Kafka
     return Collections.singleton("kafka");
   }
 
+  @JsonIgnore
   @Override
   public boolean usesFirehose() {
     return false;

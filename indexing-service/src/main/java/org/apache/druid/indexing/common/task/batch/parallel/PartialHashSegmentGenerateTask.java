@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.TaskReport;
@@ -132,6 +133,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
     return TYPE;
   }
 
+  @JsonIgnore
   @Nullable
   @Override
   public Set<String> getInputSourceTypes()
@@ -141,6 +143,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
            null;
   }
 
+  @JsonIgnore
   @Override
   public boolean usesFirehose() {
     return getIngestionSchema().getIOConfig().getFirehoseFactory() != null;

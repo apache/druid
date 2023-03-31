@@ -102,6 +102,7 @@ public class NoopTask extends AbstractTask
     return "noop";
   }
 
+  @JsonIgnore
   @Nullable
   @Override
   public Set<String> getInputSourceTypes()
@@ -109,6 +110,7 @@ public class NoopTask extends AbstractTask
     return null;
   }
 
+  @JsonIgnore
   @Override
   public boolean usesFirehose() {
     return firehoseFactory != null;

@@ -181,6 +181,7 @@ public class RealtimeIndexTask extends AbstractTask
     return "index_realtime";
   }
 
+  @JsonIgnore
   @Nullable
   @Override
   public Set<String> getInputSourceTypes()
@@ -188,6 +189,7 @@ public class RealtimeIndexTask extends AbstractTask
     return null;
   }
 
+  @JsonIgnore
   @Override
   public boolean usesFirehose() {
     return true;

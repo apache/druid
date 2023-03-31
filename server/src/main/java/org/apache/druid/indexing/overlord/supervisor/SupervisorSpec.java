@@ -25,6 +25,7 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAu
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Set;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
@@ -73,7 +74,7 @@ public interface SupervisorSpec
   String getType();
 
   @Nullable
-  default String getInputSourceType() {
+  default Set<String> getInputSourceTypes() {
     return null;
   }
 

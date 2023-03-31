@@ -195,6 +195,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     return "index_hadoop";
   }
 
+  @JsonIgnore
   @Nullable
   @Override
   public Set<String> getInputSourceTypes()
@@ -202,6 +203,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     return Collections.singleton("hadoop");
   }
 
+  @JsonIgnore
   @Override
   public boolean usesFirehose() {
     return false;

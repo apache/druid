@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kinesis.supervisor;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.name.Named;
@@ -40,7 +41,9 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 
 public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
 {
@@ -114,11 +117,13 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
     return SUPERVISOR_TYPE;
   }
 
+  @JsonIgnore
   @Override
-  public String getInputSourceType() {
-    return SUPERVISOR_TYPE;
+  public Set<String> getInputSourceTypes() {
+    return Collections.singleton(SUPERVISOR_TYPE);
   }
 
+  @JsonIgnore
   @Override
   public boolean usesFirehose() {
     return false;

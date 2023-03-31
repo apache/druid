@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.guice.annotations.Json;
@@ -37,7 +38,9 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 
 public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
 {
@@ -92,12 +95,14 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
     return TASK_TYPE;
   }
 
+  @JsonIgnore
   @Override
-  public String getInputSourceType()
+  public Set<String> getInputSourceTypes()
   {
-    return TASK_TYPE;
+    return Collections.singleton(TASK_TYPE);
   }
 
+  @JsonIgnore
   @Override
   public boolean usesFirehose() {
     return false;

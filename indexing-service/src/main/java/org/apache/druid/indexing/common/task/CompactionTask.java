@@ -401,6 +401,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     return TYPE;
   }
 
+  @JsonIgnore
   @Nullable
   @Override
   public Set<String> getInputSourceTypes()
@@ -408,6 +409,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     return null;
   }
 
+  @JsonIgnore
   @Override
   public boolean usesFirehose() {
     return false;

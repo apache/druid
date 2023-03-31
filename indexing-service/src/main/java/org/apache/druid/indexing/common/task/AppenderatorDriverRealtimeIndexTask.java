@@ -215,6 +215,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     return "index_realtime_appenderator";
   }
 
+  @JsonIgnore
   @Nullable
   @Override
   public Set<String> getInputSourceTypes()
@@ -222,6 +223,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     return null;
   }
 
+  @JsonIgnore
   @Override
   public boolean usesFirehose() {
     return true;
