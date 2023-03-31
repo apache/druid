@@ -54,7 +54,8 @@ public class StringEncodingStrategyTest
     // this next assert seems silly, but its a sanity check to make us think hard before changing the default version,
     // to make us think of the backwards compatibility implications, as new versions of segment format stuff cannot be
     // downgraded to older versions of Druid and still read
-    Assert.assertEquals(FrontCodedIndexed.V1, FrontCodedIndexed.DEFAULT_VERSION);
+    // the default version should be changed to V1 after Druid 26.0 is released
+    Assert.assertEquals(FrontCodedIndexed.V0, FrontCodedIndexed.DEFAULT_VERSION);
   }
 
   @Test
