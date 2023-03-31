@@ -588,7 +588,7 @@ class QueryTaskResult:
     @property
     def results(self):
         if not self._results:
-            rpts = self.reports()
+            rpts = self.reports
             self._results = rpts['multiStageQuery']['payload']['results']
         return self._results
 
