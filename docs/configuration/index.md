@@ -1225,10 +1225,10 @@ An example Overlord dynamic config is shown below:
 
 Issuing a GET request to the same URL returns the current Overlord dynamic config.
 
-|Property| Description                                                                                                                                                                                  | Default                       |
-|--------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------|
-|`selectStrategy`| Describes how to assign tasks to MiddleManagers. The type can be `equalDistribution`, `equalDistributionWithCategorySpec`, `fillCapacity`, `fillCapacityWithCategorySpec`, and `javascript`. | `{"type":"equalDistribution"} |
-|`autoScaler`| Only used if autoscaling is enabled. See below.                                                                                                                                              | null                          |
+|Property| Description                                                                                                                                                                                 | Default                       |
+|--------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------|
+|`selectStrategy`| Describes how to assign tasks to MiddleManagers. The type can be `equalDistribution`, `equalDistributionWithCategorySpec`, `fillCapacity`, `fillCapacityWithCategorySpec`, and `javascript`. | `{"type":"equalDistribution"}` |
+|`autoScaler`| Only used if autoscaling is enabled. See below. | null |
 
 To view the audit history of worker config issue a GET request to the URL -
 
@@ -1270,11 +1270,11 @@ Note that every worker listed in the `affinityConfig` will only be used for the 
 
 If a `categorySpec` is provided (as part of `fillCapacityWithCategorySpec` and `equalDistributionWithCategorySpec` strategies), then a task of a given datasource may be assigned to:
 
-- any worker if no categoryConfig is given for task type
-- any worker if categoryConfig is given for task type but no category is given for datasource and there's no default category
-- a preferred worker (based on categoryConfig and category for datasource) if available
-- any worker if categoryConfig and category are given but no preferred worker is available and categoryConfig is `weak`
-- not assigned at all if preferred workers are not available and `categoryConfig` is `strong`
+- any worker if no category config is given for task type
+- any worker if category config is given for task type but no category is given for datasource and there's no default category
+- a preferred worker (based on category config and category for datasource) if available
+- any worker if category config and category are given but no preferred worker is available and category config is `weak`
+- not assigned at all if preferred workers are not available and category config is `strong`
 
 In both the cases, Druid determines the list of eligible workers and selects one depending on their load with the goal of either distributing the load equally or filling as few workers as possible.
 
@@ -1289,7 +1289,7 @@ This evenly distributes work across your MiddleManagers.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`type`|`equalDistribution`|required; must be `equalDistribution`|
-|`affinityConfig`|[Affinity config](#affinityconfig) object|null (no affinity)|
+|`affinityConfig`|[`AffinityConfig`](#affinityconfig) object|null (no affinity)|
 
 ###### `equalDistributionWithCategorySpec`
 
@@ -1300,7 +1300,7 @@ This strategy doesn't work with `AutoScaler` since the behavior is undefined.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`type`|`equalDistributionWithCategorySpec`|required; must be `equalDistributionWithCategorySpec`|
-|`workerCategorySpec`|[Worker Category Spec](#workercategoryspec) object|null (no worker category spec)|
+|`workerCategorySpec`|[`WorkerCategorySpec`](#workercategoryspec) object|null (no worker category spec)|
 
 Example: tasks of type "index_kafka" default to running on MiddleManagers of category `c1`, except for tasks that write to datasource "ds1," which  run on MiddleManagers of category `c2`.
 
@@ -1335,7 +1335,7 @@ MiddleManagers up to capacity simultaneously, rather than a single MiddleManager
 |Property| Description                             |Default|
 |--------|-----------------------------------------|-------|
 |`type`| `fillCapacity`                          |required; must be `fillCapacity`|
-|`affinityConfig`| [AffinityConfig](#affinityconfig) object |null (no affinity)|
+|`affinityConfig`| [`AffinityConfig`](#affinityconfig) object |null (no affinity)|
 
 ###### `fillCapacityWithCategorySpec`
 
@@ -1346,7 +1346,7 @@ This strategy doesn't work with `AutoScaler` since the behavior is undefined.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`type`|`fillCapacityWithCategorySpec`.|required; must be `fillCapacityWithCategorySpec`|
-|`workerCategorySpec`|[Worker Category Spec](#workercategoryspec) object|null (no worker category spec)|
+|`workerCategorySpec`|[`WorkerCategorySpec`](#workercategoryspec) object|null (no worker category spec)|
 
 <a name="javascript-worker-select-strategy"></a>
 
