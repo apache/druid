@@ -20,7 +20,7 @@
 package org.apache.druid.grpc.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.ManageLifecycleServer;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.java.util.common.ISE;
@@ -38,12 +38,15 @@ import java.io.IOException;
  * Initializes the gRPC endpoint (server). This version uses a Netty-based server
  * separate from Druid's primary Jetty-based server. We may want to consider a
  * <link a="https://github.com/grpc/grpc-java/tree/master/examples/example-servlet">
- * recent addition to the gRPC examples</a> to run gRPC as a servlet.
+ * recent addition to the gRPC examples</a> to run gRPC as a servlet. However, trying
+ * that turned out to incur many issues, including the fact that there was no way
+ * to pass the AuthenticationResult down through the many layers of gRPC into the
+ * query code. So, we use the gRPC server instead.
  * <p>
  * An instance of this class is created by Guice and managed via Druid's
- * livecycle manager.
+ * lifecycle manager.
  */
-@ManageLifecycle
+@ManageLifecycleServer
 public class GrpcEndpointInitializer
 {
   private static final Logger log = new Logger(GrpcEndpointInitializer.class);

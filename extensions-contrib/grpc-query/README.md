@@ -306,6 +306,12 @@ Then, restart the cluster (`down`, then `up`). The `up` (or `test`) commands
 populate the cluster with your newly rebuilt `grpc-query` extension and test
 Protobuf classes.
 
+There are two integration tests:
+
+* `GrpcQuery` - Functional test using a "stock" Druid server.
+* `GrpcQueryBasicAuth` - Configures the server with Basic security, then runs
+  tests to verify basic security functionality.
+
 ### gRPC Logging
 
 Debugging of the gRPC stack is difficult since the shaded jar loses source attachments.

@@ -157,7 +157,6 @@ public class SqlModule implements Module
    */
   public static class SqlStatementFactoryModule implements Module
   {
-
     @Provides
     @LazySingleton
     public SqlToolbox makeSqlToolbox(

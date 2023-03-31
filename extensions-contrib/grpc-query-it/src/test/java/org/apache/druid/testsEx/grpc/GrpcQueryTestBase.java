@@ -29,7 +29,6 @@ import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryStatus;
-import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -104,7 +103,6 @@ public class GrpcQueryTestBase
     assertEquals(DruidType.STRING, col.getDruidType());
   }
 
-  @Test
   public void testProtobuf(TestClient client)
   {
     QueryRequest request = QueryRequest.newBuilder()
@@ -142,5 +140,4 @@ public class GrpcQueryTestBase
       );
     assertEquals(expected, queryResults);
   }
-
 }

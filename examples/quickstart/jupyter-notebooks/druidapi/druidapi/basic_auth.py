@@ -38,6 +38,7 @@ REQ_AUTHORIZATION_GROUP_ROLE = REQ_AUTHORIZATION_GROUP_ROLES + '/{}'
 REQ_AUTHORIZATION_ROLES = AUTHORIZATION_BASE + '/roles'
 REQ_AUTHORIZATION_ROLE = REQ_AUTHORIZATION_ROLES + '/{}'
 REQ_AUTHORIZATION_ROLE_PERMISSIONS = REQ_AUTHORIZATION_ROLE + '/permissions'
+REQ_USER_MAP = AUTHORIZATION_BASE + '/cachedSerializedUserMap'
 
 class BasicAuthClient:
     '''
@@ -166,6 +167,13 @@ class BasicAuthClient:
 
     def revoke_role_from_group(self, group, role):
         self.rest_client.delete(REQ_AUTHORIZATION_GROUP_ROLE, args=[self.authenticator, group, role])
+
+    def user_map(self):
+        # Result uses Smile encoding, not JSON. This is really just for sanity
+        # checks: a Python client can't make use of the info.
+        # To decode, see newsmile: https://pypi.org/project/newsmile/
+        # However, the format Druid returns is not quite compatible with newsmile
+        return self.rest_client.get(REQ_USER_MAP, args=[self.authenticator])
 
     # Convenience methods
 

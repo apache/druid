@@ -114,7 +114,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
           () -> {
             try {
               long randomDelay = ThreadLocalRandom.current().nextLong(0, commonCacheConfig.getMaxRandomDelay());
-              LOG.debug("Inserting cachedUserMaps random polling delay of [%s] ms", randomDelay);
+              LOG.debug("Inserting cachedUserMaps random polling delay of [%d] ms", randomDelay);
               Thread.sleep(randomDelay);
 
               LOG.debug("Scheduled user cache poll is running");
@@ -248,7 +248,6 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
 
   private Map<String, BasicAuthenticatorUser> tryFetchUserMapFromCoordinator(String prefix) throws Exception
   {
-    Map<String, BasicAuthenticatorUser> userMap = null;
     Request req = druidLeaderClient.makeRequest(
         HttpMethod.GET,
         StringUtils.format("/druid-ext/basic-security/authentication/db/%s/cachedSerializedUserMap", prefix)
@@ -258,6 +257,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
         new BytesFullResponseHandler()
     );
     byte[] userMapBytes = responseHolder.getContent();
+    Map<String, BasicAuthenticatorUser> userMap = null;
     if (ArrayUtils.isNotEmpty(userMapBytes)) {
       userMap = objectMapper.readValue(
           userMapBytes,
@@ -267,7 +267,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
         writeUserMapToDisk(prefix, userMapBytes);
       }
     } else {
-      LOG.info("Empty cached serialized user map retrieved, authenticator - %s", prefix);
+      LOG.info("Empty cached serialized user map retrieved, authenticator [%s]", prefix);
     }
     return userMap;
   }

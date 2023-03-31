@@ -72,7 +72,14 @@ public class GrpcQueryBasicAuthTest extends GrpcQueryTestBase
 
   protected static final List<ResourceAction> ALICE_PERMISSIONS = ImmutableList.of(
       new ResourceAction(
-          new Resource(".*", ResourceType.SYSTEM_TABLE),
+          new Resource("servers", ResourceType.SYSTEM_TABLE),
+          Action.READ
+      ),
+
+      // Required to allow access to system tables.
+      // https://druid.apache.org/docs/latest/operations/security-user-auth.html#system_table
+      new ResourceAction(
+          new Resource(".*", ResourceType.STATE),
           Action.READ
       )
   );
@@ -80,6 +87,10 @@ public class GrpcQueryBasicAuthTest extends GrpcQueryTestBase
   protected static final List<ResourceAction> BOB_PERMISSIONS = ImmutableList.of(
       new ResourceAction(
           new Resource("segments", ResourceType.SYSTEM_TABLE),
+          Action.READ
+      ),
+      new ResourceAction(
+          new Resource(".*", ResourceType.STATE),
           Action.READ
       )
   );
@@ -187,7 +198,6 @@ public class GrpcQueryBasicAuthTest extends GrpcQueryTestBase
   @Test
   public void testNormalUser()
   {
-    //try (TestClient client = new TestClient(GRPC_ENDPOINT, ADMIN_USER, ADMIN_PASSWORD)) {
     try (TestClient client = new TestClient(GRPC_ENDPOINT, USER_ALICE, ALICE_PASSWORD)) {
       QueryRequest request = QueryRequest.newBuilder()
           .setQuery(SERVERS_SQL)
@@ -198,6 +208,14 @@ public class GrpcQueryBasicAuthTest extends GrpcQueryTestBase
       String data = response.getData().toString(StandardCharsets.UTF_8);
       String[] lines = data.split("\n");
       assertEquals(6, lines.length);
+    }
+  }
+
+  @Test
+  public void testProtobuf()
+  {
+    try (TestClient client = new TestClient(GRPC_ENDPOINT, USER_ALICE, ALICE_PASSWORD)) {
+      testProtobuf(client);
     }
   }
 }
