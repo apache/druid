@@ -53,7 +53,7 @@ class QueryService extends QueryGrpc.QueryImplBase
       // This block mimics the Servlet pattern of throwing ForbiddenException for
       // all access denied cases rather than handling permissions in each message
       // handler.
-      throw new StatusRuntimeException(Status.PERMISSION_DENIED);
+      responseObserver.onError(new StatusRuntimeException(Status.PERMISSION_DENIED));
     }
   }
 }

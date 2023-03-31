@@ -73,13 +73,19 @@ public class BasicAuthTest
       public AuthenticationResult validateCredentials(String authenticatorName, String authorizerName,
           String username, char[] password)
       {
-        if (!CalciteTests.TEST_SUPERUSER_NAME.equals(username)) {
-          return null;
+        if (CalciteTests.TEST_SUPERUSER_NAME.equals(username)) {
+          if (!"secret".equals(new String(password))) {
+            return null;
+          }
+          return CalciteTests.SUPER_USER_AUTH_RESULT;
         }
-        if (!"secret".equals(new String(password))) {
-          return null;
+        if ("regular".equals(username)) {
+          if (!"pwd".equals(new String(password))) {
+            return null;
+          }
+          return CalciteTests.REGULAR_USER_AUTH_RESULT;
         }
-        return CalciteTests.SUPER_USER_AUTH_RESULT;
+        return null;
       }
     };
     BasicHTTPAuthenticator basicAuth = new BasicHTTPAuthenticator(
@@ -132,13 +138,9 @@ public class BasicAuthTest
         .setResultFormat(QueryResultFormat.CSV)
         .build();
 
-    TestClient client = new TestClient(TestClient.DEFAULT_HOST);
-    try {
+    try (TestClient client = new TestClient(TestClient.DEFAULT_HOST)) {
       StatusRuntimeException e = assertThrows(StatusRuntimeException.class, () -> client.client().submitQuery(request));
       assertEquals(Status.PERMISSION_DENIED, e.getStatus());
-    }
-    finally {
-      client.close();
     }
   }
 
@@ -150,13 +152,9 @@ public class BasicAuthTest
         .setResultFormat(QueryResultFormat.CSV)
         .build();
 
-    TestClient client = new TestClient(TestClient.DEFAULT_HOST, "invalid", "pwd");
-    try {
+    try (TestClient client = new TestClient(TestClient.DEFAULT_HOST, "invalid", "pwd")) {
       StatusRuntimeException e = assertThrows(StatusRuntimeException.class, () -> client.client().submitQuery(request));
       assertEquals(Status.PERMISSION_DENIED, e.getStatus());
-    }
-    finally {
-      client.close();
     }
   }
 
@@ -168,20 +166,12 @@ public class BasicAuthTest
         .setResultFormat(QueryResultFormat.CSV)
         .build();
 
-    TestClient client = new TestClient(TestClient.DEFAULT_HOST, CalciteTests.TEST_SUPERUSER_NAME, "invalid");
-    try {
+    try (TestClient client = new TestClient(TestClient.DEFAULT_HOST, CalciteTests.TEST_SUPERUSER_NAME, "invalid")) {
       StatusRuntimeException e = assertThrows(StatusRuntimeException.class, () -> client.client().submitQuery(request));
       assertEquals(Status.PERMISSION_DENIED, e.getStatus());
     }
-    finally {
-      client.close();
-    }
   }
 
-  /**
-   * Do a very basic query.
-   * @throws InterruptedException
-   */
   @Test
   public void testValidUser() throws InterruptedException
   {
@@ -190,13 +180,27 @@ public class BasicAuthTest
         .setResultFormat(QueryResultFormat.CSV)
         .build();
 
-    TestClient client = new TestClient(TestClient.DEFAULT_HOST, CalciteTests.TEST_SUPERUSER_NAME, "secret");
-    try {
+    try (TestClient client = new TestClient(TestClient.DEFAULT_HOST, CalciteTests.TEST_SUPERUSER_NAME, "secret")) {
       QueryResponse response = client.client().submitQuery(request);
       assertEquals(QueryStatus.OK, response.getStatus());
     }
-    finally {
-      client.close();
+    try (TestClient client = new TestClient(TestClient.DEFAULT_HOST, "regular", "pwd")) {
+      QueryResponse response = client.client().submitQuery(request);
+      assertEquals(QueryStatus.OK, response.getStatus());
+    }
+  }
+
+  @Test
+  public void testUnauthorized() throws InterruptedException
+  {
+    QueryRequest request = QueryRequest.newBuilder()
+        .setQuery("SELECT * FROM forbiddenDatasource")
+        .setResultFormat(QueryResultFormat.CSV)
+        .build();
+
+    try (TestClient client = new TestClient(TestClient.DEFAULT_HOST, "regular", "pwd")) {
+      StatusRuntimeException e = assertThrows(StatusRuntimeException.class, () -> client.client().submitQuery(request));
+      assertEquals(Status.PERMISSION_DENIED, e.getStatus());
     }
   }
 }

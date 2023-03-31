@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit;
  * and allows submitting a rRPC query request and returns the response.
  * The server can be in the same or another process.
  */
-public class TestClient
+public class TestClient implements AutoCloseable
 {
   public static final String DEFAULT_HOST = "localhost:50051";
   private ManagedChannel channel;
@@ -71,11 +71,17 @@ public class TestClient
     return client;
   }
 
-  public void close() throws InterruptedException
+  @Override
+  public void close()
   {
     // ManagedChannels use resources like threads and TCP connections. To prevent leaking these
     // resources the channel should be shut down when it will no longer be used. If it may be used
     // again leave it running.
-    channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
+    try {
+      channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
+    }
+    catch (InterruptedException e) {
+      // Ignore
+    }
   }
 }

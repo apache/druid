@@ -73,12 +73,13 @@ message QueryRequest {
   optional string protobufMessageName = 5;
 }
 
+// Unauthorized errors return as a StatusRuntimeException with
+// getStatus().getCode() == Status.Code.PERMISSION_DENIED
 enum QueryStatus {
   UNKNOWN_STATUS = 0; // Default value which means "unknown failure". Older clients
                       // will see this value if a future version adds a new failure
                       // type.
   OK = 1;
-  UNAUTHORIZED = 2;
   REQUEST_ERROR = 3;
   INVALID_SQL = 4;
   RUNTIME_ERROR = 5;

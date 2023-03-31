@@ -12,7 +12,34 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#--------------------------------------------------------------------
+#-------------------------------------------------------------------------
 
-# Same set up as without basic auth
-. ${CLUSTER_DIR}/../GrpcQuery/setup.sh
+# Definition of the batch index test cluster.
+# See https://yaml.org/spec/1.2.2 for more about YAML
+include:
+  - /cluster/Common/zk-metastore.yaml
+
+druid:
+  coordinator:
+    instances:
+      - port: 8081
+  overlord:
+    instances:
+      - port: 8090
+  broker:
+    instances:
+      - port: 8082
+  router:
+    instances:
+      - port: 8888
+  historical:
+    instances:
+      - port: 8083
+  indexer:
+    instances:
+      - port: 8091
+
+# The client user name and password to use for REST connections to the server.
+properties:
+  username: admin
+  password: priest

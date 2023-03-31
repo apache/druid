@@ -61,11 +61,6 @@ public class GrpcQueryTestClient
     }
     System.out.println("Data:");
     System.out.println(response.getData().toString(StandardCharsets.UTF_8));
-    try {
-      client.close();
-    }
-    catch (InterruptedException e) {
-      // Ignore;
-    }
+    client.close();
   }
 }

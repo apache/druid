@@ -38,7 +38,6 @@ import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.DirectStatement;
@@ -129,11 +128,7 @@ public class QueryDriver
     catch (ForbiddenException e) {
       stmt.reporter().failed(e);
       stmt.close();
-      return QueryResponse.newBuilder()
-          .setQueryId(stmt.sqlQueryId())
-          .setStatus(QueryStatus.UNAUTHORIZED)
-          .setErrorMessage(Access.DEFAULT_ERROR_MESSAGE)
-          .build();
+      throw e;
     }
     catch (RequestError e) {
       stmt.reporter().failed(e);

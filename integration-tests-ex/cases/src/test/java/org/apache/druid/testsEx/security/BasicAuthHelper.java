@@ -90,7 +90,8 @@ public class BasicAuthHelper
           ),
           jsonMapper.writeValueAsBytes(new BasicAuthenticatorCredentialUpdate(password, 5000))
       );
-    } catch (JsonProcessingException e) {
+    }
+    catch (JsonProcessingException e) {
       throw new RE(e, "Failed to format credentials");
     }
   }
@@ -129,7 +130,8 @@ public class BasicAuthHelper
     byte[] permissionsBytes;
     try {
       permissionsBytes = jsonMapper.writeValueAsBytes(permissions);
-    } catch (JsonProcessingException e) {
+    }
+    catch (JsonProcessingException e) {
       throw new RE(e, "Failed to encode permissions");
     }
     HttpUtil.makeRequest(
@@ -200,7 +202,8 @@ public class BasicAuthHelper
     String content = holder.getContent();
     try {
       return jsonMapper.readValue(content, TYPE_REFERENCE_STRING_LIST);
-    } catch (JsonProcessingException e) {
+    }
+    catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }
   }
@@ -230,7 +233,8 @@ public class BasicAuthHelper
     String content = holder.getContent();
     try {
       return jsonMapper.readValue(content, TYPE_REFERENCE_STRING_LIST);
-    } catch (JsonProcessingException e) {
+    }
+    catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }
   }
@@ -260,7 +264,8 @@ public class BasicAuthHelper
     String content = holder.getContent();
     try {
       return jsonMapper.readValue(content, TYPE_REFERENCE_STRING_LIST);
-    } catch (JsonProcessingException e) {
+    }
+    catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }
   }

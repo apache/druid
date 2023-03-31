@@ -25,6 +25,6 @@ class Template(BaseTemplate):
 
     def extend_druid_service(self, service):
         self.add_env(service, 'druid_test_loadList', 'druid-basic-security,grpc-query')
-        self.add_env_file(service, 'basic-auth.env')
+        self.add_env_file(service, '../Common/environment-configs/basic-auth.env')
 
 generate(__file__, Template())
