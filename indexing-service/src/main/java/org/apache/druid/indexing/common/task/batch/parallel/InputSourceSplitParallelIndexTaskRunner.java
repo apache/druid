@@ -37,6 +37,7 @@ import java.util.Map;
 abstract class InputSourceSplitParallelIndexTaskRunner<T extends Task, R extends SubTaskReport>
     extends ParallelIndexPhaseRunner<T, R>
 {
+  static final String PARTIAL_SEGMENT_GENERATION_PHASE = "partial segment generation";
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final SplittableInputSource<?> baseInputSource;
 

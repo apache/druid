@@ -32,8 +32,6 @@ import java.util.Map;
 class PartialRangeSegmentGenerateParallelIndexTaskRunner
     extends InputSourceSplitParallelIndexTaskRunner<PartialRangeSegmentGenerateTask, GeneratedPartitionsReport>
 {
-  private static final String PHASE_NAME = "partial segment generation";
-
   private final Map<Interval, PartitionBoundaries> intervalToPartitions;
 
   PartialRangeSegmentGenerateParallelIndexTaskRunner(
@@ -53,7 +51,7 @@ class PartialRangeSegmentGenerateParallelIndexTaskRunner
   @Override
   public String getName()
   {
-    return PHASE_NAME;
+    return PARTIAL_SEGMENT_GENERATION_PHASE;
   }
 
   @Override

@@ -572,7 +572,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       if (!task.isPresent()) {
         return null;
       }
-      return Futures.immediateFuture(((ParallelIndexSupervisorTask) task.get()).doGetLiveReports("full"));
+      return Futures.immediateFuture(((ParallelIndexSupervisorTask) task.get()).doGetLiveReports(true));
     }
 
     public TaskContainer getTaskContainer(String taskId)

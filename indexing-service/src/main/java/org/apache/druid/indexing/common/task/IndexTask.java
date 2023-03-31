@@ -27,6 +27,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.hash.HashFunction;
@@ -299,17 +300,17 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    return Response.ok(doGetUnparseableEvents(full)).build();
+    return Response.ok(doGetUnparseableEvents(!Strings.isNullOrEmpty(full))).build();
   }
 
-  public Map<String, Object> doGetUnparseableEvents(String full)
+  public Map<String, Object> doGetUnparseableEvents(boolean full)
   {
     Map<String, Object> events = new HashMap<>();
 
     boolean needsDeterminePartitions = false;
     boolean needsBuildSegments = false;
 
-    if (full != null) {
+    if (full) {
       needsDeterminePartitions = true;
       needsBuildSegments = true;
     } else {
@@ -346,7 +347,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     return events;
   }
 
-  public Map<String, Object> doGetRowStats(String full)
+  public Map<String, Object> doGetRowStats(boolean full)
   {
     Map<String, Object> returnMap = new HashMap<>();
     Map<String, Object> totalsMap = new HashMap<>();
@@ -355,7 +356,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     boolean needsDeterminePartitions = false;
     boolean needsBuildSegments = false;
 
-    if (full != null) {
+    if (full) {
       needsDeterminePartitions = true;
       needsBuildSegments = true;
     } else {
@@ -408,7 +409,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    return Response.ok(doGetRowStats(full)).build();
+    return Response.ok(doGetRowStats(!Strings.isNullOrEmpty(full))).build();
   }
 
   @GET
@@ -427,7 +428,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     payload.put("ingestionState", ingestionState);
     payload.put("unparseableEvents", events);
-    payload.put("rowStats", doGetRowStats(full));
+    payload.put("rowStats", doGetRowStats(!Strings.isNullOrEmpty(full)));
 
     ingestionStatsAndErrors.put("taskId", getId());
     ingestionStatsAndErrors.put("payload", payload);
@@ -530,7 +531,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     catch (Exception e) {
       log.error(e, "Encountered exception in %s.", ingestionState);
       errorMsg = Throwables.getStackTraceAsString(e);
-      toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports(Collections.emptyList()));
+      toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
       return TaskStatus.failure(
           getId(),
           errorMsg
@@ -540,6 +541,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     finally {
       toolbox.getChatHandlerProvider().unregister(getId());
     }
+  }
+
+  private Map<String, TaskReport> getTaskCompletionReports()
+  {
+    return getTaskCompletionReports(Collections.emptyList());
   }
 
   private Map<String, TaskReport> getTaskCompletionReports(List<Interval> intervals)
@@ -999,7 +1005,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       if (published == null) {
         log.error("Failed to publish segments, aborting!");
         errorMsg = "Failed to publish segments.";
-        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports(Collections.emptyList()));
+        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.failure(
             getId(),
             errorMsg

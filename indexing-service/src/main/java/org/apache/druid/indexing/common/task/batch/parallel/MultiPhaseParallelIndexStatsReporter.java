@@ -44,7 +44,7 @@ public class MultiPhaseParallelIndexStatsReporter extends ParallelIndexStatsRepo
       ParallelIndexSupervisorTask task,
       Object runner,
       boolean includeUnparseable,
-      String full
+      boolean full
   )
   {
     // use cached version if available
@@ -54,7 +54,7 @@ public class MultiPhaseParallelIndexStatsReporter extends ParallelIndexStatsRepo
     }
 
     ParallelIndexTaskRunner<?, ?> currentRunner = (ParallelIndexTaskRunner<?, ?>) runner;
-    if (!currentRunner.getName().equals("partial segment generation")) {
+    if (!InputSourceSplitParallelIndexTaskRunner.PARTIAL_SEGMENT_GENERATION_PHASE.equals(currentRunner.getName())) {
       return new ParallelIndexStats();
     }
 

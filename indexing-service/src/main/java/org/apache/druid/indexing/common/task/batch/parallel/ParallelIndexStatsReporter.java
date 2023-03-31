@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -39,11 +40,24 @@ public abstract class ParallelIndexStatsReporter
 {
   private static final Logger LOG = new Logger(ParallelIndexStatsReporter.class);
 
+  // Row ingestion meters fields
+  private static final String PROCESSED_FIELD = "processed";
+  private static final String PROCESSED_BYTES_FIELD = "processedBytes";
+  private static final String PROCESSED_WITH_ERROR_FIELD = "processedWithError";
+  private static final String THROWN_AWAY_FIELD = "thrownAway";
+  private static final String UNPARSEABLE_FIELD = "unparseable";
+  // Ingestion stats and errors report fields
+  private static final String INGESTION_STATS_AND_ERRORS_FIELD = "ingestionStatsAndErrors";
+  private static final String PAYLOAD_FIELD = "payload";
+  private static final String ROW_STATS_FIELD = "rowStats";
+  private static final String TOTALS_FIELD = "totals";
+  private static final String UNPARSEABLE_EVENTS_FIELD = "unparseableEvents";
+
   abstract ParallelIndexStats report(
       ParallelIndexSupervisorTask task,
       Object runner,
       boolean includeUnparseable,
-      String full
+      boolean full
   );
 
   protected RowIngestionMetersTotals getBuildSegmentsStatsFromTaskReport(
@@ -76,15 +90,15 @@ public abstract class ParallelIndexStatsReporter
     } else if (buildSegmentsRowStats instanceof Map) {
       Map<String, Object> buildSegmentsRowStatsMap = (Map<String, Object>) buildSegmentsRowStats;
       return new RowIngestionMetersTotals(
-          ((Number) buildSegmentsRowStatsMap.get("processed")).longValue(),
-          ((Number) buildSegmentsRowStatsMap.get("processedBytes")).longValue(),
-          ((Number) buildSegmentsRowStatsMap.get("processedWithError")).longValue(),
-          ((Number) buildSegmentsRowStatsMap.get("thrownAway")).longValue(),
-          ((Number) buildSegmentsRowStatsMap.get("unparseable")).longValue()
+          ((Number) buildSegmentsRowStatsMap.get(PROCESSED_FIELD)).longValue(),
+          ((Number) buildSegmentsRowStatsMap.get(PROCESSED_BYTES_FIELD)).longValue(),
+          ((Number) buildSegmentsRowStatsMap.get(PROCESSED_WITH_ERROR_FIELD)).longValue(),
+          ((Number) buildSegmentsRowStatsMap.get(THROWN_AWAY_FIELD)).longValue(),
+          ((Number) buildSegmentsRowStatsMap.get(UNPARSEABLE_FIELD)).longValue()
       );
     } else {
       // should never happen
-      throw new RuntimeException("Unrecognized buildSegmentsRowStats type: " + buildSegmentsRowStats.getClass());
+      throw new ISE("Unrecognized buildSegmentsRowStats type: [%s]", buildSegmentsRowStats.getClass().getName());
     }
   }
 
@@ -104,14 +118,14 @@ public abstract class ParallelIndexStatsReporter
           continue;
         }
 
-        Map<String, Object> ingestionStatsAndErrors = (Map<String, Object>) report.get("ingestionStatsAndErrors");
-        Map<String, Object> payload = (Map<String, Object>) ingestionStatsAndErrors.get("payload");
-        Map<String, Object> rowStats = (Map<String, Object>) payload.get("rowStats");
-        Map<String, Object> totals = (Map<String, Object>) rowStats.get("totals");
+        Map<String, Object> ingestionStatsAndErrors = (Map<String, Object>) report.get(INGESTION_STATS_AND_ERRORS_FIELD);
+        Map<String, Object> payload = (Map<String, Object>) ingestionStatsAndErrors.get(PAYLOAD_FIELD);
+        Map<String, Object> rowStats = (Map<String, Object>) payload.get(ROW_STATS_FIELD);
+        Map<String, Object> totals = (Map<String, Object>) rowStats.get(TOTALS_FIELD);
         Map<String, Object> buildSegments = (Map<String, Object>) totals.get(RowIngestionMeters.BUILD_SEGMENTS);
 
         if (includeUnparseable) {
-          Map<String, Object> taskUnparseableEvents = (Map<String, Object>) payload.get("unparseableEvents");
+          Map<String, Object> taskUnparseableEvents = (Map<String, Object>) payload.get(UNPARSEABLE_EVENTS_FIELD);
           List<ParseExceptionReport> buildSegmentsUnparseableEvents = (List<ParseExceptionReport>)
               taskUnparseableEvents.get(RowIngestionMeters.BUILD_SEGMENTS);
           unparseableEvents.addAll(buildSegmentsUnparseableEvents);
@@ -134,7 +148,7 @@ public abstract class ParallelIndexStatsReporter
     Map<String, Object> rowStatsMap = new HashMap<>();
     Map<String, Object> totalsMap = new HashMap<>();
     totalsMap.put(RowIngestionMeters.BUILD_SEGMENTS, rowStats);
-    rowStatsMap.put("totals", totalsMap);
+    rowStatsMap.put(TOTALS_FIELD, totalsMap);
 
     return Pair.of(rowStatsMap, ImmutableMap.of(RowIngestionMeters.BUILD_SEGMENTS, unparseableEvents));
   }

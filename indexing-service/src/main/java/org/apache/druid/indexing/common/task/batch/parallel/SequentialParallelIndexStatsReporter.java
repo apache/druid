@@ -30,7 +30,7 @@ public class SequentialParallelIndexStatsReporter extends ParallelIndexStatsRepo
       ParallelIndexSupervisorTask task,
       Object runner,
       boolean includeUnparseable,
-      String full
+      boolean full
   )
   {
     IndexTask currentSequentialTask = (IndexTask) runner;

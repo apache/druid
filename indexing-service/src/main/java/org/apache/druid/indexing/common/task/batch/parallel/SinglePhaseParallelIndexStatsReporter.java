@@ -45,7 +45,7 @@ public class SinglePhaseParallelIndexStatsReporter
       ParallelIndexSupervisorTask task,
       Object runner,
       boolean includeUnparseable,
-      String full
+      boolean full
   )
   {
     final SimpleRowIngestionMeters buildSegmentsRowStats = new SimpleRowIngestionMeters();

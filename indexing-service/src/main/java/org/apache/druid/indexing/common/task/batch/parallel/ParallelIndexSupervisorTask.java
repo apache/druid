@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.Union;
@@ -767,7 +768,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       return TaskStatus.failure(getId(), errMsg);
     }
 
-    indexGenerateRowStats = new MultiPhaseParallelIndexStatsReporter().report(this, indexingRunner, true, "full");
+    indexGenerateRowStats = new MultiPhaseParallelIndexStatsReporter().report(this, indexingRunner, true, true);
 
     // 2. Partial segment merge phase
     // partition (interval, partitionId) -> partition locations
@@ -869,7 +870,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       return TaskStatus.failure(getId(), errMsg);
     }
 
-    indexGenerateRowStats = new MultiPhaseParallelIndexStatsReporter().report(this, indexingRunner, true, "full");
+    indexGenerateRowStats = new MultiPhaseParallelIndexStatsReporter().report(this, indexingRunner, true, true);
 
     // partition (interval, partitionId) -> partition locations
     Map<Partition, List<PartitionLocation>> partitionToLocations =
@@ -1211,7 +1212,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private Map<String, TaskReport> getTaskCompletionReports(TaskStatus taskStatus, boolean segmentAvailabilityConfirmed)
   {
     ParallelIndexStats rowStatsAndUnparseableEvents = doGetRowStatsAndUnparseableEvents(
-        "true",
+        true,
         true
     );
     return TaskReport.buildTaskReports(
@@ -1538,7 +1539,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return null;
   }
 
-  private ParallelIndexStats doGetRowStatsAndUnparseableEvents(String full, boolean includeUnparseable)
+  private ParallelIndexStats doGetRowStatsAndUnparseableEvents(boolean full, boolean includeUnparseable)
   {
     if (currentSubTaskHolder == null) {
       return new ParallelIndexStats();
@@ -1562,11 +1563,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    return Response.ok(doGetRowStatsAndUnparseableEvents(full, false).getRowStats()).build();
+    return Response.ok(doGetRowStatsAndUnparseableEvents(!Strings.isNullOrEmpty(full), false).getRowStats()).build();
   }
 
   @VisibleForTesting
-  public Map<String, Object> doGetLiveReports(String full)
+  public Map<String, Object> doGetLiveReports(boolean full)
   {
     Map<String, Object> returnMap = new HashMap<>();
     Map<String, Object> ingestionStatsAndErrors = new HashMap<>();
@@ -1608,7 +1609,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
 
-    return Response.ok(doGetLiveReports(full)).build();
+    return Response.ok(doGetLiveReports(!Strings.isNullOrEmpty(full))).build();
   }
 
   /**

@@ -457,7 +457,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         Collections.emptyList(),
         ImmutableList.of(INTERVALS_INGESTED_DAY.get(1))
     );
-    Map<String, Object> actualReports = task.doGetLiveReports("full");
+    Map<String, Object> actualReports = task.doGetLiveReports(true);
     final long processedBytes = useInputFormatApi ? 335 : 0;
     Map<String, Object> expectedReports = buildExpectedTaskReportParallel(
         task.getId(),
@@ -512,7 +512,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
 
     TaskContainer taskContainer = getIndexingServiceClient().getTaskContainer(task.getId());
     final ParallelIndexSupervisorTask executedTask = (ParallelIndexSupervisorTask) taskContainer.getTask();
-    Map<String, Object> actualReports = executedTask.doGetLiveReports("full");
+    Map<String, Object> actualReports = executedTask.doGetLiveReports(true);
 
     final long processedBytes = useInputFormatApi ? 335 : 0;
     RowIngestionMetersTotals expectedTotals = new RowIngestionMetersTotals(10, processedBytes, 1, 1, 1);
