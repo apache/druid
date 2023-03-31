@@ -88,8 +88,10 @@ jobs:
         run: |
           ./.github/scripts/analyze_dependencies_script.sh
 
-      - name: analyze dependencies for hadoop
+      - name: analyze dependencies for hadoop2
         if: ${{ matrix.java == 'jdk8' }}
+        env:
+          HADOOP_PROFILE: -Phadoop2
         run: |
           ./.github/scripts/analyze_dependencies_script.sh
 
