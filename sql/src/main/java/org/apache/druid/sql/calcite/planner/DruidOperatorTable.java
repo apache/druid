@@ -364,6 +364,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new UnaryPrefixOperatorConversion(SqlStdOperatorTable.UNARY_MINUS, "-"))
                    .add(new UnaryFunctionOperatorConversion(SqlStdOperatorTable.IS_NULL, "isnull"))
                    .add(new UnaryFunctionOperatorConversion(SqlStdOperatorTable.IS_NOT_NULL, "notnull"))
+                   .add(new DirectOperatorConversion(SqlStdOperatorTable.DESC, "desc"))
                    .add(new UnarySuffixOperatorConversion(
                        SqlStdOperatorTable.IS_FALSE,
                        "<= 0"

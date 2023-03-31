@@ -1,4 +1,4 @@
-type: "failingTest"
+type: "operatorValidation"
 
 sql: |
     SELECT
@@ -10,8 +10,10 @@ sql: |
     FROM wikipedia
     GROUP BY 1, 2
     ORDER BY 1 DESC, 2 DESC
+    LIMIT 2
 
 expectedOperators:
+  - {type: "naiveSort", columns: [{column: "d0", direction: "ASC"}, {column: "d1", direction: "DESC"}]}
   - { type: "naivePartition",  partitionColumns: [ "d0" ] }
   - type: "window"
     processor:
@@ -19,7 +21,11 @@ expectedOperators:
       frame: { peerType: "ROWS", lowUnbounded: false, lowOffset: 3, uppUnbounded: false, uppOffset: 2 }
       aggregations:
         - { type: "longSum", name: "w0", fieldName: "a0" }
-  - { type: "naiveSort", columns: [ { column: "d1", direction: "DESC" }, { column: "a0", direction: "DESC"} ]}
+  - { type: "naiveSort", columns: [ { column: "d1", direction: "ASC" }, { column: "a0", direction: "DESC"} ]}
   - { type: "naivePartition",  partitionColumns: [ "d1" ] }
   - type: "window"
     processor: { type: "rowNumber", outputColumn: "w1"}
+
+expectedResults:
+  - [ "ZW", 1442044800000, 0, 254, 1 ]
+  - [ "ZW", 1442048400000, 254, 254, 1 ]
