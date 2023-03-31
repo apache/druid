@@ -46,10 +46,13 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.server.coordination.ChangeRequestHistory;
+import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
+import org.apache.druid.utils.CircularBuffer;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -950,9 +953,14 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     } else {
       log.info("Polled and found %,d segments in the database", segments.size());
     }
+    Map<String, ImmutableDruidDataSource> previousDataSourceMap = dataSourcesSnapshot.getDataSourcesMap();
+    Map<String, CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChangeRequest>>>>  previousDataSourceChanges = dataSourcesSnapshot.getDataSourceChanges();
+
     dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
         Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
         dataSourceProperties,
+        previousDataSourceMap,
+        previousDataSourceChanges,
         handedOffState
     );
   }

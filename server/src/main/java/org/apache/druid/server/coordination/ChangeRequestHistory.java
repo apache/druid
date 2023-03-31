@@ -245,7 +245,7 @@ public class ChangeRequestHistory<T>
     }
   }
 
-  private static class Holder<T>
+  public static class Holder<T>
   {
     private final T changeRequest;
     private final Counter counter;
@@ -254,6 +254,16 @@ public class ChangeRequestHistory<T>
     {
       this.changeRequest = changeRequest;
       this.counter = counter;
+    }
+
+    public T getChangeRequest()
+    {
+      return changeRequest;
+    }
+
+    public Counter getCounter()
+    {
+      return counter;
     }
   }
 
