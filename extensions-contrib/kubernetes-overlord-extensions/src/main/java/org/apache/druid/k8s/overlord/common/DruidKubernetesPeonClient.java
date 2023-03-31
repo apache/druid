@@ -111,7 +111,8 @@ public class DruidKubernetesPeonClient implements KubernetesPeonClient
                           unit
                       );
       if (job == null) {
-        return new JobResponse(job, PeonPhase.FAILED);
+        log.info("K8s job for task was not found %s", taskId);
+        return new JobResponse(null, PeonPhase.FAILED);
       }
       if (job.getStatus().getSucceeded() != null) {
         return new JobResponse(job, PeonPhase.SUCCEEDED);

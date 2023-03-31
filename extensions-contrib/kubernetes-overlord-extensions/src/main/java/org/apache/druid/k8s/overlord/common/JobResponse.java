@@ -54,6 +54,7 @@ public class JobResponse
   public Optional<Long> getJobDuration()
   {
     Optional<Long> duration = Optional.absent();
+    String jobName = job != null && job.getMetadata() != null ? job.getMetadata().getName() : "";
     try {
       if (job != null && job.getStatus() != null
           && job.getStatus().getStartTime() != null
@@ -66,12 +67,12 @@ public class JobResponse
       }
     }
     catch (Exception e) {
-      LOGGER.error(e, "Error calculating duration for job: %s", job.getMetadata().getName());
+      LOGGER.error(e, "Error calculating duration for job: %s", jobName);
     }
     if (duration.isPresent()) {
-      LOGGER.info("Duration for Job: %s was %d seconds", job.getMetadata().getName(), duration.get());
+      LOGGER.info("Duration for Job: %s was %d seconds", jobName, duration.get());
     } else {
-      LOGGER.info("Unable to calcuate duration for Job: %s", job.getMetadata().getName());
+      LOGGER.info("Unable to calcuate duration for Job: %s", jobName);
     }
     return duration;
   }
