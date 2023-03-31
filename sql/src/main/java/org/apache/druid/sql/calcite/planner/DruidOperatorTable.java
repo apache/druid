@@ -340,6 +340,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new AliasedOperatorConversion(CHARACTER_LENGTH_CONVERSION, "LENGTH"))
                    .add(new AliasedOperatorConversion(CHARACTER_LENGTH_CONVERSION, "STRLEN"))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.CONCAT, "concat"))
+                   .add(new DirectOperatorConversion(SqlStdOperatorTable.DESC, "desc"))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.EXP, "exp"))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.DIVIDE_INTEGER, "div"))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.LN, "log"))
@@ -364,7 +365,6 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new UnaryPrefixOperatorConversion(SqlStdOperatorTable.UNARY_MINUS, "-"))
                    .add(new UnaryFunctionOperatorConversion(SqlStdOperatorTable.IS_NULL, "isnull"))
                    .add(new UnaryFunctionOperatorConversion(SqlStdOperatorTable.IS_NOT_NULL, "notnull"))
-                   .add(new DirectOperatorConversion(SqlStdOperatorTable.DESC, "desc"))
                    .add(new UnarySuffixOperatorConversion(
                        SqlStdOperatorTable.IS_FALSE,
                        "<= 0"
