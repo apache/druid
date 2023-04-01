@@ -27,15 +27,15 @@
 
 ---
 
-[Website](https://druid.apache.org/) |
-[Twitter](https://twitter.com/druidio) |
-[Download](https://druid.apache.org/downloads.html) |
-[Get Started](#getting-started) |
-[Documentation](https://druid.apache.org/docs/latest/design/) |
-[Community](#community) |
-[Build](#building-from-source) |
-[Contribute](#contributing) |
-[License](#license)
+[![Website](https://img.shields.io/badge/Website-druid.apache.org-blue?style=flat-square&logo=apache-druid)](https://druid.apache.org/)
+[![Twitter](https://img.shields.io/badge/Twitter-%40druidio-blue?style=flat-square&logo=twitter)](https://twitter.com/druidio)
+[![Download](https://img.shields.io/badge/Download-Downloads_Page-blue?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0NDggNTEyIj4KICA8cGF0aCBkPSJNNDQxLjkgMTY3LjNsLTE5LjgtMTkuOGMtNC43LTQuNy0xMi4zLTQuNy0xNyAwbC0xODIuMSAxODAuNy0xODEuMS0xODAuN2MtNC43LTQuNy0xMi4zLTQuNy0xNyAwbC0xOS44IDE5LjhjLTQuNyA0LjctNC43IDEyLjMgMCAxN2wyMDkuNCAyMDkuNGM0LjcgNC43IDEyLjMgNC43IDE3IDBsMjA5LjQtMjA5LjRjNC43LTQuNyA0LjctMTIuMyAwLTE3eiIvPgo8L3N2Zz4K)](https://druid.apache.org/downloads.html)
+[![Get Started](https://img.shields.io/badge/Get_Started-Getting_Started-blue?style=flat-square&logo=quicklook)](#getting-started)
+[![Documentation](https://img.shields.io/badge/Documentation-Design_Docs-blue?style=flat-square&logo=read-the-docs)](https://druid.apache.org/docs/latest/design/)
+[![Community](https://img.shields.io/badge/Community-Join_Us-blue?style=flat-square&logo=slack)](#community)
+[![Build](https://img.shields.io/badge/Build-Building_From_Source-blue?style=flat-square&logo=github-actions)](#building-from-source)
+[![Contribute](https://img.shields.io/badge/Contribute-How_to_Contribute-blue?style=flat-square&logo=github)](#contributing)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=flat-square&logo=apache)](#license)
 
 ---
 
