@@ -610,16 +610,22 @@ The following table lists the context parameters for the MSQ task engine:
 
 ## Joins
 
-Joins in multi-stage queries use one of two algorithms, based on the [context parameter](#context-parameters)
-`sqlJoinAlgorithm`. This context parameter applies to the entire SQL statement, so it is not possible to mix different
+Joins in multi-stage queries use one of two algorithms based on what you set the [context parameter](#context-parameters) `sqlJoinAlgorithm` to: 
+
+- [`broadcast`](#broadcast) (default) 
+- [`sortMerge`](#sort-merge).
+
+If you omit this context parameter, the MSQ task engine uses broadcast since it's the default join algorithm. The context parameter applies to the entire SQL statement, so you can't mix different
 join algorithms in the same query.
 
 ### Broadcast
 
-Set `sqlJoinAlgorithm` to `broadcast`.
-
 The default join algorithm for multi-stage queries is a broadcast hash join, which is similar to how
-[joins are executed with native queries](../querying/query-execution.md#join). First, any adjacent joins are flattened
+[joins are executed with native queries](../querying/query-execution.md#join). 
+
+To use broadcast joins, either omit the  `sqlJoinAlgorithm` or set it to `broadcast`.
+
+For a broadcast join, any adjacent joins are flattened
 into a structure with a "base" input (the bottom-leftmost one) and other leaf inputs (the rest). Next, any subqueries
 that are inputs the join (either base or other leafs) are planned into independent stages. Then, the non-base leaf
 inputs are all connected as broadcast inputs to the "base" stage.
@@ -632,12 +638,13 @@ Only LEFT JOIN, INNER JOIN, and CROSS JOIN are supported with with `broadcast`.
 Join conditions, if present, must be equalities. It is not necessary to include a join condition; for example,
 `CROSS JOIN` and comma join do not require join conditions.
 
-As an example, the following statement has a single join chain where `orders` is the base input, and `products` and
-`customers` are non-base leaf inputs. The query will first read `products` and `customers`, then broadcast both to
-the stage that reads `orders`. That stage loads the broadcast inputs (`products` and `customers`) in memory, and walks
-through `orders` row by row. The results are then aggregated and written to the table `orders_enriched`. The broadcast
-inputs (`products` and `customers`) must fall under the limit on broadcast table footprint, but the base `orders` input
+The following example has a single join chain where `orders` is the base input while `products` and
+`customers` are non-base leaf inputs. The broadcast inputs (`products` and `customers`) must fall under the limit on broadcast table footprint, but the base `orders` input
 can be unlimited in size.
+
+The query reads `products` and `customers` and then broadcasts both to
+the stage that reads `orders`. That stage loads the broadcast inputs (`products` and `customers`) in memory and walks
+through `orders` row by row. The results are aggregated and written to the table `orders_enriched`. 
 
 ```
 REPLACE INTO orders_enriched
@@ -657,26 +664,23 @@ CLUSTERED BY product_name
 
 ### Sort-merge
 
-Set `sqlJoinAlgorithm` to `sortMerge`.
+You can use the sort-merge join algorithm to make queries more scalable at the cost of performance. If your goal is performance, consider [broadcast joins](#broadcast).  There are various scenarios where broadcast join would return a [`BroadcastTablesTooLarge`](#error-codes) error, but a sort-merge join would succeed.
 
-Multi-stage queries can use a sort-merge join algorithm. With this algorithm, each pairwise join is planned into its own
-stage with two inputs. The two inputs are partitioned and sorted using a hash partitioning on the same key. This
-approach is generally less performant, but more scalable, than `broadcast`. There are various scenarios where broadcast
-join would return a [`BroadcastTablesTooLarge`](#errors) error, but a sort-merge join would succeed.
+To use the sort-merge join algorithm, set the context parameter `sqlJoinAlgorithm` to `sortMerge`.
 
-There is no limit on the overall size of either input, so sort-merge is a good choice for performing a join of two large
-inputs, or for performing a self-join of a large input with itself.
+In a sort-merge join, each pairwise join is planned into its own stage with two inputs. The two inputs are partitioned and sorted using a hash partitioning on the same key. 
 
-There is a limit on the amount of data associated with each individual key. If _both_ sides of the join exceed this
-limit, the query returns a [`TooManyRowsWithSameKey`](#errors) error. If only one side exceeds the limit, the query
-does not return this error.
+When using the sort-merge algorithm, keep the following in mind:
 
-Join conditions, if present, must be equalities. It is not necessary to include a join condition; for example,
-`CROSS JOIN` and comma join do not require join conditions.
+- There is no limit on the overall size of either input, so sort-merge is a good choice for performing a join of two large inputs or for performing a self-join of a large input with itself.
 
-All join types are supported with `sortMerge`: LEFT, RIGHT, INNER, FULL, and CROSS.
+- There is a limit on the amount of data associated with each individual key. If _both_ sides of the join exceed this limit, the query returns a [`TooManyRowsWithSameKey`](#error-codes) error. If only one side exceeds the limit, the query does not return this error.
 
-As an example, the following statement runs using a single sort-merge join stage that receives `eventstream`
+- Join conditions are optional but must be equalities if they are present. For example, `CROSS JOIN` and comma join do not require join conditions.
+
+- All join types are supported with `sortMerge`: LEFT, RIGHT, INNER, FULL, and CROSS.
+
+The following example  runs using a single sort-merge join stage that receives `eventstream`
 (partitioned on `user_id`) and `users` (partitioned on `id`) as inputs. There is no limit on the size of either input.
 
 ```
@@ -693,6 +697,8 @@ LEFT JOIN users ON eventstream.user_id = users.id
 PARTITIONED BY HOUR
 CLUSTERED BY user
 ```
+
+The context parameter that sets `sqlJoinAlgorithm` to `sortMerge` is not shown in the above example.
 
 ## Durable Storage
 
