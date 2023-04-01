@@ -19,26 +19,33 @@
 import { Execution } from './execution';
 
 /*
-For query:
+===== Query =====
 
 REPLACE INTO "kttm_simple" OVERWRITE ALL
-SELECT TIME_PARSE("timestamp") AS "__time", agent_type
+SELECT
+  TIME_PARSE("timestamp") AS "__time",
+  "agent_type"
 FROM TABLE(
   EXTERN(
     '{"type":"http","uris":["https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz"]}',
-    '{"type":"json"}',
-    '[{"name":"timestamp","type":"string"},{"name":"agent_type","type":"string"}]'
+    '{"type":"json"}'
   )
-)
+) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
 PARTITIONED BY ALL TIME
+
+===== Context =====
+
+{
+  "maxNumTasks": 2
+}
 */
 
 export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
   {
-    task: 'query-32ced762-7679-4a25-9220-3915c5976961',
+    task: 'query-b55f3432-7810-4529-80ed-780a926a6f03',
     payload: {
       type: 'query_controller',
-      id: 'query-32ced762-7679-4a25-9220-3915c5976961',
+      id: 'query-b55f3432-7810-4529-80ed-780a926a6f03',
       spec: {
         query: {
           queryType: 'scan',
@@ -47,14 +54,12 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
             inputSource: {
               type: 'http',
               uris: ['https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz'],
-              httpAuthenticationUsername: null,
-              httpAuthenticationPassword: null,
             },
             inputFormat: {
               type: 'json',
-              flattenSpec: null,
-              featureSpec: {},
               keepNullColumns: false,
+              assumeNewlineDelimited: false,
+              useJsonNodeReader: false,
             },
             signature: [
               { name: 'timestamp', type: 'STRING' },
@@ -80,9 +85,11 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
             finalize: false,
             finalizeAggregations: false,
             groupByEnableMultiValueUnnesting: false,
+            maxNumTasks: 2,
+            queryId: 'b55f3432-7810-4529-80ed-780a926a6f03',
             scanSignature: '[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]',
             sqlInsertSegmentGranularity: '{"type":"all"}',
-            sqlQueryId: '32ced762-7679-4a25-9220-3915c5976961',
+            sqlQueryId: 'b55f3432-7810-4529-80ed-780a926a6f03',
             sqlReplaceTimeChunks: 'all',
           },
           granularity: { type: 'all' },
@@ -101,21 +108,23 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
         tuningConfig: { maxNumWorkers: 1, maxRowsInMemory: 100000, rowsPerSegment: 3000000 },
       },
       sqlQuery:
-        'REPLACE INTO "kttm_simple" OVERWRITE ALL\nSELECT TIME_PARSE("timestamp") AS "__time", agent_type\nFROM TABLE(\n  EXTERN(\n    \'{"type":"http","uris":["https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz"]}\',\n    \'{"type":"json"}\',\n    \'[{"name":"timestamp","type":"string"},{"name":"agent_type","type":"string"}]\'\n  )\n)\nPARTITIONED BY ALL TIME',
+        'REPLACE INTO "kttm_simple" OVERWRITE ALL\nSELECT\n  TIME_PARSE("timestamp") AS "__time",\n  "agent_type"\nFROM TABLE(\n  EXTERN(\n    \'{"type":"http","uris":["https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz"]}\',\n    \'{"type":"json"}\'\n  )\n) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)\nPARTITIONED BY ALL TIME',
       sqlQueryContext: {
         finalizeAggregations: false,
-        groupByEnableMultiValueUnnesting: false,
         maxParseExceptions: 0,
+        sqlQueryId: 'b55f3432-7810-4529-80ed-780a926a6f03',
+        groupByEnableMultiValueUnnesting: false,
         sqlInsertSegmentGranularity: '{"type":"all"}',
-        sqlQueryId: '32ced762-7679-4a25-9220-3915c5976961',
+        maxNumTasks: 2,
         sqlReplaceTimeChunks: 'all',
+        queryId: 'b55f3432-7810-4529-80ed-780a926a6f03',
       },
       sqlTypeNames: ['TIMESTAMP', 'VARCHAR'],
       context: { forceTimeChunkLock: true, useLineageBasedSegmentAllocation: true },
-      groupId: 'query-32ced762-7679-4a25-9220-3915c5976961',
+      groupId: 'query-b55f3432-7810-4529-80ed-780a926a6f03',
       dataSource: 'kttm_simple',
       resource: {
-        availabilityGroup: 'query-32ced762-7679-4a25-9220-3915c5976961',
+        availabilityGroup: 'query-b55f3432-7810-4529-80ed-780a926a6f03',
         requiredCapacity: 1,
       },
     },
@@ -124,14 +133,20 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
   {
     multiStageQuery: {
       type: 'multiStageQuery',
-      taskId: 'query-32ced762-7679-4a25-9220-3915c5976961',
+      taskId: 'query-b55f3432-7810-4529-80ed-780a926a6f03',
       payload: {
-        status: { status: 'SUCCESS', startTime: '2022-08-22T20:12:51.391Z', durationMs: 25097 },
+        status: {
+          status: 'SUCCESS',
+          startTime: '2023-03-27T22:17:02.401Z',
+          durationMs: 28854,
+          pendingTasks: 0,
+          runningTasks: 2,
+        },
         stages: [
           {
             stageNumber: 0,
             definition: {
-              id: '0b353011-6ea1-480a-8ca8-386771621672_0',
+              id: '8984a4c0-89a0-4a0a-9eaa-bf03088da3e3_0',
               input: [
                 {
                   type: 'external',
@@ -140,14 +155,12 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
                     uris: [
                       'https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz',
                     ],
-                    httpAuthenticationUsername: null,
-                    httpAuthenticationPassword: null,
                   },
                   inputFormat: {
                     type: 'json',
-                    flattenSpec: null,
-                    featureSpec: {},
                     keepNullColumns: false,
+                    assumeNewlineDelimited: false,
+                    useJsonNodeReader: false,
                   },
                   signature: [
                     { name: 'timestamp', type: 'STRING' },
@@ -180,10 +193,12 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
                     finalize: false,
                     finalizeAggregations: false,
                     groupByEnableMultiValueUnnesting: false,
+                    maxNumTasks: 2,
+                    queryId: 'b55f3432-7810-4529-80ed-780a926a6f03',
                     scanSignature:
                       '[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]',
                     sqlInsertSegmentGranularity: '{"type":"all"}',
-                    sqlQueryId: '32ced762-7679-4a25-9220-3915c5976961',
+                    sqlQueryId: 'b55f3432-7810-4529-80ed-780a926a6f03',
                     sqlReplaceTimeChunks: 'all',
                   },
                   granularity: { type: 'all' },
@@ -196,23 +211,24 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
               ],
               shuffleSpec: {
                 type: 'targetSize',
-                clusterBy: { columns: [{ columnName: '__boost' }] },
+                clusterBy: { columns: [{ columnName: '__boost', order: 'ASCENDING' }] },
                 targetSize: 3000000,
               },
               maxWorkerCount: 1,
               shuffleCheckHasMultipleValues: true,
+              maxInputBytesPerWorker: 10737418240,
             },
             phase: 'FINISHED',
             workerCount: 1,
             partitionCount: 1,
-            startTime: '2022-08-22T20:12:53.790Z',
-            duration: 20229,
+            startTime: '2023-03-27T22:17:02.792Z',
+            duration: 24236,
             sort: true,
           },
           {
             stageNumber: 1,
             definition: {
-              id: '0b353011-6ea1-480a-8ca8-386771621672_1',
+              id: '8984a4c0-89a0-4a0a-9eaa-bf03088da3e3_1',
               input: [{ type: 'stage', stage: 0 }],
               processor: {
                 type: 'segmentGenerator',
@@ -230,6 +246,7 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
                     ],
                     dimensionExclusions: ['__time'],
                     includeAllDimensions: false,
+                    useSchemaDiscovery: false,
                   },
                   metricsSpec: [],
                   granularitySpec: {
@@ -252,18 +269,25 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
               },
               signature: [],
               maxWorkerCount: 1,
+              maxInputBytesPerWorker: 10737418240,
             },
             phase: 'FINISHED',
             workerCount: 1,
             partitionCount: 1,
-            startTime: '2022-08-22T20:13:13.991Z',
-            duration: 2497,
+            startTime: '2023-03-27T22:17:26.978Z',
+            duration: 4276,
           },
         ],
         counters: {
           '0': {
             '0': {
-              input0: { type: 'channel', rows: [465346], files: [1], totalFiles: [1] },
+              input0: {
+                type: 'channel',
+                rows: [465346],
+                bytes: [360464067],
+                files: [1],
+                totalFiles: [1],
+              },
               output: { type: 'channel', rows: [465346], bytes: [25430674], frames: [4] },
               shuffle: { type: 'channel', rows: [465346], bytes: [23570446], frames: [38] },
               sortProgress: {
@@ -277,7 +301,16 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
             },
           },
           '1': {
-            '0': { input0: { type: 'channel', rows: [465346], bytes: [23570446], frames: [38] } },
+            '0': {
+              input0: { type: 'channel', rows: [465346], bytes: [23570446], frames: [38] },
+              segmentGenerationProgress: {
+                type: 'segmentGenerationProgress',
+                rowsProcessed: 465346,
+                rowsPersisted: 465346,
+                rowsMerged: 465346,
+                rowsPushed: 465346,
+              },
+            },
           },
         },
       },

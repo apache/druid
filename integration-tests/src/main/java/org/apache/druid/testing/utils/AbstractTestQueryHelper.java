@@ -146,23 +146,27 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
     for (QueryResultType queryWithResult : queries) {
       LOG.info("Running Query %s", queryWithResult.getQuery());
       List<Map<String, Object>> result = queryClient.query(url, queryWithResult.getQuery());
-      if (!QueryResultVerifier.compareResults(result, queryWithResult.getExpectedResults(),
-                                              queryWithResult.getFieldsToTest()
-      )) {
+      QueryResultVerifier.ResultVerificationObject resultsComparison = QueryResultVerifier.compareResults(
+          result,
+          queryWithResult.getExpectedResults(),
+          queryWithResult.getFieldsToTest()
+      );
+      if (!resultsComparison.isSuccess()) {
         LOG.error(
             "Failed while executing query %s \n expectedResults: %s \n actualResults : %s",
             queryWithResult.getQuery(),
             jsonMapper.writeValueAsString(queryWithResult.getExpectedResults()),
             jsonMapper.writeValueAsString(result)
         );
-        failed = true;
+        throw new ISE(
+            "Results mismatch while executing the query %s.\n"
+            + "Mismatch error: %s\n",
+            queryWithResult.getQuery(),
+            resultsComparison.getErrorMessage()
+        );
       } else {
         LOG.info("Results Verified for Query %s", queryWithResult.getQuery());
       }
-    }
-
-    if (failed) {
-      throw new ISE("one or more queries failed");
     }
   }
 

@@ -30,7 +30,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>org.apache.druid</groupId>
-        <version>25.0.0-SNAPSHOT</version>
+        <version>26.0.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -39,7 +39,14 @@
             <artifactId>druid-services</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
+        <dependency>
+            <!-- This is needed to bundle the web console -->
+            <groupId>org.apache.druid</groupId>
+            <artifactId>web-console</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
     </dependencies>
+
     <properties>
         <!-- the default value is a repeated flag from the command line, since blank value is not allowed -->
         <druid.distribution.pulldeps.opts>--clean</druid.distribution.pulldeps.opts>
@@ -218,6 +225,8 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-multi-stage-query</argument>
                                         <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-catalog</argument>
+                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-protobuf-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:mysql-metadata-storage</argument>
@@ -249,6 +258,8 @@
                                         <argument>org.apache.druid.extensions:druid-ranger-security</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-kubernetes-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-catalog</argument>
                                         <argument>${druid.distribution.pulldeps.opts}</argument>
                                     </arguments>
                                 </configuration>
@@ -588,6 +599,8 @@
                                         <argument>org.apache.druid.extensions.contrib:druid-influxdb-emitter</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:kafka-emitter</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-kubernetes-overlord-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:materialized-view-maintenance</argument>
                                         <argument>-c</argument>

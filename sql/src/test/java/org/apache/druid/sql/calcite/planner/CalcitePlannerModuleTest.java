@@ -34,8 +34,9 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.QueryContext;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -45,6 +46,7 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
+import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.Mock;
@@ -55,6 +57,7 @@ import org.junit.runner.RunWith;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
+import java.util.Collections;
 import java.util.Set;
 
 import static org.apache.calcite.plan.RelOptRule.any;
@@ -79,6 +82,8 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
   private QueryLifecycleFactory queryLifecycleFactory;
   @Mock
   private ExprMacroTable macroTable;
+  @Mock
+  private JoinableFactoryWrapper joinableFactoryWrapper;
   @Mock
   private AuthorizerMapper authorizerMapper;
   @Mock
@@ -109,7 +114,6 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
       @Override
       public void onMatch(RelOptRuleCall call)
       {
-
       }
     };
     injector = Guice.createInjector(
@@ -124,6 +128,8 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
           binder.bind(Key.get(new TypeLiteral<Set<SqlAggregator>>() {})).toInstance(aggregators);
           binder.bind(Key.get(new TypeLiteral<Set<SqlOperatorConversion>>() {})).toInstance(operatorConversions);
           binder.bind(DruidSchemaCatalog.class).toInstance(rootSchema);
+          binder.bind(JoinableFactoryWrapper.class).toInstance(joinableFactoryWrapper);
+          binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
         },
         target,
         binder -> {
@@ -166,15 +172,25 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
   @Test
   public void testExtensionCalciteRule()
   {
-    PlannerContext context = PlannerContext.create(
-        "SELECT 1",
+    PlannerToolbox toolbox = new PlannerToolbox(
         injector.getInstance(DruidOperatorTable.class),
         macroTable,
         new DefaultObjectMapper(),
         injector.getInstance(PlannerConfig.class),
         rootSchema,
+        joinableFactoryWrapper,
+        CatalogResolver.NULL_RESOLVER,
+        "druid",
+        new CalciteRulesManager(ImmutableSet.of()),
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        AuthConfig.newBuilder().build()
+    );
+    PlannerContext context = PlannerContext.create(
+        toolbox,
+        "SELECT 1",
         null,
-        new QueryContext()
+        Collections.emptyMap(),
+        null
     );
     boolean containsCustomRule = injector.getInstance(CalciteRulesManager.class)
                                          .druidConventionRuleSet(context)

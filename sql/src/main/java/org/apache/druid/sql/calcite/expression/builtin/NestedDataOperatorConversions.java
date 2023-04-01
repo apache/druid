@@ -40,6 +40,7 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeTransforms;
 import org.apache.calcite.sql2rel.SqlRexConvertlet;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.InputBindings;
@@ -54,6 +55,7 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.planner.convertlet.DruidConvertletFactory;
@@ -276,7 +278,8 @@ public class NestedDataOperatorConversions
               call.operand(0),
               call.operand(1)
           );
-        } else if (SqlTypeName.APPROX_TYPES.contains(sqlType.getSqlTypeName())) {
+        } else if (SqlTypeName.DECIMAL.equals(sqlType.getSqlTypeName()) ||
+                   SqlTypeName.APPROX_TYPES.contains(sqlType.getSqlTypeName())) {
           rewrite = JsonValueDoubleOperatorConversion.FUNCTION.createCall(
               SqlParserPos.ZERO,
               call.operand(0),
@@ -288,6 +291,33 @@ public class NestedDataOperatorConversions
               call.operand(0),
               call.operand(1)
           );
+        } else if (SqlTypeName.ARRAY.equals(sqlType.getSqlTypeName())) {
+          ColumnType elementType = Calcites.getColumnTypeForRelDataType(sqlType.getComponentType());
+          switch (elementType.getType()) {
+            case LONG:
+              rewrite = JsonValueReturningArrayBigIntOperatorConversion.FUNCTION.createCall(
+                  SqlParserPos.ZERO,
+                  call.operand(0),
+                  call.operand(1)
+              );
+              break;
+            case DOUBLE:
+              rewrite = JsonValueReturningArrayDoubleOperatorConversion.FUNCTION.createCall(
+                  SqlParserPos.ZERO,
+                  call.operand(0),
+                  call.operand(1)
+              );
+              break;
+            case STRING:
+              rewrite = JsonValueReturningArrayVarcharOperatorConversion.FUNCTION.createCall(
+                  SqlParserPos.ZERO,
+                  call.operand(0),
+                  call.operand(1)
+              );
+              break;
+            default:
+              throw new IAE("Unhandled JSON_VALUE RETURNING ARRAY type [%s]", sqlType.getComponentType());
+          }
         } else {
           // fallback to json_value_any, e.g. the 'standard' convertlet.
           rewrite = JsonValueAnyOperatorConversion.FUNCTION.createCall(
@@ -296,6 +326,7 @@ public class NestedDataOperatorConversions
               call.operand(1)
           );
         }
+
 
         // always cast anyway, to prevent haters from complaining that VARCHAR doesn't match VARCHAR(2000)
         SqlNode caster = SqlStdOperatorTable.CAST.createCall(
@@ -441,6 +472,135 @@ public class NestedDataOperatorConversions
     public JsonValueVarcharOperatorConversion()
     {
       super(FUNCTION, ColumnType.STRING);
+    }
+  }
+
+  public abstract static class JsonValueReturningArrayTypeOperatorConversion implements SqlOperatorConversion
+  {
+    private final SqlFunction function;
+    private final ColumnType druidType;
+
+    public JsonValueReturningArrayTypeOperatorConversion(SqlFunction function, ColumnType druidType)
+    {
+      this.druidType = druidType;
+      this.function = function;
+    }
+
+    @Override
+    public SqlOperator calciteOperator()
+    {
+      return function;
+    }
+
+    @Nullable
+    @Override
+    public DruidExpression toDruidExpression(
+        PlannerContext plannerContext,
+        RowSignature rowSignature,
+        RexNode rexNode
+    )
+    {
+      final RexCall call = (RexCall) rexNode;
+      final List<DruidExpression> druidExpressions = Expressions.toDruidExpressions(
+          plannerContext,
+          rowSignature,
+          call.getOperands()
+      );
+
+      if (druidExpressions == null || druidExpressions.size() != 2) {
+        return null;
+      }
+
+      final Expr pathExpr = Parser.parse(druidExpressions.get(1).getExpression(), plannerContext.getExprMacroTable());
+      if (!pathExpr.isLiteral()) {
+        return null;
+      }
+      // pre-normalize path so that the same expressions with different jq syntax are collapsed
+      final String path = (String) pathExpr.eval(InputBindings.nilBindings()).value();
+      final List<NestedPathPart> parts;
+      try {
+        parts = NestedPathFinder.parseJsonPath(path);
+      }
+      catch (IllegalArgumentException iae) {
+        throw new UnsupportedSQLQueryException(
+            "Cannot use [%s]: [%s]",
+            call.getOperator().getName(),
+            iae.getMessage()
+        );
+      }
+      final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
+      final DruidExpression.ExpressionGenerator builder = (args) ->
+          "json_value(" + args.get(0).getExpression() + ",'" + jsonPath + "', '" + druidType.asTypeString() + "')";
+
+      if (druidExpressions.get(0).isSimpleExtraction()) {
+
+        return DruidExpression.ofVirtualColumn(
+            druidType,
+            builder,
+            ImmutableList.of(
+                DruidExpression.ofColumn(NestedDataComplexTypeSerde.TYPE, druidExpressions.get(0).getDirectColumn())
+            ),
+            (name, outputType, expression, macroTable) -> new NestedFieldVirtualColumn(
+                druidExpressions.get(0).getDirectColumn(),
+                name,
+                outputType,
+                parts,
+                false,
+                null,
+                null
+            )
+        );
+      }
+      return DruidExpression.ofExpression(druidType, builder, druidExpressions);
+    }
+
+    static SqlFunction buildArrayFunction(String functionName, SqlTypeName elementTypeName)
+    {
+      return OperatorConversions.operatorBuilder(functionName)
+                                .operandTypeChecker(
+                                    OperandTypes.sequence(
+                                        "(expr,path)",
+                                        OperandTypes.family(SqlTypeFamily.ANY),
+                                        OperandTypes.family(SqlTypeFamily.STRING)
+                                    )
+                                )
+                                .returnTypeInference(
+                                    opBinding -> {
+                                      return opBinding.getTypeFactory().createTypeWithNullability(Calcites.createSqlArrayTypeWithNullability(opBinding.getTypeFactory(), elementTypeName, false), true);
+                                    }
+                                )
+                                .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
+                                .build();
+    }
+  }
+
+  public static class JsonValueReturningArrayBigIntOperatorConversion extends JsonValueReturningArrayTypeOperatorConversion
+  {
+    static final SqlFunction FUNCTION = buildArrayFunction("JSON_VALUE_RETURNING_ARRAY_BIGINT", SqlTypeName.BIGINT);
+
+    public JsonValueReturningArrayBigIntOperatorConversion()
+    {
+      super(FUNCTION, ColumnType.LONG_ARRAY);
+    }
+  }
+
+  public static class JsonValueReturningArrayDoubleOperatorConversion extends JsonValueReturningArrayTypeOperatorConversion
+  {
+    static final SqlFunction FUNCTION = buildArrayFunction("JSON_VALUE_RETURNING_ARRAY_DOUBLE", SqlTypeName.DOUBLE);
+
+    public JsonValueReturningArrayDoubleOperatorConversion()
+    {
+      super(FUNCTION, ColumnType.DOUBLE_ARRAY);
+    }
+  }
+
+  public static class JsonValueReturningArrayVarcharOperatorConversion extends JsonValueReturningArrayTypeOperatorConversion
+  {
+    static final SqlFunction FUNCTION = buildArrayFunction("JSON_VALUE_RETURNING_ARRAY_VARCHAR", SqlTypeName.VARCHAR);
+
+    public JsonValueReturningArrayVarcharOperatorConversion()
+    {
+      super(FUNCTION, ColumnType.STRING_ARRAY);
     }
   }
 

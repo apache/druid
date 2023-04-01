@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>25.0.0-SNAPSHOT</version>
+    <version>26.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -75,10 +75,11 @@
         <java.version>8</java.version>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
-        <apache.curator.version>5.3.0</apache.curator.version>
-        <apache.kafka.version>3.2.0</apache.kafka.version>
+        <apache.curator.version>5.4.0</apache.curator.version>
+        <apache.kafka.version>3.4.0</apache.kafka.version>
         <apache.ranger.version>2.0.0</apache.ranger.version>
         <apache.ranger.gson.version>2.2.4</apache.ranger.gson.version>
+        <scala.library.version>2.13.9</scala.library.version>
         <avatica.version>1.17.0</avatica.version>
         <avro.version>1.9.2</avro.version>
         <!-- sql/src/main/codegen/config.fmpp is based on a file from calcite-core, and needs to be
@@ -103,29 +104,29 @@
         <mysql.version>5.1.49</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
-        <netty4.version>4.1.68.Final</netty4.version>
+        <netty4.version>4.1.86.Final</netty4.version>
         <postgresql.version>42.4.1</postgresql.version>
-        <protobuf.version>3.11.0</protobuf.version>
+        <protobuf.version>3.21.7</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
         <slf4j.version>1.7.36</slf4j.version>
         <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
         <hadoop.compile.version>2.8.5</hadoop.compile.version>
         <mockito.version>4.3.1</mockito.version>
-        <aws.sdk.version>1.12.264</aws.sdk.version>
+        <aws.sdk.version>1.12.317</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
         <jacoco.version>0.8.7</jacoco.version>
         <hibernate-validator.version>5.2.5.Final</hibernate-validator.version>
         <httpclient.version>4.5.13</httpclient.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
-        <zookeeper.version>3.5.9</zookeeper.version>
+        <zookeeper.version>3.5.10</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
         <com.google.apis.client.version>1.26.0</com.google.apis.client.version>
         <com.google.apis.compute.version>v1-rev20190607-${com.google.apis.client.version}</com.google.apis.compute.version>
         <com.google.apis.storage.version>v1-rev20190523-${com.google.apis.client.version}</com.google.apis.storage.version>
         <jdk.surefire.argLine><!-- empty placeholder --></jdk.surefire.argLine>
-        <repoOrgId>apache.snapshots</repoOrgId>
-        <repoOrgName>Apache Snapshot Repository</repoOrgName>
-        <repoOrgUrl>https://repository.apache.org/snapshots</repoOrgUrl>
+        <repoOrgId>maven.org</repoOrgId>
+        <repoOrgName>Maven Central Repository</repoOrgName>
+        <repoOrgUrl>https://repo1.maven.org/maven2/</repoOrgUrl>
 
         <!-- Allow the handful of flaky tests with transient failures to pass. -->
         <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
@@ -137,20 +138,23 @@
         <skipTests>false</skipTests>
         <skipUTs>${skipTests}</skipUTs>
         <skipITs>${skipTests}</skipITs>
+
+        <!-- NetBeans has a problem when we use late binding with @ in the surefire arg line.
+             Therefore we set this empty property here.
+             ref: https://github.com/mapstruct/mapstruct/pull/1241
+             -->
+         <jacocoArgLine />
     </properties>
 
     <modules>
-        <module>core</module>
+        <module>processing</module>
         <module>indexing-hadoop</module>
         <module>indexing-service</module>
-        <module>processing</module>
         <module>server</module>
         <module>sql</module>
         <module>services</module>
         <module>integration-tests</module>
         <module>benchmarks</module>
-        <module>extendedset</module>
-        <module>hll</module>
         <module>web-console</module>
         <!-- Core cloud functionality -->
         <module>cloud/aws-common</module>
@@ -184,6 +188,7 @@
         <module>extensions-core/druid-basic-security</module>
         <module>extensions-core/google-extensions</module>
         <module>extensions-core/druid-ranger-security</module>
+        <module>extensions-core/druid-catalog</module>
         <module>extensions-core/testing-tools</module>
         <!-- Community extensions -->
         <module>extensions-contrib/compressed-bigdecimal</module>
@@ -212,6 +217,7 @@
         <module>extensions-contrib/aliyun-oss-extensions</module>
         <module>extensions-contrib/prometheus-emitter</module>
         <module>extensions-contrib/opentelemetry-emitter</module>
+        <module>extensions-contrib/kubernetes-overlord-extensions</module>
         <!-- distribution packaging -->
         <module>distribution</module>
         <!-- Revised integration tests -->
@@ -225,14 +231,31 @@
             <id>${repoOrgId}</id>
             <name>${repoOrgName}</name>
             <url>${repoOrgUrl}</url>
+            <snapshots>
+               <enabled>false</enabled>
+            </snapshots>
         </repository>
-
+        
         <!-- Only used by core, but moved to root for parallel build dependency resolution -->
         <repository>
-          <id>sigar</id>
-          <url>https://repository.mulesoft.org/nexus/content/repositories/public</url>
+            <id>sigar</id>
+            <url>https://repository.mulesoft.org/nexus/content/repositories/public</url>
+            <snapshots>
+               <enabled>false</enabled>
+            </snapshots>
         </repository>
     </repositories>
+    
+    <pluginRepositories>
+        <pluginRepository>
+            <id>${repoOrgId}</id>
+            <name>${repoOrgName}</name>
+            <url>${repoOrgUrl}</url>
+            <snapshots>
+               <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
 
     <dependencyManagement>
         <dependencies>
@@ -275,7 +298,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-text</artifactId>
-                <version>1.9</version>
+                <version>1.10.0</version>
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
@@ -520,8 +543,8 @@
             </dependency>
             <dependency>
                 <groupId>org.glassfish</groupId>
-                <artifactId>javax.el</artifactId>
-                <version>3.0.0</version>
+                <artifactId>jakarta.el</artifactId>
+                <version>3.0.4</version>
             </dependency>
             <dependency>
                 <groupId>org.glassfish.grizzly</groupId>
@@ -648,7 +671,7 @@
             <dependency>
                 <groupId>joda-time</groupId>
                 <artifactId>joda-time</artifactId>
-                <version>2.10.5</version>
+                <version>2.12.4</version>
             </dependency>
             <dependency>
                 <groupId>com.google.code.findbugs</groupId>
@@ -730,6 +753,11 @@
                 <version>1.8.0</version>
             </dependency>
             <dependency>
+                <groupId>org.xerial.snappy</groupId>
+                <artifactId>snappy-java</artifactId>
+                <version>1.1.8.4</version>
+            </dependency>
+            <dependency>
                 <groupId>com.google.protobuf</groupId>
                 <artifactId>protobuf-java</artifactId>
                 <version>${protobuf.version}</version>
@@ -798,6 +826,11 @@
             <dependency>
                 <groupId>it.unimi.dsi</groupId>
                 <artifactId>fastutil-core</artifactId>
+                <version>${fastutil.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>it.unimi.dsi</groupId>
+                <artifactId>fastutil-extra</artifactId>
                 <version>${fastutil.version}</version>
             </dependency>
             <dependency>
@@ -1448,7 +1481,7 @@
             <plugin>
                 <groupId>pl.project13.maven</groupId>
                 <artifactId>git-commit-id-plugin</artifactId>
-                <version>2.2.5</version>
+                <version>4.9.10</version>
                 <executions>
                     <execution>
                         <goals>
@@ -1507,7 +1540,7 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>7.0.4</version>
+                <version>7.4.4</version>
                 <configuration>
                     <failBuildOnCVSS>7</failBuildOnCVSS>
                     <skipProvidedScope>true</skipProvidedScope>
@@ -1520,6 +1553,19 @@
                 <executions>
                     <execution>
                         <phase>none</phase>  <!-- TODO: Consider enabling so part of dev flow instead of just CI -->
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.cyclonedx</groupId>
+                <artifactId>cyclonedx-maven-plugin</artifactId>
+                <version>2.7.5</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>makeBom</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>
@@ -1908,6 +1954,8 @@
                                 <exclude>.github/ISSUE_TEMPLATE/*.md</exclude>
                                 <exclude>.github/pull_request_template.md</exclude>
                                 <exclude>.github/dependabot.yml</exclude>
+                                <exclude>.github/workflows/codeql.yml</exclude>
+                                <exclude>.github/workflows/codeql-config.yml</exclude>
                                 <exclude>git.version</exclude>
                                 <exclude>website/node_modules/**</exclude>
                                 <exclude>src/**/*.snap</exclude>

@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -101,7 +100,7 @@ public class TimeseriesQueryEngine
 
     final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(adapter);
 
-    final boolean doVectorize = QueryContexts.getVectorize(query).shouldVectorize(
+    final boolean doVectorize = query.context().getVectorize().shouldVectorize(
         adapter.canVectorize(filter, query.getVirtualColumns(), descending)
         && VirtualColumns.shouldVectorize(query, query.getVirtualColumns(), adapter)
         && query.getAggregatorSpecs().stream().allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(inspector))
@@ -141,7 +140,7 @@ public class TimeseriesQueryEngine
         queryInterval,
         query.getVirtualColumns(),
         descending,
-        QueryContexts.getVectorSize(query),
+        query.context().getVectorSize(),
         timeseriesQueryMetrics
     );
 

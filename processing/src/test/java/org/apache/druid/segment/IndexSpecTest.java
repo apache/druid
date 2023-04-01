@@ -40,10 +40,10 @@ public class IndexSpecTest
     final ObjectMapper objectMapper = new DefaultObjectMapper();
     final String json =
         "{ \"bitmap\" : { \"type\" : \"roaring\" }, \"dimensionCompression\" : \"lz4\", \"metricCompression\" : \"lzf\""
-        + ", \"longEncoding\" : \"auto\" }";
+        + ", \"longEncoding\" : \"auto\", \"stringDictionaryEncoding\":{\"type\":\"frontCoded\", \"bucketSize\":16}}";
 
     final IndexSpec spec = objectMapper.readValue(json, IndexSpec.class);
-    Assert.assertEquals(new RoaringBitmapSerdeFactory(null), spec.getBitmapSerdeFactory());
+    Assert.assertEquals(RoaringBitmapSerdeFactory.getInstance(), spec.getBitmapSerdeFactory());
     Assert.assertEquals(CompressionStrategy.LZ4, spec.getDimensionCompression());
     Assert.assertEquals(CompressionStrategy.LZF, spec.getMetricCompression());
     Assert.assertEquals(CompressionFactory.LongEncodingStrategy.AUTO, spec.getLongEncoding());

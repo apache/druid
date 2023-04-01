@@ -29,6 +29,7 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
@@ -45,7 +46,6 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class TaskLockBoxConcurrencyTest
@@ -77,7 +77,7 @@ public class TaskLockBoxConcurrencyTest
         taskStorage,
         new IndexerSQLMetadataStorageCoordinator(objectMapper, derby.metadataTablesConfigSupplier().get(), derbyConnector)
     );
-    service = Executors.newFixedThreadPool(2);
+    service = Execs.multiThreaded(2, "TaskLockBoxConcurrencyTest-%d");
   }
 
   @After

@@ -588,6 +588,18 @@ public class ExpressionsTest extends ExpressionTestBase
         makeExpression("format('%s %,d',\"s\",1234,6789)"),
         "foo 1,234"
     );
+
+    testHelper.testExpressionString(
+        new StringFormatOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral("%.2f %.2f %.2f"),
+            testHelper.makeLiteral(1234d),
+            testHelper.makeLiteral(123.4),
+            testHelper.makeLiteral(123.456789)
+        ),
+        makeExpression("format('%.2f %.2f %.2f',1234.0,123.4,123.456789)"),
+        "1234.00 123.40 123.46"
+    );
   }
 
   @Test
@@ -651,7 +663,7 @@ public class ExpressionsTest extends ExpressionTestBase
             DruidExpression.functionCall("parse_long"),
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.STRING, "hexstr"),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(16))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(16))
             )
         ),
         239L
@@ -679,7 +691,7 @@ public class ExpressionsTest extends ExpressionTestBase
                         DruidExpression.ofColumn(ColumnType.STRING, "hexstr")
                     )
                 ),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(16))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(16))
             )
         ),
         239L
@@ -695,7 +707,7 @@ public class ExpressionsTest extends ExpressionTestBase
                 DruidExpression.ofColumn(ColumnType.STRING, "hexstr")
             )
         ),
-        NullHandling.sqlCompatible() ? null : 0L
+        null
     );
   }
 
@@ -929,7 +941,7 @@ public class ExpressionsTest extends ExpressionTestBase
             (args) -> "(cast(cast(" + args.get(0).getExpression() + " * 10.0,'long'),'double') / 10.0)",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.FLOAT, "x"),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(1))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(1))
             )
         ),
         2.2
@@ -946,7 +958,7 @@ public class ExpressionsTest extends ExpressionTestBase
             (args) -> "(cast(cast(" + args.get(0).getExpression() + " * 10.0,'long'),'double') / 10.0)",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.FLOAT, "z"),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(1))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(1))
             )
         ),
         -2.2
@@ -963,7 +975,7 @@ public class ExpressionsTest extends ExpressionTestBase
             (args) -> "(cast(cast(" + args.get(0).getExpression() + " * 0.1,'long'),'double') / 0.1)",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.LONG, "b"),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(-1))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(-1))
             )
         ),
         20.0
@@ -980,7 +992,7 @@ public class ExpressionsTest extends ExpressionTestBase
             (args) -> "(cast(cast(" + args.get(0).getExpression() + " * 0.1,'long'),'double') / 0.1)",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.FLOAT, "z"),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(-1))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(-1))
             )
         ),
         0.0
@@ -1029,7 +1041,7 @@ public class ExpressionsTest extends ExpressionTestBase
             DruidExpression.functionCall("round"),
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.LONG, "b"),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(-1))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(-1))
             )
         ),
         30L
@@ -1059,7 +1071,7 @@ public class ExpressionsTest extends ExpressionTestBase
             DruidExpression.functionCall("round"),
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.FLOAT, "x"),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(1))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(1))
             )
         ),
         2.3
@@ -1075,7 +1087,7 @@ public class ExpressionsTest extends ExpressionTestBase
                 DruidExpression.ofColumn(ColumnType.LONG, "y")
             )
         ),
-        3.0
+        3L
     );
 
     testHelper.testExpression(
@@ -1739,8 +1751,7 @@ public class ExpressionsTest extends ExpressionTestBase
             (args) -> "(" + args.get(0).getExpression() + " - " + args.get(1).getExpression() + ")",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.LONG, "t"),
-                // RexNode type of "interval day to minute" is not converted to druid long... yet
-                DruidExpression.ofLiteral(null, "90060000")
+                DruidExpression.ofLiteral(ColumnType.STRING, "90060000")
             )
         ),
         DateTimes.of("2000-02-03T04:05:06").minus(period).getMillis()
@@ -1767,9 +1778,8 @@ public class ExpressionsTest extends ExpressionTestBase
             DruidExpression.functionCall("timestamp_shift"),
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.LONG, "t"),
-                // RexNode type "interval year to month" is not reported as ColumnType.STRING
-                DruidExpression.ofLiteral(null, DruidExpression.stringLiteral("P13M")),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(-1)),
+                DruidExpression.ofLiteral(ColumnType.STRING, DruidExpression.stringLiteral("P13M")),
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(-1)),
                 DruidExpression.ofStringLiteral("UTC")
             )
         ),
@@ -2464,11 +2474,14 @@ public class ExpressionsTest extends ExpressionTestBase
         makeExpression("human_readable_binary_byte_format(9223372036854775807)"),
         "8.00 EiB"
     );
-
-    /*
-     * NOTE: Test for Long.MIN_VALUE is skipped since ExprListnerImpl#exitLongExpr fails to parse Long.MIN_VALUE
-     * This cases has also been verified in the tests of underlying implementation
-     */
+    testHelper.testExpressionString(
+        HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(Long.MIN_VALUE)
+        ),
+        makeExpression("human_readable_binary_byte_format(-9223372036854775808)"),
+        "-8.00 EiB"
+    );
 
     /*
      * test input with variable reference
@@ -2558,10 +2571,14 @@ public class ExpressionsTest extends ExpressionTestBase
         makeExpression("human_readable_decimal_byte_format(9223372036854775807)"),
         "9.22 EB"
     );
-
-    /*
-     * NOTE: Test for Long.MIN_VALUE is skipped since ExprListnerImpl#exitLongExpr fails to parse Long.MIN_VALUE
-     */
+    testHelper.testExpressionString(
+        HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(Long.MIN_VALUE)
+        ),
+        makeExpression("human_readable_decimal_byte_format(-9223372036854775808)"),
+        "-9.22 EB"
+    );
 
     /*
      * test input with variable reference

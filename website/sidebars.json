@@ -3,26 +3,31 @@
     "Getting started": [
       "design/index",
       "tutorials/index",
-      "tutorials/docker",
       "operations/single-server",
       "tutorials/cluster"
     ],
     "Tutorials": [
       "tutorials/tutorial-batch",
+      "tutorials/tutorial-msq-extern",
       "tutorials/tutorial-kafka",
       "tutorials/tutorial-batch-hadoop",
       "tutorials/tutorial-query",
       "tutorials/tutorial-rollup",
-      "tutorials/tutorial-sketches-theta",      
+      "tutorials/tutorial-sketches-theta",
       "tutorials/tutorial-retention",
       "tutorials/tutorial-update-data",
       "tutorials/tutorial-compaction",
       "tutorials/tutorial-delete-data",
       "tutorials/tutorial-ingestion-spec",
       "tutorials/tutorial-transform-spec",
+      "tutorials/docker",
       "tutorials/tutorial-kerberos-hadoop",
-      "tutorials/tutorial-msq-external-data",
-      "tutorials/tutorial-msq-convert-json"
+      "tutorials/tutorial-msq-convert-spec",
+      "tutorials/tutorial-jdbc",
+      "tutorials/tutorial-sql-query-view",
+      "tutorials/tutorial-unnest-datasource",
+      "tutorials/tutorial-jupyter-index",
+      "tutorials/tutorial-jdbc"
     ],
     "Design": [
       "design/architecture",
@@ -40,9 +45,6 @@
       "ingestion/partitioning",
       "ingestion/ingestion-spec",
       "ingestion/schema-design",
-      "ingestion/data-management",
-      "ingestion/compaction",
-      "ingestion/automatic-compaction",
       {
         "type": "subcategory",
         "label": "Stream ingestion",
@@ -59,25 +61,35 @@
         "label": "Batch ingestion",
         "ids": [
           "ingestion/native-batch",
-          "ingestion/native-batch-simple-task",
           "ingestion/native-batch-input-sources",
+          "ingestion/migrate-from-firehose",
           "ingestion/native-batch-firehose",
           "ingestion/hadoop"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "SQL-based ingestion \uD83C\uDD95",
+        "ids": [
+          "multi-stage-query/index",
+          "multi-stage-query/concepts",
+          "multi-stage-query/api",
+          "multi-stage-query/security",
+          "multi-stage-query/examples",
+          "multi-stage-query/reference",
+          "multi-stage-query/known-issues"
         ]
       },
       "ingestion/tasks",
       "ingestion/faq"
     ],
-  "SQL-based ingestion": [
-      "multi-stage-query/index",
-      "multi-stage-query/concepts",
-      "multi-stage-query/connect-external-data",
-      "multi-stage-query/convert-json-spec",
-      "multi-stage-query/examples",
-      "multi-stage-query/api",
-      "multi-stage-query/security",
-      "multi-stage-query/reference",
-      "multi-stage-query/known-issues"
+    "Data management": [
+      "data-management/index",
+      "data-management/update",
+      "data-management/delete",
+      "data-management/schema-changes",
+      "data-management/compaction",
+      "data-management/automatic-compaction"
     ],
     "Querying": [
       {
@@ -90,8 +102,8 @@
           "querying/sql-scalar",
           "querying/sql-aggregations",
           "querying/sql-multivalue-string-functions",
-          "querying/sql-functions",
           "querying/sql-json-functions",
+          "querying/sql-functions",
           "querying/sql-api",
           "querying/sql-jdbc",
           "querying/sql-query-context",
@@ -157,8 +169,7 @@
       "configuration/logging"
     ],
     "Operations": [
-      "operations/druid-console",
-      "operations/getting-started",
+      "operations/web-console",
       "operations/java",
       {
         "type": "subcategory",
@@ -171,7 +182,6 @@
           "operations/dynamic-config-provider",
           "design/auth",
           "operations/tls-support"
-
         ]
       },
       {
@@ -203,7 +213,6 @@
         "type": "subcategory",
         "label": "Misc",
         "ids": [
-          "operations/management-uis",
           "operations/dump-segment",
           "operations/reset-cluster",
           "operations/insert-segment-to-db",
@@ -296,6 +305,8 @@
       "operations/kubernetes",
       "querying/hll-old",
       "querying/select-query",
+      "ingestion/native-batch-firehose",
+      "ingestion/native-batch-simple-task",
       "ingestion/standalone-realtime"
     ]
   }

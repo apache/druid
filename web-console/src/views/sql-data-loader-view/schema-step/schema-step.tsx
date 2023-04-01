@@ -32,27 +32,20 @@ import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import { select, selectAll } from 'd3-selection';
-import {
-  QueryResult,
-  QueryRunner,
-  SqlExpression,
-  SqlFunction,
-  SqlQuery,
-  SqlRef,
-} from 'druid-query-toolkit';
+import type { QueryResult } from 'druid-query-toolkit';
+import { C, F, QueryRunner, SqlExpression, SqlQuery } from 'druid-query-toolkit';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { ClearableInput, LearnMore, Loader } from '../../../components';
 import { AsyncActionDialog } from '../../../dialogs';
+import type { Execution, IngestQueryPattern } from '../../../druid-models';
 import {
   changeQueryPatternExpression,
-  Execution,
   externalConfigToTableExpression,
   fitIngestQueryPattern,
   getDestinationMode,
   getQueryPatternExpression,
   getQueryPatternExpressionType,
-  IngestQueryPattern,
   ingestQueryPatternToQuery,
   possibleDruidFormatForValues,
   TIME_COLUMN,
@@ -66,6 +59,7 @@ import {
 import { useLastDefined, usePermanentCallback, useQueryManager } from '../../../hooks';
 import { getLink } from '../../../links';
 import { AppToaster } from '../../../singletons';
+import type { QueryAction } from '../../../utils';
 import {
   caseInsensitiveContains,
   change,
@@ -73,7 +67,6 @@ import {
   DruidError,
   filterMap,
   oneOf,
-  QueryAction,
   queryDruidSql,
   sampleDataToQuery,
   tickIcon,
@@ -246,7 +239,7 @@ export interface SchemaStepProps {
   enableAnalyze: boolean;
   goToQuery: () => void;
   onBack(): void;
-  onDone(): void;
+  onDone(): void | Promise<void>;
   extraCallout?: JSX.Element;
 }
 
@@ -361,10 +354,9 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
         ...ingestQueryPattern,
         dimensions: without(ingestQueryPattern.dimensions, countExpression),
         metrics: [
-          (countExpression
-            ? SqlFunction.simple('SUM', [countExpression.getUnderlyingExpression()])
-            : SqlFunction.COUNT_STAR
-          ).as(countExpression?.getOutputName() || 'count'),
+          (countExpression ? F.sum(countExpression.getUnderlyingExpression()) : F.count()).as(
+            countExpression?.getOutputName() || 'count',
+          ),
         ],
       });
     }
@@ -455,14 +447,17 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
   useEffect(() => {
     if (!previewResultState.data) return;
     lastWorkingQueryPattern.current = ingestQueryPattern;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- excluding 'ingestQueryPattern'
   }, [previewResultState]);
 
   const unusedColumns = ingestQueryPattern
-    ? ingestQueryPattern.mainExternalConfig.signature.filter(
-        ({ name }) =>
-          !ingestQueryPattern.dimensions.some(d => d.containsColumn(name)) &&
-          !ingestQueryPattern.metrics?.some(m => m.containsColumn(name)),
-      )
+    ? ingestQueryPattern.mainExternalConfig.signature.filter(columnDeclaration => {
+        const columnName = columnDeclaration.getColumnName();
+        return (
+          !ingestQueryPattern.dimensions.some(d => d.containsColumnName(columnName)) &&
+          !ingestQueryPattern.metrics?.some(m => m.containsColumnName(columnName))
+        );
+      })
     : [];
 
   const timeColumn =
@@ -706,23 +701,26 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                     )}
                     <MenuDivider />
                     {unusedColumns.length ? (
-                      unusedColumns.map((column, i) => (
-                        <MenuItem
-                          key={i}
-                          icon={dataTypeToIcon(column.type)}
-                          text={column.name}
-                          onClick={() => {
-                            handleQueryAction(q =>
-                              q.addSelect(
-                                SqlRef.column(column.name),
-                                ingestQueryPattern.metrics
-                                  ? { insertIndex: 'last-grouping', addToGroupBy: 'end' }
-                                  : {},
-                              ),
-                            );
-                          }}
-                        />
-                      ))
+                      unusedColumns.map((columnDeclaration, i) => {
+                        const columnName = columnDeclaration.getColumnName();
+                        return (
+                          <MenuItem
+                            key={i}
+                            icon={dataTypeToIcon(columnDeclaration.columnType.getNativeType())}
+                            text={columnName}
+                            onClick={() => {
+                              handleQueryAction(q =>
+                                q.addSelect(
+                                  C(columnName),
+                                  ingestQueryPattern.metrics
+                                    ? { insertIndex: 'last-grouping', addToGroupBy: 'end' }
+                                    : {},
+                                ),
+                              );
+                            }}
+                          />
+                        );
+                      })
                     ) : (
                       <MenuItem icon={IconNames.BLANK} text="No column suggestions" disabled />
                     )}
@@ -904,7 +902,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                 icon={IconNames.CLOUD_UPLOAD}
                 text="Start loading data"
                 intent={Intent.PRIMARY}
-                onClick={onDone}
+                onClick={() => void onDone()}
               />
             </div>
           </div>

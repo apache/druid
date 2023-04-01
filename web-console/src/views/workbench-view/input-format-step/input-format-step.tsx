@@ -18,20 +18,19 @@
 
 import { Button, Callout, FormGroup, Icon, Intent, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { SqlExpression, SqlRef } from 'druid-query-toolkit';
+import type { SqlExpression } from 'druid-query-toolkit';
+import { C, SqlColumnDeclaration, SqlType } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
 import { AutoForm, CenterMessage, LearnMore, Loader } from '../../../components';
+import type { InputFormat, InputSource } from '../../../druid-models';
 import {
   guessColumnTypeFromHeaderAndRows,
   guessIsArrayFromHeaderAndRows,
   INPUT_FORMAT_FIELDS,
-  InputFormat,
   inputFormatOutputsNumericStrings,
-  InputSource,
   PLACEHOLDER_TIMESTAMP_SPEC,
   possibleDruidFormatForValues,
-  SignatureColumn,
 } from '../../../druid-models';
 import { useQueryManager } from '../../../hooks';
 import { getLink } from '../../../links';
@@ -42,12 +41,8 @@ import {
   filterMap,
   timeFormatToSql,
 } from '../../../utils';
-import {
-  headerAndRowsFromSampleResponse,
-  postToSampler,
-  SampleHeaderAndRows,
-  SampleSpec,
-} from '../../../utils/sampler';
+import type { SampleHeaderAndRows, SampleSpec } from '../../../utils/sampler';
+import { headerAndRowsFromSampleResponse, postToSampler } from '../../../utils/sampler';
 import { ParseDataTable } from '../../load-data-view/parse-data-table/parse-data-table';
 
 import './input-format-step.scss';
@@ -56,7 +51,7 @@ const noop = () => {};
 
 export interface InputFormatAndMore {
   inputFormat: InputFormat;
-  signature: SignatureColumn[];
+  signature: SqlColumnDeclaration[];
   isArrays: boolean[];
   timeExpression: SqlExpression | undefined;
 }
@@ -126,7 +121,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
   let possibleTimeExpression: PossibleTimeExpression | undefined;
   if (previewData) {
     possibleTimeExpression = filterMap(previewData.header, column => {
-      const values = previewData.rows.map(row => row.input[column]);
+      const values = filterMap(previewData.rows, row => row.input?.[column]);
       const possibleDruidFormat = possibleDruidFormatForValues(values);
       if (!possibleDruidFormat) return;
 
@@ -135,7 +130,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
 
       return {
         column,
-        timeExpression: formatSql.fillPlaceholders([SqlRef.column(column)]),
+        timeExpression: formatSql.fillPlaceholders([C(column)]),
       };
     })[0];
   }
@@ -144,14 +139,18 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
     previewData && AutoForm.isValidModel(inputFormat, INPUT_FORMAT_FIELDS)
       ? {
           inputFormat,
-          signature: previewData.header.map(name => ({
-            name,
-            type: guessColumnTypeFromHeaderAndRows(
-              previewData,
+          signature: previewData.header.map(name =>
+            SqlColumnDeclaration.create(
               name,
-              inputFormatOutputsNumericStrings(inputFormat),
+              SqlType.fromNativeType(
+                guessColumnTypeFromHeaderAndRows(
+                  previewData,
+                  name,
+                  inputFormatOutputsNumericStrings(inputFormat),
+                ),
+              ),
             ),
-          })),
+          ),
           isArrays: previewData.header.map(name =>
             guessIsArrayFromHeaderAndRows(previewData, name),
           ),

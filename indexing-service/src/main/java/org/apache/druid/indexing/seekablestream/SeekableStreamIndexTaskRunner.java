@@ -769,6 +769,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
       finally {
         try {
+          // To handle cases where tasks stop reading due to stop request or exceptions
+          fireDepartmentMetrics.markProcessingDone();
           driver.persist(committerSupplier.get()); // persist pending data
         }
         catch (Exception e) {
@@ -897,7 +899,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     }
     finally {
       try {
-
         if (driver != null) {
           driver.close();
         }
@@ -1035,7 +1036,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             }
             task.emitMetric(
                 toolbox.getEmitter(),
-                "ingest/segment/count",
+                "ingest/segments/count",
                 segmentCount
             );
           }
@@ -1221,7 +1222,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     sequences.add(sequenceMetadata);
   }
 
-  private SequenceMetadata<PartitionIdType, SequenceOffsetType> getLastSequenceMetadata()
+  @VisibleForTesting
+  public SequenceMetadata<PartitionIdType, SequenceOffsetType> getLastSequenceMetadata()
   {
     Preconditions.checkState(!sequences.isEmpty(), "Empty sequences");
     return sequences.get(sequences.size() - 1);
@@ -1311,14 +1313,16 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         status = Status.PAUSED;
         hasPaused.signalAll();
 
-        log.debug("Received pause command, pausing ingestion until resumed.");
+        long pauseTime = System.currentTimeMillis();
+        log.info("Received pause command, pausing ingestion until resumed.");
         while (pauseRequested) {
           shouldResume.await();
         }
 
         status = Status.READING;
         shouldResume.signalAll();
-        log.debug("Received resume command, resuming ingestion.");
+        log.info("Received resume command, resuming ingestion.");
+        task.emitMetric(toolbox.getEmitter(), "ingest/pause/time", System.currentTimeMillis() - pauseTime);
         return true;
       }
     }
@@ -1648,6 +1652,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
              && !finish)
             || (latestSequence.getEndOffsets().equals(sequenceNumbers) && finish)) {
           log.warn("Ignoring duplicate request, end offsets already set for sequences [%s]", sequenceNumbers);
+          resetNextCheckpointTime();
           resume();
           return Response.ok(sequenceNumbers).build();
         } else if (latestSequence.isCheckpointed()) {
@@ -1765,7 +1770,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   /**
    * Signals the ingestion loop to pause.
    *
-   * @return one of the following Responses: 400 Bad Request if the task has started publishing; 202 Accepted if the
+   * @return one of the following Responses: 409 Bad Request if the task has started publishing; 202 Accepted if the
    * method has timed out and returned before the task has paused; 200 OK with a map of the current partition sequences
    * in the response body if the task successfully paused
    */
@@ -1784,7 +1789,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   public Response pause() throws InterruptedException
   {
     if (!(status == Status.PAUSED || status == Status.READING)) {
-      return Response.status(Response.Status.BAD_REQUEST)
+      return Response.status(Response.Status.CONFLICT)
                      .type(MediaType.TEXT_PLAIN)
                      .entity(StringUtils.format("Can't pause, task is not in a pausable state (state: [%s])", status))
                      .build();
@@ -1867,6 +1872,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     authorizationCheck(req, Action.WRITE);
     return startTime;
+  }
+
+  @VisibleForTesting
+  public long getNextCheckpointTime()
+  {
+    return nextCheckpointTime;
   }
 
   /**

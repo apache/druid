@@ -98,7 +98,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? defaults.getIntermediatePersistPeriod()
                                      : intermediatePersistPeriod;
-    this.basePersistDirectory = defaults.getBasePersistDirectory();
+    this.basePersistDirectory = basePersistDirectory;
     this.maxPendingPersists = maxPendingPersists == null ? 0 : maxPendingPersists;
     this.indexSpec = indexSpec == null ? defaults.getIndexSpec() : indexSpec;
     this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
@@ -193,7 +193,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   }
 
   @Override
-  @JsonProperty
   public File getBasePersistDirectory()
   {
     return basePersistDirectory;

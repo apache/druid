@@ -54,6 +54,7 @@ import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnaryFunctionOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnaryPrefixOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnarySuffixOperatorConversion;
+import org.apache.druid.sql.calcite.expression.WindowSqlAggregate;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayAppendOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayConcatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayConstructorOperatorConversion;
@@ -69,8 +70,10 @@ import org.apache.druid.sql.calcite.expression.builtin.ArrayQuantileOperatorConv
 import org.apache.druid.sql.calcite.expression.builtin.ArraySliceOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayToStringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.BTrimOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.CaseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CastOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CeilOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ComplexDecodeBase64OperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ConcatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ContainsOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
@@ -134,6 +137,16 @@ public class DruidOperatorTable implements SqlOperatorTable
   // COUNT and APPROX_COUNT_DISTINCT are not here because they are added by SqlAggregationModule.
   private static final List<SqlAggregator> STANDARD_AGGREGATORS =
       ImmutableList.<SqlAggregator>builder()
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.LAG))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.LEAD))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.FIRST_VALUE))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.LAST_VALUE))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.CUME_DIST))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.DENSE_RANK))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.NTILE))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.PERCENT_RANK))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.RANK))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.ROW_NUMBER))
                    .add(new BuiltinApproxCountDistinctSqlAggregator())
                    .add(new AvgSqlAggregator())
                    .add(EarliestLatestAnySqlAggregator.EARLIEST)
@@ -211,6 +224,7 @@ public class DruidOperatorTable implements SqlOperatorTable
       ImmutableList.<SqlOperatorConversion>builder()
                    .add(new CastOperatorConversion())
                    .add(new ReinterpretOperatorConversion())
+                   .add(new ComplexDecodeBase64OperatorConversion())
                    .build();
 
   private static final List<SqlOperatorConversion> ARRAY_OPERATOR_CONVERSIONS =
@@ -308,6 +322,9 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new NestedDataOperatorConversions.JsonValueBigintOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonValueDoubleOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonValueVarcharOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueReturningArrayBigIntOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueReturningArrayDoubleOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueReturningArrayVarcharOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonObjectOperatorConversion())
                    .add(new NestedDataOperatorConversions.ToJsonStringOperatorConversion())
                    .add(new NestedDataOperatorConversions.ParseJsonOperatorConversion())
@@ -317,7 +334,7 @@ public class DruidOperatorTable implements SqlOperatorTable
   private static final List<SqlOperatorConversion> STANDARD_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.ABS, "abs"))
-                   .add(new DirectOperatorConversion(SqlStdOperatorTable.CASE, "case_searched"))
+                   .add(new CaseOperatorConversion())
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.CHAR_LENGTH, "strlen"))
                    .add(CHARACTER_LENGTH_CONVERSION)
                    .add(new AliasedOperatorConversion(CHARACTER_LENGTH_CONVERSION, "LENGTH"))
@@ -411,7 +428,7 @@ public class DruidOperatorTable implements SqlOperatorTable
     for (SqlAggregator aggregator : aggregators) {
       final OperatorKey operatorKey = OperatorKey.of(aggregator.calciteFunction());
       if (this.aggregators.put(operatorKey, aggregator) != null) {
-        throw new ISE("Cannot have two operators with key[%s]", operatorKey);
+        throw new ISE("Cannot have two operators with key [%s]", operatorKey);
       }
     }
 
@@ -426,7 +443,7 @@ public class DruidOperatorTable implements SqlOperatorTable
       final OperatorKey operatorKey = OperatorKey.of(operatorConversion.calciteOperator());
       if (this.aggregators.containsKey(operatorKey)
           || this.operatorConversions.put(operatorKey, operatorConversion) != null) {
-        throw new ISE("Cannot have two operators with key[%s]", operatorKey);
+        throw new ISE("Cannot have two operators with key [%s]", operatorKey);
       }
     }
 
@@ -473,11 +490,7 @@ public class DruidOperatorTable implements SqlOperatorTable
       final SqlNameMatcher nameMatcher
   )
   {
-    if (opName == null) {
-      return;
-    }
-
-    if (opName.names.size() != 1) {
+    if (opName == null || opName.names.size() != 1) {
       return;
     }
 
@@ -542,16 +555,6 @@ public class DruidOperatorTable implements SqlOperatorTable
     public static OperatorKey of(final SqlOperator operator)
     {
       return new OperatorKey(operator.getName(), operator.getSyntax());
-    }
-
-    public String getName()
-    {
-      return name;
-    }
-
-    public SqlSyntax getSyntax()
-    {
-      return syntax;
     }
 
     @Override

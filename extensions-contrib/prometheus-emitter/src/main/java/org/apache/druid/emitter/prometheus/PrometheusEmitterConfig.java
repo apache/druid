@@ -39,7 +39,6 @@ public class PrometheusEmitterConfig
   private final Strategy strategy;
 
   @JsonProperty
-  @Nullable
   private final String namespace;
 
   @JsonProperty

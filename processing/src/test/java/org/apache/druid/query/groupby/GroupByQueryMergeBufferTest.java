@@ -40,6 +40,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -139,6 +140,7 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
             configSupplier,
             BUFFER_POOL,
             MERGE_BUFFER_POOL,
+            TestHelper.makeJsonMapper(),
             mapper,
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
         )

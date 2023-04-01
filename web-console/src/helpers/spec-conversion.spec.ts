@@ -16,9 +16,12 @@
  * limitations under the License.
  */
 
-import { sane } from 'druid-query-toolkit';
-
 import { convertSpecToSql } from './spec-conversion';
+
+expect.addSnapshotSerializer({
+  test: val => typeof val === 'string',
+  print: String,
+});
 
 describe('spec conversion', () => {
   it('converts index_parallel spec (without rollup)', () => {
@@ -96,6 +99,7 @@ describe('spec conversion', () => {
               'metroCode',
               'countryIsoCode',
               'regionName',
+              { name: 'event', type: 'json' },
             ],
           },
         },
@@ -106,6 +110,9 @@ describe('spec conversion', () => {
             partitionDimension: 'isRobot',
             targetRowsPerSegment: 150000,
           },
+          indexSpec: {
+            dimensionCompression: 'lzf',
+          },
           forceGuaranteedRollup: true,
           maxNumConcurrentSubTasks: 4,
           maxParseExceptions: 3,
@@ -113,52 +120,16 @@ describe('spec conversion', () => {
       },
     });
 
-    expect(converted.queryString).toEqual(sane`
-      -- This SQL query was auto generated from an ingestion spec
-      REPLACE INTO wikipedia OVERWRITE ALL
-      WITH source AS (SELECT * FROM TABLE(
-        EXTERN(
-          '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
-          '{"type":"json"}',
-          '[{"name":"timestamp","type":"string"},{"name":"isRobot","type":"string"},{"name":"channel","type":"string"},{"name":"flags","type":"string"},{"name":"isUnpatrolled","type":"string"},{"name":"page","type":"string"},{"name":"diffUrl","type":"string"},{"name":"added","type":"long"},{"name":"comment","type":"string"},{"name":"commentLength","type":"long"},{"name":"isNew","type":"string"},{"name":"isMinor","type":"string"},{"name":"delta","type":"long"},{"name":"isAnonymous","type":"string"},{"name":"user","type":"string"},{"name":"deltaBucket","type":"long"},{"name":"deleted","type":"long"},{"name":"namespace","type":"string"},{"name":"cityName","type":"string"},{"name":"countryName","type":"string"},{"name":"regionIsoCode","type":"string"},{"name":"metroCode","type":"string"},{"name":"countryIsoCode","type":"string"},{"name":"regionName","type":"string"}]'
-        )
-      ))
-      SELECT
-        CASE WHEN CAST("timestamp" AS BIGINT) > 0 THEN MILLIS_TO_TIMESTAMP(CAST("timestamp" AS BIGINT)) ELSE TIME_PARSE("timestamp") END AS __time,
-        "isRobot",
-        "channel",
-        "flags",
-        "isUnpatrolled",
-        "page",
-        "diffUrl",
-        "added",
-        "comment",
-        "commentLength",
-        "isNew",
-        "isMinor",
-        "delta",
-        "isAnonymous",
-        "user",
-        "deltaBucket",
-        "deleted",
-        "namespace",
-        "cityName",
-        "countryName",
-        "regionIsoCode",
-        "metroCode",
-        "countryIsoCode",
-        "regionName"
-      FROM source
-      WHERE NOT ("channel" = 'xxx')
-      PARTITIONED BY HOUR
-      CLUSTERED BY "isRobot"
-    `);
+    expect(converted.queryString).toMatchSnapshot();
 
     expect(converted.queryContext).toEqual({
       groupByEnableMultiValueUnnesting: false,
       maxParseExceptions: 3,
       finalizeAggregations: false,
       maxNumTasks: 5,
+      indexSpec: {
+        dimensionCompression: 'lzf',
+      },
     });
   });
 
@@ -253,45 +224,7 @@ describe('spec conversion', () => {
       },
     });
 
-    expect(converted.queryString).toEqual(sane`
-      -- This SQL query was auto generated from an ingestion spec
-      REPLACE INTO wikipedia_rollup OVERWRITE ALL
-      WITH source AS (SELECT * FROM TABLE(
-        EXTERN(
-          '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
-          '{"type":"json"}',
-          '[{"name":"timestamp","type":"string"},{"name":"isRobot","type":"string"},{"name":"channel","type":"string"},{"name":"flags","type":"string"},{"name":"isUnpatrolled","type":"string"},{"name":"comment","type":"string"},{"name":"isNew","type":"string"},{"name":"isMinor","type":"string"},{"name":"isAnonymous","type":"string"},{"name":"user","type":"string"},{"name":"namespace","type":"string"},{"name":"cityName","type":"string"},{"name":"countryName","type":"string"},{"name":"regionIsoCode","type":"string"},{"name":"metroCode","type":"string"},{"name":"countryIsoCode","type":"string"},{"name":"regionName","type":"string"},{"name":"added","type":"long"},{"name":"commentLength","type":"long"},{"name":"delta","type":"long"},{"name":"deltaBucket","type":"long"},{"name":"deleted","type":"long"},{"name":"page","type":"string"}]'
-        )
-      ))
-      SELECT
-        TIME_FLOOR(TIME_PARSE("timestamp"), 'PT1H') AS __time,
-        "isRobot",
-        "channel",
-        "flags",
-        "isUnpatrolled",
-        "comment",
-        "isNew",
-        "isMinor",
-        "isAnonymous",
-        "user",
-        "namespace",
-        "cityName",
-        "countryName",
-        "regionIsoCode",
-        "metroCode",
-        "countryIsoCode",
-        "regionName",
-        COUNT(*) AS "count",
-        SUM("added") AS "sum_added",
-        SUM("commentLength") AS "sum_commentLength",
-        SUM("delta") AS "sum_delta",
-        SUM("deltaBucket") AS "sum_deltaBucket",
-        SUM("deleted") AS "sum_deleted",
-        APPROX_COUNT_DISTINCT_DS_THETA("page") AS "page_theta"
-      FROM source
-      GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17
-      PARTITIONED BY HOUR
-    `);
+    expect(converted.queryString).toMatchSnapshot();
 
     expect(converted.queryContext).toEqual({
       groupByEnableMultiValueUnnesting: false,
@@ -415,38 +348,190 @@ describe('spec conversion', () => {
       },
     });
 
-    expect(converted.queryString).toEqual(sane`
-      -- This SQL query was auto generated from an ingestion spec
-      REPLACE INTO newSource OVERWRITE ALL
-      WITH source AS (SELECT * FROM TABLE(
-        EXTERN(
-          '{"type":"s3","uris":["s3://path"]}',
-          '{"columns":["col1","col2","col3","col4","metric1","metric2","metric3","metric4","metric5","metric6","metric7"],"type":"timeAndDims"}',
-          '[{"name":"event_ts","type":"string"},{"name":"col1","type":"string"},{"name":"col2","type":"string"},{"name":"col3","type":"string"},{"name":"col4","type":"string"},{"name":"field1","type":"double"},{"name":"field2","type":"double"},{"name":"field3","type":"double"},{"name":"field4","type":"string"},{"name":"field5","type":"string"},{"name":"field6","type":"long"},{"name":"field7","type":"double"}]'
-        )
-      ))
-      SELECT
-        TIME_FLOOR(CASE WHEN CAST(event_ts AS BIGINT) > 0 THEN MILLIS_TO_TIMESTAMP(CAST(event_ts AS BIGINT)) ELSE TIME_PARSE(event_ts) END, 'PT1H') AS __time,
-        "col1",
-        "col2",
-        "col3",
-        "col4",
-        SUM("field1") AS "metric1",
-        MAX("field2") AS "metric2",
-        MIN("field3") AS "metric3",
-        APPROX_COUNT_DISTINCT_BUILTIN("field4") AS "metric4",
-        APPROX_COUNT_DISTINCT_BUILTIN("field5") AS "metric5",
-        SUM("field6") AS "metric6",
-        SUM("field7") AS "metric7"
-      FROM source
-      WHERE "col2" = 'xxx'
-      GROUP BY 1, 2, 3, 4, 5
-      PARTITIONED BY HOUR
-    `);
+    expect(converted.queryString).toMatchSnapshot();
 
     expect(converted.queryContext).toEqual({
       groupByEnableMultiValueUnnesting: false,
       finalizeAggregations: false,
     });
+  });
+
+  it('converts with issue when there is a __time transform', () => {
+    const converted = convertSpecToSql({
+      type: 'index_parallel',
+      spec: {
+        ioConfig: {
+          type: 'index_parallel',
+          inputSource: {
+            type: 'http',
+            uris: ['https://druid.apache.org/data/wikipedia.json.gz'],
+          },
+          inputFormat: {
+            type: 'json',
+          },
+        },
+        dataSchema: {
+          granularitySpec: {
+            segmentGranularity: 'hour',
+            queryGranularity: 'none',
+            rollup: false,
+          },
+          dataSource: 'wikipedia',
+          transformSpec: {
+            transforms: [{ name: '__time', expression: '_some_time_parse_expression_' }],
+          },
+          timestampSpec: {
+            column: 'timestamp',
+            format: 'auto',
+          },
+          dimensionsSpec: {
+            dimensions: [
+              'isRobot',
+              'channel',
+              'flags',
+              'isUnpatrolled',
+              'page',
+              'diffUrl',
+              {
+                type: 'long',
+                name: 'added',
+              },
+              'comment',
+              {
+                type: 'long',
+                name: 'commentLength',
+              },
+              'isNew',
+              'isMinor',
+              {
+                type: 'long',
+                name: 'delta',
+              },
+              'isAnonymous',
+              'user',
+              {
+                type: 'long',
+                name: 'deltaBucket',
+              },
+              {
+                type: 'long',
+                name: 'deleted',
+              },
+              'namespace',
+              'cityName',
+              'countryName',
+              'regionIsoCode',
+              'metroCode',
+              'countryIsoCode',
+              'regionName',
+            ],
+          },
+        },
+        tuningConfig: {
+          type: 'index_parallel',
+          partitionsSpec: {
+            type: 'single_dim',
+            partitionDimension: 'isRobot',
+            targetRowsPerSegment: 150000,
+          },
+          forceGuaranteedRollup: true,
+          maxNumConcurrentSubTasks: 4,
+          maxParseExceptions: 3,
+        },
+      },
+    });
+
+    expect(converted.queryString).toMatchSnapshot();
+  });
+
+  it('converts with issue when there is a dimension transform and strange filter', () => {
+    const converted = convertSpecToSql({
+      type: 'index_parallel',
+      spec: {
+        ioConfig: {
+          type: 'index_parallel',
+          inputSource: {
+            type: 'http',
+            uris: ['https://druid.apache.org/data/wikipedia.json.gz'],
+          },
+          inputFormat: {
+            type: 'json',
+          },
+        },
+        dataSchema: {
+          granularitySpec: {
+            segmentGranularity: 'hour',
+            queryGranularity: 'none',
+            rollup: false,
+          },
+          dataSource: 'wikipedia',
+          transformSpec: {
+            transforms: [{ name: 'comment', expression: '_some_expression_' }],
+            filter: {
+              type: 'strange',
+            },
+          },
+          timestampSpec: {
+            column: 'timestamp',
+            format: 'auto',
+          },
+          dimensionsSpec: {
+            dimensions: [
+              'isRobot',
+              'channel',
+              'flags',
+              'isUnpatrolled',
+              'page',
+              'diffUrl',
+              {
+                type: 'long',
+                name: 'added',
+              },
+              'comment',
+              {
+                type: 'long',
+                name: 'commentLength',
+              },
+              'isNew',
+              'isMinor',
+              {
+                type: 'long',
+                name: 'delta',
+              },
+              'isAnonymous',
+              'user',
+              {
+                type: 'long',
+                name: 'deltaBucket',
+              },
+              {
+                type: 'long',
+                name: 'deleted',
+              },
+              'namespace',
+              'cityName',
+              'countryName',
+              'regionIsoCode',
+              'metroCode',
+              'countryIsoCode',
+              'regionName',
+            ],
+          },
+        },
+        tuningConfig: {
+          type: 'index_parallel',
+          partitionsSpec: {
+            type: 'single_dim',
+            partitionDimension: 'isRobot',
+            targetRowsPerSegment: 150000,
+          },
+          forceGuaranteedRollup: true,
+          maxNumConcurrentSubTasks: 4,
+          maxParseExceptions: 3,
+        },
+      },
+    });
+
+    expect(converted.queryString).toMatchSnapshot();
   });
 });

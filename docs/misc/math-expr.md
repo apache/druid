@@ -54,7 +54,7 @@ For logical operators, a number is true if and only if it is positive (0 or nega
 
 [Multi-value string dimensions](../querying/multi-value-dimensions.md) are supported and may be treated as either scalar or array typed values, as follows:  
 * When treated as a scalar type, the expression is automatically transformed so that the scalar operation is applied across all values of the multi-valued type, mimicking Druid's native behavior. 
-* Druid coerces values that result in arrays back into the native Druid string type for grouping and aggregation. Grouping on multi-value string dimensions in Druid groups by the individual values, not the 'array'. This behavior produces results similar to the `UNNEST` operator available in many SQL dialects. Alternatively, you can use the `array_to_string` function to perform the aggregation on a _stringified_ version of the complete array and therefore preserve the complete row. To transform the stringified dimension back into the true native array type, use `string_to_array` in an expression post-aggregator.
+* Druid coerces values that result in arrays back into the native Druid string type for grouping and aggregation. Grouping on multi-value string dimensions in Druid groups by the individual values, not the 'array'. This behavior produces results similar to an implicit SQL `UNNEST` operation. Alternatively, you can use the `array_to_string` function to perform the aggregation on a _stringified_ version of the complete array and therefore preserve the complete row. To transform the stringified dimension back into the true native array type, use `string_to_array` in an expression post-aggregator.
 
 
 The following built-in functions are available.
@@ -63,7 +63,7 @@ The following built-in functions are available.
 
 |name|description|
 |----|-----------|
-|cast|cast(expr,'LONG' or 'DOUBLE' or 'STRING' or 'ARRAY<LONG>', or 'ARRAY<DOUBLE>' or 'ARRAY<STRING>') returns expr with specified type. exception can be thrown. Scalar types may be cast to array types and will take the form of a single element list (null will still be null). |
+|cast|cast(expr,LONG or DOUBLE or STRING or ARRAY<LONG\>, or ARRAY<DOUBLE\> or ARRAY<STRING\>) returns expr with specified type. exception can be thrown. Scalar types may be cast to array types and will take the form of a single element list (null will still be null). |
 |if|if(predicate,then,else) returns 'then' if 'predicate' evaluates to a positive number, otherwise it returns 'else' |
 |nvl|nvl(expr,expr-for-null) returns 'expr-for-null' if 'expr' is null (or empty string for string type) |
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
@@ -289,10 +289,10 @@ For the IPv4 address functions, the `address` argument accepts either an IPv4 do
 | human_readable_decimal_format(value[, precision]) | Format a number in human-readable SI format. `precision` must be in the range of [0,3] (default: 2). For example:<li>human_readable_decimal_format(1000000) returns `1.00 M`</li><li>human_readable_decimal_format(1000000, 3) returns `1.000 M`</li>  |
 
 
-## Vectorization Support
+## Vectorization support
 A number of expressions support ['vectorized' query engines](../querying/query-context.md#vectorization-parameters)
 
-supported features:
+Supported features:
 * constants and identifiers are supported for any column type
 * `cast` is supported for numeric and string types
 * math operators: `+`,`-`,`*`,`/`,`%`,`^` are supported for numeric types

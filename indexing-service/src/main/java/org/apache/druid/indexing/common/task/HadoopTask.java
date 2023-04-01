@@ -22,12 +22,14 @@ package org.apache.druid.indexing.common.task;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.inject.Injector;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.guice.ExtensionsLoader;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.initialization.ServerInjectorBuilder;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.JvmUtils;
 
@@ -50,7 +52,10 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
 {
   private static final Logger log = new Logger(HadoopTask.class);
 
-  static final Injector INJECTOR = new StartupInjectorBuilder().withExtensions().build();
+  static final Injector INJECTOR = new StartupInjectorBuilder()
+      .forServer()
+      .add(ServerInjectorBuilder.registerNodeRoleModule(ImmutableSet.of()))
+      .build();
   private static final ExtensionsLoader EXTENSIONS_LOADER = ExtensionsLoader.instance(INJECTOR);
 
   private final List<String> hadoopDependencyCoordinates;
@@ -205,6 +210,15 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
     System.setProperty("druid.hadoop.internal.classpath", hadoopContainerDruidClasspathJars);
 
     return classLoader;
+  }
+
+  /**
+   * This method logs the {@link ExtensionsConfig} that was used to fetch the hadoop dependencies and build the classpath
+   * for the jobs
+   */
+  protected static void logExtensionsConfig()
+  {
+    log.info("HadoopTask started with the following config:\n%s", EXTENSIONS_LOADER.config().toString());
   }
 
   /**

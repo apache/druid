@@ -86,16 +86,14 @@ public class AvroStreamInputRowParserTest
   private static final ZonedDateTime DATE_TIME = ZonedDateTime.of(2015, 10, 25, 19, 30, 0, 0, ZoneOffset.UTC);
   static final List<String> DIMENSIONS = Arrays.asList(EVENT_TYPE, ID, SOME_OTHER_ID, IS_VALID);
   private static final List<String> DIMENSIONS_SCHEMALESS = Arrays.asList(
-      "nested",
       SOME_OTHER_ID,
-      "someStringArray",
       "someIntArray",
       "someFloat",
+      "someUnion",
       EVENT_TYPE,
+      ID,
       "someFixed",
       "someBytes",
-      "someUnion",
-      ID,
       "someEnum",
       "someLong",
       "someInt",
@@ -128,9 +126,9 @@ public class AvroStreamInputRowParserTest
                                                                   .setSubInt(SUB_INT_VALUE)
                                                                   .setSubLong(SUB_LONG_VALUE)
                                                                   .build();
-  private static final List<CharSequence> SOME_STRING_ARRAY_VALUE = Arrays.asList("8", "4", "2", "1");
+  private static final List<CharSequence> SOME_STRING_ARRAY_VALUE = Arrays.asList("8", "4", "2", "1", null);
   private static final List<Integer> SOME_INT_ARRAY_VALUE = Arrays.asList(1, 2, 4, 8);
-  private static final Map<CharSequence, Integer> SOME_INT_VALUE_MAP_VALUE = Maps.asMap(
+  static final Map<CharSequence, Integer> SOME_INT_VALUE_MAP_VALUE = Maps.asMap(
       new HashSet<>(Arrays.asList("8", "2", "4", "1")), new Function<CharSequence, Integer>()
       {
         @Nonnull
@@ -141,7 +139,7 @@ public class AvroStreamInputRowParserTest
         }
       }
   );
-  private static final Map<CharSequence, CharSequence> SOME_STRING_VALUE_MAP_VALUE = Maps.asMap(
+  static final Map<CharSequence, CharSequence> SOME_STRING_VALUE_MAP_VALUE = Maps.asMap(
       new HashSet<>(Arrays.asList("8", "2", "4", "1")), new Function<CharSequence, CharSequence>()
       {
         @Nonnull

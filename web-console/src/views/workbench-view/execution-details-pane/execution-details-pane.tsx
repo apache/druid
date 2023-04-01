@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 import { IconNames } from '@blueprintjs/icons';
-import { RefName } from 'druid-query-toolkit';
+import { T } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
 import { FancyTabPane } from '../../../components';
-import { Execution } from '../../../druid-models';
+import type { Execution } from '../../../druid-models';
 import { ExecutionErrorPane } from '../execution-error-pane/execution-error-pane';
 import { ExecutionStagesPane } from '../execution-stages-pane/execution-stages-pane';
 import { ExecutionWarningsPane } from '../execution-warnings-pane/execution-warnings-pane';
@@ -51,7 +51,7 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
         return (
           <div>
             <p>{`General info for ${execution.id}${
-              ingestDatasource ? ` ingesting into ${RefName.create(ingestDatasource, true)}` : ''
+              ingestDatasource ? ` ingesting into ${T(ingestDatasource)}` : ''
             }`}</p>
             {execution.error && <ExecutionErrorPane execution={execution} />}
             {execution.stages ? (

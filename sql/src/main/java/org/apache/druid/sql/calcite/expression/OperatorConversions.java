@@ -54,6 +54,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -239,6 +240,7 @@ public class OperatorConversions
    * @param rexNode               expression meant to be applied on top of the rows
    * @param postAggregatorVisitor visitor that manages postagg names and tracks postaggs that were created
    *                              by the translation
+   * @param useExpressions        whether we should consider {@link ExpressionPostAggregator} as a target
    *
    * @return rexNode referring to fields in rowOrder, or null if not possible
    */
@@ -247,7 +249,8 @@ public class OperatorConversions
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode rexNode,
-      final PostAggregatorVisitor postAggregatorVisitor
+      final PostAggregatorVisitor postAggregatorVisitor,
+      final boolean useExpressions
   )
   {
     final SqlKind kind = rexNode.getKind();
@@ -265,20 +268,44 @@ public class OperatorConversions
       );
     } else if (rexNode instanceof RexCall) {
       final SqlOperator operator = ((RexCall) rexNode).getOperator();
-      final SqlOperatorConversion conversion = plannerContext.getOperatorTable()
+      final SqlOperatorConversion conversion = plannerContext.getPlannerToolbox().operatorTable()
                                                              .lookupOperatorConversion(operator);
 
-      if (conversion == null) {
-        return null;
-      } else {
-        return conversion.toPostAggregator(
+      if (conversion != null) {
+        // Try call-specific translation.
+        final PostAggregator postAggregator = conversion.toPostAggregator(
             plannerContext,
             rowSignature,
             rexNode,
             postAggregatorVisitor
         );
+
+        if (postAggregator != null) {
+          return postAggregator;
+        }
       }
-    } else if (kind == SqlKind.LITERAL) {
+    }
+
+    if (useExpressions) {
+      // Try to translate to expression postaggregator.
+      final DruidExpression druidExpression = Expressions.toDruidExpression(
+          plannerContext,
+          rowSignature,
+          rexNode
+      );
+
+      if (druidExpression != null) {
+        return new ExpressionPostAggregator(
+            postAggregatorVisitor.getOutputNamePrefix() + postAggregatorVisitor.getAndIncrementCounter(),
+            druidExpression.getExpression(),
+            null,
+            plannerContext.getExprMacroTable()
+        );
+      }
+    }
+
+    // Could not translate.
+    if (rexNode instanceof RexCall || kind == SqlKind.LITERAL) {
       return null;
     } else {
       throw new IAE("Unknown rexnode kind: " + kind);
@@ -483,6 +510,12 @@ public class OperatorConversions
     public OperatorBuilder operandTypeInference(SqlOperandTypeInference operandTypeInference)
     {
       this.operandTypeInference = operandTypeInference;
+      return this;
+    }
+
+    public OperatorBuilder sqlKind(SqlKind kind)
+    {
+      this.kind = kind;
       return this;
     }
 
@@ -722,7 +755,7 @@ public class OperatorConversions
     }
   }
 
-  private static boolean throwOrReturn(
+  public static boolean throwOrReturn(
       final boolean throwOnFailure,
       final SqlCallBinding callBinding,
       final Function<SqlCallBinding, CalciteException> exceptionMapper

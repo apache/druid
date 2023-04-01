@@ -456,7 +456,7 @@ public class IndexGeneratorJob implements Jobby
             dimOrder.addAll(index.getDimensionOrder());
             log.info("current index full due to [%s]. creating new index.", index.getOutOfRowsReason());
             flushIndexToContextAndClose(key, index, context);
-            index = makeIncrementalIndex(bucket, combiningAggs, config, dimOrder, index.getColumnCapabilities());
+            index = makeIncrementalIndex(bucket, combiningAggs, config, dimOrder, index.getColumnHandlerCapabilities());
           }
 
           index.add(value);
@@ -752,7 +752,7 @@ public class IndexGeneratorJob implements Jobby
                 combiningAggs,
                 config,
                 allDimensionNames,
-                persistIndex.getColumnCapabilities()
+                persistIndex.getColumnHandlerCapabilities()
             );
             startTime = System.currentTimeMillis();
             ++indexCount;

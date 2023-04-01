@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-chromium';
+import type * as playwright from 'playwright-chromium';
 
 import { clickButton, getLabeledInput, setLabeledInput } from '../../util/playwright';
 import { extractTable } from '../../util/table';
@@ -99,7 +99,7 @@ export class DatasourcesOverview {
   private async openCompactionConfigurationDialog(datasourceName: string): Promise<void> {
     await this.openEditActions(datasourceName);
     await this.clickMenuItem('Edit compaction configuration');
-    await this.page.waitForSelector('div.compaction-dialog');
+    await this.page.waitForSelector('div.compaction-config-dialog');
   }
 
   private async clickMenuItem(text: string): Promise<void> {

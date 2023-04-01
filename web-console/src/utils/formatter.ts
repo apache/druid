@@ -32,13 +32,15 @@ const JSON_ESCAPES: Record<string, string> = {
   't': '\t',
 };
 
-// The stringifier is just JSON minus the double quotes, the parser is much more forgiving
+/**
+ * The stringifier is just JSON minus the double quotes, the parser is much more forgiving.
+ */
 export const JSON_STRING_FORMATTER: Formatter<string> = {
   stringify: (str: string) => {
     if (typeof str !== 'string') return '';
 
     const json = JSON.stringify(str);
-    return json.substr(1, json.length - 2);
+    return json.slice(1, json.length - 1);
   },
   parse: (str: string) => {
     const n = str.length;
@@ -48,8 +50,8 @@ export const JSON_STRING_FORMATTER: Formatter<string> = {
       const ch = str[i];
       if (ch === '\\') {
         const nextCh = str[i + 1];
-        if (nextCh === 'u' && /^[0-9a-f]{4}$/i.test(str.substr(i + 2, 4))) {
-          parsed += String.fromCharCode(parseInt(str.substr(i + 2, 4), 16));
+        if (nextCh === 'u' && /^[0-9a-f]{4}$/i.test(str.slice(i + 2, i + 6))) {
+          parsed += String.fromCharCode(parseInt(str.slice(i + 2, i + 6), 16));
           i += 6;
         } else if (JSON_ESCAPES[nextCh]) {
           parsed += JSON_ESCAPES[nextCh];

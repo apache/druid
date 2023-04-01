@@ -45,7 +45,6 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -54,6 +53,7 @@ import org.apache.druid.segment.data.ComparableList;
 import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -93,7 +93,7 @@ public class NativeQueryMaker implements QueryMaker
   }
 
   @Override
-  public Sequence<Object[]> runQuery(final DruidQuery druidQuery)
+  public QueryResponse<Object[]> runQuery(final DruidQuery druidQuery)
   {
     final Query<?> query = druidQuery.getQuery();
 
@@ -166,13 +166,14 @@ public class NativeQueryMaker implements QueryMaker
 
   private List<Interval> findBaseDataSourceIntervals(Query<?> query)
   {
-    return DataSourceAnalysis.forDataSource(query.getDataSource())
-                             .getBaseQuerySegmentSpec()
-                             .map(QuerySegmentSpec::getIntervals)
-                             .orElseGet(query::getIntervals);
+    return query.getDataSource().getAnalysis()
+                .getBaseQuerySegmentSpec()
+                .map(QuerySegmentSpec::getIntervals)
+                .orElseGet(query::getIntervals);
   }
 
-  private <T> Sequence<Object[]> execute(Query<T> query, final List<String> newFields, final List<SqlTypeName> newTypes)
+  @SuppressWarnings("unchecked")
+  private <T> QueryResponse<Object[]> execute(Query<?> query, final List<String> newFields, final List<SqlTypeName> newTypes)
   {
     Hook.QUERY_PLAN.run(query);
 
@@ -194,23 +195,27 @@ public class NativeQueryMaker implements QueryMaker
     // otherwise it won't yet be initialized. (A bummer, since ideally, we'd verify the toolChest exists and can do
     // array-based results before starting the query; but in practice we don't expect this to happen since we keep
     // tight control over which query types we generate in the SQL layer. They all support array-based results.)
-    final Sequence<T> results = queryLifecycle.runSimple(query, authenticationResult, authorizationResult);
+    final QueryResponse<T> results = queryLifecycle.runSimple((Query<T>) query, authenticationResult, authorizationResult);
 
-    //noinspection unchecked
-    final QueryToolChest<T, Query<T>> toolChest = queryLifecycle.getToolChest();
-    final List<String> resultArrayFields = toolChest.resultArraySignature(query).getColumnNames();
-    final Sequence<Object[]> resultArrays = toolChest.resultsAsArrays(query, results);
-
-    return mapResultSequence(resultArrays, resultArrayFields, newFields, newTypes);
+    return mapResultSequence(
+        results,
+        (QueryToolChest<T, Query<T>>) queryLifecycle.getToolChest(),
+        (Query<T>) query,
+        newFields,
+        newTypes
+    );
   }
 
-  private Sequence<Object[]> mapResultSequence(
-      final Sequence<Object[]> sequence,
-      final List<String> originalFields,
+  private <T> QueryResponse<Object[]> mapResultSequence(
+      final QueryResponse<T> results,
+      final QueryToolChest<T, Query<T>> toolChest,
+      final Query<T> query,
       final List<String> newFields,
       final List<SqlTypeName> newTypes
   )
   {
+    final List<String> originalFields = toolChest.resultArraySignature(query).getColumnNames();
+
     // Build hash map for looking up original field positions, in case the number of fields is super high.
     final Object2IntMap<String> originalFieldsLookup = new Object2IntOpenHashMap<>();
     originalFieldsLookup.defaultReturnValue(-1);
@@ -234,15 +239,19 @@ public class NativeQueryMaker implements QueryMaker
       mapping[i] = idx;
     }
 
-    return Sequences.map(
-        sequence,
-        array -> {
-          final Object[] newArray = new Object[mapping.length];
-          for (int i = 0; i < mapping.length; i++) {
-            newArray[i] = coerce(array[mapping[i]], newTypes.get(i));
-          }
-          return newArray;
-        }
+    final Sequence<Object[]> sequence = toolChest.resultsAsArrays(query, results.getResults());
+    return new QueryResponse<>(
+        Sequences.map(
+            sequence,
+            array -> {
+              final Object[] newArray = new Object[mapping.length];
+              for (int i = 0; i < mapping.length; i++) {
+                newArray[i] = coerce(array[mapping[i]], newTypes.get(i));
+              }
+              return newArray;
+            }
+        ),
+        results.getResponseContext()
     );
   }
 
@@ -257,6 +266,8 @@ public class NativeQueryMaker implements QueryMaker
         coercedValue = ((NlsString) value).getValue();
       } else if (value instanceof Number) {
         coercedValue = String.valueOf(value);
+      } else if (value instanceof Boolean) {
+        coercedValue = String.valueOf(value);
       } else if (value instanceof Collection) {
         // Iterate through the collection, coercing each value. Useful for handling selects of multi-value dimensions.
         final List<String> valueStrings = ((Collection<?>) value).stream()
@@ -270,7 +281,7 @@ public class NativeQueryMaker implements QueryMaker
           throw new RuntimeException(e);
         }
       } else {
-        throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+        throw new ISE("Cannot coerce [%s] to %s", value.getClass().getName(), sqlType);
       }
     } else if (value == null) {
       coercedValue = null;
@@ -284,7 +295,7 @@ public class NativeQueryMaker implements QueryMaker
       } else if (value instanceof Number) {
         coercedValue = Evals.asBoolean(((Number) value).longValue());
       } else {
-        throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+        throw new ISE("Cannot coerce [%s] to %s", value.getClass().getName(), sqlType);
       }
     } else if (sqlType == SqlTypeName.INTEGER) {
       if (value instanceof String) {
@@ -292,28 +303,28 @@ public class NativeQueryMaker implements QueryMaker
       } else if (value instanceof Number) {
         coercedValue = ((Number) value).intValue();
       } else {
-        throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+        throw new ISE("Cannot coerce [%s] to %s", value.getClass().getName(), sqlType);
       }
     } else if (sqlType == SqlTypeName.BIGINT) {
       try {
         coercedValue = DimensionHandlerUtils.convertObjectToLong(value);
       }
       catch (Exception e) {
-        throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+        throw new ISE("Cannot coerce [%s] to %s", value.getClass().getName(), sqlType);
       }
     } else if (sqlType == SqlTypeName.FLOAT) {
       try {
         coercedValue = DimensionHandlerUtils.convertObjectToFloat(value);
       }
       catch (Exception e) {
-        throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+        throw new ISE("Cannot coerce [%s] to %s", value.getClass().getName(), sqlType);
       }
     } else if (SqlTypeName.FRACTIONAL_TYPES.contains(sqlType)) {
       try {
         coercedValue = DimensionHandlerUtils.convertObjectToDouble(value);
       }
       catch (Exception e) {
-        throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+        throw new ISE("Cannot coerce [%s] to %s", value.getClass().getName(), sqlType);
       }
     } else if (sqlType == SqlTypeName.OTHER) {
       // Complex type, try to serialize if we should, else print class name
@@ -322,7 +333,7 @@ public class NativeQueryMaker implements QueryMaker
           coercedValue = jsonMapper.writeValueAsString(value);
         }
         catch (JsonProcessingException jex) {
-          throw new ISE(jex, "Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+          throw new ISE(jex, "Cannot coerce [%s] to %s", value.getClass().getName(), sqlType);
         }
       } else {
         coercedValue = value.getClass().getName();
@@ -347,11 +358,11 @@ public class NativeQueryMaker implements QueryMaker
         // here if needed
         coercedValue = maybeCoerceArrayToList(value, true);
         if (coercedValue == null) {
-          throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+          throw new ISE("Cannot coerce [%s] to %s", value.getClass().getName(), sqlType);
         }
       }
     } else {
-      throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+      throw new ISE("Cannot coerce [%s] to %s", value.getClass().getName(), sqlType);
     }
 
     return coercedValue;

@@ -81,7 +81,7 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
   private static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
       DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim1", "dim2"))
   );
-  private static final InputFormat JSON_FORMAT = new JsonInputFormat(null, null, null);
+  private static final InputFormat JSON_FORMAT = new JsonInputFormat(null, null, null, null, null);
   private static final List<Interval> INTERVAL_TO_INDEX = Collections.singletonList(Intervals.of("2022-01/P1M"));
 
   @Parameterized.Parameters
@@ -240,6 +240,8 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
                 new JsonInputFormat(
                     new JSONPathSpec(true, null),
                     null,
+                    null,
+                    null,
                     null
                 ),
                 false,
@@ -304,6 +306,8 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
                             new JSONPathFieldSpec(JSONPathFieldType.PATH, "k", "$.dim4.k")
                         )
                     ),
+                    null,
+                    null,
                     null,
                     null
                 ),

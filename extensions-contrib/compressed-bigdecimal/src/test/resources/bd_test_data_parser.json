@@ -8,13 +8,24 @@
         },
         "dimensionsSpec": {
             "dimensions": [
-                "property"
+                "property",
+                "revenue",
+                {
+                    "type": "long",
+                    "name": "longRevenue"
+                },
+                {
+                    "type": "double",
+                    "name": "doubleRevenue"
+                }
             ]
         },
         "columns": [
             "timestamp",
             "property",
-            "revenue"
+            "revenue",
+            "longRevenue",
+            "doubleRevenue"
         ]
     }
 }

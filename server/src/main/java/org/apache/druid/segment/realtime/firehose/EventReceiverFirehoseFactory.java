@@ -79,6 +79,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * Builds firehoses that accept events through the {@link EventReceiver} interface. Can also register these
  * firehoses with an {@link ServiceAnnouncingChatHandlerProvider}.
  */
+@Deprecated
 public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowParser<Map<String, Object>>>
 {
   private static final EmittingLogger log = new EmittingLogger(EventReceiverFirehoseFactory.class);

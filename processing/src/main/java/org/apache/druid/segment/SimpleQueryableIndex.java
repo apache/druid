@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ *
  */
 public class SimpleQueryableIndex extends AbstractIndex implements QueryableIndex
 {
@@ -80,40 +81,6 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
     } else {
       this.dimensionHandlers = () -> initDimensionHandlers(availableDimensions);
     }
-  }
-
-  private Map<String, DimensionHandler> initDimensionHandlers(Indexed<String> availableDimensions)
-  {
-    Map<String, DimensionHandler> dimensionHandlerMap = Maps.newLinkedHashMap();
-    for (String dim : availableDimensions) {
-      final ColumnHolder columnHolder = getColumnHolder(dim);
-      ColumnCapabilities capabilities = columnHolder.getCapabilities();
-      DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
-      dimensionHandlerMap.put(dim, handler);
-    }
-    return dimensionHandlerMap;
-  }
-
-  @VisibleForTesting
-  public SimpleQueryableIndex(
-      Interval interval,
-      List<String> columnNames,
-      Indexed<String> availableDimensions,
-      BitmapFactory bitmapFactory,
-      Map<String, Supplier<ColumnHolder>> columns,
-      SmooshedFileMapper fileMapper,
-      @Nullable Metadata metadata,
-      Supplier<Map<String, DimensionHandler>> dimensionHandlers
-  )
-  {
-    this.dataInterval = interval;
-    this.columnNames = columnNames;
-    this.availableDimensions = availableDimensions;
-    this.bitmapFactory = bitmapFactory;
-    this.columns = columns;
-    this.fileMapper = fileMapper;
-    this.metadata = metadata;
-    this.dimensionHandlers = dimensionHandlers;
   }
 
   @Override
@@ -175,7 +142,9 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
   @Override
   public void close()
   {
-    fileMapper.close();
+    if (fileMapper != null) {
+      fileMapper.close();
+    }
   }
 
   @Override
@@ -190,4 +159,15 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
     return dimensionHandlers.get();
   }
 
+  private Map<String, DimensionHandler> initDimensionHandlers(Indexed<String> availableDimensions)
+  {
+    Map<String, DimensionHandler> dimensionHandlerMap = Maps.newLinkedHashMap();
+    for (String dim : availableDimensions) {
+      final ColumnHolder columnHolder = getColumnHolder(dim);
+      ColumnCapabilities capabilities = columnHolder.getHandlerCapabilities();
+      DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
+      dimensionHandlerMap.put(dim, handler);
+    }
+    return dimensionHandlerMap;
+  }
 }

@@ -36,7 +36,7 @@ import java.util.Locale;
 /**
  * Column Serializer that understands converting CompressedBigDecimal to 4 byte long values for better storage.
  */
-public class CompressedBigDecimalLongColumnSerializer implements GenericColumnSerializer<CompressedBigDecimal<?>>
+public class CompressedBigDecimalLongColumnSerializer implements GenericColumnSerializer<CompressedBigDecimal>
 {
   private static final byte VERSION = CompressedBigDecimalColumnPartSupplier.VERSION;
 
@@ -92,9 +92,9 @@ public class CompressedBigDecimalLongColumnSerializer implements GenericColumnSe
   }
 
   @Override
-  public void serialize(ColumnValueSelector<? extends CompressedBigDecimal<?>> obj) throws IOException
+  public void serialize(ColumnValueSelector<? extends CompressedBigDecimal> obj) throws IOException
   {
-    CompressedBigDecimal<?> abd = obj.getObject();
+    CompressedBigDecimal abd = obj.getObject();
     int[] array = new int[abd.getArraySize()];
     for (int ii = 0; ii < abd.getArraySize(); ++ii) {
       array[ii] = abd.getArrayEntry(ii);

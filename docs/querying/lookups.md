@@ -98,7 +98,7 @@ This lookup is injective (assuming it contains all possible keys from your data)
 3 -> Billy
 ```
 
-But this one is not, since both "2" and "3" map to the same key:
+But this one is not, since both "2" and "3" map to the same value:
 
 ```
 1 -> Foo
@@ -115,8 +115,7 @@ will not detect this automatically.
 
 Dynamic Configuration
 ---------------------
-> Dynamic lookup configuration is an [experimental](../development/experimental.md) feature. Static
-> configuration is no longer supported.
+
 The following documents the behavior of the cluster-wide config which is accessible through the Coordinator.
 The configuration is propagated through the concept of "tier" of servers.
 A "tier" is defined as a group of services which should receive a set of lookups.
@@ -481,10 +480,3 @@ ex: `GET /druid/v1/lookups/introspect/nato-phonetic/values`
     "Dash"
 ]
 ```
-
-## Druid version 0.10.0 to 0.10.1 upgrade/downgrade
-Overall druid cluster lookups configuration is persisted in metadata store and also individual lookup processes optionally persist a snapshot of loaded lookups on disk.
-If upgrading from druid version 0.10.0 to 0.10.1, then migration for all persisted metadata is handled automatically.
-If downgrading from 0.10.1 to 0.9.0 then lookups updates done via Coordinator while 0.10.1 was running, would be lost.
-
-

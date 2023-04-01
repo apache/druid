@@ -21,9 +21,10 @@ package org.apache.druid.segment.join.table;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
+import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntList;
-import it.unimi.dsi.fastutil.ints.IntLists;
+import it.unimi.dsi.fastutil.ints.IntSortedSet;
+import it.unimi.dsi.fastutil.ints.IntSortedSets;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
@@ -262,7 +263,7 @@ public class IndexedTableJoinMatcherTest
           );
 
           Assert.assertNotNull(dimensionProcessor.match());
-          Assert.assertFalse(dimensionProcessor.match().hasNext());
+          Assert.assertTrue(dimensionProcessor.match().isEmpty());
 
           Assert.assertEquals(IndexedTableJoinMatcher.NO_CONDITION_MATCH, dimensionProcessor.matchSingleRow());
         }
@@ -284,7 +285,7 @@ public class IndexedTableJoinMatcherTest
           );
 
           Assert.assertNotNull(dimensionProcessor.match());
-          Assert.assertFalse(dimensionProcessor.match().hasNext());
+          Assert.assertTrue(dimensionProcessor.match().isEmpty());
 
           Assert.assertEquals(IndexedTableJoinMatcher.NO_CONDITION_MATCH, dimensionProcessor.matchSingleRow());
         }
@@ -405,7 +406,7 @@ public class IndexedTableJoinMatcherTest
 
   public static class Int2IntListLookupTableTest
   {
-    private IndexedTableJoinMatcher.Int2IntListLookupTable target;
+    private IndexedTableJoinMatcher.Int2IntSortedSetLookupTable target;
 
     private AtomicLong counter;
 
@@ -413,19 +414,19 @@ public class IndexedTableJoinMatcherTest
     public void setup()
     {
       counter = new AtomicLong(0);
-      IntFunction<IntList> loader = key -> {
+      IntFunction<IntSortedSet> loader = key -> {
         counter.incrementAndGet();
-        return IntLists.singleton(key);
+        return IntSortedSets.singleton(key);
       };
 
-      target = new IndexedTableJoinMatcher.Int2IntListLookupTable(SIZE, loader);
+      target = new IndexedTableJoinMatcher.Int2IntSortedSetLookupTable(SIZE, loader);
     }
 
     @Test
     public void loadsValueIfAbsent()
     {
       int key = 1;
-      Assert.assertEquals(IntLists.singleton(key), target.getAndLoadIfAbsent(key));
+      Assert.assertEquals(IntSortedSets.singleton(key), target.getAndLoadIfAbsent(key));
       Assert.assertEquals(1L, counter.longValue());
     }
 
@@ -433,15 +434,15 @@ public class IndexedTableJoinMatcherTest
     public void doesNotLoadIfPresent()
     {
       int key = 1;
-      Assert.assertEquals(IntLists.singleton(key), target.getAndLoadIfAbsent(key));
-      Assert.assertEquals(IntLists.singleton(key), target.getAndLoadIfAbsent(key));
+      Assert.assertEquals(IntSortedSets.singleton(key), target.getAndLoadIfAbsent(key));
+      Assert.assertEquals(IntSortedSets.singleton(key), target.getAndLoadIfAbsent(key));
       Assert.assertEquals(1L, counter.longValue());
     }
   }
 
-  public static class Int2IntListLruCache
+  public static class Int2IntSortedSetLruCache
   {
-    private IndexedTableJoinMatcher.Int2IntListLruCache target;
+    private IndexedTableJoinMatcher.Int2IntSortedSetLruCache target;
 
     private AtomicLong counter;
 
@@ -449,19 +450,19 @@ public class IndexedTableJoinMatcherTest
     public void setup()
     {
       counter = new AtomicLong(0);
-      IntFunction<IntList> loader = key -> {
+      IntFunction<IntSortedSet> loader = key -> {
         counter.incrementAndGet();
-        return IntLists.singleton(key);
+        return IntSortedSets.singleton(key);
       };
 
-      target = new IndexedTableJoinMatcher.Int2IntListLruCache(SIZE, loader);
+      target = new IndexedTableJoinMatcher.Int2IntSortedSetLruCache(SIZE, loader);
     }
 
     @Test
     public void loadsValueIfAbsent()
     {
       int key = 1;
-      Assert.assertEquals(IntLists.singleton(key), target.getAndLoadIfAbsent(key));
+      Assert.assertEquals(IntSortedSets.singleton(key), target.getAndLoadIfAbsent(key));
       Assert.assertEquals(1L, counter.longValue());
     }
 
@@ -469,8 +470,8 @@ public class IndexedTableJoinMatcherTest
     public void doesNotLoadIfPresent()
     {
       int key = 1;
-      Assert.assertEquals(IntLists.singleton(key), target.getAndLoadIfAbsent(key));
-      Assert.assertEquals(IntLists.singleton(key), target.getAndLoadIfAbsent(key));
+      Assert.assertEquals(IntSortedSets.singleton(key), target.getAndLoadIfAbsent(key));
+      Assert.assertEquals(IntSortedSets.singleton(key), target.getAndLoadIfAbsent(key));
       Assert.assertEquals(1L, counter.longValue());
     }
 
@@ -481,10 +482,10 @@ public class IndexedTableJoinMatcherTest
       int next = start + SIZE;
 
       for (int key = start; key < next; key++) {
-        Assert.assertEquals(IntLists.singleton(key), target.getAndLoadIfAbsent(key));
+        Assert.assertEquals(IntSortedSets.singleton(key), target.getAndLoadIfAbsent(key));
       }
 
-      Assert.assertEquals(IntLists.singleton(next), target.getAndLoadIfAbsent(next));
+      Assert.assertEquals(IntSortedSets.singleton(next), target.getAndLoadIfAbsent(next));
       Assert.assertNull(target.get(start));
 
       Assert.assertEquals(SIZE + 1, counter.longValue());
@@ -508,9 +509,9 @@ public class IndexedTableJoinMatcherTest
       }
 
       @Override
-      public IntList find(Object key)
+      public IntSortedSet find(Object key)
       {
-        return IntLists.singleton(((String) key).length());
+        return IntSortedSets.singleton(((String) key).length());
       }
 
       @Override
@@ -538,12 +539,12 @@ public class IndexedTableJoinMatcherTest
       }
 
       @Override
-      public IntList find(Object key)
+      public IntSortedSet find(Object key)
       {
         if ("1".equals(DimensionHandlerUtils.convertObjectToString(key))) {
-          return IntLists.singleton(3);
+          return IntSortedSets.singleton(3);
         } else {
-          return IntLists.EMPTY_LIST;
+          return IntSortedSets.EMPTY_SET;
         }
       }
 
@@ -572,14 +573,14 @@ public class IndexedTableJoinMatcherTest
       }
 
       @Override
-      public IntList find(Object key)
+      public IntSortedSet find(Object key)
       {
         final Long l = DimensionHandlerUtils.convertObjectToLong(key);
 
         if (l == null && NullHandling.sqlCompatible()) {
-          return IntLists.EMPTY_LIST;
+          return IntSortedSets.EMPTY_SET;
         } else {
-          return IntLists.singleton(Ints.checkedCast((l == null ? 0L : l) + 1));
+          return IntSortedSets.singleton(Ints.checkedCast((l == null ? 0L : l) + 1));
         }
       }
 
@@ -608,9 +609,9 @@ public class IndexedTableJoinMatcherTest
       }
 
       @Override
-      public IntList find(Object key)
+      public IntSortedSet find(Object key)
       {
-        return new IntArrayList(new int[]{1, 2, 3});
+        return new IntAVLTreeSet(new int[]{1, 2, 3});
       }
 
       @Override

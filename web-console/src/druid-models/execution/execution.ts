@@ -18,9 +18,17 @@
 
 import { Column, QueryResult, SqlExpression, SqlQuery, SqlWithQuery } from 'druid-query-toolkit';
 
-import { deepGet, deleteKeys, nonEmptyArray, oneOf } from '../../utils';
-import { DruidEngine, validDruidEngine } from '../druid-engine/druid-engine';
-import { QueryContext } from '../query-context/query-context';
+import {
+  deepGet,
+  deleteKeys,
+  formatInteger,
+  nonEmptyArray,
+  oneOf,
+  pluralIfNeeded,
+} from '../../utils';
+import type { DruidEngine } from '../druid-engine/druid-engine';
+import { validDruidEngine } from '../druid-engine/druid-engine';
+import type { QueryContext } from '../query-context/query-context';
 import { Stages } from '../stages/stages';
 
 const IGNORE_CONTEXT_KEYS = [
@@ -84,6 +92,68 @@ export function validateLastExecution(possibleLastExecution: any): LastExecution
   };
 }
 
+export interface UsageInfo {
+  pendingTasks: number;
+  runningTasks: number;
+}
+
+function getUsageInfoFromStatusPayload(status: any): UsageInfo | undefined {
+  const { pendingTasks, runningTasks } = status;
+  if (typeof pendingTasks !== 'number' || typeof runningTasks !== 'number') return;
+  return {
+    pendingTasks,
+    runningTasks,
+  };
+}
+
+export interface CapacityInfo {
+  availableTaskSlots: number;
+  usedTaskSlots: number;
+  totalTaskSlots: number;
+}
+
+function formatPendingMessage(
+  usageInfo: UsageInfo,
+  capacityInfo: CapacityInfo | undefined,
+): string | undefined {
+  const { pendingTasks, runningTasks } = usageInfo;
+  if (!pendingTasks) return;
+
+  const totalNeeded = runningTasks + pendingTasks;
+
+  let baseMessage = `Launched ${formatInteger(runningTasks)}/${formatInteger(totalNeeded)} tasks.`;
+
+  if (!capacityInfo) {
+    return baseMessage;
+  }
+
+  const { availableTaskSlots, usedTaskSlots, totalTaskSlots } = capacityInfo;
+
+  // If there are enough slots free: "Launched 2/4 tasks." (It will resolve very soon, no need to make it complicated.)
+  if (pendingTasks <= availableTaskSlots) {
+    return baseMessage;
+  }
+
+  baseMessage += ` Cluster is currently using ${formatInteger(usedTaskSlots)}/${formatInteger(
+    totalTaskSlots,
+  )} task slots.`;
+
+  // If there are not enough slots free then there are two cases:
+  if (totalNeeded <= totalTaskSlots) {
+    // (1) not enough free, but enough total: "Launched 2/4 tasks. Cluster is currently using 5/6 task slots. Waiting for 1 other task to finish."
+    const tasksThatNeedToFinish = pendingTasks - availableTaskSlots;
+    return (
+      baseMessage + ` Waiting for ${pluralIfNeeded(tasksThatNeedToFinish, 'other task')} to finish.`
+    );
+  } else {
+    // (2) not enough total: "Launched 2/4 tasks. Cluster is currently using 2/2 task slots. Add more capacity or reduce maxNumTasks to 2 or lower."
+    return (
+      baseMessage +
+      ` Add more capacity or reduce maxNumTasks to ${formatInteger(totalTaskSlots)} or lower.`
+    );
+  }
+}
+
 export interface ExecutionValue {
   engine: DruidEngine;
   id: string;
@@ -93,11 +163,13 @@ export interface ExecutionValue {
   status?: ExecutionStatus;
   startTime?: Date;
   duration?: number;
+  usageInfo?: UsageInfo;
   stages?: Stages;
   destination?: ExecutionDestination;
   result?: QueryResult;
   error?: ExecutionError;
   warnings?: ExecutionError[];
+  capacityInfo?: CapacityInfo;
   _payload?: { payload: any; task: string };
 }
 
@@ -186,6 +258,7 @@ export class Execution {
       engine: 'sql-msq-task',
       id: taskStatus.task,
       status: taskStatus.status.error ? 'FAILED' : status,
+      usageInfo: getUsageInfoFromStatusPayload(taskStatus.status),
       sqlQuery,
       queryContext,
       error: taskStatus.status.error
@@ -260,6 +333,9 @@ export class Execution {
       status: Execution.normalizeTaskStatus(status),
       startTime: isNaN(startTime.getTime()) ? undefined : startTime,
       duration: typeof durationMs === 'number' ? durationMs : undefined,
+      usageInfo: getUsageInfoFromStatusPayload(
+        deepGet(taskReport, 'multiStageQuery.payload.status'),
+      ),
       stages: Array.isArray(stages)
         ? new Stages(stages, deepGet(taskReport, 'multiStageQuery.payload.counters'))
         : undefined,
@@ -292,6 +368,22 @@ export class Execution {
     });
   }
 
+  static getProgressDescription(execution: Execution | undefined): string {
+    if (!execution?.stages) return 'Loading...';
+    if (!execution.isWaitingForQuery())
+      return 'Query complete, waiting for segments to be loaded...';
+
+    let ret = execution.stages.getStage(0)?.phase ? 'Running query...' : 'Starting query...';
+    if (execution.usageInfo) {
+      const pendingMessage = formatPendingMessage(execution.usageInfo, execution.capacityInfo);
+      if (pendingMessage) {
+        ret += ` ${pendingMessage}`;
+      }
+    }
+
+    return ret;
+  }
+
   public readonly engine: DruidEngine;
   public readonly id: string;
   public readonly sqlQuery?: string;
@@ -300,11 +392,13 @@ export class Execution {
   public readonly status?: ExecutionStatus;
   public readonly startTime?: Date;
   public readonly duration?: number;
+  public readonly usageInfo?: UsageInfo;
   public readonly stages?: Stages;
   public readonly destination?: ExecutionDestination;
   public readonly result?: QueryResult;
   public readonly error?: ExecutionError;
   public readonly warnings?: ExecutionError[];
+  public readonly capacityInfo?: CapacityInfo;
 
   public readonly _payload?: { payload: any; task: string };
 
@@ -318,11 +412,13 @@ export class Execution {
     this.status = value.status;
     this.startTime = value.startTime;
     this.duration = value.duration;
+    this.usageInfo = value.usageInfo;
     this.stages = value.stages;
     this.destination = value.destination;
     this.result = value.result;
     this.error = value.error;
     this.warnings = nonEmptyArray(value.warnings) ? value.warnings : undefined;
+    this.capacityInfo = value.capacityInfo;
 
     this._payload = value._payload;
   }
@@ -337,11 +433,13 @@ export class Execution {
       status: this.status,
       startTime: this.startTime,
       duration: this.duration,
+      usageInfo: this.usageInfo,
       stages: this.stages,
       destination: this.destination,
       result: this.result,
       error: this.error,
       warnings: this.warnings,
+      capacityInfo: this.capacityInfo,
 
       _payload: this._payload,
     };
@@ -371,6 +469,13 @@ export class Execution {
     return new Execution({
       ...this.valueOf(),
       result: result.attachQuery({}, this.sqlQuery ? parseSqlQuery(this.sqlQuery) : undefined),
+    });
+  }
+
+  public changeCapacityInfo(capacityInfo: CapacityInfo | undefined): Execution {
+    return new Execution({
+      ...this.valueOf(),
+      capacityInfo,
     });
   }
 
@@ -463,5 +568,15 @@ export class Execution {
     const { startTime, duration } = this;
     if (!startTime || !duration) return;
     return new Date(startTime.valueOf() + duration);
+  }
+
+  public hasPotentiallyStuckStage(): boolean {
+    return Boolean(
+      this.status === 'RUNNING' &&
+        this.stages &&
+        this.stages.getPotentiallyStuckStageIndex() >= 0 &&
+        this.usageInfo &&
+        this.usageInfo.pendingTasks > 0,
+    );
   }
 }

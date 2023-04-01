@@ -80,7 +80,8 @@ public class HllSketchEstimateWithErrorBoundsOperatorConversion implements SqlOp
         plannerContext,
         rowSignature,
         operands.get(0),
-        postAggregatorVisitor
+        postAggregatorVisitor,
+        true
     );
 
     if (firstOperand == null) {

@@ -29,7 +29,8 @@ To use this Apache Druid extension, [include](../../development/extensions.md#lo
 
 This extension exposes [Druid metrics](https://druid.apache.org/docs/latest/operations/metrics.html) for collection by a Prometheus server (https://prometheus.io/).
 
-Emitter is enabled by setting `druid.emitter=prometheus` [configs](https://druid.apache.org/docs/latest/configuration/index.html#emitting-metrics) or include `prometheus` in the composing emitter list. 
+Emitter is enabled by setting `druid.emitter=prometheus` [configs](https://druid.apache.org/docs/latest/configuration/index.html#enabling-metrics) or include `prometheus` in the composing emitter list. 
+
 
 ## Configuration
 
@@ -45,6 +46,10 @@ All the configuration parameters for the Prometheus emitter are under `druid.emi
 | `druid.emitter.prometheus.addServiceAsLabel`  | Flag to include the druid service name (e.g. `druid/broker`, `druid/coordinator`, etc.) as a prometheus label.                                                                                                                         | no        | false                                |
 | `druid.emitter.prometheus.pushGatewayAddress` | Pushgateway address. Required if using `pushgateway` strategy.                                                                                                                                                                         | no        | none                                 |
 |`druid.emitter.prometheus.flushPeriod`|Emit metrics to Pushgateway every `flushPeriod` seconds. Required if `pushgateway` strategy is used.|no|15|
+
+### Ports for colocated Druid processes
+
+In certain instances, Druid processes may be colocated on the same host. For example, the Broker and Router may share the same server. Other colocated processes include the Historical and MiddleManager or the Coordinator and Overlord. When you have colocated processes, specify `druid.emitter.prometheus.port` separately for each process on each host. For example, even if the Broker and Router share the same host, the Broker runtime properties and the Router runtime properties each need to list `druid.emitter.prometheus.port`, and the port value for both must be different.
 
 ### Override properties for Peon Tasks
 

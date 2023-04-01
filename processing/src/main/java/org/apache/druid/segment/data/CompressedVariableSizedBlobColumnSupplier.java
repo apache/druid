@@ -38,7 +38,6 @@ public class CompressedVariableSizedBlobColumnSupplier implements Supplier<Compr
       SmooshedFileMapper mapper
   ) throws IOException
   {
-
     byte versionFromBuffer = buffer.get();
     if (versionFromBuffer == VERSION) {
       final int numElements = buffer.getInt();

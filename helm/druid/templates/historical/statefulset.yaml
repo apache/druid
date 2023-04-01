@@ -42,9 +42,15 @@ spec:
         app: {{ template "druid.name" . }}
         component: {{ .Values.historical.name }}
         release: {{ .Release.Name }}
-        {{- with .Values.historical.podAnnotations }}
       annotations:
-{{ toYaml . | indent 8 }}
+        druid.k8s.enablePatching: "true"
+        {{- with .Values.historical.podAnnotations }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.prometheus.enabled }}
+          {{- with .Values.prometheus.annotation }}
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
         {{- end }}
     spec:
       {{- if or .Values.historical.antiAffinity .Values.historical.nodeAffinity }}
@@ -91,10 +97,17 @@ spec:
       imagePullSecrets:
 {{ toYaml .Values.image.pullSecrets | indent 8 }}
 {{- end }}
+      {{- if .Values.historical.serviceAccount.create }}
+      serviceAccountName: {{ include "druid.historical.serviceAccountName" . }}
+      {{- end }}
       containers:
       - name: druid
         args: [ "historical" ]
         env:
+        - name: POD_NAME
+          valueFrom:  {fieldRef: {fieldPath: metadata.name}}
+        - name: POD_NAMESPACE
+          valueFrom: {fieldRef: {fieldPath: metadata.namespace}}
         {{- range $key, $val := .Values.historical.config }}
         - name: {{ $key }}
           value: {{ $val | quote }}
@@ -119,6 +132,11 @@ spec:
         ports:
         - containerPort: {{ .Values.historical.port }}
           name: http
+        {{- if .Values.prometheus.enabled }}
+        - name: prometheus
+          containerPort: {{ .Values.prometheus.port }}
+          protocol: TCP
+        {{- end }}
         volumeMounts:
         - mountPath: /opt/druid/var/druid/
           name: data

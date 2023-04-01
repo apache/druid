@@ -95,7 +95,7 @@ date,uid,show,episode
 
 ## Ingest data using Theta sketches
 
-1. Navigate to the **Load data** wizard in the Druid console.
+1. Navigate to the **Load data** wizard in the web console.
 2. Select `Paste data` as the data source and paste the given data:
 
 ![Load data view with pasted data](../assets/tutorial-theta-01.png)

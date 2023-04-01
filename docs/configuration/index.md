@@ -418,6 +418,7 @@ There are several emitters available:
 - [`parametrized`](#parametrized-http-emitter-module) operates like the `http` emitter but fine-tunes the recipient URL based on the event feed.
 - [`composing`](#composing-emitter-module) initializes multiple emitter modules.
 - [`graphite`](#graphite-emitter) emits metrics to a [Graphite](https://graphiteapp.org/) Carbon service.
+- [`switching`](#switching-emitter) initializes and emits to multiple emitter modules based on the event feed.
 
 ##### Logging Emitter Module
 
@@ -483,6 +484,14 @@ Instead use `recipientBaseUrlPattern` described in the table below.
 
 To use graphite as emitter set `druid.emitter=graphite`. For configuration details, see [Graphite emitter](../development/extensions-contrib/graphite.md) for the Graphite emitter Druid extension.
 
+##### Switching Emitter
+
+To use switching as emitter set `druid.emitter=switching`. 
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.emitter.switching.emitters`|JSON map of feed to list of emitter modules that will be used for the mapped feed, e.g., {"metrics":["http"], "alerts":["logging"]}|{}|
+|`druid.emitter.switching.defaultEmitters`|JSON list of emitter modules to load that will be used if there is no emitter specifically designated for that event's feed, e.g., ["logging","http"].|[]|
 
 ### Metadata storage
 
@@ -502,8 +511,8 @@ These properties specify the JDBC connection and other configuration around the 
 |`druid.metadata.storage.tables.rules`|The table to use to look for segment load/drop rules.|druid_rules|
 |`druid.metadata.storage.tables.config`|The table to use to look for configs.|druid_config|
 |`druid.metadata.storage.tables.tasks`|Used by the indexing service to store tasks.|druid_tasks|
-|`druid.metadata.storage.tables.taskLog`|Used by the indexing service to store task logs.|druid_taskLog|
-|`druid.metadata.storage.tables.taskLock`|Used by the indexing service to store task locks.|druid_taskLock|
+|`druid.metadata.storage.tables.taskLog`|Used by the indexing service to store task logs.|druid_tasklogs|
+|`druid.metadata.storage.tables.taskLock`|Used by the indexing service to store task locks.|druid_tasklocks|
 |`druid.metadata.storage.tables.supervisors`|Used by the indexing service to store supervisor configurations.|druid_supervisors|
 |`druid.metadata.storage.tables.audit`|The table to use for audit history of configuration changes, e.g., Coordinator rules.|druid_audit|
 
@@ -567,7 +576,7 @@ This deep storage is used to interface with Cassandra.  Note that the `druid-cas
 #### HDFS input source
 
 You can set the following property to specify permissible protocols for
-the [HDFS input source](../ingestion/native-batch-input-source.md#hdfs-input-source) and the [HDFS firehose](../ingestion/native-batch-firehose.md#hdfsfirehose).
+the [HDFS input source](../ingestion/native-batch-input-source.md#hdfs-input-source).
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
@@ -577,7 +586,7 @@ the [HDFS input source](../ingestion/native-batch-input-source.md#hdfs-input-sou
 #### HTTP input source
 
 You can set the following property to specify permissible protocols for
-the [HTTP input source](../ingestion/native-batch-input-source.md#http-input-source) and the [HTTP firehose](../ingestion/native-batch-firehose.md#httpfirehose).
+the [HTTP input source](../ingestion/native-batch-input-source.md#http-input-source).
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
@@ -590,7 +599,6 @@ the [HTTP input source](../ingestion/native-batch-input-source.md#http-input-sou
 
 You can use the following properties to specify permissible JDBC options for:
 - [SQL input source](../ingestion/native-batch-input-source.md#sql-input-source)
-- [SQL firehose](../ingestion/native-batch-firehose.md#sqlfirehose),
 - [globally cached JDBC lookups](../development/extensions-core/lookups-cached-global.md#jdbc-lookup)
 - [JDBC Data Fetcher for per-lookup caching](../development/extensions-core/druid-lookups.md#data-fetcher-layer).
 
@@ -872,8 +880,8 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 ##### Segment Management
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.serverview.type`|batch or http|Segment discovery method to use. "http" enables discovering segments using HTTP instead of ZooKeeper.|batch|
-|`druid.coordinator.loadqueuepeon.type`|curator or http|Whether to use "http" or "curator" implementation to assign segment loads/drops to historical|curator|
+|`druid.serverview.type`|batch or http|Segment discovery method to use. "http" enables discovering segments using HTTP instead of ZooKeeper.|http|
+|`druid.coordinator.loadqueuepeon.type`|curator or http|Whether to use "http" or "curator" implementation to assign segment loads/drops to historical|http|
 |`druid.coordinator.segment.awaitInitializationOnStart`|true or false|Whether the Coordinator will wait for its view of segments to fully initialize before starting up. If set to 'true', the Coordinator's HTTP server will not start up, and the Coordinator will not announce itself as available, until the server view is initialized.|true|
 
 ###### Additional config when "http" loadqueuepeon is used
@@ -893,9 +901,10 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 
 #### Dynamic Configuration
 
-The Coordinator has dynamic configuration to change certain behavior on the fly. The Coordinator uses a JSON spec object from the Druid [metadata storage](../dependencies/metadata-storage.md) config table. This object is detailed below:
+The Coordinator has dynamic configuration to change certain behavior on the fly.
 
-It is recommended that you use the Coordinator Console to configure these parameters. However, if you need to do it via HTTP, the JSON object can be submitted to the Coordinator via a POST request at:
+It is recommended that you use the [web console](../operations/web-console.md) to configure these parameters.
+However, if you need to do it via HTTP, the JSON object can be submitted to the Coordinator via a POST request at:
 
 ```
 http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/config
@@ -938,7 +947,7 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 |`mergeBytesLimit`|The maximum total uncompressed size in bytes of segments to merge.|524288000L|
 |`mergeSegmentsLimit`|The maximum number of segments that can be in a single [append task](../ingestion/tasks.md).|100|
 |`maxSegmentsToMove`|The maximum number of segments that can be moved at any given time.|5|
-|`useBatchedSegmentSampler`|Boolean flag for whether or not we should use the Reservoir Sampling with a reservoir of size k instead of fixed size 1 to pick segments to move. This option can be enabled to speed up segment balancing process, especially if there are huge number of segments in the cluster or if there are too many segments to move.|false|
+|`useBatchedSegmentSampler`|Deprecated. Boolean flag for whether or not we should use the Reservoir Sampling with a reservoir of size k instead of fixed size 1 to pick segments to move. This option can be enabled to speed up the sampling of segments to be balanced, especially if there is a large number of segments in the cluster or if there are too many segments to move.|true|
 |`percentOfSegmentsToConsiderPerMove`|Deprecated. This will eventually be phased out by the batched segment sampler. You can enable the batched segment sampler now by setting the dynamic Coordinator config, `useBatchedSegmentSampler`, to `true`. Note that if you choose to enable the batched segment sampler, `percentOfSegmentsToConsiderPerMove` will no longer have any effect on balancing. If `useBatchedSegmentSampler == false`, this config defines the percentage of the total number of segments in the cluster that are considered every time a segment needs to be selected for a move. Druid orders servers by available capacity ascending (the least available capacity first) and then iterates over the servers. For each server, Druid iterates over the segments on the server, considering them for moving. The default config of 100% means that every segment on every server is a candidate to be moved. This should make sense for most small to medium-sized clusters. However, an admin may find it preferable to drop this value lower if they don't think that it is worthwhile to consider every single segment in the cluster each time it is looking for a segment to move.|100|
 |`replicantLifetime`|The maximum number of Coordinator runs for a segment to be replicated before we start alerting.|15|
 |`replicationThrottleLimit`|The maximum number of segments that can be replicated at one time.|10|
@@ -947,8 +956,9 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 |`killDataSourceWhitelist`|List of specific data sources for which kill tasks are sent if property `druid.coordinator.kill.on` is true. This can be a list of comma-separated data source names or a JSON array.|none|
 |`killPendingSegmentsSkipList`|List of data sources for which pendingSegments are _NOT_ cleaned up if property `druid.coordinator.kill.pendingSegments.on` is true. This can be a list of comma-separated data sources or a JSON array.|none|
 |`maxSegmentsInNodeLoadingQueue`|The maximum number of segments that could be queued for loading to any given server. This parameter could be used to speed up segments loading process, especially if there are "slow" nodes in the cluster (with low loading speed) or if too much segments scheduled to be replicated to some particular node (faster loading could be preferred to better segments distribution). Desired value depends on segments loading speed, acceptable replication time and number of nodes. Value 1000 could be a start point for a rather big cluster. Default value is 100. |100|
+|`useRoundRobinSegmentAssignment`|Boolean flag for whether segments should be assigned to historicals in a round robin fashion. When disabled, segment assignment is done using the chosen balancer strategy. When enabled, this can speed up segment assignments leaving balancing to move the segments to their optimal locations (based on the balancer strategy) lazily. |false|
 |`decommissioningNodes`| List of historical servers to 'decommission'. Coordinator will not assign new segments to 'decommissioning' servers,  and segments will be moved away from them to be placed on non-decommissioning servers at the maximum rate specified by `decommissioningMaxPercentOfMaxSegmentsToMove`.|none|
-|`decommissioningMaxPercentOfMaxSegmentsToMove`|  The maximum number of segments that may be moved away from 'decommissioning' servers to non-decommissioning (that is, active) servers during one Coordinator run. This value is relative to the total maximum segment movements allowed during one run which is determined by `maxSegmentsToMove`. If `decommissioningMaxPercentOfMaxSegmentsToMove` is 0, segments will neither be moved from _or to_ 'decommissioning' servers, effectively putting them in a sort of "maintenance" mode that will not participate in balancing or assignment by load rules. Decommissioning can also become stalled if there are no available active servers to place the segments. By leveraging the maximum percent of decommissioning segment movements, an operator can prevent active servers from overload by prioritizing balancing, or decrease decommissioning time instead. The value should be between 0 and 100.|70|
+|`decommissioningMaxPercentOfMaxSegmentsToMove`| Upper limit of segments the Coordinator can move from decommissioning servers to active non-decommissioning servers during a single run. This value is relative to the total maximum number of segments that can be moved at any given time based upon the value of `maxSegmentsToMove`.<br /><br />If `decommissioningMaxPercentOfMaxSegmentsToMove` is 0, the Coordinator does not move segments to decommissioning servers, effectively putting them in a type of "maintenance" mode. In this case, decommissioning servers do not participate in balancing or assignment by load rules. The Coordinator still considers segments on decommissioning servers as candidates to replicate on active servers.<br /><br />Decommissioning can stall if there are no available active servers to move the segments to. You can use the maximum percent of decommissioning segment movements to prioritize balancing or to decrease commissioning time to prevent active servers from being overloaded. The value must be between 0 and 100.|70|
 |`pauseCoordination`| Boolean flag for whether or not the coordinator should execute its various duties of coordinating the cluster. Setting this to true essentially pauses all coordination work while allowing the API to remain up. Duties that are paused include all classes that implement the `CoordinatorDuty` Interface. Such duties include: Segment balancing, Segment compaction, Emission of metrics controlled by the dynamic coordinator config `emitBalancingStats`, Submitting kill tasks for unused segments (if enabled), Logging of used segments in the cluster, Marking of newly unused or overshadowed segments, Matching and execution of load/drop rules for used segments, Unloading segments that are no longer marked as used from Historical servers. An example of when an admin may want to pause coordination would be if they are doing deep storage maintenance on HDFS Name Nodes with downtime and don't want the coordinator to be directing Historical Nodes to hit the Name Node with API requests until maintenance is done and the deep store is declared healthy for use again. |false|
 |`replicateAfterLoadTimeout`| Boolean flag for whether or not additional replication is needed for segments that have failed to load due to the expiry of `druid.coordinator.load.timeout`. If this is set to true, the coordinator will attempt to replicate the failed segment on a different historical server. This helps improve the segment availability if there are a few slow historicals in the cluster. However, the slow historical may still load the segment later and the coordinator may issue drop requests if the segment is over-replicated.|false|
 |`maxNonPrimaryReplicantsToLoad`|This is the maximum number of non-primary segment replicants to load per Coordination run. This number can be set to put a hard upper limit on the number of replicants loaded. It is a tool that can help prevent long delays in new data being available for query after events that require many non-primary replicants to be loaded by the cluster; such as a Historical node disconnecting from the cluster. The default value essentially means there is no limit on the number of replicants loaded per coordination cycle. If you want to use a non-default value for this config, you may want to start with it being `~20%` of the number of segments found on your Historical server with the most segments. You can use the Druid metric, `coordinator/time` with the filter `duty=org.apache.druid.server.coordinator.duty.RunRules` to see how different values of this config impact your Coordinator execution time.|`Integer.MAX_VALUE`|
@@ -962,14 +972,14 @@ http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/config/history?interval=<int
 
 default value of interval can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in Coordinator runtime.properties
 
-To view last <n> entries of the audit history of Coordinator dynamic config issue a GET request to the URL -
+To view last `n` entries of the audit history of Coordinator dynamic config issue a GET request to the URL -
 
 ```
 http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/config/history?count=<n>
 ```
 
 ##### Lookups Dynamic Configuration
-These configuration options control the behavior of the Lookup dynamic configuration described in the [lookups page](../querying/lookups.md)
+These configuration options control Coordinator lookup management. See [dynamic configuration for lookups](../querying/lookups.md#dynamic-configuration) configurations that affect lookup propagation.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -978,11 +988,11 @@ These configuration options control the behavior of the Lookup dynamic configura
 |`druid.manager.lookups.deleteAllTimeout`|How long to wait for all `DELETE` requests to finish before considering the delete attempt a failure|PT10S|
 |`druid.manager.lookups.updateAllTimeout`|How long to wait for all `POST` requests to finish before considering the attempt a failure|PT60S|
 |`druid.manager.lookups.threadPoolSize`|How many processes can be managed concurrently (concurrent POST and DELETE requests). Requests this limit will wait in a queue until a slot becomes available.|10|
-|`druid.manager.lookups.period`|How many milliseconds between checks for configuration changes|30_000|
+|`druid.manager.lookups.period`|Number of milliseconds between checks for configuration changes|120000 (2 minutes)|
 
 ##### Automatic compaction dynamic configuration
 
-You can set or update [automatic compaction](../ingestion/automatic-compaction.md) properties dynamically using the
+You can set or update [automatic compaction](../data-management/automatic-compaction.md) properties dynamically using the
 [Coordinator API](../operations/api-reference.md#automatic-compaction-configuration) without restarting Coordinators.
 
 For details about segment compaction, see [Segment size optimization](../operations/segment-optimization.md).
@@ -993,8 +1003,8 @@ You can configure automatic compaction through the following properties:
 |--------|-----------|--------|
 |`dataSource`|dataSource name to be compacted.|yes|
 |`taskPriority`|[Priority](../ingestion/tasks.md#priority) of compaction task.|no (default = 25)|
-|`inputSegmentSizeBytes`|Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.|no (default = 100,000,000,000,000 i.e. 100TB)|
-|`skipOffsetFromLatest`|The offset for searching segments to be compacted in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration format. Strongly recommended to set for realtime dataSources. See [Data handling with compaction](../ingestion/compaction.md#data-handling-with-compaction).|no (default = "P1D")|
+|`inputSegmentSizeBytes`|Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk.|no (default = 100,000,000,000,000 i.e. 100TB)|
+|`skipOffsetFromLatest`|The offset for searching segments to be compacted in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration format. Strongly recommended to set for realtime dataSources. See [Data handling with compaction](../data-management/compaction.md#data-handling-with-compaction).|no (default = "P1D")|
 |`tuningConfig`|Tuning config for compaction tasks. See below [Automatic compaction tuningConfig](#automatic-compaction-tuningconfig).|no|
 |`taskContext`|[Task context](../ingestion/tasks.md#context) for compaction tasks.|no|
 |`granularitySpec`|Custom `granularitySpec`. See [Automatic compaction granularitySpec](#automatic-compaction-granularityspec).|No|
@@ -1019,7 +1029,7 @@ You may see this issue with streaming ingestion from Kafka and Kinesis, which in
 
 To mitigate this problem, set `skipOffsetFromLatest` to a value large enough so that arriving data tends to fall outside the offset value from the current time. This way you can avoid conflicts between compaction tasks and realtime ingestion tasks.
 For example, if you want to skip over segments from thirty days prior to the end time of the most recent segment, assign `"skipOffsetFromLatest": "P30D"`.
-For more information, see [Avoid conflicts with ingestion](../ingestion/automatic-compaction.md#avoid-conflicts-with-ingestion).
+For more information, see [Avoid conflicts with ingestion](../data-management/automatic-compaction.md#avoid-conflicts-with-ingestion).
 
 ###### Automatic compaction tuningConfig
 
@@ -1037,7 +1047,7 @@ The below is a list of the supported configurations for auto-compaction.
 |`indexSpecForIntermediatePersists`|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](../ingestion/ingestion-spec.md#indexspec) for possible values.|no|
 |`maxPendingPersists`|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with `maxRowsInMemory` * (2 + `maxPendingPersists`).|no (default = 0, meaning one persist can be running concurrently with ingestion, and none can be queued up)|
 |`pushTimeout`|Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.|no (default = 0)|
-|`segmentWriteOutMediumFactory`|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](../ingestion/native-batch-simple-task.md#segmentwriteoutmediumfactory).|no (default is the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used)|
+|`segmentWriteOutMediumFactory`|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](../ingestion/native-batch.md#segmentwriteoutmediumfactory).|no (default is the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used)|
 |`maxNumConcurrentSubTasks`|Maximum number of worker tasks which can be run in parallel at the same time. The supervisor task would spawn worker tasks up to `maxNumConcurrentSubTasks` regardless of the current available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion. Check [Capacity Planning](../ingestion/native-batch.md#capacity-planning) for more details.|no (default = 1)|
 |`maxRetry`|Maximum number of retries on task failures.|no (default = 3)|
 |`maxNumSegmentsToMerge`|Max limit for the number of segments that a single task can merge at the same time in the second phase. Used only with `hashed` or `single_dim` partitionsSpec.|no (default = 100)|
@@ -1097,10 +1107,12 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.runner.type`|Choices "local" or "remote". Indicates whether tasks should be run locally or in a distributed environment. Experimental task runner "httpRemote" is also available which is same as "remote" but uses HTTP to interact with Middle Managers instead of ZooKeeper.|local|
+|`druid.indexer.runner.type`|Indicates whether tasks should be run locally using "local" or in a distributed environment using "remote". The recommended option is "httpRemote", which is similar to "remote" but uses HTTP to interact with Middle Managers instead of ZooKeeper.|httpRemote|
 |`druid.indexer.storage.type`|Choices are "local" or "metadata". Indicates whether incoming tasks should be stored locally (in heap) or in metadata storage. "local" is mainly for internal testing while "metadata" is recommended in production because storing incoming tasks in metadata storage allows for tasks to be resumed if the Overlord should fail.|local|
 |`druid.indexer.storage.recentlyFinishedThreshold`|Duration of time to store task results. Default is 24 hours. If you have hundreds of tasks running in a day, consider increasing this threshold.|PT24H|
 |`druid.indexer.tasklock.forceTimeChunkLock`|_**Setting this to false is still experimental**_<br/> If set, all tasks are enforced to use time chunk lock. If not set, each task automatically chooses a lock type to use. This configuration can be overwritten by setting `forceTimeChunkLock` in the [task context](../ingestion/tasks.md#context). See [Task Locking & Priority](../ingestion/tasks.md#context) for more details about locking in tasks.|true|
+|`druid.indexer.tasklock.batchSegmentAllocation`| If set to true, Druid performs segment allocate actions in batches to improve throughput and reduce the average `task/action/run/time`. See [batching `segmentAllocate` actions](../ingestion/tasks.md#batching-segmentallocate-actions) for details.|false|
+|`druid.indexer.tasklock.batchAllocationWaitTime`|Number of milliseconds after Druid adds the first segment allocate action to a batch, until it executes the batch. Allows the batch to add more requests and improve the average segment allocation run time. This configuration takes effect only if `batchSegmentAllocation` is enabled.|500|
 |`druid.indexer.task.default.context`|Default task context that is applied to all tasks submitted to the Overlord. Any default in this config does not override neither the context values the user provides nor `druid.indexer.tasklock.forceTimeChunkLock`.|empty context|
 |`druid.indexer.queue.maxSize`|Maximum number of active tasks at one time.|Integer.MAX_VALUE|
 |`druid.indexer.queue.startDelay`|Sleep this long before starting Overlord queue management. This can be useful to give a cluster time to re-orient itself after e.g. a widespread network issue.|PT1M|
@@ -1151,10 +1163,14 @@ There are additional configs for autoscaling (if it is enabled):
 |`druid.supervisor.taskUnhealthinessThreshold`|The number of consecutive task failures before the supervisor is considered unhealthy.|3|
 |`druid.supervisor.storeStackTrace`|Whether full stack traces of supervisor exceptions should be stored and returned by the supervisor `/status` endpoint.|false|
 |`druid.supervisor.maxStoredExceptionEvents`|The maximum number of exception events that can be returned through the supervisor `/status` endpoint.|`max(healthinessThreshold, unhealthinessThreshold)`|
+|`druid.supervisor.idleConfig.enabled`|If `true`, supervisor can become idle if there is no data on input stream/topic for some time.|false|
+|`druid.supervisor.idleConfig.inactiveAfterMillis`|Supervisor is marked as idle if all existing data has been read from input topic and no new data has been published for `inactiveAfterMillis` milliseconds.|`600_000`|
 
-#### Overlord Dynamic Configuration
+The `druid.supervisor.idleConfig.*` specified in the runtime properties of the overlord defines the default behavior for the entire cluster. See [Idle Configuration in Kafka Supervisor IOConfig](../development/extensions-core/kafka-supervisor-reference.md#kafkasupervisorioconfig) to override it for an individual supervisor.
 
-The Overlord can dynamically change worker behavior.
+#### Overlord dynamic configuration
+
+The Overlord can be dynamically configured to specify how tasks are assigned to workers.
 
 The JSON object can be submitted to the Overlord via a POST request at:
 
@@ -1162,14 +1178,14 @@ The JSON object can be submitted to the Overlord via a POST request at:
 http://<OVERLORD_IP>:<port>/druid/indexer/v1/worker
 ```
 
-Optional Header Parameters for auditing the config change can also be specified.
+Optional header parameters for auditing the config change can also be specified.
 
 |Header Param Name| Description | Default |
 |----------|-------------|---------|
 |`X-Druid-Author`| author making the config change|""|
 |`X-Druid-Comment`| comment describing the change being done|""|
 
-A sample worker config spec is shown below:
+An example Overlord dynamic config is shown below:
 
 ```json
 {
@@ -1207,12 +1223,12 @@ A sample worker config spec is shown below:
 }
 ```
 
-Issuing a GET request at the same URL will return the current worker config spec that is currently in place. The worker config spec list above is just a sample for EC2 and it is possible to extend the code base for other deployment environments. A description of the worker config spec is shown below.
+Issuing a GET request to the same URL returns the current Overlord dynamic config.
 
-|Property|Description|Default|
-|--------|-----------|-------|
-|`selectStrategy`|How to assign tasks to MiddleManagers. Choices are `fillCapacity`, `equalDistribution`, and `javascript`.|equalDistribution|
-|`autoScaler`|Only used if autoscaling is enabled. See below.|null|
+|Property| Description                                                                                                                                                                                 | Default                       |
+|--------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------|
+|`selectStrategy`| Describes how to assign tasks to MiddleManagers. The type can be `equalDistribution`, `equalDistributionWithCategorySpec`, `fillCapacity`, `fillCapacityWithCategorySpec`, and `javascript`. | `{"type":"equalDistribution"}` |
+|`autoScaler`| Only used if autoscaling is enabled. See below. | null |
 
 To view the audit history of worker config issue a GET request to the URL -
 
@@ -1220,39 +1236,73 @@ To view the audit history of worker config issue a GET request to the URL -
 http://<OVERLORD_IP>:<port>/druid/indexer/v1/worker/history?interval=<interval>
 ```
 
-default value of interval can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in Overlord runtime.properties.
+The default value of `interval` can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in Overlord runtime.properties.
 
-To view last <n> entries of the audit history of worker config issue a GET request to the URL -
+To view the last `n` entries of the audit history of worker config, issue a GET request to the following URL:
 
 ```
 http://<OVERLORD_IP>:<port>/druid/indexer/v1/worker/history?count=<n>
 ```
 
-##### Worker Select Strategy
+##### Worker select strategy
 
-Worker select strategies control how Druid assigns tasks to MiddleManagers.
+The select strategy controls how Druid assigns tasks to workers (MiddleManagers).
+At a high level, the select strategy determines the list of eligible workers for a given task using
+either an `affinityConfig` or a `categorySpec`. Then, Druid assigns the task by either trying to distribute load equally
+(`equalDistribution`) or to fill as many workers as possible to capacity (`fillCapacity`).
+There are 4 options for select strategies:
 
-###### Equal Distribution
+- [`equalDistribution`](#equaldistribution)
+- [`equalDistributionWithCategorySpec`](#equaldistributionwithcategoryspec)
+- [`fillCapacity`](#fillcapacity)
+- [`fillCapacityWithCategorySpec`](#fillcapacitywithcategoryspec)
 
-Tasks are assigned to the MiddleManager with the most free slots at the time the task begins running. This is useful if
-you want work evenly distributed across your MiddleManagers.
+A `javascript` option is also available but should only be used for prototyping new strategies.
+
+If an `affinityConfig` is provided (as part of `fillCapacity` and `equalDistribution` strategies) for a given task, the list of workers eligible to be assigned is determined as follows:
+
+- a non-affinity worker if no affinity is specified for that datasource. Any worker not listed in the `affinityConfig` is considered a non-affinity worker.
+- a non-affinity worker if preferred workers are not available and the affinity is _weak_ i.e. `strong: false`.
+- a preferred worker listed in the `affinityConfig` for this datasource if it has available capacity
+- no worker if preferred workers are not available and affinity is _strong_ i.e. `strong: true`. In this case, the task remains in "pending" state. The chosen provisioning strategy (e.g. `pendingTaskBased`) may then use the total number of pending tasks to determine if a new node should be provisioned.
+
+Note that every worker listed in the `affinityConfig` will only be used for the assigned datasources and no other.
+
+If a `categorySpec` is provided (as part of `fillCapacityWithCategorySpec` and `equalDistributionWithCategorySpec` strategies), then a task of a given datasource may be assigned to:
+
+- any worker if no category config is given for task type
+- any worker if category config is given for task type but no category is given for datasource and there's no default category
+- a preferred worker (based on category config and category for datasource) if available
+- any worker if category config and category are given but no preferred worker is available and category config is `weak`
+- not assigned at all if preferred workers are not available and category config is `strong`
+
+In both the cases, Druid determines the list of eligible workers and selects one depending on their load with the goal of either distributing the load equally or filling as few workers as possible.
+
+If you are using auto-scaling, use the `fillCapacity` select strategy since auto-scaled nodes can
+not be assigned a category, and you want the work to be concentrated on the fewest number of workers to allow the empty ones to scale down.
+
+###### `equalDistribution`
+
+Tasks are assigned to the MiddleManager with the most free slots at the time the task begins running.
+This evenly distributes work across your MiddleManagers.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`type`|`equalDistribution`.|required; must be `equalDistribution`|
-|`affinityConfig`|[Affinity config](#affinity) object|null (no affinity)|
+|`type`|`equalDistribution`|required; must be `equalDistribution`|
+|`affinityConfig`|[`AffinityConfig`](#affinityconfig) object|null (no affinity)|
 
-###### Equal Distribution With Category Spec
+###### `equalDistributionWithCategorySpec`
 
-This strategy is a variant of `Equal Distribution`, which support `workerCategorySpec` field rather than `affinityConfig`. By specifying `workerCategorySpec`, you can assign tasks to run on different categories of MiddleManagers based on the tasks' **taskType** and **dataSource name**. This strategy can't work with `AutoScaler` since the behavior is undefined.
+This strategy is a variant of `equalDistribution`, which supports `workerCategorySpec` field rather than `affinityConfig`.
+By specifying `workerCategorySpec`, you can assign tasks to run on different categories of MiddleManagers based on the **type** and **dataSource** of the task.
+This strategy doesn't work with `AutoScaler` since the behavior is undefined.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`type`|`equalDistributionWithCategorySpec`.|required; must be `equalDistributionWithCategorySpec`|
-|`workerCategorySpec`|[Worker Category Spec](#workercategoryspec) object|null (no worker category spec)|
+|`type`|`equalDistributionWithCategorySpec`|required; must be `equalDistributionWithCategorySpec`|
+|`workerCategorySpec`|[`WorkerCategorySpec`](#workercategoryspec) object|null (no worker category spec)|
 
-Example: specify tasks default to run on **c1** whose task
-type is "index_kafka", while dataSource "ds1" run on **c2**.
+Example: tasks of type "index_kafka" default to running on MiddleManagers of category `c1`, except for tasks that write to datasource "ds1," which  run on MiddleManagers of category `c2`.
 
 ```json
 {
@@ -1262,10 +1312,10 @@ type is "index_kafka", while dataSource "ds1" run on **c2**.
       "strong": false,
       "categoryMap": {
         "index_kafka": {
-           "defaultCategory": "c1",
-           "categoryAffinity": {
-              "ds1": "c2"
-           }
+          "defaultCategory": "c1", 
+          "categoryAffinity": {
+            "ds1": "c2"
+          }
         }
       }
     }
@@ -1273,34 +1323,34 @@ type is "index_kafka", while dataSource "ds1" run on **c2**.
 }
 ```
 
-###### Fill Capacity
+###### `fillCapacity`
 
-Tasks are assigned to the worker with the most currently-running tasks at the time the task begins running. This is
-useful in situations where you are elastically auto-scaling MiddleManagers, since it will tend to pack some full and
+Tasks are assigned to the worker with the most currently-running tasks. This is
+useful when you are auto-scaling MiddleManagers since it tends to pack some full and
 leave others empty. The empty ones can be safely terminated.
 
 Note that if `druid.indexer.runner.pendingTasksRunnerNumThreads` is set to _N_ > 1, then this strategy will fill _N_
 MiddleManagers up to capacity simultaneously, rather than a single MiddleManager.
 
-|Property|Description|Default|
-|--------|-----------|-------|
-|`type`|`fillCapacity`.|required; must be `fillCapacity`|
-|`affinityConfig`|[Affinity config](#affinity) object|null (no affinity)|
+|Property| Description                             |Default|
+|--------|-----------------------------------------|-------|
+|`type`| `fillCapacity`                          |required; must be `fillCapacity`|
+|`affinityConfig`| [`AffinityConfig`](#affinityconfig) object |null (no affinity)|
 
-###### Fill Capacity With Category Spec
+###### `fillCapacityWithCategorySpec`
 
-This strategy is a variant of `Fill Capacity`, which support `workerCategorySpec` field rather than `affinityConfig`. The usage is the same with _equalDistributionWithCategorySpec_ strategy. This strategy can't work with `AutoScaler` since the behavior is undefined.
+This strategy is a variant of `fillCapacity`, which supports `workerCategorySpec` instead of an `affinityConfig`.
+The usage is the same as `equalDistributionWithCategorySpec` strategy.
+This strategy doesn't work with `AutoScaler` since the behavior is undefined.
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`type`|`fillCapacityWithCategorySpec`.|required; must be `fillCapacityWithCategorySpec`|
-|`workerCategorySpec`|[Worker Category Spec](#workercategoryspec) object|null (no worker category spec)|
-
-> Before using the _equalDistributionWithCategorySpec_ and _fillCapacityWithCategorySpec_ strategies, you must upgrade overlord and all MiddleManagers to the version that support this feature.
+|`workerCategorySpec`|[`WorkerCategorySpec`](#workercategoryspec) object|null (no worker category spec)|
 
 <a name="javascript-worker-select-strategy"></a>
 
-###### JavaScript
+###### `javascript`
 
 Allows defining arbitrary logic for selecting workers to run task using a JavaScript function.
 The function is passed remoteTaskRunnerConfig, map of workerId to available workers and task to be executed and returns the workerId on which the task should be run or null if the task cannot be run.
@@ -1310,32 +1360,33 @@ its better to write a druid extension module with extending current worker selec
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`type`|`javascript`.|required; must be `javascript`|
+|`type`|`javascript`|required; must be `javascript`|
 |`function`|String representing JavaScript function| |
 
 Example: a function that sends batch_index_task to workers 10.0.0.1 and 10.0.0.2 and all other tasks to other available workers.
 
 ```
 {
-"type":"javascript",
-"function":"function (config, zkWorkers, task) {\nvar batch_workers = new java.util.ArrayList();\nbatch_workers.add(\"middleManager1_hostname:8091\");\nbatch_workers.add(\"middleManager2_hostname:8091\");\nworkers = zkWorkers.keySet().toArray();\nvar sortedWorkers = new Array()\n;for(var i = 0; i < workers.length; i++){\n sortedWorkers[i] = workers[i];\n}\nArray.prototype.sort.call(sortedWorkers,function(a, b){return zkWorkers.get(b).getCurrCapacityUsed() - zkWorkers.get(a).getCurrCapacityUsed();});\nvar minWorkerVer = config.getMinWorkerVersion();\nfor (var i = 0; i < sortedWorkers.length; i++) {\n var worker = sortedWorkers[i];\n  var zkWorker = zkWorkers.get(worker);\n  if(zkWorker.canRunTask(task) && zkWorker.isValidVersion(minWorkerVer)){\n    if(task.getType() == 'index_hadoop' && batch_workers.contains(worker)){\n      return worker;\n    } else {\n      if(task.getType() != 'index_hadoop' && !batch_workers.contains(worker)){\n        return worker;\n      }\n    }\n  }\n}\nreturn null;\n}"
+  "type":"javascript",
+  "function":"function (config, zkWorkers, task) {\nvar batch_workers = new java.util.ArrayList();\nbatch_workers.add(\"middleManager1_hostname:8091\");\nbatch_workers.add(\"middleManager2_hostname:8091\");\nworkers = zkWorkers.keySet().toArray();\nvar sortedWorkers = new Array()\n;for(var i = 0; i < workers.length; i++){\n sortedWorkers[i] = workers[i];\n}\nArray.prototype.sort.call(sortedWorkers,function(a, b){return zkWorkers.get(b).getCurrCapacityUsed() - zkWorkers.get(a).getCurrCapacityUsed();});\nvar minWorkerVer = config.getMinWorkerVersion();\nfor (var i = 0; i < sortedWorkers.length; i++) {\n var worker = sortedWorkers[i];\n  var zkWorker = zkWorkers.get(worker);\n  if(zkWorker.canRunTask(task) && zkWorker.isValidVersion(minWorkerVer)){\n    if(task.getType() == 'index_hadoop' && batch_workers.contains(worker)){\n      return worker;\n    } else {\n      if(task.getType() != 'index_hadoop' && !batch_workers.contains(worker)){\n        return worker;\n      }\n    }\n  }\n}\nreturn null;\n}"
 }
 ```
 
 > JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
 
-###### Affinity
+###### affinityConfig
 
-Use the `affinityConfig` field to pass affinity configuration to the _equalDistribution_ and _fillCapacity_ strategies. If not provided, the default is to not use affinity at all.
+Use the `affinityConfig` field to pass affinity configuration to the `equalDistribution` and `fillCapacity` strategies.
+If not provided, the default is to have no affinity.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`affinity`|JSON object mapping a datasource String name to a list of indexing service MiddleManager host:port String values. Druid doesn't perform DNS resolution, so the 'host' value must match what is configured on the MiddleManager and what the MiddleManager announces itself as (examine the Overlord logs to see what your MiddleManager announces itself as).|{}|
+|`affinity`|JSON object mapping a datasource String name to a list of indexing service MiddleManager `host:port` values. Druid doesn't perform DNS resolution, so the 'host' value must match what is configured on the MiddleManager and what the MiddleManager announces itself as (examine the Overlord logs to see what your MiddleManager announces itself as).|{}|
 |`strong`|When `true` tasks for a datasource must be assigned to affinity-mapped MiddleManagers. Tasks remain queued until a slot becomes available.  When `false`, Druid may assign tasks for a datasource to other MiddleManagers when affinity-mapped MiddleManagers are unavailable to run queued tasks.|false|
 
-###### WorkerCategorySpec
+###### workerCategorySpec
 
-WorkerCategorySpec can be provided to the _equalDistributionWithCategorySpec_ and _fillCapacityWithCategorySpec_ strategies using the "workerCategorySpec"
+WorkerCategorySpec can be provided to the `equalDistributionWithCategorySpec` and `fillCapacityWithCategorySpec` strategies using the `workerCategorySpec`
 field. If not provided, the default is to not use it at all.
 
 |Property|Description|Default|
@@ -1356,13 +1407,14 @@ Amazon's EC2 together with Google's GCE are currently the only supported autosca
 
 EC2's autoscaler properties are:
 
-|Property|Description|Default|
-|--------|-----------|-------|
-|`minNumWorkers`|The minimum number of workers that can be in the cluster at any given time.|0|
-|`maxNumWorkers`|The maximum number of workers that can be in the cluster at any given time.|0|
-|`availabilityZone`|What availability zone to run in.|none|
-|`nodeData`|A JSON object that describes how to launch new nodes.|none; required|
-|`userData`|A JSON object that describes how to configure new nodes. If you have set druid.indexer.autoscale.workerVersion, this must have a versionReplacementString. Otherwise, a versionReplacementString is not necessary.|none; optional|
+| Property                     | Description                                                                                                                                                                                                        |Default|
+|------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------|
+| `type`                       | `ec2`                                                                                                                                                                                                              |0|
+| `minNumWorkers`              | The minimum number of workers that can be in the cluster at any given time.                                                                                                                                        |0|
+| `maxNumWorkers`              | The maximum number of workers that can be in the cluster at any given time.                                                                                                                                        |0|
+| `envConfig.availabilityZone` | What Amazon availability zone to run in.                                                                                                                                                                           |none|
+| `envConfig.nodeData`         | A JSON object that describes how to launch new nodes.                                                                                                                                                              |none; required|
+| `envConfig.userData`         | A JSON object that describes how to configure new nodes. If you have set druid.indexer.autoscale.workerVersion, this must have a versionReplacementString. Otherwise, a versionReplacementString is not necessary. |none; optional|
 
 For GCE's properties, please refer to the [gce-extensions](../development/extensions-contrib/gce-extensions.md).
 
@@ -1370,7 +1422,7 @@ For GCE's properties, please refer to the [gce-extensions](../development/extens
 
 This section contains the configuration options for the processes that reside on Data servers (MiddleManagers/Peons and Historicals) in the suggested [three-server configuration](../design/processes.md#server-types).
 
-Configuration options for the experimental [Indexer process](../design/indexer.md) are also provided here.
+Configuration options for the [Indexer process](../design/indexer.md) are also provided here.
 
 ### MiddleManager and Peons
 
@@ -1458,7 +1510,8 @@ Additional peon configs include:
 |--------|-----------|-------|
 |`druid.peon.mode`|Choices are "local" and "remote". Setting this to local means you intend to run the peon as a standalone process (Not recommended).|remote|
 |`druid.indexer.task.baseDir`|Base temporary working directory.|`System.getProperty("java.io.tmpdir")`|
-|`druid.indexer.task.baseTaskDir`|Base temporary working directory for tasks.|`${druid.indexer.task.baseDir}/persistent/task`|
+|`druid.indexer.task.baseTaskDir`|Deprecated. Base temporary working directory for tasks.|`${druid.indexer.task.baseDir}/persistent/task`|
+|`druid.indexer.task.baseTaskDirPaths`|List of base temporary working directories, one of which is assigned per task in a round-robin fashion. This property can be used to allow usage of multiple disks for indexing. This property is recommended in place of `${druid.indexer.task.baseTaskDir}`. If a null or empty value is provided, `baseTaskDir` is used. Otherwise, it overrides the value of `baseTaskDir`. Example: `druid.indexer.task.baseTaskDirPaths=[\"PATH1\",\"PATH2\",...]`.|null|
 |`druid.indexer.task.batchProcessingMode`| Batch ingestion tasks have three operating modes to control construction and tracking for intermediary segments: `OPEN_SEGMENTS`, `CLOSED_SEGMENTS`, and `CLOSED_SEGMENT_SINKS`. `OPEN_SEGMENTS` uses the streaming ingestion code path and performs a `mmap` on intermediary segments to build a timeline to make these segments available to realtime queries. Batch ingestion doesn't require intermediary segments, so the default mode, `CLOSED_SEGMENTS`, eliminates `mmap` of intermediary segments. `CLOSED_SEGMENTS` mode still tracks the entire set of segments in heap. The `CLOSED_SEGMENTS_SINKS` mode is the most aggressive configuration and should have the smallest memory footprint. It eliminates in-memory tracking and `mmap` of intermediary segments produced during segment creation. `CLOSED_SEGMENTS_SINKS` mode isn't as well tested as other modes so is currently considered experimental. You can use `OPEN_SEGMENTS` mode if problems occur with the 2 newer modes. |`CLOSED_SEGMENTS`|
 |`druid.indexer.task.defaultHadoopCoordinates`|Hadoop version to use with HadoopIndexTasks that do not request a particular version.|org.apache.hadoop:hadoop-client:2.8.5|
 |`druid.indexer.task.defaultRowFlushBoundary`|Highest row count before persisting to disk. Used for indexing generating tasks.|75000|
@@ -1483,7 +1536,7 @@ If the peon is running in remote mode, there must be an Overlord up and running.
 When new segments are created, Druid temporarily stores some preprocessed data in some buffers. Currently three types of
 *medium* exist for those buffers: *temporary files*, *off-heap memory*, and *on-heap memory*.
 
-*Temporary files* (`tmpFile`) are stored under the task working directory (see `druid.indexer.task.baseTaskDir`
+*Temporary files* (`tmpFile`) are stored under the task working directory (see `druid.indexer.task.baseTaskDirPaths`
 configuration above) and thus share it's mounting properties, e. g. they could be backed by HDD, SSD or memory (tmpfs).
 This type of medium may do unnecessary disk I/O and requires some disk space to be available.
 
@@ -1527,7 +1580,8 @@ then the value from the configuration below is used:
 |`druid.worker.globalIngestionHeapLimitBytes`|Total amount of heap available for ingestion processing. This is applied by automatically setting the `maxBytesInMemory` property on tasks.|60% of configured JVM heap|
 |`druid.worker.numConcurrentMerges`|Maximum number of segment persist or merge operations that can run concurrently across all tasks.|`druid.worker.capacity` / 2, rounded down|
 |`druid.indexer.task.baseDir`|Base temporary working directory.|`System.getProperty("java.io.tmpdir")`|
-|`druid.indexer.task.baseTaskDir`|Base temporary working directory for tasks.|`${druid.indexer.task.baseDir}/persistent/tasks`|
+|`druid.indexer.task.baseTaskDir`|Deprecated. Base temporary working directory for tasks.|`${druid.indexer.task.baseDir}/persistent/tasks`|
+|`druid.indexer.task.baseTaskDirPaths`|List of base temporary working directories, one of which is assigned per task in a round-robin fashion. This property can be used to allow usage of multiple disks for indexing. This property is recommended in place of `${druid.indexer.task.baseTaskDir}`. If a null or empty value is provided, `baseTaskDir` is used. Otherwise, it overrides the value of `baseTaskDir`. Example: `druid.indexer.task.baseTaskDirPaths=[\"PATH1\",\"PATH2\",...]`.|null|
 |`druid.indexer.task.defaultHadoopCoordinates`|Hadoop version to use with HadoopIndexTasks that do not request a particular version.|org.apache.hadoop:hadoop-client:2.8.5|
 |`druid.indexer.task.gracefulShutdownTimeout`|Wait this long on Indexer restart for restorable tasks to gracefully exit.|PT5M|
 |`druid.indexer.task.hadoopWorkingPath`|Temporary working directory for Hadoop tasks.|`/tmp/druid-indexing`|
@@ -1790,7 +1844,7 @@ This laning strategy is best suited for cases where one or more external applica
 
 ##### Server Configuration
 
-Druid uses Jetty to serve HTTP requests. Each query being processed consumes a single thread from `druid.server.http.numThreads`, so consider defining `druid.query.scheduler.numThreads` to a lower value in order to reserve HTTP threads for responding to health checks, lookup loading, and other non-query, and in most cases comparatively very short lived, HTTP requests.
+Druid uses Jetty to serve HTTP requests. Each query being processed consumes a single thread from `druid.server.http.numThreads`, so consider defining `druid.query.scheduler.numThreads` to a lower value in order to reserve HTTP threads for responding to health checks, lookup loading, and other non-query, (in most cases) comparatively very short-lived, HTTP requests.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1800,16 +1854,17 @@ Druid uses Jetty to serve HTTP requests. Each query being processed consumes a s
 |`druid.server.http.enableRequestLimit`|If enabled, no requests would be queued in jetty queue and "HTTP 429 Too Many Requests" error response would be sent. |false|
 |`druid.server.http.defaultQueryTimeout`|Query timeout in millis, beyond which unfinished queries will be cancelled|300000|
 |`druid.server.http.maxScatterGatherBytes`|Maximum number of bytes gathered from data processes such as Historicals and realtime processes to execute a query. Queries that exceed this limit will fail. This is an advance configuration that allows to protect in case Broker is under heavy load and not utilizing the data gathered in memory fast enough and leading to OOMs. This limit can be further reduced at query time using `maxScatterGatherBytes` in the context. Note that having large limit is not necessarily bad if broker is never under heavy concurrent load in which case data gathered is processed quickly and freeing up the memory used. Human-readable format is supported, see [here](human-readable-byte.md). |Long.MAX_VALUE|
-|`druid.server.http.maxSubqueryRows`|Maximum number of rows from all subqueries per query. Druid stores the subquery rows in temporary tables that live in the Java heap. `druid.server.http.maxSubqueryRows` is a guardrail to prevent the system from exhausting available heap. When a subquery exceeds the row limit, Druid throws a resource limit exceeded exception: "Subquery generated results beyond maximum."<br><br>It is a good practice to avoid large subqueries in Druid. However, if you choose to raise the subquery row limit, you must also increase the heap size of all Brokers, Historicals, and task Peons that process data for the subqueries to accommodate the subquery results.<br><br>There is no formula to calculate the correct value. Trial and error is the best approach.|100000|
+|`druid.server.http.maxSubqueryRows`|Maximum number of rows from all subqueries per query. Druid stores the subquery rows in temporary tables that live in the Java heap. `druid.server.http.maxSubqueryRows` is a guardrail to prevent the system from exhausting available heap. When a subquery exceeds the row limit, Druid throws a resource limit exceeded exception: "Subquery generated results beyond maximum."<br /><br />It is a good practice to avoid large subqueries in Druid. However, if you choose to raise the subquery row limit, you must also increase the heap size of all Brokers, Historicals, and task Peons that process data for the subqueries to accommodate the subquery results.<br /><br />There is no formula to calculate the correct value. Trial and error is the best approach.|100000|
 |`druid.server.http.gracefulShutdownTimeout`|The maximum amount of time Jetty waits after receiving shutdown signal. After this timeout the threads will be forcefully shutdown. This allows any queries that are executing to complete(Only values greater than zero are valid).|`PT30S`|
 |`druid.server.http.unannouncePropagationDelay`|How long to wait for ZooKeeper unannouncements to propagate before shutting down Jetty. This is a minimum and `druid.server.http.gracefulShutdownTimeout` does not start counting down until after this period elapses.|`PT0S` (do not wait)|
 |`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.md) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks. |8 * 1024|
 |`druid.server.http.contentSecurityPolicy`|Content-Security-Policy header value to set on each non-POST response. Setting this property to an empty string, or omitting it, both result in the default `frame-ancestors: none` being set.|`frame-ancestors 'none'`|
+|`druid.server.http.enableHSTS`|If set to true, druid services will add strict transport security header `Strict-Transport-Security: max-age=63072000; includeSubDomains` to all HTTP responses|`false`|
 
 ##### Client Configuration
 
-Druid Brokers use an HTTP client to communicate with with data servers (Historical servers and real-time tasks). This
+Druid Brokers use an HTTP client to communicate with data servers (Historical servers and real-time tasks). This
 client has the following configuration options.
 
 |Property|Description|Default|
@@ -1887,6 +1942,7 @@ The Druid SQL server is configured through the following properties on the Broke
 |`druid.sql.avatica.minRowsPerFrame`|Minimum acceptable value for the JDBC client `Statement.setFetchSize` method. The value for this property must greater than 0. If the JDBC client calls `Statement.setFetchSize` with a lesser value, Druid uses `minRowsPerFrame` instead. If `maxRowsPerFrame` is less than `minRowsPerFrame`, Druid uses the minimum value of the two. For handling queries which produce results with a large number of rows, you can increase this value to reduce the number of fetches required to completely transfer the result set.|100|
 |`druid.sql.avatica.maxStatementsPerConnection`|Maximum number of simultaneous open statements per Avatica client connection.|4|
 |`druid.sql.avatica.connectionIdleTimeout`|Avatica client connection idle timeout.|PT5M|
+|`druid.sql.avatica.fetchTimeoutMs`|Avatica fetch timeout, in milliseconds. When a request for the next batch of data takes longer than this time, Druid returns an empty result set, causing the client to poll again. This avoids HTTP timeouts for long-running queries. The default of 5 sec. is good for most cases. |5000|
 |`druid.sql.http.enable`|Whether to enable JSON over HTTP querying at `/druid/v2/sql/`.|true|
 |`druid.sql.planner.maxTopNLimit`|Maximum threshold for a [TopN query](../querying/topnquery.md). Higher limits will be planned as [GroupBy queries](../querying/groupbyquery.md) instead.|100000|
 |`druid.sql.planner.metadataRefreshPeriod`|Throttle for metadata refreshes.|PT1M|
@@ -1900,7 +1956,7 @@ The Druid SQL server is configured through the following properties on the Broke
 |`druid.sql.planner.authorizeSystemTablesDirectly`|If true, Druid authorizes queries against any of the system schema tables (`sys` in SQL) as `SYSTEM_TABLE` resources which require `READ` access, in addition to permissions based content filtering.|false|
 |`druid.sql.planner.useNativeQueryExplain`|If true, `EXPLAIN PLAN FOR` will return the explain plan as a JSON representation of equivalent native query(s), else it will return the original version of explain plan generated by Calcite. It can be overridden per query with `useNativeQueryExplain` context key.|true|
 |`druid.sql.planner.maxNumericInFilters`|Max limit for the amount of numeric values that can be compared for a string type dimension when the entire SQL WHERE clause of a query translates to an [OR](../querying/filters.md#or) of [Bound filter](../querying/filters.md#bound-filter). By default, Druid does not restrict the amount of numeric Bound Filters on String columns, although this situation may block other queries from running. Set this property to a smaller value to prevent Druid from running queries that have prohibitively long segment processing times. The optimal limit requires some trial and error; we recommend starting with 100.  Users who submit a query that exceeds the limit of `maxNumericInFilters` should instead rewrite their queries to use strings in the `WHERE` clause instead of numbers. For example, `WHERE someString IN (‘123’, ‘456’)`. If this value is disabled, `maxNumericInFilters` set through query context is ignored.|`-1` (disabled)|
-|`druid.sql.approxCountDistinct.function`|Implementation to use for the [`APPROX_COUNT_DISTINCT` function](../querying/sql-aggregations.md). Without extensions loaded, the only valid value is `APPROX_COUNT_DISTINCT_BUILTIN` (a HyperLogLog, or HLL, based implementation). If the [DataSketches extension](../development/extensions-core/datasketches-extension.md) is loaded, this can also be `APPROX_COUNT_DISTINCT_DS_HLL` (alternative HLL implementation) or `APPROX_COUNT_DISTINCT_DS_THETA`.<br><br>Theta sketches use significantly more memory than HLL sketches, so you should prefer one of the two HLL implementations.|APPROX_COUNT_DISTINCT_BUILTIN|
+|`druid.sql.approxCountDistinct.function`|Implementation to use for the [`APPROX_COUNT_DISTINCT` function](../querying/sql-aggregations.md). Without extensions loaded, the only valid value is `APPROX_COUNT_DISTINCT_BUILTIN` (a HyperLogLog, or HLL, based implementation). If the [DataSketches extension](../development/extensions-core/datasketches-extension.md) is loaded, this can also be `APPROX_COUNT_DISTINCT_DS_HLL` (alternative HLL implementation) or `APPROX_COUNT_DISTINCT_DS_THETA`.<br /><br />Theta sketches use significantly more memory than HLL sketches, so you should prefer one of the two HLL implementations.|APPROX_COUNT_DISTINCT_BUILTIN|
 
 > Previous versions of Druid had properties named `druid.sql.planner.maxQueryCount` and `druid.sql.planner.maxSemiJoinRowsInMemory`.
 > These properties are no longer available. Since Druid 0.18.0, you can use `druid.server.http.maxSubqueryRows` to control the maximum
@@ -1929,7 +1985,7 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
 #### Segment Discovery
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.serverview.type`|batch or http|Segment discovery method to use. "http" enables discovering segments using HTTP instead of ZooKeeper.|batch|
+|`druid.serverview.type`|batch or http|Segment discovery method to use. "http" enables discovering segments using HTTP instead of ZooKeeper.|http|
 |`druid.broker.segment.watchedTiers`|List of strings|The Broker watches segment announcements from processes that serve segments to build a cache to relate each process to the segments it serves. This configuration allows the Broker to only consider segments being served from a list of tiers. By default, Broker considers all tiers. This can be used to partition your dataSources in specific Historical tiers and configure brokers in partitions so that they are only queryable for specific dataSources. This config is mutually exclusive from `druid.broker.segment.ignoredTiers` and at most one of these can be configured on a Broker.|none|
 |`druid.broker.segment.ignoredTiers`|List of strings|The Broker watches segment announcements from processes that serve segments to build a cache to relate each process to the segments it serves. This configuration allows the Broker to ignore the segments being served from a list of tiers. By default, Broker considers all tiers. This config is mutually exclusive from `druid.broker.segment.watchedTiers` and at most one of these can be configured on a Broker.|none|
 |`druid.broker.segment.watchedDataSources`|List of strings|Broker watches the segment announcements from processes serving segments to build cache of which process is serving which segments, this configuration allows to only consider segments being served from a whitelist of dataSources. By default, Broker would consider all datasources. This can be used to configure brokers in partitions so that they are only queryable for specific dataSources.|none|
@@ -2044,9 +2100,9 @@ This section describes configurations that control behavior of Druid's query typ
 
 ### Overriding default query context values
 
-Any [Query Context General Parameter](../querying/query-context.md#general-parameters) default value can be
-overridden by setting runtime property in the format of `druid.query.default.context.{query_context_key}`.
-`druid.query.default.context.{query_context_key}` runtime property prefix applies to all current and future
+Any [query context general parameter](../querying/query-context.md#general-parameters) default value can be
+overridden by setting the runtime property in the format of `druid.query.default.context.{query_context_key}`.
+The `druid.query.default.context.{query_context_key}` runtime property prefix applies to all current and future
 query context keys, the same as how query context parameter passed with the query works. Note that the runtime property
 value can be overridden if value for the same key is explicitly specify in the query contexts.
 
@@ -2182,7 +2238,7 @@ Supported query contexts:
 |Key|Description|Default|
 |---|-----------|-------|
 |`druid.expressions.useStrictBooleans`|Controls the behavior of Druid boolean operators and functions, if set to `true` all boolean values will be either a `1` or `0`. See [expression documentation](../misc/math-expr.md#logical-operator-modes)|false|
-|`druid.expressions.allowNestedArrays`|If enabled, Druid array expressions can create nested arrays. This is experimental and should be used with caution.|false|
+|`druid.expressions.allowNestedArrays`|If enabled, Druid array expressions can create nested arrays.|false|
 ### Router
 
 #### Router Process Configs
@@ -2200,7 +2256,7 @@ Supported query contexts:
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.router.defaultBrokerServiceName`|The default Broker to connect to in case service discovery fails.|druid/broker|
-|`druid.router.tierToBrokerMap`|Queries for a certain tier of data are routed to their appropriate Broker. This value should be an ordered JSON map of tiers to Broker names. The priority of Brokers is based on the ordering.|{"_default_tier": "<defaultBrokerServiceName>"}|
+|`druid.router.tierToBrokerMap`|Queries for a certain tier of data are routed to their appropriate Broker. This value should be an ordered JSON map of tiers to Broker names. The priority of Brokers is based on the ordering.|`{"_default_tier": "<defaultBrokerServiceName>"}`|
 |`druid.router.defaultRule`|The default rule for all datasources.|"_default"|
 |`druid.router.pollPeriod`|How often to poll for new rules.|PT1M|
 |`druid.router.sql.enable`|Enable routing of SQL queries using strategies. When`true`, the Router uses the  strategies defined in `druid.router.strategies` to determine the broker service for a given SQL query. When `false`, the Router uses the `defaultBrokerServiceName`.|`false`|

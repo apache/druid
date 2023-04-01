@@ -22,9 +22,6 @@ title: "Cached Lookup Module"
   ~ under the License.
   -->
 
-
-> Please note that this is an experimental module and the development/testing still at early stage. Feel free to try it and give us your feedback.
-
 ## Description
 This Apache Druid module provides a per-lookup caching mechanism for JDBC data sources.
 The main goal of this cache is to speed up the access to a high latency lookup sources and to provide a caching isolation for every lookup source.

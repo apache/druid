@@ -38,6 +38,7 @@ import org.apache.druid.segment.nested.StructuredDataProcessor;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -479,10 +480,25 @@ public class NestedDataExpressions
       final StructuredDataProcessor processor = new StructuredDataProcessor()
       {
         @Override
-        public int processLiteralField(String fieldName, Object fieldValue)
+        public ProcessedValue<?> processField(ArrayList<NestedPathPart> fieldPath, @Nullable Object fieldValue)
         {
           // do nothing, we only want the list of fields returned by this processor
-          return 0;
+          return ProcessedValue.NULL_LITERAL;
+        }
+
+        @Nullable
+        @Override
+        public ProcessedValue<?> processArrayField(
+            ArrayList<NestedPathPart> fieldPath,
+            @Nullable List<?> array
+        )
+        {
+          // we only want to return a non-null value here if the value is an array of primitive values
+          ExprEval<?> eval = ExprEval.bestEffortArray(array);
+          if (eval.type().isArray() && eval.type().getElementType().isPrimitive()) {
+            return ProcessedValue.NULL_LITERAL;
+          }
+          return null;
         }
       };
 
@@ -500,9 +516,9 @@ public class NestedDataExpressions
           // maybe in the future ProcessResults should deal in PathFinder.PathPart instead of strings for fields
           StructuredDataProcessor.ProcessResults info = processor.processFields(unwrap(input));
           List<String> transformed = info.getLiteralFields()
-                                        .stream()
-                                        .map(p -> NestedPathFinder.toNormalizedJsonPath(NestedPathFinder.parseJqPath(p)))
-                                        .collect(Collectors.toList());
+                                         .stream()
+                                         .map(NestedPathFinder::toNormalizedJsonPath)
+                                         .collect(Collectors.toList());
           return ExprEval.ofType(
               ExpressionType.STRING_ARRAY,
               transformed

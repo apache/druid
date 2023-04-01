@@ -20,14 +20,12 @@
 package org.apache.druid.compressedbigdecimal;
 
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
-import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 
 /**
@@ -36,7 +34,7 @@ import java.nio.ByteBuffer;
 public class CompressedBigDecimalMetricSerde extends ComplexMetricSerde
 {
 
-  private CompressedBigDecimalObjectStrategy strategy = new CompressedBigDecimalObjectStrategy();
+  private final CompressedBigDecimalObjectStrategy strategy = new CompressedBigDecimalObjectStrategy();
 
   /* (non-Javadoc)
    * @see ComplexMetricSerde#getTypeName()
@@ -48,32 +46,22 @@ public class CompressedBigDecimalMetricSerde extends ComplexMetricSerde
   }
 
   @Override
-  public ComplexMetricExtractor<CompressedBigDecimal<?>> getExtractor()
+  public ComplexMetricExtractor<CompressedBigDecimal> getExtractor()
   {
-    return new ComplexMetricExtractor<CompressedBigDecimal<?>>()
+    return new ComplexMetricExtractor<CompressedBigDecimal>()
     {
-      @SuppressWarnings("unchecked")
       @Override
-      public Class<CompressedBigDecimal<?>> extractedClass()
+      public Class<CompressedBigDecimal> extractedClass()
       {
-        return (Class<CompressedBigDecimal<?>>) (Class<?>) CompressedBigDecimal.class;
+        return CompressedBigDecimal.class;
       }
 
       @Override
-      public CompressedBigDecimal<?> extractValue(InputRow inputRow, String metricName)
+      public CompressedBigDecimal extractValue(InputRow inputRow, String metricName)
       {
         Object rawMetric = inputRow.getRaw(metricName);
-        if (rawMetric == null) {
-          return null;
-        } else if (rawMetric instanceof BigDecimal) {
-          return new ArrayCompressedBigDecimal((BigDecimal) rawMetric);
-        } else if (rawMetric instanceof String) {
-          return new ArrayCompressedBigDecimal(new BigDecimal((String) rawMetric));
-        } else if (rawMetric instanceof CompressedBigDecimal<?>) {
-          return (CompressedBigDecimal<?>) rawMetric;
-        } else {
-          throw new ISE("Unknown extraction value type: [%s]", rawMetric.getClass().getSimpleName());
-        }
+
+        return Utils.objToCompressedBigDecimal(rawMetric);
       }
     };
   }
@@ -95,7 +83,8 @@ public class CompressedBigDecimalMetricSerde extends ComplexMetricSerde
   @Override
   public CompressedBigDecimalLongColumnSerializer getSerializer(
       SegmentWriteOutMedium segmentWriteOutMedium,
-      String column)
+      String column
+  )
   {
     return CompressedBigDecimalLongColumnSerializer.create(segmentWriteOutMedium, column);
   }
@@ -104,7 +93,7 @@ public class CompressedBigDecimalMetricSerde extends ComplexMetricSerde
    * @see ComplexMetricSerde#getObjectStrategy()
    */
   @Override
-  public ObjectStrategy<CompressedBigDecimal<?>> getObjectStrategy()
+  public ObjectStrategy<CompressedBigDecimal> getObjectStrategy()
   {
     return strategy;
   }

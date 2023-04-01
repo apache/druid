@@ -1,7 +1,7 @@
 ---
 id: native-batch-simple-task
 title: "Native batch simple task indexing"
-sidebar_label: "Simple task indexing"
+sidebar_label: "Native batch (simple)"
 ---
 
 <!--
@@ -23,7 +23,10 @@ sidebar_label: "Simple task indexing"
   ~ under the License.
   -->
 
-The simple task (type `index`) is designed to ingest small data sets into Apache Druid. The task executes within the indexing service. For general information on native batch indexing and parallel task indexing, see [Native batch ingestion](./native-batch.md).
+> This page describes native batch ingestion using [ingestion specs](ingestion-spec.md). Refer to the [ingestion
+> methods](../ingestion/index.md#batch) table to determine which ingestion method is right for you.
+
+The simple task ([task type](tasks.md) `index`) executes single-threaded as a single task within the indexing service. For parallel, scalable options consider using [`index_parallel` tasks](./native-batch.md) or [SQL-based batch ingestion](../multi-stage-query/index.md).
 
 ## Simple task example
 
@@ -143,7 +146,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](rollup.md). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. If this is set to true, the index task will read the entire input data twice: one for finding the optimal number of partitions per time chunk and one for generating segments. Note that the result segments would be hash-partitioned. This flag cannot be used with `appendToExisting` of IOConfig. For more details, see the below __Segment pushing modes__ section.|false|no|
 |reportParseExceptions|DEPRECATED. If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped. Setting `reportParseExceptions` to true will override existing configurations for `maxParseExceptions` and `maxSavedParseExceptions`, setting `maxParseExceptions` to 0 and limiting `maxSavedParseExceptions` to no more than 1.|false|no|
 |pushTimeout|Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.|0|no|
-|segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](#segmentwriteoutmediumfactory).|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used|no|
+|segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](native-batch.md#segmentwriteoutmediumfactory).|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used|no|
 |logParseExceptions|If true, log an error message when a parsing exception occurs, containing information about the row where the error occurred.|false|no|
 |maxParseExceptions|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overridden if `reportParseExceptions` is set.|unlimited|no|
 |maxSavedParseExceptions|When a parse exception occurs, Druid can keep track of the most recent parse exceptions. "maxSavedParseExceptions" limits how many exception instances will be saved. These saved exceptions will be made available after the task finishes in the [task completion report](tasks.md#task-reports). Overridden if `reportParseExceptions` is set.|0|no|
@@ -169,12 +172,6 @@ For best-effort rollup, you should use `dynamic`.
 |type|This should always be `dynamic`|none|yes|
 |maxRowsPerSegment|Used in sharding. Determines how many rows are in each segment.|5000000|no|
 |maxTotalRows|Total number of rows in segments waiting for being pushed.|20000000|no|
-
-### `segmentWriteOutMediumFactory`
-
-|Field|Type|Description|Required|
-|-----|----|-----------|--------|
-|type|String|See [Additional Peon Configuration: SegmentWriteOutMediumFactory](../configuration/index.md#segmentwriteoutmediumfactory) for explanation and available options.|yes|
 
 ## Segment pushing modes
 

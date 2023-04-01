@@ -38,9 +38,9 @@ import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -80,8 +80,7 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
       .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
       .build();
 
-  private static final PlannerContext PLANNER_CONTEXT = PlannerContext.create(
-      "SELECT 1", // The actual query isn't important for this test
+  private static final PlannerToolbox PLANNER_TOOLBOX = new PlannerToolbox(
       new DruidOperatorTable(
           Collections.emptySet(),
           ImmutableSet.of(new DirectOperatorConversion(OPERATOR, "hyper_unique"))
@@ -96,8 +95,19 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
               NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
           )
       ),
-      null /* Don't need an engine */,
-      new QueryContext()
+      CalciteTests.createJoinableFactoryWrapper(),
+      CatalogResolver.NULL_RESOLVER,
+      "druid",
+      new CalciteRulesManager(ImmutableSet.of()),
+      CalciteTests.TEST_AUTHORIZER_MAPPER,
+      AuthConfig.newBuilder().build()
+  );
+  private static final PlannerContext PLANNER_CONTEXT = PlannerContext.create(
+      PLANNER_TOOLBOX,
+      "SELECT 1", // The actual query isn't important for this test
+      null, /* Don't need an engine */
+      Collections.emptyMap(),
+      null
   );
 
   private final RexBuilder rexBuilder = new RexBuilder(new JavaTypeFactoryImpl());

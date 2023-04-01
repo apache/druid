@@ -41,6 +41,7 @@ import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
@@ -100,6 +101,48 @@ public class IndexerWorkerClient implements WorkerClient
         new RequestBuilder(HttpMethod.POST, "/workOrder")
             .jsonContent(jsonMapper, workOrder),
         IgnoreHttpResponseHandler.INSTANCE
+    );
+  }
+
+  @Override
+  public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshot(
+      String workerTaskId,
+      String queryId,
+      int stageNumber
+  )
+  {
+    String path = StringUtils.format("/keyStatistics/%s/%d",
+                                     StringUtils.urlEncode(queryId),
+                                     stageNumber);
+
+    return FutureUtils.transform(
+        getClient(workerTaskId).asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> deserialize(holder, new TypeReference<ClusterByStatisticsSnapshot>() {})
+    );
+  }
+
+  @Override
+  public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshotForTimeChunk(
+      String workerTaskId,
+      String queryId,
+      int stageNumber,
+      long timeChunk
+  )
+  {
+    String path = StringUtils.format("/keyStatisticsForTimeChunk/%s/%d/%d",
+                                     StringUtils.urlEncode(queryId),
+                                     stageNumber,
+                                     timeChunk);
+
+    return FutureUtils.transform(
+        getClient(workerTaskId).asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> deserialize(holder, new TypeReference<ClusterByStatisticsSnapshot>() {})
     );
   }
 

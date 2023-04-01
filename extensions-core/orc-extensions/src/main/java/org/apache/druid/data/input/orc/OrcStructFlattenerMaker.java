@@ -25,6 +25,7 @@ import com.jayway.jsonpath.Option;
 import com.jayway.jsonpath.spi.json.JsonProvider;
 import org.apache.druid.java.util.common.parsers.NotImplementedMappingProvider;
 import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.orc.TypeDescription;
 import org.apache.orc.mapred.OrcList;
 import org.apache.orc.mapred.OrcMap;
@@ -42,7 +43,9 @@ public class OrcStructFlattenerMaker implements ObjectFlatteners.FlattenerMaker<
   private final JsonProvider orcJsonProvider;
   private final OrcStructConverter converter;
 
-  OrcStructFlattenerMaker(boolean binaryAsString)
+  private final boolean discoverNestedFields;
+
+  OrcStructFlattenerMaker(boolean binaryAsString, boolean disocverNestedFields)
   {
     this.converter = new OrcStructConverter(binaryAsString);
     this.orcJsonProvider = new OrcStructJsonProvider(converter);
@@ -51,11 +54,17 @@ public class OrcStructFlattenerMaker implements ObjectFlatteners.FlattenerMaker<
                                               .mappingProvider(new NotImplementedMappingProvider())
                                               .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                                               .build();
+    this.discoverNestedFields = disocverNestedFields;
   }
 
   @Override
   public Iterable<String> discoverRootFields(OrcStruct obj)
   {
+    // if discovering nested fields, just return all root fields since we want everything
+    // else, we filter for literals and arrays of literals
+    if (discoverNestedFields) {
+      return obj.getSchema().getFieldNames();
+    }
     List<String> fields = obj.getSchema().getFieldNames();
     List<TypeDescription> children = obj.getSchema().getChildren();
     List<String> primitiveFields = new ArrayList<>();
@@ -71,7 +80,7 @@ public class OrcStructFlattenerMaker implements ObjectFlatteners.FlattenerMaker<
   @Override
   public Object getRootField(OrcStruct obj, String key)
   {
-    return finalizeConversion(converter.convertRootField(obj, key));
+    return toPlainJavaType(converter.convertRootField(obj, key));
   }
 
   @Override
@@ -92,16 +101,34 @@ public class OrcStructFlattenerMaker implements ObjectFlatteners.FlattenerMaker<
   }
 
   @Override
+  public Function<OrcStruct, Object> makeJsonTreeExtractor(List<String> nodes)
+  {
+    if (nodes.size() == 1) {
+      return (OrcStruct record) -> getRootField(record, nodes.get(0));
+    }
+
+    throw new UnsupportedOperationException("ORC flattener does not support nested root queries");
+  }
+
+  @Override
   public JsonProvider getJsonProvider()
   {
     return orcJsonProvider;
   }
 
+  @Override
+  public Object finalizeConversionForMap(Object o)
+  {
+    return finalizeConversion(o);
+  }
+
   private Object finalizeConversion(Object o)
   {
-    // replace any remaining complex types with null
+    // recursively convert any complex types
     if (o instanceof OrcStruct || o instanceof OrcMap || o instanceof OrcList) {
-      return null;
+      return toPlainJavaType(o);
+    } else if (o instanceof WritableComparable) {
+      return converter.tryConvertPrimitive((WritableComparable) o);
     }
     return o;
   }

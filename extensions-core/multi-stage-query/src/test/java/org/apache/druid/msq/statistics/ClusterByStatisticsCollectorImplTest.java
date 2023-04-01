@@ -28,10 +28,11 @@ import com.google.common.math.LongMath;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.frame.key.KeyTestUtils;
 import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.frame.key.RowKeyReader;
-import org.apache.druid.frame.key.SortColumn;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -66,21 +67,32 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
 {
   private static final double PARTITION_SIZE_LEEWAY = 0.3;
 
-  private static final RowSignature SIGNATURE =
-      RowSignature.builder().add("x", ColumnType.LONG).add("y", ColumnType.LONG).build();
+  private static final RowSignature SIGNATURE = RowSignature.builder()
+                                                            .add("x", ColumnType.LONG)
+                                                            .add("y", ColumnType.LONG)
+                                                            .add("z", ColumnType.STRING)
+                                                            .build();
 
   private static final ClusterBy CLUSTER_BY_X = new ClusterBy(
-      ImmutableList.of(new SortColumn("x", false)),
+      ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING)),
       0
   );
 
   private static final ClusterBy CLUSTER_BY_XY_BUCKET_BY_X = new ClusterBy(
-      ImmutableList.of(new SortColumn("x", false), new SortColumn("y", false)),
+      ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING), new KeyColumn("y", KeyOrder.ASCENDING)),
+      1
+  );
+  private static final ClusterBy CLUSTER_BY_XYZ_BUCKET_BY_X = new ClusterBy(
+      ImmutableList.of(
+          new KeyColumn("x", KeyOrder.ASCENDING),
+          new KeyColumn("y", KeyOrder.ASCENDING),
+          new KeyColumn("z", KeyOrder.ASCENDING)
+      ),
       1
   );
 
   // These numbers are roughly 10x lower than authentic production numbers. (See StageDefinition.)
-  private static final int MAX_KEYS = 5000;
+  private static final int MAX_BYTES = 1_000_000;
   private static final int MAX_BUCKETS = 1000;
 
   @Test
@@ -438,6 +450,17 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
     );
   }
 
+  @Test
+  public void testBucketDownsampledToSingleKeyFinishesCorrectly()
+  {
+    ClusterByStatisticsCollectorImpl clusterByStatisticsCollector = makeCollector(CLUSTER_BY_XYZ_BUCKET_BY_X, false);
+
+    clusterByStatisticsCollector.add(createKey(CLUSTER_BY_XYZ_BUCKET_BY_X, 1, 1, "Extremely long key string for unit test; Extremely long key string for unit test;"), 2);
+    clusterByStatisticsCollector.add(createKey(CLUSTER_BY_XYZ_BUCKET_BY_X, 2, 1, "b"), 2);
+
+    clusterByStatisticsCollector.downSample();
+  }
+
   @Test(expected = IllegalArgumentException.class)
   public void testMoreBucketsThanKeysThrowsException()
   {
@@ -598,7 +621,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
   private ClusterByStatisticsCollectorImpl makeCollector(final ClusterBy clusterBy, final boolean aggregate)
   {
     return (ClusterByStatisticsCollectorImpl)
-        ClusterByStatisticsCollectorImpl.create(clusterBy, SIGNATURE, MAX_KEYS, MAX_BUCKETS, aggregate, false);
+        ClusterByStatisticsCollectorImpl.create(clusterBy, SIGNATURE, MAX_BYTES, MAX_BUCKETS, aggregate, false);
   }
 
   private static void verifyPartitions(

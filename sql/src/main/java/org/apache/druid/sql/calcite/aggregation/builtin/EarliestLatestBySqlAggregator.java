@@ -89,7 +89,7 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
     final List<RexNode> rexNodes = aggregateCall
         .getArgList()
         .stream()
-        .map(i -> Expressions.fromFieldAccess(rowSignature, project, i))
+        .map(i -> Expressions.fromFieldAccess(rexBuilder.getTypeFactory(), rowSignature, project, i))
         .collect(Collectors.toList());
 
     final List<DruidExpression> args = Expressions.toDruidExpressions(plannerContext, rowSignature, rexNodes);
@@ -122,12 +122,20 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
         );
         break;
       case 3:
+        int maxStringBytes;
+        try {
+          maxStringBytes = RexLiteral.intValue(rexNodes.get(2));
+        }
+        catch (AssertionError ae) {
+          plannerContext.setPlanningError("The third argument '%s' to function '%s' is not a number", rexNodes.get(2), aggregateCall.getName());
+          return null;
+        }
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,
             fieldName,
             EarliestLatestAnySqlAggregator.getColumnName(plannerContext, virtualColumnRegistry, args.get(1), rexNodes.get(1)),
             outputType,
-            RexLiteral.intValue(rexNodes.get(2))
+            maxStringBytes
         );
         break;
       default:

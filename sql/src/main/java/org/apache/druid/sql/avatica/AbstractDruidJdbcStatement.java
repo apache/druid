@@ -27,6 +27,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcherFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 
@@ -56,19 +57,25 @@ public abstract class AbstractDruidJdbcStatement implements Closeable
 
   protected final String connectionId;
   protected final int statementId;
+  protected final ResultFetcherFactory fetcherFactory;
   protected Throwable throwable;
   protected DruidJdbcResultSet resultSet;
 
   public AbstractDruidJdbcStatement(
       final String connectionId,
-      final int statementId
+      final int statementId,
+      final ResultFetcherFactory fetcherFactory
   )
   {
     this.connectionId = Preconditions.checkNotNull(connectionId, "connectionId");
     this.statementId = statementId;
+    this.fetcherFactory = fetcherFactory;
   }
 
-  protected static Meta.Signature createSignature(PrepareResult prepareResult, String sql)
+  protected static Meta.Signature createSignature(
+      final PrepareResult prepareResult,
+      final String sql
+  )
   {
     List<AvaticaParameter> params = new ArrayList<>();
     final RelDataType parameterRowType = prepareResult.getParameterRowType();
@@ -85,7 +92,10 @@ public abstract class AbstractDruidJdbcStatement implements Closeable
     );
   }
 
-  private static AvaticaParameter createParameter(RelDataTypeField field, RelDataType type)
+  private static AvaticaParameter createParameter(
+      final RelDataTypeField field,
+      final RelDataType type
+  )
   {
     // signed is always false because no way to extract from RelDataType, and the only usage of this AvaticaParameter
     // constructor I can find, in CalcitePrepareImpl, does it this way with hard coded false

@@ -27,7 +27,7 @@ This topic shows you how to load and query data files in Apache Druid using its 
 
 ## Prerequisites
 
-Install Druid, start up Druid services, and open the Druid console as described in the [Druid quickstart](index.md).
+Install Druid, start up Druid services, and open the web console as described in the [Druid quickstart](index.md).
 
 ## Load data
 
@@ -37,7 +37,7 @@ as we'll do here to perform batch file loading with Druid's native batch ingesti
 The Druid distribution bundles sample data we can use. The sample data located in `quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz` 
 in the Druid root directory represents Wikipedia page edits for a given day. 
 
-1. Click **Load data** from the Druid console header (![Load data](../assets/tutorial-batch-data-loader-00.png)).
+1. Click **Load data** from the web console header (![Load data](../assets/tutorial-batch-data-loader-00.png)).
 
 2. Select the **Local disk** tile and then click **Connect data**.
 

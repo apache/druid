@@ -16,13 +16,14 @@
  * limitations under the License.
  */
 
-import axios, { AxiosResponse } from 'axios';
-import { SqlRef } from 'druid-query-toolkit';
+import type { AxiosResponse } from 'axios';
+import axios from 'axios';
+import { C } from 'druid-query-toolkit';
 
 import { Api } from '../singletons';
 
 import { assemble } from './general';
-import { RowColumn } from './query-cursor';
+import type { RowColumn } from './query-cursor';
 
 const CANCELED_MESSAGE = 'Query canceled by user.';
 
@@ -309,6 +310,6 @@ export interface QueryExplanation {
 
 export function formatSignature(queryExplanation: QueryExplanation): string {
   return queryExplanation.signature
-    .map(({ name, type }) => `${SqlRef.column(name)}::${type}`)
+    .map(({ name, type }) => `${C.optionalQuotes(name)}::${type}`)
     .join(', ');
 }

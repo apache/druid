@@ -68,6 +68,9 @@
       ~ dependency on hadoop 2.8.5 is blocking us from updating this dependency. Not a major concern since Druid
       ~ eats uncaught exceptions, and only displays them in logs. This issue also should only affect ingestion
       ~ jobs which can only be run by admin type users.
+
+      ~ CVE-2022-45688:
+      ~ We do not use XML, so not impact that by this CVE
       -->
     <notes><![CDATA[
    file name: json-smart-2.3.jar
@@ -75,7 +78,18 @@
     <packageUrl regex="true">^pkg:maven/net\.minidev/json\-smart@.*$</packageUrl>
     <cve>CVE-2021-27568</cve>
     <cve>CVE-2021-31684</cve>
+    <cve>CVE-2022-45688</cve>
+    <cve>CVE-2023-1370</cve>
   </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+     file name: json-path-2.3.0.jar
+     ]]></notes>
+    <packageUrl regex="true">^pkg:maven/net\.minidev/json\-path@.*$</packageUrl>
+    <cve>CVE-2022-45688</cve>
+  </suppress>
+
   <suppress>
     <!--
       accessors-smart-1.2 is a dependency of json-smart-2.3.
@@ -87,6 +101,18 @@
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/net\.minidev/accessors\-smart@.*$</packageUrl>
     <cve>CVE-2021-27568</cve>
+    <cve>CVE-2022-45688</cve>
+  </suppress>
+  <suppress>
+    <!--
+      Suppressing for patch release 24.0.1
+      -->
+    <notes><![CDATA[
+   file name: jackson-databind-2.10.5.1.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson\-databind@.*$</packageUrl>
+    <cve>CVE-2022-42003</cve>
+    <cve>CVE-2022-42004</cve>
   </suppress>
 
 
@@ -180,8 +206,10 @@
     <cve>CVE-2019-16869</cve>
     <cve>CVE-2019-20444</cve>
     <cve>CVE-2019-20445</cve>
+    <cve>CVE-2020-11612</cve>
     <cve>CVE-2021-37136</cve>
     <cve>CVE-2021-37137</cve>
+    <cve>CVE-2022-41881</cve>
   </suppress>
   <suppress>
     <!-- TODO: Fix by upgrading hadoop-auth version -->
@@ -210,6 +238,17 @@
       <cve>CVE-2019-0205</cve>
   </suppress>
   <suppress>
+    <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-storage     -->
+    <notes><![CDATA[
+    file name: jettison-1.*.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.codehaus\.jettison/jettison@1.*$</packageUrl>
+    <cve>CVE-2022-40149</cve>
+    <cve>CVE-2022-40150</cve>
+    <cve>CVE-2022-45685</cve>
+    <cve>CVE-2022-45693</cve>
+  </suppress>
+  <suppress>
     <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-storage -->
     <notes><![CDATA[
     file name: snakeyaml-1.6.jar
@@ -224,6 +263,7 @@
     file name: snakeyaml-1.27.jar
     ]]></notes>
     <cve>CVE-2022-25857</cve>
+    <cve>CVE-2022-1471</cve>
   </suppress>
   <suppress>
     <notes><![CDATA[
@@ -305,6 +345,13 @@
     <cve>CVE-2018-17196</cve>
   </suppress>
   <suppress>
+    <notes><![CDATA[
+    file name: kafka-clients-3.2.0.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.kafka/kafka\-clients@.*$</packageUrl>
+    <cve>CVE-2022-34917</cve>
+  </suppress>
+  <suppress>
     <!--
       ~ TODO: Fix when Apache Ranger is released with updated log4j
       -->
@@ -344,6 +391,7 @@
     <cve>CVE-2022-23307</cve>
     <cve>CVE-2022-23305</cve>
     <cve>CVE-2022-23302</cve>
+    <cve>CVE-2022-41881</cve>
   </suppress>
   <suppress>
        <!--
@@ -374,6 +422,7 @@
      <cve>CVE-2022-25168</cve>
      <cve>CVE-2022-26612</cve>
      <cve>CVE-2018-8009</cve>
+     <cve>CVE-2021-33036</cve>
   </suppress>
   <suppress>
     <notes><![CDATA[
@@ -386,6 +435,9 @@
     <cve>CVE-2021-35516</cve>
     <cve>CVE-2021-35515</cve>
     <cve>CVE-2021-36090</cve>
+    <cve>CVE-2022-2048</cve>
+    <cve>CVE-2022-3509</cve>
+    <cve>CVE-2022-40152</cve>
   </suppress>
   <suppress>
     <!-- The CVE is not applicable to kafka-clients. -->
@@ -418,8 +470,17 @@
      <packageUrl regex="true">^pkg:maven/org\.codehaus\.jackson/jackson-(xc|jaxrs)@1.9.*$</packageUrl>
      <cve>CVE-2018-14718</cve>
      <cve>CVE-2018-7489</cve>
+     <cve>CVE-2022-42003</cve>
+     <cve>CVE-2022-42004</cve>
   </suppress>
-
+  <suppress>
+    <!-- aliyun-oss -->
+    <notes><![CDATA[
+    file name: ini4j-0.5.4.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.ini4j/ini4j@.*$</packageUrl>
+    <vulnerabilityName>CVE-2022-41404</vulnerabilityName>
+  </suppress>
   <suppress>
     <!-- Transitive dependency from apache-ranger, latest ranger version 2.1.0 still uses solr 7.7.1-->
     <notes><![CDATA[
@@ -484,6 +545,7 @@
     <cve>CVE-2020-10740</cve>
     <cve>CVE-2020-25644</cve>
     <cve>CVE-2020-10718</cve>
+    <cve>CVE-2022-1278</cve>
   </suppress>
 
   <suppress>
@@ -553,10 +615,12 @@
 
   <suppress>
     <!-- Jackson CVEs when processing objects of large depth. Consider updating -->
+
     <notes><![CDATA[
    file name: *jackson-*.jar
    ]]></notes>
     <cve>CVE-2020-36518</cve>
+    <cve>CVE-2022-45688</cve>
   </suppress>
 
   <suppress>
@@ -622,8 +686,15 @@
    file name: avatica-server-1.17.0.jar
    ]]></notes>
     <cve>CVE-2022-36364</cve>
+    <cve>CVE-2022-39135</cve>
   </suppress>
-
+  <suppress>
+    <notes><![CDATA[
+    file name: calcite-core-1.21.0.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.calcite/calcite\-core@.*$</packageUrl>
+    <cve>CVE-2020-13955</cve>
+  </suppress>
   <suppress>
     <!-- False positive. 42.3.3 is not affected by the CVE. And we don't use Resultset.refreshRow method either  -->
     <notes><![CDATA[
@@ -631,5 +702,91 @@
    ]]></notes>
     <cve>CVE-2022-31197</cve>
   </suppress>
+  <suppress>
+    <!-- avatica-server-1.17.0.jar -->
+    <notes><![CDATA[
+   file name: avatica-server-1.17.0.jar
+   ]]></notes>
+    <!--
+    We do not expose any of the SQL operators that were found vulnerable in this CVE.
+    -->
+    <cve>CVE-2022-39135</cve>
+  </suppress>
 
+  <suppress>
+    <!-- calcite-core-1.21.0.jar -->
+    <notes><![CDATA[
+   file name: calcite-core-1.21.0.jar
+   ]]></notes>
+    <!--
+    We do not expose any of the SQL operators that were found vulnerable in this CVE.
+    -->
+    <cve>CVE-2022-39135</cve>
+  </suppress>
+
+  <suppress>
+    <!-- package-lock.json?d3-color -->
+    <notes><![CDATA[
+   file name: d3-color:2.0.0
+   ]]></notes>
+    <!--
+    Not vulnerable to these as, we use d3-color on the client only.
+    -->
+    <packageUrl regex="true">^pkg:npm/d3\-color@.*$</packageUrl>
+    <vulnerabilityName>1084597</vulnerabilityName>
+    <vulnerabilityName>1088594</vulnerabilityName>
+  </suppress>
+
+  <suppress>
+     <notes><![CDATA[
+     file name: d3-color:2.0.0
+     ]]></notes>
+     <packageUrl regex="true">^pkg:npm/d3\-color@.*$</packageUrl>
+     <vulnerabilityName>1084597</vulnerabilityName>
+   </suppress>
+   <suppress>
+     <notes><![CDATA[
+     file name: protobuf-java-3.11.0.jar
+     ]]></notes>
+     <packageUrl regex="true">^pkg:maven/com\.google\.protobuf/protobuf\-java@.*$</packageUrl>
+     <cve>CVE-2022-3171</cve>
+   </suppress>
+   <suppress>
+     <notes><![CDATA[
+     file name: protobuf-java-util-3.11.0.jar
+     ]]></notes>
+     <packageUrl regex="true">^pkg:maven/com\.google\.protobuf/protobuf\-java\-util@.*$</packageUrl>
+     <cve>CVE-2022-3171</cve>
+   </suppress>
+   <suppress>
+     <notes><![CDATA[
+     file name: ansi-regex:5.0.0
+     ]]></notes>
+     <packageUrl regex="true">^pkg:npm/ansi\-regex@.*$</packageUrl>
+     <vulnerabilityName>1084697</vulnerabilityName>
+     <cve>CVE-2021-3807</cve>
+   </suppress>
+   <suppress>
+     <notes><![CDATA[
+     file name: glob-parent:5.1.1
+     ]]></notes>
+     <packageUrl regex="true">^pkg:npm/glob\-parent@.*$</packageUrl>
+     <vulnerabilityName>1081884</vulnerabilityName>
+     <cve>CVE-2020-28469</cve>
+   </suppress>
+   <suppress>
+     <notes><![CDATA[
+     file name: minimatch:3.0.4
+     ]]></notes>
+     <packageUrl regex="true">^pkg:npm/minimatch@.*$</packageUrl>
+     <vulnerabilityName>1084765</vulnerabilityName>
+   </suppress>
+   <suppress>
+     <notes><![CDATA[
+     file name: y18n:4.0.0
+     ]]></notes>
+     <packageUrl regex="true">^pkg:npm/y18n@.*$</packageUrl>
+     <vulnerabilityName>1070209</vulnerabilityName>
+     <cve>CVE-2020-7774</cve>
+   </suppress>
 </suppressions>

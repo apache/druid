@@ -21,12 +21,12 @@ package org.apache.druid.sql;
 
 import com.google.common.base.Preconditions;
 import org.apache.calcite.avatica.remote.TypedValue;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.sql.http.SqlQuery;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -39,25 +39,32 @@ import java.util.Map;
  * SQL requests come from a variety of sources in a variety of formats. Use
  * the {@link Builder} class to create an instance from the information
  * available at each point in the code.
+ * <p>
+ * The query context has a complex lifecycle. The copy here is immutable:
+ * it is the set of values which the user requested. Planning will
+ * add (and sometimes remove) values: that work should be done on a copy of the
+ * context so that we have a clean record of the user's original requested
+ * values. This original record is required to perform security on the set
+ * of user-provided context keys.
  */
 public class SqlQueryPlus
 {
   private final String sql;
-  private final QueryContext queryContext;
+  private final Map<String, Object> queryContext;
   private final List<TypedValue> parameters;
   private final AuthenticationResult authResult;
 
   public SqlQueryPlus(
       String sql,
-      QueryContext queryContext,
+      Map<String, Object> queryContext,
       List<TypedValue> parameters,
       AuthenticationResult authResult
   )
   {
     this.sql = Preconditions.checkNotNull(sql);
     this.queryContext = queryContext == null
-        ? new QueryContext()
-        : queryContext;
+        ? Collections.emptyMap()
+        : Collections.unmodifiableMap(new HashMap<>(queryContext));
     this.parameters = parameters == null
         ? Collections.emptyList()
         : parameters;
@@ -84,7 +91,7 @@ public class SqlQueryPlus
     return sql;
   }
 
-  public QueryContext context()
+  public Map<String, Object> context()
   {
     return queryContext;
   }
@@ -99,14 +106,9 @@ public class SqlQueryPlus
     return authResult;
   }
 
-  public SqlQueryPlus withContext(QueryContext context)
-  {
-    return new SqlQueryPlus(sql, context, parameters, authResult);
-  }
-
   public SqlQueryPlus withContext(Map<String, Object> context)
   {
-    return new SqlQueryPlus(sql, new QueryContext(context), parameters, authResult);
+    return new SqlQueryPlus(sql, context, parameters, authResult);
   }
 
   public SqlQueryPlus withParameters(List<TypedValue> parameters)
@@ -117,7 +119,7 @@ public class SqlQueryPlus
   public static class Builder
   {
     private String sql;
-    private QueryContext queryContext;
+    private Map<String, Object> queryContext;
     private List<TypedValue> parameters;
     private AuthenticationResult authResult;
 
@@ -130,20 +132,14 @@ public class SqlQueryPlus
     public Builder query(SqlQuery sqlQuery)
     {
       this.sql = sqlQuery.getQuery();
-      this.queryContext = new QueryContext(sqlQuery.getContext());
+      this.queryContext = sqlQuery.getContext();
       this.parameters = sqlQuery.getParameterList();
-      return this;
-    }
-
-    public Builder context(QueryContext queryContext)
-    {
-      this.queryContext = queryContext;
       return this;
     }
 
     public Builder context(Map<String, Object> queryContext)
     {
-      this.queryContext = queryContext == null ? null : new QueryContext(queryContext);
+      this.queryContext = queryContext;
       return this;
     }
 

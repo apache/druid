@@ -81,8 +81,10 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
+import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
@@ -298,7 +300,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
     final Map<String, BitmapSerdeFactory> bitmapSerdeFactories = ImmutableMap.of(
         "concise", new ConciseBitmapSerdeFactory(),
-        "roaring", new RoaringBitmapSerdeFactory(true)
+        "roaring", RoaringBitmapSerdeFactory.getInstance()
     );
 
     final Map<String, SegmentWriteOutMediumFactory> segmentWriteOutMediumFactories = ImmutableMap.of(
@@ -347,6 +349,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
             })
             .build();
 
+    StringEncodingStrategy[] stringEncoding = new StringEncodingStrategy[]{
+        new StringEncodingStrategy.Utf8(),
+        new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V0),
+        new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1)
+    };
     for (Map.Entry<String, BitmapSerdeFactory> bitmapSerdeFactoryEntry : bitmapSerdeFactories.entrySet()) {
       for (Map.Entry<String, SegmentWriteOutMediumFactory> segmentWriteOutMediumFactoryEntry :
           segmentWriteOutMediumFactories.entrySet()) {
@@ -354,20 +361,33 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
             finishers.entrySet()) {
           for (boolean cnf : ImmutableList.of(false, true)) {
             for (boolean optimize : ImmutableList.of(false, true)) {
-              final String testName = StringUtils.format(
-                  "bitmaps[%s], indexMerger[%s], finisher[%s], cnf[%s], optimize[%s]",
-                  bitmapSerdeFactoryEntry.getKey(),
-                  segmentWriteOutMediumFactoryEntry.getKey(),
-                  finisherEntry.getKey(),
-                  cnf,
-                  optimize
-              );
-              final IndexBuilder indexBuilder = IndexBuilder
-                  .create()
-                  .schema(DEFAULT_INDEX_SCHEMA)
-                  .indexSpec(new IndexSpec(bitmapSerdeFactoryEntry.getValue(), null, null, null))
-                  .segmentWriteOutMediumFactory(segmentWriteOutMediumFactoryEntry.getValue());
-              constructors.add(new Object[]{testName, indexBuilder, finisherEntry.getValue(), cnf, optimize});
+              for (StringEncodingStrategy encodingStrategy : stringEncoding) {
+                final String testName = StringUtils.format(
+                    "bitmaps[%s], indexMerger[%s], finisher[%s], cnf[%s], optimize[%s], stringDictionaryEncoding[%s]",
+                    bitmapSerdeFactoryEntry.getKey(),
+                    segmentWriteOutMediumFactoryEntry.getKey(),
+                    finisherEntry.getKey(),
+                    cnf,
+                    optimize,
+                    encodingStrategy.getType()
+                );
+                final IndexBuilder indexBuilder = IndexBuilder
+                    .create()
+                    .schema(DEFAULT_INDEX_SCHEMA)
+                    .indexSpec(
+                        new IndexSpec(
+                            bitmapSerdeFactoryEntry.getValue(),
+                            null,
+                            encodingStrategy,
+                            null,
+                            null,
+                            null,
+                            null
+                        )
+                    )
+                    .segmentWriteOutMediumFactory(segmentWriteOutMediumFactoryEntry.getValue());
+                constructors.add(new Object[]{testName, indexBuilder, finisherEntry.getValue(), cnf, optimize});
+              }
             }
           }
         }

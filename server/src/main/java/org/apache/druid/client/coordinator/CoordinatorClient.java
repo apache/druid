@@ -174,7 +174,9 @@ public class CoordinatorClient
 
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
-            "Error while fetching database segment data source segment status[%s] content[%s]",
+            "Error while fetching database segment[%s] in dataSource[%s] with status[%s] content[%s]",
+            segmentId,
+            dataSource,
             response.getStatus(),
             response.getContent()
         );

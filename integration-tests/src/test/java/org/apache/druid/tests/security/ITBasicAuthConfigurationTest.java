@@ -25,6 +25,7 @@ import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
+import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.HttpUtil;
@@ -47,8 +48,13 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   private static final String BASIC_AUTHENTICATOR = "basic";
   private static final String BASIC_AUTHORIZER = "basic";
 
-  private static final String EXPECTED_AVATICA_AUTH_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: User metadata store authentication failed.";
-  private static final String EXPECTED_AVATICA_AUTHZ_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: Unauthorized";
+  private static final String EXPECTED_AVATICA_AUTH_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: " + Access.DEFAULT_ERROR_MESSAGE;
+
+  // This error must match both authorization paths: initial prepare of
+  // the query, and checks of resources used by a query during execution.
+  // The two errors are raised in different points in the code, but should
+  // look identical to users (and tests).
+  private static final String EXPECTED_AVATICA_AUTHZ_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: " + Access.DEFAULT_ERROR_MESSAGE;
 
   private HttpClient druid99;
 

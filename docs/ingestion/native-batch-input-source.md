@@ -1,7 +1,7 @@
 ---
 id: native-batch-input-sources
 title: "Native batch input sources"
-sidebar_label: "Input sources"
+sidebar_label: "Native batch: input sources"
 ---
 
 <!--
@@ -46,7 +46,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
-        "filter": "*.json",
+        "objectGlob": "**.json",
         "uris": ["s3://foo/bar/file.json", "s3://bar/foo/file2.json"]
       },
       "inputFormat": {
@@ -63,7 +63,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
-        "filter": "*.parquet",
+        "objectGlob": "**.parquet",
         "prefixes": ["s3://foo/bar/", "s3://bar/foo/"]
       },
       "inputFormat": {
@@ -81,7 +81,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
-        "filter": "*.json",
+        "objectGlob": "**.json",
         "objects": [
           { "bucket": "foo", "path": "bar/file1.json"},
           { "bucket": "bar", "path": "foo/file2.json"}
@@ -101,7 +101,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
-        "filter": "*.json",
+        "objectGlob": "**.json",
         "uris": ["s3://foo/bar/file.json", "s3://bar/foo/file2.json"],
         "properties": {
           "accessKeyId": "KLJ78979SDFdS2",
@@ -122,7 +122,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
-        "filter": "*.json",
+        "objectGlob": "**.json",
         "uris": ["s3://foo/bar/file.json", "s3://bar/foo/file2.json"],
         "properties": {
           "accessKeyId": "KLJ78979SDFdS2",
@@ -182,7 +182,7 @@ Sample specs:
 |uris|JSON array of URIs where S3 objects to be ingested are located.|None|`uris` or `prefixes` or `objects` must be set|
 |prefixes|JSON array of URI prefixes for the locations of S3 objects to be ingested. Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of S3 Objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
-|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information. Files matching the filter criteria are considered for ingestion. Files not matching the filter criteria are ignored.|None|no|
+|objectGlob|A glob for the object part of the S3 URI. In the URI `s3://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `s3://foo/bar/file.json`, because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-).|None|no|
 | endpointConfig |Config for overriding the default S3 endpoint and signing region. This would allow ingesting data from a different S3 store. Please see [s3 config](../development/extensions-core/s3.md#connecting-to-s3-configuration) for more information.|None|No (defaults will be used if not given)
 | clientConfig |S3 client properties for the overridden s3 endpoint. This is used in conjunction with `endPointConfig`. Please see [s3 config](../development/extensions-core/s3.md#connecting-to-s3-configuration) for more information.|None|No (defaults will be used if not given)
 | proxyConfig |Properties for specifying proxy information for the overridden s3 endpoint. This is used in conjunction with `clientConfig`. Please see [s3 config](../development/extensions-core/s3.md#connecting-to-s3-configuration) for more information.|None|No (defaults will be used if not given)
@@ -226,7 +226,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "google",
-        "filter": "*.json",
+        "objectGlob": "**.json",
         "uris": ["gs://foo/bar/file.json", "gs://bar/foo/file2.json"]
       },
       "inputFormat": {
@@ -243,7 +243,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "google",
-        "filter": "*.parquet",
+        "objectGlob": "**.parquet",
         "prefixes": ["gs://foo/bar/", "gs://bar/foo/"]
       },
       "inputFormat": {
@@ -261,7 +261,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "google",
-        "filter": "*.json",
+        "objectGlob": "**.json",
         "objects": [
           { "bucket": "foo", "path": "bar/file1.json"},
           { "bucket": "bar", "path": "foo/file2.json"}
@@ -281,7 +281,7 @@ Sample specs:
 |uris|JSON array of URIs where Google Cloud Storage objects to be ingested are located.|None|`uris` or `prefixes` or `objects` must be set|
 |prefixes|JSON array of URI prefixes for the locations of Google Cloud Storage objects to be ingested. Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of Google Cloud Storage objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
-|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information. Files matching the filter criteria are considered for ingestion. Files not matching the filter criteria are ignored.|None|no|
+|objectGlob|A glob for the object part of the S3 URI. In the URI `s3://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `s3://foo/bar/file.json`, because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-).|None|no|
 
 Note that the Google Cloud Storage input source will skip all empty objects only when `prefixes` is specified.
 
@@ -307,7 +307,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "azure",
-        "filter": "*.json",
+        "objectGlob": "**.json",
         "uris": ["azure://container/prefix1/file.json", "azure://container/prefix2/file2.json"]
       },
       "inputFormat": {
@@ -324,7 +324,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "azure",
-        "filter": "*.parquet",
+        "objectGlob": "**.parquet",
         "prefixes": ["azure://container/prefix1/", "azure://container/prefix2/"]
       },
       "inputFormat": {
@@ -342,7 +342,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "azure",
-        "filter": "*.json",
+        "objectGlob": "**.json",
         "objects": [
           { "bucket": "container", "path": "prefix1/file1.json"},
           { "bucket": "container", "path": "prefix2/file2.json"}
@@ -359,10 +359,10 @@ Sample specs:
 |Property|Description|Default|Required|
 |--------|-----------|-------|---------|
 |type|Set the value to `azure`.|None|yes|
-|uris|JSON array of URIs where the Azure objects to be ingested are located, in the form "azure://\<container>/\<path-to-file\>"|None|`uris` or `prefixes` or `objects` must be set|
-|prefixes|JSON array of URI prefixes for the locations of Azure objects to ingest, in the form `azure://\<container>/\<prefix\>`. Empty objects starting with one of the given prefixes are skipped.|None|`uris` or `prefixes` or `objects` must be set|
+|uris|JSON array of URIs where the Azure objects to be ingested are located, in the form `azure://<container>/<path-to-file>`|None|`uris` or `prefixes` or `objects` must be set|
+|prefixes|JSON array of URI prefixes for the locations of Azure objects to ingest, in the form `azure://<container>/<prefix>`. Empty objects starting with one of the given prefixes are skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of Azure objects to ingest.|None|`uris` or `prefixes` or `objects` must be set|
-|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information. Files matching the filter criteria are considered for ingestion. Files not matching the filter criteria are ignored.|None|no|
+|objectGlob|A glob for the object part of the S3 URI. In the URI `s3://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `s3://foo/bar/file.json`, because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-).|None|no|
 
 Note that the Azure input source skips all empty objects only when `prefixes` is specified.
 
@@ -462,9 +462,9 @@ in `druid.ingestion.hdfs.allowedProtocols`. See [HDFS input source security conf
 
 The HTTP input source is to support reading files directly from remote sites via HTTP.
 
-> **NOTE:** Ingestion tasks run under the operating system account that runs the Druid processes, for example the Indexer, Middle Manager, and Peon. This means any user who can submit an ingestion task can specify an `HTTPInputSource` at any location where the Druid process has permissions. For example, using `HTTPInputSource`, a console user has access to internal network locations where the they would be denied access otherwise.
-
-> **WARNING:** `HTTPInputSource` is not limited to the HTTP or HTTPS protocols. It uses the Java `URI` class that supports HTTP, HTTPS, FTP, file, and jar protocols by default. This means you should never run Druid under the `root` account, because a user can use the file protocol to access any files on the local disk.
+> **Security notes:** Ingestion tasks run under the operating system account that runs the Druid processes, for example the Indexer, Middle Manager, and Peon. This means any user who can submit an ingestion task can specify an input source referring to any location that the Druid process can access. For example, using `http` input source, users may have access to internal network servers.
+>
+> The `http` input source is not limited to the HTTP or HTTPS protocols. It uses the Java URI class that supports HTTP, HTTPS, FTP, file, and jar protocols by default.
 
 For more information about security best practices, see [Security overview](../operations/security-overview.md#best-practices).
 
@@ -632,9 +632,9 @@ want the output timestamp to be equivalent to the input timestamp. In this case,
 and the format to `auto` or `millis`.
 
 It is OK for the input and output datasources to be the same. In this case, newly generated data will overwrite the
-previous data for the intervals specified in the `granularitySpec`. Generally, if you are going to do this, it is a
-good idea to test out your reindexing by writing to a separate datasource before overwriting your main one.
-Alternatively, if your goals can be satisfied by [compaction](compaction.md), consider that instead as a simpler
+previous data for the intervals specified in the `granularitySpec`. Generally, if you are going to do this, it is a good
+idea to test out your reindexing by writing to a separate datasource before overwriting your main one. Alternatively, if
+your goals can be satisfied by [compaction](../data-management/compaction.md), consider that instead as a simpler
 approach.
 
 An example task spec is shown below. It reads from a hypothetical raw datasource `wikipedia_raw` and creates a new
@@ -752,10 +752,12 @@ Compared to the other native batch input sources, SQL input source behaves diffe
 
 The Combining input source lets you read data from multiple input sources.
 It identifies the splits from delegate input sources and uses a worker task to process each split.
-Use the Combining input source only if all the delegates are splittable and can be used by the [Parallel task](./native-batch.md). 
+Use the Combining input source only if all the delegates are splittable and can be used by the [Parallel task](./native-batch.md).
 
 Similar to other input sources, the Combining input source supports a single `inputFormat`.
 Delegate input sources that require an `inputFormat` must have the same format for input data.
+If you include the [Druid input source](#druid-input-source), the timestamp column is stored in the `__time` field.
+To correctly combine the data from the Druid input source with another source, ensure that other delegate input sources also store the timestamp column in `__time`.
 
 |Property|Description|Required|
 |--------|-----------|---------|

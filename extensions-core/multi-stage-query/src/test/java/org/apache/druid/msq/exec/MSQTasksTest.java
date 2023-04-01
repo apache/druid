@@ -19,14 +19,17 @@
 
 package org.apache.druid.msq.exec;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
+import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.error.TaskStartTimeoutFault;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
@@ -139,6 +142,24 @@ public class MSQTasksTest
   }
 
   @Test
+  public void test_getWorkerFromTaskId()
+  {
+    Assert.assertEquals(1, MSQTasks.workerFromTaskId("xxxx-worker1_0"));
+    Assert.assertEquals(10, MSQTasks.workerFromTaskId("xxxx-worker10_0"));
+    Assert.assertEquals(0, MSQTasks.workerFromTaskId("xxdsadxx-worker0_0"));
+    Assert.assertEquals(90, MSQTasks.workerFromTaskId("dx-worker90_0"));
+    Assert.assertEquals(9, MSQTasks.workerFromTaskId("12dsa1-worker9_0"));
+
+    Assert.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("xxxx-worker-0"));
+    Assert.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("worker-0"));
+    Assert.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("xxxx-worker1-0"));
+    Assert.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("xxxx-worker0-"));
+    Assert.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("xxxx-worr1_0"));
+    Assert.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("xxxx-worker-1-0"));
+    Assert.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("xx"));
+  }
+
+  @Test
   public void test_queryWithoutEnoughSlots_shouldThrowException()
   {
     final int numSlots = 5;
@@ -150,7 +171,8 @@ public class MSQTasksTest
         CONTROLLER_ID,
         "foo",
         controllerContext,
-        false,
+        (task, fault) -> {},
+        ImmutableMap.of(),
         TimeUnit.SECONDS.toMillis(5)
     );
 
@@ -161,8 +183,8 @@ public class MSQTasksTest
     }
     catch (Exception e) {
       Assert.assertEquals(
-          new TaskStartTimeoutFault(numTasks + 1).getCodeWithMessage(),
-          ((MSQException) e.getCause()).getFault().getCodeWithMessage()
+          MSQFaultUtils.generateMessageWithErrorCode(new TaskStartTimeoutFault(numTasks + 1, 5000)),
+          MSQFaultUtils.generateMessageWithErrorCode(((MSQException) e.getCause()).getFault())
       );
     }
   }
@@ -220,7 +242,7 @@ public class MSQTasksTest
     }
 
     @Override
-    public synchronized String run(String controllerId, MSQWorkerTask task)
+    public synchronized String run(String taskId, MSQWorkerTask task)
     {
       allTasks.add(task.getId());
 

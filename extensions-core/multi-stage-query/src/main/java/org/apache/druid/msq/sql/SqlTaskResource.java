@@ -25,6 +25,7 @@ import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.druid.common.exception.SanitizableException;
+import org.apache.druid.guice.annotations.MSQ;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -37,6 +38,7 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -47,7 +49,6 @@ import org.apache.druid.sql.HttpStatement;
 import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.SqlRowTransformer;
 import org.apache.druid.sql.SqlStatementFactory;
-import org.apache.druid.sql.SqlStatementFactoryFactory;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
@@ -91,14 +92,13 @@ public class SqlTaskResource
 
   @Inject
   public SqlTaskResource(
-      final MSQTaskSqlEngine engine,
-      final SqlStatementFactoryFactory sqlStatementFactoryFactory,
+      final @MSQ SqlStatementFactory sqlStatementFactory,
       final ServerConfig serverConfig,
       final AuthorizerMapper authorizerMapper,
       final ObjectMapper jsonMapper
   )
   {
-    this.sqlStatementFactory = sqlStatementFactoryFactory.factorize(engine);
+    this.sqlStatementFactory = sqlStatementFactory;
     this.serverConfig = serverConfig;
     this.authorizerMapper = authorizerMapper;
     this.jsonMapper = jsonMapper;
@@ -147,7 +147,8 @@ public class SqlTaskResource
     final String sqlQueryId = stmt.sqlQueryId();
     try {
       final DirectStatement.ResultSet plan = stmt.plan();
-      final Sequence<Object[]> sequence = plan.run();
+      final QueryResponse<Object[]> response = plan.run();
+      final Sequence<Object[]> sequence = response.getResults();
       final SqlRowTransformer rowTransformer = plan.createRowTransformer();
       final boolean isTaskStruct = MSQTaskSqlEngine.TASK_STRUCT_FIELD_NAMES.equals(rowTransformer.getFieldList());
 
