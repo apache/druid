@@ -158,7 +158,9 @@ services:
       - environment
 
   jupyter:
-    image: imply/druid-notebook:latest
+    build:
+      context: ..
+      dockerfile: Dockerfile
     container_name: jupyter
     profiles: ["jupyter", "all-services"]
     environment:

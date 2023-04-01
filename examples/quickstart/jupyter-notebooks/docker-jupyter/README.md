@@ -20,9 +20,26 @@
 # Jupyter in Docker
 
 For details on getting started with Jupyter in Docker,
-see [Jupyter Notebook tutorials](../../../../docs/tutorials/tutorial-jupyter-index.md).
+see [Docker for Jupyter Notebook tutorials](../../../../docs/tutorials/tutorial-jupyter-docker.md).
 
 ## Contributing
+
+### Updating the Docker Compose file
+
+The Docker Compose file defines a multi-container application that allows you to run
+the custom Jupyter Notebook container, Apache Druid, and Apache Kafka.
+
+Any changes to `docker-compose.yaml` should also be made to `docker-compose-local.yaml`
+and vice versa. These files should be identical except that `docker-compose.yaml`
+contains an `image` attribute while `docker-compose-local.yaml` contains a `build` subsection.
+
+If you update `docker-compose.yaml`, recreate the ZIP file using the following command:
+
+```bash
+zip tutorial-jupyter-docker.zip docker-compose.yaml environment
+```
+
+### Updating the Jupyter image
 
 You may want to update the Jupyter image to add prerequisite Python packages,
 new tutorial notebooks, or configuration files.
@@ -31,10 +48,12 @@ To build the custom Jupyter image locally:
 
 1. Clone the Druid repo if you haven't already.
 2. Navigate to `examples/quickstart/jupyter-notebooks` in your Druid source repo.
-3. Run the following command:
+3. Edit the image definition in `Dockerfile`.
+3. Verify the new build using the following command:
 
-   ```
-   docker build -t apache/druid:jupyter-notebook .
+   ```shell
+   DRUID_VERSION=25.0.0 docker-compose --profile jupyter -f docker-compose-local.yaml up -d --build
    ```
 
-TODO how to update image on DockerHub
+   You can change the value of `DRUID_VERSION` or the profile used from the Docker Compose file.
+

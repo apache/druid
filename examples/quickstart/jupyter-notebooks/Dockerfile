@@ -19,7 +19,7 @@
 # -------------------------------------------------------------
 # This Dockerfile creates a custom Docker image for Jupyter
 # to use with the Apache Druid Jupyter notebook tutorials.
-# Build using `docker build -t apache/druid:jupyter-notebook .`
+# Build using `docker build -t imply/druid-notebook:latest .`
 # -------------------------------------------------------------
 
 # Use the Jupyter base notebook as the base image
