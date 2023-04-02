@@ -166,7 +166,7 @@ public class StandardStringColumnSupplier implements Supplier<StandardTypeColumn
     this.encodedColumnSupplier = encodedColumnSupplier;
     this.valueIndexes = valueIndexes;
     this.bitmapFactory = serdeFactory.getBitmapFactory();
-    this.nullValueBitmap = valueIndexes.get(0);
+    this.nullValueBitmap = valueIndexes.get(0) == null ? bitmapFactory.makeEmptyImmutableBitmap() : valueIndexes.get(0);
   }
 
   @Override

@@ -148,7 +148,7 @@ public class StandardDoubleColumnSupplier implements Supplier<StandardTypeColumn
     this.valueColumnSupplier = valueColumnSupplier;
     this.valueIndexes = valueIndexes;
     this.bitmapFactory = bitmapFactory;
-    this.nullValueBitmap = valueIndexes.get(0);
+    this.nullValueBitmap = valueIndexes.get(0) == null ? bitmapFactory.makeEmptyImmutableBitmap() : valueIndexes.get(0);
   }
 
   @Override

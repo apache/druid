@@ -205,7 +205,7 @@ public class StandardArrayColumnSupplier implements Supplier<StandardTypeColumn>
     this.arrayDictionarySupplier = arrayDictionarySupplier;
     this.encodedValueColumnSupplier = encodedValueColumnSupplier;
     this.valueIndexes = valueIndexes;
-    this.nullValueBitmap = valueIndexes.get(0);
+    this.nullValueBitmap = valueIndexes.get(0) == null ? bitmapFactory.makeEmptyImmutableBitmap() : valueIndexes.get(0);
   }
 
   @Override
