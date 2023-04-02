@@ -50,6 +50,7 @@ public interface IndexableAdapter
   @Nullable
   <T extends Comparable<? super T>> CloseableIndexed<T> getDimValueLookup(String dimension);
 
+  @Nullable
   SortedValueDictionary getSortedValueLookup(String dimension, SortedMap<String, FieldTypeInfo.MutableTypeSet> mergedFields);
 
   TransformableRowIterator getRows();

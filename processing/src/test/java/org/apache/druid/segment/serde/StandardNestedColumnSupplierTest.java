@@ -722,7 +722,7 @@ public class StandardNestedColumnSupplierTest extends InitializedNullHandlingTes
     }
   }
 
-  private static class SettableSelector extends ObjectColumnSelector<StructuredData>
+  static class SettableSelector extends ObjectColumnSelector<StructuredData>
   {
     private StructuredData data;
 

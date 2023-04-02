@@ -249,6 +249,7 @@ public class StandardNestedColumnSerializer extends StandardTypeColumnSerializer
     nullRowsBitmap = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
   }
 
+  @Override
   public void serializeFields(SortedMap<String, FieldTypeInfo.MutableTypeSet> fields) throws IOException
   {
     this.fields = fields;

@@ -85,7 +85,7 @@ public interface StandardTypeColumn extends BaseColumn
     @Override
     public ColumnType getLogicalType()
     {
-      return null;
+      return logicalType;
     }
 
     @Override

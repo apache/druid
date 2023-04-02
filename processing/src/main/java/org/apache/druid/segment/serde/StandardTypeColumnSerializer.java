@@ -24,9 +24,11 @@ import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.nested.DictionaryIdLookup;
+import org.apache.druid.segment.nested.FieldTypeInfo;
 import org.apache.druid.segment.nested.StructuredData;
 
 import java.io.IOException;
+import java.util.SortedMap;
 
 public abstract class StandardTypeColumnSerializer implements GenericColumnSerializer<StructuredData>
 {
@@ -46,6 +48,11 @@ public abstract class StandardTypeColumnSerializer implements GenericColumnSeria
   public static final String NESTED_FIELD_PREFIX = "__field_";
 
   public abstract void openDictionaryWriter() throws IOException;
+
+  public void serializeFields(SortedMap<String, FieldTypeInfo.MutableTypeSet> fields) throws IOException
+  {
+    // nothing to do unless we actually have nested fields
+  }
 
   public abstract void serializeDictionaries(
       Iterable<String> strings,

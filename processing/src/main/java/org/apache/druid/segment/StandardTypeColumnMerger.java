@@ -139,7 +139,6 @@ public class StandardTypeColumnMerger implements DimensionMergerV9
                 progressIndicator,
                 closer
             );
-            longSerializer.openDictionaryWriter();
             serializer = longSerializer;
             break;
           case DOUBLE:
@@ -150,7 +149,6 @@ public class StandardTypeColumnMerger implements DimensionMergerV9
                 progressIndicator,
                 closer
             );
-            doubleSerializer.openDictionaryWriter();
             serializer = doubleSerializer;
             break;
           case STRING:
@@ -161,7 +159,6 @@ public class StandardTypeColumnMerger implements DimensionMergerV9
                 progressIndicator,
                 closer
             );
-            stringSerializer.openDictionaryWriter();
             serializer = stringSerializer;
             break;
           case ARRAY:
@@ -172,7 +169,6 @@ public class StandardTypeColumnMerger implements DimensionMergerV9
                 progressIndicator,
                 closer
             );
-            arraySerializer.openDictionaryWriter();
             serializer = arraySerializer;
             break;
           default:
@@ -193,10 +189,10 @@ public class StandardTypeColumnMerger implements DimensionMergerV9
             closer
         );
         serializer = defaultSerializer;
-        defaultSerializer.openDictionaryWriter();
-        // make sure we serialize the fields list since we actually have nested data
-        defaultSerializer.serializeFields(mergedFields);
       }
+
+      serializer.openDictionaryWriter();
+      serializer.serializeFields(mergedFields);
 
       int stringCardinality;
       int longCardinality;

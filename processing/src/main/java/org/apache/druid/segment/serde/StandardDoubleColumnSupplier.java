@@ -406,7 +406,7 @@ public class StandardDoubleColumnSupplier implements Supplier<StandardTypeColumn
             {
               while (!nextSet && iterator.hasNext()) {
                 Double nextValue = iterator.next();
-                if (nextValue == 0) {
+                if (nextValue == null) {
                   nextSet = doublePredicate.applyNull();
                 } else {
                   nextSet = doublePredicate.applyDouble(nextValue);
