@@ -28,13 +28,17 @@ import org.apache.druid.segment.IntIteratorUtils;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.TransformableRowIterator;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
+import org.apache.druid.segment.nested.FieldTypeInfo;
+import org.apache.druid.segment.nested.SortedValueDictionary;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.stream.Collectors;
 
 /**
@@ -143,6 +147,22 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   }
 
   @Override
+  public SortedValueDictionary getSortedValueLookup(
+      String dimension,
+      SortedMap<String, FieldTypeInfo.MutableTypeSet> mergedFields
+  )
+  {
+    final DimensionAccessor accessor = accessors.get(dimension);
+    if (accessor == null) {
+      return null;
+    }
+
+    final DimensionIndexer indexer = accessor.dimensionDesc.getIndexer();
+    indexer.mergeNestedFields(mergedFields);
+    return indexer.getSortedValueLookups();
+  }
+
+  @Override
   public TransformableRowIterator getRows()
   {
     return new IncrementalIndexRowIterator(index);
@@ -179,7 +199,13 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   @Override
   public ColumnCapabilities getCapabilities(String column)
   {
-    return index.getColumnHandlerCapabilities(column);
+    return index.getColumnCapabilities(column);
+  }
+
+  @Override
+  public ColumnFormat getFormat(String column)
+  {
+    return index.getColumnFormat(column);
   }
 
   @Override

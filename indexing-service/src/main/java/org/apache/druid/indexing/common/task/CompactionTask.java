@@ -1109,7 +1109,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         );
 
         if (!uniqueDims.containsKey(dimension)) {
-          final DimensionHandler dimensionHandler = Preconditions.checkNotNull(
+          Preconditions.checkNotNull(
               dimensionHandlerMap.get(dimension),
               "Cannot find dimensionHandler for dimension[%s]",
               dimension
@@ -1118,11 +1118,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           uniqueDims.put(dimension, uniqueDims.size());
           dimensionSchemaMap.put(
               dimension,
-              createDimensionSchema(
-                  dimension,
-                  columnHolder.getHandlerCapabilities(),
-                  dimensionHandler.getMultivalueHandling()
-              )
+              columnHolder.getColumnFormat().getColumnSchema(dimension)
           );
         }
       }

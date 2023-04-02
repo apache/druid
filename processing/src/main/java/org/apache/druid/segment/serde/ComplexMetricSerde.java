@@ -52,6 +52,21 @@ public abstract class ComplexMetricSerde
    * @param columnConfig ColumnConfiguration used during deserialization
    */
   public void deserializeColumn(
+      @SuppressWarnings("unused") String columnName,
+      ByteBuffer buffer,
+      ColumnBuilder builder,
+      ColumnConfig columnConfig
+  )
+  {
+    deserializeColumn(buffer, builder, columnConfig);
+  }
+
+  /**
+   * {@link ComplexMetricSerde#deserializeColumn(String, ByteBuffer, ColumnBuilder, ColumnConfig)} should be used instead of this.
+   * This method is left for backward compatibility.
+   */
+  @Deprecated
+  public void deserializeColumn(
       ByteBuffer buffer,
       ColumnBuilder builder,
       @SuppressWarnings("unused") ColumnConfig columnConfig
@@ -60,8 +75,9 @@ public abstract class ComplexMetricSerde
     deserializeColumn(buffer, builder);
   }
 
+
   /**
-   * {@link ComplexMetricSerde#deserializeColumn(ByteBuffer, ColumnBuilder, ColumnConfig)} should be used instead of this.
+   * {@link ComplexMetricSerde#deserializeColumn(String, ByteBuffer, ColumnBuilder, ColumnConfig)} should be used instead of this.
    * This method is left for backward compatibility.
    */
   @Deprecated

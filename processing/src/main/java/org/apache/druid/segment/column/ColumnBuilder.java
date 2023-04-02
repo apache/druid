@@ -36,14 +36,14 @@ public class ColumnBuilder
   private final ColumnCapabilitiesImpl capabilitiesBuilder = ColumnCapabilitiesImpl.createDefault();
 
   @Nullable
-  private ColumnCapabilities handlerCapabilities = null;
-
-  @Nullable
   private Supplier<? extends BaseColumn> columnSupplier = null;
   @Nullable
   private ColumnIndexSupplier indexSupplier = NoIndexesColumnIndexSupplier.getInstance();
   @Nullable
   private SmooshedFileMapper fileMapper = null;
+
+  @Nullable
+  private ColumnFormat columnFormat = null;
 
   public ColumnCapabilitiesImpl getCapabilitiesBuilder()
   {
@@ -116,6 +116,13 @@ public class ColumnBuilder
     return this;
   }
 
+  public ColumnBuilder setStandardTypeColumnSupplier(Supplier<? extends StandardTypeColumn> columnSupplier)
+  {
+    checkColumnSupplierNotSet();
+    this.columnSupplier = columnSupplier;
+    return this;
+  }
+
   public ColumnBuilder setIndexSupplier(
       @Nullable ColumnIndexSupplier indexSupplier,
       boolean hasBitmapIndex,
@@ -147,9 +154,9 @@ public class ColumnBuilder
     return this;
   }
 
-  public ColumnBuilder setHandlerCapabilities(ColumnCapabilities handlerCapabilities)
+  public ColumnBuilder setColumnFormat(ColumnFormat columnFormat)
   {
-    this.handlerCapabilities = handlerCapabilities;
+    this.columnFormat = columnFormat;
     return this;
   }
 
@@ -157,7 +164,7 @@ public class ColumnBuilder
   {
     Preconditions.checkState(capabilitiesBuilder.getType() != null, "Type must be set.");
 
-    return new SimpleColumnHolder(capabilitiesBuilder, handlerCapabilities, columnSupplier, indexSupplier);
+    return new SimpleColumnHolder(capabilitiesBuilder, columnFormat, columnSupplier, indexSupplier);
   }
 
   private void checkColumnSupplierNotSet()

@@ -211,7 +211,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
           columns.put(columnName, Suppliers.memoize(
               () -> {
                 try {
-                  return deserializeColumn(mapper, colBuffer, smooshedFiles);
+                  return deserializeColumn(columnName, mapper, colBuffer, smooshedFiles);
                 }
                 catch (IOException | RuntimeException e) {
                   loadFailed.execute();
@@ -220,7 +220,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
               }
           ));
         } else {
-          ColumnHolder columnHolder = deserializeColumn(mapper, colBuffer, smooshedFiles);
+          ColumnHolder columnHolder = deserializeColumn(columnName, mapper, colBuffer, smooshedFiles);
           columns.put(columnName, () -> columnHolder);
         }
 
@@ -232,7 +232,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
         columns.put(ColumnHolder.TIME_COLUMN_NAME, Suppliers.memoize(
             () -> {
               try {
-                return deserializeColumn(mapper, timeBuffer, smooshedFiles);
+                return deserializeColumn(ColumnHolder.TIME_COLUMN_NAME, mapper, timeBuffer, smooshedFiles);
               }
               catch (IOException | RuntimeException e) {
                 loadFailed.execute();
@@ -241,7 +241,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
             }
         ));
       } else {
-        ColumnHolder columnHolder = deserializeColumn(mapper, timeBuffer, smooshedFiles);
+        ColumnHolder columnHolder = deserializeColumn(ColumnHolder.TIME_COLUMN_NAME, mapper, timeBuffer, smooshedFiles);
         columns.put(ColumnHolder.TIME_COLUMN_NAME, () -> columnHolder);
       }
 
@@ -259,6 +259,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
     }
 
     private ColumnHolder deserializeColumn(
+        String columnName,
         ObjectMapper mapper,
         ByteBuffer byteBuffer,
         SmooshedFileMapper smooshedFiles
@@ -267,7 +268,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
       ColumnDescriptor serde = mapper.readValue(
           IndexIO.SERIALIZER_UTILS.readString(byteBuffer), ColumnDescriptor.class
       );
-      return serde.read(byteBuffer, columnConfig, smooshedFiles);
+      return serde.read(columnName, byteBuffer, columnConfig, smooshedFiles);
     }
   }
 }

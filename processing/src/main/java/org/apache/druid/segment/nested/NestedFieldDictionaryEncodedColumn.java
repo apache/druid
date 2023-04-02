@@ -38,9 +38,9 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.LongColumnSelector;
+import org.apache.druid.segment.column.CachingStringDictionaryEncodedColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ColumnarDoubles;
@@ -74,7 +74,7 @@ import java.util.BitSet;
 public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexed<ByteBuffer>>
     implements DictionaryEncodedColumn<String>
 {
-  private final NestedFieldTypeInfo.TypeSet types;
+  private final FieldTypeInfo.TypeSet types;
   @Nullable
   private final ColumnType singleType;
   private final ColumnarLongs longsColumn;
@@ -95,7 +95,7 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
 
 
   public NestedFieldDictionaryEncodedColumn(
-      NestedFieldTypeInfo.TypeSet types,
+      FieldTypeInfo.TypeSet types,
       ColumnarLongs longsColumn,
       ColumnarDoubles doublesColumn,
       ColumnarInts column,
@@ -678,7 +678,7 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
   @Override
   public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(ReadableVectorOffset offset)
   {
-    final class StringVectorSelector extends StringDictionaryEncodedColumn.StringSingleValueDimensionVectorSelector
+    final class StringVectorSelector extends CachingStringDictionaryEncodedColumn.StringSingleValueDimensionVectorSelector
     {
       public StringVectorSelector()
       {
@@ -786,7 +786,7 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
         }
       };
     }
-    final class StringVectorSelector extends StringDictionaryEncodedColumn.StringVectorObjectSelector
+    final class StringVectorSelector extends CachingStringDictionaryEncodedColumn.StringVectorObjectSelector
     {
       public StringVectorSelector()
       {

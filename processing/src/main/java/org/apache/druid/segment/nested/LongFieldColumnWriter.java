@@ -41,12 +41,12 @@ public final class LongFieldColumnWriter extends GlobalDictionaryEncodedFieldCol
 {
   private ColumnarLongsSerializer longsSerializer;
 
-  protected LongFieldColumnWriter(
+  public LongFieldColumnWriter(
       String columnName,
       String fieldName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       IndexSpec indexSpec,
-      GlobalDictionaryIdLookup globalDictionaryIdLookup
+      DictionaryIdLookup globalDictionaryIdLookup
   )
   {
     super(columnName, fieldName, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);

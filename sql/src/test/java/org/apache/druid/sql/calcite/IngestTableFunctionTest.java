@@ -337,7 +337,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         RowSignature.builder()
                     .add("x", ColumnType.STRING)
                     .add("y", ColumnType.STRING)
-                    .add("z", NestedDataComplexTypeSerde.TYPE)
+                    .add("z", ColumnType.NESTED_DATA)
                     .build()
         );
     testIngestionQuery()

@@ -22,13 +22,15 @@ package org.apache.druid.segment.nested;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.serde.StandardNestedColumnSerializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
 /**
- * Literal field writer for string type nested columns of {@link NestedDataColumnSerializer}
+ * Field writer for string type nested columns of {@link NestedDataColumnSerializer} and
+ * {@link StandardNestedColumnSerializer}
  */
 public final class StringFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<String>
 {
@@ -37,7 +39,7 @@ public final class StringFieldColumnWriter extends GlobalDictionaryEncodedFieldC
       String fieldName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       IndexSpec indexSpec,
-      GlobalDictionaryIdLookup globalDictionaryIdLookup
+      DictionaryIdLookup globalDictionaryIdLookup
   )
   {
     super(columnName, fieldName, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);

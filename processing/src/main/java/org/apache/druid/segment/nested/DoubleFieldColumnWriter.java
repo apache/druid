@@ -41,12 +41,12 @@ public final class DoubleFieldColumnWriter extends GlobalDictionaryEncodedFieldC
 {
   private ColumnarDoublesSerializer doublesSerializer;
 
-  protected DoubleFieldColumnWriter(
+  public DoubleFieldColumnWriter(
       String columnName,
       String fieldName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       IndexSpec indexSpec,
-      GlobalDictionaryIdLookup globalDictionaryIdLookup
+      DictionaryIdLookup globalDictionaryIdLookup
   )
   {
     super(columnName, fieldName, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);

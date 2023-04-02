@@ -54,7 +54,7 @@ import java.util.List;
 /**
  *
  */
-public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<String>
+public class CachingStringDictionaryEncodedColumn implements DictionaryEncodedColumn<String>
 {
   @Nullable
   private final ColumnarInts column;
@@ -63,7 +63,7 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
   private final CachingIndexed<String> cachedDictionary;
   private final Indexed<ByteBuffer> dictionaryUtf8;
 
-  public StringDictionaryEncodedColumn(
+  public CachingStringDictionaryEncodedColumn(
       @Nullable ColumnarInts singleValueColumn,
       @Nullable ColumnarMultiInts multiValueColumn,
       CachingIndexed<String> dictionary,
@@ -165,7 +165,7 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
       @Override
       public String lookupName(int id)
       {
-        final String value = StringDictionaryEncodedColumn.this.lookupName(id);
+        final String value = CachingStringDictionaryEncodedColumn.this.lookupName(id);
         return extractionFn == null ? value : extractionFn.apply(value);
       }
 
@@ -173,7 +173,7 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
       @Override
       public ByteBuffer lookupNameUtf8(int id)
       {
-        return StringDictionaryEncodedColumn.this.lookupNameUtf8(id);
+        return CachingStringDictionaryEncodedColumn.this.lookupNameUtf8(id);
       }
 
       @Override
@@ -201,7 +201,7 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
         if (extractionFn != null) {
           throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
         }
-        return StringDictionaryEncodedColumn.this.lookupId(name);
+        return CachingStringDictionaryEncodedColumn.this.lookupId(name);
       }
     }
 
@@ -302,7 +302,7 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
                 @Override
                 public void inspectRuntimeShape(RuntimeShapeInspector inspector)
                 {
-                  inspector.visit("column", StringDictionaryEncodedColumn.this);
+                  inspector.visit("column", CachingStringDictionaryEncodedColumn.this);
                 }
               };
             } else {
@@ -343,7 +343,7 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
             @Override
             public void inspectRuntimeShape(RuntimeShapeInspector inspector)
             {
-              inspector.visit("column", StringDictionaryEncodedColumn.this);
+              inspector.visit("column", CachingStringDictionaryEncodedColumn.this);
             }
           };
         }
@@ -392,20 +392,20 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
       @Override
       public String lookupName(final int id)
       {
-        return StringDictionaryEncodedColumn.this.lookupName(id);
+        return CachingStringDictionaryEncodedColumn.this.lookupName(id);
       }
 
       @Nullable
       @Override
       public ByteBuffer lookupNameUtf8(int id)
       {
-        return StringDictionaryEncodedColumn.this.lookupNameUtf8(id);
+        return CachingStringDictionaryEncodedColumn.this.lookupNameUtf8(id);
       }
 
       @Override
       public int lookupId(@Nullable final String name)
       {
-        return StringDictionaryEncodedColumn.this.lookupId(name);
+        return CachingStringDictionaryEncodedColumn.this.lookupId(name);
       }
     }
 
@@ -433,20 +433,20 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
       @Override
       public String lookupName(final int id)
       {
-        return StringDictionaryEncodedColumn.this.lookupName(id);
+        return CachingStringDictionaryEncodedColumn.this.lookupName(id);
       }
 
       @Nullable
       @Override
       public ByteBuffer lookupNameUtf8(int id)
       {
-        return StringDictionaryEncodedColumn.this.lookupNameUtf8(id);
+        return CachingStringDictionaryEncodedColumn.this.lookupNameUtf8(id);
       }
 
       @Override
       public int lookupId(@Nullable final String name)
       {
-        return StringDictionaryEncodedColumn.this.lookupId(name);
+        return CachingStringDictionaryEncodedColumn.this.lookupId(name);
       }
     }
     return new MultiStringVectorSelector();
@@ -467,7 +467,7 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
         @Override
         public String lookupName(int id)
         {
-          return StringDictionaryEncodedColumn.this.lookupName(id);
+          return CachingStringDictionaryEncodedColumn.this.lookupName(id);
         }
       }
 
@@ -484,7 +484,7 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
         @Override
         public String lookupName(int id)
         {
-          return StringDictionaryEncodedColumn.this.lookupName(id);
+          return CachingStringDictionaryEncodedColumn.this.lookupName(id);
         }
       }
 

@@ -21,7 +21,7 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -539,7 +539,7 @@ public class OutputTypeTest extends InitializedNullHandlingTest
         ExpressionTypeConversion.operator(ExpressionType.STRING_ARRAY, ExpressionType.STRING_ARRAY)
     );
 
-    ExpressionType nested = ExpressionType.fromColumnType(NestedDataComplexTypeSerde.TYPE);
+    ExpressionType nested = ExpressionType.fromColumnType(ColumnType.NESTED_DATA);
     Assert.assertEquals(
         nested,
         ExpressionTypeConversion.operator(nested, nested)
@@ -616,7 +616,7 @@ public class OutputTypeTest extends InitializedNullHandlingTest
         ExpressionType.STRING_ARRAY,
         ExpressionTypeConversion.function(ExpressionType.STRING_ARRAY, ExpressionType.STRING_ARRAY)
     );
-    ExpressionType nested = ExpressionType.fromColumnType(NestedDataComplexTypeSerde.TYPE);
+    ExpressionType nested = ExpressionType.fromColumnType(ColumnType.NESTED_DATA);
     Assert.assertEquals(
         nested,
         ExpressionTypeConversion.function(nested, nested)

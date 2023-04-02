@@ -39,8 +39,6 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.ProgressIndicator;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.StringEncodingStrategies;
-import org.apache.druid.segment.column.TypeStrategies;
-import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ByteBufferWriter;
@@ -48,7 +46,6 @@ import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSerializer
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.DictionaryWriter;
 import org.apache.druid.segment.data.FixedIndexedWriter;
-import org.apache.druid.segment.data.FrontCodedIntArrayIndexedWriter;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.serde.Serializer;
@@ -68,7 +65,6 @@ import java.util.SortedMap;
 public class NestedDataColumnSerializer implements GenericColumnSerializer<StructuredData>
 {
   private static final Logger log = new Logger(NestedDataColumnSerializer.class);
-  public static final IntTypeStrategy INT_TYPE_STRATEGY = new IntTypeStrategy();
   public static final String STRING_DICTIONARY_FILE_NAME = "__stringDictionary";
   public static final String LONG_DICTIONARY_FILE_NAME = "__longDictionary";
   public static final String DOUBLE_DICTIONARY_FILE_NAME = "__doubleDictionary";
@@ -118,35 +114,19 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
         @Nullable List<?> array
     )
     {
-      final ExprEval<?> eval = ExprEval.bestEffortArray(array);
-      if (eval.type().isArray() && eval.type().getElementType().isPrimitive()) {
-        final GlobalDictionaryEncodedFieldColumnWriter<?> writer = fieldWriters.get(
-            NestedPathFinder.toNormalizedJsonPath(fieldPath)
-        );
-        if (writer != null) {
-          try {
-            writer.addValue(rowCount, eval.value());
-            // serializer doesn't use size estimate
-            return ProcessedValue.NULL_LITERAL;
-          }
-          catch (IOException e) {
-            throw new RE(e, "Failed to write field [%s] value [%s]", fieldPath, array);
-          }
-        }
-      }
+      // classic nested column ingestion does not support array fields
       return null;
     }
   };
 
   private byte[] metadataBytes;
-  private GlobalDictionaryIdLookup globalDictionaryIdLookup;
-  private SortedMap<String, NestedFieldTypeInfo.MutableTypeSet> fields;
+  private DictionaryIdLookup globalDictionaryIdLookup;
+  private SortedMap<String, FieldTypeInfo.MutableTypeSet> fields;
   private GenericIndexedWriter<String> fieldsWriter;
-  private NestedFieldTypeInfo.Writer fieldsInfoWriter;
+  private FieldTypeInfo.Writer fieldsInfoWriter;
   private DictionaryWriter<String> dictionaryWriter;
   private FixedIndexedWriter<Long> longDictionaryWriter;
   private FixedIndexedWriter<Double> doubleDictionaryWriter;
-  private FrontCodedIntArrayIndexedWriter arrayDictionaryWriter;
   private CompressedVariableSizedBlobColumnSerializer rawWriter;
   private ByteBufferWriter<ImmutableBitmap> nullBitmapWriter;
   private MutableBitmap nullRowsBitmap;
@@ -168,10 +148,10 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.indexSpec = indexSpec;
     this.closer = closer;
-    this.globalDictionaryIdLookup = new GlobalDictionaryIdLookup();
+    this.globalDictionaryIdLookup = new DictionaryIdLookup();
   }
 
-  public GlobalDictionaryIdLookup getGlobalLookup()
+  public DictionaryIdLookup getGlobalLookup()
   {
     return globalDictionaryIdLookup;
   }
@@ -182,7 +162,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     fieldsWriter = new GenericIndexedWriter<>(segmentWriteOutMedium, name, GenericIndexed.STRING_STRATEGY);
     fieldsWriter.open();
 
-    fieldsInfoWriter = new NestedFieldTypeInfo.Writer(segmentWriteOutMedium);
+    fieldsInfoWriter = new FieldTypeInfo.Writer(segmentWriteOutMedium);
     fieldsInfoWriter.open();
 
     dictionaryWriter = StringEncodingStrategies.getStringDictionaryWriter(
@@ -210,13 +190,6 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     );
     doubleDictionaryWriter.open();
 
-    arrayDictionaryWriter = new FrontCodedIntArrayIndexedWriter(
-        segmentWriteOutMedium,
-        ByteOrder.nativeOrder(),
-        4
-    );
-    arrayDictionaryWriter.open();
-
     rawWriter = new CompressedVariableSizedBlobColumnSerializer(
         getInternalFileName(name, RAW_FILE_NAME),
         segmentWriteOutMedium,
@@ -233,12 +206,12 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     nullRowsBitmap = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
   }
 
-  public void serializeFields(SortedMap<String, NestedFieldTypeInfo.MutableTypeSet> fields) throws IOException
+  public void serializeFields(SortedMap<String, FieldTypeInfo.MutableTypeSet> fields) throws IOException
   {
     this.fields = fields;
     this.fieldWriters = Maps.newHashMapWithExpectedSize(fields.size());
     int ctr = 0;
-    for (Map.Entry<String, NestedFieldTypeInfo.MutableTypeSet> field : fields.entrySet()) {
+    for (Map.Entry<String, FieldTypeInfo.MutableTypeSet> field : fields.entrySet()) {
       final String fieldName = field.getKey();
       final String fieldFileName = NESTED_FIELD_PREFIX + ctr++;
       fieldsWriter.write(fieldName);
@@ -270,14 +243,6 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
               indexSpec,
               globalDictionaryIdLookup
           );
-        } else if (Types.is(type, ValueType.ARRAY)) {
-          writer = new ArrayFieldColumnWriter(
-              name,
-              fieldFileName,
-              segmentWriteOutMedium,
-              indexSpec,
-              globalDictionaryIdLookup
-          );
         } else {
           throw new ISE("Invalid field type [%s], how did this happen?", type);
         }
@@ -298,8 +263,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
   public void serializeDictionaries(
       Iterable<String> strings,
       Iterable<Long> longs,
-      Iterable<Double> doubles,
-      Iterable<int[]> arrays
+      Iterable<Double> doubles
   ) throws IOException
   {
     if (dictionarySerialized) {
@@ -335,24 +299,13 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
       doubleDictionaryWriter.write(value);
       globalDictionaryIdLookup.addDouble(value);
     }
-
-    for (int[] value : arrays) {
-      if (value == null) {
-        continue;
-      }
-      arrayDictionaryWriter.write(value);
-      globalDictionaryIdLookup.addArray(value);
-    }
     dictionarySerialized = true;
   }
 
   @Override
   public void serialize(ColumnValueSelector<? extends StructuredData> selector) throws IOException
   {
-    if (!dictionarySerialized) {
-      throw new ISE("Must serialize value dictionaries before serializing values for column [%s]", name);
-    }
-    StructuredData data = StructuredData.wrap(selector.getObject());
+    final StructuredData data = StructuredData.wrap(selector.getObject());
     if (data == null) {
       nullRowsBitmap.add(rowCount);
     }
@@ -405,7 +358,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     Preconditions.checkState(closedForWrite, "Not closed yet!");
     Preconditions.checkArgument(dictionaryWriter.isSorted(), "Dictionary not sorted?!?");
     // version 5
-    channel.write(ByteBuffer.wrap(new byte[]{0x05}));
+    channel.write(ByteBuffer.wrap(new byte[]{0x04}));
     channel.write(ByteBuffer.wrap(metadataBytes));
     fieldsWriter.writeTo(channel, smoosher);
     fieldsInfoWriter.writeTo(channel, smoosher);
@@ -414,7 +367,6 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     writeInternal(smoosher, dictionaryWriter, STRING_DICTIONARY_FILE_NAME);
     writeInternal(smoosher, longDictionaryWriter, LONG_DICTIONARY_FILE_NAME);
     writeInternal(smoosher, doubleDictionaryWriter, DOUBLE_DICTIONARY_FILE_NAME);
-    writeInternal(smoosher, arrayDictionaryWriter, ARRAY_DICTIONARY_FILE_NAME);
     writeInternal(smoosher, rawWriter, RAW_FILE_NAME);
     if (!nullRowsBitmap.isEmpty()) {
       writeInternal(smoosher, nullBitmapWriter, NULL_BITMAP_FILE_NAME);
@@ -430,7 +382,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
       channel.close();
     }
 
-    for (Map.Entry<String, NestedFieldTypeInfo.MutableTypeSet> field : fields.entrySet()) {
+    for (Map.Entry<String, FieldTypeInfo.MutableTypeSet> field : fields.entrySet()) {
       // remove writer so that it can be collected when we are done with it
       GlobalDictionaryEncodedFieldColumnWriter<?> writer = fieldWriters.remove(field.getKey());
       writer.writeTo(rowCount, smoosher);
@@ -451,49 +403,4 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     return StringUtils.format("%s.%s", fileNameBase, field);
   }
 
-  private static final class IntTypeStrategy implements TypeStrategy<Integer>
-  {
-    @Override
-    public int estimateSizeBytes(Integer value)
-    {
-      return Integer.BYTES;
-    }
-
-    @Override
-    public Integer read(ByteBuffer buffer)
-    {
-      return buffer.getInt();
-    }
-
-    @Override
-    public Integer read(ByteBuffer buffer, int offset)
-    {
-      return buffer.getInt(offset);
-    }
-
-    @Override
-    public boolean readRetainsBufferReference()
-    {
-      return false;
-    }
-
-    @Override
-    public int write(ByteBuffer buffer, Integer value, int maxSizeBytes)
-    {
-      TypeStrategies.checkMaxSize(buffer.remaining(), maxSizeBytes, ColumnType.LONG);
-      final int sizeBytes = Integer.BYTES;
-      final int remaining = maxSizeBytes - sizeBytes;
-      if (remaining >= 0) {
-        buffer.putInt(value);
-        return sizeBytes;
-      }
-      return remaining;
-    }
-
-    @Override
-    public int compare(Object o1, Object o2)
-    {
-      return Integer.compare(((Number) o1).intValue(), ((Number) o2).intValue());
-    }
-  }
 }

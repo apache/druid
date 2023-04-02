@@ -25,14 +25,18 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
+import org.apache.druid.segment.column.StandardTypeColumn;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.ImmutableBitmapValues;
 import org.apache.druid.segment.data.IndexedIterable;
+import org.apache.druid.segment.nested.FieldTypeInfo;
+import org.apache.druid.segment.nested.SortedValueDictionary;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableLongColumnValueSelector;
 import org.apache.druid.utils.CloseableUtils;
@@ -45,6 +49,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.SortedMap;
 
 /**
  *
@@ -153,6 +158,37 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
         dict.close();
       }
     };
+  }
+
+  @Override
+  public SortedValueDictionary getSortedValueLookup(
+      String dimension,
+      SortedMap<String, FieldTypeInfo.MutableTypeSet> mergedFields
+  )
+  {
+    final ColumnHolder columnHolder = input.getColumnHolder(dimension);
+
+    if (columnHolder == null) {
+      return null;
+    }
+    if (!(columnHolder.getColumnFormat() instanceof StandardTypeColumn.Format)) {
+      return null;
+    }
+
+    final BaseColumn col = columnHolder.getColumn();
+    if (col instanceof StandardTypeColumn) {
+      StandardTypeColumn column = (StandardTypeColumn) col;
+      column.mergeNestedFields(mergedFields);
+      return new SortedValueDictionary(
+          column.getStringDictionary(),
+          column.getLongDictionary(),
+          column.getDoubleDictionary(),
+          column.getArrayDictionary(),
+          column
+      );
+    }
+    // leaky leaky but this shouldn't be able to happen because of the format check...
+    return null;
   }
 
   @Override
@@ -340,7 +376,13 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   @Override
   public ColumnCapabilities getCapabilities(String column)
   {
-    return input.getColumnHolder(column).getHandlerCapabilities();
+    return input.getColumnHolder(column).getCapabilities();
+  }
+
+  @Override
+  public ColumnFormat getFormat(String column)
+  {
+    return input.getColumnHolder(column).getColumnFormat();
   }
 
   @Override

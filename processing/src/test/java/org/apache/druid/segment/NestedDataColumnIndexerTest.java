@@ -94,34 +94,34 @@ public class NestedDataColumnIndexerTest extends InitializedNullHandlingTest
 
     // new raw value, new fields
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(1L, 2L, 10L), false);
-    Assert.assertEquals(168, key.getEffectiveSizeBytes());
-    Assert.assertEquals(6, indexer.getCardinality());
+    Assert.assertEquals(276, key.getEffectiveSizeBytes());
+    Assert.assertEquals(5, indexer.getCardinality());
     // new raw value, re-use fields and dictionary
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(1L, 2L, 10L), false);
-    Assert.assertEquals(104, key.getEffectiveSizeBytes());
-    Assert.assertEquals(6, indexer.getCardinality());
+    Assert.assertEquals(56, key.getEffectiveSizeBytes());
+    Assert.assertEquals(5, indexer.getCardinality());
     // new raw value, new fields
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(
         ImmutableMap.of("x", ImmutableList.of(1L, 2L, 10L)),
         false
     );
-    Assert.assertEquals(166, key.getEffectiveSizeBytes());
-    Assert.assertEquals(6, indexer.getCardinality());
+    Assert.assertEquals(286, key.getEffectiveSizeBytes());
+    Assert.assertEquals(5, indexer.getCardinality());
     // new raw value
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(
         ImmutableMap.of("x", ImmutableList.of(1L, 2L, 10L)),
         false
     );
-    Assert.assertEquals(166, key.getEffectiveSizeBytes());
-    Assert.assertEquals(6, indexer.getCardinality());
+    Assert.assertEquals(118, key.getEffectiveSizeBytes());
+    Assert.assertEquals(5, indexer.getCardinality());
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent("", false);
     if (NullHandling.replaceWithDefault()) {
       Assert.assertEquals(0, key.getEffectiveSizeBytes());
-      Assert.assertEquals(7, indexer.getCardinality());
+      Assert.assertEquals(6, indexer.getCardinality());
     } else {
       Assert.assertEquals(104, key.getEffectiveSizeBytes());
-      Assert.assertEquals(7, indexer.getCardinality());
+      Assert.assertEquals(6, indexer.getCardinality());
     }
   }
 

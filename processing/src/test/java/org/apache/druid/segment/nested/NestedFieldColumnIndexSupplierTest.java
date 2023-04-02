@@ -1351,7 +1351,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
 
     FixedIndexedWriter<Integer> localDictionaryWriter = new FixedIndexedWriter<>(
         new OnHeapMemorySegmentWriteOutMedium(),
-        NestedDataColumnSerializer.INT_TYPE_STRATEGY,
+        CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
         Integer.BYTES,
         true
@@ -1391,7 +1391,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
 
     Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
-        NestedDataColumnSerializer.INT_TYPE_STRATEGY,
+        CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
         Integer.BYTES
     );
@@ -1399,10 +1399,10 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
 
     NestedFieldColumnIndexSupplier<?> indexSupplier = new NestedFieldColumnIndexSupplier<>(
-        new NestedFieldTypeInfo.TypeSet(
-            new NestedFieldTypeInfo.MutableTypeSet().add(ColumnType.STRING)
-                                                    .add(ColumnType.LONG)
-                                                    .getByteValue()
+        new FieldTypeInfo.TypeSet(
+            new FieldTypeInfo.MutableTypeSet().add(ColumnType.STRING)
+                                              .add(ColumnType.LONG)
+                                              .getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
         bitmaps,
@@ -1447,7 +1447,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
 
     FixedIndexedWriter<Integer> localDictionaryWriter = new FixedIndexedWriter<>(
         new OnHeapMemorySegmentWriteOutMedium(),
-        NestedDataColumnSerializer.INT_TYPE_STRATEGY,
+        CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
         Integer.BYTES,
         true
@@ -1491,7 +1491,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
 
     Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
-        NestedDataColumnSerializer.INT_TYPE_STRATEGY,
+        CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
         Integer.BYTES
     );
@@ -1499,8 +1499,8 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
 
     return new NestedFieldColumnIndexSupplier<>(
-        new NestedFieldTypeInfo.TypeSet(
-            new NestedFieldTypeInfo.MutableTypeSet().add(ColumnType.STRING).getByteValue()
+        new FieldTypeInfo.TypeSet(
+            new FieldTypeInfo.MutableTypeSet().add(ColumnType.STRING).getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
         bitmaps,
@@ -1520,7 +1520,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
 
     FixedIndexedWriter<Integer> localDictionaryWriter = new FixedIndexedWriter<>(
         new OnHeapMemorySegmentWriteOutMedium(),
-        NestedDataColumnSerializer.INT_TYPE_STRATEGY,
+        CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
         Integer.BYTES,
         true
@@ -1567,7 +1567,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
 
     Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
-        NestedDataColumnSerializer.INT_TYPE_STRATEGY,
+        CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
         Integer.BYTES
     );
@@ -1575,8 +1575,8 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
 
     return new NestedFieldColumnIndexSupplier<>(
-        new NestedFieldTypeInfo.TypeSet(
-            new NestedFieldTypeInfo.MutableTypeSet().add(ColumnType.STRING).getByteValue()
+        new FieldTypeInfo.TypeSet(
+            new FieldTypeInfo.MutableTypeSet().add(ColumnType.STRING).getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
         bitmaps,
@@ -1596,7 +1596,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
 
     FixedIndexedWriter<Integer> localDictionaryWriter = new FixedIndexedWriter<>(
         new OnHeapMemorySegmentWriteOutMedium(),
-        NestedDataColumnSerializer.INT_TYPE_STRATEGY,
+        CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
         Integer.BYTES,
         true
@@ -1640,7 +1640,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
 
     Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
-        NestedDataColumnSerializer.INT_TYPE_STRATEGY,
+        CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
         Integer.BYTES
     );
@@ -1648,8 +1648,8 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
 
     return new NestedFieldColumnIndexSupplier<>(
-        new NestedFieldTypeInfo.TypeSet(
-            new NestedFieldTypeInfo.MutableTypeSet().add(ColumnType.LONG).getByteValue()
+        new FieldTypeInfo.TypeSet(
+            new FieldTypeInfo.MutableTypeSet().add(ColumnType.LONG).getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
         bitmaps,
@@ -1669,7 +1669,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
 
     FixedIndexedWriter<Integer> localDictionaryWriter = new FixedIndexedWriter<>(
         new OnHeapMemorySegmentWriteOutMedium(),
-        NestedDataColumnSerializer.INT_TYPE_STRATEGY,
+        CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
         Integer.BYTES,
         true
@@ -1717,7 +1717,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
 
     Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
-        NestedDataColumnSerializer.INT_TYPE_STRATEGY,
+        CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
         Integer.BYTES
     );
@@ -1725,8 +1725,8 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
 
     return new NestedFieldColumnIndexSupplier<>(
-        new NestedFieldTypeInfo.TypeSet(
-            new NestedFieldTypeInfo.MutableTypeSet().add(ColumnType.LONG).getByteValue()
+        new FieldTypeInfo.TypeSet(
+            new FieldTypeInfo.MutableTypeSet().add(ColumnType.LONG).getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
         bitmaps,
@@ -1746,7 +1746,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
 
     FixedIndexedWriter<Integer> localDictionaryWriter = new FixedIndexedWriter<>(
         new OnHeapMemorySegmentWriteOutMedium(),
-        NestedDataColumnSerializer.INT_TYPE_STRATEGY,
+        CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
         Integer.BYTES,
         true
@@ -1790,7 +1790,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
 
     Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
-        NestedDataColumnSerializer.INT_TYPE_STRATEGY,
+        CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
         Integer.BYTES
     );
@@ -1798,8 +1798,8 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
 
     return new NestedFieldColumnIndexSupplier<>(
-        new NestedFieldTypeInfo.TypeSet(
-            new NestedFieldTypeInfo.MutableTypeSet().add(ColumnType.DOUBLE).getByteValue()
+        new FieldTypeInfo.TypeSet(
+            new FieldTypeInfo.MutableTypeSet().add(ColumnType.DOUBLE).getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
         bitmaps,
@@ -1819,7 +1819,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
 
     FixedIndexedWriter<Integer> localDictionaryWriter = new FixedIndexedWriter<>(
         new OnHeapMemorySegmentWriteOutMedium(),
-        NestedDataColumnSerializer.INT_TYPE_STRATEGY,
+        CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
         Integer.BYTES,
         true
@@ -1867,7 +1867,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
 
     Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
-        NestedDataColumnSerializer.INT_TYPE_STRATEGY,
+        CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
         Integer.BYTES
     );
@@ -1875,8 +1875,8 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
 
     return new NestedFieldColumnIndexSupplier<>(
-        new NestedFieldTypeInfo.TypeSet(
-            new NestedFieldTypeInfo.MutableTypeSet().add(ColumnType.DOUBLE).getByteValue()
+        new FieldTypeInfo.TypeSet(
+            new FieldTypeInfo.MutableTypeSet().add(ColumnType.DOUBLE).getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
         bitmaps,
@@ -1896,7 +1896,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
 
     FixedIndexedWriter<Integer> localDictionaryWriter = new FixedIndexedWriter<>(
         new OnHeapMemorySegmentWriteOutMedium(),
-        NestedDataColumnSerializer.INT_TYPE_STRATEGY,
+        CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
         Integer.BYTES,
         true
@@ -1952,7 +1952,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
 
     Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
-        NestedDataColumnSerializer.INT_TYPE_STRATEGY,
+        CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
         Integer.BYTES
     );
@@ -1960,11 +1960,11 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
 
     return new NestedFieldColumnIndexSupplier<>(
-        new NestedFieldTypeInfo.TypeSet(
-            new NestedFieldTypeInfo.MutableTypeSet().add(ColumnType.STRING)
-                                                    .add(ColumnType.LONG)
-                                                    .add(ColumnType.DOUBLE)
-                                                    .getByteValue()
+        new FieldTypeInfo.TypeSet(
+            new FieldTypeInfo.MutableTypeSet().add(ColumnType.STRING)
+                                              .add(ColumnType.LONG)
+                                              .add(ColumnType.DOUBLE)
+                                              .getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
         bitmaps,

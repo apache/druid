@@ -42,7 +42,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.segment.NestedDataDimensionSchema;
+import org.apache.druid.segment.StandardTypeColumnSchema;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.transform.TransformingInputEntityReader;
@@ -269,14 +269,14 @@ public class ProtobufInputFormatTest
             timestampSpec,
             new DimensionsSpec(
                 Lists.newArrayList(
-                    new StringDimensionSchema("event"),
-                    new StringDimensionSchema("id"),
-                    new StringDimensionSchema("someOtherId"),
-                    new StringDimensionSchema("isValid"),
-                    new StringDimensionSchema("eventType"),
-                    new NestedDataDimensionSchema("foo"),
-                    new NestedDataDimensionSchema("bar"),
-                    new StringDimensionSchema("someBytesColumn")
+                    new StandardTypeColumnSchema("event"),
+                    new StandardTypeColumnSchema("id"),
+                    new StandardTypeColumnSchema("someOtherId"),
+                    new StandardTypeColumnSchema("isValid"),
+                    new StandardTypeColumnSchema("eventType"),
+                    new StandardTypeColumnSchema("foo"),
+                    new StandardTypeColumnSchema("bar"),
+                    new StandardTypeColumnSchema("someBytesColumn")
                 )
             ),
             null

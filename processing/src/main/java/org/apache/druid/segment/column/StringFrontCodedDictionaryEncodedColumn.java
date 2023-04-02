@@ -31,6 +31,7 @@ import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarMultiInts;
 import org.apache.druid.segment.data.FrontCodedIndexed;
+import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.data.SingleIndexedInt;
@@ -51,12 +52,12 @@ import java.util.BitSet;
 /**
  * {@link DictionaryEncodedColumn<String>} for a column which uses a {@link FrontCodedIndexed} to store its value
  * dictionary, which 'delta encodes' strings (instead of {@link org.apache.druid.segment.data.GenericIndexed} like
- * {@link StringDictionaryEncodedColumn}).
+ * {@link CachingStringDictionaryEncodedColumn}).
  *
- * This class is otherwise nearly identical to {@link StringDictionaryEncodedColumn} other than the dictionary
+ * This class is otherwise nearly identical to {@link CachingStringDictionaryEncodedColumn} other than the dictionary
  * difference.
  */
-public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncodedColumn<String>
+public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncodedColumn<String>, StandardTypeColumn
 {
   @Nullable
   private final ColumnarInts column;
@@ -358,7 +359,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
   @Override
   public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(final ReadableVectorOffset offset)
   {
-    final class StringVectorSelector extends StringDictionaryEncodedColumn.StringSingleValueDimensionVectorSelector
+    final class StringVectorSelector extends CachingStringDictionaryEncodedColumn.StringSingleValueDimensionVectorSelector
     {
       public StringVectorSelector()
       {
@@ -398,7 +399,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
   @Override
   public MultiValueDimensionVectorSelector makeMultiValueDimensionVectorSelector(final ReadableVectorOffset offset)
   {
-    final class MultiStringVectorSelector extends StringDictionaryEncodedColumn.StringMultiValueDimensionVectorSelector
+    final class MultiStringVectorSelector extends CachingStringDictionaryEncodedColumn.StringMultiValueDimensionVectorSelector
     {
       public MultiStringVectorSelector()
       {
@@ -440,7 +441,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
   public VectorObjectSelector makeVectorObjectSelector(ReadableVectorOffset offset)
   {
     if (!hasMultipleValues()) {
-      final class StringVectorSelector extends StringDictionaryEncodedColumn.StringVectorObjectSelector
+      final class StringVectorSelector extends CachingStringDictionaryEncodedColumn.StringVectorObjectSelector
       {
         public StringVectorSelector()
         {
@@ -456,7 +457,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
       }
       return new StringVectorSelector();
     } else {
-      final class MultiStringVectorSelector extends StringDictionaryEncodedColumn.MultiValueStringVectorObjectSelector
+      final class MultiStringVectorSelector extends CachingStringDictionaryEncodedColumn.MultiValueStringVectorObjectSelector
       {
         public MultiStringVectorSelector()
         {
@@ -478,5 +479,17 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
   public void close() throws IOException
   {
     CloseableUtils.closeAll(column, multiValueColumn);
+  }
+
+  @Override
+  public ColumnType getLogicalType()
+  {
+    return ColumnType.STRING;
+  }
+
+  @Override
+  public Indexed<String> getStringDictionary()
+  {
+    return new StringEncodingStrategies.Utf8ToStringIndexed(utf8Dictionary);
   }
 }

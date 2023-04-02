@@ -20,13 +20,18 @@
 package org.apache.druid.segment;
 
 import com.google.errorprone.annotations.MustBeClosed;
+import org.apache.druid.segment.column.CapabilitiesBasedFormat;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
+import org.apache.druid.segment.nested.FieldTypeInfo;
+import org.apache.druid.segment.nested.SortedValueDictionary;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.SortedMap;
 
 /**
  * An adapter to an index
@@ -45,11 +50,18 @@ public interface IndexableAdapter
   @Nullable
   <T extends Comparable<? super T>> CloseableIndexed<T> getDimValueLookup(String dimension);
 
+  SortedValueDictionary getSortedValueLookup(String dimension, SortedMap<String, FieldTypeInfo.MutableTypeSet> mergedFields);
+
   TransformableRowIterator getRows();
 
   BitmapValues getBitmapValues(String dimension, int dictId);
 
   ColumnCapabilities getCapabilities(String column);
+
+  default ColumnFormat getFormat(String column)
+  {
+    return new CapabilitiesBasedFormat(getCapabilities(column));
+  }
 
   Metadata getMetadata();
 }

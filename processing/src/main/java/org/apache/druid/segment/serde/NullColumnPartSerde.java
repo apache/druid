@@ -105,7 +105,7 @@ public class NullColumnPartSerde implements ColumnPartSerde
   @Override
   public Deserializer getDeserializer()
   {
-    return (buffer, builder, columnConfig) -> {
+    return (columnName, buffer, builder, columnConfig) -> {
       builder.setHasMultipleValues(false)
              .setHasNulls(true)
              .setFilterable(true)

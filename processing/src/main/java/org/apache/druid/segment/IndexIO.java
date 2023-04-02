@@ -788,7 +788,7 @@ public class IndexIO
      */
     @VisibleForTesting
     ColumnHolder deserializeColumn(
-        String columnName, // columnName is not used in this method, but used in tests.
+        String columnName,
         ObjectMapper mapper,
         ByteBuffer byteBuffer,
         SmooshedFileMapper smooshedFiles
@@ -797,7 +797,7 @@ public class IndexIO
       ColumnDescriptor serde = mapper.readValue(
           SERIALIZER_UTILS.readString(byteBuffer), ColumnDescriptor.class
       );
-      return serde.read(byteBuffer, columnConfig, smooshedFiles);
+      return serde.read(columnName, byteBuffer, columnConfig, smooshedFiles);
     }
   }
 

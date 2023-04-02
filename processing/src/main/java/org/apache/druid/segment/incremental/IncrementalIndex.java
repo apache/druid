@@ -59,22 +59,23 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.EncodedKeyComponent;
 import org.apache.druid.segment.FloatColumnSelector;
-import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
+import org.apache.druid.segment.StandardTypeColumnHandler;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.CapabilitiesBasedFormat;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
@@ -314,25 +315,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
 
     this.dimensionDescsList = new ArrayList<>();
     for (DimensionSchema dimSchema : dimensionsSpec.getDimensions()) {
-      ColumnType type = dimSchema.getColumnType();
-      String dimName = dimSchema.getName();
-
-      // Note: Things might be simpler if DimensionSchema had a method "getColumnCapabilities()" which could return
-      // type specific capabilities by itself. However, for various reasons, DimensionSchema currently lives in druid-core
-      // while ColumnCapabilities lives in druid-processing which makes that approach difficult.
-      ColumnCapabilitiesImpl capabilities = makeDefaultCapabilitiesFromValueType(type);
-
-      capabilities.setHasBitmapIndexes(dimSchema.hasBitmapIndex());
-
-      if (dimSchema.getTypeName().equals(DimensionSchema.SPATIAL_TYPE_NAME)) {
-        capabilities.setHasSpatialIndexes(true);
-      }
-      DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(
-          dimName,
-          capabilities,
-          dimSchema.getMultiValueHandling()
-      );
-      addNewDimension(dimName, handler);
+      addNewDimension(dimSchema.getName(), dimSchema.getDimensionHandler());
     }
 
     //__time capabilities
@@ -459,13 +442,13 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     return row;
   }
 
-  public Map<String, ColumnCapabilities> getColumnHandlerCapabilities()
+  public Map<String, ColumnFormat> getColumnFormats()
   {
-    ImmutableMap.Builder<String, ColumnCapabilities> builder =
-        ImmutableMap.<String, ColumnCapabilities>builder().putAll(timeAndMetricsColumnCapabilities);
+    ImmutableMap.Builder<String, ColumnFormat> builder = ImmutableMap.builder();
 
     synchronized (dimensionDescs) {
-      dimensionDescs.forEach((dimension, desc) -> builder.put(dimension, desc.getIndexer().getHandlerCapabilities()));
+      timeAndMetricsColumnCapabilities.forEach((col, cap) -> builder.put(col, new CapabilitiesBasedFormat(cap)));
+      dimensionDescs.forEach((dimension, desc) -> builder.put(dimension, desc.getIndexer().getFormat()));
     }
     return builder.build();
   }
@@ -484,7 +467,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   }
 
   @Nullable
-  public ColumnCapabilities getColumnHandlerCapabilities(String columnName)
+  public ColumnFormat getColumnFormat(String columnName)
   {
     if (timeAndMetricsColumnCapabilities.containsKey(columnName)) {
       final ColumnCapabilities capabilities = timeAndMetricsColumnCapabilities.get(columnName);
@@ -494,16 +477,21 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
         // for this method though, we want the 'normal' type name for the capabilities, since this is the true 'output'
         // type of the column, so use the type from the MetricDesc instead, which is computed by round-tripping through
         // something like ComplexMetrics.getSerdeForType(valueType.getComplexTypeName()).getTypeName()
-        return ColumnCapabilitiesImpl.copyOf(capabilities)
-                                     .setType(ColumnType.ofComplex(metricDescs.get(columnName).getType()));
+        return new CapabilitiesBasedFormat(
+            ColumnCapabilitiesImpl.snapshot(
+                ColumnCapabilitiesImpl.copyOf(capabilities)
+                                      .setType(ColumnType.ofComplex(metricDescs.get(columnName).getType())),
+                ColumnCapabilitiesImpl.ALL_FALSE
+            )
+        );
       }
-      return capabilities;
+      return new CapabilitiesBasedFormat(ColumnCapabilitiesImpl.snapshot(capabilities, ColumnCapabilitiesImpl.ALL_FALSE));
     }
 
 
     synchronized (dimensionDescs) {
       final DimensionDesc desc = dimensionDescs.get(columnName);
-      return desc != null ? desc.getIndexer().getHandlerCapabilities() : null;
+      return desc != null ? desc.getIndexer().getFormat() : null;
     }
   }
 
@@ -592,11 +580,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
           wasNewDim = true;
           final DimensionHandler<?, ?, ?> handler;
           if (useSchemaDiscovery) {
-            handler = DimensionHandlerUtils.getHandlerFromCapabilities(
-                dimension,
-                makeDefaultCapabilitiesFromValueType(NestedDataComplexTypeSerde.TYPE),
-                null
-            );
+            handler = new StandardTypeColumnHandler(dimension);
           } else {
             // legacy behavior: for schemaless type discovery, everything is a String
             handler = DimensionHandlerUtils.getHandlerFromCapabilities(
@@ -872,7 +856,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     }
   }
 
-  private ColumnCapabilitiesImpl makeDefaultCapabilitiesFromValueType(ColumnType type)
+  public static ColumnCapabilitiesImpl makeDefaultCapabilitiesFromValueType(ColumnType type)
   {
     switch (type.getType()) {
       case STRING:
@@ -896,7 +880,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
    */
   public void loadDimensionIterable(
       Iterable<String> oldDimensionOrder,
-      Map<String, ColumnCapabilities> oldColumnCapabilities
+      Map<String, ColumnFormat> oldColumnCapabilities
   )
   {
     synchronized (dimensionDescs) {
@@ -905,12 +889,8 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       }
       for (String dim : oldDimensionOrder) {
         if (dimensionDescs.get(dim) == null) {
-          ColumnCapabilitiesImpl capabilities = ColumnCapabilitiesImpl.snapshot(
-              oldColumnCapabilities.get(dim),
-              IndexMergerV9.DIMENSION_CAPABILITY_MERGE_LOGIC
-          );
-          DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
-          addNewDimension(dim, handler);
+          ColumnFormat format = oldColumnCapabilities.get(dim);
+          addNewDimension(dim, format.getColumnHandler(dim));
         }
       }
     }
