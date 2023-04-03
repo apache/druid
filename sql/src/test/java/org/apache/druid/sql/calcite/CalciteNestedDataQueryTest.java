@@ -1306,6 +1306,59 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
+
+  @Test
+  public void testGroupByRootSingleTypeArrayLongNullsFilteredMore()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "arrayLongNulls, "
+            + "SUM(cnt) "
+            + "FROM druid.arrays WHERE ARRAY_CONTAINS(arrayLongNulls, 1) OR ARRAY_OVERLAP(arrayLongNulls, ARRAY[2, 3]) GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("arrayLongNulls", "d0", ColumnType.LONG_ARRAY)
+                                )
+                            )
+                            .setDimFilter(
+                                or(
+                                    expressionFilter("array_contains(\"arrayLongNulls\",1)"),
+                                    expressionFilter("array_overlap(\"arrayLongNulls\",array(2,3))")
+                                )
+                            )
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{Arrays.asList(null, 2L, 9L), 2L},
+                new Object[]{Collections.singletonList(1L), 1L},
+                new Object[]{Arrays.asList(1L, null, 3L), 2L},
+                new Object[]{Arrays.asList(1L, 2L, 3L), 2L},
+                new Object[]{Arrays.asList(2L, 3L), 2L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("arrayLongNulls", ColumnType.LONG_ARRAY)
+                        .add("EXPR$1", ColumnType.LONG)
+                        .build()
+        )
+        .run();
+  }
+
   @Test
   public void testGroupByRootSingleTypeArrayString()
   {
