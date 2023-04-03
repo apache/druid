@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
@@ -54,6 +55,8 @@ import java.util.stream.Stream;
  */
 public class DataSourcesSnapshot
 {
+  private static final EmittingLogger log = new EmittingLogger(DataSourcesSnapshot.class);
+
   public static DataSourcesSnapshot fromUsedSegments(
       Iterable<DataSegment> segments,
       ImmutableMap<String, String> dataSourceProperties
@@ -81,7 +84,7 @@ public class DataSourcesSnapshot
     );
     ImmutableSet<DataSegment> overshadowedSegments = determineOvershadowedSegments(immutableDruidDataSources, usedSegmentsTimelinesPerDataSource);
     CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> changes =
-        computeDiff(
+        computeChanges(
             oldSegments,
             getSegmentsWithOvershadowedStatus(immutableDruidDataSources.values(), overshadowedSegments, handedOffState),
             oldChanges);
@@ -146,7 +149,8 @@ public class DataSourcesSnapshot
         usedSegmentsTimelinesPerDataSource,
         determineOvershadowedSegments(dataSourcesWithAllUsedSegments, usedSegmentsTimelinesPerDataSource),
         handedOffStatePerDataSource,
-        changes);
+        changes
+    );
   }
 
   private DataSourcesSnapshot(
@@ -294,28 +298,34 @@ public class DataSourcesSnapshot
         .map(segment -> new SegmentWithOvershadowedStatus(
             segment,
             overshadowedSegments.contains(segment),
-            handedOffState
-                .getOrDefault(segment.getDataSource(), new HashMap<>())
-                .getOrDefault(segment.getId(), Pair.of(false, null)).lhs,
-            handedOffState
-                .getOrDefault(segment.getDataSource(), new HashMap<>())
-                .getOrDefault(segment.getId(), Pair.of(false, null)).rhs
+            getHandedOffStateForSegment(handedOffState, segment.getDataSource(), segment.getId()).lhs,
+            getHandedOffStateForSegment(handedOffState, segment.getDataSource(), segment.getId()).rhs
             )
         )
         .collect(Collectors.toSet());
   }
 
-  private static CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> computeDiff(
+  private static Pair<Boolean, DateTime> getHandedOffStateForSegment(
+      Map<String, Map<SegmentId, Pair<Boolean, DateTime>>> handedOffState,
+      String dataSource, SegmentId segmentId
+  )
+  {
+    return handedOffState
+        .getOrDefault(dataSource, new HashMap<>())
+        .getOrDefault(segmentId, new Pair<>(false, null));
+  }
+
+  private static CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> computeChanges(
       Set<SegmentWithOvershadowedStatus> oldSegments,
       Set<SegmentWithOvershadowedStatus> currentSegments,
-      CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> previousChanges
+      CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> oldChanges
   )
   {
     if (oldSegments.isEmpty()) {
       return new CircularBuffer<>(CHANGES_QUEUE_MAX_SIZE);
     }
 
-    // a segment is considered changed, if following changes:
+    // a segment is added to the change set, if following changes:
     // segmentId
     // overshadowed state
     // handed off state
@@ -368,10 +378,13 @@ public class DataSourcesSnapshot
       changeList.add(new DataSegmentChange(segment, true, changeReasons));
     });
 
-    ChangeRequestHistory.Counter lastCounter = getLastCounter(previousChanges);
-    previousChanges.add(new ChangeRequestHistory.Holder<>(changeList, lastCounter.inc()));
+    ChangeRequestHistory.Counter lastCounter = getLastCounter(oldChanges);
+    oldChanges.add(new ChangeRequestHistory.Holder<>(changeList, lastCounter.inc()));
 
-    return previousChanges;
+    log.info(
+        "Finished computing segment changes. Changes count [%d], current counter [%d]",
+        changeList.size(), getLastCounter(oldChanges).getCounter());
+    return oldChanges;
   }
 
   public static ChangeRequestHistory.Counter getLastCounter(CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> buffer)

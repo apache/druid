@@ -32,6 +32,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.JettyUtils;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
@@ -74,6 +75,7 @@ import java.util.stream.Stream;
 @Path("/druid/coordinator/v1/metadata")
 public class MetadataResource
 {
+  private static final EmittingLogger log = new EmittingLogger(MetadataResource.class);
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthorizerMapper authorizerMapper;
@@ -141,7 +143,7 @@ public class MetadataResource
   @GET
   @Path("/segments")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getSegmentsChangeSet(
+  public Response getChangedSegments(
       @Context final HttpServletRequest req,
       @QueryParam("datasources") final @Nullable Set<String> dataSources,
       @QueryParam("includeOvershadowedStatus") final @Nullable String includeOvershadowedStatus
@@ -176,7 +178,7 @@ public class MetadataResource
   @GET
   @Path("/changedSegments")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getSegmentsChangeSet(
+  public Response getChangedSegments(
       @Context final HttpServletRequest req,
       @QueryParam("datasources") final @Nullable Set<String> dataSources,
       @QueryParam("counter") long counter,
@@ -185,17 +187,21 @@ public class MetadataResource
   {
     Set<String> requiredDataSources = (null == dataSources) ? new HashSet<>() : dataSources;
 
+    log.info("Changed segments requested. counter [%d], hash [%d], dataSources [%s]", counter, hash, requiredDataSources);
+
     DataSourcesSnapshot dataSourcesSnapshot = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments();
     Stream<DataSegment> usedSegments =
         dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()
                            .stream()
                            .flatMap(druidDataSource -> druidDataSource.getSegments().stream());
 
-    ChangeRequestsSnapshot<DataSegmentChange> changes = dataSourcesSnapshot.getChangesSince(new ChangeRequestHistory.Counter(counter, hash));
+    ChangeRequestsSnapshot<DataSegmentChange> changeRequestsSnapshot = dataSourcesSnapshot.getChangesSince(new ChangeRequestHistory.Counter(counter, hash));
     List<DataSegmentChange> dataSegmentChanges;
     ChangeRequestHistory.Counter lastCounter;
 
-    if (changes.isResetCounter()) {
+    boolean reset = false;
+    if (changeRequestsSnapshot.isResetCounter()) {
+      reset = true;
       dataSegmentChanges =
           usedSegments
               .filter(segment -> requiredDataSources.contains(segment.getDataSource()))
@@ -211,13 +217,17 @@ public class MetadataResource
                            Collections.singletonList(DataSegmentChange.ChangeReason.SEGMENT_ID)))
               .collect(Collectors.toList());
       lastCounter = DataSourcesSnapshot.getLastCounter(dataSourcesSnapshot.getChanges());
+      log.info("Returning full snapshot. segment count [%d], last counter [%d], last hash [%d]",
+               dataSegmentChanges.size(), lastCounter.getCounter(), lastCounter.getHash());
     } else {
-      dataSegmentChanges = changes.getRequests();
+      dataSegmentChanges = changeRequestsSnapshot.getRequests();
       dataSegmentChanges = dataSegmentChanges
           .stream()
           .filter(segment -> requiredDataSources.contains(segment.getSegmentWithOvershadowedStatus().getDataSegment().getDataSource()))
           .collect(Collectors.toList());
-      lastCounter = changes.getCounter();
+      lastCounter = changeRequestsSnapshot.getCounter();
+      log.info("Returning delta snapshot. segment count [%d], last counter [%d], last hash [%d]",
+               dataSegmentChanges.size(), lastCounter.getCounter(), lastCounter.getHash());
     }
 
     final Function<DataSegmentChange, Iterable<ResourceAction>> raGenerator = segment -> Collections
@@ -230,7 +240,11 @@ public class MetadataResource
         authorizerMapper
     );
 
-    ChangeRequestsSnapshot<DataSegmentChange> finalChanges = ChangeRequestsSnapshot.success(lastCounter, Lists.newArrayList(authorizedSegments));
+    ChangeRequestsSnapshot<DataSegmentChange> finalChanges = new ChangeRequestsSnapshot<>(
+        reset,
+        "",
+        lastCounter,
+        Lists.newArrayList(authorizedSegments));
 
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
     return builder.entity(finalChanges).build();
@@ -279,7 +293,8 @@ public class MetadataResource
 
   private Pair<Boolean, DateTime> getHandedOffStateForSegment(
       DataSourcesSnapshot dataSourcesSnapshot,
-      String dataSource, SegmentId segmentId)
+      String dataSource, SegmentId segmentId
+  )
   {
     return dataSourcesSnapshot.getHandedOffStatePerDataSource()
                        .getOrDefault(dataSource, new HashMap<>())

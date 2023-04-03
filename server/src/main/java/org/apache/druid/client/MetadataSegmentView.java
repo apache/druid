@@ -193,6 +193,7 @@ public class MetadataSegmentView
       counter = changedRequestsSnapshot.getCounter();
 
       if (changedRequestsSnapshot.isResetCounter()) {
+        log.info("full sync");
         runSegmentCallbacks(
             input -> input.fullSync(dataSegmentChanges)
         );
@@ -202,6 +203,7 @@ public class MetadataSegmentView
               dataSegmentChange -> publishedSegmentsSet.add(dataSegmentChange.getSegmentWithOvershadowedStatus()));
         }
       } else {
+        log.info("delta sync");
         runSegmentCallbacks(
             input -> input.deltaSync(dataSegmentChanges)
         );
@@ -217,6 +219,9 @@ public class MetadataSegmentView
             }
           });
         }
+
+        log.info("counter [%d], hash [%d], segments changed [%d]",
+                 counter.getCounter(), counter.getHash(), dataSegmentChanges.size());
       }
 
       if (initializationLatch.getCount() > 0) {
@@ -312,25 +317,25 @@ public class MetadataSegmentView
       Set<String> watchedDataSources
   )
   {
-    String query = "/druid/coordinator/v1/metadata/changedSegments?";
+    StringBuilder queryBuilder = new StringBuilder();
+    queryBuilder.append("/druid/coordinator/v1/metadata/changedSegments?");
+
     if (watchedDataSources != null && !watchedDataSources.isEmpty()) {
       log.debug(
           "filtering datasources in published segments based on broker's watchedDataSources[%s]", watchedDataSources);
-      final StringBuilder sb = new StringBuilder();
       for (String ds : watchedDataSources) {
-        sb.append("datasources=").append(ds).append("&");
+        queryBuilder.append("datasources=").append(ds).append("&");
       }
-      query += sb;
     }
 
     if (null == counter) {
-      query += "counter=-1";
+      queryBuilder.append("counter=-1");
     } else {
-      query += StringUtils.format("counter=%s&hash=%s", counter.getCounter(), counter.getHash());
+      queryBuilder.append(StringUtils.format("counter=%s&hash=%s", counter.getCounter(), counter.getHash()));
     }
 
     JsonParserIterator<ChangeRequestsSnapshot<DataSegmentChange>> iterator = coordinatorClient.getThingsFromLeaderNode(
-        query,
+        queryBuilder.toString(),
         new TypeReference<ChangeRequestsSnapshot<DataSegmentChange>>()
         {
         },
