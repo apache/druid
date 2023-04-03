@@ -39,7 +39,6 @@ import org.apache.druid.testing.utils.WikipediaStreamEventStreamGenerator;
 import org.apache.druid.testsEx.categories.TransactionalKafkaIndexSlow;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -79,7 +78,7 @@ public class ITNilColumnTest extends AbstractKafkaIndexingServiceTest
   }
 
   @Before
-  public void beforeClass() throws Exception
+  public void before() throws Exception
   {
     doBefore();
   }

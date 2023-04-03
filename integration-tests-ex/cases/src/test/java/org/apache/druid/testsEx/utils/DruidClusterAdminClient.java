@@ -243,7 +243,6 @@ public class DruidClusterAdminClient
 
   private String findDockerContainer(DockerClient dockerClient, String serviceName)
   {
-
     List<Container> containers = dockerClient.listContainersCmd().exec();
     Optional<String> containerName = containers
         .stream()

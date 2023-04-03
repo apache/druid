@@ -14,11 +14,25 @@
 # limitations under the License.
 
 from template import BaseTemplate, generate
+from template import COORDINATOR, OVERLORD
+
+# The Kafka tests restart services and the DruidClusterAdminClient
+# uses the names "coordinator-one" and "overlord-one" for the master
+# services. These names are used by the HighAvailability tests which
+# run two services. We rename the containers accordingly.
 
 class Template(BaseTemplate):
 
     def define_support_services(self):
         super().define_support_services()
         self.define_kafka()
+
+    def define_coordinator(self) -> dict:
+        service = super().define_coordinator()
+        service['container_name'] = COORDINATOR + '-one'
+
+    def define_overlord(self) -> dict:
+        service = super().define_overlord()
+        service['container_name'] = OVERLORD + '-one'
 
 generate(__file__, Template())
