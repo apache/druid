@@ -42,6 +42,7 @@ import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.StandardTypeColumnIndexer;
@@ -186,9 +187,12 @@ public class StandardNestedColumnSupplierTest extends InitializedNullHandlingTes
         indexer.processRowValsToUnsortedEncodedKeyComponent(o, false);
       }
       SortedMap<String, FieldTypeInfo.MutableTypeSet> sortedFields = new TreeMap<>();
-      indexer.mergeNestedFields(sortedFields);
 
-      SortedValueDictionary globalDictionarySortedCollector = closer.register(indexer.getSortedValueLookups());
+      IndexableAdapter.NestedColumnMergable mergable = closer.register(
+          new IndexableAdapter.NestedColumnMergable(indexer.getSortedValueLookups(), indexer.getFieldTypeInfo())
+      );
+      SortedValueDictionary globalDictionarySortedCollector = mergable.getValueDictionary();
+      mergable.mergeFieldsInto(sortedFields);
 
       serializer.openDictionaryWriter();
       serializer.serializeFields(sortedFields);

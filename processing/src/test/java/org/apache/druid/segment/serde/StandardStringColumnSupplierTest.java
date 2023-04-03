@@ -38,6 +38,7 @@ import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.StandardTypeColumnIndexer;
 import org.apache.druid.segment.StandardTypeColumnMerger;
@@ -141,9 +142,12 @@ public class StandardStringColumnSupplierTest extends InitializedNullHandlingTes
         indexer.processRowValsToUnsortedEncodedKeyComponent(o, false);
       }
       SortedMap<String, FieldTypeInfo.MutableTypeSet> sortedFields = new TreeMap<>();
-      indexer.mergeNestedFields(sortedFields);
 
-      SortedValueDictionary globalDictionarySortedCollector = closer.register(indexer.getSortedValueLookups());
+      IndexableAdapter.NestedColumnMergable mergable = closer.register(
+          new IndexableAdapter.NestedColumnMergable(indexer.getSortedValueLookups(), indexer.getFieldTypeInfo())
+      );
+      SortedValueDictionary globalDictionarySortedCollector = mergable.getValueDictionary();
+      mergable.mergeFieldsInto(sortedFields);
 
       serializer.openDictionaryWriter();
       serializer.serializeDictionaries(
@@ -248,8 +252,7 @@ public class StandardStringColumnSupplierTest extends InitializedNullHandlingTes
     DruidPredicateIndex predicateIndex = supplier.as(DruidPredicateIndex.class);
     NullValueIndex nullValueIndex = supplier.as(NullValueIndex.class);
 
-    SortedMap<String, FieldTypeInfo.MutableTypeSet> fields = new TreeMap<>();
-    column.mergeNestedFields(fields);
+    SortedMap<String, FieldTypeInfo.MutableTypeSet> fields = column.getFieldTypeInfo();
     Assert.assertEquals(ImmutableMap.of(NestedPathFinder.JSON_PATH_ROOT, new FieldTypeInfo.MutableTypeSet().add(ColumnType.STRING)), fields);
 
     for (int i = 0; i < data.size(); i++) {

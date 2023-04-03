@@ -263,7 +263,7 @@ public class NestedDataColumnIndexer implements DimensionIndexer<StructuredData,
     return globalDictionary.getSortedCollector();
   }
 
-  public SortedMap<String, FieldTypeInfo.MutableTypeSet> getFields()
+  public SortedMap<String, FieldTypeInfo.MutableTypeSet> getFieldTypeInfo()
   {
     TreeMap<String, FieldTypeInfo.MutableTypeSet> fields = new TreeMap<>();
     for (Map.Entry<String, FieldIndexer> entry : fieldIndexers.entrySet()) {
@@ -273,16 +273,6 @@ public class NestedDataColumnIndexer implements DimensionIndexer<StructuredData,
       }
     }
     return fields;
-  }
-
-  public void mergeNestedFields(SortedMap<String, FieldTypeInfo.MutableTypeSet> mergedFields)
-  {
-    for (Map.Entry<String, FieldIndexer> entry : fieldIndexers.entrySet()) {
-      // skip adding the field if no types are in the set, meaning only null values have been processed
-      if (!entry.getValue().getTypes().isEmpty()) {
-        mergedFields.put(entry.getKey(), entry.getValue().getTypes());
-      }
-    }
   }
 
   @Override

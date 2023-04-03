@@ -159,14 +159,14 @@ public class IncrementalIndexAdapter implements IndexableAdapter
 
       return new NestedColumnMergable(
           nestedDataColumnIndexer.getSortedValueLookups(),
-          nestedDataColumnIndexer.getFields()
+          nestedDataColumnIndexer.getFieldTypeInfo()
       );
     }
     if (indexer instanceof StandardTypeColumnIndexer) {
       StandardTypeColumnIndexer standardIndexer = (StandardTypeColumnIndexer) indexer;
       return new NestedColumnMergable(
           standardIndexer.getSortedValueLookups(),
-          standardIndexer.getFields()
+          standardIndexer.getFieldTypeInfo()
       );
     }
     return null;

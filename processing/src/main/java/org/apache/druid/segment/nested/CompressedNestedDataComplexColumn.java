@@ -170,21 +170,6 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   }
 
   @Override
-  public void mergeNestedFields(SortedMap<String, FieldTypeInfo.MutableTypeSet> mergedFields)
-  {
-    for (int i = 0; i < fields.size(); i++) {
-      String fieldPath = fields.get(i);
-      FieldTypeInfo.TypeSet types = fieldInfo.getTypes(i);
-      mergedFields.compute(fieldPath, (k, v) -> {
-        if (v == null) {
-          return new FieldTypeInfo.MutableTypeSet(types.getByteValue());
-        }
-        return v.merge(types.getByteValue());
-      });
-    }
-  }
-
-  @Override
   public SortedMap<String, FieldTypeInfo.MutableTypeSet> getFieldTypeInfo()
   {
     SortedMap<String, FieldTypeInfo.MutableTypeSet> fieldMap = new TreeMap<>();

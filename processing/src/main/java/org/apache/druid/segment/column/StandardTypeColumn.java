@@ -59,17 +59,6 @@ public interface StandardTypeColumn extends BaseColumn
     return Indexed.empty();
   }
 
-  default void mergeNestedFields(SortedMap<String, FieldTypeInfo.MutableTypeSet> mergedFields)
-  {
-    FieldTypeInfo.MutableTypeSet rootOnlyType = new FieldTypeInfo.MutableTypeSet().add(getLogicalType());
-    mergedFields.compute(NestedPathFinder.JSON_PATH_ROOT, (k, v) -> {
-      if (v == null) {
-        return rootOnlyType;
-      }
-      return v.merge(rootOnlyType.getByteValue());
-    });
-  }
-
 
   default SortedMap<String, FieldTypeInfo.MutableTypeSet> getFieldTypeInfo()
   {
