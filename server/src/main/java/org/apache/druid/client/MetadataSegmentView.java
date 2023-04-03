@@ -20,12 +20,10 @@
 package org.apache.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.inject.Inject;
 import org.apache.druid.client.coordinator.Coordinator;
@@ -33,23 +31,23 @@ import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
-import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.server.coordination.ChangeRequestHistory;
+import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegmentChange;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
+import javax.annotation.Nullable;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -58,6 +56,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * This class polls the Coordinator in background to keep the latest published segments.
@@ -78,6 +77,8 @@ public class MetadataSegmentView
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
 
   private final boolean isCacheEnabled;
+  private final boolean isDetectUnavailableSegmentsEnabled;
+
   /**
    * Use {@link ImmutableSortedSet} so that the order of segments is deterministic and
    * sys.segments queries return the segments in sorted order based on segmentId.
@@ -92,7 +93,12 @@ public class MetadataSegmentView
   private final LifecycleLock lifecycleLock = new LifecycleLock();
   private final CountDownLatch cachePopulated = new CountDownLatch(1);
 
-  private final ConcurrentMap<ServerView.PublishedSegmentCallback, Executor> segmentCallbacks = new ConcurrentHashMap<>();
+  @Nullable
+  private ChangeRequestHistory.Counter counter = null;
+
+  private final ConcurrentMap<ServerView.HandedOffSegmentCallback, Executor> segmentCallbacks = new ConcurrentHashMap<>();
+
+  private final CountDownLatch initializationLatch = new CountDownLatch(1);
 
   @Inject
   public MetadataSegmentView(
@@ -109,6 +115,7 @@ public class MetadataSegmentView
     this.isCacheEnabled = config.isMetadataSegmentCacheEnable();
     this.pollPeriodInMS = config.getMetadataSegmentPollPeriod();
     this.scheduledExec = Execs.scheduledSingleThreaded("MetadataSegmentView-Cache--%d");
+    this.isDetectUnavailableSegmentsEnabled = config.isDetectUnavailableSegments();
   }
 
   @LifecycleStart
@@ -118,7 +125,7 @@ public class MetadataSegmentView
       throw new ISE("can't start.");
     }
     try {
-      if (isCacheEnabled) {
+      if (isCacheEnabled || isDetectUnavailableSegmentsEnabled) {
         scheduledExec.schedule(new PollTask(), pollPeriodInMS, TimeUnit.MILLISECONDS);
       }
       lifecycleLock.started();
@@ -153,38 +160,103 @@ public class MetadataSegmentView
 
     final ImmutableSortedSet.Builder<SegmentWithOvershadowedStatus> builder = ImmutableSortedSet.naturalOrder();
     while (metadataSegments.hasNext()) {
-      final SegmentWithOvershadowedStatus segment = metadataSegments.next();
-      final DataSegment interned = DataSegmentInterner.intern(segment.getDataSegment());
-      final SegmentWithOvershadowedStatus segmentWithOvershadowedStatus = new SegmentWithOvershadowedStatus(
-          interned,
-          segment.isOvershadowed(),
-          segment.isHandedOff()
-      );
+      final SegmentWithOvershadowedStatus segmentWithOvershadowedStatus = convert(metadataSegments.next());
       builder.add(segmentWithOvershadowedStatus);
     }
 
     publishedSegments = builder.build();
+    cachePopulated.countDown();
+  }
 
-    runSegmentCallbacks(
-        input -> input.segmentsPolled(publishedSegments)
+  private void pollChangedSegments()
+  {
+    log.info("polling changed segments from coordinator");
+    final ChangeRequestsSnapshot<DataSegmentChange> changedRequestsSnapshot = getChangedSegments(
+        coordinatorDruidLeaderClient,
+        jsonMapper,
+        segmentWatcherConfig.getWatchedDataSources()
     );
 
-    cachePopulated.countDown();
+    Set<SegmentWithOvershadowedStatus> publishedSegmentsSet = new HashSet<>();
+
+    if (null != changedRequestsSnapshot) {
+      final List<DataSegmentChange> dataSegmentChanges =
+          changedRequestsSnapshot
+              .getRequests()
+              .stream()
+              .map(dataSegmentChange ->
+                       new DataSegmentChange(
+                           convert(dataSegmentChange.getSegmentWithOvershadowedStatus()),
+                           dataSegmentChange.isLoad(),
+                           dataSegmentChange.getChangeReasons()))
+              .collect(Collectors.toList());
+      counter = changedRequestsSnapshot.getCounter();
+
+      if (changedRequestsSnapshot.isResetCounter()) {
+        runSegmentCallbacks(
+            input -> input.fullSync(dataSegmentChanges)
+        );
+
+        if (isCacheEnabled) {
+          dataSegmentChanges.forEach(
+              dataSegmentChange -> publishedSegmentsSet.add(dataSegmentChange.getSegmentWithOvershadowedStatus()));
+        }
+      } else {
+        runSegmentCallbacks(
+            input -> input.deltaSync(dataSegmentChanges)
+        );
+
+        if (isCacheEnabled) {
+          dataSegmentChanges.forEach(dataSegmentChange -> {
+            publishedSegments.stream().iterator().forEachRemaining(publishedSegmentsSet::add);
+
+            if (dataSegmentChange.isLoad()) {
+              publishedSegmentsSet.add(dataSegmentChange.getSegmentWithOvershadowedStatus());
+            } else {
+              publishedSegmentsSet.remove(dataSegmentChange.getSegmentWithOvershadowedStatus());
+            }
+          });
+        }
+      }
+
+      if (initializationLatch.getCount() > 0) {
+        initializationLatch.countDown();
+        runSegmentCallbacks(ServerView.HandedOffSegmentCallback::segmentViewInitialized);
+      }
+    }
+
+    if (isCacheEnabled) {
+      ImmutableSortedSet.Builder<SegmentWithOvershadowedStatus> builder = ImmutableSortedSet.naturalOrder();
+      builder.addAll(publishedSegmentsSet);
+      publishedSegments = builder.build();
+      cachePopulated.countDown();
+    }
+  }
+
+  private SegmentWithOvershadowedStatus convert(SegmentWithOvershadowedStatus segment)
+  {
+    DataSegment interned = DataSegmentInterner.intern(segment.getDataSegment());
+    return new SegmentWithOvershadowedStatus(
+        interned,
+        segment.isOvershadowed(),
+        segment.isHandedOff(),
+        segment.getHandedOffTime()
+    );
   }
 
   public void registerSegmentCallback(
       Executor exec,
-      ServerView.PublishedSegmentCallback segmentCallback
+      ServerView.HandedOffSegmentCallback segmentCallback
   )
   {
     segmentCallbacks.put(segmentCallback, exec);
   }
 
   private void runSegmentCallbacks(
-      final Function<ServerView.PublishedSegmentCallback, ServerView.CallbackAction> fn
+      final Function<ServerView.HandedOffSegmentCallback, ServerView.CallbackAction> fn
   )
   {
-    for (final Map.Entry<ServerView.PublishedSegmentCallback, Executor> entry : segmentCallbacks.entrySet()) {
+    for (final Map.Entry<ServerView.HandedOffSegmentCallback, Executor> entry : segmentCallbacks.entrySet()) {
       entry.getValue().execute(
           () -> fn.apply(entry.getKey())
       );
@@ -233,6 +305,41 @@ public class MetadataSegmentView
     );
   }
 
+  @Nullable
+  private ChangeRequestsSnapshot<DataSegmentChange> getChangedSegments(
+      DruidLeaderClient coordinatorClient,
+      ObjectMapper jsonMapper,
+      Set<String> watchedDataSources
+  )
+  {
+    String query = "/druid/coordinator/v1/metadata/changedSegments?";
+    if (watchedDataSources != null && !watchedDataSources.isEmpty()) {
+      log.debug(
+          "filtering datasources in published segments based on broker's watchedDataSources[%s]", watchedDataSources);
+      final StringBuilder sb = new StringBuilder();
+      for (String ds : watchedDataSources) {
+        sb.append("datasources=").append(ds).append("&");
+      }
+      query += sb;
+    }
+
+    if (null == counter) {
+      query += "counter=-1";
+    } else {
+      query += StringUtils.format("counter=%s&hash=%s", counter.getCounter(), counter.getHash());
+    }
+
+    JsonParserIterator<ChangeRequestsSnapshot<DataSegmentChange>> iterator = coordinatorClient.getThingsFromLeaderNode(
+        query,
+        new TypeReference<ChangeRequestsSnapshot<DataSegmentChange>>()
+        {
+        },
+        jsonMapper
+    );
+
+    return iterator.hasNext() ? iterator.next() : null;
+  }
+
   private class PollTask implements Runnable
   {
     @Override
@@ -241,7 +348,11 @@ public class MetadataSegmentView
       long delayMS = pollPeriodInMS;
       try {
         final long pollStartTime = System.nanoTime();
-        poll();
+        if (isDetectUnavailableSegmentsEnabled) {
+          pollChangedSegments();
+        } else {
+          poll();
+        }
         final long pollEndTime = System.nanoTime();
         final long pollTimeNS = pollEndTime - pollStartTime;
         final long pollTimeMS = TimeUnit.NANOSECONDS.toMillis(pollTimeNS);

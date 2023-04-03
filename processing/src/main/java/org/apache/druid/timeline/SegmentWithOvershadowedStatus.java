@@ -22,6 +22,7 @@ package org.apache.druid.timeline;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
+import org.joda.time.DateTime;
 
 /**
  * DataSegment object plus the overshadowed status for the segment. An immutable object.
@@ -42,25 +43,30 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
 
   private final boolean handedOff;
 
+  private final DateTime handedOffTime;
+
   @JsonCreator
   public SegmentWithOvershadowedStatus(
       @JsonProperty("overshadowed") boolean overshadowed,
-      @JsonProperty("handedOff") boolean handedOff
+      @JsonProperty("handedOff") boolean handedOff,
+      @JsonProperty("handedOffTime") DateTime handedOffTime
   )
   {
     // Jackson will overwrite dataSegment if needed (even though the field is final)
-    this(null, overshadowed, handedOff);
+    this(null, overshadowed, handedOff, handedOffTime);
   }
 
   public SegmentWithOvershadowedStatus(
       DataSegment dataSegment,
       boolean overshadowed,
-      boolean handedOff
+      boolean handedOff,
+      DateTime handedOffTime
   )
   {
     this.dataSegment = dataSegment;
     this.overshadowed = overshadowed;
     this.handedOff = handedOff;
+    this.handedOffTime = handedOffTime;
   }
 
   @JsonProperty
@@ -79,6 +85,12 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
   public boolean isHandedOff()
   {
     return handedOff;
+  }
+
+  @JsonProperty
+  public DateTime getHandedOffTime()
+  {
+    return handedOffTime;
   }
 
   @Override
@@ -100,6 +112,7 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
     if (handedOff != (that.handedOff)) {
       return false;
     }
+
     return true;
   }
 
@@ -123,7 +136,8 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
   {
     return "SegmentWithOvershadowedStatus{" +
            "overshadowed=" + overshadowed +
-           ", handedOff="  + handedOff +
+           ", handedOff=" + handedOff +
+           ", handedOff=" + handedOffTime +
            ", dataSegment=" + dataSegment +
            '}';
   }

@@ -144,7 +144,8 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     );
   }
 
-  public Collection<PartitionChunkEntry<VersionType, ObjectType>> getAllPartitionChunkEntries() {
+  public Collection<PartitionChunkEntry<VersionType, ObjectType>> getAllPartitionChunkEntries()
+  {
     return CollectionUtils.createLazyCollectionFromStream(() ->
         allTimelineEntries
         .values()

@@ -19,7 +19,6 @@
 
 package org.apache.druid.client;
 
-import org.apache.druid.client.SegmentMetadataCacheConfig;
 import org.joda.time.Period;
 import org.junit.Test;
 

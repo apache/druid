@@ -19,12 +19,11 @@
 
 package org.apache.druid.client;
 
-import com.google.common.collect.ImmutableSortedSet;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
+import org.apache.druid.timeline.DataSegmentChange;
 
-import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.Executor;
 
 /**
@@ -98,8 +97,13 @@ public interface ServerView
     CallbackAction segmentViewInitialized();
   }
 
-  interface PublishedSegmentCallback {
-    CallbackAction segmentsPolled(ImmutableSortedSet<SegmentWithOvershadowedStatus> segment);
+  interface HandedOffSegmentCallback
+  {
+    CallbackAction fullSync(List<DataSegmentChange> segments);
+
+    CallbackAction deltaSync(List<DataSegmentChange> segments);
+
+    CallbackAction segmentViewInitialized();
   }
 
   abstract class BaseSegmentCallback implements SegmentCallback

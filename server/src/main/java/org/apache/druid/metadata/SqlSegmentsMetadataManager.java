@@ -47,11 +47,12 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
-import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegmentChange;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
+import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.apache.druid.utils.CircularBuffer;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
@@ -897,7 +898,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     //
     // setting connection to read-only will allow some database such as MySQL
     // to automatically use read-only transaction mode, further optimizing the query
-    final Map<String, Map<SegmentId, Boolean>> handedOffState = new HashMap<>();
+    final Map<String, Map<SegmentId, Pair<Boolean, DateTime>>> handedOffState = new HashMap<>();
     final List<DataSegment> segments = connector.inReadOnlyTransaction(
         new TransactionCallback<List<DataSegment>>()
         {
@@ -905,7 +906,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           public List<DataSegment> inTransaction(Handle handle, TransactionStatus status)
           {
             return handle
-                .createQuery(StringUtils.format("SELECT handed_off, payload FROM %s WHERE used=true", getSegmentsTable()))
+                .createQuery(StringUtils.format("SELECT handed_off, handed_off_time, payload FROM %s WHERE used=true", getSegmentsTable()))
                 .setFetchSize(connector.getStreamingFetchSize())
                 .map(
                     new ResultSetMapper<DataSegment>()
@@ -916,7 +917,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                         try {
                           DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
                           boolean handedOff = r.getBoolean("handed_off");
-                          handedOffState.computeIfAbsent(segment.getDataSource(), v -> new HashMap<>()).put(segment.getId(), handedOff);
+                          DateTime handedOffTime = DateTimes.of(r.getString("handed_off_time"));
+                          handedOffState.computeIfAbsent(segment.getDataSource(), v -> new HashMap<>()).put(segment.getId(), Pair.of(handedOff, handedOffTime));
                           return replaceWithExistingSegmentIfPresent(segment);
                         }
                         catch (IOException e) {
@@ -953,15 +955,19 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     } else {
       log.info("Polled and found %,d segments in the database", segments.size());
     }
-    Map<String, ImmutableDruidDataSource> previousDataSourceMap = dataSourcesSnapshot.getDataSourcesMap();
-    Map<String, CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChangeRequest>>>>  previousDataSourceChanges = dataSourcesSnapshot.getDataSourceChanges();
+    Set<SegmentWithOvershadowedStatus> oldSegments = DataSourcesSnapshot.getSegmentsWithOvershadowedStatus(
+        dataSourcesSnapshot.getDataSourcesWithAllUsedSegments(),
+        dataSourcesSnapshot.getOvershadowedSegments(),
+        dataSourcesSnapshot.getHandedOffStatePerDataSource());
+
+    CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> oldChanges = dataSourcesSnapshot.getChanges();
 
     dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
         Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
         dataSourceProperties,
-        previousDataSourceMap,
-        previousDataSourceChanges,
-        handedOffState
+        handedOffState,
+        oldSegments,
+        oldChanges
     );
   }
 

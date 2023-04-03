@@ -23,30 +23,28 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.commons.collections.IteratorUtils;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.JettyUtils;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
-import org.apache.druid.server.coordination.DataSegmentChangeRequest;
-import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
-import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegmentChange;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
-import org.apache.druid.timeline.SegmentWithOvershadowedStatusChangeRequest;
-import org.apache.druid.utils.CollectionUtils;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -61,13 +59,11 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -145,16 +141,14 @@ public class MetadataResource
   @GET
   @Path("/segments")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getAllUsedSegments(
+  public Response getSegmentsChangeSet(
       @Context final HttpServletRequest req,
       @QueryParam("datasources") final @Nullable Set<String> dataSources,
-      @QueryParam("includeOvershadowedStatus") final @Nullable String includeOvershadowedStatus,
-      @QueryParam("countersAndHash") final @Nullable Map<String, List<Long>> dataSourcesCounters
-      )
+      @QueryParam("includeOvershadowedStatus") final @Nullable String includeOvershadowedStatus
+  )
   {
     if (includeOvershadowedStatus != null) {
-
-      return getAllUsedSegmentsWithOvershadowedStatus(req, dataSources, CollectionUtils.mapValues(dataSourcesCounters, v -> new ChangeRequestHistory.Counter(v.get(0), v.get(1))));
+      return getAllUsedSegmentsWithOvershadowedStatus(req, dataSources);
     }
 
     Collection<ImmutableDruidDataSource> dataSourcesWithUsedSegments =
@@ -179,84 +173,117 @@ public class MetadataResource
     return builder.entity(authorizedSegments).build();
   }
 
-  private Response getAllUsedSegmentsWithOvershadowedStatus(
-      HttpServletRequest req,
-      @Nullable Set<String> dataSources,
-      @Nullable Map<String, ChangeRequestHistory.Counter> dataSourcesCounters
+  @GET
+  @Path("/changedSegments")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getSegmentsChangeSet(
+      @Context final HttpServletRequest req,
+      @QueryParam("datasources") final @Nullable Set<String> dataSources,
+      @QueryParam("counter") long counter,
+      @QueryParam("hash") long hash
   )
   {
-    DataSourcesSnapshot dataSourcesSnapshot = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments();
-    Map<String, ImmutableDruidDataSource> dataSourcesWithUsedSegments =
-        dataSourcesSnapshot.getDataSourcesMap();
+    Set<String> requiredDataSources = (null == dataSources) ? new HashSet<>() : dataSources;
 
-    Map<String, ChangeRequestsSnapshot<DataSegmentChangeRequest>> dataSourceChanges = new HashMap<>();
-    if (dataSourcesCounters != null && !dataSourcesCounters.isEmpty()) {
-      dataSourceChanges = dataSourcesSnapshot.getChangesSince(dataSourcesCounters);
+    DataSourcesSnapshot dataSourcesSnapshot = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments();
+    Stream<DataSegment> usedSegments =
+        dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()
+                           .stream()
+                           .flatMap(druidDataSource -> druidDataSource.getSegments().stream());
+
+    ChangeRequestsSnapshot<DataSegmentChange> changes = dataSourcesSnapshot.getChangesSince(new ChangeRequestHistory.Counter(counter, hash));
+    List<DataSegmentChange> dataSegmentChanges;
+    ChangeRequestHistory.Counter lastCounter;
+
+    if (changes.isResetCounter()) {
+      dataSegmentChanges =
+          usedSegments
+              .filter(segment -> requiredDataSources.contains(segment.getDataSource()))
+              .map(segment ->
+                       new DataSegmentChange(
+                           new SegmentWithOvershadowedStatus(
+                               segment,
+                               dataSourcesSnapshot.getOvershadowedSegments().contains(segment),
+                               getHandedOffStateForSegment(dataSourcesSnapshot, segment.getDataSource(), segment.getId()).lhs,
+                               getHandedOffStateForSegment(dataSourcesSnapshot, segment.getDataSource(), segment.getId()).rhs
+                           ),
+                           true,
+                           Collections.singletonList(DataSegmentChange.ChangeReason.SEGMENT_ID)))
+              .collect(Collectors.toList());
+      lastCounter = DataSourcesSnapshot.getLastCounter(dataSourcesSnapshot.getChanges());
+    } else {
+      dataSegmentChanges = changes.getRequests();
+      dataSegmentChanges = dataSegmentChanges
+          .stream()
+          .filter(segment -> requiredDataSources.contains(segment.getSegmentWithOvershadowedStatus().getDataSegment().getDataSource()))
+          .collect(Collectors.toList());
+      lastCounter = changes.getCounter();
     }
 
-    final Set<String> existingDataSources = dataSourceChanges.keySet();
+    final Function<DataSegmentChange, Iterable<ResourceAction>> raGenerator = segment -> Collections
+        .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getSegmentWithOvershadowedStatus().getDataSegment().getDataSource()));
 
-    // is this fine?
-    final Function<String, Iterable<ResourceAction>> raGenerator = dataSource -> Collections
-        .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(dataSource));
-
-    final Iterable<String> authorizedDataSources = AuthorizationUtils.filterAuthorizedResources(
+    final Iterable<DataSegmentChange> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
         req,
-        existingDataSources,
+        dataSegmentChanges,
         raGenerator,
         authorizerMapper
     );
-    Set<String> authorisedDataSets = new HashSet<>(IteratorUtils.toList(authorizedDataSources.iterator()));
 
-    dataSourceChanges.entrySet().removeIf(v -> !authorisedDataSets.contains(v.getKey()));
-
-    final Set<DataSegment> overshadowedSegments = dataSourcesSnapshot.getOvershadowedSegments();
-    List<ChangeRequestsSnapshot<SegmentWithOvershadowedStatusChangeRequest>> changeRequestsSnapshots = new ArrayList<>();
-
-    for (Map.Entry<String, ChangeRequestsSnapshot<DataSegmentChangeRequest>> entry : dataSourceChanges.entrySet()) {
-      if (entry.getValue().isResetCounter()) {
-        List<SegmentWithOvershadowedStatusChangeRequest> list = dataSourcesWithUsedSegments
-            .get(entry.getKey()).getSegments()
-            .stream()
-            .map(segment ->
-                     new SegmentWithOvershadowedStatusChangeRequest(
-                         new SegmentWithOvershadowedStatus(
-                             segment, overshadowedSegments.contains(segment),
-                             dataSourcesSnapshot.getHandedOffStatePerDataSource()
-                               .getOrDefault(segment.getDataSource(), new HashMap<>())
-                               .getOrDefault(segment.getId(), false)),
-                         true)).collect(Collectors.toList());
-        changeRequestsSnapshots.add(ChangeRequestsSnapshot.success(ChangeRequestHistory.Counter.ZERO, list));
-      } else {
-        List<SegmentWithOvershadowedStatusChangeRequest> list = entry
-            .getValue().getRequests()
-            .stream()
-            .map(changeRequest -> {
-              boolean load;
-              DataSegment segment;
-              if (changeRequest instanceof SegmentChangeRequestLoad) {
-                load = true;
-                segment = ((SegmentChangeRequestLoad) changeRequest).getSegment();
-              } else {
-                load = false;
-                segment = ((SegmentChangeRequestDrop) changeRequest).getSegment();
-              }
-
-              return new SegmentWithOvershadowedStatusChangeRequest(
-                  new SegmentWithOvershadowedStatus(
-                      segment, overshadowedSegments.contains(segment),
-                      dataSourcesSnapshot.getHandedOffStatePerDataSource()
-                                         .getOrDefault(segment.getDataSource(), new HashMap<>())
-                                         .getOrDefault(segment.getId(), false)),
-                  load);
-            }).collect(Collectors.toList());
-
-        changeRequestsSnapshots.add(ChangeRequestsSnapshot.success(entry.getValue().getCounter(), list));
-      }
-    }
+    ChangeRequestsSnapshot<DataSegmentChange> finalChanges = ChangeRequestsSnapshot.success(lastCounter, Lists.newArrayList(authorizedSegments));
 
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
-    return builder.entity(changeRequestsSnapshots).build();
+    return builder.entity(finalChanges).build();
+  }
+
+  private Response getAllUsedSegmentsWithOvershadowedStatus(
+      HttpServletRequest req,
+      @Nullable Set<String> dataSources
+  )
+  {
+    DataSourcesSnapshot dataSourcesSnapshot = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments();
+    Collection<ImmutableDruidDataSource> dataSourcesWithUsedSegments =
+        dataSourcesSnapshot.getDataSourcesWithAllUsedSegments();
+    if (dataSources != null && !dataSources.isEmpty()) {
+      dataSourcesWithUsedSegments = dataSourcesWithUsedSegments
+          .stream()
+          .filter(dataSourceWithUsedSegments -> dataSources.contains(dataSourceWithUsedSegments.getName()))
+          .collect(Collectors.toList());
+    }
+    final Stream<DataSegment> usedSegments = dataSourcesWithUsedSegments
+        .stream()
+        .flatMap(t -> t.getSegments().stream());
+    final Set<DataSegment> overshadowedSegments = dataSourcesSnapshot.getOvershadowedSegments();
+
+    final Stream<SegmentWithOvershadowedStatus> usedSegmentsWithOvershadowedStatus = usedSegments
+        .map(segment -> new SegmentWithOvershadowedStatus(
+            segment,
+            overshadowedSegments.contains(segment),
+            getHandedOffStateForSegment(dataSourcesSnapshot, segment.getDataSource(), segment.getId()).lhs,
+            getHandedOffStateForSegment(dataSourcesSnapshot, segment.getDataSource(), segment.getId()).rhs
+            ));
+
+    final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>> raGenerator = segment -> Collections
+        .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
+
+    final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
+        req,
+        usedSegmentsWithOvershadowedStatus::iterator,
+        raGenerator,
+        authorizerMapper
+    );
+
+    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
+    return builder.entity(authorizedSegments).build();
+  }
+
+  private Pair<Boolean, DateTime> getHandedOffStateForSegment(
+      DataSourcesSnapshot dataSourcesSnapshot,
+      String dataSource, SegmentId segmentId)
+  {
+    return dataSourcesSnapshot.getHandedOffStatePerDataSource()
+                       .getOrDefault(dataSource, new HashMap<>())
+                       .getOrDefault(segmentId, new Pair<>(false, null));
   }
 
   /**

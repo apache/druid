@@ -281,6 +281,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  version VARCHAR(255) NOT NULL,\n"
                 + "  used BOOLEAN NOT NULL,\n"
                 + "  handed_off BOOLEAN NOT NULL,\n"
+                + "  handed_off_time VARCHAR NOT NULL,\n"
                 + "  payload %2$s NOT NULL,\n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
@@ -294,6 +295,35 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             )
         )
     );
+  }
+
+  private void alterSegmentsTable(final String tableName)
+  {
+    try {
+      retryWithHandle(
+          new HandleCallback<Void>()
+          {
+            @Override
+            public Void withHandle(Handle handle)
+            {
+              final Batch batch = handle.createBatch();
+              if (!tableContainsColumn(handle, tableName, "handed_off")) {
+                log.info("Adding column: handed_off to table[%s]", tableName);
+                batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN handed_off VARCHAR(255)", tableName));
+              }
+              if (!tableContainsColumn(handle, tableName, "handed_off_time")) {
+                log.info("Adding column: handed_off_time to table[%s]", tableName);
+                batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN handed_off_time VARCHAR(255)", tableName));
+              }
+              batch.execute();
+              return null;
+            }
+          }
+      );
+    }
+    catch (Exception e) {
+      log.warn(e, "Exception altering table");
+    }
   }
 
   public void createRulesTable(final String tableName)
@@ -609,7 +639,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   public void createSegmentTable()
   {
     if (config.get().isCreateTables()) {
-      createSegmentTable(tablesConfigSupplier.get().getSegmentsTable());
+      String tableName = tablesConfigSupplier.get().getSegmentsTable();
+      createSegmentTable(tableName);
+      alterSegmentsTable(tableName);
     }
   }
 

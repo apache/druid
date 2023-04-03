@@ -40,6 +40,7 @@ import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.MetadataSegmentView;
+import org.apache.druid.client.SegmentMetadataCacheConfig;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
@@ -88,7 +89,6 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.client.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.schema.SystemSchema.SegmentsTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
@@ -547,11 +547,11 @@ public class SystemSchemaTest extends CalciteTestBase
   {
     final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, new ObjectMapper(), authMapper);
     final Set<SegmentWithOvershadowedStatus> publishedSegments = new HashSet<>(Arrays.asList(
-        new SegmentWithOvershadowedStatus(publishedCompactedSegment1, true, false),
-        new SegmentWithOvershadowedStatus(publishedCompactedSegment2, false, false),
-        new SegmentWithOvershadowedStatus(publishedUncompactedSegment3, false, false),
-        new SegmentWithOvershadowedStatus(segment1, true, false),
-        new SegmentWithOvershadowedStatus(segment2, false, false)
+        new SegmentWithOvershadowedStatus(publishedCompactedSegment1, true, false, null),
+        new SegmentWithOvershadowedStatus(publishedCompactedSegment2, false, false, null),
+        new SegmentWithOvershadowedStatus(publishedUncompactedSegment3, false, false, null),
+        new SegmentWithOvershadowedStatus(segment1, true, false, null),
+        new SegmentWithOvershadowedStatus(segment2, false, false, null)
     ));
 
     EasyMock.expect(metadataView.getPublishedSegments()).andReturn(publishedSegments.iterator()).once();

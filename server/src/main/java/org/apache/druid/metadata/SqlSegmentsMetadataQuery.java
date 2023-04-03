@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import org.apache.druid.java.util.common.CloseableIterators;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -161,18 +162,19 @@ public class SqlSegmentsMetadataQuery
     );
   }
 
-  public int markSegmentAsHandedOff(final SegmentId segmentId) {
+  public int markSegmentAsHandedOff(final SegmentId segmentId)
+  {
     final String dataSource = segmentId.getDataSource();
 
     final PreparedBatch batch =
         handle.prepareBatch(
             StringUtils.format(
-                "UPDATE %s SET handed_off = true WHERE datasource = ? AND id = ?",
+                "UPDATE %s SET handed_off = true, handed_off_time = ? WHERE datasource = ? AND id = ?",
                 dbTables.getSegmentsTable()
             )
         );
 
-    batch.add(dataSource, segmentId.toString());
+    batch.add(DateTimes.nowUtc(), dataSource, segmentId.toString());
 
     final int[] segmentChanges = batch.execute();
 

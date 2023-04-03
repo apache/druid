@@ -101,11 +101,6 @@ public class ImmutableDruidDataSource
     return idToSegments.get(segmentId);
   }
 
-  @JsonIgnore
-  public Map<SegmentId, DataSegment> getIdToSegments() {
-    return idToSegments;
-  }
-
   /**
    * Returns the sum of the {@link DataSegment#getSize() sizes} of all segments in this ImmutableDruidDataSource.
    */

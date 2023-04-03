@@ -44,6 +44,9 @@ public class SegmentMetadataCacheConfig
   @JsonProperty
   private boolean awaitInitializationOnStart = true;
 
+  @JsonProperty
+  private boolean detectUnavailableSegments = false;
+
   public static SegmentMetadataCacheConfig create()
   {
     return new SegmentMetadataCacheConfig();
@@ -78,6 +81,11 @@ public class SegmentMetadataCacheConfig
     return metadataSegmentPollPeriod;
   }
 
+  public boolean isDetectUnavailableSegments()
+  {
+    return detectUnavailableSegments;
+  }
+
   @Override
   public boolean equals(final Object o)
   {
@@ -91,7 +99,8 @@ public class SegmentMetadataCacheConfig
     return awaitInitializationOnStart == that.awaitInitializationOnStart &&
            metadataSegmentCacheEnable == that.metadataSegmentCacheEnable &&
            metadataSegmentPollPeriod == that.metadataSegmentPollPeriod &&
-           Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod);
+           Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod) &&
+           detectUnavailableSegments == that.detectUnavailableSegments;
   }
 
   @Override
@@ -101,7 +110,8 @@ public class SegmentMetadataCacheConfig
         metadataRefreshPeriod,
         awaitInitializationOnStart,
         metadataSegmentCacheEnable,
-        metadataSegmentPollPeriod
+        (metadataSegmentPollPeriod),
+        detectUnavailableSegments
     );
   }
 
@@ -113,6 +123,7 @@ public class SegmentMetadataCacheConfig
            ", metadataSegmentCacheEnable=" + metadataSegmentCacheEnable +
            ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
            ", awaitInitializationOnStart=" + awaitInitializationOnStart +
+           ", enableUnavailableSegmentDetection=" + detectUnavailableSegments +
            '}';
   }
 }

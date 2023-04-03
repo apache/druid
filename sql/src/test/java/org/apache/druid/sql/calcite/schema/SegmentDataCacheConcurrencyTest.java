@@ -31,6 +31,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.FilteringSegmentCallback;
 import org.apache.druid.client.MetadataSegmentView;
+import org.apache.druid.client.SegmentMetadataCacheConfig;
 import org.apache.druid.client.ServerView.CallbackAction;
 import org.apache.druid.client.ServerView.SegmentCallback;
 import org.apache.druid.client.ServerView.ServerRemovedCallback;
@@ -372,7 +373,8 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
         new NoopServiceEmitter(),
         new BrokerSegmentWatcherConfig(),
-        EasyMock.createMock(MetadataSegmentView.class)
+        EasyMock.createMock(MetadataSegmentView.class),
+        EasyMock.createMock(SegmentMetadataCacheConfig.class)
     );
   }
 

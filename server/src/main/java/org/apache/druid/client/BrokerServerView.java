@@ -21,7 +21,6 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -47,11 +46,14 @@ import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegmentChange;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.utils.CollectionUtils;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,8 +66,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import static java.util.stream.Collectors.toSet;
 
 /**
  *
@@ -94,6 +94,8 @@ public class BrokerServerView implements TimelineServerView
 
   private final CountDownLatch initialized = new CountDownLatch(1);
 
+  private final CountDownLatch metadataInitialized;
+
   @Inject
   public BrokerServerView(
       final QueryToolChestWarehouse warehouse,
@@ -104,7 +106,8 @@ public class BrokerServerView implements TimelineServerView
       final TierSelectorStrategy tierSelectorStrategy,
       final ServiceEmitter emitter,
       final BrokerSegmentWatcherConfig segmentWatcherConfig,
-      final MetadataSegmentView metadataSegmentView
+      final MetadataSegmentView metadataSegmentView,
+      final SegmentMetadataCacheConfig segmentMetadataCacheConfig
   )
   {
     this.warehouse = warehouse;
@@ -186,12 +189,37 @@ public class BrokerServerView implements TimelineServerView
 
     metadataSegmentView.registerSegmentCallback(
         exec,
-        polledSegments ->
+        new HandedOffSegmentCallback()
+        {
+
+          @Override
+          public CallbackAction fullSync(List<DataSegmentChange> segments)
           {
-            addHandedOffSegmentsToTimeline(polledSegments);
+            handedOffSegmentsFullSync(segments);
             return CallbackAction.CONTINUE;
           }
+
+          @Override
+          public CallbackAction deltaSync(List<DataSegmentChange> segments)
+          {
+            handedOffSegmentsDeltaSync(segments);
+            return CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public CallbackAction segmentViewInitialized()
+          {
+            metadataInitialized.countDown();
+            return CallbackAction.CONTINUE;
+          }
+        }
     );
+
+    if (segmentMetadataCacheConfig.isDetectUnavailableSegments()) {
+      metadataInitialized = new CountDownLatch(1);
+    } else {
+      metadataInitialized = new CountDownLatch(0);
+    }
   }
 
   @LifecycleStart
@@ -212,12 +240,13 @@ public class BrokerServerView implements TimelineServerView
 
   public boolean isInitialized()
   {
-    return initialized.getCount() == 0;
+    return initialized.getCount() == 0 && metadataInitialized.getCount() == 0;
   }
 
   public void awaitInitialization() throws InterruptedException
   {
     initialized.await();
+    metadataInitialized.await();
   }
 
   /**
@@ -281,57 +310,6 @@ public class BrokerServerView implements TimelineServerView
     return clients.remove(server.getName());
   }
 
-  private void addHandedOffSegmentsToTimeline(final ImmutableSortedSet<SegmentWithOvershadowedStatus> segmentWithOvershadowedStatusSet) {
-    // filter out handed off segments
-    // group by data source
-    Map<String, Map<SegmentId, SegmentWithOvershadowedStatus>> polledSegmentsPerDataSource =
-        CollectionUtils.mapValues(
-            segmentWithOvershadowedStatusSet
-                .stream()
-                .filter(SegmentWithOvershadowedStatus::isHandedOff)
-                .collect(Collectors.groupingBy(segment -> segment.getDataSegment().getDataSource(), toSet())),
-            segmentSet -> segmentSet.stream().collect(
-                Collectors.toMap(
-                    segmentWithOvershadowedStatus -> segmentWithOvershadowedStatus.getDataSegment().getId(),
-                    segmentWithOvershadowedStatus -> segmentWithOvershadowedStatus))
-        );
-
-    synchronized (lock) {
-      // we have two sets here
-      // set1 -> all segments which are existing in the system and handed off
-      // set2 -> all segments in the timeline
-      // for each datasource
-      // remove segments from set2 which are not in set1 -> get rid of unused segments
-      // add segments from set1 not in set2 -> adds handed off but unavialble segments to the timeline
-
-      for (Map.Entry<String, Map<SegmentId, SegmentWithOvershadowedStatus>> entry : polledSegmentsPerDataSource.entrySet()) {
-        String dataSource = entry.getKey();
-        Map<SegmentId, SegmentWithOvershadowedStatus> segments = entry.getValue();
-
-        VersionedIntervalTimeline<String, ServerSelector> versionedIntervalTimeline = timelines.get(dataSource);
-
-        Map<SegmentId, VersionedIntervalTimeline.PartitionChunkEntry<String, ServerSelector>> segmentIdPartitionChunkEntryMap =
-            versionedIntervalTimeline.getAllPartitionChunkEntries().stream().collect(
-                Collectors.toMap(pce -> pce.getChunk().getObject().getSegment().getId(), pce -> pce));
-
-        Set<SegmentId> segmentIdsToRemoveFromTimeline = Sets.difference(segmentIdPartitionChunkEntryMap.keySet(), segments.keySet());
-
-        segmentIdsToRemoveFromTimeline
-            .stream()
-            .map(segmentIdPartitionChunkEntryMap::get)
-            .forEach(pce -> versionedIntervalTimeline.remove(pce.getInterval(), pce.getVersion(), pce.getChunk()));
-
-        for (Map.Entry<SegmentId, SegmentWithOvershadowedStatus> segmentWithOvershadowedStatusEntry : entry.getValue().entrySet()) {
-          if (!segmentIdPartitionChunkEntryMap.containsKey(segmentWithOvershadowedStatusEntry.getKey())) {
-            addSegmentToTimeline(segmentWithOvershadowedStatusEntry.getValue().getDataSegment());
-            // required ?
-            // runTimelineCallbacks(callback -> callback.segmentAdded(server, segment));
-          }
-        }
-      }
-    }
-  }
-
   private void serverAddedSegment(final DruidServerMetadata server, final DataSegment segment)
   {
     synchronized (lock) {
@@ -354,7 +332,8 @@ public class BrokerServerView implements TimelineServerView
     }
   }
 
-  private ServerSelector addSegmentToTimeline(DataSegment segment) {
+  private ServerSelector addSegmentToTimeline(DataSegment segment)
+  {
     SegmentId segmentId = segment.getId();
     ServerSelector selector = selectors.get(segmentId);
     if (selector == null) {
@@ -372,6 +351,36 @@ public class BrokerServerView implements TimelineServerView
     }
 
     return selector;
+  }
+
+  private void addSegmentsToTimeline(List<SegmentWithOvershadowedStatus> segments)
+  {
+
+    Map<String, List<VersionedIntervalTimeline.PartitionChunkEntry<String, ServerSelector>>> partitionChunkEntryMap = new HashMap<>();
+
+    for (SegmentWithOvershadowedStatus segmentWithOvershadowedStatus : segments) {
+      DataSegment segment = segmentWithOvershadowedStatus.getDataSegment();
+      SegmentId segmentId = segment.getId();
+      ServerSelector selector = selectors.get(segmentId);
+      if (selector == null) {
+        selector = new ServerSelector(segment, tierSelectorStrategy, segmentWithOvershadowedStatus.getHandedOffTime());
+
+        VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
+        if (timeline == null) {
+          // broker needs to skip tombstones
+          timeline = new VersionedIntervalTimeline<>(Ordering.natural(), true);
+          timelines.put(segment.getDataSource(), timeline);
+        }
+
+        partitionChunkEntryMap
+            .computeIfAbsent(segment.getDataSource(), entries -> new ArrayList<>())
+            .add(new VersionedIntervalTimeline.PartitionChunkEntry<>(
+                segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector)));
+        selectors.put(segmentId, selector);
+      }
+    }
+
+    partitionChunkEntryMap.forEach((dataSource, entries) -> timelines.get(dataSource).addAll(entries.iterator()));
   }
 
   private void serverRemovedSegment(DruidServerMetadata server, DataSegment segment)
@@ -410,6 +419,120 @@ public class BrokerServerView implements TimelineServerView
       if (selector.isEmpty()) {
         selectors.remove(segmentId);
       }
+    }
+  }
+
+  private void handedOffSegmentsFullSync(final List<DataSegmentChange> dataSegmentChanges)
+  {
+    Map<String, Map<SegmentId, SegmentWithOvershadowedStatus>> handedOffSegmentsPerDataSource =
+        CollectionUtils.mapValues(
+            dataSegmentChanges
+                .stream()
+                .map(DataSegmentChange::getSegmentWithOvershadowedStatus)
+                .filter(SegmentWithOvershadowedStatus::isHandedOff)
+                .collect(Collectors.groupingBy(segment -> segment.getDataSegment().getDataSource(), Collectors.toSet())),
+            segmentSet -> segmentSet.stream().collect(
+                Collectors.toMap(
+                    segmentWithOvershadowedStatus -> segmentWithOvershadowedStatus.getDataSegment().getId(),
+                    segmentWithOvershadowedStatus -> segmentWithOvershadowedStatus))
+        );
+
+    synchronized (lock) {
+      // for each datasource,
+      // set1 -> all segments which are existing in the system and handed off
+      // set2 -> all segments in the timeline
+      // remove segments from set2 which are not in set1 -> get rid of unused segments
+      // add segments from set1 not in set2 -> add handed off but unavialble segments to the timeline
+      // update handed off time for elements of set2 in set1
+
+      for (Map.Entry<String, Map<SegmentId, SegmentWithOvershadowedStatus>> entry : handedOffSegmentsPerDataSource.entrySet()) {
+        String dataSource = entry.getKey();
+        Map<SegmentId, SegmentWithOvershadowedStatus> segments = entry.getValue();
+
+        VersionedIntervalTimeline<String, ServerSelector> versionedIntervalTimeline = timelines.get(dataSource);
+
+        Map<SegmentId, VersionedIntervalTimeline.PartitionChunkEntry<String, ServerSelector>> segmentIdPartitionChunkEntryMap =
+            versionedIntervalTimeline
+                .getAllPartitionChunkEntries()
+                .stream()
+                .collect(Collectors.toMap(
+                    pce -> pce.getChunk().getObject().getSegment().getId(),
+                    Function.identity()));
+
+        Set<SegmentId> segmentIdsToRemoveFromTimeline = Sets.difference(segmentIdPartitionChunkEntryMap.keySet(), segments.keySet());
+
+        segmentIdsToRemoveFromTimeline.forEach(segmentId -> removeSegmentFromTimeline(segments.get(segmentId).getDataSegment()));
+
+        List<SegmentWithOvershadowedStatus> segmentsToAdd = new ArrayList<>();
+        for (Map.Entry<SegmentId, SegmentWithOvershadowedStatus> segmentWithOvershadowedStatusEntry : entry.getValue().entrySet()) {
+          if (selectors.containsKey(segmentWithOvershadowedStatusEntry.getKey())) {
+            selectors.get(segmentWithOvershadowedStatusEntry.getKey())
+                     .setHandedOffTime(segmentWithOvershadowedStatusEntry.getValue().getHandedOffTime());
+          }
+          if (!segmentIdPartitionChunkEntryMap.containsKey(segmentWithOvershadowedStatusEntry.getKey())) {
+            segmentsToAdd.add(segmentWithOvershadowedStatusEntry.getValue());
+            // not invoking timeline callback since this segment doesn't reside on a server
+          }
+        }
+        addSegmentsToTimeline(segmentsToAdd);
+      }
+    }
+  }
+
+  private void handedOffSegmentsDeltaSync(final List<DataSegmentChange> dataSegmentChanges)
+  {
+    List<SegmentWithOvershadowedStatus> segmentsToAdd =
+        dataSegmentChanges
+            .stream()
+            .filter(DataSegmentChange::isLoad)
+            .map(DataSegmentChange::getSegmentWithOvershadowedStatus)
+            .filter(SegmentWithOvershadowedStatus::isHandedOff)
+            .collect(Collectors.toList());
+
+    List<DataSegment> segmentsToRemove =
+        dataSegmentChanges
+            .stream()
+            .filter(segment -> !segment.isLoad())
+            .map(DataSegmentChange::getSegmentWithOvershadowedStatus)
+            .map(SegmentWithOvershadowedStatus::getDataSegment)
+            .collect(Collectors.toList());
+
+    synchronized (lock) {
+      segmentsToRemove.forEach(this::removeSegmentFromTimeline);
+      addSegmentsToTimeline(segmentsToAdd);
+    }
+  }
+
+  private void removeSegmentFromTimeline(DataSegment segment)
+  {
+    SegmentId segmentId = segment.getId();
+
+    ServerSelector selector = selectors.get(segmentId);
+    if (selector == null) {
+      log.warn("Told to remove non-existant segment[%s]", segmentId);
+      return;
+    }
+
+    // run call back for all server this segment is present on
+    for (DruidServerMetadata server : selector.getAllServers()) {
+      runTimelineCallbacks(callback -> callback.serverSegmentRemoved(server, segment));
+    }
+
+    selectors.remove(segmentId);
+
+    VersionedIntervalTimeline<String, ServerSelector> versionedIntervalTimeline = timelines.get(segment.getDataSource());
+
+    final PartitionChunk<ServerSelector> removedPartition = versionedIntervalTimeline.remove(
+        segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector)
+    );
+
+    if (removedPartition == null) {
+      log.warn(
+          "Asked to remove timeline entry[interval: %s, version: %s] that doesn't exist",
+          segment.getInterval(),
+          segment.getVersion());
+    } else {
+      runTimelineCallbacks(callback -> callback.segmentRemoved(segment));
     }
   }
 

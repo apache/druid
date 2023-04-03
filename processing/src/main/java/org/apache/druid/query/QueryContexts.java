@@ -158,7 +158,8 @@ public class QueryContexts
     }
   }
 
-  public enum PartialResultAction {
+  public enum PartialResultAction
+  {
     FAIL,
     ALLOW;
 

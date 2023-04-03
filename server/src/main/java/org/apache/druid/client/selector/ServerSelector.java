@@ -27,6 +27,7 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Overshadowable;
+import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -49,15 +50,28 @@ public class ServerSelector implements Overshadowable<ServerSelector>
 
   private final AtomicReference<DataSegment> segment;
 
+  private DateTime handedOffTime;
+
+  private DateTime latestHistoricalLoadTime;
+
   public ServerSelector(
       DataSegment segment,
-      TierSelectorStrategy strategy
+      TierSelectorStrategy strategy)
+  {
+    this(segment, strategy, null);
+  }
+
+  public ServerSelector(
+      DataSegment segment,
+      TierSelectorStrategy strategy,
+      DateTime handedOffTime
   )
   {
     this.segment = new AtomicReference<>(DataSegmentInterner.intern(segment));
     this.strategy = strategy;
     this.historicalServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
     this.realtimeServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
+    this.handedOffTime = handedOffTime;
   }
 
   public DataSegment getSegment()
@@ -216,4 +230,23 @@ public class ServerSelector implements Overshadowable<ServerSelector>
     return segment.get().hasData();
   }
 
+  public void setHandedOffTime(DateTime handedOffTime)
+  {
+    this.handedOffTime = handedOffTime;
+  }
+
+  public DateTime getHandedOffTime()
+  {
+    return handedOffTime;
+  }
+
+  public DateTime getLatestHistoricalLoadTime()
+  {
+    return latestHistoricalLoadTime;
+  }
+
+  public void setLatestHistoricalLoadTime(DateTime latestHistoricalLoadTime)
+  {
+    this.latestHistoricalLoadTime = latestHistoricalLoadTime;
+  }
 }
