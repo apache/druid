@@ -193,7 +193,8 @@ public abstract class FormattedInputSourceDefn extends BaseInputSourceDefn
     return new ExternalTableSpec(
         convertSource(sourceMap, jsonMapper),
         inputFormat,
-        Columns.convertSignature(completedCols)
+        Columns.convertSignature(completedCols),
+        typeValue()
     );
   }
 }

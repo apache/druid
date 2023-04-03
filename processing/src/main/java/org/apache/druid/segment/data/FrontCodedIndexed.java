@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -76,11 +77,28 @@ import java.util.NoSuchElementException;
  */
 public final class FrontCodedIndexed implements Indexed<ByteBuffer>
 {
+  public static final byte V0 = 0;
+  public static final byte V1 = 1;
+  public static final byte DEFAULT_VERSION = V0;
+  public static final int DEFAULT_BUCKET_SIZE = 4;
+
+  public static byte validateVersion(byte version)
+  {
+    if (version != FrontCodedIndexed.V0 && version != FrontCodedIndexed.V1) {
+      throw new IAE(
+          "Unknown format version for FrontCodedIndexed [%s], must be [%s] or [%s]",
+          version,
+          FrontCodedIndexed.V0,
+          FrontCodedIndexed.V1
+      );
+    }
+    return version;
+  }
   public static Supplier<FrontCodedIndexed> read(ByteBuffer buffer, ByteOrder ordering)
   {
     final ByteBuffer orderedBuffer = buffer.asReadOnlyBuffer().order(ordering);
     final byte version = orderedBuffer.get();
-    Preconditions.checkArgument(version == 0 || version == 1, "only V0 and V1 exist, encountered " + version);
+    Preconditions.checkArgument(version == V0 || version == V1, "only V0 and V1 exist, encountered " + version);
     final int bucketSize = Byte.toUnsignedInt(orderedBuffer.get());
     final boolean hasNull = NullHandling.IS_NULL_BYTE == orderedBuffer.get();
     final int numValues = VByte.readInt(orderedBuffer);
@@ -179,8 +197,9 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     }
     Indexed.checkIndex(index, adjustedNumValues);
 
-    // due to vbyte encoding, the null value is not actually stored in the bucket (no negative values), so we adjust
-    // the index
+    // due to vbyte encoding, the null value is not actually stored in the bucket. we would typically represent it as a
+    // length of -1, since 0 is the empty string, but VByte encoding cannot have negative values, so if the null value
+    // is present, we adjust the index by 1 since it is always stored as position 0 due to sorting first
     final int adjustedIndex = index - adjustIndex;
     // find the bucket which contains the value with maths
     final int bucket = adjustedIndex >> div;
@@ -197,6 +216,10 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     // a linear scan to find the value within the bucket
     if (value == null) {
       return hasNull ? 0 : -1;
+    }
+
+    if (numBuckets == 0) {
+      return hasNull ? -2 : -1;
     }
 
     int minBucketIndex = 0;
@@ -298,6 +321,9 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
   @Override
   public Iterator<ByteBuffer> iterator()
   {
+    if (adjustedNumValues == 0) {
+      return Collections.emptyIterator();
+    }
     if (hasNull && adjustedNumValues == 1) {
       return Collections.<ByteBuffer>singletonList(null).iterator();
     }

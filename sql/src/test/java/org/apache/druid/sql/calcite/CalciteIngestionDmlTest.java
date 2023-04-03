@@ -40,6 +40,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlQueryPlus;
@@ -216,6 +217,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
     private Matcher<Throwable> validationErrorMatcher;
     private String expectedLogicalPlanResource;
     private List<SqlParameter> parameters;
+    private AuthConfig authConfig;
 
     private IngestionDmlTester()
     {
@@ -252,6 +254,12 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
     public IngestionDmlTester parameters(List<SqlParameter> parameters)
     {
       this.parameters = parameters;
+      return this;
+    }
+
+    public IngestionDmlTester authConfig(AuthConfig authConfig)
+    {
+      this.authConfig = authConfig;
       return this;
     }
 
@@ -378,6 +386,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
           .authResult(authenticationResult)
           .parameters(parameters)
           .plannerConfig(plannerConfig)
+          .authConfig(authConfig)
           .expectedResources(expectedResources)
           .run();
 
@@ -396,6 +405,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
           .authResult(authenticationResult)
           .parameters(parameters)
           .plannerConfig(plannerConfig)
+          .authConfig(authConfig)
           .expectedQuery(expectedQuery)
           .expectedResults(Collections.singletonList(new Object[]{expectedTargetDataSource, expectedTargetSignature}))
           .expectedLogicalPlan(expectedLogicalPlan)

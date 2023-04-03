@@ -29,6 +29,7 @@ import {
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import type { QueryResult } from 'druid-query-toolkit';
+import { SqlColumnDeclaration } from 'druid-query-toolkit';
 import React, { useEffect, useState } from 'react';
 
 import { AutoForm, ExternalLink } from '../../../components';
@@ -138,7 +139,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
             listDelimiter: BOGUS_LIST_DELIMITER,
             columns: ['raw'],
           },
-          signature: [{ name: 'raw', type: 'string' }],
+          signature: [SqlColumnDeclaration.create('raw', 'VARCHAR')],
         });
 
         const result = extractResult(

@@ -70,6 +70,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.input.InputSourceModule;
+import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.counters.QueryCounterSnapshot;
@@ -133,6 +134,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.SqlQueryPlus;
@@ -509,7 +511,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.createJoinableFactoryWrapper(),
-        catalogResolver
+        catalogResolver,
+        new AuthConfig()
     );
 
     sqlStatementFactory = CalciteTests.createSqlStatementFactory(engine, plannerFactory);
@@ -894,6 +897,18 @@ public class MSQTestBase extends BaseCalciteQueryTest
       this.expectedStageWorkerChannelToCounters.computeIfAbsent(stage, s -> new HashMap<>())
                                                .computeIfAbsent(worker, w -> new HashMap<>())
                                                .put(channel, counterSnapshot);
+      return asBuilder();
+    }
+
+    public Builder setExpectedSegmentGenerationProgressCountersForStageWorker(
+        CounterSnapshotMatcher counterSnapshot,
+        int stage,
+        int worker
+    )
+    {
+      this.expectedStageWorkerChannelToCounters.computeIfAbsent(stage, s -> new HashMap<>())
+                                               .computeIfAbsent(worker, w -> new HashMap<>())
+                                               .put(CounterNames.getSegmentGenerationProgress(), counterSnapshot);
       return asBuilder();
     }
 

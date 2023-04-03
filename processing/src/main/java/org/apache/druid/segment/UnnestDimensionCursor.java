@@ -142,6 +142,9 @@ public class UnnestDimensionCursor implements Cursor
               @Override
               public boolean matches()
               {
+                if (indexedIntsForCurrentRow == null) {
+                  return false;
+                }
                 if (indexedIntsForCurrentRow.size() <= 0) {
                   return false;
                 }
