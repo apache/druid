@@ -171,7 +171,7 @@ public class StandardDoubleColumnSupplier implements Supplier<StandardTypeColumn
   public <T> T as(Class<T> clazz)
   {
     if (clazz.equals(NullValueIndex.class)) {
-      final BitmapColumnIndex nullIndex = new SimpleImmutableBitmapIndex(valueIndexes.get(0));
+      final BitmapColumnIndex nullIndex = new SimpleImmutableBitmapIndex(nullValueBitmap);
       return (T) (NullValueIndex) () -> nullIndex;
     } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)
                || clazz.equals(DictionaryEncodedValueIndex.class)) {

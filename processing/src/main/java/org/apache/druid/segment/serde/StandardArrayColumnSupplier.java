@@ -25,9 +25,12 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.NullValueIndex;
+import org.apache.druid.segment.column.SimpleImmutableBitmapIndex;
 import org.apache.druid.segment.column.StandardArrayColumn;
 import org.apache.druid.segment.column.StandardTypeColumn;
 import org.apache.druid.segment.column.StringEncodingStrategy;
@@ -237,6 +240,10 @@ public class StandardArrayColumnSupplier implements Supplier<StandardTypeColumn>
   @Override
   public <T> T as(Class<T> clazz)
   {
+    if (clazz.equals(NullValueIndex.class)) {
+      final BitmapColumnIndex nullIndex = new SimpleImmutableBitmapIndex(nullValueBitmap);
+      return (T) (NullValueIndex) () -> nullIndex;
+    }
     // coming soon...
     return null;
   }

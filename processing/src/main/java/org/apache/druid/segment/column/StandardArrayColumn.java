@@ -23,6 +23,7 @@ import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.guava.GuavaUtils;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -40,6 +41,7 @@ import org.roaringbitmap.PeekableIntIterator;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Iterator;
 
 public class StandardArrayColumn<TStringDictionary extends Indexed<ByteBuffer>> implements StandardTypeColumn
 {
@@ -80,6 +82,103 @@ public class StandardArrayColumn<TStringDictionary extends Indexed<ByteBuffer>> 
   public ColumnType getLogicalType()
   {
     return logicalType;
+  }
+
+  @Override
+  public Indexed<String> getStringDictionary()
+  {
+    return new StringEncodingStrategies.Utf8ToStringIndexed(stringDictionary);
+  }
+
+  @Override
+  public Indexed<Long> getLongDictionary()
+  {
+    return longDictionary;
+  }
+
+  @Override
+  public Indexed<Double> getDoubleDictionary()
+  {
+    return doubleDictionary;
+  }
+
+  @Override
+  public Indexed<Object[]> getArrayDictionary()
+  {
+    Iterable<Object[]> arrays = () -> {
+
+      return new Iterator<Object[]>()
+      {
+        final Iterator<int[]> delegate = arrayDictionary.iterator();
+
+        @Override
+        public boolean hasNext()
+        {
+          return delegate.hasNext();
+        }
+
+        @Override
+        public Object[] next()
+        {
+          final int[] next = delegate.next();
+          final Object[] nextArray = new Object[next.length];
+          for (int i = 0; i < nextArray.length; i++) {
+            nextArray[i] = lookupId(next[i]);
+          }
+          return nextArray;
+        }
+
+        private Object lookupId(int globalId)
+        {
+          if (globalId == 0) {
+            return null;
+          }
+          final int adjustLongId = stringDictionary.size();
+          final int adjustDoubleId = stringDictionary.size() + longDictionary.size();
+          if (globalId < adjustLongId) {
+            return StringUtils.fromUtf8Nullable(stringDictionary.get(globalId));
+          } else if (globalId < adjustDoubleId) {
+            return longDictionary.get(globalId - adjustLongId);
+          } else if (globalId < adjustDoubleId + doubleDictionary.size()) {
+            return doubleDictionary.get(globalId - adjustDoubleId);
+          }
+          throw new IAE("Unknown globalId [%s]", globalId);
+        }
+      };
+    };
+    return new Indexed<Object[]>()
+    {
+      @Override
+      public int size()
+      {
+        return arrayDictionary.size();
+      }
+
+      @Nullable
+      @Override
+      public Object[] get(int index)
+      {
+        throw new UnsupportedOperationException("get not supported");
+      }
+
+      @Override
+      public int indexOf(@Nullable Object[] value)
+      {
+        throw new UnsupportedOperationException("indexOf not supported");
+      }
+
+      @Override
+      public Iterator<Object[]> iterator()
+      {
+        return arrays.iterator();
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        // meh
+      }
+    };
   }
 
   @Override
