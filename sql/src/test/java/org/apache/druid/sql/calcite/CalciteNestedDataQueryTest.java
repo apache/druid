@@ -59,7 +59,7 @@ import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.StandardTypeColumnSchema;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -143,11 +143,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       new TimestampSpec("t", "iso", null),
       DimensionsSpec.builder().setDimensions(
           ImmutableList.<DimensionSchema>builder()
-                       .add(new StandardTypeColumnSchema("string"))
-                       .add(new StandardTypeColumnSchema("nest"))
-                       .add(new StandardTypeColumnSchema("nester"))
-                       .add(new StandardTypeColumnSchema("long"))
-                       .add(new StandardTypeColumnSchema("string_sparse"))
+                       .add(new AutoTypeColumnSchema("string"))
+                       .add(new AutoTypeColumnSchema("nest"))
+                       .add(new AutoTypeColumnSchema("nester"))
+                       .add(new AutoTypeColumnSchema("long"))
+                       .add(new AutoTypeColumnSchema("string_sparse"))
                        .build()
       ).build(),
       null
@@ -158,8 +158,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       DimensionsSpec.builder().setDimensions(
           ImmutableList.<DimensionSchema>builder()
                        .add(new StringDimensionSchema("string"))
-                       .add(new StandardTypeColumnSchema("nest"))
-                       .add(new StandardTypeColumnSchema("nester"))
+                       .add(new AutoTypeColumnSchema("nest"))
+                       .add(new AutoTypeColumnSchema("nester"))
                        .add(new LongDimensionSchema("long"))
                        .add(new StringDimensionSchema("string_sparse"))
                        .build()

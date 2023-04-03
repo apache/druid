@@ -40,11 +40,11 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.StandardTypeColumnSchema;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.transform.ExpressionTransform;
@@ -94,11 +94,11 @@ public class NestedDataTestUtils
       DimensionsSpec.builder()
                     .setDimensions(
                         Arrays.asList(
-                            new StandardTypeColumnSchema("dim"),
-                            new StandardTypeColumnSchema("nest_json"),
-                            new StandardTypeColumnSchema("nester_json"),
-                            new StandardTypeColumnSchema("variant_json"),
-                            new StandardTypeColumnSchema("list_json")
+                            new AutoTypeColumnSchema("dim"),
+                            new AutoTypeColumnSchema("nest_json"),
+                            new AutoTypeColumnSchema("nester_json"),
+                            new AutoTypeColumnSchema("variant_json"),
+                            new AutoTypeColumnSchema("list_json")
                         )
                     )
                     .build();

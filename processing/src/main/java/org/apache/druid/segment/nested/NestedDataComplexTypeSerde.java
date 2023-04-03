@@ -89,7 +89,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
       ColumnConfig columnConfig
   )
   {
-    final NestedDataColumnSupplier supplier = NestedDataColumnSupplier.read(
+    final NestedDataColumnSupplierV4 supplier = NestedDataColumnSupplierV4.read(
         buffer,
         builder,
         columnConfig,

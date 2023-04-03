@@ -27,12 +27,10 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
-/**
- * Literal field writer for mixed type nested columns of {@link NestedDataColumnSerializerV4}
- */
-public final class VariantFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<Object>
+public class VariantArrayFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<int[]>
 {
-  public VariantFieldColumnWriter(
+
+  public VariantArrayFieldColumnWriter(
       String columnName,
       String fieldName,
       SegmentWriteOutMedium segmentWriteOutMedium,
@@ -43,9 +41,8 @@ public final class VariantFieldColumnWriter extends GlobalDictionaryEncodedField
     super(columnName, fieldName, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);
   }
 
-
   @Override
-  Object processValue(int row, Object value)
+  int[] processValue(int row, Object value)
   {
     if (value instanceof Object[]) {
       Object[] array = (Object[]) value;
@@ -63,27 +60,20 @@ public final class VariantFieldColumnWriter extends GlobalDictionaryEncodedField
           globalIds[i] = -1;
         }
         Preconditions.checkArgument(globalIds[i] >= 0, "unknown global id [%s] for value [%s]", globalIds[i], array[i]);
+        arrayElements.computeIfAbsent(
+            globalIds[i],
+            (id) -> indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap()
+        ).add(row);
       }
       return globalIds;
     }
-    return super.processValue(row, value);
+    return null;
   }
 
   @Override
-  int lookupGlobalId(Object value)
+  int lookupGlobalId(int[] value)
   {
-    if (value == null) {
-      return 0;
-    }
-    if (value instanceof Long) {
-      return globalDictionaryIdLookup.lookupLong((Long) value);
-    } else if (value instanceof Double) {
-      return globalDictionaryIdLookup.lookupDouble((Double) value);
-    } else if (value instanceof int[]) {
-      return globalDictionaryIdLookup.lookupArray((int[]) value);
-    } else {
-      return globalDictionaryIdLookup.lookupString(String.valueOf(value));
-    }
+    return globalDictionaryIdLookup.lookupArray(value);
   }
 
   @Override

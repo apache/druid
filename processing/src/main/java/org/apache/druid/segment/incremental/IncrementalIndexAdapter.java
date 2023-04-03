@@ -22,12 +22,12 @@ package org.apache.druid.segment.incremental;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
+import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.IntIteratorUtils;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.NestedDataColumnIndexer;
-import org.apache.druid.segment.StandardTypeColumnIndexer;
 import org.apache.druid.segment.TransformableRowIterator;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnFormat;
@@ -162,8 +162,8 @@ public class IncrementalIndexAdapter implements IndexableAdapter
           nestedDataColumnIndexer.getFieldTypeInfo()
       );
     }
-    if (indexer instanceof StandardTypeColumnIndexer) {
-      StandardTypeColumnIndexer standardIndexer = (StandardTypeColumnIndexer) indexer;
+    if (indexer instanceof AutoTypeColumnIndexer) {
+      AutoTypeColumnIndexer standardIndexer = (AutoTypeColumnIndexer) indexer;
       return new NestedColumnMergable(
           standardIndexer.getSortedValueLookups(),
           standardIndexer.getFieldTypeInfo()

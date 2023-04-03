@@ -30,11 +30,11 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
-import org.apache.druid.segment.column.StandardTypeColumn;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.ImmutableBitmapValues;
 import org.apache.druid.segment.data.IndexedIterable;
+import org.apache.druid.segment.nested.NestedCommonFormatColumn;
 import org.apache.druid.segment.nested.SortedValueDictionary;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableLongColumnValueSelector;
@@ -173,13 +173,13 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     if (columnHolder == null) {
       return null;
     }
-    if (!(columnHolder.getColumnFormat() instanceof StandardTypeColumn.Format)) {
+    if (!(columnHolder.getColumnFormat() instanceof NestedCommonFormatColumn.Format)) {
       return null;
     }
 
     final BaseColumn col = columnHolder.getColumn();
-    if (col instanceof StandardTypeColumn) {
-      StandardTypeColumn column = (StandardTypeColumn) col;
+    if (col instanceof NestedCommonFormatColumn) {
+      NestedCommonFormatColumn column = (NestedCommonFormatColumn) col;
       return new NestedColumnMergable(
           new SortedValueDictionary(
               column.getStringDictionary(),

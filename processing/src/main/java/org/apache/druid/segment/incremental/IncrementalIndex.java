@@ -61,11 +61,11 @@ import org.apache.druid.segment.EncodedKeyComponent;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.NestedCommonFormatColumnHandler;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
-import org.apache.druid.segment.StandardTypeColumnHandler;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.CapabilitiesBasedFormat;
@@ -580,7 +580,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
           wasNewDim = true;
           final DimensionHandler<?, ?, ?> handler;
           if (useSchemaDiscovery) {
-            handler = new StandardTypeColumnHandler(dimension);
+            handler = new NestedCommonFormatColumnHandler(dimension);
           } else {
             // legacy behavior: for schemaless type discovery, everything is a String
             handler = DimensionHandlerUtils.getHandlerFromCapabilities(

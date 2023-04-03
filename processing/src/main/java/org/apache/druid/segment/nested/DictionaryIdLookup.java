@@ -32,7 +32,7 @@ import org.apache.druid.segment.data.FrontCodedIntArrayIndexedWriter;
 import javax.annotation.Nullable;
 
 /**
- * Ingestion time dictionary identifier lookup, used by {@link NestedDataColumnSerializer} to build a global dictionary
+ * Ingestion time dictionary identifier lookup, used by {@link NestedDataColumnSerializerV4} to build a global dictionary
  * id to value mapping for the 'stacked' global value dictionaries.
  */
 public class DictionaryIdLookup

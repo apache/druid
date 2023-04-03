@@ -21,6 +21,7 @@ package org.apache.druid.segment.nested;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.ComparatorDimensionDictionary;
 import org.apache.druid.segment.ComparatorSortedDimensionDictionary;
 import org.apache.druid.segment.DimensionDictionary;
@@ -38,7 +39,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * Used by {@link org.apache.druid.segment.StandardTypeColumnIndexer} and {@link NestedDataColumnIndexer} to build the
+ * Used by {@link AutoTypeColumnIndexer} and {@link NestedDataColumnIndexer} to build the
  * value dictionary, which can be converted into a {@link SortedValueDictionary} to sort and write out the values to a
  * segment with {@link #getSortedCollector()}.
  */

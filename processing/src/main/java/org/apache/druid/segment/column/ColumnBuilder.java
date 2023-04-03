@@ -24,6 +24,7 @@ import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.nested.NestedCommonFormatColumn;
 import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 import org.apache.druid.segment.serde.NullValueIndexSupplier;
 
@@ -116,7 +117,7 @@ public class ColumnBuilder
     return this;
   }
 
-  public ColumnBuilder setStandardTypeColumnSupplier(Supplier<? extends StandardTypeColumn> columnSupplier)
+  public ColumnBuilder setStandardTypeColumnSupplier(Supplier<? extends NestedCommonFormatColumn> columnSupplier)
   {
     checkColumnSupplierNotSet();
     this.columnSupplier = columnSupplier;

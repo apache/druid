@@ -26,7 +26,7 @@ import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.nested.FieldTypeInfo;
-import org.apache.druid.segment.nested.NestedDataColumnSerializer;
+import org.apache.druid.segment.nested.NestedDataColumnSerializerV4;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.SortedValueDictionary;
 import org.apache.druid.segment.serde.ComplexColumnPartSerde;
@@ -111,7 +111,7 @@ public class NestedDataColumnMerger implements DimensionMergerV9
 
       descriptorBuilder = new ColumnDescriptor.Builder();
 
-      final NestedDataColumnSerializer defaultSerializer = new NestedDataColumnSerializer(
+      final NestedDataColumnSerializerV4 defaultSerializer = new NestedDataColumnSerializerV4(
           name,
           indexSpec,
           segmentWriteOutMedium,

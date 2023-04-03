@@ -20,16 +20,21 @@
 package org.apache.druid.segment.nested;
 
 import com.google.common.base.Supplier;
+import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnBuilder;
-import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.NullValueIndex;
+import org.apache.druid.segment.column.SimpleImmutableBitmapIndex;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
-import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSupplier;
+import org.apache.druid.segment.data.ColumnarInts;
+import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
 import org.apache.druid.segment.data.EncodedStringDictionaryWriter;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.FrontCodedIndexed;
@@ -42,16 +47,15 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColumn>
+public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommonFormatColumn>, ColumnIndexSupplier
 {
-  public static NestedDataColumnSupplier read(
+  public static VariantArrayColumnAndIndexSupplier read(
       String columnName,
-      boolean hasNulls,
-      ByteBuffer bb,
-      ColumnBuilder columnBuilder,
-      ColumnConfig columnConfig,
+      ColumnType logicalType,
+      ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
-      ByteOrder byteOrder
+      ByteBuffer bb,
+      ColumnBuilder columnBuilder
   )
   {
     final byte version = bb.get();
@@ -59,29 +63,11 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
     if (version == NestedCommonFormatColumnSerializer.V0) {
       try {
         final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
-        final GenericIndexed<String> fields;
-        final FieldTypeInfo fieldInfo;
-        final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
-        final ImmutableBitmap nullValues;
         final GenericIndexed<ByteBuffer> stringDictionary;
         final Supplier<FrontCodedIndexed> frontCodedStringDictionarySupplier;
         final Supplier<FixedIndexed<Long>> longDictionarySupplier;
         final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
         final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
-
-        ColumnType simpleType;
-        fields = GenericIndexed.read(bb, GenericIndexed.STRING_STRATEGY, mapper);
-        fieldInfo = FieldTypeInfo.read(bb, fields.size());
-
-        if (fields.size() == 0) {
-          // all nulls, in the future we'll deal with this better... but for now lets just call it a string because
-          // it is the most permissive (besides json)
-          simpleType = ColumnType.STRING;
-        } else if (fields.size() == 1 && NestedPathFinder.JSON_PATH_ROOT.equals(fields.get(0))) {
-          simpleType = fieldInfo.getTypes(0).getSingleType();
-        } else {
-          simpleType = null;
-        }
 
         final ByteBuffer stringDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
@@ -117,21 +103,41 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
           stringDictionary = GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.UTF8_STRATEGY, mapper);
           frontCodedStringDictionarySupplier = null;
         }
+        final ByteBuffer encodedValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
+            mapper,
+            columnName,
+            NestedCommonFormatColumnSerializer.ENCODED_VALUE_COLUMN_FILE_NAME
+        );
+        final CompressedVSizeColumnarIntsSupplier ints = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
+            encodedValueColumn,
+            byteOrder
+        );
         final ByteBuffer longDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
             NestedCommonFormatColumnSerializer.LONG_DICTIONARY_FILE_NAME
         );
+        final ByteBuffer doubleDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+            mapper,
+            columnName,
+            NestedCommonFormatColumnSerializer.DOUBLE_DICTIONARY_FILE_NAME
+        );
+        final ByteBuffer valueIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+            mapper,
+            columnName,
+            NestedCommonFormatColumnSerializer.BITMAP_INDEX_FILE_NAME
+        );
+        GenericIndexed<ImmutableBitmap> valueIndexes = GenericIndexed.read(
+            valueIndexBuffer,
+            bitmapSerdeFactory.getObjectStrategy(),
+            columnBuilder.getFileMapper()
+        );
+
         longDictionarySupplier = FixedIndexed.read(
             longDictionaryBuffer,
             ColumnType.LONG.getStrategy(),
             byteOrder,
             Long.BYTES
-        );
-        final ByteBuffer doubleDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
-            mapper,
-            columnName,
-            NestedCommonFormatColumnSerializer.DOUBLE_DICTIONARY_FILE_NAME
         );
         doubleDictionarySupplier = FixedIndexed.read(
             doubleDictionaryBuffer,
@@ -148,48 +154,16 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
             arrayDictionarybuffer,
             byteOrder
         );
-        final ByteBuffer rawBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
-            mapper,
-            columnName,
-            NestedCommonFormatColumnSerializer.RAW_FILE_NAME
-        );
-        compressedRawColumnSupplier = CompressedVariableSizedBlobColumnSupplier.fromByteBuffer(
-            NestedCommonFormatColumnSerializer.getInternalFileName(
-                columnName,
-                NestedCommonFormatColumnSerializer.RAW_FILE_NAME
-            ),
-            rawBuffer,
-            byteOrder,
-            mapper
-        );
-        if (hasNulls) {
-          columnBuilder.setHasNulls(true);
-          final ByteBuffer nullIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
-              mapper,
-              columnName,
-              NestedCommonFormatColumnSerializer.NULL_BITMAP_FILE_NAME
-          );
-          nullValues = bitmapSerdeFactory.getObjectStrategy().fromByteBufferWithSize(nullIndexBuffer);
-        } else {
-          nullValues = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();
-        }
-
-        return new NestedDataColumnSupplier(
-            columnName,
-            fields,
-            fieldInfo,
-            compressedRawColumnSupplier,
-            nullValues,
+        return new VariantArrayColumnAndIndexSupplier(
+            logicalType,
             stringDictionary,
             frontCodedStringDictionarySupplier,
             longDictionarySupplier,
             doubleDictionarySupplier,
             arrayDictionarySupplier,
-            columnConfig,
-            mapper,
-            bitmapSerdeFactory,
-            byteOrder,
-            simpleType
+            ints,
+            valueIndexes,
+            bitmapSerdeFactory.getBitmapFactory()
         );
       }
       catch (IOException ex) {
@@ -200,100 +174,76 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
     }
   }
 
-  private final String columnName;
-  private final GenericIndexed<String> fields;
-  private final FieldTypeInfo fieldInfo;
-  private final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
-  private final ImmutableBitmap nullValues;
+
+  private final ColumnType logicalType;
+
   private final GenericIndexed<ByteBuffer> stringDictionary;
   private final Supplier<FrontCodedIndexed> frontCodedStringDictionarySupplier;
   private final Supplier<FixedIndexed<Long>> longDictionarySupplier;
   private final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
   private final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
-  private final ColumnConfig columnConfig;
-  private final SmooshedFileMapper fileMapper;
-  private final BitmapSerdeFactory bitmapSerdeFactory;
-  private final ByteOrder byteOrder;
+  private final Supplier<ColumnarInts> encodedValueColumnSupplier;
+  @SuppressWarnings("unused")
+  private final GenericIndexed<ImmutableBitmap> valueIndexes;
+  private final ImmutableBitmap nullValueBitmap;
 
-  @Nullable
-  private final ColumnType simpleType;
-
-  private NestedDataColumnSupplier(
-      String columnName,
-      GenericIndexed<String> fields,
-      FieldTypeInfo fieldInfo,
-      CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
-      ImmutableBitmap nullValues,
+  public VariantArrayColumnAndIndexSupplier(
+      ColumnType logicalType,
       GenericIndexed<ByteBuffer> stringDictionary,
       Supplier<FrontCodedIndexed> frontCodedStringDictionarySupplier,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
       Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
-      ColumnConfig columnConfig,
-      SmooshedFileMapper fileMapper,
-      BitmapSerdeFactory bitmapSerdeFactory,
-      ByteOrder byteOrder,
-      @Nullable ColumnType simpleType
+      Supplier<ColumnarInts> encodedValueColumnSupplier,
+      GenericIndexed<ImmutableBitmap> valueIndexes,
+      @SuppressWarnings("unused") BitmapFactory bitmapFactory
   )
   {
-    this.columnName = columnName;
-    this.fields = fields;
-    this.fieldInfo = fieldInfo;
-    this.compressedRawColumnSupplier = compressedRawColumnSupplier;
-    this.nullValues = nullValues;
+    this.logicalType = logicalType;
     this.stringDictionary = stringDictionary;
     this.frontCodedStringDictionarySupplier = frontCodedStringDictionarySupplier;
     this.longDictionarySupplier = longDictionarySupplier;
     this.doubleDictionarySupplier = doubleDictionarySupplier;
     this.arrayDictionarySupplier = arrayDictionarySupplier;
-    this.columnConfig = columnConfig;
-    this.fileMapper = fileMapper;
-    this.bitmapSerdeFactory = bitmapSerdeFactory;
-    this.byteOrder = byteOrder;
-    this.simpleType = simpleType;
+    this.encodedValueColumnSupplier = encodedValueColumnSupplier;
+    this.valueIndexes = valueIndexes;
+    this.nullValueBitmap = valueIndexes.get(0) == null ? bitmapFactory.makeEmptyImmutableBitmap() : valueIndexes.get(0);
   }
 
   @Override
   public NestedCommonFormatColumn get()
   {
     if (frontCodedStringDictionarySupplier != null) {
-      return new NestedDataColumnV5<>(
-          columnName,
-          getLogicalType(),
-          columnConfig,
-          compressedRawColumnSupplier,
-          nullValues,
-          fields,
-          fieldInfo,
-          frontCodedStringDictionarySupplier,
-          longDictionarySupplier,
-          doubleDictionarySupplier,
-          arrayDictionarySupplier,
-          fileMapper,
-          bitmapSerdeFactory,
-          byteOrder
+      return new VariantArrayColumn<>(
+          frontCodedStringDictionarySupplier.get(),
+          longDictionarySupplier.get(),
+          doubleDictionarySupplier.get(),
+          arrayDictionarySupplier.get(),
+          encodedValueColumnSupplier.get(),
+          nullValueBitmap,
+          logicalType
       );
     }
-    return new NestedDataColumnV5<>(
-        columnName,
-        getLogicalType(),
-        columnConfig,
-        compressedRawColumnSupplier,
-        nullValues,
-        fields,
-        fieldInfo,
-        stringDictionary::singleThreaded,
-        longDictionarySupplier,
-        doubleDictionarySupplier,
-        arrayDictionarySupplier,
-        fileMapper,
-        bitmapSerdeFactory,
-        byteOrder
+    return new VariantArrayColumn<>(
+        stringDictionary.singleThreaded(),
+        longDictionarySupplier.get(),
+        doubleDictionarySupplier.get(),
+        arrayDictionarySupplier.get(),
+        encodedValueColumnSupplier.get(),
+        nullValueBitmap,
+        logicalType
     );
   }
 
-  public ColumnType getLogicalType()
+  @Nullable
+  @Override
+  public <T> T as(Class<T> clazz)
   {
-    return simpleType == null ? ColumnType.NESTED_DATA : simpleType;
+    if (clazz.equals(NullValueIndex.class)) {
+      final BitmapColumnIndex nullIndex = new SimpleImmutableBitmapIndex(nullValueBitmap);
+      return (T) (NullValueIndex) () -> nullIndex;
+    }
+    // coming soon...
+    return null;
   }
 }

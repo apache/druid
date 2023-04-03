@@ -44,7 +44,6 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.StandardTypeColumn;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategy;
@@ -93,7 +92,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 'raw' {@link StructuredData} values and provides selectors for nested 'literal' field columns.
  */
 public abstract class CompressedNestedDataComplexColumn<TStringDictionary extends Indexed<ByteBuffer>>
-    extends NestedDataComplexColumn implements StandardTypeColumn
+    extends NestedDataComplexColumn implements NestedCommonFormatColumn
 {
   public static final IntTypeStrategy INT_TYPE_STRATEGY = new IntTypeStrategy();
   private final Closer closer;

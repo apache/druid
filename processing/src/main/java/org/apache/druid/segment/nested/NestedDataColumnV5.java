@@ -27,6 +27,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
+import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 
@@ -34,10 +35,19 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.List;
 
-public final class NestedDataColumnV4<TStringDictionary extends Indexed<ByteBuffer>>
+/**
+ * Nested data column with optimized support for simple arrays. Not actually v5 in the segment since columns are now
+ * serialized using {@link org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde} instead of the generic
+ * complex type system.
+ *
+ * Not really stored in a segment as V5 since instead of V5 we migrated to {@link NestedCommonFormatColumn} which
+ * specializes physical format based on the types of data encountered during processing, and so versions are now
+ * {@link NestedCommonFormatColumnSerializer#V0} for all associated specializations.
+ */
+public class NestedDataColumnV5<TStringDictionary extends Indexed<ByteBuffer>>
     extends CompressedNestedDataComplexColumn<TStringDictionary>
 {
-  public NestedDataColumnV4(
+  public NestedDataColumnV5(
       String columnName,
       ColumnType logicalType,
       ColumnConfig columnConfig,
@@ -48,6 +58,7 @@ public final class NestedDataColumnV4<TStringDictionary extends Indexed<ByteBuff
       Supplier<TStringDictionary> stringDictionary,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
+      Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
       SmooshedFileMapper fileMapper,
       BitmapSerdeFactory bitmapSerdeFactory,
       ByteOrder byteOrder
@@ -64,7 +75,7 @@ public final class NestedDataColumnV4<TStringDictionary extends Indexed<ByteBuff
         stringDictionary,
         longDictionarySupplier,
         doubleDictionarySupplier,
-        null,
+        arrayDictionarySupplier,
         fileMapper,
         bitmapSerdeFactory,
         byteOrder,
@@ -81,9 +92,9 @@ public final class NestedDataColumnV4<TStringDictionary extends Indexed<ByteBuff
   @Override
   public String getFieldFileName(String fileNameBase, String field, int fieldIndex)
   {
-    return NestedDataColumnSerializerV4.getInternalFileName(
+    return NestedCommonFormatColumnSerializer.getInternalFileName(
         fileNameBase,
-        NestedDataColumnSerializerV4.NESTED_FIELD_PREFIX + fieldIndex
+        NestedCommonFormatColumnSerializer.NESTED_FIELD_PREFIX + fieldIndex
     );
   }
 

@@ -67,7 +67,8 @@ public class CapabilitiesBasedFormat implements ColumnFormat
       };
   private final ColumnCapabilities capabilities;
 
-  public static CapabilitiesBasedFormat forColumnIndexer(ColumnCapabilities capabilities) {
+  public static CapabilitiesBasedFormat forColumnIndexer(ColumnCapabilities capabilities)
+  {
     return new CapabilitiesBasedFormat(ColumnCapabilitiesImpl.snapshot(capabilities, DIMENSION_CAPABILITY_MERGE_LOGIC));
   }
 

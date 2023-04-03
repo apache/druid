@@ -38,6 +38,7 @@ import org.apache.druid.segment.data.SingleIndexedInt;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.apache.druid.segment.historical.HistoricalDimensionSelector;
 import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelector;
+import org.apache.druid.segment.nested.NestedCommonFormatColumn;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
@@ -57,7 +58,8 @@ import java.util.BitSet;
  * This class is otherwise nearly identical to {@link CachingStringDictionaryEncodedColumn} other than the dictionary
  * difference.
  */
-public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncodedColumn<String>, StandardTypeColumn
+public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncodedColumn<String>,
+    NestedCommonFormatColumn
 {
   @Nullable
   private final ColumnarInts column;

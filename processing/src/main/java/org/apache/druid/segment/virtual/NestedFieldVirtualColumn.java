@@ -51,7 +51,6 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.StandardArrayColumn;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.column.ValueTypes;
 import org.apache.druid.segment.data.IndexedInts;
@@ -64,6 +63,7 @@ import org.apache.druid.segment.nested.NestedPathArrayElement;
 import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.segment.nested.StructuredData;
+import org.apache.druid.segment.nested.VariantArrayColumn;
 import org.apache.druid.segment.vector.BaseDoubleVectorValueSelector;
 import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.NilVectorSelector;
@@ -294,8 +294,8 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       );
     }
 
-    if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && theColumn instanceof StandardArrayColumn) {
-      final StandardArrayColumn<?> arrayColumn = (StandardArrayColumn<?>) theColumn;
+    if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && theColumn instanceof VariantArrayColumn) {
+      final VariantArrayColumn<?> arrayColumn = (VariantArrayColumn<?>) theColumn;
       ColumnValueSelector<?> arraySelector = arrayColumn.makeColumnValueSelector(offset);
       final int elementNumber = ((NestedPathArrayElement) parts.get(0)).getIndex();
       if (elementNumber < 0) {
@@ -374,8 +374,8 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       return theColumn.makeColumnValueSelector(offset);
     }
 
-    if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && theColumn instanceof StandardArrayColumn) {
-      final StandardArrayColumn<?> arrayColumn = (StandardArrayColumn<?>) theColumn;
+    if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && theColumn instanceof VariantArrayColumn) {
+      final VariantArrayColumn<?> arrayColumn = (VariantArrayColumn<?>) theColumn;
       ColumnValueSelector<?> arraySelector = arrayColumn.makeColumnValueSelector(offset);
       final int elementNumber = ((NestedPathArrayElement) parts.get(0)).getIndex();
       if (elementNumber < 0) {
@@ -532,8 +532,8 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       return column.makeVectorObjectSelector(offset);
     }
 
-    if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && column instanceof StandardArrayColumn) {
-      final StandardArrayColumn<?> arrayColumn = (StandardArrayColumn<?>) column;
+    if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && column instanceof VariantArrayColumn) {
+      final VariantArrayColumn<?> arrayColumn = (VariantArrayColumn<?>) column;
       VectorObjectSelector arraySelector = arrayColumn.makeVectorObjectSelector(offset);
       final int elementNumber = ((NestedPathArrayElement) parts.get(0)).getIndex();
       if (elementNumber < 0) {
@@ -613,8 +613,8 @@ public class NestedFieldVirtualColumn implements VirtualColumn
         }
         return theColumn.makeVectorValueSelector(offset);
       }
-      if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && theColumn instanceof StandardArrayColumn) {
-        final StandardArrayColumn<?> arrayColumn = (StandardArrayColumn<?>) theColumn;
+      if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && theColumn instanceof VariantArrayColumn) {
+        final VariantArrayColumn<?> arrayColumn = (VariantArrayColumn<?>) theColumn;
         VectorObjectSelector arraySelector = arrayColumn.makeVectorObjectSelector(offset);
         final int elementNumber = ((NestedPathArrayElement) parts.get(0)).getIndex();
         if (elementNumber < 0) {
@@ -884,7 +884,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     if (parts.isEmpty()) {
       return holder.getIndexSupplier();
     }
-    if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && !hasNegativeArrayIndex && theColumn instanceof StandardArrayColumn) {
+    if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && !hasNegativeArrayIndex && theColumn instanceof VariantArrayColumn) {
       return holder.getIndexSupplier();
     }
     return null;

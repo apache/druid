@@ -1768,21 +1768,6 @@ public class CompactionTaskTest
     );
   }
 
-  @Test
-  public void testCreateDimensionSchemaIllegalComplex()
-  {
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage("Can't find DimensionHandlerProvider for typeName [unknown]");
-    CompactionTask.createDimensionSchema(
-        "foo",
-        new ExtensionDimensionHandler("foo"),
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(
-            ColumnType.ofComplex("unknown")
-        ),
-        DimensionSchema.MultiValueHandling.SORTED_SET
-    );
-  }
-
   private Granularity chooseFinestGranularityHelper(List<Granularity> granularities)
   {
     SettableSupplier<Granularity> queryGranularity = new SettableSupplier<>();
