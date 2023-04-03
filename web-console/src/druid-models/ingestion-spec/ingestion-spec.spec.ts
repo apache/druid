@@ -23,7 +23,7 @@ import {
   cleanSpec,
   guessColumnTypeFromInput,
   guessColumnTypeFromSampleResponse,
-  guessInputFormat,
+  guessSimpleInputFormat,
   upgradeSpec,
 } from './ingestion-spec';
 
@@ -563,26 +563,26 @@ describe('ingestion-spec', () => {
     });
   });
 
-  describe('guessInputFormat', () => {
+  describe('guessSimpleInputFormat', () => {
     it('works for parquet', () => {
-      expect(guessInputFormat(['PAR1lol']).type).toEqual('parquet');
+      expect(guessSimpleInputFormat(['PAR1lol']).type).toEqual('parquet');
     });
 
     it('works for orc', () => {
-      expect(guessInputFormat(['ORClol']).type).toEqual('orc');
+      expect(guessSimpleInputFormat(['ORClol']).type).toEqual('orc');
     });
 
     it('works for AVRO', () => {
-      expect(guessInputFormat(['Obj\x01lol']).type).toEqual('avro_ocf');
-      expect(guessInputFormat(['Obj1lol']).type).toEqual('regex');
+      expect(guessSimpleInputFormat(['Obj\x01lol']).type).toEqual('avro_ocf');
+      expect(guessSimpleInputFormat(['Obj1lol']).type).toEqual('regex');
     });
 
     it('works for JSON (strict)', () => {
-      expect(guessInputFormat(['{"a":1}'])).toEqual({ type: 'json' });
+      expect(guessSimpleInputFormat(['{"a":1}'])).toEqual({ type: 'json' });
     });
 
     it('works for JSON (lax)', () => {
-      expect(guessInputFormat([`{hello:'world'}`])).toEqual({
+      expect(guessSimpleInputFormat([`{hello:'world'}`])).toEqual({
         type: 'json',
         featureSpec: {
           ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER: true,
@@ -600,14 +600,14 @@ describe('ingestion-spec', () => {
     });
 
     it('works for CSV (with header)', () => {
-      expect(guessInputFormat(['A,B,"X,1",Y'])).toEqual({
+      expect(guessSimpleInputFormat(['A,B,"X,1",Y'])).toEqual({
         type: 'csv',
         findColumnsFromHeader: true,
       });
     });
 
     it('works for CSV (no header)', () => {
-      expect(guessInputFormat(['"A,1","B,2",1,2'])).toEqual({
+      expect(guessSimpleInputFormat(['"A,1","B,2",1,2'])).toEqual({
         type: 'csv',
         findColumnsFromHeader: false,
         columns: ['column1', 'column2', 'column3', 'column4'],
@@ -615,14 +615,14 @@ describe('ingestion-spec', () => {
     });
 
     it('works for TSV (with header)', () => {
-      expect(guessInputFormat(['A\tB\tX\tY'])).toEqual({
+      expect(guessSimpleInputFormat(['A\tB\tX\tY'])).toEqual({
         type: 'tsv',
         findColumnsFromHeader: true,
       });
     });
 
     it('works for TSV (no header)', () => {
-      expect(guessInputFormat(['A\tB\t1\t2\t3\t4\t5\t6\t7\t8\t9'])).toEqual({
+      expect(guessSimpleInputFormat(['A\tB\t1\t2\t3\t4\t5\t6\t7\t8\t9'])).toEqual({
         type: 'tsv',
         findColumnsFromHeader: false,
         columns: [
@@ -642,7 +642,7 @@ describe('ingestion-spec', () => {
     });
 
     it('works for TSV with ;', () => {
-      const inputFormat = guessInputFormat(['A;B;X;Y']);
+      const inputFormat = guessSimpleInputFormat(['A;B;X;Y']);
       expect(inputFormat).toEqual({
         type: 'tsv',
         delimiter: ';',
@@ -651,7 +651,7 @@ describe('ingestion-spec', () => {
     });
 
     it('works for TSV with |', () => {
-      const inputFormat = guessInputFormat(['A|B|X|Y']);
+      const inputFormat = guessSimpleInputFormat(['A|B|X|Y']);
       expect(inputFormat).toEqual({
         type: 'tsv',
         delimiter: '|',
@@ -660,7 +660,7 @@ describe('ingestion-spec', () => {
     });
 
     it('works for regex', () => {
-      expect(guessInputFormat(['A/B/X/Y'])).toEqual({
+      expect(guessSimpleInputFormat(['A/B/X/Y'])).toEqual({
         type: 'regex',
         pattern: '([\\s\\S]*)',
         columns: ['line'],

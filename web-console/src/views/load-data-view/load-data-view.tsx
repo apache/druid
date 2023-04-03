@@ -73,6 +73,7 @@ import {
   addTimestampTransform,
   adjustForceGuaranteedRollup,
   adjustId,
+  BATCH_INPUT_FORMAT_FIELDS,
   cleanSpec,
   computeFlattenPathsForData,
   CONSTANT_TIMESTAMP_SPEC,
@@ -95,10 +96,10 @@ import {
   getRequiredModule,
   getRollup,
   getSecondaryPartitionRelatedFormFields,
+  getSpecType,
   getTimestampExpressionFields,
   getTimestampSchema,
   getTuningFormFields,
-  INPUT_FORMAT_FIELDS,
   inputFormatCanProduceNestedData,
   invalidIoConfig,
   invalidPartitionConfig,
@@ -108,6 +109,8 @@ import {
   issueWithIoConfig,
   issueWithSampleData,
   joinFilter,
+  KAFKA_INPUT_FORMAT_FIELDS,
+  KINESIS_INPUT_FORMAT_FIELDS,
   KNOWN_FILTER_TYPES,
   MAX_INLINE_DATA_LENGTH,
   METRIC_SPEC_FIELDS,
@@ -117,7 +120,6 @@ import {
   PRIMARY_PARTITION_RELATED_FORM_FIELDS,
   removeTimestampTransform,
   splitFilter,
-  STREAMING_INPUT_FORMAT_FIELDS,
   TIME_COLUMN,
   TIMESTAMP_SPEC_FIELDS,
   TRANSFORM_FIELDS,
@@ -129,6 +131,7 @@ import { getLink } from '../../links';
 import { Api, AppToaster, UrlBaser } from '../../singletons';
 import {
   alphanumericCompare,
+  compact,
   deepDelete,
   deepGet,
   deepSet,
@@ -213,28 +216,49 @@ function showRawLine(line: SampleEntry): string {
 }
 
 function showDruidLine(line: SampleEntry): string {
-  if (!line.input) return 'Invalid row';
-  return `Druid row: ${JSONBig.stringify(line.input)}`;
+  if (!line.input) return 'Invalid druid row';
+  return `[Druid row: ${JSONBig.stringify(line.input)}]`;
+}
+
+function showKafkaLine(line: SampleEntry): string {
+  const { input } = line;
+  if (!input) return 'Invalid kafka row';
+  return compact([
+    `[ Kafka timestamp: ${input['kafka.timestamp']}`,
+    ...filterMap(Object.entries(input), ([k, v]) => {
+      if (!k.startsWith('kafka.header.')) return;
+      return `  Header: ${k.slice(13)}=${v}`;
+    }),
+    input['kafka.key'] ? `  Key: ${input['kafka.key']}` : undefined,
+    `  Payload: ${input.raw}`,
+    ']',
+  ]).join('\n');
 }
 
 function showBlankLine(line: SampleEntry): string {
   return line.parsed ? `[Row: ${JSONBig.stringify(line.parsed)}]` : '[Binary data]';
 }
 
-function formatSampleEntries(sampleEntries: SampleEntry[], isDruidSource: boolean): string {
-  if (sampleEntries.length) {
-    if (isDruidSource) {
-      return sampleEntries.map(showDruidLine).join('\n');
-    }
+function formatSampleEntries(
+  sampleEntries: SampleEntry[],
+  druidSource: boolean,
+  kafkaSource: boolean,
+): string {
+  if (!sampleEntries.length) return 'No data returned from sampler';
 
-    return (
-      sampleEntries.every(l => !l.parsed)
-        ? sampleEntries.map(showBlankLine)
-        : sampleEntries.map(showRawLine)
-    ).join('\n');
-  } else {
-    return 'No data returned from sampler';
+  if (druidSource) {
+    return sampleEntries.map(showDruidLine).join('\n');
   }
+
+  if (kafkaSource) {
+    return sampleEntries.map(showKafkaLine).join('\n');
+  }
+
+  return (
+    sampleEntries.every(l => !l.parsed)
+      ? sampleEntries.map(showBlankLine)
+      : sampleEntries.map(showRawLine)
+  ).join('\n');
 }
 
 function getTimestampSpec(sampleResponse: SampleResponse | null): TimestampSpec {
@@ -1215,6 +1239,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const ioConfig: IoConfig = deepGet(spec, 'spec.ioConfig') || EMPTY_OBJECT;
     const inlineMode = deepGet(spec, 'spec.ioConfig.inputSource.type') === 'inline';
     const druidSource = isDruidSource(spec);
+    const kafkaSource = getSpecType(spec) === 'kafka';
 
     let mainFill: JSX.Element | string;
     if (inlineMode) {
@@ -1246,7 +1271,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <TextArea
               className="raw-lines"
               readOnly
-              value={formatSampleEntries(inputData, druidSource)}
+              value={formatSampleEntries(inputData, druidSource, kafkaSource)}
             />
           )}
           {inputQueryState.isLoading() && <Loader />}
@@ -1368,11 +1393,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
               this.updateSpec(fillDataSourceNameIfNeeded(newSpec));
             } else {
-              const sampleLines = filterMap(inputQueryState.data.data, l =>
-                l.input ? l.input.raw : undefined,
-              );
-
-              const issue = issueWithSampleData(sampleLines, spec);
+              const issue = issueWithSampleData(inputData, spec);
               if (issue) {
                 AppToaster.show({
                   icon: IconNames.WARNING_SIGN,
@@ -1383,9 +1404,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 return false;
               }
 
-              this.updateSpec(
-                fillDataSourceNameIfNeeded(fillInputFormatIfNeeded(spec, sampleLines)),
-              );
+              this.updateSpec(fillDataSourceNameIfNeeded(fillInputFormatIfNeeded(spec, inputData)));
             }
             return true;
           },
@@ -1498,9 +1517,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       );
     }
 
-    const inputFormatFields = isStreamingSpec(spec)
-      ? STREAMING_INPUT_FORMAT_FIELDS
-      : INPUT_FORMAT_FIELDS;
+    const specType = getSpecType(spec);
+    const inputFormatFields =
+      specType === 'kafka'
+        ? KAFKA_INPUT_FORMAT_FIELDS
+        : specType === 'kinesis'
+        ? KINESIS_INPUT_FORMAT_FIELDS
+        : BATCH_INPUT_FORMAT_FIELDS;
     return (
       <>
         <div className="main">{mainFill}</div>

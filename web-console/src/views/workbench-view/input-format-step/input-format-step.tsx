@@ -25,9 +25,9 @@ import React, { useState } from 'react';
 import { AutoForm, CenterMessage, LearnMore, Loader } from '../../../components';
 import type { InputFormat, InputSource } from '../../../druid-models';
 import {
+  BATCH_INPUT_FORMAT_FIELDS,
   guessColumnTypeFromSampleResponse,
   guessIsArrayFromSampleResponse,
-  INPUT_FORMAT_FIELDS,
   inputFormatOutputsNumericStrings,
   PLACEHOLDER_TIMESTAMP_SPEC,
   possibleDruidFormatForValues,
@@ -76,7 +76,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
 
   const [inputFormat, setInputFormat] = useState<Partial<InputFormat>>(initInputFormat);
   const [inputFormatToSample, setInputFormatToSample] = useState<InputFormat | undefined>(
-    AutoForm.isValidModel(initInputFormat, INPUT_FORMAT_FIELDS) ? initInputFormat : undefined,
+    AutoForm.isValidModel(initInputFormat, BATCH_INPUT_FORMAT_FIELDS) ? initInputFormat : undefined,
   );
   const [selectTimestamp, setSelectTimestamp] = useState(true);
 
@@ -133,7 +133,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
   }
 
   const inputFormatAndMore =
-    previewSampleResponse && AutoForm.isValidModel(inputFormat, INPUT_FORMAT_FIELDS)
+    previewSampleResponse && AutoForm.isValidModel(inputFormat, BATCH_INPUT_FORMAT_FIELDS)
       ? {
           inputFormat,
           signature: getHeaderNamesFromSampleResponse(previewSampleResponse).map(name =>
@@ -188,15 +188,19 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
               <LearnMore href={`${getLink('DOCS')}/ingestion/data-formats.html`} />
             </Callout>
           </FormGroup>
-          <AutoForm fields={INPUT_FORMAT_FIELDS} model={inputFormat} onChange={setInputFormat} />
+          <AutoForm
+            fields={BATCH_INPUT_FORMAT_FIELDS}
+            model={inputFormat}
+            onChange={setInputFormat}
+          />
           {inputFormatToSample !== inputFormat && (
             <FormGroup className="control-buttons">
               <Button
                 text="Preview changes"
                 intent={Intent.PRIMARY}
-                disabled={!AutoForm.isValidModel(inputFormat, INPUT_FORMAT_FIELDS)}
+                disabled={!AutoForm.isValidModel(inputFormat, BATCH_INPUT_FORMAT_FIELDS)}
                 onClick={() => {
-                  if (!AutoForm.isValidModel(inputFormat, INPUT_FORMAT_FIELDS)) return;
+                  if (!AutoForm.isValidModel(inputFormat, BATCH_INPUT_FORMAT_FIELDS)) return;
                   setInputFormatToSample(inputFormat);
                 }}
               />

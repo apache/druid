@@ -34,6 +34,7 @@ import {
   EMPTY_ARRAY,
   EMPTY_OBJECT,
   filterMap,
+  findMap,
   isSimpleArray,
   oneOf,
   parseCsvLine,
@@ -2137,33 +2138,32 @@ export function updateIngestionType(
 }
 
 export function issueWithSampleData(
-  sampleData: string[],
+  sampleData: SampleResponse,
   spec: Partial<IngestionSpec>,
 ): JSX.Element | undefined {
   if (isStreamingSpec(spec)) return;
 
-  if (sampleData.length) {
-    const firstData = sampleData[0];
+  const firstData: string = findMap(sampleData.data, l => l.input?.raw);
+  if (firstData) return;
 
-    if (firstData === '{') {
-      return (
-        <>
-          This data looks like regular JSON object. For Druid to parse a text file it must have one
-          row per event. Maybe look at{' '}
-          <ExternalLink href="http://ndjson.org/">newline delimited JSON</ExternalLink> instead.
-        </>
-      );
-    }
+  if (firstData === '{') {
+    return (
+      <>
+        This data looks like regular JSON object. For Druid to parse a text file it must have one
+        row per event. Maybe look at{' '}
+        <ExternalLink href="http://ndjson.org/">newline delimited JSON</ExternalLink> instead.
+      </>
+    );
+  }
 
-    if (oneOf(firstData, '[', '[]')) {
-      return (
-        <>
-          This data looks like a multi-line JSON array. For Druid to parse a text file it must have
-          one row per event. Maybe look at{' '}
-          <ExternalLink href="http://ndjson.org/">newline delimited JSON</ExternalLink> instead.
-        </>
-      );
-    }
+  if (oneOf(firstData, '[', '[]')) {
+    return (
+      <>
+        This data looks like a multi-line JSON array. For Druid to parse a text file it must have
+        one row per event. Maybe look at{' '}
+        <ExternalLink href="http://ndjson.org/">newline delimited JSON</ExternalLink> instead.
+      </>
+    );
   }
 
   return;
@@ -2171,13 +2171,19 @@ export function issueWithSampleData(
 
 export function fillInputFormatIfNeeded(
   spec: Partial<IngestionSpec>,
-  sampleData: string[],
+  sampleResponse: SampleResponse,
 ): Partial<IngestionSpec> {
   if (deepGet(spec, 'spec.ioConfig.inputFormat.type')) return spec;
+
   return deepSet(
     spec,
     'spec.ioConfig.inputFormat',
-    guessInputFormat(sampleData, isStreamingSpec(spec)),
+    getSpecType(spec) === 'kafka'
+      ? guessKafkaInputFormat(filterMap(sampleResponse.data, l => l.input))
+      : guessSimpleInputFormat(
+          filterMap(sampleResponse.data, l => l.input?.raw),
+          isStreamingSpec(spec),
+        ),
   );
 }
 
@@ -2185,7 +2191,22 @@ function noNumbers(xs: string[]): boolean {
   return xs.every(x => isNaN(Number(x)));
 }
 
-export function guessInputFormat(sampleRaw: string[], canBeMultiLineJson = false): InputFormat {
+export function guessKafkaInputFormat(sampleRaw: Record<string, any>[]): InputFormat {
+  const hasHeader = sampleRaw.some(x => Object.keys(x).some(k => k.startsWith('kafka.header.')));
+  const keys = filterMap(sampleRaw, x => x['kafka.key']);
+  const payloads = filterMap(sampleRaw, x => x.raw);
+  return {
+    type: 'kafka',
+    headerFormat: hasHeader ? { type: 'string' } : undefined,
+    keyFormat: keys.length ? guessSimpleInputFormat(keys, true) : undefined,
+    valueFormat: guessSimpleInputFormat(payloads, true),
+  };
+}
+
+export function guessSimpleInputFormat(
+  sampleRaw: string[],
+  canBeMultiLineJson = false,
+): InputFormat {
   let sampleDatum = sampleRaw[0];
   if (sampleDatum) {
     sampleDatum = String(sampleDatum); // Really ensure it is a string

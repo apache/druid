@@ -217,6 +217,23 @@ function fixSamplerTypes(sampleSpec: SampleSpec): SampleSpec {
   return sampleSpec;
 }
 
+const WHOLE_ROW_INPUT_FORMAT: InputFormat = {
+  type: 'regex',
+  pattern: '([\\s\\S]*)', // Match the entire line, every single character
+  listDelimiter: '56616469-6de2-9da4-efb8-8f416e6e6965', // Just a UUID to disable the list delimiter, let's hope we do not see this UUID in the data
+  columns: ['raw'],
+};
+
+const KAFKA_SAMPLE_INPUT_FORMAT: InputFormat = {
+  type: 'kafka',
+  headerFormat: {
+    type: 'string',
+    encoding: 'UTF-8',
+  },
+  keyFormat: WHOLE_ROW_INPUT_FORMAT,
+  valueFormat: WHOLE_ROW_INPUT_FORMAT,
+};
+
 export async function sampleForConnect(
   spec: Partial<IngestionSpec>,
   sampleStrategy: SampleStrategy,
@@ -230,12 +247,11 @@ export async function sampleForConnect(
 
   const reingestMode = isDruidSource(spec);
   if (!reingestMode) {
-    ioConfig = deepSet(ioConfig, 'inputFormat', {
-      type: 'regex',
-      pattern: '([\\s\\S]*)', // Match the entire line, every single character
-      listDelimiter: '56616469-6de2-9da4-efb8-8f416e6e6965', // Just a UUID to disable the list delimiter, let's hope we do not see this UUID in the data
-      columns: ['raw'],
-    });
+    ioConfig = deepSet(
+      ioConfig,
+      'inputFormat',
+      samplerType === 'kafka' ? KAFKA_SAMPLE_INPUT_FORMAT : WHOLE_ROW_INPUT_FORMAT,
+    );
   }
 
   const sampleSpec: SampleSpec = {
