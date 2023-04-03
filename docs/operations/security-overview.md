@@ -1,7 +1,7 @@
 ---
 id: security-overview
 title: "Security overview"
-description: Overiew of Apache Druid security. Includes best practices, configuration instructions, and a description of the security model.
+description: Overiew of Apache Druid security. Includes best practices, configuration instructions, a description of the security model and documentation on how to report security issues.
 ---
 
 <!--
@@ -272,3 +272,19 @@ Cluster to deep storage:
 Cluster to client:
 1. Druid authenticates with the client based on the configured authenticator.
 2. Druid only performs actions when an authorizer grants permission. The default configuration is `allowAll authorizer`.
+
+## Reporting security issues
+
+The Apache Druid team takes security very seriously. If you find a potential security issue in Druid, such as a way to bypass the security mechanisms described earlier, please report this problem to [security@apache.org](mailto:security@apache.org). This is a private mailing list. Please send one plain text email for each vulnerability you are reporting.
+
+### Vulnerability handling
+
+The following list summarizes the vulnerability handling process:
+
+* The reporter reports the vulnerability privately to [security@apache.org](mailto:security@apache.org)
+* The reporter receives a response that the Druid team has received the report and will investigate the issue.
+* The Druid project security team works privately with the reporter to resolve the vulnerability.
+* The Druid team delivers the fix by creating a new release of the package that the vulnerability affects.
+* The Druid team publicly announces the vulnerability and describes how to apply the fix.
+
+Committers should read a [more detailed description of the process](https://www.apache.org/security/committers.html). Reporters of security vulnerabilities may also find it useful.

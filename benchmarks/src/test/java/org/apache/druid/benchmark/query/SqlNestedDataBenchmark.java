@@ -38,12 +38,14 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.NestedDataDimensionSchema;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.calcite.SqlVectorizedExpressionSanityTest;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
@@ -267,7 +269,7 @@ public class SqlNestedDataBenchmark
     if (stringEncoding.startsWith("front-coded")) {
       String[] split = stringEncoding.split("-");
       int bucketSize = Integer.parseInt(split[2]);
-      encodingStrategy = new StringEncodingStrategy.FrontCoded(bucketSize);
+      encodingStrategy = new StringEncodingStrategy.FrontCoded(bucketSize, FrontCodedIndexed.V1);
     } else {
       encodingStrategy = new StringEncodingStrategy.Utf8();
     }
@@ -313,7 +315,8 @@ public class SqlNestedDataBenchmark
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.createJoinableFactoryWrapper(),
-        CatalogResolver.NULL_RESOLVER
+        CatalogResolver.NULL_RESOLVER,
+        new AuthConfig()
     );
 
     try {

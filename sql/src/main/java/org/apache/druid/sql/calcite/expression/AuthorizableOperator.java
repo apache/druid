@@ -31,5 +31,5 @@ import java.util.Set;
  */
 public interface AuthorizableOperator
 {
-  Set<ResourceAction> computeResources(SqlCall call);
+  Set<ResourceAction> computeResources(SqlCall call, boolean inputSourceTypeSecurityEnabled);
 }

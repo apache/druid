@@ -39,7 +39,6 @@ import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MappedByteBufferHandler;
-import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -142,12 +141,9 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
         ArenaMemoryAllocator.createOnHeap(frameSize),
         () -> {
           try {
-            RetryUtils.retry(() -> {
-              if (!storageConnector.pathExists(fileName)) {
-                throw new ISE("File does not exist : %s", fileName);
-              }
-              return Boolean.TRUE;
-            }, (throwable) -> true, 10);
+            if (!storageConnector.pathExists(fileName)) {
+              throw new ISE("File does not exist : %s", fileName);
+            }
           }
           catch (Exception exception) {
             throw new RuntimeException(exception);

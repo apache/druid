@@ -22,6 +22,8 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 public class DefaultPasswordProvider implements PasswordProvider
 {
   public static final String TYPE_KEY = "default";
@@ -64,8 +66,7 @@ public class DefaultPasswordProvider implements PasswordProvider
     }
 
     DefaultPasswordProvider that = (DefaultPasswordProvider) o;
-
-    return getPassword() != null ? getPassword().equals(that.getPassword()) : that.getPassword() == null;
+    return Objects.equals(getPassword(), that.getPassword());
   }
 
   @Override

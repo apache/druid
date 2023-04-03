@@ -122,7 +122,6 @@ public class QueryFrameworkUtils
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
         new NoopRequestLogger(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        authConfig,
         new DefaultQueryConfig(ImmutableMap.of()),
         new SqlLifecycleManager()
     );

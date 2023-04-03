@@ -32,6 +32,8 @@ spec:
           env:
             - name: "TASK_DIR"
               value: "/tmp"
+            - name: "TASK_ID"
+              value: "id"
             - name: "TASK_JSON"
               valueFrom:
                 fieldRef:

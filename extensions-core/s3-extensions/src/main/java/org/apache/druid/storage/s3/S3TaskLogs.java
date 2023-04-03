@@ -187,7 +187,7 @@ public class S3TaskLogs implements TaskLogs
     try {
       S3Utils.deleteObjectsInPath(
           service,
-          inputDataConfig,
+          inputDataConfig.getMaxListingLength(),
           config.getS3Bucket(),
           config.getS3Prefix(),
           (object) -> object.getLastModified().getTime() < timestamp
