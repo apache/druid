@@ -637,7 +637,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
     FramesBackedInlineDataSource dataSource = null;
     // Try to serialize the results into a frame only if the memory limit is set on the server or the query
-    if (memoryLimitSet || true) {
+    if (memoryLimitSet) {
       if (!toolChest.canFetchResultsAsFrames()) {
         throw new ISE("The memory of the subqueries cannot be estimated correctly.");
       }
