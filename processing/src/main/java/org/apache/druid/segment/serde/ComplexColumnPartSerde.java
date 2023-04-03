@@ -86,7 +86,7 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
       builder.setComplexTypeName(typeName);
 
       if (serde != null) {
-        serde.deserializeColumn(columnName, buffer, builder, columnConfig);
+        serde.deserializeColumn(buffer, builder, columnConfig);
       }
     };
   }

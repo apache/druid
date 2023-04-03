@@ -213,7 +213,6 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     ColumnBuilder bob = new ColumnBuilder();
     bob.setFileMapper(fileMapper);
     NestedDataColumnSupplier supplier = NestedDataColumnSupplier.read(
-        "test",
         baseBuffer,
         bob,
         () -> 0,
@@ -233,7 +232,6 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     ColumnBuilder bob = new ColumnBuilder();
     bob.setFileMapper(fileMapper);
     NestedDataColumnSupplier supplier = NestedDataColumnSupplier.read(
-        "test",
         baseBuffer,
         bob,
         () -> 0,

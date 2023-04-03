@@ -38,13 +38,11 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.ArrayBasedIndexedInts;
-import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRow;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
-import org.apache.druid.segment.nested.SortedValueDictionary;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
@@ -235,18 +233,6 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
   public int getUnsortedEncodedKeyComponentHashCode(int[] key)
   {
     return Arrays.hashCode(key);
-  }
-
-  @Override
-  public SortedValueDictionary getSortedValueLookups()
-  {
-    return new SortedValueDictionary(
-        getSortedIndexedValues(),
-        Indexed.empty(),
-        Indexed.empty(),
-        Indexed.empty(),
-        null
-    );
   }
 
   @Override

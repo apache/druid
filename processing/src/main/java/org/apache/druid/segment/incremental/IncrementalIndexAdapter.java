@@ -26,19 +26,18 @@ import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.IntIteratorUtils;
 import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.NestedDataColumnIndexer;
+import org.apache.druid.segment.StandardTypeColumnIndexer;
 import org.apache.druid.segment.TransformableRowIterator;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
-import org.apache.druid.segment.nested.FieldTypeInfo;
-import org.apache.druid.segment.nested.SortedValueDictionary;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedMap;
 import java.util.stream.Collectors;
 
 /**
@@ -147,19 +146,30 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   }
 
   @Override
-  public SortedValueDictionary getSortedValueLookup(
-      String dimension,
-      SortedMap<String, FieldTypeInfo.MutableTypeSet> mergedFields
-  )
+  public NestedColumnMergable getNestedColumnMergeables(String column)
   {
-    final DimensionAccessor accessor = accessors.get(dimension);
+    final DimensionAccessor accessor = accessors.get(column);
     if (accessor == null) {
       return null;
     }
 
     final DimensionIndexer indexer = accessor.dimensionDesc.getIndexer();
-    indexer.mergeNestedFields(mergedFields);
-    return indexer.getSortedValueLookups();
+    if (indexer instanceof NestedDataColumnIndexer) {
+      NestedDataColumnIndexer nestedDataColumnIndexer = (NestedDataColumnIndexer) indexer;
+
+      return new NestedColumnMergable(
+          nestedDataColumnIndexer.getSortedValueLookups(),
+          nestedDataColumnIndexer.getFields()
+      );
+    }
+    if (indexer instanceof StandardTypeColumnIndexer) {
+      StandardTypeColumnIndexer standardIndexer = (StandardTypeColumnIndexer) indexer;
+      return new NestedColumnMergable(
+          standardIndexer.getSortedValueLookups(),
+          standardIndexer.getFields()
+      );
+    }
+    return null;
   }
 
   @Override

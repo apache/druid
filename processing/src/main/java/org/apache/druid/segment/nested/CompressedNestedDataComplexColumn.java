@@ -85,6 +85,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -181,6 +182,18 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
         return v.merge(types.getByteValue());
       });
     }
+  }
+
+  @Override
+  public SortedMap<String, FieldTypeInfo.MutableTypeSet> getFieldTypeInfo()
+  {
+    SortedMap<String, FieldTypeInfo.MutableTypeSet> fieldMap = new TreeMap<>();
+    for (int i = 0; i < fields.size(); i++) {
+      String fieldPath = fields.get(i);
+      FieldTypeInfo.TypeSet types = fieldInfo.getTypes(i);
+      fieldMap.put(fieldPath, new FieldTypeInfo.MutableTypeSet(types.getByteValue()));
+    }
+    return fieldMap;
   }
 
   @Override

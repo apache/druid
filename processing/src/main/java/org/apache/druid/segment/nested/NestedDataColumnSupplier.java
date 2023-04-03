@@ -48,7 +48,6 @@ import java.nio.ByteOrder;
 public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
 {
   public static NestedDataColumnSupplier read(
-      String columnName,
       ByteBuffer bb,
       ColumnBuilder columnBuilder,
       ColumnConfig columnConfig,
@@ -56,7 +55,6 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
   )
   {
     return read(
-        columnName,
         bb,
         columnBuilder,
         columnConfig,
@@ -67,7 +65,6 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
   }
 
   public static NestedDataColumnSupplier read(
-      String columnName,
       ByteBuffer bb,
       ColumnBuilder columnBuilder,
       ColumnConfig columnConfig,
@@ -206,7 +203,7 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
 
         return new NestedDataColumnSupplier(
             version,
-            columnName,
+            metadata.getFileNameBase(),
             columnConfig,
             fields,
             fieldInfo,

@@ -24,17 +24,12 @@ import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.CapabilitiesBasedFormat;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
-import org.apache.druid.segment.nested.FieldTypeInfo;
-import org.apache.druid.segment.nested.NestedPathFinder;
-import org.apache.druid.segment.nested.SortedValueDictionary;
 
 import javax.annotation.Nullable;
-import java.util.SortedMap;
 
 /**
  * Processing related interface
@@ -181,19 +176,6 @@ public interface DimensionIndexer<
    */
   CloseableIndexed<ActualType> getSortedIndexedValues();
 
-
-  default SortedValueDictionary getSortedValueLookups()
-  {
-    throw new UnsupportedOperationException("Column does not support value dictionaries.");
-  }
-
-  default void mergeNestedFields(SortedMap<String, FieldTypeInfo.MutableTypeSet> mergedFields)
-  {
-    mergedFields.put(
-        NestedPathFinder.JSON_PATH_ROOT,
-        new FieldTypeInfo.MutableTypeSet().add(getColumnCapabilities().toColumnType())
-    );
-  }
   /**
    * Get the minimum dimension value seen by this indexer.
    *
@@ -258,12 +240,7 @@ public interface DimensionIndexer<
 
   default ColumnFormat getFormat()
   {
-    return new CapabilitiesBasedFormat(
-        ColumnCapabilitiesImpl.snapshot(
-            getColumnCapabilities(),
-            CapabilitiesBasedFormat.DIMENSION_CAPABILITY_MERGE_LOGIC
-        )
-    );
+    return CapabilitiesBasedFormat.forColumnIndexer(getColumnCapabilities());
   }
 
   /**

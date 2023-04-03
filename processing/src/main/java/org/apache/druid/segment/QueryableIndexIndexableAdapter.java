@@ -35,7 +35,6 @@ import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.ImmutableBitmapValues;
 import org.apache.druid.segment.data.IndexedIterable;
-import org.apache.druid.segment.nested.FieldTypeInfo;
 import org.apache.druid.segment.nested.SortedValueDictionary;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableLongColumnValueSelector;
@@ -49,7 +48,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.SortedMap;
 
 /**
  *
@@ -113,6 +111,13 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     final BaseColumn col = columnHolder.getColumn();
 
     if (!(col instanceof DictionaryEncodedColumn)) {
+      // this shouldn't happen, but if it does, try to close to prevent a leak
+      try {
+        col.close();
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
       return null;
     }
 
@@ -161,12 +166,9 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   }
 
   @Override
-  public SortedValueDictionary getSortedValueLookup(
-      String dimension,
-      SortedMap<String, FieldTypeInfo.MutableTypeSet> mergedFields
-  )
+  public NestedColumnMergable getNestedColumnMergeables(String columnName)
   {
-    final ColumnHolder columnHolder = input.getColumnHolder(dimension);
+    final ColumnHolder columnHolder = input.getColumnHolder(columnName);
 
     if (columnHolder == null) {
       return null;
@@ -178,16 +180,25 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     final BaseColumn col = columnHolder.getColumn();
     if (col instanceof StandardTypeColumn) {
       StandardTypeColumn column = (StandardTypeColumn) col;
-      column.mergeNestedFields(mergedFields);
-      return new SortedValueDictionary(
-          column.getStringDictionary(),
-          column.getLongDictionary(),
-          column.getDoubleDictionary(),
-          column.getArrayDictionary(),
-          column
+      return new NestedColumnMergable(
+          new SortedValueDictionary(
+              column.getStringDictionary(),
+              column.getLongDictionary(),
+              column.getDoubleDictionary(),
+              column.getArrayDictionary(),
+              column
+          ),
+          column.getFieldTypeInfo()
       );
     }
-    // leaky leaky but this shouldn't be able to happen because of the format check...
+
+    // this shouldn't happen because of the format check, but if it does try to close the column just in case
+    try {
+      col.close();
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
     return null;
   }
 

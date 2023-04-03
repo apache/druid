@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.column;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.DimensionHandler;
@@ -30,6 +31,7 @@ import java.util.Objects;
 public class CapabilitiesBasedFormat implements ColumnFormat
 {
   // merge logic for the state capabilities will be in after incremental index is persisted
+  @VisibleForTesting
   public static final ColumnCapabilities.CoercionLogic DIMENSION_CAPABILITY_MERGE_LOGIC =
       new ColumnCapabilities.CoercionLogic()
       {
@@ -64,6 +66,10 @@ public class CapabilitiesBasedFormat implements ColumnFormat
         }
       };
   private final ColumnCapabilities capabilities;
+
+  public static CapabilitiesBasedFormat forColumnIndexer(ColumnCapabilities capabilities) {
+    return new CapabilitiesBasedFormat(ColumnCapabilitiesImpl.snapshot(capabilities, DIMENSION_CAPABILITY_MERGE_LOGIC));
+  }
 
   public CapabilitiesBasedFormat(ColumnCapabilities capabilities)
   {

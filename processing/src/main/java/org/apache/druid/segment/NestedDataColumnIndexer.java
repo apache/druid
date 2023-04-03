@@ -53,6 +53,8 @@ import java.util.TreeMap;
 
 public class NestedDataColumnIndexer implements DimensionIndexer<StructuredData, StructuredData, StructuredData>
 {
+  private static final ColumnFormat FORMAT = new NestedDataComplexTypeSerde.NestedColumnFormatV4();
+
   protected volatile boolean hasNulls = false;
 
   protected SortedMap<String, FieldIndexer> fieldIndexers = new TreeMap<>();
@@ -253,16 +255,26 @@ public class NestedDataColumnIndexer implements DimensionIndexer<StructuredData,
   @Override
   public ColumnFormat getFormat()
   {
-    return new NestedDataComplexTypeSerde.LegacyNestedColumnFormat();
+    return FORMAT;
   }
 
-  @Override
   public SortedValueDictionary getSortedValueLookups()
   {
     return globalDictionary.getSortedCollector();
   }
 
-  @Override
+  public SortedMap<String, FieldTypeInfo.MutableTypeSet> getFields()
+  {
+    TreeMap<String, FieldTypeInfo.MutableTypeSet> fields = new TreeMap<>();
+    for (Map.Entry<String, FieldIndexer> entry : fieldIndexers.entrySet()) {
+      // skip adding the field if no types are in the set, meaning only null values have been processed
+      if (!entry.getValue().getTypes().isEmpty()) {
+        fields.put(entry.getKey(), entry.getValue().getTypes());
+      }
+    }
+    return fields;
+  }
+
   public void mergeNestedFields(SortedMap<String, FieldTypeInfo.MutableTypeSet> mergedFields)
   {
     for (Map.Entry<String, FieldIndexer> entry : fieldIndexers.entrySet()) {

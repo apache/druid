@@ -94,13 +94,16 @@ import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DoubleDimensionHandler;
+import org.apache.druid.segment.FloatDimensionHandler;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.LongDimensionHandler;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.SimpleQueryableIndex;
+import org.apache.druid.segment.StringDimensionHandler;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
@@ -1680,6 +1683,7 @@ public class CompactionTaskTest
     );
     DimensionSchema stringSchema = CompactionTask.createDimensionSchema(
         dimensionName,
+        new StringDimensionHandler(dimensionName, null, true, false),
         ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities()
                               .setHasBitmapIndexes(true)
                               .setDictionaryEncoded(true)
@@ -1692,6 +1696,7 @@ public class CompactionTaskTest
 
     DimensionSchema floatSchema = CompactionTask.createDimensionSchema(
         dimensionName,
+        new FloatDimensionHandler(dimensionName),
         ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
         null
     );
@@ -1699,6 +1704,7 @@ public class CompactionTaskTest
 
     DimensionSchema doubleSchema = CompactionTask.createDimensionSchema(
         dimensionName,
+        new DoubleDimensionHandler(dimensionName),
         ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE),
         null
     );
@@ -1706,6 +1712,7 @@ public class CompactionTaskTest
 
     DimensionSchema longSchema = CompactionTask.createDimensionSchema(
         dimensionName,
+        new LongDimensionHandler(dimensionName),
         ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG),
         null
     );
@@ -1713,6 +1720,7 @@ public class CompactionTaskTest
 
     DimensionSchema extensionSchema = CompactionTask.createDimensionSchema(
         dimensionName,
+        new ExtensionDimensionHandler(dimensionName),
         ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(
             ColumnType.ofComplex(ExtensionDimensionHandler.TYPE_NAME)
         ),
@@ -1728,6 +1736,7 @@ public class CompactionTaskTest
     expectedException.expectMessage("multi-value dimension [foo] is not supported for float type yet");
     CompactionTask.createDimensionSchema(
         "foo",
+        new FloatDimensionHandler("foo"),
         ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
         DimensionSchema.MultiValueHandling.SORTED_SET
     );
@@ -1740,6 +1749,7 @@ public class CompactionTaskTest
     expectedException.expectMessage("multi-value dimension [foo] is not supported for double type yet");
     CompactionTask.createDimensionSchema(
         "foo",
+        new DoubleDimensionHandler("foo"),
         ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE),
         DimensionSchema.MultiValueHandling.SORTED_SET
     );
@@ -1752,6 +1762,7 @@ public class CompactionTaskTest
     expectedException.expectMessage("multi-value dimension [foo] is not supported for long type yet");
     CompactionTask.createDimensionSchema(
         "foo",
+        new LongDimensionHandler("foo"),
         ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG),
         DimensionSchema.MultiValueHandling.SORTED_SET
     );
@@ -1764,6 +1775,7 @@ public class CompactionTaskTest
     expectedException.expectMessage("Can't find DimensionHandlerProvider for typeName [unknown]");
     CompactionTask.createDimensionSchema(
         "foo",
+        new ExtensionDimensionHandler("foo"),
         ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(
             ColumnType.ofComplex("unknown")
         ),

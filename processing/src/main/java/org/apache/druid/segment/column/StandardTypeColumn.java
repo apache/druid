@@ -30,6 +30,7 @@ import org.apache.druid.segment.nested.NestedPathFinder;
 
 import javax.annotation.Nullable;
 import java.util.SortedMap;
+import java.util.TreeMap;
 
 /**
  * Base implementation for columns created with {@link StandardTypeColumnSchema} and handled with
@@ -67,6 +68,15 @@ public interface StandardTypeColumn extends BaseColumn
       }
       return v.merge(rootOnlyType.getByteValue());
     });
+  }
+
+
+  default SortedMap<String, FieldTypeInfo.MutableTypeSet> getFieldTypeInfo()
+  {
+    FieldTypeInfo.MutableTypeSet rootOnlyType = new FieldTypeInfo.MutableTypeSet().add(getLogicalType());
+    SortedMap<String, FieldTypeInfo.MutableTypeSet> fields = new TreeMap<>();
+    fields.put(NestedPathFinder.JSON_PATH_ROOT, rootOnlyType);
+    return fields;
   }
 
   ColumnType getLogicalType();

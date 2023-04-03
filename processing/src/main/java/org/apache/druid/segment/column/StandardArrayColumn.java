@@ -128,6 +128,7 @@ public class StandardArrayColumn<TStringDictionary extends Indexed<ByteBuffer>> 
           return nextArray;
         }
 
+        @Nullable
         private Object lookupId(int globalId)
         {
           if (globalId == 0) {

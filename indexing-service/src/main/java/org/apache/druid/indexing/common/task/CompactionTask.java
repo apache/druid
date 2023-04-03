@@ -80,7 +80,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.DimensionHandler;
-import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
@@ -872,6 +871,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   @VisibleForTesting
   static DimensionSchema createDimensionSchema(
       String name,
+      DimensionHandler dimensionHandler,
       ColumnCapabilities capabilities,
       DimensionSchema.MultiValueHandling multiValueHandling
   )
@@ -901,12 +901,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       case STRING:
         return new StringDimensionSchema(name, multiValueHandling, capabilities.hasBitmapIndexes());
       default:
-        DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(
-            name,
-            capabilities,
-            multiValueHandling
-        );
-        return handler.getDimensionSchema(capabilities);
+        return dimensionHandler.getDimensionSchema(capabilities);
     }
   }
 
@@ -1109,16 +1104,25 @@ public class CompactionTask extends AbstractBatchIndexTask
         );
 
         if (!uniqueDims.containsKey(dimension)) {
-          Preconditions.checkNotNull(
+          final DimensionHandler dimensionHandler = Preconditions.checkNotNull(
               dimensionHandlerMap.get(dimension),
               "Cannot find dimensionHandler for dimension[%s]",
               dimension
           );
 
+
           uniqueDims.put(dimension, uniqueDims.size());
           dimensionSchemaMap.put(
               dimension,
-              columnHolder.getColumnFormat().getColumnSchema(dimension)
+              // this should use:
+              // columnHolder.getColumnFormat().getColumnSchema(dimension)
+              // someday...
+              createDimensionSchema(
+                  dimension,
+                  dimensionHandler,
+                  columnHolder.getCapabilities(),
+                  dimensionHandler.getMultivalueHandling()
+              )
           );
         }
       }

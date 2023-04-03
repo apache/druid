@@ -149,13 +149,23 @@ public class StandardTypeColumnIndexer implements DimensionIndexer<StructuredDat
     throw new UnsupportedOperationException("Not supported");
   }
 
-  @Override
   public SortedValueDictionary getSortedValueLookups()
   {
     return globalDictionary.getSortedCollector();
   }
 
-  @Override
+  public SortedMap<String, FieldTypeInfo.MutableTypeSet> getFields()
+  {
+    final TreeMap<String, FieldTypeInfo.MutableTypeSet> fields = new TreeMap<>();
+    for (Map.Entry<String, FieldIndexer> entry : fieldIndexers.entrySet()) {
+      // skip adding the field if no types are in the set, meaning only null values have been processed
+      if (!entry.getValue().getTypes().isEmpty()) {
+        fields.put(entry.getKey(), entry.getValue().getTypes());
+      }
+    }
+    return fields;
+  }
+
   public void mergeNestedFields(SortedMap<String, FieldTypeInfo.MutableTypeSet> mergedFields)
   {
     for (Map.Entry<String, FieldIndexer> entry : fieldIndexers.entrySet()) {

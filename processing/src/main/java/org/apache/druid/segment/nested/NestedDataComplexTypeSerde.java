@@ -84,14 +84,12 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
 
   @Override
   public void deserializeColumn(
-      String columnName,
       ByteBuffer buffer,
       ColumnBuilder builder,
       ColumnConfig columnConfig
   )
   {
     final NestedDataColumnSupplier supplier = NestedDataColumnSupplier.read(
-        columnName,
         buffer,
         builder,
         columnConfig,
@@ -108,7 +106,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
       builder.setComplexTypeName(TYPE_NAME);
     }
     builder.setComplexColumnSupplier(supplier);
-    builder.setColumnFormat(new LegacyNestedColumnFormat());
+    builder.setColumnFormat(new NestedColumnFormatV4());
   }
 
   @Override
@@ -160,7 +158,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     };
   }
 
-  public static class LegacyNestedColumnFormat implements ColumnFormat
+  public static class NestedColumnFormatV4 implements ColumnFormat
   {
     @Override
     public ColumnType getLogicalType()
