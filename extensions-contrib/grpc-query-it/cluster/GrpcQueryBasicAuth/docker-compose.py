@@ -24,7 +24,7 @@ class Template(BaseTemplate):
         self.add_port(service, 50051, 50051)
 
     def extend_druid_service(self, service):
-        self.add_env(service, 'druid_test_loadList', 'druid-basic-security,grpc-query')
+        self.add_env(service, 'druid_test_loadList', 'druid-basic-security,/shared/extensions/grpc-query')
         self.add_env_file(service, '../Common/environment-configs/basic-auth.env')
 
 generate(__file__, Template())

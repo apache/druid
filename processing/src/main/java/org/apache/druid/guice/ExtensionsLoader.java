@@ -20,13 +20,12 @@
 package org.apache.druid.guice;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Strings;
 import com.google.inject.Injector;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.utils.CollectionUtils;
 
 import javax.inject.Inject;
 
@@ -55,12 +54,6 @@ import java.util.stream.Collectors;
  * extensions during initialization. The design, however, should support
  * any kind of extension that may be needed in the future.
  * The extensions are cached so that they can be reported by various REST APIs.
- * <p>
- * Extensions reside in a directory. The name of the directory is the extension
- * name. No two extensions can have the same name. This is not actually a restriction
- * as extensions reside in {@code $DRUID_HOME/extensions}, so each extension must
- * be in its own extension. The extension name is the same as that used in the
- * Druid extension load list.
  */
 @LazySingleton
 public class ExtensionsLoader
@@ -68,7 +61,7 @@ public class ExtensionsLoader
   private static final Logger log = new Logger(ExtensionsLoader.class);
 
   private final ExtensionsConfig extensionsConfig;
-  private final ConcurrentHashMap<String, URLClassLoader> loaders = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<Pair<File, Boolean>, URLClassLoader> loaders = new ConcurrentHashMap<>();
 
   /**
    * Map of loaded extensions, keyed by class (or interface).
@@ -116,7 +109,7 @@ public class ExtensionsLoader
   }
 
   @VisibleForTesting
-  public Map<String, URLClassLoader> getLoadersMap()
+  public Map<Pair<File, Boolean>, URLClassLoader> getLoadersMap()
   {
     return loaders;
   }
@@ -156,112 +149,45 @@ public class ExtensionsLoader
   }
 
   /**
-   * Find all the extension files that should be loaded by Druid.
+   * Find all the extension files that should be loaded by druid.
    * <p/>
-   * If user explicitly specifies {@code druid.extensions.loadList}, then it will look for those extensions under root
-   * extensions directory. If one of them is not found, Druid will fail loudly.
+   * If user explicitly specifies druid.extensions.loadList, then it will look for those extensions under root
+   * extensions directory. If one of them is not found, druid will fail loudly.
    * <p/>
-   * If user doesn't specify {@code druid.extensions.loadList} (or its value is empty), druid will load all the extensions
+   * If user doesn't specify druid.extension.toLoad (or its value is empty), druid will load all the extensions
    * under the root extensions directory.
    *
-   * @return an array of Druid extension files that will be loaded by Druid process
+   * @return an array of druid extension files that will be loaded by druid process
    */
-  public List<File> getExtensionFilesToLoad()
+  public File[] getExtensionFilesToLoad()
   {
-    List<File> extensionsPath = new ArrayList<>();
+    final File rootExtensionsDir = new File(extensionsConfig.getDirectory());
+    if (rootExtensionsDir.exists() && !rootExtensionsDir.isDirectory()) {
+      throw new ISE("Root extensions directory [%s] is not a directory!?", rootExtensionsDir);
+    }
+    File[] extensionsToLoad;
     final LinkedHashSet<String> toLoad = extensionsConfig.getLoadList();
-    List<String> path = extensionsConfig.getPath();
-
-    // For backward compatibility, we allow the extensions directory to be set to
-    // its default value, but to not exist. This is a bit
-    // of hack: a better solution is to require that the directory exist if configured.
-    // But, since a missing config means (use the default), we can't require the user
-    // to use the workaround which is to set the directory to an empty string. Experienced
-    // users can use that feature, but newbies won't have a clue. Also, pull-deps and other
-    // tools count on the old behavior.
-    // Note that, in the case of a non-existent directory, any extensions have to be
-    // an absolute path, on the extensions path, or built-in. The result is a much more
-    // confusing error than just saying, "hey, your extensions directory is wrong!"
-    String extensionsDir = extensionsConfig.getDirectory();
-    if (!Strings.isNullOrEmpty(extensionsDir)) {
-      final File rootExtensionsDir = new File(extensionsDir);
-      if (rootExtensionsDir.isDirectory()) {
-        // Verify the directory is readable.
-        verifyDirectory("Extensions", rootExtensionsDir);
-        extensionsPath.add(rootExtensionsDir);
-      // Verify a non-default path, but only if there are extensions. PullDeps will
-      // create the directory, but other tools require that the path exists. We count on
-      // the fact that, for LoadDeps, the load list will be empty, while for a Druid server,
-      // it is very likely to be set. This DOES NOT handle the corner case in which the user
-      // wants to load all extensions, but messes up their extension directory. To fix that,
-      // PullDeps should require that the extension directory exists, which does not occur
-      // today in the distribution project.
-      } else if (!ExtensionsConfig.DEFAULT_EXTENSIONS_DIR.equals(extensionsDir) &&
-                 !CollectionUtils.isNullOrEmpty(toLoad)) {
-        // Non-default value. It must exist. Fail since it doesn't.
-        verifyDirectory("Extensions", rootExtensionsDir);
-      }
-    }
-    if (!CollectionUtils.isNullOrEmpty(path)) {
-      // Validate the paths
-      for (String extnDir : path) {
-        final File rootExtensionsDir = new File(extnDir);
-        // Breaking change: we require that the directory exists. Prior versions didn't
-        // check unless there we actually extensions loaded, which meant that if the loadList
-        // was empty, the user got no extensions, rather than the standard ones.
-        // This more strict approach is safer.
-        verifyDirectory("Extensions", rootExtensionsDir);
-        extensionsPath.add(rootExtensionsDir);
-      }
-    }
-
-    List<File> extensionsToLoad = new ArrayList<>();
     if (toLoad == null) {
-      // No load list? Load everything in all along the path.
-      for (File extnDir : extensionsPath) {
-        extensionsToLoad.addAll(Arrays.asList(extnDir.listFiles()));
-      }
+      extensionsToLoad = rootExtensionsDir.listFiles();
     } else {
-      // Resolve extensions one by one, searching the path for each
+      int i = 0;
+      extensionsToLoad = new File[toLoad.size()];
       for (final String extensionName : toLoad) {
         File extensionDir = new File(extensionName);
-        if (extensionDir.isAbsolute()) {
-          // The path is absolute: no need to search
-          verifyDirectory("Extension", extensionDir);
-          extensionsToLoad.add(extensionDir);
-        } else {
-          // Search the path. The extension must exist.
-          boolean found = false;
-          for (File rootExtensionsDir : extensionsPath) {
-            extensionDir = new File(rootExtensionsDir, extensionName);
-            if (extensionDir.exists()) {
-              verifyDirectory("Extension", extensionDir);
-              extensionsToLoad.add(extensionDir);
-              found = true;
-              break;
-            }
-          }
-
-          if (!found) {
-            throw new ISE(
-                "Extension [%s] specified in \"druid.extensions.loadList\" not found in the extension path",
-                extensionDir.getAbsolutePath()
-            );
-          }
+        if (!extensionDir.isAbsolute()) {
+          extensionDir = new File(rootExtensionsDir, extensionName);
         }
+
+        if (!extensionDir.isDirectory()) {
+          throw new ISE(
+              "Extension [%s] specified in \"druid.extensions.loadList\" didn't exist!?",
+              extensionDir.getAbsolutePath()
+          );
+        }
+        extensionsToLoad[i++] = extensionDir;
       }
     }
-    return extensionsToLoad;
-  }
-
-  private void verifyDirectory(String label, File dir)
-  {
-    if (!dir.isDirectory()) {
-      throw new ISE("%s directory [%s] is not a directory", label, dir);
-    }
-    if (!dir.canRead()) {
-      throw new ISE("%s directory [%s] is not readable", label, dir);
-    }
+    return extensionsToLoad == null ? new File[]{} : extensionsToLoad;
   }
 
   /**
@@ -269,20 +195,15 @@ public class ExtensionsLoader
    *
    * @return a URLClassLoader that loads all the jars on which the extension is dependent
    */
-  public URLClassLoader getClassLoaderForExtension(File extension)
-  {
-    return getClassLoaderForExtension(extension, extensionsConfig.isUseExtensionClassloaderFirst());
-  }
-
   public URLClassLoader getClassLoaderForExtension(File extension, boolean useExtensionClassloaderFirst)
   {
     return loaders.computeIfAbsent(
-        extension.getName(),
-        k -> makeClassLoaderForExtension(extension, useExtensionClassloaderFirst)
+        Pair.of(extension, useExtensionClassloaderFirst),
+        k -> makeClassLoaderForExtension(k.lhs, k.rhs)
     );
   }
 
-  private URLClassLoader makeClassLoaderForExtension(
+  private static URLClassLoader makeClassLoaderForExtension(
       final File extension,
       final boolean useExtensionClassloaderFirst
   )
@@ -305,29 +226,8 @@ public class ExtensionsLoader
     if (useExtensionClassloaderFirst) {
       return new ExtensionFirstClassLoader(urls, ExtensionsLoader.class.getClassLoader());
     } else {
-      return new URLClassLoader(
-          // extension.getName() - after moving off of Java 8
-          urls,
-          ExtensionsLoader.class.getClassLoader()
-      );
+      return new URLClassLoader(urls, ExtensionsLoader.class.getClassLoader());
     }
-  }
-
-  /**
-   * Obtains the class loader for the given extension name. Assumes the extension
-   * has been loaded. This method primarily solves the use case of resolving a class
-   * within jars in an extension, when run from an IDE. When run in production, the
-   * class loader of the extensions {@code DruidModule} will give the extension class
-   * loader. But, when run in an IDE, the extension may be on the class path, so that
-   * the {@code AppClassLoader} finds the class before the extension class loader does.
-   * In this case, classes from the extension report the {@code AppClassLoader}, not
-   * the extensions {@link URLClassLoader} as their class loader. When this happens,
-   * an attempt to find a class using the class loader will fail. This method is a workaround:
-   * even in an IDE, we use the actual extension class loader.
-   */
-  public URLClassLoader getClassLoaderForExtension(String extensionName)
-  {
-    return loaders.get(extensionName);
   }
 
   public static List<URL> getURLsForClasspath(String cp)
@@ -393,7 +293,10 @@ public class ExtensionsLoader
       for (File extension : getExtensionFilesToLoad()) {
         log.debug("Loading extension [%s] for class [%s]", extension.getName(), serviceClass);
         try {
-          final URLClassLoader loader = getClassLoaderForExtension(extension);
+          final URLClassLoader loader = getClassLoaderForExtension(
+              extension,
+              extensionsConfig.isUseExtensionClassloaderFirst()
+          );
 
           log.info(
               "Loading extension [%s], jars: %s",

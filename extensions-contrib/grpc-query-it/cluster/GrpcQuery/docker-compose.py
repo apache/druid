@@ -22,6 +22,6 @@ class Template(BaseTemplate):
         self.add_port(service, 50051, 50051)
 
     def extend_druid_service(self, service):
-        self.add_env(service, 'druid_test_loadList', 'grpc-query')
+        self.add_env(service, 'druid_test_loadList', '/shared/extensions/grpc-query')
 
 generate(__file__, Template())
