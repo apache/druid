@@ -26,6 +26,8 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.joda.time.Period;
 import org.joda.time.PeriodType;
 
+import javax.annotation.Nullable;
+
 
 public class JobResponse
 {
@@ -35,7 +37,7 @@ public class JobResponse
   private final Job job;
   private final PeonPhase phase;
 
-  public JobResponse(Job job, PeonPhase phase)
+  public JobResponse(@Nullable Job job, PeonPhase phase)
   {
     this.job = job;
     this.phase = phase;
