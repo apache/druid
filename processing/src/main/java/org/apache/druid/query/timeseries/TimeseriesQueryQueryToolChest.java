@@ -463,6 +463,12 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   }
 
   @Override
+  public boolean canFetchResultsAsFrames()
+  {
+    return true;
+  }
+
+  @Override
   public Sequence<FrameSignaturePair> resultsAsFrames(
       TimeseriesQuery query,
       Sequence<Result<TimeseriesResultValue>> resultSequence

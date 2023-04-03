@@ -187,17 +187,22 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     }
 
     // Now that we know the structure is workable, actually do the inlining (if necessary).
+    AtomicLong memoryLimitAcc = new AtomicLong(0);
     newQuery = newQuery.withDataSource(
         inlineIfNecessary(
             freeTradeDataSource,
             toolChest,
             new AtomicInteger(),
-            new AtomicLong(),
+            memoryLimitAcc,
             maxSubqueryRows,
             maxSubqueryMemory,
             false
         )
     );
+
+    log.info("Memory used by subqueries of query [%s] is [%d]", query, memoryLimitAcc.get());
+
+    int x = 5;
 
     if (canRunQueryUsingLocalWalker(newQuery)) {
       // No need to decorate since LocalQuerySegmentWalker does its own.
@@ -630,22 +635,16 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       );
     }
 
-    final List<Object[]> resultList = toolChest.resultsAsArrays(query, results).toList();
-
-    if (limitAccumulator.addAndGet(resultList.size()) >= limitToUse) {
-      throw ResourceLimitExceededException.withMessage(
-          "Subquery generated results beyond maximum[%d] rows",
-          limitToUse
-      );
-    }
-
     FramesBackedInlineDataSource dataSource = null;
     // Try to serialize the results into a frame only if the memory limit is set on the server or the query
     if (memoryLimitSet || true) {
+      if (!toolChest.canFetchResultsAsFrames()) {
+        throw new ISE("The memory of the subqueries cannot be estimated correctly.");
+      }
       try {
         Sequence<FrameSignaturePair> frames = toolChest.resultsAsFrames(query, results);
         Long memoryUsed = frames.accumulate(0L, ((accumulated, in) -> accumulated + in.getFrame().numBytes()));
-        dataSource = new FramesBackedInlineDataSource(frames);
+        dataSource = new FramesBackedInlineDataSource(frames, toolChest.resultArraySignature(query));
 
         if (memoryLimitAccumulator.addAndGet(memoryUsed) >= memoryLimitToUse) {
           throw ResourceLimitExceededException.withMessage(
@@ -663,7 +662,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       }
     }
     return dataSource;
-
   }
 
   /**

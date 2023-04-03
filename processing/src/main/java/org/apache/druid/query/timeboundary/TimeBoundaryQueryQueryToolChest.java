@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.BySegmentSkippingQueryRunner;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
-import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
@@ -264,14 +263,5 @@ public class TimeBoundaryQueryQueryToolChest
     } else {
       return super.resultsAsArrays(query, resultSequence);
     }
-  }
-
-  @Override
-  public Sequence<FrameSignaturePair> resultsAsFrames(
-      TimeBoundaryQuery query,
-      Sequence<Result<TimeBoundaryResultValue>> resultSequence
-  )
-  {
-    return super.resultsAsFrames(query, resultSequence);
   }
 }

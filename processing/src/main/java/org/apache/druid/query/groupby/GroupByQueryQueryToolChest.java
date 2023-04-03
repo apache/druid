@@ -718,6 +718,12 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   }
 
   @Override
+  public boolean canFetchResultsAsFrames()
+  {
+    return true;
+  }
+
+  @Override
   public Sequence<FrameSignaturePair> resultsAsFrames(GroupByQuery query, Sequence<ResultRow> resultSequence)
   {
     RowSignature rowSignature = query.getResultRowSignature(RowSignature.Finalization.YES);

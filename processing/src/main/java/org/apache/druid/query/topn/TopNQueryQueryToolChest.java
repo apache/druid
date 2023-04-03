@@ -562,6 +562,12 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   }
 
   @Override
+  public boolean canFetchResultsAsFrames()
+  {
+    return true;
+  }
+
+  @Override
   public Sequence<FrameSignaturePair> resultsAsFrames(TopNQuery query, Sequence<Result<TopNResultValue>> resultSequence)
   {
     final RowSignature rowSignature = resultArraySignature(query);

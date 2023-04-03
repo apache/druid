@@ -19,32 +19,141 @@
 
 package org.apache.druid.query;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.read.FrameReader;
+import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class FramesBackedInlineDataSource implements DataSource
 {
 
   final Sequence<FrameSignaturePair> frames;
+  final RowSignature rowSignature;
 
-  public FramesBackedInlineDataSource(Sequence<FrameSignaturePair> frames)
+  public FramesBackedInlineDataSource(
+      Sequence<FrameSignaturePair> frames,
+      RowSignature rowSignature
+  )
   {
     this.frames = frames;
+    this.rowSignature = rowSignature;
   }
 
   public Sequence<FrameSignaturePair> getFrames()
   {
     return frames;
+  }
+
+  public RowSignature getRowSignature()
+  {
+    return rowSignature;
+  }
+
+  public List<Object[]> getRowsAsList()
+  {
+    List<Object[]> frameRows = new ArrayList<>();
+
+    final Sequence<Cursor> cursorSequence = frames
+        .flatMap(
+            frameSignaturePair -> {
+              Frame frame = frameSignaturePair.getFrame();
+              RowSignature frameSignature = frameSignaturePair.getRowSignature();
+              FrameReader frameReader = FrameReader.create(frameSignature, true);
+              return new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
+                  .makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null);
+            }
+        );
+
+    cursorSequence.accumulate(
+        null,
+        (accumulated, cursor) -> {
+          final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+          final List<BaseObjectColumnValueSelector> selectors = rowSignature
+              .getColumnNames()
+              .stream()
+              .map(columnSelectorFactory::makeColumnValueSelector)
+              .collect(Collectors.toList());
+          while (!cursor.isDone()) {
+            Object[] row = new Object[rowSignature.size()];
+            for (int i = 0; i < rowSignature.size(); ++i) {
+              row[i] = selectors.get(i).getObject();
+            }
+            frameRows.add(row);
+            cursor.advance();
+          }
+          return null;
+        }
+    );
+    return frameRows;
+  }
+
+  public Sequence<Object[]> getRowsAsSequence()
+  {
+    final Sequence<Cursor> cursorSequence = frames
+        .flatMap(
+            frameSignaturePair -> {
+              Frame frame = frameSignaturePair.getFrame();
+              RowSignature frameSignature = frameSignaturePair.getRowSignature();
+              FrameReader frameReader = FrameReader.create(frameSignature, true);
+              return new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
+                  .makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null);
+            }
+        );
+    return cursorSequence.flatMap(
+        (cursor) -> {
+          final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+          final List<BaseObjectColumnValueSelector> selectors = rowSignature
+              .getColumnNames()
+              .stream()
+              .map(columnSelectorFactory::makeColumnValueSelector)
+              .collect(Collectors.toList());
+          return Sequences.simple(
+              () -> new Iterator<Object[]>()
+              {
+                @Override
+                public boolean hasNext()
+                {
+                  return !cursor.isDone();
+                }
+
+                @Override
+                public Object[] next()
+                {
+
+                  Object[] row = new Object[rowSignature.size()];
+                  for (int i = 0; i < rowSignature.size(); ++i) {
+                    row[i] = selectors.get(i).getObject();
+                  }
+
+                  cursor.advance();
+
+                  return row;
+                }
+              }
+          );
+        }
+    );
+
   }
 
   @Override
@@ -113,6 +222,6 @@ public class FramesBackedInlineDataSource implements DataSource
 
   public IterableBackedInlineDataSource toIterableBackedInlineDataSource()
   {
-    return IterableBackedInlineDataSource.fromIterable(ImmutableList.of(), RowSignature.builder().build());
+    return IterableBackedInlineDataSource.fromIterable(getRowsAsList(), rowSignature);
   }
 }

@@ -19,6 +19,8 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.segment.column.RowSignature;
@@ -28,17 +30,22 @@ public class FrameSignaturePair
   final Frame frame;
   final RowSignature rowSignature;
 
-  public FrameSignaturePair(Frame frame, RowSignature rowSignature)
+  @JsonCreator
+  public FrameSignaturePair(
+      @JsonProperty("frame") Frame frame,
+      @JsonProperty("rowSignature") RowSignature rowSignature)
   {
     this.frame = Preconditions.checkNotNull(frame, "'frame' must be non null");
     this.rowSignature = Preconditions.checkNotNull(rowSignature, "'rowSignature' must be non null");
   }
 
+  @JsonProperty("frame")
   public Frame getFrame()
   {
     return frame;
   }
 
+  @JsonProperty("rowSignature")
   public RowSignature getRowSignature()
   {
     return rowSignature;

@@ -200,6 +200,12 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   }
 
   @Override
+  public boolean canFetchResultsAsFrames()
+  {
+    return true;
+  }
+
+  @Override
   public Sequence<FrameSignaturePair> resultsAsFrames(
       final ScanQuery query,
       final Sequence<ScanResultValue> resultSequence
@@ -210,9 +216,6 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
           final List rows = (List) result.getEvents();
           final Function<?, Object[]> mapper = getResultFormatMapper(query);
           final Iterable<Object[]> formattedRows = Iterables.transform(rows, (Function) mapper);
-
-          // 1. objectMapper() -> non performant,
-          // 2. Represent those types as Complex<Json> objects
 
           RowBasedCursor cursor = IterableRowsCursorHelper.getCursorFromIterable(
               formattedRows,

@@ -32,6 +32,8 @@ import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.query.FramesBackedInlineDataSource;
+import org.apache.druid.query.FramesBackedInlineDataSourceSerializer;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContextDeserializer;
 import org.joda.time.DateTimeZone;
@@ -51,6 +53,8 @@ public class DruidDefaultSerializersModule extends SimpleModule
     super("Druid default serializers");
 
     JodaStuff.register(this);
+
+    addSerializer(FramesBackedInlineDataSource.class, new FramesBackedInlineDataSourceSerializer());
 
     addDeserializer(
         DateTimeZone.class,

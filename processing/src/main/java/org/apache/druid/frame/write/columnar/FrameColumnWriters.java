@@ -62,7 +62,8 @@ public class FrameColumnWriters
   {
     if (type == null) {
       if (allowNullType) {
-        return makeLongWriter(columnSelectorFactory, allocator, column);
+        // Serde unknown types as complex
+        return makeComplexWriter(columnSelectorFactory, allocator, column, "json");
       }
       throw new UnsupportedColumnTypeException(column, null);
     }

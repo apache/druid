@@ -72,7 +72,7 @@ public class FrameReader
    * Create a reader for frames with a given {@link RowSignature}. The signature must exactly match the frames to be
    * read, or else behavior is undefined.
    */
-  public static FrameReader create(final RowSignature signature)
+  public static FrameReader create(final RowSignature signature, final boolean allowNullTypes)
   {
     // Double-check that the frame does not have any disallowed field names. Generally, we expect this to be
     // caught on the write side, but we do it again here for safety.
@@ -85,18 +85,28 @@ public class FrameReader
     final List<FieldReader> fieldReaders = new ArrayList<>(signature.size());
 
     for (int columnNumber = 0; columnNumber < signature.size(); columnNumber++) {
-      final ColumnType columnType =
-          Preconditions.checkNotNull(
-              signature.getColumnType(columnNumber).orElse(null),
-              "Type for column [%s]",
-              signature.getColumnName(columnNumber)
-          );
+      ColumnType columnType;
+      if (!allowNullTypes) {
+        columnType =
+            Preconditions.checkNotNull(
+                signature.getColumnType(columnNumber).orElse(null),
+                "Type for column [%s]",
+                signature.getColumnName(columnNumber)
+            );
+      } else {
+        columnType = signature.getColumnType(columnNumber).orElse(ColumnType.ofComplex("json"));
+      }
 
       columnReaders.add(FrameColumnReaders.create(columnNumber, columnType));
       fieldReaders.add(FieldReaders.create(signature.getColumnName(columnNumber), columnType));
     }
 
     return new FrameReader(signature, columnReaders, fieldReaders);
+  }
+
+  public static FrameReader create(final RowSignature signature)
+  {
+    return create(signature, false);
   }
 
   public RowSignature signature()
