@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import unittest
-from .setup import setup, ROUTER_ENDPOINT, BROKER_ENDPOINT
+from .setup import setup, ROUTER_ENDPOINT
 setup()
 
 import druidapi
@@ -53,13 +53,13 @@ class TestSqlClient(unittest.TestCase):
         self.assertEqual(consts.SQL_OBJECT, resp.result_format)
         self.assertIsNone(resp.error_message)
         self.assertIsNone(resp.error)
-        self.assertTrue(len(resp.id) > 10)
+        self.assertGreater(len(resp.id), 10)
         json = resp.json
         self.assertIs(list, type(json))
         rows = resp.rows
-        self.assertTrue(len(rows) > 3)
+        self.assertGreater(len(rows), 3)
         schema = resp.schema
-        self.assertTrue(len(schema) > 3)
+        self.assertGreater(len(schema), 3)
         self.assertIs(ColumnSchema, type(schema[0]))
 
         # Do-it-yourself SqlQuery form
@@ -75,7 +75,7 @@ class TestSqlClient(unittest.TestCase):
         '''
         rows = self.client.sql(sql)
         count = len(rows)
-        self.assertTrue(count > 3)
+        self.assertGreater(count, 3)
 
         # Python-parameterized form. Often used internally.
         sql = '''
@@ -174,10 +174,10 @@ class TestSqlClient(unittest.TestCase):
 
     def test_metadata(self):
         rows = self.client.tables(consts.INFORMATION_SCHEMA)
-        self.assertTrue(len(rows) > 2)
+        self.assertGreater(len(rows), 2)
 
         rows = self.client.schemas()
-        self.assertTrue(len(rows) > 2)
+        self.assertGreater(len(rows),2)
 
         rows = self.client.table_schema(consts.SCHEMA_TABLE)
-        self.assertTrue(len(rows) > 5)
+        self.assertGreater(len(rows), 5)

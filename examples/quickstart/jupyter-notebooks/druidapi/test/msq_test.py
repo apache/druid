@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import unittest
-from .setup import setup, ROUTER_ENDPOINT, BROKER_ENDPOINT
+from .setup import setup, ROUTER_ENDPOINT
 setup()
 
 import druidapi
@@ -46,31 +46,31 @@ class TestSqlClient(unittest.TestCase):
         sql = '''
         REPLACE INTO "myWiki" OVERWRITE ALL
         SELECT
-        TIME_PARSE("timestamp") AS "__time",
-        namespace,
-        page,
-        channel,
-        "user",
-        countryName,
-        CASE WHEN isRobot = 'true' THEN 1 ELSE 0 END AS isRobot,
-        "added",
-        "delta",
-        CASE WHEN isNew = 'true' THEN 1 ELSE 0 END AS isNew,
-        CAST("deltaBucket" AS DOUBLE) AS deltaBucket,
-        "deleted"
+            TIME_PARSE("timestamp") AS "__time",
+            namespace,
+            page,
+            channel,
+            "user",
+            countryName,
+            CASE WHEN isRobot = 'true' THEN 1 ELSE 0 END AS isRobot,
+            "added",
+            "delta",
+            CASE WHEN isNew = 'true' THEN 1 ELSE 0 END AS isNew,
+            CAST("deltaBucket" AS DOUBLE) AS deltaBucket,
+            "deleted"
         FROM TABLE(
-        EXTERN(
-            '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
-            '{"type":"json"}',
-            '[{"name":"isRobot","type":"string"},{"name":"channel","type":"string"},{"name":"timestamp","type":"string"},{"name":"flags","type":"string"},{"name":"isUnpatrolled","type":"string"},{"name":"page","type":"string"},{"name":"diffUrl","type":"string"},{"name":"added","type":"long"},{"name":"comment","type":"string"},{"name":"commentLength","type":"long"},{"name":"isNew","type":"string"},{"name":"isMinor","type":"string"},{"name":"delta","type":"long"},{"name":"isAnonymous","type":"string"},{"name":"user","type":"string"},{"name":"deltaBucket","type":"long"},{"name":"deleted","type":"long"},{"name":"namespace","type":"string"},{"name":"cityName","type":"string"},{"name":"countryName","type":"string"},{"name":"regionIsoCode","type":"string"},{"name":"metroCode","type":"long"},{"name":"countryIsoCode","type":"string"},{"name":"regionName","type":"string"}]'
-        )
+            EXTERN(
+                '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
+                '{"type":"json"}',
+                '[{"name":"isRobot","type":"string"},{"name":"channel","type":"string"},{"name":"timestamp","type":"string"},{"name":"flags","type":"string"},{"name":"isUnpatrolled","type":"string"},{"name":"page","type":"string"},{"name":"diffUrl","type":"string"},{"name":"added","type":"long"},{"name":"comment","type":"string"},{"name":"commentLength","type":"long"},{"name":"isNew","type":"string"},{"name":"isMinor","type":"string"},{"name":"delta","type":"long"},{"name":"isAnonymous","type":"string"},{"name":"user","type":"string"},{"name":"deltaBucket","type":"long"},{"name":"deleted","type":"long"},{"name":"namespace","type":"string"},{"name":"cityName","type":"string"},{"name":"countryName","type":"string"},{"name":"regionIsoCode","type":"string"},{"name":"metroCode","type":"long"},{"name":"countryIsoCode","type":"string"},{"name":"regionName","type":"string"}]'
+            )
         )
         PARTITIONED BY DAY
         CLUSTERED BY namespace, page
         '''
         task = self.client.task(sql)        
         self.assertTrue(task.ok)
-        self.assertTrue(len(task.id) > 10)
+        self.assertGreater(len(task.id), 10)
         self.assertFalse(task.done)
         self.assertFalse(task.succeeded)
         self.assertEqual(consts.RUNNING_STATE, task.state)

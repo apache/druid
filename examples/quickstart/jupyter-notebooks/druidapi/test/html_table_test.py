@@ -14,11 +14,11 @@
 # limitations under the License.
 
 import unittest
-from .setup import setup, ROUTER_ENDPOINT, BROKER_ENDPOINT
+from .setup import setup
 setup()
 
 from druidapi.html_display import HtmlTable
-from druidapi.base_table import ALIGN_LEFT, ALIGN_CENTER, ALIGN_RIGHT
+from druidapi.base_table import ALIGN_CENTER, ALIGN_RIGHT
 
 class TestHtmlTable(unittest.TestCase):
 

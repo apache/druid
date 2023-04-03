@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import unittest
-from .setup import setup, ROUTER_ENDPOINT, BROKER_ENDPOINT
+from .setup import setup, ROUTER_ENDPOINT
 setup()
 
 import druidapi
@@ -50,7 +50,7 @@ class TestStatusClient(unittest.TestCase):
 
     def test_version(self):
         v = self.status.version
-        self.assertTrue(len(v) > 2)
+        self.assertGreater(len(v), 2)
 
     def test_properties(self):
         json = self.status.properties
@@ -60,4 +60,4 @@ class TestStatusClient(unittest.TestCase):
     def test_brokers(self):
         json = self.status.brokers
         self.assertIs(dict, type(json))
-        self.assertTrue(len(json) > 0)
+        self.assertNotEqual(0, len(json))

@@ -21,7 +21,6 @@ setup()
 
 from druidapi.rest import DruidRestClient, build_url, check_error
 from druidapi.error import ClientError
-from druidapi.util import dict_get
 
 class TestRestClient(unittest.TestCase):
 
@@ -122,14 +121,14 @@ class TestRestClient(unittest.TestCase):
         # Return format: ['broker:8082', 'historical:8083']
         json = self.rest_client.get_json('/druid/coordinator/v1/servers')
         self.assertIsNotNone(json)
-        self.assertTrue(len(json) > 0)
+        self.assertNotEqual(0, len(json))
         self.assertIs(str, type(json[0]))
 
         # Return format: [dict, dict]
         # Not sure why this longer format is "simple"...
         json = self.rest_client.get_json('/druid/coordinator/v1/servers', params={'simple': True})
         self.assertIsNotNone(json)
-        self.assertTrue(len(json) > 0)
+        self.assertNotEqual(0, len(json))
         self.assertIs(dict, type(json[0]))
 
     def test_post_only_json(self):
