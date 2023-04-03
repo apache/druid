@@ -89,7 +89,7 @@ public class RealtimeTuningConfigTest
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(new NumberedShardSpec(0, 1), config.getShardSpec());
     Assert.assertEquals(0, config.getMaxPendingPersists());
-    Assert.assertEquals(1000000, config.getMaxRowsInMemory());
+    Assert.assertEquals(150000, config.getMaxRowsInMemory());
     Assert.assertEquals(0, config.getMergeThreadPriority());
     Assert.assertEquals(0, config.getPersistThreadPriority());
     Assert.assertEquals(new Period("PT10M"), config.getWindowPeriod());

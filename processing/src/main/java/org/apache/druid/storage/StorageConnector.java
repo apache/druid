@@ -24,7 +24,7 @@ import org.apache.druid.guice.annotations.UnstableApi;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.List;
+import java.util.Iterator;
 
 /**
  * Low level interface for interacting with different storage providers like S3, GCS, Azure and local file system.
@@ -105,26 +105,39 @@ public interface StorageConnector
    * with a basePath.
    * If the path is a directory, this method throws an exception.
    *
-   * @param path
-   * @throws IOException
+   * @param path to delete
+   * @throws IOException thrown in case of errors.
    */
   void deleteFile(String path) throws IOException;
+
+
+  /**
+   * Delete files present at the input paths. Most implementations prepend all the input paths
+   * with the basePath.
+   * <br/>
+   * This method is <b>recommended</b> in case we need to delete a batch of files.
+   * If the path is a directory, this method throws an exception.
+   *
+   * @param paths Iterable of the paths to delete.
+   * @throws IOException thrown in case of errors.
+   */
+  void deleteFiles(Iterable<String> paths) throws IOException;
 
   /**
    * Delete a directory pointed to by the path and also recursively deletes all files/directories in said directory.
    * Most implementations prepend the input path with a basePath.
    *
    * @param path path
-   * @throws IOException
+   * @throws IOException thrown in case of errors.
    */
   void deleteRecursively(String path) throws IOException;
 
   /**
-   * Returns a list containing all the files present in the path. The returned filenames should be such that joining
+   * Returns a lazy iterator containing all the files present in the path. The returned filenames should be such that joining
    * the dirName and the file name form the full path that can be used as the arguments for other methods of the storage
    * connector.
-   * For example, for a S3 path such as s3://bucket/parent1/parent2/child, the filename returned for the path
-   * "parent1/parent2" should be "child" and for "parent1" should be "parent2"
+   * For example, for a S3 path such as s3://bucket/parent1/parent2/child, the filename returned for the input path
+   * "parent1/parent2" should be "child" and for input "parent1" should be "parent2/child"
    */
-  List<String> listDir(String dirName);
+  Iterator<String> listDir(String dirName) throws IOException;
 }

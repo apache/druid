@@ -24,8 +24,10 @@ import it.unimi.dsi.fastutil.doubles.Double2IntLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.doubles.Double2IntMap;
 import it.unimi.dsi.fastutil.longs.Long2IntLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntAVLTreeMap;
 import it.unimi.dsi.fastutil.objects.Object2IntLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import org.apache.druid.segment.data.FrontCodedIntArrayIndexedWriter;
 
 import javax.annotation.Nullable;
 
@@ -41,6 +43,8 @@ public class GlobalDictionaryIdLookup
 
   private final Double2IntMap doubleLookup;
 
+  private final Object2IntMap<int[]> arrayLookup;
+
   private int dictionarySize;
 
   public GlobalDictionaryIdLookup()
@@ -51,6 +55,8 @@ public class GlobalDictionaryIdLookup
     longLookup.defaultReturnValue(-1);
     this.doubleLookup = new Double2IntLinkedOpenHashMap();
     doubleLookup.defaultReturnValue(-1);
+    this.arrayLookup = new Object2IntAVLTreeMap<>(FrontCodedIntArrayIndexedWriter.ARRAY_COMPARATOR);
+    this.arrayLookup.defaultReturnValue(-1);
   }
 
   public void addString(@Nullable String value)
@@ -98,5 +104,19 @@ public class GlobalDictionaryIdLookup
       return 0;
     }
     return doubleLookup.get(value.doubleValue());
+  }
+
+  public void addArray(int[] value)
+  {
+    int id = dictionarySize++;
+    arrayLookup.put(value, id);
+  }
+
+  public int lookupArray(@Nullable int[] value)
+  {
+    if (value == null) {
+      return 0;
+    }
+    return arrayLookup.getInt(value);
   }
 }

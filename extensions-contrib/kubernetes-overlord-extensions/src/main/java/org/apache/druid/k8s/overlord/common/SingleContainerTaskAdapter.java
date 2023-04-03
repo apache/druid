@@ -23,8 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.log.StartupLoggingConfig;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -32,13 +35,18 @@ import java.util.Map;
 
 public class SingleContainerTaskAdapter extends K8sTaskAdapter
 {
+  public static final String TYPE = "overlordSingleContainer";
+
   public SingleContainerTaskAdapter(
       KubernetesClientApi client,
-      KubernetesTaskRunnerConfig config,
+      KubernetesTaskRunnerConfig taskRunnerConfig,
+      TaskConfig taskConfig,
+      StartupLoggingConfig startupLoggingConfig,
+      DruidNode druidNode,
       ObjectMapper mapper
   )
   {
-    super(client, config, mapper);
+    super(client, taskRunnerConfig, taskConfig, startupLoggingConfig, druidNode, mapper);
   }
 
   @Override

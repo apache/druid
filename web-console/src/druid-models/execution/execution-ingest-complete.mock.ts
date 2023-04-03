@@ -19,26 +19,33 @@
 import { Execution } from './execution';
 
 /*
-For query:
+===== Query =====
 
 REPLACE INTO "kttm_simple" OVERWRITE ALL
-SELECT TIME_PARSE("timestamp") AS "__time", agent_type
+SELECT
+  TIME_PARSE("timestamp") AS "__time",
+  "agent_type"
 FROM TABLE(
   EXTERN(
     '{"type":"http","uris":["https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz"]}',
-    '{"type":"json"}',
-    '[{"name":"timestamp","type":"string"},{"name":"agent_type","type":"string"}]'
+    '{"type":"json"}'
   )
-)
+) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
 PARTITIONED BY ALL TIME
+
+===== Context =====
+
+{
+  "maxNumTasks": 2
+}
 */
 
 export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
   {
-    task: 'query-09af0c1e-1c0f-4539-917c-b0458849d0d9',
+    task: 'query-b55f3432-7810-4529-80ed-780a926a6f03',
     payload: {
       type: 'query_controller',
-      id: 'query-09af0c1e-1c0f-4539-917c-b0458849d0d9',
+      id: 'query-b55f3432-7810-4529-80ed-780a926a6f03',
       spec: {
         query: {
           queryType: 'scan',
@@ -78,10 +85,11 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
             finalize: false,
             finalizeAggregations: false,
             groupByEnableMultiValueUnnesting: false,
-            queryId: '09af0c1e-1c0f-4539-917c-b0458849d0d9',
+            maxNumTasks: 2,
+            queryId: 'b55f3432-7810-4529-80ed-780a926a6f03',
             scanSignature: '[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]',
             sqlInsertSegmentGranularity: '{"type":"all"}',
-            sqlQueryId: '09af0c1e-1c0f-4539-917c-b0458849d0d9',
+            sqlQueryId: 'b55f3432-7810-4529-80ed-780a926a6f03',
             sqlReplaceTimeChunks: 'all',
           },
           granularity: { type: 'all' },
@@ -100,22 +108,23 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
         tuningConfig: { maxNumWorkers: 1, maxRowsInMemory: 100000, rowsPerSegment: 3000000 },
       },
       sqlQuery:
-        'REPLACE INTO "kttm_simple" OVERWRITE ALL\nSELECT TIME_PARSE("timestamp") AS "__time", agent_type\nFROM TABLE(\n  EXTERN(\n    \'{"type":"http","uris":["https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz"]}\',\n    \'{"type":"json"}\',\n    \'[{"name":"timestamp","type":"string"},{"name":"agent_type","type":"string"}]\'\n  )\n)\nPARTITIONED BY ALL TIME',
+        'REPLACE INTO "kttm_simple" OVERWRITE ALL\nSELECT\n  TIME_PARSE("timestamp") AS "__time",\n  "agent_type"\nFROM TABLE(\n  EXTERN(\n    \'{"type":"http","uris":["https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz"]}\',\n    \'{"type":"json"}\'\n  )\n) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)\nPARTITIONED BY ALL TIME',
       sqlQueryContext: {
         finalizeAggregations: false,
         maxParseExceptions: 0,
-        sqlQueryId: '09af0c1e-1c0f-4539-917c-b0458849d0d9',
+        sqlQueryId: 'b55f3432-7810-4529-80ed-780a926a6f03',
         groupByEnableMultiValueUnnesting: false,
         sqlInsertSegmentGranularity: '{"type":"all"}',
+        maxNumTasks: 2,
         sqlReplaceTimeChunks: 'all',
-        queryId: '09af0c1e-1c0f-4539-917c-b0458849d0d9',
+        queryId: 'b55f3432-7810-4529-80ed-780a926a6f03',
       },
       sqlTypeNames: ['TIMESTAMP', 'VARCHAR'],
       context: { forceTimeChunkLock: true, useLineageBasedSegmentAllocation: true },
-      groupId: 'query-09af0c1e-1c0f-4539-917c-b0458849d0d9',
+      groupId: 'query-b55f3432-7810-4529-80ed-780a926a6f03',
       dataSource: 'kttm_simple',
       resource: {
-        availabilityGroup: 'query-09af0c1e-1c0f-4539-917c-b0458849d0d9',
+        availabilityGroup: 'query-b55f3432-7810-4529-80ed-780a926a6f03',
         requiredCapacity: 1,
       },
     },
@@ -124,12 +133,12 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
   {
     multiStageQuery: {
       type: 'multiStageQuery',
-      taskId: 'query-09af0c1e-1c0f-4539-917c-b0458849d0d9',
+      taskId: 'query-b55f3432-7810-4529-80ed-780a926a6f03',
       payload: {
         status: {
           status: 'SUCCESS',
-          startTime: '2022-10-31T16:11:13.160Z',
-          durationMs: 9012,
+          startTime: '2023-03-27T22:17:02.401Z',
+          durationMs: 28854,
           pendingTasks: 0,
           runningTasks: 2,
         },
@@ -137,7 +146,7 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
           {
             stageNumber: 0,
             definition: {
-              id: 'b94caff0-f693-47ed-a242-ccf837550383_0',
+              id: '8984a4c0-89a0-4a0a-9eaa-bf03088da3e3_0',
               input: [
                 {
                   type: 'external',
@@ -184,11 +193,12 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
                     finalize: false,
                     finalizeAggregations: false,
                     groupByEnableMultiValueUnnesting: false,
-                    queryId: '09af0c1e-1c0f-4539-917c-b0458849d0d9',
+                    maxNumTasks: 2,
+                    queryId: 'b55f3432-7810-4529-80ed-780a926a6f03',
                     scanSignature:
                       '[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]',
                     sqlInsertSegmentGranularity: '{"type":"all"}',
-                    sqlQueryId: '09af0c1e-1c0f-4539-917c-b0458849d0d9',
+                    sqlQueryId: 'b55f3432-7810-4529-80ed-780a926a6f03',
                     sqlReplaceTimeChunks: 'all',
                   },
                   granularity: { type: 'all' },
@@ -201,23 +211,24 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
               ],
               shuffleSpec: {
                 type: 'targetSize',
-                clusterBy: { columns: [{ columnName: '__boost' }] },
+                clusterBy: { columns: [{ columnName: '__boost', order: 'ASCENDING' }] },
                 targetSize: 3000000,
               },
               maxWorkerCount: 1,
               shuffleCheckHasMultipleValues: true,
+              maxInputBytesPerWorker: 10737418240,
             },
             phase: 'FINISHED',
             workerCount: 1,
             partitionCount: 1,
-            startTime: '2022-10-31T16:11:15.380Z',
-            duration: 4887,
+            startTime: '2023-03-27T22:17:02.792Z',
+            duration: 24236,
             sort: true,
           },
           {
             stageNumber: 1,
             definition: {
-              id: 'b94caff0-f693-47ed-a242-ccf837550383_1',
+              id: '8984a4c0-89a0-4a0a-9eaa-bf03088da3e3_1',
               input: [{ type: 'stage', stage: 0 }],
               processor: {
                 type: 'segmentGenerator',
@@ -235,6 +246,7 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
                     ],
                     dimensionExclusions: ['__time'],
                     includeAllDimensions: false,
+                    useSchemaDiscovery: false,
                   },
                   metricsSpec: [],
                   granularitySpec: {
@@ -257,32 +269,48 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
               },
               signature: [],
               maxWorkerCount: 1,
+              maxInputBytesPerWorker: 10737418240,
             },
             phase: 'FINISHED',
             workerCount: 1,
             partitionCount: 1,
-            startTime: '2022-10-31T16:11:20.264Z',
-            duration: 1908,
+            startTime: '2023-03-27T22:17:26.978Z',
+            duration: 4276,
           },
         ],
         counters: {
           '0': {
             '0': {
-              input0: { type: 'channel', rows: [465346], files: [1], totalFiles: [1] },
+              input0: {
+                type: 'channel',
+                rows: [465346],
+                bytes: [360464067],
+                files: [1],
+                totalFiles: [1],
+              },
               output: { type: 'channel', rows: [465346], bytes: [25430674], frames: [4] },
               shuffle: { type: 'channel', rows: [465346], bytes: [23570446], frames: [38] },
               sortProgress: {
                 type: 'sortProgress',
                 totalMergingLevels: 3,
-                levelToTotalBatches: { '0': 2, '1': 1, '2': 1 },
-                levelToMergedBatches: { '0': 2, '1': 1, '2': 1 },
+                levelToTotalBatches: { '0': 1, '1': 1, '2': 1 },
+                levelToMergedBatches: { '0': 1, '1': 1, '2': 1 },
                 totalMergersForUltimateLevel: 1,
                 progressDigest: 1.0,
               },
             },
           },
           '1': {
-            '0': { input0: { type: 'channel', rows: [465346], bytes: [23570446], frames: [38] } },
+            '0': {
+              input0: { type: 'channel', rows: [465346], bytes: [23570446], frames: [38] },
+              segmentGenerationProgress: {
+                type: 'segmentGenerationProgress',
+                rowsProcessed: 465346,
+                rowsPersisted: 465346,
+                rowsMerged: 465346,
+                rowsPushed: 465346,
+              },
+            },
           },
         },
       },

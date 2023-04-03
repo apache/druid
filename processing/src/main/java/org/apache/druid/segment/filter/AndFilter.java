@@ -49,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -215,6 +216,28 @@ public class AndFilter implements BooleanFilter
   public LinkedHashSet<Filter> getFilters()
   {
     return filters;
+  }
+
+  @Override
+  public boolean supportsRequiredColumnRewrite()
+  {
+    for (Filter filter : filters) {
+      if (!filter.supportsRequiredColumnRewrite()) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  @Override
+  public Filter rewriteRequiredColumns(Map<String, String> columnRewrites)
+  {
+    final List<Filter> newFilters = new ArrayList<>(filters.size());
+    for (Filter filter : filters) {
+      newFilters.add(filter.rewriteRequiredColumns(columnRewrites));
+    }
+    return new AndFilter(newFilters);
   }
 
   @Override

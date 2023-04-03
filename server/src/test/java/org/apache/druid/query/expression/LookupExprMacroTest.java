@@ -22,6 +22,7 @@ package org.apache.druid.query.expression;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -32,9 +33,9 @@ import org.junit.rules.ExpectedException;
 
 public class LookupExprMacroTest extends InitializedNullHandlingTest
 {
-  private static final Expr.ObjectBinding BINDINGS = InputBindings.withMap(
-      ImmutableMap.<String, Object>builder()
-          .put("x", "foo")
+  private static final Expr.ObjectBinding BINDINGS = InputBindings.forInputSuppliers(
+      ImmutableMap.<String, InputBindings.InputSupplier>builder()
+          .put("x", InputBindings.inputSupplier(ExpressionType.STRING, () -> "foo"))
           .build()
   );
 

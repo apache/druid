@@ -726,7 +726,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     }
 
     if (inputRow instanceof Transformer.TransformedInputRow) {
-      InputRow innerRow = ((Transformer.TransformedInputRow) inputRow).getRow();
+      InputRow innerRow = ((Transformer.TransformedInputRow) inputRow).getBaseRow();
       if (innerRow instanceof MapBasedInputRow) {
         return ((MapBasedInputRow) innerRow).getEvent().toString();
       }

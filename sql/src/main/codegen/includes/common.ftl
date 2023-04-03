@@ -92,3 +92,18 @@ SqlNodeList ClusterItems() :
     return new SqlNodeList(list, s.addAll(list).pos());
   }
 }
+
+SqlTypeNameSpec DruidType() :
+{
+  String typeName;
+}
+{
+  <TYPE> <LPAREN> <QUOTED_STRING>
+  {
+    typeName = SqlParserUtil.trim(token.image, "'");
+  }
+  <RPAREN>
+  {
+    return new SqlUserDefinedTypeNameSpec(typeName, span().pos());
+  }
+}

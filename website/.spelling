@@ -25,6 +25,7 @@
 ACL
 ACLs
 APIs
+apache.org
 AvroStorage
 ARN
 autokill
@@ -139,6 +140,7 @@ JSONPath
 JSSE
 JVM
 JVMs
+JWT
 Joda
 JsonProperty
 Jupyter
@@ -170,6 +172,7 @@ Murmur3
 MVCC
 NFS
 OCF
+OIDC
 OLAP
 OOMs
 OpenJDK
@@ -1099,7 +1102,7 @@ KinesisSupervisorIOConfig
 KinesisSupervisorTuningConfig
 Resharding
 resharding
-LZ4LZFuncompressedLZ4LZ4LZFuncompressednoneLZ4autolongsautolongslongstypeconcisetyperoaringcompressRunOnSerializationtruetypestreamendpointreplicastaskCounttaskCount
+LZ4LZFuncompressedLZ4LZ4LZFuncompressednoneLZ4autolongsautolongslongstypeconcisetyperoaringtypestreamendpointreplicastaskCounttaskCount
 deaggregate
 druid-kinesis-indexing-service
 maxRecordsPerPoll
@@ -2256,6 +2259,11 @@ DS_QUANTILE_SUMMARY
 DS_QUANTILES_SKETCH
 DS_RANK
 DS_THETA
+DS_TUPLE_DOUBLES
+DS_TUPLE_DOUBLES_INTERSECT
+DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE
+DS_TUPLE_DOUBLES_NOT
+DS_TUPLE_DOUBLES_UNION
 EARLIEST_BY
 _e_
 HLL_SKETCH_ESTIMATE

@@ -32,8 +32,9 @@ import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.data.input.MapBasedRow;
+import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.InputBindings;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.DimFilter;
@@ -45,6 +46,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
@@ -67,7 +69,6 @@ import org.joda.time.DateTimeZone;
 import org.junit.Assert;
 
 import javax.annotation.Nullable;
-
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
@@ -96,7 +97,8 @@ class ExpressionTestHelper
       CatalogResolver.NULL_RESOLVER,
       "druid",
       new CalciteRulesManager(ImmutableSet.of()),
-      CalciteTests.TEST_AUTHORIZER_MAPPER
+      CalciteTests.TEST_AUTHORIZER_MAPPER,
+      AuthConfig.newBuilder().build()
   );
   private static final PlannerContext PLANNER_CONTEXT = PlannerContext.create(
       PLANNER_TOOLBOX,
@@ -108,6 +110,7 @@ class ExpressionTestHelper
 
   private final RowSignature rowSignature;
   private final Map<String, Object> bindings;
+  private final Expr.ObjectBinding expressionBindings;
   private final RelDataTypeFactory typeFactory;
   private final RexBuilder rexBuilder;
   private final RelDataType relDataType;
@@ -116,7 +119,22 @@ class ExpressionTestHelper
   {
     this.rowSignature = rowSignature;
     this.bindings = bindings;
+    this.expressionBindings = new Expr.ObjectBinding()
+    {
+      @Nullable
+      @Override
+      public Object get(String name)
+      {
+        return bindings.get(name);
+      }
 
+      @Nullable
+      @Override
+      public ExpressionType getType(String name)
+      {
+        return rowSignature.getType(name);
+      }
+    };
     this.typeFactory = new JavaTypeFactoryImpl();
     this.rexBuilder = new RexBuilder(typeFactory);
     this.relDataType = RowSignatures.toRelDataType(rowSignature, typeFactory);
@@ -319,7 +337,7 @@ class ExpressionTestHelper
     }
 
     ExprEval<?> result = Parser.parse(expression.getExpression(), PLANNER_CONTEXT.getExprMacroTable())
-                               .eval(InputBindings.withMap(bindings));
+                               .eval(expressionBindings);
 
     Assert.assertEquals("Result for: " + rexNode, expectedResult, result.value());
   }
