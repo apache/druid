@@ -94,13 +94,13 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
     final DruidExpression leftExpression = druidExpressions.get(0);
     final DruidExpression rightExpression = druidExpressions.get(1);
     final boolean leftSimpleExtractionExpr = leftExpression.isSimpleExtraction();
-    final boolean leftArray = leftExpression.getDruidType() != null && leftExpression.getDruidType().isArray();
+    final boolean leftArrayColumn = leftExpression.isDirectColumnAccess() && leftExpression.getDruidType() != null && leftExpression.getDruidType().isArray();
     final boolean rightSimpleExtractionExpr = rightExpression.isSimpleExtraction();
-    final boolean rightArray = rightExpression.getDruidType() != null && rightExpression.getDruidType().isArray();
+    final boolean rightArrayColumn = rightExpression.isDirectColumnAccess() && rightExpression.getDruidType() != null && rightExpression.getDruidType().isArray();
     final DruidExpression simpleExtractionExpr;
     final DruidExpression complexExpr;
 
-    if (leftSimpleExtractionExpr ^ rightSimpleExtractionExpr && !(leftArray || rightArray)) {
+    if (leftSimpleExtractionExpr ^ rightSimpleExtractionExpr && !(leftArrayColumn || rightArrayColumn)) {
       if (leftSimpleExtractionExpr) {
         simpleExtractionExpr = leftExpression;
         complexExpr = rightExpression;
