@@ -180,6 +180,11 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                   TaskStatus status;
                   if (PeonPhase.SUCCEEDED.equals(completedPhase.getPhase())) {
                     status = TaskStatus.success(task.getId());
+                  } else if (completedPhase.getJob() == null) {
+                    status = TaskStatus.failure(
+                        task.getId(),
+                        "Task was deleted before completion: " + k8sTaskId
+                    );
                   } else {
                     status = TaskStatus.failure(
                         task.getId(),
