@@ -143,7 +143,7 @@ public class MetadataResource
   @GET
   @Path("/segments")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getChangedSegments(
+  public Response getAllUsedSegments(
       @Context final HttpServletRequest req,
       @QueryParam("datasources") final @Nullable Set<String> dataSources,
       @QueryParam("includeOvershadowedStatus") final @Nullable String includeOvershadowedStatus
@@ -204,7 +204,7 @@ public class MetadataResource
       reset = true;
       dataSegmentChanges =
           usedSegments
-              .filter(segment -> requiredDataSources.contains(segment.getDataSource()))
+              .filter(segment -> requiredDataSources.size() == 0 || requiredDataSources.contains(segment.getDataSource()))
               .map(segment ->
                        new DataSegmentChange(
                            new SegmentWithOvershadowedStatus(
@@ -223,7 +223,7 @@ public class MetadataResource
       dataSegmentChanges = changeRequestsSnapshot.getRequests();
       dataSegmentChanges = dataSegmentChanges
           .stream()
-          .filter(segment -> requiredDataSources.contains(segment.getSegmentWithOvershadowedStatus().getDataSegment().getDataSource()))
+          .filter(segment -> requiredDataSources.size() == 0 || requiredDataSources.contains(segment.getSegment().getDataSegment().getDataSource()))
           .collect(Collectors.toList());
       lastCounter = changeRequestsSnapshot.getCounter();
       log.info("Returning delta snapshot. segment count [%d], last counter [%d], last hash [%d]",
@@ -231,7 +231,7 @@ public class MetadataResource
     }
 
     final Function<DataSegmentChange, Iterable<ResourceAction>> raGenerator = segment -> Collections
-        .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getSegmentWithOvershadowedStatus().getDataSegment().getDataSource()));
+        .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getSegment().getDataSegment().getDataSource()));
 
     final Iterable<DataSegmentChange> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
         req,

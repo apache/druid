@@ -62,7 +62,28 @@ public class DataSourcesSnapshot
       ImmutableMap<String, String> dataSourceProperties
   )
   {
-    return fromUsedSegments(segments, dataSourceProperties, ImmutableMap.of(), ImmutableSet.of(), new CircularBuffer<>(CHANGES_QUEUE_MAX_SIZE));
+    return fromUsedSegments(
+        segments,
+        dataSourceProperties,
+        ImmutableMap.of(),
+        ImmutableSet.of(),
+        new CircularBuffer<>(CHANGES_QUEUE_MAX_SIZE)
+    );
+  }
+
+  public static DataSourcesSnapshot fromUsedSegments(
+      Iterable<DataSegment> segments,
+      ImmutableMap<String, String> dataSourceProperties,
+      Map<String, Map<SegmentId, Pair<Boolean, DateTime>>> handedOffState
+  )
+  {
+    return fromUsedSegments(
+        segments,
+        dataSourceProperties,
+        handedOffState,
+        ImmutableSet.of(),
+        new CircularBuffer<>(CHANGES_QUEUE_MAX_SIZE)
+    );
   }
 
   public static DataSourcesSnapshot fromUsedSegments(
@@ -379,7 +400,10 @@ public class DataSourcesSnapshot
     });
 
     ChangeRequestHistory.Counter lastCounter = getLastCounter(oldChanges);
-    oldChanges.add(new ChangeRequestHistory.Holder<>(changeList, lastCounter.inc()));
+
+    if (changeList.size() > 0) {
+      oldChanges.add(new ChangeRequestHistory.Holder<>(changeList, lastCounter.inc()));
+    }
 
     log.info(
         "Finished computing segment changes. Changes count [%d], current counter [%d]",

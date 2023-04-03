@@ -49,6 +49,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -262,6 +263,37 @@ public class DruidLeaderClient
         responseHolder.getStatus().getCode(),
         responseHolder.getContent()
     );
+  }
+
+  public InputStream getThingsFromLeaderNode(String query)
+  {
+    Request request;
+    InputStreamFullResponseHolder responseHolder;
+    try {
+      request = makeRequest(
+          HttpMethod.GET,
+          query
+      );
+
+      responseHolder = go(
+          request,
+          new InputStreamFullResponseHandler()
+      );
+
+      if (responseHolder.getStatus().getCode() != HttpServletResponse.SC_OK) {
+        throw new RE(
+            "Failed to talk to leader node at [%s]. Error code [%d], description [%s].",
+            query,
+            responseHolder.getStatus().getCode(),
+            responseHolder.getStatus().getReasonPhrase()
+        );
+      }
+    }
+    catch (IOException | InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+
+    return responseHolder.getContent();
   }
 
   public <T> JsonParserIterator<T> getThingsFromLeaderNode(

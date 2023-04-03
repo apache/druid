@@ -169,12 +169,12 @@ public class SqlSegmentsMetadataQuery
     final PreparedBatch batch =
         handle.prepareBatch(
             StringUtils.format(
-                "UPDATE %s SET handed_off = true, handed_off_time = ? WHERE datasource = ? AND id = ?",
+                "UPDATE %s SET handed_off = true, handed_off_time = ? WHERE datasource = ? AND id = ? AND handed_off_time IS NULL",
                 dbTables.getSegmentsTable()
             )
         );
 
-    batch.add(DateTimes.nowUtc(), dataSource, segmentId.toString());
+    batch.add(DateTimes.nowUtc().toString(), dataSource, segmentId.toString());
 
     final int[] segmentChanges = batch.execute();
 

@@ -45,6 +45,7 @@ import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -180,13 +181,19 @@ public class MetadataSegmentView
     Set<SegmentWithOvershadowedStatus> publishedSegmentsSet = new HashSet<>();
 
     if (null != changedRequestsSnapshot) {
+      log.info("changedRequestsSnapshot %s", changedRequestsSnapshot);
+
+      if (null == changedRequestsSnapshot.getRequests()) {
+        log.info("changedRequestsSnapshot null request");
+      }
+
       final List<DataSegmentChange> dataSegmentChanges =
           changedRequestsSnapshot
               .getRequests()
               .stream()
               .map(dataSegmentChange ->
                        new DataSegmentChange(
-                           convert(dataSegmentChange.getSegmentWithOvershadowedStatus()),
+                           convert(dataSegmentChange.getSegment()),
                            dataSegmentChange.isLoad(),
                            dataSegmentChange.getChangeReasons()))
               .collect(Collectors.toList());
@@ -200,7 +207,7 @@ public class MetadataSegmentView
 
         if (isCacheEnabled) {
           dataSegmentChanges.forEach(
-              dataSegmentChange -> publishedSegmentsSet.add(dataSegmentChange.getSegmentWithOvershadowedStatus()));
+              dataSegmentChange -> publishedSegmentsSet.add(dataSegmentChange.getSegment()));
         }
       } else {
         log.info("delta sync");
@@ -213,9 +220,9 @@ public class MetadataSegmentView
             publishedSegments.stream().iterator().forEachRemaining(publishedSegmentsSet::add);
 
             if (dataSegmentChange.isLoad()) {
-              publishedSegmentsSet.add(dataSegmentChange.getSegmentWithOvershadowedStatus());
+              publishedSegmentsSet.add(dataSegmentChange.getSegment());
             } else {
-              publishedSegmentsSet.remove(dataSegmentChange.getSegmentWithOvershadowedStatus());
+              publishedSegmentsSet.remove(dataSegmentChange.getSegment());
             }
           });
         }
@@ -334,15 +341,18 @@ public class MetadataSegmentView
       queryBuilder.append(StringUtils.format("counter=%s&hash=%s", counter.getCounter(), counter.getHash()));
     }
 
-    JsonParserIterator<ChangeRequestsSnapshot<DataSegmentChange>> iterator = coordinatorClient.getThingsFromLeaderNode(
-        queryBuilder.toString(),
-        new TypeReference<ChangeRequestsSnapshot<DataSegmentChange>>()
-        {
-        },
-        jsonMapper
-    );
+    ChangeRequestsSnapshot<DataSegmentChange> changeRequestsSnapshot;
 
-    return iterator.hasNext() ? iterator.next() : null;
+    try {
+      changeRequestsSnapshot = jsonMapper.readValue(
+          coordinatorClient.getThingsFromLeaderNode(queryBuilder.toString()),
+          new TypeReference<ChangeRequestsSnapshot<DataSegmentChange>>() {});
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
+    return changeRequestsSnapshot;
   }
 
   private class PollTask implements Runnable

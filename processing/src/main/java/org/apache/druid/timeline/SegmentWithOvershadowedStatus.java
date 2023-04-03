@@ -137,7 +137,7 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
     return "SegmentWithOvershadowedStatus{" +
            "overshadowed=" + overshadowed +
            ", handedOff=" + handedOff +
-           ", handedOff=" + handedOffTime +
+           ", handedOffTime=" + handedOffTime +
            ", dataSegment=" + dataSegment +
            '}';
   }

@@ -441,7 +441,7 @@ public class BrokerServerView implements TimelineServerView
         CollectionUtils.mapValues(
             dataSegmentChanges
                 .stream()
-                .map(DataSegmentChange::getSegmentWithOvershadowedStatus)
+                .map(DataSegmentChange::getSegment)
                 .filter(SegmentWithOvershadowedStatus::isHandedOff)
                 .collect(Collectors.groupingBy(segment -> segment.getDataSegment().getDataSource(), Collectors.toSet())),
             segmentSet -> segmentSet.stream().collect(
@@ -498,7 +498,7 @@ public class BrokerServerView implements TimelineServerView
         dataSegmentChanges
             .stream()
             .filter(DataSegmentChange::isLoad)
-            .map(DataSegmentChange::getSegmentWithOvershadowedStatus)
+            .map(DataSegmentChange::getSegment)
             .filter(SegmentWithOvershadowedStatus::isHandedOff)
             .collect(Collectors.toList());
 
@@ -506,7 +506,7 @@ public class BrokerServerView implements TimelineServerView
         dataSegmentChanges
             .stream()
             .filter(segment -> !segment.isLoad())
-            .map(DataSegmentChange::getSegmentWithOvershadowedStatus)
+            .map(DataSegmentChange::getSegment)
             .map(SegmentWithOvershadowedStatus::getDataSegment)
             .collect(Collectors.toList());
 

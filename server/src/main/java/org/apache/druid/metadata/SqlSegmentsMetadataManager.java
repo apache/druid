@@ -916,9 +916,11 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                       {
                         try {
                           DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
-                          boolean handedOff = r.getBoolean("handed_off");
-                          DateTime handedOffTime = DateTimes.of(r.getString("handed_off_time"));
-                          handedOffState.computeIfAbsent(segment.getDataSource(), v -> new HashMap<>()).put(segment.getId(), Pair.of(handedOff, handedOffTime));
+                          if (null != (r.getString("handed_off_time"))) {
+                            boolean handedOff = r.getBoolean("handed_off");
+                            DateTime handedOffTime = DateTimes.of(r.getString("handed_off_time"));
+                            handedOffState.computeIfAbsent(segment.getDataSource(), v -> new HashMap<>()).put(segment.getId(), Pair.of(handedOff, handedOffTime));
+                          }
                           return replaceWithExistingSegmentIfPresent(segment);
                         }
                         catch (IOException e) {
@@ -955,20 +957,29 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     } else {
       log.info("Polled and found %,d segments in the database", segments.size());
     }
-    Set<SegmentWithOvershadowedStatus> oldSegments = DataSourcesSnapshot.getSegmentsWithOvershadowedStatus(
-        dataSourcesSnapshot.getDataSourcesWithAllUsedSegments(),
-        dataSourcesSnapshot.getOvershadowedSegments(),
-        dataSourcesSnapshot.getHandedOffStatePerDataSource());
 
-    CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> oldChanges = dataSourcesSnapshot.getChanges();
+    if (null != dataSourcesSnapshot) {
+      Set<SegmentWithOvershadowedStatus> oldSegments = DataSourcesSnapshot.getSegmentsWithOvershadowedStatus(
+          dataSourcesSnapshot.getDataSourcesWithAllUsedSegments(),
+          dataSourcesSnapshot.getOvershadowedSegments(),
+          dataSourcesSnapshot.getHandedOffStatePerDataSource());
 
-    dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
-        Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
-        dataSourceProperties,
-        handedOffState,
-        oldSegments,
-        oldChanges
-    );
+      CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> oldChanges = dataSourcesSnapshot.getChanges();
+
+      dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
+          Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
+          dataSourceProperties,
+          handedOffState,
+          oldSegments,
+          oldChanges
+      );
+    } else {
+      dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
+          Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
+          dataSourceProperties,
+          handedOffState
+      );
+    }
   }
 
   private static ImmutableMap<String, String> createDefaultDataSourceProperties()

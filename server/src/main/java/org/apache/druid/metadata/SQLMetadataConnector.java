@@ -280,8 +280,6 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  partitioned BOOLEAN NOT NULL,\n"
                 + "  version VARCHAR(255) NOT NULL,\n"
                 + "  used BOOLEAN NOT NULL,\n"
-                + "  handed_off BOOLEAN NOT NULL,\n"
-                + "  handed_off_time VARCHAR NOT NULL,\n"
                 + "  payload %2$s NOT NULL,\n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",

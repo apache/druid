@@ -21,7 +21,6 @@ package org.apache.druid.timeline;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.fasterxml.jackson.annotation.JsonValue;
 import org.apache.druid.java.util.common.StringUtils;
 
@@ -29,37 +28,26 @@ import java.util.List;
 
 public class DataSegmentChange
 {
-  @JsonUnwrapped
-  private final SegmentWithOvershadowedStatus segmentWithOvershadowedStatus;
-
+  private final SegmentWithOvershadowedStatus segment;
   private final boolean load;
-
   private final List<ChangeReason> changeReasons;
 
   @JsonCreator
   public DataSegmentChange(
+      @JsonProperty("segment") SegmentWithOvershadowedStatus segment,
       @JsonProperty("load") boolean load,
       @JsonProperty("changeReasons") List<ChangeReason> changeReasons
   )
   {
-    this(null, load, changeReasons);
-  }
-
-  public DataSegmentChange(
-      SegmentWithOvershadowedStatus segmentWithOvershadowedStatus,
-      boolean load,
-      List<ChangeReason> changeReasons
-  )
-  {
-    this.segmentWithOvershadowedStatus = segmentWithOvershadowedStatus;
+    this.segment = segment;
     this.load = load;
     this.changeReasons = changeReasons;
   }
 
   @JsonProperty
-  public SegmentWithOvershadowedStatus getSegmentWithOvershadowedStatus()
+  public SegmentWithOvershadowedStatus getSegment()
   {
-    return segmentWithOvershadowedStatus;
+    return segment;
   }
 
   @JsonProperty
@@ -68,6 +56,7 @@ public class DataSegmentChange
     return load;
   }
 
+  @JsonProperty
   public List<ChangeReason> getChangeReasons()
   {
     return changeReasons;
@@ -79,7 +68,7 @@ public class DataSegmentChange
     return "DataSegmentChangeRequest{" +
            "load=" + load +
            ", changeReason=" + changeReasons +
-           ", segmentWithOvershadowedStatus=" + segmentWithOvershadowedStatus +
+           ", segment=" + segment +
            '}';
   }
 
