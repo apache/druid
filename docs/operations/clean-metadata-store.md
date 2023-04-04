@@ -230,5 +230,5 @@ druid.coordinator.kill.datasource.durationToRetain=P4D
 ## Learn more
 See the following topics for more information:
 - [Metadata management](../configuration/index.md#metadata-management) for metadata store configuration reference.
-- [Metadata storage](../depsign/metadata-storage.md) for an overview of the metadata storage database.
+- [Metadata storage](../design/metadata-storage.md) for an overview of the metadata storage database.
 

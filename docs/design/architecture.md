@@ -94,7 +94,7 @@ For more details, please see the [Metadata storage](../design/metadata-storage.m
 
 Used for internal service discovery, coordination, and leader election.
 
-For more details, please see the [ZooKeeper](../design/zookeeper.md) page.
+For more details, please see the [ZooKeeper](zookeeper.md) page.
 
 
 ## Storage design

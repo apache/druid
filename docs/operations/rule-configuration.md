@@ -34,7 +34,7 @@ You can specify the data to retain or drop in the following ways:
 - Period: segment data specified as an offset from the present time.
 - Interval: a fixed time range.
 
-Retention rules are persistent: they remain in effect until you change them. Druid stores retention rules in its [metadata store](../dependencies/metadata-storage.md).
+Retention rules are persistent: they remain in effect until you change them. Druid stores retention rules in its [metadata store](../design/metadata-storage.md).
 
 ## Set retention rules
 
