@@ -17,13 +17,26 @@
   ~ under the License.
   -->
 
-[![Build Status](https://api.travis-ci.com/apache/druid.svg?branch=master)](https://app.travis-ci.com/github/apache/druid)
-[![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/apache/druid.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/apache/druid/context:java)
 [![Coverage Status](https://img.shields.io/codecov/c/gh/apache/druid)](https://codecov.io/gh/apache/druid)
 [![Docker](https://img.shields.io/badge/container-docker-blue.svg)](https://hub.docker.com/r/apache/druid)
 [![Helm](https://img.shields.io/badge/helm-druid-5F90AB?logo=helm)](https://github.com/apache/druid/blob/master/helm/druid/README.md)
 <!--- Following badges are disabled until they can be fixed: -->
 <!--- [![Inspections Status](https://img.shields.io/teamcity/http/teamcity.jetbrains.com/s/OpenSourceProjects_Druid_Inspections.svg?label=TeamCity%20inspections)](https://teamcity.jetbrains.com/viewType.html?buildTypeId=OpenSourceProjects_Druid_Inspections) -->
+
+| Workflow                             | Status                                                       |
+| :----------------------------------- | :----------------------------------------------------------- |
+| ⚙️ CodeQL Config                      | ![codeql-config](https://img.shields.io/github/actions/workflow/status/apache/druid/codeql-config.yml?branch=master&logo=github-actions&style=flat-square) |
+| 🔍 CodeQL                             | ![codeql](https://img.shields.io/github/actions/workflow/status/apache/druid/codeql.yml?branch=master&logo=github-actions&style=flat-square) |
+| 🕒 Cron Job ITS                       | ![cron-job-its](https://img.shields.io/github/actions/workflow/status/apache/druid/cron-job-its.yml?branch=master&logo=github-actions&style=flat-square) |
+| 🏷️ Labeler                            | ![labeler](https://img.shields.io/github/actions/workflow/status/apache/druid/labeler.yml?branch=master&logo=github-actions&style=flat-square) |
+| ♻️ Reusable Revised ITS               | ![reusable-revised-its](https://img.shields.io/github/actions/workflow/status/apache/druid/reusable-revised-its.yml?branch=master&logo=github-actions&style=flat-square) |
+| ♻️ Reusable Standard ITS              | ![reusable-standard-its](https://img.shields.io/github/actions/workflow/status/apache/druid/reusable-standard-its.yml?branch=master&logo=github-actions&style=flat-square) |
+| ♻️ Reusable Unit Tests                | ![reusable-unit-tests](https://img.shields.io/github/actions/workflow/status/apache/druid/reusable-unit-tests.yml?branch=master&logo=github-actions&style=flat-square) |
+| 🔄 Revised ITS                        | ![revised-its](https://img.shields.io/github/actions/workflow/status/apache/druid/revised-its.yml?branch=master&logo=github-actions&style=flat-square) |
+| 🔧 Standard ITS                       | ![standard-its](https://img.shields.io/github/actions/workflow/status/apache/druid/standard-its.yml?branch=master&logo=github-actions&style=flat-square) |
+| 🛠️ Static Checks                      | ![static-checks](https://img.shields.io/github/actions/workflow/status/apache/druid/static-checks.yml?branch=master&logo=github-actions&style=flat-square) |
+| 🧪 Unit and Integration Tests Unified | ![unit-and-integration-tests-unified](https://img.shields.io/github/actions/workflow/status/apache/druid/unit-and-integration-tests-unified.yml?branch=master&logo=github-actions&style=flat-square) |
+| 🔬 Unit Tests                         | ![unit-tests](https://img.shields.io/github/actions/workflow/status/apache/druid/unit-tests.yml?branch=master&logo=github-actions&style=flat-square) |
 
 ---
 
