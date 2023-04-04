@@ -74,10 +74,21 @@ public interface SupervisorSpec
    */
   String getType();
 
+  /**
+   * @return The types of {@link org.apache.druid.data.input.InputSource} that the task uses. Empty set is returned if
+   * the task does not use any. Users can be given permission to access particular types of
+   * input sources but not others, using the
+   * {@link org.apache.druid.server.security.AuthConfig#enableInputSourceSecurity} config.
+   */
   default Set<String> getInputSourceTypes() {
     return ImmutableSet.of();
   }
 
+  /**
+   * @return Whether the task uses {@link org.apache.druid.data.input.Firehose}. If the
+   * {@link org.apache.druid.server.security.AuthConfig#enableInputSourceSecurity} config is
+   * enabled, then tasks that use firehose cannot be used.
+   */
   default boolean usesFirehose() {
     return false;
   }
