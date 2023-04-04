@@ -181,7 +181,7 @@ the extension used in the examples above.
 * [Kerberos](../development/extensions-core/druid-kerberos.md) for Kerberos authentication.
 * [User authentication and authorization](security-user-auth.md) for details about permissions.
 * [SQL permissions](security-user-auth.md#sql-permissions) for permissions on SQL system tables.
-* [The `druidapi` Python library](../tutorials/tutorial-jupyter-index.md#python-api-for-druid),
+* [The `druidapi` Python library](../tutorials/tutorial-jupyter-index.md),
   provided as part of the Druid tutorials, for functions you can
   use in a Jupyter notebook to learn how security works, and to set up users and roles for testing.
 
