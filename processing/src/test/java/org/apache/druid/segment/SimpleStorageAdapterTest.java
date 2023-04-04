@@ -19,27 +19,41 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.collections.bitmap.BitmapFactory;
-import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.QueryMetrics;
+import org.apache.druid.query.filter.Filter;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.Indexed;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-import java.util.List;
-import java.util.Map;
 
 
-public class SimpleQueryableIndexTest
+public class SimpleStorageAdapterTest
 {
   @Test
   public void testTombstoneDefaultInterface()
   {
-    QueryableIndex qi = new QueryableIndex()
+    StorageAdapter sa = new StorageAdapter()
     {
       @Override
-      public Interval getDataInterval()
+      public Sequence<Cursor> makeCursors(
+          @Nullable Filter filter,
+          Interval interval,
+          VirtualColumns virtualColumns,
+          Granularity gran,
+          boolean descending,
+          @Nullable QueryMetrics<?> queryMetrics)
+      {
+        return null;
+      }
+
+      @Override
+      public Interval getInterval()
       {
         return null;
       }
@@ -51,13 +65,58 @@ public class SimpleQueryableIndexTest
       }
 
       @Override
+      public DateTime getMaxIngestedEventTime()
+      {
+        return null;
+      }
+
+      @Override
       public Indexed<String> getAvailableDimensions()
       {
         return null;
       }
 
       @Override
-      public BitmapFactory getBitmapFactoryForDimensions()
+      public Iterable<String> getAvailableMetrics()
+      {
+        return null;
+      }
+
+      @Override
+      public int getDimensionCardinality(String column)
+      {
+        return 0;
+      }
+
+      @Override
+      public DateTime getMinTime()
+      {
+        return null;
+      }
+
+      @Override
+      public DateTime getMaxTime()
+      {
+        return null;
+      }
+
+      @Nullable
+      @Override
+      public Comparable getMinValue(String column)
+      {
+        return null;
+      }
+
+      @Nullable
+      @Override
+      public Comparable getMaxValue(String column)
+      {
+        return null;
+      }
+
+      @Nullable
+      @Override
+      public ColumnCapabilities getColumnCapabilities(String column)
       {
         return null;
       }
@@ -69,33 +128,9 @@ public class SimpleQueryableIndexTest
         return null;
       }
 
-      @Override
-      public Map<String, DimensionHandler> getDimensionHandlers()
-      {
-        return null;
-      }
-
-      @Override
-      public void close()
-      {
-
-      }
-
-      @Override
-      public List<String> getColumnNames()
-      {
-        return null;
-      }
-
-      @Nullable
-      @Override
-      public ColumnHolder getColumnHolder(String columnName)
-      {
-        return null;
-      }
     };
 
-    Assert.assertFalse(qi.isFromTombstone());
+    Assert.assertFalse(sa.isFromTombstone());
   }
 
 }
