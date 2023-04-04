@@ -155,7 +155,7 @@ Here is a collection of queries to try out:
 
 ```sql
 SELECT FLOOR(__time to HOUR) AS HourTime, SUM(deleted) AS LinesDeleted
-FROM wikipedia WHERE TIME_IN_INTERVAL("__time", '2015-09-12/2015-09-13')
+FROM wikipedia WHERE TIME_IN_INTERVAL("__time", '2016-06-27/2016-06-28')
 GROUP BY 1
 ```
 
@@ -165,7 +165,7 @@ GROUP BY 1
 
 ```sql
 SELECT channel, page, SUM(added)
-FROM wikipedia WHERE TIME_IN_INTERVAL("__time", '2015-09-12/2015-09-13')
+FROM wikipedia WHERE TIME_IN_INTERVAL("__time", '2016-06-27/2016-06-28')
 GROUP BY channel, page
 ORDER BY SUM(added) DESC
 ```
@@ -190,7 +190,7 @@ dsql>
 To submit the query, paste it to the `dsql` prompt and press enter:
 
 ```bash
-dsql> SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE TIME_IN_INTERVAL("__time", '2015-09-12/2015-09-13') GROUP BY page ORDER BY Edits DESC LIMIT 10;
+dsql> SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE TIME_IN_INTERVAL("__time", '2016-06-27/2016-06-28') GROUP BY page ORDER BY Edits DESC LIMIT 10;
 ┌──────────────────────────────────────────────────────────┬───────┐
 │ page                                                     │ Edits │
 ├──────────────────────────────────────────────────────────┼───────┤
@@ -216,7 +216,7 @@ You can submit native queries [directly to the Druid Broker over HTTP](../queryi
 
 ```json
 {
-  "query": "SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE TIME_IN_INTERVAL(\"__time\", '2015-09-12/2015-09-13') GROUP BY page ORDER BY Edits DESC LIMIT 10"
+  "query": "SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE TIME_IN_INTERVAL(\"__time\", '2016-06-27/2016-06-28') GROUP BY page ORDER BY Edits DESC LIMIT 10"
 }
 ```
 
@@ -230,46 +230,46 @@ The following results should be returned:
 
 ```json
 [
-  {
-    "page": "Wikipedia:Vandalismusmeldung",
-    "Edits": 33
-  },
-  {
-    "page": "User:Cyde/List of candidates for speedy deletion/Subpage",
-    "Edits": 28
-  },
-  {
-    "page": "Jeremy Corbyn",
-    "Edits": 27
-  },
-  {
-    "page": "Wikipedia:Administrators' noticeboard/Incidents",
-    "Edits": 21
-  },
-  {
-    "page": "Flavia Pennetta",
-    "Edits": 20
-  },
-  {
-    "page": "Total Drama Presents: The Ridonculous Race",
-    "Edits": 18
-  },
-  {
-    "page": "User talk:Dudeperson176123",
-    "Edits": 18
-  },
-  {
-    "page": "Wikipédia:Le Bistro/12 septembre 2015",
-    "Edits": 18
-  },
-  {
-    "page": "Wikipedia:In the news/Candidates",
-    "Edits": 17
-  },
-  {
-    "page": "Wikipedia:Requests for page protection",
-    "Edits": 17
-  }
+    {
+        "page": "Copa América Centenario",
+        "Edits": 29
+    },
+    {
+        "page": "User:Cyde/List of candidates for speedy deletion/Subpage",
+        "Edits": 16
+    },
+    {
+        "page": "Wikipedia:Administrators' noticeboard/Incidents",
+        "Edits": 16
+    },
+    {
+        "page": "2016 Wimbledon Championships – Men's Singles",
+        "Edits": 15
+    },
+    {
+        "page": "Wikipedia:Administrator intervention against vandalism",
+        "Edits": 15
+    },
+    {
+        "page": "Wikipedia:Vandalismusmeldung",
+        "Edits": 15
+    },
+    {
+        "page": "The Winds of Winter (Game of Thrones)",
+        "Edits": 12
+    },
+    {
+        "page": "ولاية الجزائر",
+        "Edits": 12
+    },
+    {
+        "page": "Copa América",
+        "Edits": 10
+    },
+    {
+        "page": "Lionel Messi",
+        "Edits": 10
+    }
 ]
 ```
 
