@@ -203,7 +203,7 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
   public void testInputSourceTypes()
   {
     final RealtimeIndexTask task = makeRealtimeTask(null);
-    Assert.assertNull(task.getInputSourceTypes());
+    Assert.assertTrue(task.getInputSourceTypes().isEmpty());
   }
 
   @Test(timeout = 60_000L)
