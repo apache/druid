@@ -172,7 +172,7 @@ ORDER BY SUM(added) DESC
 
 ![Query example](../assets/tutorial-query-07.png "Query example")
 
-
+<!--
 ## Other ways to invoke SQL queries
 
 ### Query SQL via dsql
@@ -207,9 +207,9 @@ dsql> SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE TIME_IN_INTERVAL("__ti
 └──────────────────────────────────────────────────────────┴───────┘
 Retrieved 10 rows in 0.06s.
 ```
+-->
 
-
-### Query SQL over HTTP
+## Query SQL over HTTP
 
 
 You can submit native queries [directly to the Druid Broker over HTTP](../querying/sql-api.md#submit-a-query). The request body should be a JSON object, with the value for the key `query` containing text of the query:
