@@ -41,6 +41,7 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
+import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
@@ -1147,6 +1148,73 @@ public class MSQSelectTest extends MSQTestBase
             new Object[]{null},
             new Object[]{null}
         )).verifyResults();
+  }
+
+  @Test
+  public void testHavingOnApproximateCountDistinct()
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("dim2", ColumnType.STRING)
+                                               .add("col", ColumnType.LONG)
+                                               .build();
+
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource(CalciteTests.DATASOURCE1)
+                                     .setInterval(querySegmentSpec(Filtration.eternity()))
+                                     .setGranularity(Granularities.ALL)
+                                     .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                                     .setAggregatorSpecs(
+                                         aggregators(
+                                             new CardinalityAggregatorFactory(
+                                                 "a0",
+                                                 null,
+                                                 ImmutableList.of(
+                                                     new DefaultDimensionSpec(
+                                                         "m1",
+                                                         "m1",
+                                                         ColumnType.FLOAT
+                                                     )
+                                                 ),
+                                                 false,
+                                                 true
+                                             )
+                                         )
+                                     )
+                                     .setHavingSpec(
+                                         having(
+                                             bound(
+                                                 "a0",
+                                                 "1",
+                                                 null,
+                                                 true,
+                                                 false,
+                                                 null,
+                                                 StringComparators.NUMERIC
+                                             )
+                                         )
+                                     )
+                                     .setContext(context)
+                                     .build();
+
+    testSelectQuery()
+        .setSql("SELECT dim2, COUNT(DISTINCT m1) as col FROM foo GROUP BY dim2 HAVING COUNT(DISTINCT m1) > 1")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(query)
+                                   .columnMappings(new ColumnMappings(ImmutableList.of(
+                                       new ColumnMapping("d0", "dim2"),
+                                       new ColumnMapping("a0", "col")
+                                   )))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .build())
+        .setQueryContext(context)
+        .setExpectedRowSignature(resultSignature)
+        .setExpectedResultRows(ImmutableList.of(
+                                   new Object[]{null, 3L},
+                                   new Object[]{"a", 2L}
+                               )
+
+        )
+        .verifyResults();
   }
 
   @Test

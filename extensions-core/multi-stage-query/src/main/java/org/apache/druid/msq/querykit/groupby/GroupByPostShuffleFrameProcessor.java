@@ -221,14 +221,16 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
       outputRowAsMap.put(postAggregator.getName(), value);
     }
 
-    // Finalize aggregators.
-    finalizeFn.accept(outputRow);
-
     if (havingSpec != null && !havingSpec.eval(outputRow)) {
       // Didn't match HAVING.
       outputRow = null;
       return false;
-    } else if (frameWriter.addSelection()) {
+    }
+
+    // Finalize aggregators.
+    finalizeFn.accept(outputRow);
+
+    if (frameWriter.addSelection()) {
       outputRow = null;
       return false;
     } else if (frameWriter.getNumRows() > 0) {
