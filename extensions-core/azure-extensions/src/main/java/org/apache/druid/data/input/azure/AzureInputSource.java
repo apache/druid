@@ -97,7 +97,8 @@ public class AzureInputSource extends CloudObjectInputSource
   @JsonIgnore
   @Nonnull
   @Override
-  public Set<String> getTypes() {
+  public Set<String> getTypes()
+  {
     return Collections.singleton(SCHEME);
   }
 
