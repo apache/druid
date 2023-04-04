@@ -75,7 +75,8 @@ public class SqlInputSource extends AbstractInputSource implements SplittableInp
   @JsonIgnore
   @Nonnull
   @Override
-  public Set<String> getTypes() {
+  public Set<String> getTypes()
+  {
     return Collections.singleton(TYPE_KEY);
   }
 
