@@ -1208,10 +1208,10 @@ public class MSQSelectTest extends MSQTestBase
                                    .build())
         .setQueryContext(context)
         .setExpectedRowSignature(resultSignature)
-        .setExpectedResultRows(ImmutableList.of(
-                                   new Object[]{null, 3L},
-                                   new Object[]{"a", 2L}
-                               )
+        .setExpectedResultRows(
+            NullHandling.replaceWithDefault()
+            ? ImmutableList.of(new Object[]{null, 3L}, new Object[]{"a", 2L})
+            : ImmutableList.of(new Object[]{null, 2L}, new Object[]{"a", 2L})
 
         )
         .verifyResults();
