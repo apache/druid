@@ -125,14 +125,11 @@ public class CapabilitiesBasedFormat implements ColumnFormat
         merged.areDictionaryValuesUnique().and(otherSnapshot.areDictionaryValuesUnique()).isTrue()
     );
     merged.setHasNulls(merged.hasNulls().or(otherSnapshot.hasNulls()).isTrue());
-    // When merging persisted queryableIndexes in the same ingestion job,
-    // all queryableIndexes should have the exact same hasBitmapIndexes flag set which is set in the ingestionSpec.
-    // One exception is null-only columns as they always do NOT have bitmap indexes no matter whether the flag is set
-    // in the ingestionSpec. As a result, the mismatch checked in the if clause below can happen
-    // when one of the columnCapability is from a real column and another is from a null-only column.
-    // See NullColumnPartSerde for how columnCapability is created for null-only columns.
-    // When the mismatch is found, we prefer the flag set in the ingestionSpec over
-    // the columnCapability of null-only columns.
+    // when merging persisted queryableIndexes in the same ingestion job, all queryableIndexes should have the exact
+    // same hasBitmapIndexes flag set which is set in the ingestionSpec.. the exception is explicit null value
+    // columns which always report as having bitmap indexes because they can always resolve to all-true or all-false
+    // depending on whether or not the filter matches the null value. choosing false here picks what is most likely
+    // to be correct since explicit falses mean that the ingestion spec does not have bitmap index creation set
     if (merged.hasBitmapIndexes() != otherSnapshot.hasBitmapIndexes()) {
       merged.setHasBitmapIndexes(false);
     }
