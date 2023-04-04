@@ -37,7 +37,6 @@ import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.sql.SqlTaskStatus;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.SqlResourceTestClient;
@@ -203,13 +202,13 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
     List<Map<String, Object>> actualResults = new ArrayList<>();
 
     Yielder<Object[]> yielder = resultsReport.getResultYielder();
-    RowSignature rowSignature = resultsReport.getSignature();
+    List<MSQResultsReport.ColumnAndType> rowSignature = resultsReport.getSignature();
 
     while (!yielder.isDone()) {
       Object[] row = yielder.get();
       Map<String, Object> rowWithFieldNames = new LinkedHashMap<>();
       for (int i = 0; i < row.length; ++i) {
-        rowWithFieldNames.put(rowSignature.getColumnName(i), row[i]);
+        rowWithFieldNames.put(rowSignature.get(i).getName(), row[i]);
       }
       actualResults.add(rowWithFieldNames);
       yielder = yielder.next(null);
