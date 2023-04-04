@@ -96,7 +96,7 @@ public class LongFieldReader implements FieldReader
     @Override
     public long getLong()
     {
-      assert NullHandling.replaceWithDefault() || !isNull();
+      assert !isNull();
       final long bits = memory.getLong(fieldPointer.position() + Byte.BYTES);
       return LongFieldWriter.detransform(bits);
     }

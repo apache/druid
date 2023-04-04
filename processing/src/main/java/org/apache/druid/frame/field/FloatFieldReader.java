@@ -93,7 +93,7 @@ public class FloatFieldReader implements FieldReader
     @Override
     public float getFloat()
     {
-      assert NullHandling.replaceWithDefault() || !isNull();
+      assert !isNull();
       final int bits = dataRegion.getInt(fieldPointer.position() + Byte.BYTES);
       return FloatFieldWriter.detransform(bits);
     }

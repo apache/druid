@@ -96,7 +96,7 @@ public class DoubleFieldReader implements FieldReader
     @Override
     public double getDouble()
     {
-      assert NullHandling.replaceWithDefault() || !isNull();
+      assert !isNull();
       final long bits = dataRegion.getLong(fieldPointer.position() + Byte.BYTES);
       return DoubleFieldWriter.detransform(bits);
     }
