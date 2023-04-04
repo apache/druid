@@ -142,7 +142,6 @@ public class QueryDriver
     catch (SqlPlanningException e) {
       stmt.reporter().failed(e);
       stmt.close();
-      e.printStackTrace();
       return QueryResponse.newBuilder()
           .setQueryId(stmt.sqlQueryId())
           .setStatus(QueryStatus.INVALID_SQL)
@@ -152,7 +151,6 @@ public class QueryDriver
     catch (IOException | RuntimeException e) {
       stmt.reporter().failed(e);
       stmt.close();
-      e.printStackTrace();
       return QueryResponse.newBuilder()
           .setQueryId(stmt.sqlQueryId())
           .setStatus(QueryStatus.RUNTIME_ERROR)

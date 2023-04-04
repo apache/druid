@@ -22,8 +22,8 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.druid.extensions.contrib</groupId>
-  <artifactId>druid-shaded-grpc</artifactId>
-  <name>druid-shaded-grpc</name>
+  <artifactId>shaded-grpc</artifactId>
+  <name>shaded-grpc</name>
   <description>Shaded gRPC jar</description>
 
   <parent>
@@ -140,7 +140,9 @@
                     <shadedPattern>org.apache.druid.grpc.shaded.com.google.common</shadedPattern>
                   </relocation>
                 </relocations>
-                <dependencyReducedPomLocation>${project.build.directory}/dependency-reduced-pom.xml</dependencyReducedPomLocation>
+                <!-- Warning: do not set this! It changes the Maven basedir which will cause
+                     follow-on tasks (such as RAT and assembly) to fail. -->
+                <!-- <dependencyReducedPomLocation>${project.build.directory}/dependency-reduced-pom.xml</dependencyReducedPomLocation> -->
 
                 <!-- We want to include only gRPC and Guava. Exclude Netty as we want Guava to
                      use the same classes as Druid. rGPC does some matching based on class

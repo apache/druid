@@ -54,7 +54,7 @@
     <files>
       <file>
         <source>../../LICENSE.BINARY</source>
-        <outputDirectory>.</outputDirectory>
+        <outputDirectory>/</outputDirectory>
         <destName>LICENSE</destName>
         <lineEnding>keep</lineEnding>
       </file>

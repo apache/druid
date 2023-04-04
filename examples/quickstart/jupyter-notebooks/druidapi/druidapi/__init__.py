@@ -15,21 +15,22 @@
 
 from druidapi.druid import DruidClient
 
-def jupyter_client(endpoint, auth=None) -> DruidClient:
+def jupyter_client(endpoint) -> DruidClient:
     '''
     Create a Druid client configured to display results as HTML withing a Jupyter notebook.
     Waits for the cluster to become ready to avoid intermitent problems when using Druid.
     '''
     from druidapi.html_display import HtmlDisplayClient
-    druid = DruidClient(endpoint, HtmlDisplayClient(), auth=auth)
+    druid = DruidClient(endpoint, HtmlDisplayClient())
     druid.status.wait_until_ready()
     return druid
 
-def client(endpoint, auth=None) -> DruidClient:
+def client(endpoint) -> DruidClient:
     '''
     Create a Druid client for use in Python scripts that uses a text-based format for
     displaying results. Does not wait for the cluster to be ready: clients should call
     `status().wait_until_ready()` before making other Druid calls if there is a chance
     that the cluster has not yet fully started.
     '''
-    return DruidClient(endpoint, auth=auth)
+    return DruidClient(endpoint)
+

@@ -40,18 +40,13 @@
         <option value="$PROJECT_DIR$/pom.xml" />
       </list>
     </option>
-    <option name="ignoredFiles">
-      <set>
-        <option value="$PROJECT_DIR$/extensions-contrib/grpc-shaded/pom.xml" />
-      </set>
-    </option>
   </component>
   <component name="NullableNotNullManager">
     <option name="myDefaultNullable" value="javax.annotation.Nullable" />
     <option name="myDefaultNotNull" value="javax.annotation.Nonnull" />
     <option name="myNullables">
       <value>
-        <list size="13">
+        <list size="12">
           <item index="0" class="java.lang.String" itemvalue="org.jetbrains.annotations.Nullable" />
           <item index="1" class="java.lang.String" itemvalue="javax.annotation.Nullable" />
           <item index="2" class="java.lang.String" itemvalue="javax.annotation.CheckForNull" />
@@ -64,13 +59,12 @@
           <item index="9" class="java.lang.String" itemvalue="org.checkerframework.checker.nullness.compatqual.NullableType" />
           <item index="10" class="java.lang.String" itemvalue="androidx.annotation.RecentlyNullable" />
           <item index="11" class="java.lang.String" itemvalue="com.android.annotations.Nullable" />
-          <item index="12" class="java.lang.String" itemvalue="org.eclipse.jdt.annotation.Nullable" />
         </list>
       </value>
     </option>
     <option name="myNotNulls">
       <value>
-        <list size="13">
+        <list size="11">
           <item index="0" class="java.lang.String" itemvalue="org.jetbrains.annotations.NotNull" />
           <item index="1" class="java.lang.String" itemvalue="javax.annotation.Nonnull" />
           <item index="2" class="java.lang.String" itemvalue="edu.umd.cs.findbugs.annotations.NonNull" />
@@ -82,8 +76,6 @@
           <item index="8" class="java.lang.String" itemvalue="org.checkerframework.checker.nullness.compatqual.NonNullType" />
           <item index="9" class="java.lang.String" itemvalue="androidx.annotation.RecentlyNonNull" />
           <item index="10" class="java.lang.String" itemvalue="com.android.annotations.NonNull" />
-          <item index="11" class="java.lang.String" itemvalue="lombok.NonNull" />
-          <item index="12" class="java.lang.String" itemvalue="org.eclipse.jdt.annotation.NonNull" />
         </list>
       </value>
     </option>
@@ -92,7 +84,7 @@
     <resource url="http://maven.apache.org/ASSEMBLY/2.0.0" location="$PROJECT_DIR$/.idea/xml-schemas/assembly-2.0.0.xsd" />
     <resource url="http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd" location="$PROJECT_DIR$/.idea/xml-schemas/svg11.dtd" />
   </component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_8" project-jdk-name="1.8" project-jdk-type="JavaSDK">
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_8" default="false" project-jdk-name="1.8" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/classes" />
   </component>
 </project>

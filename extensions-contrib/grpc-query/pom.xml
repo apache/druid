@@ -48,7 +48,7 @@
   <dependencies>
     <dependency>
       <groupId>org.apache.druid.extensions.contrib</groupId>
-      <artifactId>druid-shaded-grpc</artifactId>
+      <artifactId>shaded-grpc</artifactId>
       <version>${project.parent.version}</version>
       <exclusions>
         <!-- gRPC uses a newer Guava version. It is shaded in the jar. Prevent the transitive

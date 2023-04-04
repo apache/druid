@@ -22,6 +22,7 @@ package org.apache.druid.grpc;
 import io.grpc.CallCredentials;
 import io.grpc.Metadata;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.concurrent.Executor;
 
@@ -59,7 +60,7 @@ public class BasicCredentials extends CallCredentials
   private static String getBasicAuthenticationHeader(String username, String password)
   {
     String valueToEncode = username + ":" + password;
-    return "Basic " + Base64.getEncoder().encodeToString(valueToEncode.getBytes());
+    return "Basic " + Base64.getEncoder().encodeToString(valueToEncode.getBytes(StandardCharsets.UTF_8));
   }
 
   @Override

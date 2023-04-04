@@ -87,7 +87,7 @@ Druid uses Jetty as its embedded web server. See [Configuring SSL/TLS KeyStores
 
 
    > WARNING: Do not use use self-signed certificates for production environments. Instead, rely on your current public key infrastructure to generate and distribute trusted keys.
-
+   
 
 
 ### Update Druid TLS configurations
@@ -115,10 +115,10 @@ druid.client.https.trustStorePassword=secret123  # replace with your own passwor
 druid.server.https.keyStoreType=jks
 druid.server.https.keyStorePath=my-keystore.jks # replace with correct keyStore file
 druid.server.https.keyStorePassword=secret123 # replace with your own password
-druid.server.https.certAlias=druid
+druid.server.https.certAlias=druid 
 
 ```
-For more information, see [TLS support](tls-support.md) and [Simple SSLContext Provider Module](../development/extensions-core/simple-client-sslcontext.md).
+For more information, see [TLS support](tls-support.md) and [Simple SSLContext Provider Module](../development/extensions-core/simple-client-sslcontext.md). 
 
 
 ## Authentication and authorization
@@ -130,24 +130,23 @@ Within Druid's operating context, authenticators control the way user identities
 The following graphic depicts the course of request through the authentication process:
 
 
-![Druid security check flow](../assets/security-model-1.png "Druid security check flow")
+![Druid security check flow](../assets/security-model-1.png "Druid security check flow") 
 
 
 ## Enable an authenticator
 
-To authenticate requests in Druid, you configure an Authenticator. Authenticator extensions exist for HTTP basic authentication, LDAP, and Kerberos.
+To authenticate requests in Druid, you configure an Authenticator. Authenticator extensions exist for HTTP basic authentication, LDAP, and Kerberos.  
 
-The following takes you through sample configuration steps for enabling basic auth:
+The following takes you through sample configuration steps for enabling basic auth:  
 
 1. Add the `druid-basic-security` extension to `druid.extensions.loadList` in `common.runtime.properties`. For the quickstart installation, for example, the properties file is at `conf/druid/cluster/_common`:
    ```
    druid.extensions.loadList=["druid-basic-security", "druid-histogram", "druid-datasketches", "druid-kafka-indexing-service"]
    ```
-2. Configure the basic Authenticator, Authorizer, and Escalator settings in the same common.runtime.properties file. The Escalator defines how Druid processes authenticate with one another.
+2. Configure the basic Authenticator, Authorizer, and Escalator settings in the same common.runtime.properties file. The Escalator defines how Druid processes authenticate with one another. 
 
-   An example configuration:
-
-   ```text
+An example configuration:
+   ```
    # Druid basic security
    druid.auth.authenticatorChain=["MyBasicMetadataAuthenticator"]
    druid.auth.authenticator.MyBasicMetadataAuthenticator.type=basic
@@ -158,12 +157,10 @@ The following takes you through sample configuration steps for enabling basic au
    # Default password for internal 'druid_system' user, should be changed for production.
    druid.auth.authenticator.MyBasicMetadataAuthenticator.initialInternalClientPassword=password2
 
-   # Uses the metadata store for storing users.
-   # You can use authentication API to create new users and grant permissions
+   # Uses the metadata store for storing users, you can use authentication API to create new users and grant permissions
    druid.auth.authenticator.MyBasicMetadataAuthenticator.credentialsValidator.type=metadata
 
-   # If true and the request credential doesn't exist in this credentials store,
-   # the request will proceed to next Authenticator in the chain.
+   # If true and the request credential doesn't exists in this credentials store, the request will proceed to next Authenticator in the chain.
    druid.auth.authenticator.MyBasicMetadataAuthenticator.skipOnFailure=false
 
    druid.auth.authenticator.MyBasicMetadataAuthenticator.authorizerName=MyBasicMetadataAuthorizer
@@ -179,80 +176,70 @@ The following takes you through sample configuration steps for enabling basic au
    druid.auth.authorizer.MyBasicMetadataAuthorizer.type=basic
    ```
 
-3. Restart the cluster.
+3. Restart the cluster. 
 
-See
+See [Authentication and Authorization](../design/auth.md) for more information about the Authenticator, Escalator, and Authorizer concepts. See [Basic Security](../development/extensions-core/druid-basic-security.md) for more information about the extension used in the examples above, and [Kerberos](../development/extensions-core/druid-kerberos.md) for Kerberos authentication.
 
-* [Authentication and Authorization](../design/auth.md) for more information about the Authenticator,
-Escalator, and Authorizer concepts.
-* [Basic Security](../development/extensions-core/druid-basic-security.md) for more information about
-the extension used in the examples above.
-* [Kerberos](../development/extensions-core/druid-kerberos.md) for Kerberos authentication.
-* [User authentication and authorization](security-user-auth.md) for details of permissions.
-* [SQL permissions](security-user-auth.md#sql-permissions) for permissions on SQL system tables.
 
 ## Enable authorizers
 
-After enabling the basic auth extension, you can add users, roles, and permissions via the Druid Coordinator `user` endpoint. Note that you cannot assign permissions directly to individual users. They must be assigned through roles.
+After enabling the basic auth extension, you can add users, roles, and permissions via the Druid Coordinator `user` endpoint. Note that you cannot assign permissions directly to individual users. They must be assigned through roles. 
 
 The following diagram depicts the authorization model, and the relationship between users, roles, permissions, and resources.
+ 
+![Druid Security model](../assets/security-model-2.png "Druid security model") 
 
-![Druid Security model](../assets/security-model-2.png "Druid security model")
 
-
-The following steps walk through a sample setup procedure:
+The following steps walk through a sample setup procedure:  
 
 > The default Coordinator API port is 8081 for non-TLS connections and 8281 for secured connections.
 
-1. Create a user by issuing a POST request to `druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/<USERNAME>`,
-   replacing USERNAME with the *new* username you are trying to create. For example:
-   ```bash
+1. Create a user by issuing a POST request to `druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/<USERNAME>`, replacing USERNAME with the *new* username you are trying to create. For example: 
+  ```
    curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/myname
-   ```
-   >  If you have TLS enabled, be sure to adjust the curl command accordingly. For example, if your Druid servers use self-signed certificates,
-   you may choose to include the `insecure` curl option to forgo certificate checking for the curl command.
-
+  ```
+  >  If you have TLS enabled, be sure to adjust the curl command accordingly. For example, if your Druid servers use self-signed certificates, you may choose to include the `insecure` curl option to forgo certificate checking for the curl command. 
 2. Add a credential for the user by issuing a POST to `druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/<USERNAME>/credentials`. For example:
-   ```bash
-   curl -u admin:password1 -H'Content-Type: application/json' -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/myname/credentials --data-raw '{"password": "my_password"}'
-   ```
-2. For each authenticator user you create, create a corresponding authorizer user by issuing a POST request to `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/<USERNAME>`. For example:
-	 ```bash
-	 curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/myname
-	 ```
-3. Create authorizer roles to control permissions by issuing a POST request to `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/<ROLENAME>`. For example:
-	 ```bash
+    ```
+    curl -u admin:password1 -H'Content-Type: application/json' -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/myname/credentials --data-raw '{"password": "my_password"}'
+    ```
+2. For each authenticator user you create, create a corresponding authorizer user by issuing a POST request to `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/<USERNAME>`. For example: 
+	```
+	curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/myname
+	```
+3. Create authorizer roles to control permissions by issuing a POST request to `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/<ROLENAME>`. For example: 
+	```
    curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/myrole
    ```
-4. Assign roles to users by issuing a POST request to `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/<USERNAME>/roles/<ROLENAME>`. For example:
-	 ```bash
-	 curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/myname/roles/myrole | jq
-	 ```
-5. Finally, attach permissions to the roles to control how they can interact with Druid at `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/<ROLENAME>/permissions`.
-	 For example:
-	 ```bash
-	 curl -u admin:password1 -H'Content-Type: application/json' -XPOST --data-binary @perms.json https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/myrole/permissions
-	 ```
+4. Assign roles to users by issuing a POST request to `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/<USERNAME>/roles/<ROLENAME>`. For example: 
+	```
+	curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/myname/roles/myrole | jq
+	```
+5. Finally, attach permissions to the roles to control how they can interact with Druid at `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/<ROLENAME>/permissions`. 
+	For example: 
+	```
+	curl -u admin:password1 -H'Content-Type: application/json' -XPOST --data-binary @perms.json https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/myrole/permissions
+	```
 	The payload of `perms.json` should be in the form:
- 	```json
-  [
+   	```
+    [
     {
       "resource": {
-        "type": "DATASOURCE",
-        "name": "<PATTERN>"
+        "name": "<PATTERN>",
+        "type": "DATASOURCE"
       },
       "action": "READ"
     },
     {
       "resource": {
-        "type": "STATE",
-        "name": "STATE"
-      },
-      "action": "READ"
+      "name": "STATE",
+      "type": "STATE"
+    },
+    "action": "READ"
     }
-  ]
-  ```
-  > Note: Druid treats the resource name as a regular expression (regex). You can use a specific datasource name or regex to grant permissions for multiple datasources at a time.
+    ]
+    ```
+    > Note: Druid treats the resource name as a regular expression (regex). You can use a specific datasource name or regex to grant permissions for multiple datasources at a time.
 
 
 ## Configuring an LDAP authenticator
