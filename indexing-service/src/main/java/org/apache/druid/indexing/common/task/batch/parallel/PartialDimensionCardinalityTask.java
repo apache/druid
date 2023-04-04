@@ -27,6 +27,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
@@ -48,6 +49,7 @@ import org.apache.druid.timeline.partition.HashPartitioner;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
@@ -135,19 +137,20 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
     return TYPE;
   }
 
+  @Nonnull
   @JsonIgnore
-  @Nullable
   @Override
   public Set<String> getInputSourceTypes()
   {
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
            getIngestionSchema().getIOConfig().getInputSource().getTypes() :
-           null;
+           ImmutableSet.of();
   }
 
   @JsonIgnore
   @Override
-  public boolean usesFirehose() {
+  public boolean usesFirehose()
+  {
     return getIngestionSchema().getIOConfig().getFirehoseFactory() != null;
   }
 

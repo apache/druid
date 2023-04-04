@@ -246,6 +246,7 @@ public class S3InputSource extends CloudObjectInputSource
     this.maxRetries = maxRetries;
   }
 
+  @Nonnull
   @Override
   public Set<String> getTypes() {
     return Collections.singleton(TYPE_KEY);

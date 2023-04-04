@@ -27,6 +27,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -91,6 +92,7 @@ import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.utils.CloseableUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
@@ -215,17 +217,18 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     return "index_realtime_appenderator";
   }
 
+  @Nonnull
   @JsonIgnore
-  @Nullable
   @Override
   public Set<String> getInputSourceTypes()
   {
-    return null;
+    return ImmutableSet.of();
   }
 
   @JsonIgnore
   @Override
-  public boolean usesFirehose() {
+  public boolean usesFirehose()
+  {
     return true;
   }
 

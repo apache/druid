@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
@@ -40,6 +41,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
@@ -150,19 +152,20 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
     return TYPE;
   }
 
+  @Nonnull
   @JsonIgnore
-  @Nullable
   @Override
   public Set<String> getInputSourceTypes()
   {
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
            getIngestionSchema().getIOConfig().getInputSource().getTypes() :
-           null;
+           ImmutableSet.of();
   }
 
   @JsonIgnore
   @Override
-  public boolean usesFirehose() {
+  public boolean usesFirehose()
+  {
     return getIngestionSchema().getIOConfig().getFirehoseFactory() != null;
   }
 

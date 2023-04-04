@@ -19,10 +19,10 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
@@ -40,7 +40,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 
-import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 import java.util.Map;
 import java.util.Set;
 
@@ -141,12 +141,14 @@ public interface Task
    */
   String getDataSource();
 
-  @Nullable
-  default Set<String> getInputSourceTypes() {
-    return null;
+  @Nonnull
+  default Set<String> getInputSourceTypes()
+  {
+    return ImmutableSet.of();
   }
 
-  default boolean usesFirehose() {
+  default boolean usesFirehose()
+  {
     return false;
   }
 

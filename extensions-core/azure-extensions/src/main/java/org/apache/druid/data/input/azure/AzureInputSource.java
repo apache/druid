@@ -93,6 +93,7 @@ public class AzureInputSource extends CloudObjectInputSource
     );
   }
 
+  @Nonnull
   @Override
   public Set<String> getTypes() {
     return Collections.singleton(SCHEME);

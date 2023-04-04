@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 
 import javax.annotation.Nullable;
@@ -73,9 +74,8 @@ public interface SupervisorSpec
    */
   String getType();
 
-  @Nullable
   default Set<String> getInputSourceTypes() {
-    return null;
+    return ImmutableSet.of();
   }
 
   default boolean usesFirehose() {

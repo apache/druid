@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -71,6 +72,7 @@ import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Map;
@@ -181,17 +183,18 @@ public class RealtimeIndexTask extends AbstractTask
     return "index_realtime";
   }
 
+  @Nonnull
   @JsonIgnore
-  @Nullable
   @Override
   public Set<String> getInputSourceTypes()
   {
-    return null;
+    return ImmutableSet.of();
   }
 
   @JsonIgnore
   @Override
-  public boolean usesFirehose() {
+  public boolean usesFirehose()
+  {
     return true;
   }
 

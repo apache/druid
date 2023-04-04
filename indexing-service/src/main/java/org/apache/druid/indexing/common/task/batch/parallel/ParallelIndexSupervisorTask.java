@@ -271,8 +271,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return TYPE;
   }
 
+  @Nonnull
   @JsonIgnore
-  @Nullable
   @Override
   public Set<String> getInputSourceTypes()
   {
@@ -283,7 +283,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   @JsonIgnore
   @Override
-  public boolean usesFirehose() {
+  public boolean usesFirehose()
+  {
     return ingestionSchema.getIOConfig().getFirehoseFactory() != null;
   }
 

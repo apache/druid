@@ -35,6 +35,7 @@ import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.metadata.SQLFirehoseDatabaseConnector;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Collections;
@@ -70,6 +71,7 @@ public class SqlInputSource extends AbstractInputSource implements SplittableInp
     this.objectMapper = objectMapper;
   }
 
+  @Nonnull
   @Override
   public Set<String> getTypes() {
     return Collections.singleton(TYPE_KEY);

@@ -1280,6 +1280,28 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
   }
 
+  @Test(timeout = 60_000L)
+  public void testNullInputSources()
+  {
+    // Expect 2 segments as we will hit maxTotalRows
+    expectPublishedSegments(2);
+
+    final AppenderatorDriverRealtimeIndexTask task =
+        makeRealtimeTask(null, Integer.MAX_VALUE, 1500L);
+    Assert.assertTrue(task.getInputSourceTypes().isEmpty());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testUsesFirehose()
+  {
+    // Expect 2 segments as we will hit maxTotalRows
+    expectPublishedSegments(2);
+
+    final AppenderatorDriverRealtimeIndexTask task =
+        makeRealtimeTask(null, Integer.MAX_VALUE, 1500L);
+    Assert.assertTrue(task.usesFirehose());
+  }
+
   private ListenableFuture<TaskStatus> runTask(final Task task)
   {
     try {

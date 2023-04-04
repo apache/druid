@@ -289,8 +289,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
   }
 
+  @Nonnull
   @JsonIgnore
-  @Nullable
   @Override
   public Set<String> getInputSourceTypes()
   {
@@ -301,7 +301,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   @JsonIgnore
   @Override
-  public boolean usesFirehose() {
+  public boolean usesFirehose()
+  {
     return ingestionSchema.getIOConfig().firehoseFactory != null;
   }
 

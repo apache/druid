@@ -172,6 +172,8 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
       final TaskActionClient subTaskActionClient = createActionClient(subTask);
       prepareTaskForLocking(subTask);
       Assert.assertTrue(subTask.isReady(subTaskActionClient));
+      Assert.assertEquals(Collections.singleton(LocalInputSource.TYPE_KEY), subTask.getInputSourceTypes());
+      Assert.assertFalse(subTask.usesFirehose());
     }
   }
 

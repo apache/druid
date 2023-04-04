@@ -76,6 +76,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
     this.inputDataConfig = inputDataConfig;
   }
 
+  @Nonnull
   @Override
   public Set<String> getTypes() {
     return Collections.singleton(TYPE_KEY);

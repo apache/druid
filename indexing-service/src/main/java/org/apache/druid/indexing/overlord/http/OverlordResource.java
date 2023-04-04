@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord.http;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
@@ -194,31 +195,18 @@ public class OverlordResource
   public Response taskPost(final Task task, @Context final HttpServletRequest req)
   {
     final String dataSource = task.getDataSource();
-    final Set<ResourceAction> resourceActions = new HashSet<>();
-    resourceActions.add(new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.WRITE));
-    if (authConfig.isEnableInputSourceSecurity()) {
-      if (task.usesFirehose()) {
-        return Response.status(Response.Status.BAD_REQUEST)
-            .entity(
-                ImmutableMap.of(
-                    "error",
-                    StringUtils.format(
-                        "Input source based security cannot be performed for Task[%s] because it uses firehose."
-                        + "Change the tasks configuration, or disable `isEnableInputSourceSecurity`",
-                        task.getId()
-                    )
-                )
-            )
-            .build();
-      }
-      if (null != task.getInputSourceTypes()) {
-        for (String inputSourceType : task.getInputSourceTypes()) {
-          resourceActions.add(new ResourceAction(
-              new Resource(ResourceType.EXTERNAL, inputSourceType),
-              Action.READ
-          ));
-        }
-      }
+    final Set<ResourceAction> resourceActions;
+    try {
+      resourceActions = getNeededResourceActionsForTask(task);
+    } catch (IAE e) {
+      return Response.status(Response.Status.BAD_REQUEST)
+          .entity(
+              ImmutableMap.of(
+                  "error",
+                  e.getMessage()
+              )
+          )
+          .build();
     }
 
     Access authResult = AuthorizationUtils.authorizeAllResourceActions(
@@ -1112,6 +1100,27 @@ public class OverlordResource
       // Encourage client to try again soon, when we'll likely have a redirect set up
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
     }
+  }
+
+  @VisibleForTesting
+  Set<ResourceAction> getNeededResourceActionsForTask(Task task) throws IAE
+  {
+    final String dataSource = task.getDataSource();
+    final Set<ResourceAction> resourceActions = new HashSet<>();
+    resourceActions.add(new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.WRITE));
+    if (authConfig.isEnableInputSourceSecurity()) {
+      if (task.usesFirehose()) {
+        throw new IAE(StringUtils.format(
+            "Input source based security cannot be performed for Task[%s] because it uses firehose."
+            + "Change the tasks configuration, or disable `isEnableInputSourceSecurity`",
+            task.getId()
+        ));
+      }
+      for (String inputSourceType : task.getInputSourceTypes()) {
+        resourceActions.add(new ResourceAction(new Resource(ResourceType.EXTERNAL, inputSourceType), Action.READ));
+      }
+    }
+    return resourceActions;
   }
 
   private List<TaskStatusPlus> securedTaskStatusPlus(

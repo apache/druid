@@ -210,6 +210,88 @@ public class IndexTaskTest extends IngestionTestBase
   }
 
   @Test
+  public void testCorrectInputSourceTypes() throws IOException
+  {
+    File tmpDir = temporaryFolder.newFolder();
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        new IndexIngestionSpec(
+            new DataSchema(
+                "test-json",
+                DEFAULT_TIMESTAMP_SPEC,
+                new DimensionsSpec(
+                    ImmutableList.of(
+                        new StringDimensionSchema("ts"),
+                        new StringDimensionSchema("dim"),
+                        new LongDimensionSchema("valDim")
+                    )
+                ),
+                new AggregatorFactory[]{new LongSumAggregatorFactory("valMet", "val")},
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    Granularities.MINUTE,
+                    Collections.singletonList(Intervals.of("2014/P1D"))
+                ),
+                null
+            ),
+            new IndexIOConfig(
+                null,
+                new LocalInputSource(tmpDir, "druid*"),
+                DEFAULT_INPUT_FORMAT,
+                false,
+                false
+            ),
+            createTuningConfigWithMaxRowsPerSegment(10, true)
+        ),
+        null
+    );
+
+    Assert.assertEquals(Collections.singleton("local"), indexTask.getInputSourceTypes());
+  }
+
+  @Test
+  public void testUseFirehoseFalse() throws IOException
+  {
+    File tmpDir = temporaryFolder.newFolder();
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        new IndexIngestionSpec(
+            new DataSchema(
+                "test-json",
+                DEFAULT_TIMESTAMP_SPEC,
+                new DimensionsSpec(
+                    ImmutableList.of(
+                        new StringDimensionSchema("ts"),
+                        new StringDimensionSchema("dim"),
+                        new LongDimensionSchema("valDim")
+                    )
+                ),
+                new AggregatorFactory[]{new LongSumAggregatorFactory("valMet", "val")},
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    Granularities.MINUTE,
+                    Collections.singletonList(Intervals.of("2014/P1D"))
+                ),
+                null
+            ),
+            new IndexIOConfig(
+                null,
+                new LocalInputSource(tmpDir, "druid*"),
+                DEFAULT_INPUT_FORMAT,
+                false,
+                false
+            ),
+            createTuningConfigWithMaxRowsPerSegment(10, true)
+        ),
+        null
+    );
+
+    Assert.assertFalse(indexTask.usesFirehose());
+  }
+
+  @Test
   public void testIngestNullOnlyColumns() throws Exception
   {
     File tmpDir = temporaryFolder.newFolder();

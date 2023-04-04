@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.PasswordProvider;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.net.URI;
@@ -70,6 +71,7 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
     this.config = config;
   }
 
+  @Nonnull
   @Override
   public Set<String> getTypes()
   {

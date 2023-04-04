@@ -87,6 +87,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -921,6 +922,9 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         ),
         null
     );
+
+    Assert.assertEquals(Collections.singleton(LocalInputSource.TYPE_KEY), indexTask.getInputSourceTypes());
+    Assert.assertFalse(indexTask.usesFirehose());
 
     runTask(indexTask);
   }

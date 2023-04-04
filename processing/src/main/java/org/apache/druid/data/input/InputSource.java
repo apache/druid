@@ -23,12 +23,14 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.impl.CombiningInputSource;
 import org.apache.druid.data.input.impl.HttpInputSource;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.guice.annotations.UnstableApi;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Set;
@@ -89,9 +91,14 @@ public interface InputSource
       File temporaryDirectory
   );
 
-  @Nullable
+  /**
+   * The types of input sources uses. A set is returned here, as some InputSource implementation allow for
+   * combining of multiple input sources.
+   * @return The types of input sources uses
+   */
+  @Nonnull
   default Set<String> getTypes()
   {
-    return null;
+    return ImmutableSet.of();
   }
 }

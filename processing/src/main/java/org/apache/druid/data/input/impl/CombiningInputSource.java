@@ -29,6 +29,7 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.java.util.common.Pair;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.HashSet;
@@ -63,16 +64,15 @@ public class CombiningInputSource extends AbstractInputSource implements Splitta
     this.delegates = delegates;
   }
 
+  @Nonnull
   @Override
   public Set<String> getTypes()
   {
     Set<String> types = new HashSet<>();
     for (InputSource delegate : delegates) {
-      Set<String> delegateTypes = delegate.getTypes();
-      if (null != delegateTypes) {
-        types.addAll(delegateTypes);
-      }
+      types.addAll(delegate.getTypes());
     }
+
     return types;
   }
 

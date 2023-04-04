@@ -72,6 +72,7 @@ import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.util.ToolRunner;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
@@ -195,8 +196,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     return "index_hadoop";
   }
 
+  @Nonnull
   @JsonIgnore
-  @Nullable
   @Override
   public Set<String> getInputSourceTypes()
   {
@@ -205,7 +206,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
   @JsonIgnore
   @Override
-  public boolean usesFirehose() {
+  public boolean usesFirehose()
+  {
     return false;
   }
 

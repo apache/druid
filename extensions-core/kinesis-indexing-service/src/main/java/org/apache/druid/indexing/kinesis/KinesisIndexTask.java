@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.utils.RuntimeInfo;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Map;
@@ -44,6 +45,7 @@ import java.util.Set;
 
 public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, ByteEntity>
 {
+  public static final String INPUT_SOURCE_TYPE = "kinesis";
   private static final String TYPE = "index_kinesis";
   private static final Logger log = new Logger(KinesisIndexTask.class);
 
@@ -151,12 +153,12 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
     return TYPE;
   }
 
+  @Nonnull
   @JsonIgnore
-  @Nullable
   @Override
   public Set<String> getInputSourceTypes()
   {
-    return Collections.singleton("kinesis");
+    return Collections.singleton(INPUT_SOURCE_TYPE);
   }
 
   @Override

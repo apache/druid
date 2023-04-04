@@ -127,6 +127,8 @@ public class KinesisIndexTaskSerdeTest
     Assert.assertEquals(ACCESS_KEY, awsCredentialsConfig.getAccessKey().getPassword());
     Assert.assertEquals(SECRET_KEY, awsCredentialsConfig.getSecretKey().getPassword());
     Assert.assertEquals(FILE_SESSION_CREDENTIALS, awsCredentialsConfig.getFileSessionCredentials());
+    Assert.assertEquals(Collections.singleton(KinesisIndexTask.INPUT_SOURCE_TYPE), target.getInputSourceTypes());
+    Assert.assertFalse(target.usesFirehose());
   }
 
   private static ObjectMapper createObjectMapper()

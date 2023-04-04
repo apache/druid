@@ -2672,6 +2672,68 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(task, task1);
   }
 
+  @Test
+  public void testCorrectInputSources() throws Exception
+  {
+    // This is both a serde test and a regression test for https://github.com/apache/druid/issues/7724.
+
+    final KafkaIndexTask task = createTask(
+        "taskid",
+        NEW_DATA_SCHEMA.withTransformSpec(
+            new TransformSpec(
+                null,
+                ImmutableList.of(new ExpressionTransform("beep", "nofunc()", ExprMacroTable.nil()))
+            )
+        ),
+        new KafkaIndexTaskIOConfig(
+            0,
+            "sequence",
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of()),
+            ImmutableMap.of(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null,
+            INPUT_FORMAT,
+            null
+        )
+    );
+
+    Assert.assertEquals(Collections.singleton(KafkaIndexTask.INPUT_SOURCE_TYPE), task.getInputSourceTypes());
+  }
+
+  @Test
+  public void testDoesntUseFirehose() throws Exception
+  {
+    // This is both a serde test and a regression test for https://github.com/apache/druid/issues/7724.
+
+    final KafkaIndexTask task = createTask(
+        "taskid",
+        NEW_DATA_SCHEMA.withTransformSpec(
+            new TransformSpec(
+                null,
+                ImmutableList.of(new ExpressionTransform("beep", "nofunc()", ExprMacroTable.nil()))
+            )
+        ),
+        new KafkaIndexTaskIOConfig(
+            0,
+            "sequence",
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of()),
+            ImmutableMap.of(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null,
+            INPUT_FORMAT,
+            null
+        )
+    );
+
+    Assert.assertFalse(task.usesFirehose());
+  }
+
   /**
    * Wait for a task to consume certain offsets (inclusive).
    */

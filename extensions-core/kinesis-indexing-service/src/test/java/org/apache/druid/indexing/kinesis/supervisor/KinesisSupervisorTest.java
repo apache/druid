@@ -4080,6 +4080,99 @@ public class KinesisSupervisorTest extends EasyMockSupport
     testShardSplitPhaseThree(phaseTwoTasks);
   }
 
+  @Test
+  public void testCorrectInputSources() {
+    KinesisSupervisorSpec supervisorSpec = new KinesisSupervisorSpec(
+        null,
+        dataSchema,
+        null,
+        new KinesisSupervisorIOConfig(
+            STREAM,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            true,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            false
+        ),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    Assert.assertEquals(
+        Collections.singleton(KinesisIndexTask.INPUT_SOURCE_TYPE),
+        supervisorSpec.getInputSourceTypes()
+    );
+  }
+
+  @Test
+  public void testDoesntUseFirehose() {
+    KinesisSupervisorSpec supervisorSpec = new KinesisSupervisorSpec(
+        null,
+        dataSchema,
+        null,
+        new KinesisSupervisorIOConfig(
+            STREAM,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            true,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            false
+        ),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    Assert.assertFalse(supervisorSpec.usesFirehose());
+  }
+
   private List<Task> testShardSplitPhaseOne() throws Exception
   {
     supervisorRecordSupplier.assign(EasyMock.anyObject());

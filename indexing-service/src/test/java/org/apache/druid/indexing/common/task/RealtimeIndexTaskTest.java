@@ -199,6 +199,20 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
     Assert.assertTrue(task.supportsQueries());
   }
 
+  @Test(timeout = 60_000L)
+  public void testInputSourceTypes()
+  {
+    final RealtimeIndexTask task = makeRealtimeTask(null);
+    Assert.assertNull(task.getInputSourceTypes());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testUsesFirehose()
+  {
+    final RealtimeIndexTask task = makeRealtimeTask(null);
+    Assert.assertTrue(task.usesFirehose());
+  }
+
   @Test(timeout = 60_000L, expected = ExecutionException.class)
   public void testHandoffTimeout() throws Exception
   {

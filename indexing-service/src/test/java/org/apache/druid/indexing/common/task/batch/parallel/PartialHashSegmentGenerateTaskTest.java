@@ -39,6 +39,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -84,6 +85,18 @@ public class PartialHashSegmentGenerateTaskTest
   {
     String id = target.getId();
     Assert.assertThat(id, Matchers.startsWith(PartialHashSegmentGenerateTask.TYPE));
+  }
+
+  @Test
+  public void hasCorrectInputSourceTypes()
+  {
+    Assert.assertEquals(Collections.singleton(LocalInputSource.TYPE_KEY), target.getInputSourceTypes());
+  }
+
+  @Test
+  public void hasCorrectUsesFirehose()
+  {
+    Assert.assertFalse( target.usesFirehose());
   }
 
   @Test

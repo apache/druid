@@ -28,6 +28,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.IngestionState;
@@ -78,6 +79,7 @@ import org.apache.druid.timeline.partition.PartitionChunk;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
@@ -191,19 +193,20 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     return TYPE;
   }
 
+  @Nonnull
   @JsonIgnore
-  @Nullable
   @Override
   public Set<String> getInputSourceTypes()
   {
     return ingestionSchema.getIOConfig().getInputSource() != null ?
            ingestionSchema.getIOConfig().getInputSource().getTypes() :
-           null;
+           ImmutableSet.of();
   }
 
   @JsonIgnore
   @Override
-  public boolean usesFirehose() {
+  public boolean usesFirehose()
+  {
     return ingestionSchema.getIOConfig().getFirehoseFactory() != null;
   }
 

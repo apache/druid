@@ -115,6 +115,22 @@ public class PartialDimensionCardinalityTaskTest
     }
 
     @Test
+    public void hasCorrectInputSourceTypes()
+    {
+      PartialDimensionCardinalityTask task = new PartialDimensionCardinalityTaskBuilder()
+          .build();
+      Assert.assertEquals(Collections.singleton(InlineInputSource.TYPE_KEY), task.getInputSourceTypes());
+    }
+
+    @Test
+    public void hasCorrectUsesfirehose()
+    {
+      PartialDimensionCardinalityTask task = new PartialDimensionCardinalityTaskBuilder()
+          .build();
+      Assert.assertFalse(task.usesFirehose());
+    }
+
+    @Test
     public void hasCorrectPrefixForAutomaticId()
     {
       PartialDimensionCardinalityTask task = new PartialDimensionCardinalityTaskBuilder()

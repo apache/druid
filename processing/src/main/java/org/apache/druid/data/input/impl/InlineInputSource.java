@@ -30,6 +30,7 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Collections;
@@ -50,6 +51,7 @@ public class InlineInputSource extends AbstractInputSource
     this.data = data;
   }
 
+  @Nonnull
   @Override
   public Set<String> getTypes()
   {

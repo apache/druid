@@ -34,6 +34,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
 
 public class SinglePhaseSubTaskSpecTest
@@ -88,5 +89,7 @@ public class SinglePhaseSubTaskSpecTest
     final byte[] json = mapper.writeValueAsBytes(expected);
     final Map<String, Object> actual = mapper.readValue(json, Map.class);
     Assert.assertEquals(SinglePhaseSubTask.OLD_TYPE_NAME, actual.get("type"));
+    Assert.assertEquals(Collections.singleton(LocalInputSource.TYPE_KEY), expected.getInputSourceTypes());
+    Assert.assertFalse(expected.usesFirehose());
   }
 }

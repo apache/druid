@@ -45,6 +45,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.CollectionUtils;
 import org.apache.druid.utils.Streams;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Collections;
@@ -82,6 +83,7 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
     }
   }
 
+  @Nonnull
   @Override
   public Set<String> getTypes()
   {
