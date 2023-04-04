@@ -22,6 +22,7 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
+import com.google.common.math.LongMath;
 import com.google.inject.Inject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.client.CachingClusteredClient;
@@ -201,8 +202,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     );
 
     log.info("Memory used by subqueries of query [%s] is [%d]", query, memoryLimitAcc.get());
-
-    int x = 5;
 
     if (canRunQueryUsingLocalWalker(newQuery)) {
       // No need to decorate since LocalQuerySegmentWalker does its own.
@@ -643,7 +642,13 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       }
       try {
         Sequence<FrameSignaturePair> frames = toolChest.resultsAsFrames(query, results);
-        Long memoryUsed = frames.accumulate(0L, ((accumulated, in) -> accumulated + in.getFrame().numBytes()));
+        Long memoryUsed = frames.accumulate(
+            0L,
+            ((accumulated, in) -> LongMath.checkedAdd(
+                accumulated,
+                in.getFrame().numBytes()
+            ))
+        );
         dataSource = new FramesBackedInlineDataSource(frames, toolChest.resultArraySignature(query));
 
         if (memoryLimitAccumulator.addAndGet(memoryUsed) >= memoryLimitToUse) {
@@ -657,8 +662,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         throw rlee;
       }
       catch (Exception e) {
-        log.info("Unable to write the subquery results to a frame. Results won't be accounted for in the memory"
-                 + "calculation");
+        log.info(
+            "Unable to write the subquery results to a frame. Results won't be accounted for in the memory "
+            + "calculation"
+        );
       }
     }
     return dataSource;
