@@ -174,7 +174,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testBasicFunctionality() throws IOException
+  public void testBasicFunctionality()
   {
     ColumnBuilder bob = new ColumnBuilder();
     bob.setFileMapper(fileMapper);
