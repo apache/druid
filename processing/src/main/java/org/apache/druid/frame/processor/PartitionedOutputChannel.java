@@ -61,15 +61,6 @@ public class PartitionedOutputChannel
   }
 
   /**
-   * writableChannelNew = writableChannel {
-   *   close() {
-   *     super.close();
-   *     PartitionedOutputChannel.this.convertToReadOnly();
-   *   }
-   * }
-   */
-
-  /**
    * Creates a partitioned output channel pair.
    *
    * @param writableChannel         writable channel for producer

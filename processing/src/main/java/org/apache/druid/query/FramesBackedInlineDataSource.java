@@ -44,6 +44,18 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * Represents an inline datasource where the rows are embedded within the DataSource object itself.
+ *
+ * The rows are backed by a sequence of {@link FrameSignaturePair}, which contain the Frame representation of the rows
+ * represented by the datasource. {@link #getRowsAsList()} and {@link #getRowsAsSequence()} return the iterables which
+ * read the rows that are encapsulated in the frames.
+ *
+ * Note that the signature of the datasource can be different from the signatures of the constituent frames that it
+ * consists of. While fetching the iterables, it is the job of this class to make sure that the rows correspond to the
+ * {@link #rowSignature}. For frames that donot contain the columns present in the {@link #rowSignature}, they are
+ * populated with {@code null}.
+ */
 public class FramesBackedInlineDataSource implements DataSource
 {
 

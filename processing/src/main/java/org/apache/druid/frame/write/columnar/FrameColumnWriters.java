@@ -29,6 +29,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
@@ -63,7 +64,7 @@ public class FrameColumnWriters
     if (type == null) {
       if (allowNullType) {
         // Serde unknown types as complex
-        return makeComplexWriter(columnSelectorFactory, allocator, column, "json");
+        return makeComplexWriter(columnSelectorFactory, allocator, column, NestedDataComplexTypeSerde.TYPE_NAME);
       }
       throw new UnsupportedColumnTypeException(column, null);
     }

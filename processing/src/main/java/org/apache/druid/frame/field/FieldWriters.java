@@ -28,6 +28,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
@@ -63,7 +64,7 @@ public class FieldWriters
   {
     if (columnType == null) {
       if (allowNullColumnType) {
-        return makeLongWriter(columnSelectorFactory, columnName);
+        return makeComplexWriter(columnSelectorFactory, columnName, NestedDataComplexTypeSerde.TYPE_NAME);
       }
       throw new UnsupportedColumnTypeException(columnName, null);
     }

@@ -36,6 +36,7 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -94,7 +95,7 @@ public class FrameReader
                 signature.getColumnName(columnNumber)
             );
       } else {
-        columnType = signature.getColumnType(columnNumber).orElse(ColumnType.ofComplex("json"));
+        columnType = signature.getColumnType(columnNumber).orElse(NestedDataComplexTypeSerde.TYPE);
       }
 
       columnReaders.add(FrameColumnReaders.create(columnNumber, columnType));

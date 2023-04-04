@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -31,6 +32,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+/**
+ * Serializes {@link FramesBackedInlineDataSource} to the representation of {@link IterableBackedInlineDataSource}
+ * so that the servers' on wire transfer data doesn't change. {@link FramesBackedInlineDataSource} is currently limited
+ * to the brokers only and therefore this aids in conversion of the object to a representation that the data servers
+ * can recognize
+ */
 public class FramesBackedInlineDataSourceSerializer extends StdSerializer<FramesBackedInlineDataSource>
 {
   public FramesBackedInlineDataSourceSerializer()
@@ -56,11 +63,7 @@ public class FramesBackedInlineDataSourceSerializer extends StdSerializer<Frames
 
     value.getRowsAsSequence().forEach(row -> {
       try {
-        jg.writeStartArray();
-        for (Object o : row) {
-          jg.writeObject(o);
-        }
-        jg.writeEndArray();
+        JacksonUtils.writeObjectUsingSerializerProvider(jg, serializers, row);
       }
       catch (IOException e) {
         // Do nothing, shouldn't be possible for now
@@ -71,6 +74,9 @@ public class FramesBackedInlineDataSourceSerializer extends StdSerializer<Frames
     jg.writeEndObject();
   }
 
+  /**
+   * Required because {@link DataSource} is polymorphic
+   */
   @Override
   public void serializeWithType(
       FramesBackedInlineDataSource value,
