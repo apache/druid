@@ -473,7 +473,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         }
 
         if (unavailableSegmentsIds.size() > 0) {
-          log.error("Detected [%d] unavailable segments, segment ids: [%s]", unavailableSegmentsIds.size(), unavailableSegmentsIds);
+          log.warn("Detected [%d] unavailable segments, segment ids: [%s]", unavailableSegmentsIds.size(), unavailableSegmentsIds);
           if (partialResultAction == QueryContexts.PartialResultAction.FAIL) {
             throw new QueryException(
                 QueryException.UNAVAILABLE_SEGMENTS_ERROR_CODE,
