@@ -98,7 +98,7 @@ SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(<expr>, '<serialized_byte
 
 ### Expression and Virtual Column Support
 
-The bloom filter extension also adds a bloom filter [Druid expression](../../misc/math-expr.md) which shares syntax
+The bloom filter extension also adds a bloom filter [Druid expression](../../querying/math-expr.md) which shares syntax
 with the SQL operator.
 
 ```sql

@@ -88,13 +88,13 @@ The metadata storage holds various shared system metadata such as segment usage 
 clustered deployment, this is typically a traditional RDBMS like PostgreSQL or MySQL. In a single-server
 deployment, it is typically a locally-stored Apache Derby database.
 
-For more details, please see the [Metadata storage](../dependencies/metadata-storage.md) page.
+For more details, please see the [Metadata storage](../design/metadata-storage.md) page.
 
 ### ZooKeeper
 
 Used for internal service discovery, coordination, and leader election.
 
-For more details, please see the [ZooKeeper](../dependencies/zookeeper.md) page.
+For more details, please see the [ZooKeeper](../design/zookeeper.md) page.
 
 
 ## Storage design
@@ -203,7 +203,7 @@ new segments. Then it drops the old segments a few minutes later.
 Each segment has a lifecycle that involves the following three major areas:
 
 1. **Metadata store:** Segment metadata (a small JSON payload generally no more than a few KB) is stored in the
-[metadata store](../dependencies/metadata-storage.md) once a segment is done being constructed. The act of inserting
+[metadata store](../design/metadata-storage.md) once a segment is done being constructed. The act of inserting
 a record for a segment into the metadata store is called _publishing_. These metadata records have a boolean flag
 named `used`, which controls whether the segment is intended to be queryable or not. Segments created by realtime tasks will be
 available before they are published, since they are only published when the segment is complete and will not accept

@@ -48,7 +48,7 @@ If your Kafka cluster enables consumer-group based ACLs, you can set `group.id` 
 
 ## Load the Kafka indexing service
 
-To use the Kafka indexing service, load the `druid-kafka-indexing-service` extension on both the Overlord and the MiddleManagers. See [Loading extensions](../configuration/extensions.md#loading-extensions) for instructions on how to configure extensions.
+To use the Kafka indexing service, load the `druid-kafka-indexing-service` extension on both the Overlord and the MiddleManagers. See [Loading extensions](../../configuration/extensions.md) for instructions on how to configure extensions.
 
 ## Define a supervisor spec
 Similar to the ingestion spec for batch ingestion, the supervisor spec configures the data ingestion for Kafka streaming ingestion. A supervisor spec has the following sections:
