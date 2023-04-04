@@ -172,47 +172,10 @@ ORDER BY SUM(added) DESC
 
 ![Query example](../assets/tutorial-query-07.png "Query example")
 
-<!--
-## Other ways to invoke SQL queries
-
-### Query SQL via dsql
-
-For convenience, the Druid package includes a SQL command-line client, located at `bin/dsql` in the Druid package root.
-
-Let's now run `bin/dsql`; you should see the following prompt:
-
-```bash
-Welcome to dsql, the command-line client for Druid SQL.
-Type "\h" for help.
-dsql>
-```
-
-To submit the query, paste it to the `dsql` prompt and press enter:
-
-```bash
-dsql> SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE TIME_IN_INTERVAL("__time", '2016-06-27/2016-06-28') GROUP BY page ORDER BY Edits DESC LIMIT 10;
-┌──────────────────────────────────────────────────────────┬───────┐
-│ page                                                     │ Edits │
-├──────────────────────────────────────────────────────────┼───────┤
-│ Wikipedia:Vandalismusmeldung                             │    33 │
-│ User:Cyde/List of candidates for speedy deletion/Subpage │    28 │
-│ Jeremy Corbyn                                            │    27 │
-│ Wikipedia:Administrators' noticeboard/Incidents          │    21 │
-│ Flavia Pennetta                                          │    20 │
-│ Total Drama Presents: The Ridonculous Race               │    18 │
-│ User talk:Dudeperson176123                               │    18 │
-│ Wikipédia:Le Bistro/12 septembre 2015                    │    18 │
-│ Wikipedia:In the news/Candidates                         │    17 │
-│ Wikipedia:Requests for page protection                   │    17 │
-└──────────────────────────────────────────────────────────┴───────┘
-Retrieved 10 rows in 0.06s.
-```
--->
-
 ## Query SQL over HTTP
 
 
-You can submit native queries [directly to the Druid Broker over HTTP](../querying/sql-api.md#submit-a-query). The request body should be a JSON object, with the value for the key `query` containing text of the query:
+You can submit native queries [over HTTP](../querying/sql-api.md#submit-a-query). The request body should be a JSON object, with the value for the key `query` containing text of the query:
 
 ```json
 {
