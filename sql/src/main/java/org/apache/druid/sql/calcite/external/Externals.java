@@ -279,7 +279,10 @@ public class Externals
    * Create an MSQ ExternalTable given an external table spec. Enforces type restructions
    * (which should be revisited.)
    */
-  public static ExternalTable buildExternalTable(ExternalTableSpec spec, ObjectMapper jsonMapper)
+  public static ExternalTable buildExternalTable(
+      ExternalTableSpec spec,
+      ObjectMapper jsonMapper
+  )
   {
     // Prevent a RowSignature that has a ColumnSignature with name "__time" and type that is not LONG because it
     // will be automatically cast to LONG while processing in RowBasedColumnSelectorFactory.
@@ -294,7 +297,7 @@ public class Externals
                     + "Please change the column name to something other than __time");
     }
 
-    return toExternalTable(spec, jsonMapper);
+    return toExternalTable(spec, jsonMapper, spec.inputSourceType);
   }
 
   public static ResourceAction externalRead(String name)
@@ -302,7 +305,11 @@ public class Externals
     return new ResourceAction(new Resource(name, ResourceType.EXTERNAL), Action.READ);
   }
 
-  public static ExternalTable toExternalTable(ExternalTableSpec spec, ObjectMapper jsonMapper)
+  public static ExternalTable toExternalTable(
+      ExternalTableSpec spec,
+      ObjectMapper jsonMapper,
+      String inputSourceType
+  )
   {
     return new ExternalTable(
         new ExternalDataSource(
@@ -311,7 +318,8 @@ public class Externals
             spec.signature
           ),
         spec.signature,
-        jsonMapper
+        jsonMapper,
+        inputSourceType
     );
   }
 

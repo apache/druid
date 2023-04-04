@@ -173,7 +173,7 @@ public class UnnestStorageAdapter implements StorageAdapter
   @Nullable
   public Filter getUnnestFilter()
   {
-    return unnestFilter.toFilter();
+    return unnestFilter == null ? null : unnestFilter.toFilter();
   }
 
   @Override
@@ -390,6 +390,9 @@ public class UnnestStorageAdapter implements StorageAdapter
           }
           // add the entire query filter to unnest filter to be used in Value matcher
           filterSplitter.addPostFilterWithPreFilterIfRewritePossible(queryFilter, true);
+        } else {
+          // case where the outer filter has reference to the outputcolumn
+          filterSplitter.addPostFilterWithPreFilterIfRewritePossible(queryFilter, false);
         }
       } else {
         // normal case without any filter on unnested column

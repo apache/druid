@@ -97,6 +97,7 @@ public class KubernetesTaskRunnerFactoryTest
   {
     KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
         objectMapper,
+        null,
         kubernetesTaskRunnerConfig,
         startupLoggingConfig,
         taskQueueConfig,
@@ -117,6 +118,7 @@ public class KubernetesTaskRunnerFactoryTest
   {
     KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
         objectMapper,
+        null,
         kubernetesTaskRunnerConfig,
         startupLoggingConfig,
         taskQueueConfig,
@@ -139,6 +141,7 @@ public class KubernetesTaskRunnerFactoryTest
 
     KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
         objectMapper,
+        null,
         kubernetesTaskRunnerConfig,
         startupLoggingConfig,
         taskQueueConfig,
@@ -162,6 +165,7 @@ public class KubernetesTaskRunnerFactoryTest
 
     KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
         objectMapper,
+        null,
         kubernetesTaskRunnerConfig,
         startupLoggingConfig,
         taskQueueConfig,
@@ -187,6 +191,7 @@ public class KubernetesTaskRunnerFactoryTest
 
     KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
         objectMapper,
+        null,
         kubernetesTaskRunnerConfig,
         startupLoggingConfig,
         taskQueueConfig,
@@ -213,6 +218,7 @@ public class KubernetesTaskRunnerFactoryTest
 
     KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
         objectMapper,
+        null,
         kubernetesTaskRunnerConfig,
         startupLoggingConfig,
         taskQueueConfig,
@@ -236,6 +242,7 @@ public class KubernetesTaskRunnerFactoryTest
 
     KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
         objectMapper,
+        null,
         kubernetesTaskRunnerConfig,
         startupLoggingConfig,
         taskQueueConfig,
@@ -262,6 +269,7 @@ public class KubernetesTaskRunnerFactoryTest
 
     KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
         objectMapper,
+        null,
         kubernetesTaskRunnerConfig,
         startupLoggingConfig,
         taskQueueConfig,

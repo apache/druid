@@ -8,7 +8,7 @@ exports[`IngestSuccessPane matches snapshot 1`] = `
     465,346 rows inserted into "kttm_simple".
   </p>
   <p>
-    Insert query took 0:00:09. 
+    Insert query took 0:00:28. 
     <span
       className="action"
       onClick={[Function]}

@@ -238,7 +238,8 @@ public class SqlResourceTest extends CalciteTestBase
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.createJoinableFactoryWrapper(),
-        CatalogResolver.NULL_RESOLVER
+        CatalogResolver.NULL_RESOLVER,
+        new AuthConfig()
     );
 
     lifecycleManager = new SqlLifecycleManager()
@@ -262,7 +263,6 @@ public class SqlResourceTest extends CalciteTestBase
         stubServiceEmitter,
         testRequestLogger,
         scheduler,
-        authConfig,
         defaultQueryConfig,
         lifecycleManager
     );
