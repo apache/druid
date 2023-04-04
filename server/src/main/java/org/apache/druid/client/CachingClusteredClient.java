@@ -62,6 +62,7 @@ import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -457,6 +458,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         } else {
           filteredChunks = Sets.newHashSet(holder.getObject());
         }
+        List<SegmentId> unavailableSegmentsIds = new ArrayList<>();
         for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
           ServerSelector server = chunk.getObject();
           final SegmentDescriptor segment = new SegmentDescriptor(
@@ -466,10 +468,19 @@ public class CachingClusteredClient implements QuerySegmentWalker
           );
           segments.add(new SegmentServerSelector(server, segment));
           if (server.isEmpty()) {
-            switch (partialResultAction) {
-              case FAIL:
-                throw new RuntimeException("Query failed, incomplete data");
-            }
+            unavailableSegmentsIds.add(server.getSegment().getId());
+          }
+        }
+
+        if (unavailableSegmentsIds.size() > 0) {
+          log.error("Detected [%d] unavailable segments, segment ids: [%s]", unavailableSegmentsIds.size(), unavailableSegmentsIds);
+          if (partialResultAction == QueryContexts.PartialResultAction.FAIL) {
+            throw new QueryException(
+                QueryException.UNAVAILABLE_SEGMENTS_ERROR_CODE,
+                StringUtils.format("Detected [%d] unavailable segments, segment ids: [%s]", unavailableSegmentsIds.size(), unavailableSegmentsIds),
+                null,
+                null
+            );
           }
         }
       }

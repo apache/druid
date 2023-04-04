@@ -84,7 +84,7 @@ public class MetadataSegmentView
    * Use {@link ImmutableSortedSet} so that the order of segments is deterministic and
    * sys.segments queries return the segments in sorted order based on segmentId.
    *
-   * Volatile since this reference is reassigned in {@code poll()} and then read in {@code getPublishedSegments()}
+   * Volatile since this reference is reassigned in {@code poll()} or {@code pollChangedSegments()} and then read in {@code getPublishedSegments()}
    * from other threads.
    */
   @MonotonicNonNull
@@ -178,63 +178,66 @@ public class MetadataSegmentView
         segmentWatcherConfig.getWatchedDataSources()
     );
 
+    if (null == changedRequestsSnapshot) {
+      log.error("ChangedRequestsSnapshot object polled from coordinator is null");
+      return;
+    }
+    if (null == changedRequestsSnapshot.getRequests()) {
+      log.error("change requests list in ChangedRequestsSnapshot is null");
+      return;
+    }
+
     Set<SegmentWithOvershadowedStatus> publishedSegmentsSet = new HashSet<>();
 
-    if (null != changedRequestsSnapshot) {
-      log.info("changedRequestsSnapshot %s", changedRequestsSnapshot);
+    final List<DataSegmentChange> dataSegmentChanges =
+        changedRequestsSnapshot
+            .getRequests()
+            .stream()
+            .map(dataSegmentChange ->
+                     new DataSegmentChange(
+                         convert(dataSegmentChange.getSegmentWithOvershadowedStatus()),
+                         dataSegmentChange.isLoad(),
+                         dataSegmentChange.getChangeReasons()))
+            .collect(Collectors.toList());
 
-      if (null == changedRequestsSnapshot.getRequests()) {
-        log.info("changedRequestsSnapshot null request");
+    counter = changedRequestsSnapshot.getCounter();
+
+    if (changedRequestsSnapshot.isResetCounter()) {
+      log.info("full sync");
+      runSegmentCallbacks(
+          input -> input.fullSync(dataSegmentChanges)
+      );
+
+      if (isCacheEnabled) {
+        dataSegmentChanges.forEach(
+            dataSegmentChange -> publishedSegmentsSet.add(dataSegmentChange.getSegmentWithOvershadowedStatus()));
       }
+    } else {
+      log.info("delta sync");
+      runSegmentCallbacks(
+          input -> input.deltaSync(dataSegmentChanges)
+      );
 
-      final List<DataSegmentChange> dataSegmentChanges =
-          changedRequestsSnapshot
-              .getRequests()
-              .stream()
-              .map(dataSegmentChange ->
-                       new DataSegmentChange(
-                           convert(dataSegmentChange.getSegment()),
-                           dataSegmentChange.isLoad(),
-                           dataSegmentChange.getChangeReasons()))
-              .collect(Collectors.toList());
-      counter = changedRequestsSnapshot.getCounter();
+      if (isCacheEnabled) {
+        dataSegmentChanges.forEach(dataSegmentChange -> {
+          publishedSegments.stream().iterator().forEachRemaining(publishedSegmentsSet::add);
 
-      if (changedRequestsSnapshot.isResetCounter()) {
-        log.info("full sync");
-        runSegmentCallbacks(
-            input -> input.fullSync(dataSegmentChanges)
-        );
-
-        if (isCacheEnabled) {
-          dataSegmentChanges.forEach(
-              dataSegmentChange -> publishedSegmentsSet.add(dataSegmentChange.getSegment()));
-        }
-      } else {
-        log.info("delta sync");
-        runSegmentCallbacks(
-            input -> input.deltaSync(dataSegmentChanges)
-        );
-
-        if (isCacheEnabled) {
-          dataSegmentChanges.forEach(dataSegmentChange -> {
-            publishedSegments.stream().iterator().forEachRemaining(publishedSegmentsSet::add);
-
-            if (dataSegmentChange.isLoad()) {
-              publishedSegmentsSet.add(dataSegmentChange.getSegment());
-            } else {
-              publishedSegmentsSet.remove(dataSegmentChange.getSegment());
-            }
-          });
-        }
-
-        log.info("counter [%d], hash [%d], segments changed [%d]",
-                 counter.getCounter(), counter.getHash(), dataSegmentChanges.size());
+          if (dataSegmentChange.isLoad()) {
+            publishedSegmentsSet.add(dataSegmentChange.getSegmentWithOvershadowedStatus());
+          } else {
+            publishedSegmentsSet.remove(dataSegmentChange.getSegmentWithOvershadowedStatus());
+          }
+        });
       }
+    }
 
-      if (initializationLatch.getCount() > 0) {
-        initializationLatch.countDown();
-        runSegmentCallbacks(ServerView.HandedOffSegmentCallback::segmentViewInitialized);
-      }
+    log.info("counter [%d], hash [%d], segments changed [%d]",
+             counter.getCounter(), counter.getHash(), dataSegmentChanges.size());
+
+    if (initializationLatch.getCount() > 0) {
+      initializationLatch.countDown();
+      log.info("synced successfully for the first time.");
+      runSegmentCallbacks(ServerView.HandedOffSegmentCallback::segmentViewInitialized);
     }
 
     if (isCacheEnabled) {
@@ -349,7 +352,7 @@ public class MetadataSegmentView
           new TypeReference<ChangeRequestsSnapshot<DataSegmentChange>>() {});
     }
     catch (IOException e) {
-      throw new RuntimeException(e);
+      throw new ISE("Unable to parse ChangeRequestSnapshot.", e);
     }
 
     return changeRequestsSnapshot;

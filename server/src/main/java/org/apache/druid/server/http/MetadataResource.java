@@ -200,6 +200,7 @@ public class MetadataResource
     ChangeRequestHistory.Counter lastCounter;
 
     boolean reset = false;
+    String resetCause = "";
     if (changeRequestsSnapshot.isResetCounter()) {
       reset = true;
       dataSegmentChanges =
@@ -217,21 +218,22 @@ public class MetadataResource
                            Collections.singletonList(DataSegmentChange.ChangeReason.SEGMENT_ID)))
               .collect(Collectors.toList());
       lastCounter = DataSourcesSnapshot.getLastCounter(dataSourcesSnapshot.getChanges());
-      log.info("Returning full snapshot. segment count [%d], last counter [%d], last hash [%d]",
+      resetCause = changeRequestsSnapshot.getResetCause();
+      log.info("Returning full snapshot. segment count [%d], counter [%d], hash [%d]",
                dataSegmentChanges.size(), lastCounter.getCounter(), lastCounter.getHash());
     } else {
       dataSegmentChanges = changeRequestsSnapshot.getRequests();
       dataSegmentChanges = dataSegmentChanges
           .stream()
-          .filter(segment -> requiredDataSources.size() == 0 || requiredDataSources.contains(segment.getSegment().getDataSegment().getDataSource()))
+          .filter(segment -> requiredDataSources.size() == 0 || requiredDataSources.contains(segment.getSegmentWithOvershadowedStatus().getDataSegment().getDataSource()))
           .collect(Collectors.toList());
       lastCounter = changeRequestsSnapshot.getCounter();
-      log.info("Returning delta snapshot. segment count [%d], last counter [%d], last hash [%d]",
+      log.info("Returning delta snapshot. segment count [%d], counter [%d], hash [%d]",
                dataSegmentChanges.size(), lastCounter.getCounter(), lastCounter.getHash());
     }
 
     final Function<DataSegmentChange, Iterable<ResourceAction>> raGenerator = segment -> Collections
-        .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getSegment().getDataSegment().getDataSource()));
+        .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getSegmentWithOvershadowedStatus().getDataSegment().getDataSource()));
 
     final Iterable<DataSegmentChange> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
         req,
@@ -242,7 +244,7 @@ public class MetadataResource
 
     ChangeRequestsSnapshot<DataSegmentChange> finalChanges = new ChangeRequestsSnapshot<>(
         reset,
-        "",
+        resetCause,
         lastCounter,
         Lists.newArrayList(authorizedSegments));
 

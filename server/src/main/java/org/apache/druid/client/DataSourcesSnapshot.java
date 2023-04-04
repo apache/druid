@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
@@ -227,6 +228,9 @@ public class DataSourcesSnapshot
 
   public ChangeRequestsSnapshot<DataSegmentChange> getChangesSince(ChangeRequestHistory.Counter counter)
   {
+    if (counter.getCounter() < 0) {
+      return ChangeRequestsSnapshot.fail(StringUtils.format("counter[%s] must be >= 0", counter));
+    }
 
     ChangeRequestHistory.Counter lastCounter = getLastCounter(changes);
 
@@ -234,17 +238,37 @@ public class DataSourcesSnapshot
       if (counter.matches(lastCounter)) {
         return ChangeRequestsSnapshot.success(counter, new ArrayList<>());
       } else {
-        return ChangeRequestsSnapshot.fail("");
+        return ChangeRequestsSnapshot.fail(StringUtils.format("counter[%s] failed to match with [%s]", counter, lastCounter));
       }
-    } else if (counter.getCounter() > lastCounter.getCounter() || lastCounter.getCounter() - counter.getCounter() >= CHANGES_QUEUE_MAX_SIZE) {
-      return ChangeRequestsSnapshot.fail("");
+    } else if (counter.getCounter() > lastCounter.getCounter()) {
+      return ChangeRequestsSnapshot.fail(
+          StringUtils.format(
+            "counter[%s] > last counter[%s]",
+            counter,
+            lastCounter
+          )
+      );
+    } else if (lastCounter.getCounter() - counter.getCounter() >= CHANGES_QUEUE_MAX_SIZE) {
+      return ChangeRequestsSnapshot.fail(
+          StringUtils.format(
+              "can't serve request, not enough history is kept. given counter [%s] and current last counter [%s]",
+              counter,
+              lastCounter
+          )
+      );
     } else {
       int changeStartIndex = (int) (counter.getCounter() + changes.size() - lastCounter.getCounter());
 
       ChangeRequestHistory.Counter counterToMatch = counter.getCounter() == 0 ? ChangeRequestHistory.Counter.ZERO : changes.get(changeStartIndex - 1).getCounter();
 
       if (!counterToMatch.matches(counter)) {
-        return ChangeRequestsSnapshot.fail("");
+        return ChangeRequestsSnapshot.fail(
+            StringUtils.format(
+                "counter[%s] failed to match with [%s]",
+                counter,
+                lastCounter
+            )
+        );
       }
 
       List<DataSegmentChange> result = new ArrayList<>();

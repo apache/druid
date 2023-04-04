@@ -28,26 +28,26 @@ import java.util.List;
 
 public class DataSegmentChange
 {
-  private final SegmentWithOvershadowedStatus segment;
+  private final SegmentWithOvershadowedStatus segmentWithOvershadowedStatus;
   private final boolean load;
   private final List<ChangeReason> changeReasons;
 
   @JsonCreator
   public DataSegmentChange(
-      @JsonProperty("segment") SegmentWithOvershadowedStatus segment,
+      @JsonProperty("segment") SegmentWithOvershadowedStatus segmentWithOvershadowedStatus,
       @JsonProperty("load") boolean load,
       @JsonProperty("changeReasons") List<ChangeReason> changeReasons
   )
   {
-    this.segment = segment;
+    this.segmentWithOvershadowedStatus = segmentWithOvershadowedStatus;
     this.load = load;
     this.changeReasons = changeReasons;
   }
 
   @JsonProperty
-  public SegmentWithOvershadowedStatus getSegment()
+  public SegmentWithOvershadowedStatus getSegmentWithOvershadowedStatus()
   {
-    return segment;
+    return segmentWithOvershadowedStatus;
   }
 
   @JsonProperty
@@ -68,7 +68,7 @@ public class DataSegmentChange
     return "DataSegmentChangeRequest{" +
            "load=" + load +
            ", changeReason=" + changeReasons +
-           ", segment=" + segment +
+           ", segmentWithOvershadowedStatus=" + segmentWithOvershadowedStatus +
            '}';
   }
 

@@ -79,6 +79,7 @@ public class QueryException extends RuntimeException implements SanitizableExcep
   public static final String SQL_PARSE_FAILED_ERROR_CODE = "SQL parse failed";
   public static final String PLAN_VALIDATION_FAILED_ERROR_CODE = "Plan validation failed";
   public static final String SQL_QUERY_UNSUPPORTED_ERROR_CODE = "SQL query is unsupported";
+  public static final String UNAVAILABLE_SEGMENTS_ERROR_CODE = "Unavailable segments";
 
   public enum FailType
   {
@@ -112,6 +113,7 @@ public class QueryException extends RuntimeException implements SanitizableExcep
 
     switch (errorCode) {
       case QUERY_CANCELED_ERROR_CODE:
+      case UNAVAILABLE_SEGMENTS_ERROR_CODE:
         return FailType.CANCELED;
 
       // These error codes are generally expected to come from a QueryInterruptedException
