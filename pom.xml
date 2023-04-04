@@ -188,7 +188,6 @@
         <module>extensions-core/druid-basic-security</module>
         <module>extensions-core/google-extensions</module>
         <module>extensions-core/druid-ranger-security</module>
-        <module>extensions-core/druid-catalog</module>
         <module>extensions-core/testing-tools</module>
         <!-- Community extensions -->
         <module>extensions-contrib/compressed-bigdecimal</module>
@@ -235,7 +234,7 @@
                <enabled>false</enabled>
             </snapshots>
         </repository>
-        
+
         <!-- Only used by core, but moved to root for parallel build dependency resolution -->
         <repository>
             <id>sigar</id>
@@ -245,7 +244,7 @@
             </snapshots>
         </repository>
     </repositories>
-    
+
     <pluginRepositories>
         <pluginRepository>
             <id>${repoOrgId}</id>

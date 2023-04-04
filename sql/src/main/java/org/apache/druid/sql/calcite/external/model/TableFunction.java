@@ -17,10 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.catalog.model.table;
+package org.apache.druid.sql.calcite.external.model;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.catalog.model.ColumnSpec;
 
 import java.util.List;
 import java.util.Map;

@@ -35,9 +35,6 @@ import org.apache.calcite.sql.SqlTypeNameSpec;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
 import org.apache.calcite.sql.type.SqlOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.catalog.model.ColumnSpec;
-import org.apache.druid.catalog.model.table.ExternalTableSpec;
-import org.apache.druid.catalog.model.table.TableFunction;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -47,6 +44,9 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.calcite.external.model.ColumnSpec;
+import org.apache.druid.sql.calcite.external.model.ExternalTableSpec;
+import org.apache.druid.sql.calcite.external.model.TableFunction;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.table.ExternalTable;
 
@@ -204,7 +204,7 @@ public class Externals
     for (int i = 0; i < schema.size(); i += 2) {
       final String name = convertName((SqlIdentifier) schema.get(i));
       final String sqlType = convertType(name, (SqlDataTypeSpec) schema.get(i + 1));
-      columns.add(new ColumnSpec(name, sqlType, null));
+      columns.add(new ColumnSpec(name, sqlType));
     }
     return columns;
   }
@@ -276,7 +276,7 @@ public class Externals
   }
 
   /**
-   * Create an MSQ ExternalTable given an external table spec. Enforces type restructions
+   * Create an MSQ ExternalTable given an external table spec. Enforces type restrictions
    * (which should be revisited.)
    */
   public static ExternalTable buildExternalTable(

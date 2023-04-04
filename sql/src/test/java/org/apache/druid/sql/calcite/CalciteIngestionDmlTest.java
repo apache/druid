@@ -46,9 +46,6 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
-import org.apache.druid.sql.calcite.external.HttpOperatorConversion;
-import org.apache.druid.sql.calcite.external.InlineOperatorConversion;
-import org.apache.druid.sql.calcite.external.LocalOperatorConversion;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -154,9 +151,6 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 
         // Set up the EXTERN macro.
         SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
-        SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
-        SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
-        SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
       }
     });
   }
