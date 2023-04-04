@@ -145,6 +145,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     return indexer.getSortedIndexedValues();
   }
 
+  @Nullable
   @Override
   public NestedColumnMergable getNestedColumnMergeables(String column)
   {

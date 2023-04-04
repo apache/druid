@@ -53,6 +53,7 @@ public interface IndexableAdapter
   @Nullable
   <T extends Comparable<? super T>> CloseableIndexed<T> getDimValueLookup(String dimension);
 
+  @Nullable
   NestedColumnMergable getNestedColumnMergeables(String column);
 
   TransformableRowIterator getRows();

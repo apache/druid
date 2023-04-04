@@ -165,6 +165,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     };
   }
 
+  @Nullable
   @Override
   public NestedColumnMergable getNestedColumnMergeables(String columnName)
   {
