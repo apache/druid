@@ -1114,7 +1114,7 @@ public class OverlordResource
       } catch (UnsupportedOperationException e) {
         throw new IAE(StringUtils.format(
             "Input source based security cannot be performed for Task[%s] because it uses firehose."
-            + "Change the tasks configuration, or disable `isEnableInputSourceSecurity`",
+            + " Change the tasks configuration, or disable `isEnableInputSourceSecurity`",
             task.getId()
         ));
       }
