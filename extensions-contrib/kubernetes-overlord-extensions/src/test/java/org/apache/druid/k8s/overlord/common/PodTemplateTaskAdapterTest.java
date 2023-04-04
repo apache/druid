@@ -21,10 +21,9 @@ package org.apache.druid.k8s.overlord.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import org.apache.druid.indexing.common.TestUtils;
@@ -315,15 +314,17 @@ public class PodTemplateTaskAdapterTest
         props
     );
 
-    Pod pod = client
-        .pods()
+    Job job = client
+        .batch()
+        .v1()
+        .jobs()
         .load(this.getClass()
             .getClassLoader()
             .getResourceAsStream("basePodWithoutAnnotations.yaml")
         )
         .get();
 
-    Assert.assertThrows(IOE.class, () -> adapter.toTask(pod));
+    Assert.assertThrows(IOE.class, () -> adapter.toTask(job));
   }
 
   @Test
@@ -344,21 +345,25 @@ public class PodTemplateTaskAdapterTest
         props
     );
 
-    Pod basePod = client
-        .pods()
+    Job baseJob = client
+        .batch()
+        .v1()
+        .jobs()
         .load(this.getClass()
             .getClassLoader()
             .getResourceAsStream("basePodWithoutAnnotations.yaml")
         )
         .get();
-
-    Pod pod = new PodBuilder(basePod)
+    Job job = new JobBuilder(baseJob)
+        .editSpec()
+        .editTemplate()
         .editMetadata()
         .addToAnnotations(Collections.emptyMap())
         .endMetadata()
+        .endTemplate()
+        .endSpec()
         .build();
-
-    Assert.assertThrows(IOE.class, () -> adapter.toTask(pod));
+    Assert.assertThrows(IOE.class, () -> adapter.toTask(job));
   }
 
   @Test
@@ -379,15 +384,17 @@ public class PodTemplateTaskAdapterTest
         props
     );
 
-    Pod pod = client
-        .pods()
+    Job job = client
+        .batch()
+        .v1()
+        .jobs()
         .load(this.getClass()
             .getClassLoader()
             .getResourceAsStream("basePod.yaml")
         )
         .get();
 
-    Task actual = adapter.toTask(pod);
+    Task actual = adapter.toTask(job);
     Task expected = NoopTask.create("id", 1);
 
     Assertions.assertEquals(expected, actual);

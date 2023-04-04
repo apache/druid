@@ -24,7 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -80,6 +79,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Runs tasks as k8s jobs using the "internal peon" verb.
@@ -338,7 +338,9 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public Collection<? extends TaskRunnerWorkItem> getKnownTasks()
   {
     List<TaskRunnerWorkItem> result = new ArrayList<>();
-    for (Pod existingTask : client.listPeonPods()) {
+    log.info("Get known tasks");
+    for (Job existingTask : client.listAllPeonJobs()) {
+      log.info(existingTask.getMetadata().getName());
       try {
         Task task = adapter.toTask(existingTask);
         ListenableFuture<TaskStatus> future = run(task);
@@ -425,7 +427,11 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public Collection<TaskRunnerWorkItem> getRunningTasks()
   {
     List<TaskRunnerWorkItem> result = new ArrayList<>();
-    for (Pod existingTask : client.listPeonPods(Sets.newHashSet(PeonPhase.RUNNING))) {
+    log.info("Get running tasks");
+    for (Job existingTask : client.listAllPeonJobs().stream()
+        .filter(job -> job.getStatus() != null && job.getStatus().getActive() != null && job.getStatus().getActive() > 0).collect(Collectors.toSet())
+    ) {
+      log.info(existingTask.getMetadata().getName());
       try {
         Task task = adapter.toTask(existingTask);
         ListenableFuture<TaskStatus> future = run(task);
