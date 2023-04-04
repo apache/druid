@@ -227,7 +227,8 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
       return false;
     }
 
-    // Finalize aggregators.
+    // Finalize aggregators after checking if they are passing the havingSpec, because havingSpec expects the
+    // unfinalized row (and finalizes it internally after making a copy of it)
     finalizeFn.accept(outputRow);
 
     if (frameWriter.addSelection()) {
