@@ -136,7 +136,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
     previewSampleResponse && AutoForm.isValidModel(inputFormat, BATCH_INPUT_FORMAT_FIELDS)
       ? {
           inputFormat,
-          signature: getHeaderNamesFromSampleResponse(previewSampleResponse).map(name =>
+          signature: getHeaderNamesFromSampleResponse(previewSampleResponse, true).map(name =>
             SqlColumnDeclaration.create(
               name,
               SqlType.fromNativeType(
@@ -148,7 +148,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
               ),
             ),
           ),
-          isArrays: getHeaderNamesFromSampleResponse(previewSampleResponse).map(name =>
+          isArrays: getHeaderNamesFromSampleResponse(previewSampleResponse, true).map(name =>
             guessIsArrayFromSampleResponse(previewSampleResponse, name),
           ),
           timeExpression: selectTimestamp ? possibleTimeExpression?.timeExpression : undefined,
