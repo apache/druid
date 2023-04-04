@@ -123,7 +123,7 @@ public class SegmentMetadataCacheConfig
            ", metadataSegmentCacheEnable=" + metadataSegmentCacheEnable +
            ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
            ", awaitInitializationOnStart=" + awaitInitializationOnStart +
-           ", enableUnavailableSegmentDetection=" + detectUnavailableSegments +
+           ", detectUnavailableSegments=" + detectUnavailableSegments +
            '}';
   }
 }

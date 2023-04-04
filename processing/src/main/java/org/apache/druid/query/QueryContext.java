@@ -577,9 +577,9 @@ public class QueryContext
     return getString(QueryContexts.BROKER_SERVICE_NAME);
   }
 
-  public QueryContexts.PartialResultAction getPartialResultAction()
+  public QueryContexts.UnavailableSegmentsAction getPartialResultAction()
   {
-    return QueryContexts.PartialResultAction.fromString(getString(QueryContexts.PARTIAL_RESULT_KEY));
+    return QueryContexts.UnavailableSegmentsAction.fromString(getString(QueryContexts.UNAVAILABLE_SEGMENTS_ACTION_KEY));
   }
 
   @Override

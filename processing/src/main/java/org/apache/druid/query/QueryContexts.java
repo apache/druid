@@ -82,7 +82,7 @@ public class QueryContexts
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
   public static final String MIN_TOP_N_THRESHOLD = "minTopNThreshold";
 
-  public static final String PARTIAL_RESULT_KEY = "partialResult";
+  public static final String UNAVAILABLE_SEGMENTS_ACTION_KEY = "unavailableSegmentsAction";
 
   // SQL query context keys
   public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;
@@ -158,17 +158,17 @@ public class QueryContexts
     }
   }
 
-  public enum PartialResultAction
+  public enum UnavailableSegmentsAction
   {
     FAIL,
     ALLOW;
 
-    public static PartialResultAction fromString(String str)
+    public static UnavailableSegmentsAction fromString(String str)
     {
       if (org.apache.commons.lang.StringUtils.isEmpty(str)) {
-        return PartialResultAction.ALLOW;
+        return UnavailableSegmentsAction.ALLOW;
       }
-      return PartialResultAction.valueOf(StringUtils.toUpperCase(str));
+      return UnavailableSegmentsAction.valueOf(StringUtils.toUpperCase(str));
     }
   }
 

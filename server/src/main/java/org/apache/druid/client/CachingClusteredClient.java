@@ -268,7 +268,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private final boolean populateCache;
     private final boolean isBySegment;
     private final int uncoveredIntervalsLimit;
-    private final QueryContexts.PartialResultAction partialResultAction;
+    private final QueryContexts.UnavailableSegmentsAction unavailableSegmentsAction;
 
     private final Map<String, Cache.NamedKey> cachePopulatorKeyMap = new HashMap<>();
     private final DataSourceAnalysis dataSourceAnalysis;
@@ -291,7 +291,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       // Note that enabling this leads to putting uncovered intervals information in the response headers
       // and might blow up in some cases https://github.com/apache/druid/issues/2108
       this.uncoveredIntervalsLimit = queryContext.getUncoveredIntervalsLimit();
-      this.partialResultAction = queryContext.getPartialResultAction();
+      this.unavailableSegmentsAction = queryContext.getPartialResultAction();
       // For nested queries, we need to look at the intervals of the inner most query.
       this.intervals = dataSourceAnalysis.getBaseQuerySegmentSpec()
                                          .map(QuerySegmentSpec::getIntervals)
@@ -474,7 +474,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
         if (unavailableSegmentsIds.size() > 0) {
           log.warn("Detected [%d] unavailable segments, segment ids: [%s]", unavailableSegmentsIds.size(), unavailableSegmentsIds);
-          if (partialResultAction == QueryContexts.PartialResultAction.FAIL) {
+          if (unavailableSegmentsAction == QueryContexts.UnavailableSegmentsAction.FAIL) {
             throw new QueryException(
                 QueryException.UNAVAILABLE_SEGMENTS_ERROR_CODE,
                 StringUtils.format("Detected [%d] unavailable segments, segment ids: [%s]", unavailableSegmentsIds.size(), unavailableSegmentsIds),
