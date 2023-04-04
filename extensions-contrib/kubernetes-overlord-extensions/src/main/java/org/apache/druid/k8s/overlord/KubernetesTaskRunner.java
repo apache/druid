@@ -183,7 +183,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                   } else if (completedPhase.getJob() == null) {
                     status = TaskStatus.failure(
                         task.getId(),
-                        "Task was deleted before completion: " + k8sTaskId
+                        "K8s Job for task disappeared before completion: " + k8sTaskId
                     );
                   } else {
                     status = TaskStatus.failure(

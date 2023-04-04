@@ -747,7 +747,7 @@ public class KubernetesTaskRunnerTest
     ListenableFuture<TaskStatus> future = spyRunner.run(task);
     TaskStatus taskStatus = future.get();
     Assert.assertEquals(TaskState.FAILED, taskStatus.getStatusCode());
-    Assert.assertEquals("Task was deleted before completion: [ k8sTaskId, k8staskid]", taskStatus.getErrorMsg());
+    Assert.assertEquals("K8s Job for task disappeared before completion: [ k8sTaskId, k8staskid]", taskStatus.getErrorMsg());
 
   }
 
