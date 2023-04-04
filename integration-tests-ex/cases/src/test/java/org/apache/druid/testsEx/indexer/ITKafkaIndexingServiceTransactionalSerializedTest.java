@@ -22,9 +22,9 @@ package org.apache.druid.testsEx.indexer;
 import org.apache.druid.testsEx.categories.TransactionalKafkaIndexSlow;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.junit.Before;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
-import org.testng.annotations.Test;
 
 /**
  * Tests Kafka ingestion while restarting nodes. Each test changes the state of
