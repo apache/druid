@@ -146,7 +146,7 @@ public class K8sTestUtils
   public static <T> T fileToResource(String contents, Class<T> type)
   {
     return Serialization.unmarshal(
-        MultiContainerTaskAdapter.class.getClassLoader().getResourceAsStream(contents),
+        K8sTestUtils.class.getClassLoader().getResourceAsStream(contents),
         type
     );
   }

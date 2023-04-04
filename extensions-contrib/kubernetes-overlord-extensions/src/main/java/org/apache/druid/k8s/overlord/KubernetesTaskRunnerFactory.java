@@ -144,7 +144,6 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
       );
     } else if (PodTemplateTaskAdapter.TYPE.equals(adapter)) {
       return new PodTemplateTaskAdapter(
-          client,
           kubernetesTaskRunnerConfig,
           taskConfig,
           druidNode,
