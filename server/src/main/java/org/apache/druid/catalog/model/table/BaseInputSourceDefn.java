@@ -151,7 +151,8 @@ public abstract class BaseInputSourceDefn implements InputSourceDefn
     return new ExternalTableSpec(
         convertArgsToSource(args, jsonMapper),
         convertArgsToFormat(args, columns, jsonMapper),
-        Columns.convertSignature(columns)
+        Columns.convertSignature(columns),
+        typeValue()
     );
   }
 
@@ -207,7 +208,8 @@ public abstract class BaseInputSourceDefn implements InputSourceDefn
     return new ExternalTableSpec(
         convertTableToSource(table),
         convertTableToFormat(table),
-        Columns.convertSignature(table.resolvedTable().spec().columns())
+        Columns.convertSignature(table.resolvedTable().spec().columns()),
+        typeValue()
     );
   }
 
