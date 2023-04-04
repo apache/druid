@@ -35,6 +35,10 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.utils.RuntimeInfo;
 
 import javax.annotation.Nonnull;
@@ -156,9 +160,12 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
   @Nonnull
   @JsonIgnore
   @Override
-  public Set<String> getInputSourceTypes()
+  public Set<ResourceAction> getInputSourceResources()
   {
-    return Collections.singleton(INPUT_SOURCE_TYPE);
+    return Collections.singleton(new ResourceAction(
+        new Resource(ResourceType.EXTERNAL, INPUT_SOURCE_TYPE),
+        Action.READ
+    ));
   }
 
   @Override

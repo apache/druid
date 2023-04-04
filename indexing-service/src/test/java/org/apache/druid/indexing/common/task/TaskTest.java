@@ -24,6 +24,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.junit.Assert;
@@ -123,12 +124,9 @@ public class TaskTest
   @Test
   public void testGetInputSourceTypes()
   {
-    Assert.assertEquals(ImmutableSet.of(), TASK.getInputSourceTypes());
-  }
-
-  @Test
-  public void testUsesFirehose()
-  {
-    Assert.assertFalse(TASK.usesFirehose());
+    Assert.assertThrows(
+        UOE.class,
+        TASK::getInputSourceResources
+    );
   }
 }

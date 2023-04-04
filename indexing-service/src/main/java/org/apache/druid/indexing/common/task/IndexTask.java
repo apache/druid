@@ -30,6 +30,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -98,6 +99,9 @@ import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -131,6 +135,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 {
@@ -292,18 +297,17 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @Nonnull
   @JsonIgnore
   @Override
-  public Set<String> getInputSourceTypes()
+  public Set<ResourceAction> getInputSourceResources()
   {
+    if (ingestionSchema.getIOConfig().firehoseFactory != null) {
+      super.getInputSourceResources();
+    }
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
-           getIngestionSchema().getIOConfig().getInputSource().getTypes() :
-           null;
-  }
-
-  @JsonIgnore
-  @Override
-  public boolean usesFirehose()
-  {
-    return ingestionSchema.getIOConfig().firehoseFactory != null;
+           getIngestionSchema().getIOConfig().getInputSource().getTypes()
+               .stream()
+               .map(i -> new ResourceAction(new Resource(ResourceType.EXTERNAL, i), Action.READ))
+               .collect(Collectors.toSet()) :
+           ImmutableSet.of();
   }
 
   @GET

@@ -53,6 +53,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
@@ -1496,8 +1497,11 @@ public class OverlordResourceTest
 
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
     EasyMock.expect(task.getDataSource()).andReturn(dataSource);
-    EasyMock.expect(task.getInputSourceTypes()).andReturn(ImmutableSet.of(inputSourceType));
-    EasyMock.expect(task.usesFirehose()).andReturn(false);
+    EasyMock.expect(task.getInputSourceResources())
+            .andReturn(ImmutableSet.of(new ResourceAction(
+                new Resource(ResourceType.EXTERNAL, inputSourceType),
+                Action.READ
+            )));
 
     EasyMock.replay(
         task,
@@ -1528,7 +1532,7 @@ public class OverlordResourceTest
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
     EasyMock.expect(task.getId()).andReturn("taskId");
     EasyMock.expect(task.getDataSource()).andReturn(dataSource);
-    EasyMock.expect(task.usesFirehose()).andReturn(true);
+    EasyMock.expect(task.getInputSourceResources()).andThrow(new UOE("unsupported"));
 
     EasyMock.replay(
         task,
@@ -1560,8 +1564,11 @@ public class OverlordResourceTest
 
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(false);
     EasyMock.expect(task.getDataSource()).andReturn(dataSource);
-    EasyMock.expect(task.getInputSourceTypes()).andReturn(ImmutableSet.of(inputSourceType));
-    EasyMock.expect(task.usesFirehose()).andReturn(false);
+    EasyMock.expect(task.getInputSourceResources())
+            .andReturn(ImmutableSet.of(new ResourceAction(
+                new Resource(ResourceType.EXTERNAL, inputSourceType),
+                Action.READ
+            )));
 
     EasyMock.replay(
         task,

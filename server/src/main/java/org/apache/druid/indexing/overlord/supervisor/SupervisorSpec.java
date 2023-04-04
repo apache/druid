@@ -21,10 +21,11 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.server.security.ResourceAction;
 
-import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Set;
 
@@ -80,17 +81,13 @@ public interface SupervisorSpec
    * input sources but not others, using the
    * {@link org.apache.druid.server.security.AuthConfig#enableInputSourceSecurity} config.
    */
-  default Set<String> getInputSourceTypes() {
-    return ImmutableSet.of();
-  }
-
-  /**
-   * @return Whether the task uses {@link org.apache.druid.data.input.Firehose}. If the
-   * {@link org.apache.druid.server.security.AuthConfig#enableInputSourceSecurity} config is
-   * enabled, then tasks that use firehose cannot be used.
-   */
-  default boolean usesFirehose() {
-    return false;
+  @Nonnull
+  default Set<ResourceAction> getInputSourceTypes() throws UnsupportedOperationException
+  {
+    throw new UnsupportedOperationException(StringUtils.format(
+        "SuperviserSpec type [%s], does not support input source based security",
+        getType()
+    ));
   }
 
   /**

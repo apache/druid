@@ -51,6 +51,10 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
@@ -61,6 +65,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * The worker task of {@link PartialDimensionDistributionParallelIndexTaskRunner}. This task
@@ -181,18 +186,17 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
   @Nonnull
   @JsonIgnore
   @Override
-  public Set<String> getInputSourceTypes()
+  public Set<ResourceAction> getInputSourceResources()
   {
+    if (getIngestionSchema().getIOConfig().getFirehoseFactory() != null) {
+      super.getInputSourceResources();
+    }
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
-           getIngestionSchema().getIOConfig().getInputSource().getTypes() :
+           getIngestionSchema().getIOConfig().getInputSource().getTypes()
+                               .stream()
+                               .map(i -> new ResourceAction(new Resource(ResourceType.EXTERNAL, i), Action.READ))
+                               .collect(Collectors.toSet()) :
            ImmutableSet.of();
-  }
-
-  @JsonIgnore
-  @Override
-  public boolean usesFirehose()
-  {
-    return getIngestionSchema().getIOConfig().getFirehoseFactory() != null;
   }
 
   @Override

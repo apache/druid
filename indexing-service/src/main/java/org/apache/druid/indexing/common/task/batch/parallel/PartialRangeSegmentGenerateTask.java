@@ -37,6 +37,10 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.RangePartitionIndexTaskInputRowIteratorBuilder;
 import org.apache.druid.indexing.common.task.batch.partition.RangePartitionAnalysis;
 import org.apache.druid.indexing.worker.shuffle.ShuffleDataSegmentPusher;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.joda.time.Interval;
@@ -155,18 +159,17 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
   @Nonnull
   @JsonIgnore
   @Override
-  public Set<String> getInputSourceTypes()
+  public Set<ResourceAction> getInputSourceResources()
   {
+    if (getIngestionSchema().getIOConfig().getFirehoseFactory() != null) {
+      super.getInputSourceResources();
+    }
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
-           getIngestionSchema().getIOConfig().getInputSource().getTypes() :
+           getIngestionSchema().getIOConfig().getInputSource().getTypes()
+                               .stream()
+                               .map(i -> new ResourceAction(new Resource(ResourceType.EXTERNAL, i), Action.READ))
+                               .collect(Collectors.toSet()) :
            ImmutableSet.of();
-  }
-
-  @JsonIgnore
-  @Override
-  public boolean usesFirehose()
-  {
-    return getIngestionSchema().getIOConfig().getFirehoseFactory() != null;
   }
 
   @Override

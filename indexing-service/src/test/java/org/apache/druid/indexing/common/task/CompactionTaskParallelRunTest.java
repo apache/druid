@@ -62,6 +62,10 @@ import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
@@ -923,8 +927,14 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         null
     );
 
-    Assert.assertEquals(Collections.singleton(LocalInputSource.TYPE_KEY), indexTask.getInputSourceTypes());
-    Assert.assertFalse(indexTask.usesFirehose());
+    Assert.assertEquals(
+        Collections.singleton(
+            new ResourceAction(new Resource(
+                ResourceType.EXTERNAL,
+                LocalInputSource.TYPE_KEY
+            ), Action.READ)),
+        indexTask.getInputSourceResources()
+    );
 
     runTask(indexTask);
   }

@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.security.ResourceAction;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -107,16 +108,9 @@ public class NoopTask extends AbstractTask
   @Nonnull
   @JsonIgnore
   @Override
-  public Set<String> getInputSourceTypes()
+  public Set<ResourceAction> getInputSourceResources()
   {
     return ImmutableSet.of();
-  }
-
-  @JsonIgnore
-  @Override
-  public boolean usesFirehose()
-  {
-    return firehoseFactory != null;
   }
 
   @JsonProperty

@@ -37,8 +37,11 @@ import org.apache.druid.indexing.common.task.batch.parallel.PartialGenericSegmen
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialRangeSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.server.security.ResourceAction;
 
 import javax.annotation.Nonnull;
 import java.util.Map;
@@ -146,21 +149,16 @@ public interface Task
    * the task does not use any. Users can be given permission to access particular types of
    * input sources but not others, using the
    * {@link org.apache.druid.server.security.AuthConfig#enableInputSourceSecurity} config.
+   * @throws UnsupportedOperationException if the given task type does not suppoert input source based security. Such
+   * would be the case, if the task uses firehose.
    */
   @Nonnull
-  default Set<String> getInputSourceTypes()
+  default Set<ResourceAction> getInputSourceResources() throws UOE
   {
-    return ImmutableSet.of();
-  }
-
-  /**
-   * @return Whether the task uses {@link org.apache.druid.data.input.Firehose}. If the
-   * {@link org.apache.druid.server.security.AuthConfig#enableInputSourceSecurity} config is
-   * enabled, then tasks that use firehose cannot be used.
-   */
-  default boolean usesFirehose()
-  {
-    return false;
+    throw new UOE(StringUtils.format(
+        "Task type [%s], does not support input source based security",
+        getType()
+    ));
   }
 
   /**

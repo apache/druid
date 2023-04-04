@@ -31,6 +31,10 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -141,15 +145,12 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long, Kafka
   @Nonnull
   @JsonIgnore
   @Override
-  public Set<String> getInputSourceTypes()
+  public Set<ResourceAction> getInputSourceResources()
   {
-    return Collections.singleton(INPUT_SOURCE_TYPE);
-  }
-
-  @JsonIgnore
-  @Override
-  public boolean usesFirehose() {
-    return false;
+    return Collections.singleton(new ResourceAction(
+        new Resource(ResourceType.EXTERNAL, INPUT_SOURCE_TYPE),
+        Action.READ
+    ));
   }
 
   @Override

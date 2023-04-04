@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -30,6 +31,10 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.hamcrest.Matchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -90,13 +95,14 @@ public class PartialHashSegmentGenerateTaskTest
   @Test
   public void hasCorrectInputSourceTypes()
   {
-    Assert.assertEquals(Collections.singleton(LocalInputSource.TYPE_KEY), target.getInputSourceTypes());
-  }
-
-  @Test
-  public void hasCorrectUsesFirehose()
-  {
-    Assert.assertFalse( target.usesFirehose());
+    Assert.assertEquals(
+        Collections.singleton(
+            new ResourceAction(new Resource(
+                ResourceType.EXTERNAL,
+                LocalInputSource.TYPE_KEY
+            ), Action.READ)),
+        target.getInputSourceResources()
+    );
   }
 
   @Test

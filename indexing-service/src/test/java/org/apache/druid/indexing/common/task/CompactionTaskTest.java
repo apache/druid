@@ -1785,24 +1785,7 @@ public class CompactionTaskTest
         .context(ImmutableMap.of("testKey", "testContext"))
         .build();
 
-    Assert.assertNull(task.getInputSourceTypes());
-  }
-
-  @Test
-  public void testDoesntUseFirehose() throws IOException
-  {
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
-    );
-    final CompactionTask task = builder
-        .segments(SEGMENTS)
-        .tuningConfig(createTuningConfig())
-        .context(ImmutableMap.of("testKey", "testContext"))
-        .build();
-
-    Assert.assertFalse(task.usesFirehose());
+    Assert.assertNull(task.getInputSourceResources());
   }
 
   private Granularity chooseFinestGranularityHelper(List<Granularity> granularities)

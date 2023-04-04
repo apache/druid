@@ -36,7 +36,12 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Map;
@@ -95,17 +100,15 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
     return TASK_TYPE;
   }
 
+  @Nonnull
   @JsonIgnore
   @Override
-  public Set<String> getInputSourceTypes()
+  public Set<ResourceAction> getInputSourceTypes()
   {
-    return Collections.singleton(TASK_TYPE);
-  }
-
-  @JsonIgnore
-  @Override
-  public boolean usesFirehose() {
-    return false;
+    return Collections.singleton(new ResourceAction(
+        new Resource(ResourceType.EXTERNAL, TASK_TYPE),
+        Action.READ
+    ));
   }
 
   @Override

@@ -88,6 +88,7 @@ import org.apache.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import org.apache.druid.segment.realtime.plumber.Committers;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.utils.CloseableUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -215,21 +216,6 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   public String getType()
   {
     return "index_realtime_appenderator";
-  }
-
-  @Nonnull
-  @JsonIgnore
-  @Override
-  public Set<String> getInputSourceTypes()
-  {
-    return ImmutableSet.of();
-  }
-
-  @JsonIgnore
-  @Override
-  public boolean usesFirehose()
-  {
-    return true;
   }
 
   @Override

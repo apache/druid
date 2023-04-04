@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.HadoopIOConfig;
 import org.apache.druid.indexer.HadoopIngestionSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -30,7 +31,11 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -64,34 +69,13 @@ public class HadoopIndexTaskTest
         null
     );
 
-    Assert.assertEquals(Collections.singleton("hadoop"), task.getInputSourceTypes());
-  }
-
-  @Test
-  public void testDoesntUseFirehose() throws Exception
-  {
-    final HadoopIndexTask task = new HadoopIndexTask(
-        null,
-        new HadoopIngestionSpec(
-            new DataSchema(
-                "foo", null, new AggregatorFactory[0], new UniformGranularitySpec(
-                Granularities.DAY,
-                null,
-                ImmutableList.of(Intervals.of("2010-01-01/P1D"))
-            ),
-                null,
-                jsonMapper
-            ), new HadoopIOConfig(ImmutableMap.of("paths", "bar"), null, null), null
-        ),
-        null,
-        null,
-        "blah",
-        jsonMapper,
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+    Assert.assertEquals(
+        Collections.singleton(
+            new ResourceAction(new Resource(
+                ResourceType.EXTERNAL,
+                "hadoop"
+            ), Action.READ)),
+        task.getInputSourceResources()
     );
-
-    Assert.assertFalse(task.usesFirehose());
   }
 }

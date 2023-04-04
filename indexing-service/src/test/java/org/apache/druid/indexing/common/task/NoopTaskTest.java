@@ -28,13 +28,6 @@ public class NoopTaskTest
   public void testNullInputSources()
   {
     NoopTask task = new NoopTask("myID", null, null, 1, 0, null, null, null);
-    Assert.assertTrue(task.getInputSourceTypes().isEmpty());
-  }
-
-  @Test
-  public void testDoesntUsesFirehose()
-  {
-    NoopTask task = new NoopTask("myID", null, null, 1, 0, null, null, null);
-    Assert.assertFalse(task.usesFirehose());
+    Assert.assertTrue(task.getInputSourceResources().isEmpty());
   }
 }

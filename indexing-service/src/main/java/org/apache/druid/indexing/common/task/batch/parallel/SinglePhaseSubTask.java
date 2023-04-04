@@ -72,6 +72,9 @@ import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -99,6 +102,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 /**
  * The worker task of {@link SinglePhaseParallelIndexTaskRunner}. Similar to {@link IndexTask}, but this task
@@ -196,18 +200,17 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   @Nonnull
   @JsonIgnore
   @Override
-  public Set<String> getInputSourceTypes()
+  public Set<ResourceAction> getInputSourceResources()
   {
-    return ingestionSchema.getIOConfig().getInputSource() != null ?
-           ingestionSchema.getIOConfig().getInputSource().getTypes() :
+    if (getIngestionSchema().getIOConfig().getFirehoseFactory() != null) {
+      super.getInputSourceResources();
+    }
+    return getIngestionSchema().getIOConfig().getInputSource() != null ?
+           getIngestionSchema().getIOConfig().getInputSource().getTypes()
+                               .stream()
+                               .map(i -> new ResourceAction(new Resource(ResourceType.EXTERNAL, i), Action.READ))
+                               .collect(Collectors.toSet()) :
            ImmutableSet.of();
-  }
-
-  @JsonIgnore
-  @Override
-  public boolean usesFirehose()
-  {
-    return ingestionSchema.getIOConfig().getFirehoseFactory() != null;
   }
 
   @Override

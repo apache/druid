@@ -24,12 +24,17 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
@@ -105,14 +110,14 @@ public class PartialRangeSegmentGenerateTaskTest extends AbstractParallelIndexSu
   public void hasCorrectInputSourceTypes()
   {
     PartialRangeSegmentGenerateTask task = new PartialRangeSegmentGenerateTaskBuilder().build();
-    Assert.assertEquals(Collections.singleton(InlineInputSource.TYPE_KEY), task.getInputSourceTypes());
-  }
-
-  @Test
-  public void hasCorrectUsedFirehose()
-  {
-    PartialRangeSegmentGenerateTask task = new PartialRangeSegmentGenerateTaskBuilder().build();
-    Assert.assertFalse(task.usesFirehose());
+    Assert.assertEquals(
+        Collections.singleton(
+            new ResourceAction(new Resource(
+                ResourceType.EXTERNAL,
+                InlineInputSource.TYPE_KEY
+            ), Action.READ)),
+        task.getInputSourceResources()
+    );
   }
 
   @Test

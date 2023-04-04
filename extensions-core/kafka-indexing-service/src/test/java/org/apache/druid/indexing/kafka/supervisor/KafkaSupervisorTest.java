@@ -434,7 +434,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
             (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(2)
     );
     Assert.assertEquals(Collections.singleton("kafka"), testableSupervisorSpec.getInputSourceTypes());
-    Assert.assertFalse(testableSupervisorSpec.usesFirehose());
 
     autoscaler.reset();
     autoscaler.stop();

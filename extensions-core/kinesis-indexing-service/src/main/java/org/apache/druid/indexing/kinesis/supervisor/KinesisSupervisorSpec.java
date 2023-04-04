@@ -39,7 +39,12 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Map;
@@ -117,16 +122,14 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
     return SUPERVISOR_TYPE;
   }
 
+  @Nonnull
   @JsonIgnore
   @Override
-  public Set<String> getInputSourceTypes() {
-    return Collections.singleton(SUPERVISOR_TYPE);
-  }
-
-  @JsonIgnore
-  @Override
-  public boolean usesFirehose() {
-    return false;
+  public Set<ResourceAction> getInputSourceTypes() {
+    return Collections.singleton(new ResourceAction(
+        new Resource(ResourceType.EXTERNAL, SUPERVISOR_TYPE),
+        Action.READ
+    ));
   }
 
   @Override

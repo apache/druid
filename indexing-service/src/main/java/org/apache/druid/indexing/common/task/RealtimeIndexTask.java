@@ -183,21 +183,6 @@ public class RealtimeIndexTask extends AbstractTask
     return "index_realtime";
   }
 
-  @Nonnull
-  @JsonIgnore
-  @Override
-  public Set<String> getInputSourceTypes()
-  {
-    return ImmutableSet.of();
-  }
-
-  @JsonIgnore
-  @Override
-  public boolean usesFirehose()
-  {
-    return true;
-  }
-
   @Override
   public String getNodeType()
   {

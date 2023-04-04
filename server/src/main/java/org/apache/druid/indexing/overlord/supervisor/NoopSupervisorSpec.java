@@ -23,9 +23,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
+import org.apache.druid.server.security.ResourceAction;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
@@ -113,17 +116,11 @@ public class NoopSupervisorSpec implements SupervisorSpec
     return type;
   }
 
-  @JsonIgnore
-  @Nullable
-  @Override
-  public Set<String> getInputSourceTypes() {
-    return null;
-  }
-
+  @Nonnull
   @JsonIgnore
   @Override
-  public boolean usesFirehose() {
-    return false;
+  public Set<ResourceAction> getInputSourceTypes() {
+    return ImmutableSet.of();
   }
 
   @Override

@@ -109,17 +109,6 @@ public class PartialDimensionDistributionTaskTest
     }
 
     @Test
-    public void serializesDeserializes()
-    {
-      PartialDimensionDistributionTask task = new PartialDimensionDistributionTaskBuilder()
-          .build();
-      TestHelper.testSerializesDeserializes(OBJECT_MAPPER, task);
-
-      Assert.assertEquals(Collections.singleton(InlineInputSource.TYPE_KEY), task.getInputSourceTypes());
-      Assert.assertFalse(task.usesFirehose());
-    }
-
-    @Test
     public void hasCorrectPrefixForAutomaticId()
     {
       PartialDimensionDistributionTask task = new PartialDimensionDistributionTaskBuilder()

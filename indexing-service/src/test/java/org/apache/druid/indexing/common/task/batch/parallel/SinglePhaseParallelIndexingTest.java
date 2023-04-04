@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.TaskState;
@@ -46,6 +47,10 @@ import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -172,8 +177,14 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
       final TaskActionClient subTaskActionClient = createActionClient(subTask);
       prepareTaskForLocking(subTask);
       Assert.assertTrue(subTask.isReady(subTaskActionClient));
-      Assert.assertEquals(Collections.singleton(LocalInputSource.TYPE_KEY), subTask.getInputSourceTypes());
-      Assert.assertFalse(subTask.usesFirehose());
+      Assert.assertEquals(
+          Collections.singleton(
+              new ResourceAction(new Resource(
+                  ResourceType.EXTERNAL,
+                  LocalInputSource.TYPE_KEY
+              ), Action.READ)),
+          subTask.getInputSourceResources()
+      );
     }
   }
 

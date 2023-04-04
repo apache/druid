@@ -65,9 +65,11 @@ import org.apache.druid.indexing.test.TestDataSegmentPusher;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -203,14 +205,10 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
   public void testInputSourceTypes()
   {
     final RealtimeIndexTask task = makeRealtimeTask(null);
-    Assert.assertTrue(task.getInputSourceTypes().isEmpty());
-  }
-
-  @Test(timeout = 60_000L)
-  public void testUsesFirehose()
-  {
-    final RealtimeIndexTask task = makeRealtimeTask(null);
-    Assert.assertTrue(task.usesFirehose());
+    Assert.assertThrows(
+        UOE.class,
+        task::getInputSourceResources
+    );
   }
 
   @Test(timeout = 60_000L, expected = ExecutionException.class)
