@@ -1,7 +1,7 @@
 ---
 id: native-batch-simple-task
-title: "Native batch simple task indexing"
-sidebar_label: "Native batch (simple)"
+title: "Legacy batch simple task indexing"
+sidebar_label: "Legacy batch (simple)"
 ---
 
 <!--

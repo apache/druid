@@ -1,7 +1,7 @@
 ---
 id: tutorial-query
-title: "Tutorial: Querying data"
-sidebar_label: "Querying data"
+title: Query data
+sidebar_label: Query data
 ---
 
 <!--
@@ -30,9 +30,9 @@ It assumes that you've completed the [Quickstart](../tutorials/index.md)
 or one of the following tutorials, since we'll query datasources that you would have created
 by following one of them:
 
-* [Tutorial: Loading a file](../tutorials/tutorial-batch.md)
-* [Tutorial: Loading stream data from Kafka](../tutorials/tutorial-kafka.md)
-* [Tutorial: Loading a file using Hadoop](../tutorials/tutorial-batch-hadoop.md)
+* [Load a file](../tutorials/tutorial-batch.md)
+* [Load stream data from Kafka](../tutorials/tutorial-kafka.md)
+* [Load a file using Hadoop](../tutorials/tutorial-batch-hadoop.md)
 
 There are various ways to run Druid SQL queries: from the web console, using a command line utility
 and by posting the query by HTTP. We'll look at each of these. 

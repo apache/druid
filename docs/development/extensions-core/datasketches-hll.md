@@ -27,7 +27,7 @@ This module provides Apache Druid aggregators for distinct counting based on HLL
 the estimate of the number of distinct values presented to the sketch. You can also use post aggregators to produce a union of sketch columns in the same row.
 You can use the HLL sketch aggregator on any column to estimate its cardinality.
 
-To use this aggregator, make sure you [include](../../development/extensions.md#loading-extensions) the extension in your config file:
+To use this aggregator, make sure you [include](../../configuration/extensions.md#loading-extensions) the extension in your config file:
 
 ```
 druid.extensions.loadList=["druid-datasketches"]

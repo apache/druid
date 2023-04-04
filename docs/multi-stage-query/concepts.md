@@ -126,7 +126,7 @@ The `__time` column is used for [partitioning by time](#partitioning-by-time). I
 column in your `INSERT` statement. However, Druid still creates a `__time` column in your Druid table and sets all
 timestamps to 1970-01-01 00:00:00.
 
-For more information, see [Primary timestamp](../ingestion/data-model.md#primary-timestamp).
+For more information, see [Primary timestamp](../ingestion/schema-model.md#primary-timestamp).
 
 <a name="partitioning"></a>
 

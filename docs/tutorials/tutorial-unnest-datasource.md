@@ -1,7 +1,7 @@
 ---
 id: tutorial-unnest-datasource
-sidebar_label: "Using the unnest datasource"
-title: "Tutorial: Unnest data in a column"
+sidebar_label: Use the unnest datasource
+title: Unnest data in a column
 ---
 
 <!--

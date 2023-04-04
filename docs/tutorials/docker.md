@@ -1,6 +1,7 @@
 ---
 id: docker
-title: "Tutorial: Run with Docker"
+title:  Run with Docker
+sidebar_label: Run with Docker
 ---
 
 <!--

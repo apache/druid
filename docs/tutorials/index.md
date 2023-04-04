@@ -1,6 +1,7 @@
 ---
 id: index
 title: "Quickstart (local)"
+sidebar_label: Quickstart (local)
 ---
 
 <!--
@@ -215,6 +216,6 @@ See the following topics for more information:
 * [Tutorial: Load files using SQL](./tutorial-msq-extern.md) to learn how to generate a SQL query that loads external data into a Druid datasource.
 * [Tutorial: Load data with native batch ingestion](tutorial-batch-native.md) to load and query data with Druid's native batch ingestion feature.
 * [Tutorial: Load stream data from Apache Kafka](./tutorial-kafka.md) to load streaming data from a Kafka topic.
-* [Extensions](../development/extensions.md) for details on Druid extensions.
+* [Extensions](../configuration/extensions.md) for details on Druid extensions.
 
 Remember that after stopping Druid services, you can start clean next time by deleting the `var` directory from the Druid root directory and running the `bin/start-druid` script again. You may want to do this before using other data ingestion tutorials, since they use the same Wikipedia datasource.

@@ -1,7 +1,7 @@
 ---
 id: api
-title: SQL-based ingestion and multi-stage query task API
-sidebar_label: API
+title: SQL-based ingestion and multi-stage task engine API
+sidebar_label: MSQ task engine API
 ---
 
 <!--

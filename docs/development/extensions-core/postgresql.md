@@ -23,7 +23,7 @@ title: "PostgreSQL Metadata Store"
   -->
 
 
-To use this Apache Druid extension, [include](../../development/extensions.md#loading-extensions) `postgresql-metadata-storage` in the extensions load list.
+To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `postgresql-metadata-storage` in the extensions load list.
 
 ## Setting up PostgreSQL
 

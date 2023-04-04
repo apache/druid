@@ -1,7 +1,7 @@
 ---
 id: native-batch
-title: "Native batch ingestion"
-sidebar_label: "Native batch"
+title: "Legacy batch overview"
+sidebar_label: "Overview"
 ---
 
 <!--

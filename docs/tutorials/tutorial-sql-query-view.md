@@ -1,7 +1,7 @@
 ---
 id: tutorial-sql-query-view
-title: "Tutorial: Get to know Query view"
-sidebar_label: "Get to know Query view"
+title: Get to know Query view
+sidebar_label: Get to know Query view
 ---
 
 <!--

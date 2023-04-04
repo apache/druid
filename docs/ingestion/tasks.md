@@ -1,6 +1,7 @@
 ---
 id: tasks
-title: "Task reference"
+title: Task API
+sidebar_label: Task API
 ---
 
 <!--

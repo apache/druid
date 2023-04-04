@@ -1,7 +1,7 @@
 ---
 id: native-batch-input-sources
-title: "Native batch input sources"
-sidebar_label: "Native batch: input sources"
+title: "Legacy batch input sources"
+sidebar_label: "Legacy batch input sources"
 ---
 
 <!--

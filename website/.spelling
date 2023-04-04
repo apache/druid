@@ -743,7 +743,7 @@ APPROX_QUANTILE_FIXED_BUCKETS
  - ../docs/configuration/logging.md
 _common
 appenders
- - ../docs/dependencies/deep-storage.md
+ - ../docs/design/deep-storage.md
 druid-hdfs-storage
 druid-s3-extensions
 druid.sql.planner.maxNumericInFilters
@@ -755,7 +755,7 @@ BasicDataSource
 LeaderLatch
 3.5.x
 3.4.x
- - ../docs/design/auth.md
+ - ../docs/operations/auth.md
 AllowAll
 AuthenticationResult
 AuthorizationLoadingLookupTest
@@ -1203,7 +1203,7 @@ www.ucs.louisiana.edu
 zscore
 zscore2sample
 ztests
- - ../docs/development/extensions.md
+ - ../docs/configuration/extensions.md
 DistinctCount
 artifactId
 com.example

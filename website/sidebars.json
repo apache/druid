@@ -7,7 +7,6 @@
       "tutorials/cluster"
     ],
     "Tutorials": [
-      "tutorials/tutorial-batch",
       "tutorials/tutorial-msq-extern",
       "tutorials/tutorial-kafka",
       "tutorials/tutorial-batch-hadoop",
@@ -20,67 +19,67 @@
       "tutorials/tutorial-delete-data",
       "tutorials/tutorial-ingestion-spec",
       "tutorials/tutorial-transform-spec",
+      "tutorials/tutorial-msq-convert-spec",
       "tutorials/docker",
       "tutorials/tutorial-kerberos-hadoop",
-      "tutorials/tutorial-msq-convert-spec",
-      "tutorials/tutorial-jdbc",
       "tutorials/tutorial-sql-query-view",
       "tutorials/tutorial-unnest-datasource",
-      "tutorials/tutorial-jupyter-index",
-      "tutorials/tutorial-jdbc"
+      "tutorials/tutorial-jupyter-index"
     ],
     "Design": [
       "design/architecture",
       "design/segments",
       "design/processes",
-      "dependencies/deep-storage",
-      "dependencies/metadata-storage",
-      "dependencies/zookeeper"
+      "design/deep-storage",
+      "design/metadata-storage",
+      "design/zookeeper"
     ],
     "Ingestion": [
       "ingestion/index",
-      "ingestion/data-formats",
-      "ingestion/data-model",
-      "ingestion/rollup",
-      "ingestion/partitioning",
-      "ingestion/ingestion-spec",
-      "ingestion/schema-design",
       {
         "type": "subcategory",
-        "label": "Stream ingestion",
+        "label": "Ingestion concepts",
         "ids": [
-          "development/extensions-core/kafka-ingestion",
-          "development/extensions-core/kafka-supervisor-reference",
-          "development/extensions-core/kafka-supervisor-operations",
-          "development/extensions-core/kinesis-ingestion",
-          "ingestion/standalone-realtime"
+          "ingestion/data-formats",
+          "ingestion/schema-model",
+          "ingestion/rollup",
+          "ingestion/partitioning"
         ]
       },
       {
         "type": "subcategory",
-        "label": "Batch ingestion",
-        "ids": [
-          "ingestion/native-batch",
-          "ingestion/native-batch-input-sources",
-          "ingestion/migrate-from-firehose",
-          "ingestion/native-batch-firehose",
-          "ingestion/hadoop"
-        ]
-      },
-      {
-        "type": "subcategory",
-        "label": "SQL-based ingestion \uD83C\uDD95",
+        "label": "SQL-based batch",
         "ids": [
           "multi-stage-query/index",
           "multi-stage-query/concepts",
-          "multi-stage-query/api",
           "multi-stage-query/security",
           "multi-stage-query/examples",
           "multi-stage-query/reference",
           "multi-stage-query/known-issues"
         ]
       },
-      "ingestion/tasks",
+      {
+        "type": "subcategory",
+        "label": "Streaming",
+        "ids": [
+          "development/extensions-core/kafka-ingestion",
+          "development/extensions-core/kafka-supervisor-reference",
+          "development/extensions-core/kafka-supervisor-operations",
+          "development/extensions-core/kinesis-ingestion"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "Legacy batch",
+        "ids": [
+          "ingestion/native-batch",
+          "ingestion/native-batch-input-sources",
+          "ingestion/migrate-from-firehose",
+          "ingestion/hadoop"
+        ]
+      },
+      "ingestion/ingestion-spec",
+      "ingestion/schema-design",
       "ingestion/faq"
     ],
     "Data management": [
@@ -104,8 +103,6 @@
           "querying/sql-multivalue-string-functions",
           "querying/sql-json-functions",
           "querying/sql-functions",
-          "querying/sql-api",
-          "querying/sql-jdbc",
           "querying/sql-query-context",
           "querying/sql-metadata-tables",
           "querying/sql-translation"
@@ -153,19 +150,26 @@
           "querying/dimensionspecs",
           "querying/aggregations",
           "querying/post-aggregations",
-          "misc/math-expr",
+          "querying/math-expr",
           "querying/having",
           "querying/limitspec",
           "querying/topnmetricspec",
           "querying/sorting-orders",
           "querying/virtual-columns",
-          "development/geo"
+          "querying/geo"
         ]
       }
     ],
+    "API reference":[
+      "multi-stage-query/api",
+      "querying/sql-api",
+      "querying/sql-jdbc",
+      "ingestion/tasks",
+      "operations/api-reference"
+    ],
     "Configuration": [
       "configuration/index",
-      "development/extensions",
+      "configuration/extensions",
       "configuration/logging"
     ],
     "Operations": [
@@ -180,7 +184,6 @@
           "operations/auth-ldap",
           "operations/password-provider",
           "operations/dynamic-config-provider",
-          "design/auth",
           "operations/tls-support"
         ]
       },
@@ -204,7 +207,6 @@
           "operations/alerts"
         ]
       },
-      "operations/api-reference",
       "operations/high-availability",
       "operations/rolling-updates",
       "operations/rule-configuration",
@@ -242,7 +244,7 @@
       "comparisons/druid-vs-redshift",
       "comparisons/druid-vs-spark",
       "comparisons/druid-vs-sql-on-hadoop",
-      "design/auth",
+      "operations/auth",
       "design/broker",
       "design/coordinator",
       "design/historical",
@@ -302,12 +304,13 @@
       "development/extensions-contrib/gce-extensions",
       "development/extensions-contrib/aliyun-oss",
       "development/extensions-contrib/prometheus",
+      "ingestion/native-batch-firehose",
+      "ingestion/native-batch-simple-task",
+      "ingestion/standalone-realtime",
       "operations/kubernetes",
       "querying/hll-old",
       "querying/select-query",
-      "ingestion/native-batch-firehose",
-      "ingestion/native-batch-simple-task",
-      "ingestion/standalone-realtime"
+      "tutorials/tutorial-batch"
     ]
   }
 }

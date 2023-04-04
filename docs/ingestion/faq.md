@@ -33,7 +33,7 @@ If the number of ingested events seem correct, make sure your query is correctly
 
 ## Where do my Druid segments end up after ingestion?
 
-Depending on what `druid.storage.type` is set to, Druid will upload segments to some [Deep Storage](../dependencies/deep-storage.md). Local disk is used as the default deep storage.
+Depending on what `druid.storage.type` is set to, Druid will upload segments to some [Deep Storage](../design/deep-storage.md). Local disk is used as the default deep storage.
 
 ## My stream ingest is not handing segments off
 
@@ -51,7 +51,7 @@ Other common reasons that hand-off fails are as follows:
 
 ## How do I get HDFS to work?
 
-Make sure to include the `druid-hdfs-storage` and all the hadoop configuration, dependencies (that can be obtained by running command `hadoop classpath` on a machine where hadoop has been setup) in the classpath. And, provide necessary HDFS settings as described in [deep storage](../dependencies/deep-storage.md) .
+Make sure to include the `druid-hdfs-storage` and all the hadoop configuration, dependencies (that can be obtained by running command `hadoop classpath` on a machine where hadoop has been setup) in the classpath. And, provide necessary HDFS settings as described in [deep storage](../design/deep-storage.md) .
 
 ## How do I know when I can make query to Druid after submitting batch ingestion task?
 

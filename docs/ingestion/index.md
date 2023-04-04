@@ -1,6 +1,7 @@
 ---
 id: index
-title: "Ingestion"
+title: Ingestion overview
+sidebar_label: Overview
 ---
 
 <!--
@@ -30,11 +31,11 @@ For most ingestion methods, the Druid [MiddleManager](../design/middlemanager.md
 [Indexer](../design/indexer.md) processes load your source data. The sole exception is Hadoop-based ingestion, which
 uses a Hadoop MapReduce job on YARN.
 
-During ingestion, Druid creates segments and stores them in [deep storage](../dependencies/deep-storage.md). Historical nodes load the segments into memory to respond to queries. For streaming ingestion, the Middle Managers and indexers can respond to queries in real-time with arriving data. See the [Storage design](../design/architecture.md#storage-design) section of the Druid design documentation for more information.
+During ingestion, Druid creates segments and stores them in [deep storage](../design/deep-storage.md). Historical nodes load the segments into memory to respond to queries. For streaming ingestion, the Middle Managers and indexers can respond to queries in real-time with arriving data. See the [Storage design](../design/architecture.md#storage-design) section of the Druid design documentation for more information.
 
 This topic introduces streaming and batch ingestion methods. The following topics describe ingestion concepts and information that apply to all [ingestion methods](#ingestion-methods):
 
-- [Druid data model](./data-model.md) introduces concepts of datasources, primary timestamp, dimensions, and metrics.
+- [Druid schema model](./schema-model.md) introduces concepts of datasources, primary timestamp, dimensions, and metrics.
 - [Data rollup](./rollup.md) describes rollup as a concept and provides suggestions to maximize the benefits of rollup.
 - [Partitioning](./partitioning.md) describes time chunk and secondary partitioning in Druid.
 - [Ingestion spec reference](./ingestion-spec.md) provides a reference for the configuration options in the ingestion spec.

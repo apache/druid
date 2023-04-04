@@ -23,6 +23,9 @@
       "comparisons/druid-vs-sql-on-hadoop": {
         "title": "Apache Druid vs SQL-on-Hadoop"
       },
+      "configuration/extensions": {
+        "title": "Extensions"
+      },
       "configuration/human-readable-byte": {
         "title": "Human-readable Byte Configuration Reference"
       },
@@ -51,26 +54,20 @@
       "data-management/update": {
         "title": "Data updates"
       },
-      "dependencies/deep-storage": {
-        "title": "Deep storage"
-      },
-      "dependencies/metadata-storage": {
-        "title": "Metadata storage"
-      },
       "dependencies/zookeeper": {
         "title": "ZooKeeper"
       },
       "design/architecture": {
         "title": "Design"
       },
-      "design/auth": {
-        "title": "Authentication and Authorization"
-      },
       "design/broker": {
         "title": "Broker"
       },
       "design/coordinator": {
         "title": "Coordinator Process"
+      },
+      "design/deep-storage": {
+        "title": "Deep storage"
       },
       "design/extensions-contrib/dropwizard": {
         "title": "Dropwizard metrics emitter"
@@ -86,6 +83,9 @@
       },
       "design/indexing-service": {
         "title": "Indexing Service"
+      },
+      "design/metadata-storage": {
+        "title": "Metadata storage"
       },
       "design/middlemanager": {
         "title": "MiddleManager Process"
@@ -292,12 +292,6 @@
       "development/extensions-core/test-stats": {
         "title": "Test Stats Aggregators"
       },
-      "development/extensions": {
-        "title": "Extensions"
-      },
-      "development/geo": {
-        "title": "Spatial filters"
-      },
       "development/javascript": {
         "title": "JavaScript programming guide",
         "sidebar_label": "JavaScript functionality"
@@ -313,11 +307,8 @@
         "title": "Versioning"
       },
       "ingestion/data-formats": {
-        "title": "Data formats"
-      },
-      "ingestion/data-model": {
-        "title": "Druid data model",
-        "sidebar_label": "Data model"
+        "title": "Input formats",
+        "sidebar_label": "Input formats"
       },
       "ingestion/faq": {
         "title": "Ingestion troubleshooting FAQ",
@@ -328,31 +319,32 @@
         "sidebar_label": "Hadoop-based"
       },
       "ingestion/index": {
-        "title": "Ingestion"
+        "title": "Ingestion overview",
+        "sidebar_label": "Overview"
       },
       "ingestion/ingestion-spec": {
         "title": "Ingestion spec reference",
-        "sidebar_label": "Ingestion spec"
+        "sidebar_label": "Ingestion spec reference"
       },
       "ingestion/migrate-from-firehose": {
         "title": "Migrate from firehose to input source ingestion",
         "sidebar_label": "Migrate from firehose"
       },
       "ingestion/native-batch-firehose": {
-        "title": "Native batch ingestion with firehose (Deprecated)",
+        "title": "Legacy batch ingestion with firehose (Deprecated)",
         "sidebar_label": "Firehose (deprecated)"
       },
       "ingestion/native-batch-input-sources": {
-        "title": "Native batch input sources",
-        "sidebar_label": "Native batch: input sources"
+        "title": "Legacy batch input sources",
+        "sidebar_label": "Legacy batch input sources"
       },
       "ingestion/native-batch-simple-task": {
-        "title": "Native batch simple task indexing",
-        "sidebar_label": "Native batch (simple)"
+        "title": "Legacy batch simple task indexing",
+        "sidebar_label": "Legacy batch (simple)"
       },
       "ingestion/native-batch": {
-        "title": "Native batch ingestion",
-        "sidebar_label": "Native batch"
+        "title": "Legacy batch overview",
+        "sidebar_label": "Overview"
       },
       "ingestion/partitioning": {
         "title": "Partitioning",
@@ -360,29 +352,31 @@
       },
       "ingestion/rollup": {
         "title": "Data rollup",
-        "sidebar_label": "Data rollup"
+        "sidebar_label": "Rollup"
       },
       "ingestion/schema-design": {
         "title": "Schema design tips"
+      },
+      "ingestion/schema-model": {
+        "title": "Druid schema model",
+        "sidebar_label": "Schema model"
       },
       "ingestion/standalone-realtime": {
         "title": "Realtime Process"
       },
       "ingestion/tasks": {
-        "title": "Task reference"
+        "title": "Task API",
+        "sidebar_label": "Task API"
       },
       "ingestion/tranquility": {
         "title": "Tranquility"
-      },
-      "misc/math-expr": {
-        "title": "Expressions"
       },
       "misc/papers-and-talks": {
         "title": "Papers"
       },
       "multi-stage-query/api": {
-        "title": "SQL-based ingestion and multi-stage query task API",
-        "sidebar_label": "API"
+        "title": "SQL-based ingestion and multi-stage task engine API",
+        "sidebar_label": "MSQ task engine API"
       },
       "multi-stage-query/concepts": {
         "title": "SQL-based ingestion concepts",
@@ -393,7 +387,7 @@
         "sidebar_label": "Examples"
       },
       "multi-stage-query/index": {
-        "title": "SQL-based ingestion",
+        "title": "SQL-based ingestion overview",
         "sidebar_label": "Overview"
       },
       "multi-stage-query/known-issues": {
@@ -412,11 +406,15 @@
         "title": "Alerts"
       },
       "operations/api-reference": {
-        "title": "API reference"
+        "title": "Druid API endpoints reference",
+        "sidebar_label": "API endpoints reference"
       },
       "operations/auth-ldap": {
         "title": "Configure LDAP authentication",
         "sidebar_label": "LDAP auth"
+      },
+      "operations/auth": {
+        "title": "Authentication and Authorization"
       },
       "operations/basic-cluster-tuning": {
         "title": "Basic cluster tuning"
@@ -532,6 +530,9 @@
         "title": "Query filters",
         "sidebar_label": "Filters"
       },
+      "querying/geo": {
+        "title": "Spatial filters"
+      },
       "querying/granularities": {
         "title": "Query granularities",
         "sidebar_label": "Granularities"
@@ -554,6 +555,9 @@
       },
       "querying/lookups": {
         "title": "Lookups"
+      },
+      "querying/math-expr": {
+        "title": "Expressions"
       },
       "querying/multi-value-dimensions": {
         "title": "Multi-value dimensions"
@@ -615,7 +619,7 @@
         "sidebar_label": "All functions"
       },
       "querying/sql-jdbc": {
-        "title": "SQL JDBC driver API",
+        "title": "JDBC driver API",
         "sidebar_label": "JDBC driver API"
       },
       "querying/sql-json-functions": {
@@ -676,87 +680,96 @@
         "title": "Virtual columns"
       },
       "tutorials/cluster": {
-        "title": "Clustered deployment"
+        "title": "Clustered deployment",
+        "sidebar_label": "Clustered deployment"
       },
       "tutorials/docker": {
-        "title": "Tutorial: Run with Docker"
+        "title": "Run with Docker",
+        "sidebar_label": "Run with Docker"
       },
       "tutorials/index": {
-        "title": "Quickstart (local)"
+        "title": "Quickstart (local)",
+        "sidebar_label": "Quickstart (local)"
       },
       "tutorials/tutorial-batch-hadoop": {
-        "title": "Tutorial: Load batch data using Apache Hadoop",
+        "title": "Load batch data using Apache Hadoop",
         "sidebar_label": "Load from Apache Hadoop"
       },
       "tutorials/tutorial-batch-native": {
-        "title": "Load data with native batch ingestion"
+        "title": "Load data with native batch ingestion",
+        "sidebar_label": "Load data with native batch ingestion"
       },
       "tutorials/tutorial-batch": {
-        "title": "Tutorial: Loading a file",
+        "title": "Load a file",
         "sidebar_label": "Load files natively"
       },
       "tutorials/tutorial-compaction": {
-        "title": "Tutorial: Compacting segments",
-        "sidebar_label": "Compacting segments"
+        "title": "Compact segments",
+        "sidebar_label": "Compact segments"
       },
       "tutorials/tutorial-delete-data": {
-        "title": "Tutorial: Deleting data",
-        "sidebar_label": "Deleting data"
+        "title": "Delete data",
+        "sidebar_label": "Delete data"
       },
       "tutorials/tutorial-ingestion-spec": {
-        "title": "Tutorial: Writing an ingestion spec",
-        "sidebar_label": "Writing an ingestion spec"
+        "title": "Write an ingestion spec",
+        "sidebar_label": "Write an ingestion spec"
       },
       "tutorials/tutorial-jdbc": {
-        "title": "Tutorial: Using the JDBC driver to query Druid",
+        "title": "Use the JDBC driver to query Druid",
         "sidebar_label": "JDBC connector"
       },
       "tutorials/tutorial-jupyter-index": {
-        "title": "Jupyter Notebook tutorials"
+        "title": "Jupyter Notebook tutorials",
+        "sidebar_label": "Jupyter Notebook tutorials"
       },
       "tutorials/tutorial-kafka": {
-        "title": "Tutorial: Load streaming data from Apache Kafka",
+        "title": "Load streaming data from Apache Kafka",
         "sidebar_label": "Load from Apache Kafka"
       },
       "tutorials/tutorial-kerberos-hadoop": {
-        "title": "Configuring Apache Druid to use Kerberized Apache Hadoop as deep storage",
+        "title": "Configure Apache Druid to use Kerberized Apache Hadoop as deep storage",
         "sidebar_label": "Kerberized HDFS deep storage"
       },
       "tutorials/tutorial-msq-convert-spec": {
-        "title": "Tutorial: Convert an ingestion spec for SQL-based ingestion",
+        "title": "Convert an ingestion spec for SQL-based ingestion",
         "sidebar_label": "Convert ingestion spec to SQL"
       },
       "tutorials/tutorial-msq-extern": {
-        "title": "Tutorial: Load files with SQL-based ingestion",
-        "sidebar_label": "Load files using SQL 🆕"
+        "title": "Load files with SQL-based ingestion",
+        "sidebar_label": "Load files using SQL"
       },
       "tutorials/tutorial-query": {
-        "title": "Tutorial: Querying data",
-        "sidebar_label": "Querying data"
+        "title": "Query data",
+        "sidebar_label": "Query data"
       },
       "tutorials/tutorial-retention": {
-        "title": "Tutorial: Configuring data retention",
-        "sidebar_label": "Configuring data retention"
+        "title": "Configure data retention",
+        "sidebar_label": "Configure data retention"
       },
       "tutorials/tutorial-rollup": {
-        "title": "Tutorial: Roll-up",
-        "sidebar_label": "Roll-up"
+        "title": "Rollup",
+        "sidebar_label": "Rollup"
       },
       "tutorials/tutorial-sketches-theta": {
         "title": "Approximations with Theta sketches",
         "sidebar_label": "Theta sketches"
       },
+      "tutorials/tutorial-sql-query-view": {
+        "title": "Get to know Query view",
+        "sidebar_label": "Get to know Query view"
+      },
       "tutorials/tutorial-transform-spec": {
-        "title": "Tutorial: Transforming input data",
-        "sidebar_label": "Transforming input data"
+        "title": "Transform input data",
+        "sidebar_label": "Transform input data"
       },
       "tutorials/tutorial-unnest-datasource": {
-        "title": "Tutorial: Unnest data in a column",
-        "sidebar_label": "Using the unnest datasource"
+        "title": "Unnest data in a column",
+        "sidebar_label": "Use the unnest datasource"
       },
       "tutorials/tutorial-update-data": {
-        "title": "Tutorial: Updating existing data",
-        "sidebar_label": "Updating existing data"
+        "title": "Update existing data",
+        "sidebar_label": "Update existing data"
       }
     },
     "links": {
@@ -775,6 +788,7 @@
       "Ingestion": "Ingestion",
       "Data management": "Data management",
       "Querying": "Querying",
+      "API reference": "API reference",
       "Configuration": "Configuration",
       "Operations": "Operations",
       "Development": "Development",

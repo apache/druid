@@ -1,7 +1,7 @@
 ---
 id: ingestion-spec
 title: Ingestion spec reference
-sidebar_label: Ingestion spec
+sidebar_label: Ingestion spec reference
 description: Reference for the configuration options in the ingestion spec.
 ---
 
@@ -157,7 +157,7 @@ The `dataSource` is located in `dataSchema` → `dataSource` and is simply the n
 ### `timestampSpec`
 
 The `timestampSpec` is located in `dataSchema` → `timestampSpec` and is responsible for
-configuring the [primary timestamp](./data-model.md#primary-timestamp). An example `timestampSpec` is:
+configuring the [primary timestamp](./schema-model.md#primary-timestamp). An example `timestampSpec` is:
 
 ```
 "timestampSpec": {
@@ -186,7 +186,7 @@ Treat `__time` as a millisecond timestamp: the number of milliseconds since Jan 
 ### `dimensionsSpec`
 
 The `dimensionsSpec` is located in `dataSchema` → `dimensionsSpec` and is responsible for
-configuring [dimensions](./data-model.md#dimensions). An example `dimensionsSpec` is:
+configuring [dimensions](./schema-model.md#dimensions). An example `dimensionsSpec` is:
 
 ```
 "dimensionsSpec" : {
@@ -211,7 +211,7 @@ A `dimensionsSpec` can have the following components:
 |------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
 | `dimensions`           | A list of [dimension names or objects](#dimension-objects). You cannot include the same column in both `dimensions` and `dimensionExclusions`.<br /><br />If `dimensions` and `spatialDimensions` are both null or empty arrays, Druid treats all columns other than timestamp or metrics that do not appear in `dimensionExclusions` as String-typed dimension columns. See [inclusions and exclusions](#inclusions-and-exclusions) for details.<br /><br />As a best practice, put the most frequently filtered dimensions at the beginning of the dimensions list. In this case, it would also be good to consider [`partitioning`](partitioning.md) by those same dimensions.                                                                                                                                                                                                                                  | `[]`    |
 | `dimensionExclusions`  | The names of dimensions to exclude from ingestion. Only names are supported here, not objects.<br /><br />This list is only used if the `dimensions` and `spatialDimensions` lists are both null or empty arrays; otherwise it is ignored. See [inclusions and exclusions](#inclusions-and-exclusions) below for details.                                                                                                                                                                                                                                                                                                                                               | `[]`    |
-| `spatialDimensions`    | An array of [spatial dimensions](../development/geo.md).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `[]`    |
+| `spatialDimensions`    | An array of [spatial dimensions](../querying/geo.md).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `[]`    |
 | `includeAllDimensions` | You can set `includeAllDimensions` to true to ingest both explicit dimensions in the `dimensions` field and other dimensions that the ingestion task discovers from input data. In this case, the explicit dimensions will appear first in order that you specify them and the dimensions dynamically discovered will come after. This flag can be useful especially with auto schema discovery using [`flattenSpec`](./data-formats.html#flattenspec). If this is not set and the `dimensions` field is not empty, Druid will ingest only explicit dimensions. If this is not set and the `dimensions` field is empty, all discovered dimensions will be ingested. | false   |
 
 #### Dimension objects
@@ -279,7 +279,7 @@ the following operations:
 3. Specifying which time chunks of segments should be created, for batch ingestion (via `intervals`).
 4. Specifying whether ingestion-time [rollup](./rollup.md) should be used or not (via `rollup`).
 
-Other than `rollup`, these operations are all based on the [primary timestamp](./data-model.md#primary-timestamp).
+Other than `rollup`, these operations are all based on the [primary timestamp](./schema-model.md#primary-timestamp).
 
 An example `granularitySpec` is:
 
@@ -349,7 +349,7 @@ Druid currently includes one kind of built-in transform, the expression transfor
 }
 ```
 
-The `expression` is a [Druid query expression](../misc/math-expr.md).
+The `expression` is a [Druid query expression](../querying/math-expr.md).
 
 > Conceptually, after input data records are read, Druid applies ingestion spec components in a particular order:
 > first [`flattenSpec`](data-formats.md#flattenspec) (if any), then [`timestampSpec`](#timestampspec), then [`transformSpec`](#transformspec),
@@ -379,8 +379,8 @@ For details about `inputFormat` and supported `parser` types, see the ["Data for
 
 For details about major components of the `parseSpec`, refer to their subsections:
 
-- [`timestampSpec`](#timestampspec), responsible for configuring the [primary timestamp](./data-model.md#primary-timestamp).
-- [`dimensionsSpec`](#dimensionsspec), responsible for configuring [dimensions](./data-model.md#dimensions).
+- [`timestampSpec`](#timestampspec), responsible for configuring the [primary timestamp](./schema-model.md#primary-timestamp).
+- [`dimensionsSpec`](#dimensionsspec), responsible for configuring [dimensions](./schema-model.md#dimensions).
 - [`flattenSpec`](#flattenspec), responsible for flattening nested data formats.
 
 An example `parser` is:

@@ -1,6 +1,7 @@
 ---
 id: api-reference
-title: "API reference"
+title: Druid API endpoints reference
+sidebar_label: API endpoints reference
 ---
 
 <!--

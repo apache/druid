@@ -80,7 +80,7 @@ both in deep storage and across your Historical servers for the data you plan to
 Deep storage is an important part of Druid's elastic, fault-tolerant design. Druid bootstraps from deep storage even
 if every single data server is lost and re-provisioned.
 
-For more details, please see the [Deep storage](../dependencies/deep-storage.md) page.
+For more details, please see the [Deep storage](../design/deep-storage.md) page.
 
 ### Metadata storage
 
