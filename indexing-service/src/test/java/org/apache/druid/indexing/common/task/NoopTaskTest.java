@@ -17,7 +17,6 @@
  * under the License.
  */
 
-
 package org.apache.druid.indexing.common.task;
 
 import org.junit.Assert;
