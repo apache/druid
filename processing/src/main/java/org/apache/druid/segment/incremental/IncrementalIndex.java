@@ -239,6 +239,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   private final List<DimensionDesc> dimensionDescsList;
   // dimension capabilities are provided by the indexers
   private final Map<String, ColumnCapabilities> timeAndMetricsColumnCapabilities;
+  private final Map<String, ColumnFormat> timeAndMetricsColumnFormats;
   private final AtomicInteger numEntries = new AtomicInteger();
   private final AtomicLong bytesInMemory = new AtomicLong();
   private final boolean useMaxMemoryEstimates;
@@ -293,6 +294,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
                                                     .useSchemaDiscovery();
 
     this.timeAndMetricsColumnCapabilities = new HashMap<>();
+    this.timeAndMetricsColumnFormats = new HashMap<>();
     this.metricDescs = Maps.newLinkedHashMap();
     this.dimensionDescs = Maps.newLinkedHashMap();
     this.metadata = new Metadata(
@@ -308,7 +310,27 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     for (AggregatorFactory metric : metrics) {
       MetricDesc metricDesc = new MetricDesc(metricDescs.size(), metric);
       metricDescs.put(metricDesc.getName(), metricDesc);
-      timeAndMetricsColumnCapabilities.put(metricDesc.getName(), metricDesc.getCapabilities());
+      final ColumnCapabilities capabilities = metricDesc.getCapabilities();
+      timeAndMetricsColumnCapabilities.put(metricDesc.getName(), capabilities);
+      if (capabilities.is(ValueType.COMPLEX)) {
+        timeAndMetricsColumnFormats.put(
+            metricDesc.getName(),
+            new CapabilitiesBasedFormat(
+                ColumnCapabilitiesImpl.snapshot(
+                    ColumnCapabilitiesImpl.copyOf(capabilities).setType(ColumnType.ofComplex(metricDesc.getType())),
+                    ColumnCapabilitiesImpl.ALL_FALSE
+                )
+            )
+        );
+      } else {
+        timeAndMetricsColumnFormats.put(
+            metricDesc.getName(),
+            new CapabilitiesBasedFormat(
+                ColumnCapabilitiesImpl.snapshot(capabilities, ColumnCapabilitiesImpl.ALL_FALSE)
+            )
+        );
+      }
+
     }
 
     this.dimensionsSpec = incrementalIndexSchema.getDimensionsSpec();

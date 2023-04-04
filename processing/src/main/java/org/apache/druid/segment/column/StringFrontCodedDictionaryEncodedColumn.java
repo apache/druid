@@ -53,9 +53,9 @@ import java.util.BitSet;
 /**
  * {@link DictionaryEncodedColumn<String>} for a column which uses a {@link FrontCodedIndexed} to store its value
  * dictionary, which 'delta encodes' strings (instead of {@link org.apache.druid.segment.data.GenericIndexed} like
- * {@link CachingStringDictionaryEncodedColumn}).
+ * {@link StringDictionaryEncodedColumn}).
  *
- * This class is otherwise nearly identical to {@link CachingStringDictionaryEncodedColumn} other than the dictionary
+ * This class is otherwise nearly identical to {@link StringDictionaryEncodedColumn} other than the dictionary
  * difference.
  */
 public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncodedColumn<String>,
@@ -361,7 +361,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
   @Override
   public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(final ReadableVectorOffset offset)
   {
-    final class StringVectorSelector extends CachingStringDictionaryEncodedColumn.StringSingleValueDimensionVectorSelector
+    final class StringVectorSelector extends StringDictionaryEncodedColumn.StringSingleValueDimensionVectorSelector
     {
       public StringVectorSelector()
       {
@@ -401,7 +401,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
   @Override
   public MultiValueDimensionVectorSelector makeMultiValueDimensionVectorSelector(final ReadableVectorOffset offset)
   {
-    final class MultiStringVectorSelector extends CachingStringDictionaryEncodedColumn.StringMultiValueDimensionVectorSelector
+    final class MultiStringVectorSelector extends StringDictionaryEncodedColumn.StringMultiValueDimensionVectorSelector
     {
       public MultiStringVectorSelector()
       {
@@ -443,7 +443,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
   public VectorObjectSelector makeVectorObjectSelector(ReadableVectorOffset offset)
   {
     if (!hasMultipleValues()) {
-      final class StringVectorSelector extends CachingStringDictionaryEncodedColumn.StringVectorObjectSelector
+      final class StringVectorSelector extends StringDictionaryEncodedColumn.StringVectorObjectSelector
       {
         public StringVectorSelector()
         {
@@ -459,7 +459,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
       }
       return new StringVectorSelector();
     } else {
-      final class MultiStringVectorSelector extends CachingStringDictionaryEncodedColumn.MultiValueStringVectorObjectSelector
+      final class MultiStringVectorSelector extends StringDictionaryEncodedColumn.MultiValueStringVectorObjectSelector
       {
         public MultiStringVectorSelector()
         {

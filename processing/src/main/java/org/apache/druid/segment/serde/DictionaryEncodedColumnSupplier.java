@@ -20,7 +20,7 @@
 package org.apache.druid.segment.serde;
 
 import com.google.common.base.Supplier;
-import org.apache.druid.segment.column.CachingStringDictionaryEncodedColumn;
+import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.data.CachingIndexed;
 import org.apache.druid.segment.data.ColumnarInts;
@@ -58,7 +58,7 @@ public class DictionaryEncodedColumnSupplier implements Supplier<DictionaryEncod
   @Override
   public DictionaryEncodedColumn<?> get()
   {
-    return new CachingStringDictionaryEncodedColumn(
+    return new StringDictionaryEncodedColumn(
         singleValuedColumn != null ? singleValuedColumn.get() : null,
         multiValuedColumn != null ? multiValuedColumn.get() : null,
         new CachingIndexed<>(dictionary, lookupCacheSize),

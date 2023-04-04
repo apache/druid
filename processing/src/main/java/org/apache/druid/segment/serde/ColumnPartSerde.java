@@ -40,7 +40,7 @@ import java.nio.ByteBuffer;
     @JsonSubTypes.Type(name = "longV2", value = LongNumericColumnPartSerdeV2.class),
     @JsonSubTypes.Type(name = "doubleV2", value = DoubleNumericColumnPartSerdeV2.class),
     @JsonSubTypes.Type(name = "null", value = NullColumnPartSerde.class),
-    @JsonSubTypes.Type(name = "standard", value = NestedCommonFormatColumnPartSerde.class)
+    @JsonSubTypes.Type(name = "nestedCommonFormat", value = NestedCommonFormatColumnPartSerde.class)
 })
 public interface ColumnPartSerde
 {
@@ -54,6 +54,6 @@ public interface ColumnPartSerde
 
   interface Deserializer
   {
-    void read(String columnName, ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig);
+    void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig);
   }
 }

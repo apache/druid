@@ -23,7 +23,7 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.segment.column.BitmapColumnIndex;
-import org.apache.druid.segment.column.CachingStringDictionaryEncodedColumn;
+import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -62,7 +62,7 @@ public class ColumnSelectorColumnIndexSelectorTest
 
     ColumnHolder holder = EasyMock.createMock(ColumnHolder.class);
     EasyMock.expect(index.getColumnHolder(STRING_DICTIONARY_COLUMN_NAME)).andReturn(holder).anyTimes();
-    CachingStringDictionaryEncodedColumn stringColumn = EasyMock.createMock(CachingStringDictionaryEncodedColumn.class);
+    StringDictionaryEncodedColumn stringColumn = EasyMock.createMock(StringDictionaryEncodedColumn.class);
     EasyMock.expect(holder.getCapabilities()).andReturn(
         ColumnCapabilitiesImpl.createDefault()
                               .setType(ColumnType.STRING)

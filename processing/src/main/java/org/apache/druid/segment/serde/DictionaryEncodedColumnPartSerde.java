@@ -294,7 +294,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     return new Deserializer()
     {
       @Override
-      public void read(String columnName, ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+      public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
       {
         final VERSION rVersion = VERSION.fromByte(buffer.get());
         final int rFlags;

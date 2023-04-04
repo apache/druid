@@ -24,6 +24,7 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnBuilder;
@@ -40,6 +41,7 @@ import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
+import org.apache.druid.segment.data.VByte;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
 import javax.annotation.Nullable;
@@ -50,7 +52,6 @@ import java.nio.ByteOrder;
 public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommonFormatColumn>, ColumnIndexSupplier
 {
   public static VariantArrayColumnAndIndexSupplier read(
-      String columnName,
       ColumnType logicalType,
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
@@ -59,6 +60,8 @@ public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommon
   )
   {
     final byte version = bb.get();
+    final int columnNameLength = VByte.readInt(bb);
+    final String columnName = StringUtils.fromUtf8(bb, columnNameLength);
 
     if (version == NestedCommonFormatColumnSerializer.V0) {
       try {

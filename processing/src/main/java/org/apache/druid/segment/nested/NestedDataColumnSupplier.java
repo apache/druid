@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -35,6 +36,7 @@ import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
+import org.apache.druid.segment.data.VByte;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
 import javax.annotation.Nullable;
@@ -45,7 +47,6 @@ import java.nio.ByteOrder;
 public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColumn>
 {
   public static NestedDataColumnSupplier read(
-      String columnName,
       boolean hasNulls,
       ByteBuffer bb,
       ColumnBuilder columnBuilder,
@@ -55,6 +56,8 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
   )
   {
     final byte version = bb.get();
+    final int columnNameLength = VByte.readInt(bb);
+    final String columnName = StringUtils.fromUtf8(bb, columnNameLength);
 
     if (version == NestedCommonFormatColumnSerializer.V0) {
       try {

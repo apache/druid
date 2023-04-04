@@ -63,6 +63,7 @@ public class ScalarStringColumnSerializer extends NestedCommonFormatColumnSerial
   private SingleValueColumnarIntsSerializer encodedValueSerializer;
   private GenericIndexedWriter<ImmutableBitmap> bitmapIndexWriter;
   private MutableBitmap[] bitmaps;
+  private ByteBuffer columnNameBytes = null;
 
   public ScalarStringColumnSerializer(
       String name,
@@ -198,6 +199,7 @@ public class ScalarStringColumnSerializer extends NestedCommonFormatColumnSerial
         );
         bitmaps[i] = null; // Reclaim memory
       }
+      columnNameBytes = computeFilenameBytes();
       closedForWrite = true;
     }
   }
@@ -208,7 +210,7 @@ public class ScalarStringColumnSerializer extends NestedCommonFormatColumnSerial
     closeForWrite();
 
     // standard string version
-    long size = 1;
+    long size = 1 + columnNameBytes.capacity();
     // the value dictionaries, raw column, and null index are all stored in separate files
     return size;
   }
@@ -221,8 +223,8 @@ public class ScalarStringColumnSerializer extends NestedCommonFormatColumnSerial
   {
     Preconditions.checkState(closedForWrite, "Not closed yet!");
     Preconditions.checkArgument(dictionaryWriter.isSorted(), "Dictionary not sorted?!?");
-    channel.write(ByteBuffer.wrap(new byte[]{NestedCommonFormatColumnSerializer.V0}));
 
+    writeV0Header(channel, columnNameBytes);
     writeInternal(smoosher, dictionaryWriter, STRING_DICTIONARY_FILE_NAME);
     writeInternal(smoosher, encodedValueSerializer, ENCODED_VALUE_COLUMN_FILE_NAME);
     writeInternal(smoosher, bitmapIndexWriter, BITMAP_INDEX_FILE_NAME);

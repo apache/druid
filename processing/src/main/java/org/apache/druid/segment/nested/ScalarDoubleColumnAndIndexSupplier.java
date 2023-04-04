@@ -30,6 +30,7 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.DruidDoublePredicate;
@@ -53,6 +54,7 @@ import org.apache.druid.segment.data.ColumnarDoubles;
 import org.apache.druid.segment.data.CompressedColumnarDoublesSuppliers;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
+import org.apache.druid.segment.data.VByte;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
 import javax.annotation.Nullable;
@@ -66,7 +68,6 @@ import java.util.SortedSet;
 public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommonFormatColumn>, ColumnIndexSupplier
 {
   public static ScalarDoubleColumnAndIndexSupplier read(
-      String columnName,
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
       ByteBuffer bb,
@@ -74,6 +75,8 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
   )
   {
     final byte version = bb.get();
+    final int columnNameLength = VByte.readInt(bb);
+    final String columnName = StringUtils.fromUtf8(bb, columnNameLength);
 
     if (version == NestedCommonFormatColumnSerializer.V0) {
       try {

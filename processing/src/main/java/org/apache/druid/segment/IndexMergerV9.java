@@ -191,9 +191,9 @@ public class IndexMergerV9 implements IndexMerger
       log.debug("Completed factory.json in %,d millis", System.currentTimeMillis() - startTime);
 
       progress.progress();
-      final Map<String, ColumnFormat> metricTypes = new TreeMap<>(Comparators.naturalNullsFirst());
+      final Map<String, ColumnFormat> metricFormats = new TreeMap<>(Comparators.naturalNullsFirst());
       final List<ColumnFormat> dimFormats = Lists.newArrayListWithCapacity(mergedDimensions.size());
-      mergeFormat(adapters, mergedDimensions, metricTypes, dimFormats);
+      mergeFormat(adapters, mergedDimensions, metricFormats, dimFormats);
 
       final Map<String, DimensionHandler> handlers = makeDimensionHandlers(mergedDimensions, dimFormats);
       final List<DimensionMergerV9> mergers = new ArrayList<>();
@@ -229,7 +229,7 @@ public class IndexMergerV9 implements IndexMerger
       closer.register(timeAndDimsIterator);
       final GenericColumnSerializer timeWriter = setupTimeWriter(segmentWriteOutMedium, indexSpec);
       final ArrayList<GenericColumnSerializer> metricWriters =
-          setupMetricsWriters(segmentWriteOutMedium, mergedMetrics, metricTypes, indexSpec);
+          setupMetricsWriters(segmentWriteOutMedium, mergedMetrics, metricFormats, indexSpec);
       IndexMergeResult indexMergeResult = mergeIndexesAndWriteColumns(
           adapters,
           progress,
@@ -248,7 +248,7 @@ public class IndexMergerV9 implements IndexMerger
           v9Smoosher,
           progress,
           mergedMetrics,
-          metricTypes,
+          metricFormats,
           metricWriters,
           indexSpec
       );

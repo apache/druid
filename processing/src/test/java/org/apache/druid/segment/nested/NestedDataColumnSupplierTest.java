@@ -88,7 +88,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class NestedColumnSupplierTest extends InitializedNullHandlingTest
+public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 
@@ -227,7 +227,6 @@ public class NestedColumnSupplierTest extends InitializedNullHandlingTest
     ColumnBuilder bob = new ColumnBuilder();
     bob.setFileMapper(fileMapper);
     NestedDataColumnSupplier supplier = NestedDataColumnSupplier.read(
-        "test",
         false,
         baseBuffer,
         bob,
@@ -246,7 +245,6 @@ public class NestedColumnSupplierTest extends InitializedNullHandlingTest
     ColumnBuilder bob = new ColumnBuilder();
     bob.setFileMapper(arrayFileMapper);
     NestedDataColumnSupplier supplier = NestedDataColumnSupplier.read(
-        "array",
         false,
         arrayBaseBuffer,
         bob,
@@ -266,7 +264,6 @@ public class NestedColumnSupplierTest extends InitializedNullHandlingTest
     ColumnBuilder bob = new ColumnBuilder();
     bob.setFileMapper(fileMapper);
     NestedDataColumnSupplier supplier = NestedDataColumnSupplier.read(
-        "test",
         false,
         baseBuffer,
         bob,

@@ -65,6 +65,7 @@ public class ScalarLongColumnSerializer extends NestedCommonFormatColumnSerializ
   private ColumnarLongsSerializer longsSerializer;
   private GenericIndexedWriter<ImmutableBitmap> bitmapIndexWriter;
   private MutableBitmap[] bitmaps;
+  private ByteBuffer columnNameBytes = null;
 
   public ScalarLongColumnSerializer(
       String name,
@@ -203,7 +204,7 @@ public class ScalarLongColumnSerializer extends NestedCommonFormatColumnSerializ
   }
 
 
-  private void writeBitmapIndexes() throws IOException
+  private void closeForWrite() throws IOException
   {
     if (!closedForWrite) {
       for (int i = 0; i < bitmaps.length; i++) {
@@ -213,6 +214,7 @@ public class ScalarLongColumnSerializer extends NestedCommonFormatColumnSerializ
         );
         bitmaps[i] = null; // Reclaim memory
       }
+      columnNameBytes = computeFilenameBytes();
       closedForWrite = true;
     }
   }
@@ -220,9 +222,9 @@ public class ScalarLongColumnSerializer extends NestedCommonFormatColumnSerializ
   @Override
   public long getSerializedSize() throws IOException
   {
-    writeBitmapIndexes();
+    closeForWrite();
 
-    long size = 1;
+    long size = 1 + columnNameBytes.capacity();
     // the value dictionaries, raw column, and null index are all stored in separate files
     return size;
   }
@@ -234,7 +236,8 @@ public class ScalarLongColumnSerializer extends NestedCommonFormatColumnSerializ
   ) throws IOException
   {
     Preconditions.checkState(closedForWrite, "Not closed yet!");
-    channel.write(ByteBuffer.wrap(new byte[]{NestedCommonFormatColumnSerializer.V0}));
+
+    writeV0Header(channel, columnNameBytes);
     writeInternal(smoosher, longDictionaryWriter, LONG_DICTIONARY_FILE_NAME);
     writeInternal(smoosher, encodedValueSerializer, ENCODED_VALUE_COLUMN_FILE_NAME);
     writeInternal(smoosher, longsSerializer, LONG_VALUE_COLUMN_FILE_NAME);

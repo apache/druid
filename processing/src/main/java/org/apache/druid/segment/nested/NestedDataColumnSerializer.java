@@ -140,6 +140,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
   private boolean closedForWrite = false;
 
   private boolean dictionarySerialized = false;
+  private ByteBuffer columnNameBytes = null;
 
   public NestedDataColumnSerializer(
       String name,
@@ -383,7 +384,8 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
               )
           )
       );
-      this.nullBitmapWriter.write(nullRowsBitmap);
+      nullBitmapWriter.write(nullRowsBitmap);
+      columnNameBytes = computeFilenameBytes();
     }
   }
 
@@ -392,7 +394,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
   {
     closeForWrite();
 
-    long size = 1;
+    long size = 1 + columnNameBytes.capacity();
     if (fieldsWriter != null) {
       size += fieldsWriter.getSerializedSize();
     }
@@ -412,7 +414,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
     Preconditions.checkState(closedForWrite, "Not closed yet!");
     Preconditions.checkArgument(dictionaryWriter.isSorted(), "Dictionary not sorted?!?");
 
-    channel.write(ByteBuffer.wrap(new byte[]{NestedCommonFormatColumnSerializer.V0}));
+    writeV0Header(channel, columnNameBytes);
     fieldsWriter.writeTo(channel, smoosher);
     fieldsInfoWriter.writeTo(channel, smoosher);
     writeInternal(smoosher, dictionaryWriter, STRING_DICTIONARY_FILE_NAME);

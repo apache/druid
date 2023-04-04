@@ -27,7 +27,7 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AbstractDimensionSelector;
 import org.apache.druid.segment.IdLookup;
-import org.apache.druid.segment.column.CachingStringDictionaryEncodedColumn;
+import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringEncodingStrategies;
@@ -293,7 +293,7 @@ public class ScalarStringDictionaryEncodedColumn<TIndexed extends Indexed<ByteBu
   @Override
   public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(final ReadableVectorOffset offset)
   {
-    final class StringVectorSelector extends CachingStringDictionaryEncodedColumn.StringSingleValueDimensionVectorSelector
+    final class StringVectorSelector extends StringDictionaryEncodedColumn.StringSingleValueDimensionVectorSelector
     {
       public StringVectorSelector()
       {
@@ -339,7 +339,7 @@ public class ScalarStringDictionaryEncodedColumn<TIndexed extends Indexed<ByteBu
   @Override
   public VectorObjectSelector makeVectorObjectSelector(ReadableVectorOffset offset)
   {
-    final class StringVectorSelector extends CachingStringDictionaryEncodedColumn.StringVectorObjectSelector
+    final class StringVectorSelector extends StringDictionaryEncodedColumn.StringVectorObjectSelector
     {
       public StringVectorSelector()
       {

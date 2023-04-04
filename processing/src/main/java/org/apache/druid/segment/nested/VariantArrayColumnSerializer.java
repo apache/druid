@@ -76,6 +76,7 @@ public class VariantArrayColumnSerializer extends NestedCommonFormatColumnSerial
   private GenericIndexedWriter<ImmutableBitmap> bitmapIndexWriter;
   private GenericIndexedWriter<ImmutableBitmap> arrayElementIndexWriter;
   private MutableBitmap[] bitmaps;
+  private ByteBuffer columnNameBytes = null;
   private final Int2ObjectRBTreeMap<MutableBitmap> arrayElements = new Int2ObjectRBTreeMap<>();
 
   public VariantArrayColumnSerializer(
@@ -300,6 +301,7 @@ public class VariantArrayColumnSerializer extends NestedCommonFormatColumnSerial
             indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeImmutableBitmap(arrayElement.getValue())
         );
       }
+      columnNameBytes = computeFilenameBytes();
       closedForWrite = true;
     }
   }
@@ -309,7 +311,7 @@ public class VariantArrayColumnSerializer extends NestedCommonFormatColumnSerial
   {
     closeForWrite();
 
-    long size = 1;
+    long size = 1 + columnNameBytes.capacity();
     // the value dictionaries, raw column, and null index are all stored in separate files
     return size;
   }
@@ -323,7 +325,7 @@ public class VariantArrayColumnSerializer extends NestedCommonFormatColumnSerial
     Preconditions.checkState(closedForWrite, "Not closed yet!");
     Preconditions.checkArgument(dictionaryWriter.isSorted(), "Dictionary not sorted?!?");
 
-    channel.write(ByteBuffer.wrap(new byte[]{NestedCommonFormatColumnSerializer.V0}));
+    writeV0Header(channel, columnNameBytes);
 
     writeInternal(smoosher, dictionaryWriter, STRING_DICTIONARY_FILE_NAME);
     writeInternal(smoosher, longDictionaryWriter, LONG_DICTIONARY_FILE_NAME);

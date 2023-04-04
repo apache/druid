@@ -33,7 +33,7 @@ import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.BaseColumn;
-import org.apache.druid.segment.column.CachingStringDictionaryEncodedColumn;
+import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -95,7 +95,7 @@ public class DummyStringVirtualColumn implements VirtualColumn
         return DimensionSelector.constant(null);
       }
 
-      CachingStringDictionaryEncodedColumn stringCol = toStringDictionaryEncodedColumn(holder.getColumn());
+      StringDictionaryEncodedColumn stringCol = toStringDictionaryEncodedColumn(holder.getColumn());
 
       DimensionSelector baseDimensionSelector = stringCol.makeDimensionSelector(
           offset,
@@ -145,7 +145,7 @@ public class DummyStringVirtualColumn implements VirtualColumn
         return NilColumnValueSelector.instance();
       }
 
-      CachingStringDictionaryEncodedColumn stringCol = toStringDictionaryEncodedColumn(holder.getColumn());
+      StringDictionaryEncodedColumn stringCol = toStringDictionaryEncodedColumn(holder.getColumn());
       return stringCol.makeColumnValueSelector(offset);
     } else {
       return null;
@@ -222,13 +222,13 @@ public class DummyStringVirtualColumn implements VirtualColumn
     return new byte[0];
   }
 
-  private CachingStringDictionaryEncodedColumn toStringDictionaryEncodedColumn(BaseColumn column)
+  private StringDictionaryEncodedColumn toStringDictionaryEncodedColumn(BaseColumn column)
   {
-    if (!(column instanceof CachingStringDictionaryEncodedColumn)) {
+    if (!(column instanceof StringDictionaryEncodedColumn)) {
       throw new IAE("I can only work with StringDictionaryEncodedColumn");
     }
 
-    return (CachingStringDictionaryEncodedColumn) column;
+    return (StringDictionaryEncodedColumn) column;
   }
 
   private DimensionSelector disableValueMatchers(DimensionSelector base)

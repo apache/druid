@@ -153,7 +153,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
       );
       serializer.open();
 
-      NestedColumnSupplierTest.SettableSelector valueSelector = new NestedColumnSupplierTest.SettableSelector();
+      NestedDataColumnSupplierTest.SettableSelector valueSelector = new NestedDataColumnSupplierTest.SettableSelector();
       for (Object o : data) {
         valueSelector.setObject(StructuredData.wrap(o));
         serializer.serialize(valueSelector);
@@ -179,7 +179,6 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
     ColumnBuilder bob = new ColumnBuilder();
     bob.setFileMapper(fileMapper);
     ScalarLongColumnAndIndexSupplier supplier = ScalarLongColumnAndIndexSupplier.read(
-        "test",
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
         baseBuffer,
@@ -197,7 +196,6 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
     ColumnBuilder bob = new ColumnBuilder();
     bob.setFileMapper(fileMapper);
     ScalarLongColumnAndIndexSupplier supplier = ScalarLongColumnAndIndexSupplier.read(
-        "test",
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
         baseBuffer,

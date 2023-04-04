@@ -1114,15 +1114,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           uniqueDims.put(dimension, uniqueDims.size());
           dimensionSchemaMap.put(
               dimension,
-              // this should use:
-              // columnHolder.getColumnFormat().getColumnSchema(dimension)
-              // someday...
-              createDimensionSchema(
-                  dimension,
-                  dimensionHandler,
-                  columnHolder.getCapabilities(),
-                  dimensionHandler.getMultivalueHandling()
-              )
+              columnHolder.getColumnFormat().getColumnSchema(dimension)
           );
         }
       }

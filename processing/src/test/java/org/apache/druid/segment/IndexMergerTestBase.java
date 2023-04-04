@@ -45,7 +45,7 @@ import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.segment.column.CachingStringDictionaryEncodedColumn;
+import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
@@ -565,12 +565,12 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     DictionaryEncodedColumn encodedColumn = (DictionaryEncodedColumn) index.getColumnHolder("dim2").getColumn();
     Object obj;
     if (encodedColumn.hasMultipleValues()) {
-      Field field = CachingStringDictionaryEncodedColumn.class.getDeclaredField("multiValueColumn");
+      Field field = StringDictionaryEncodedColumn.class.getDeclaredField("multiValueColumn");
       field.setAccessible(true);
 
       obj = field.get(encodedColumn);
     } else {
-      Field field = CachingStringDictionaryEncodedColumn.class.getDeclaredField("column");
+      Field field = StringDictionaryEncodedColumn.class.getDeclaredField("column");
       field.setAccessible(true);
 
       obj = field.get(encodedColumn);

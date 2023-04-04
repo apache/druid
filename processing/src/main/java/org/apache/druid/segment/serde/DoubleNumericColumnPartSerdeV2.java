@@ -142,7 +142,7 @@ public class DoubleNumericColumnPartSerdeV2 implements ColumnPartSerde
   @Override
   public Deserializer getDeserializer()
   {
-    return (columnName, buffer, builder, columnConfig) -> {
+    return (buffer, builder, columnConfig) -> {
       int offset = buffer.getInt();
       int initialPos = buffer.position();
       final Supplier<ColumnarDoubles> column = CompressedColumnarDoublesSuppliers.fromByteBuffer(

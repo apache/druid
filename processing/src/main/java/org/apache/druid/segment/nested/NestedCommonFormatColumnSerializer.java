@@ -23,9 +23,13 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.segment.GenericColumnSerializer;
+import org.apache.druid.segment.data.VByte;
 import org.apache.druid.segment.serde.Serializer;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.channels.WritableByteChannel;
 import java.util.SortedMap;
 
 public abstract class NestedCommonFormatColumnSerializer implements GenericColumnSerializer<StructuredData>
@@ -71,6 +75,24 @@ public abstract class NestedCommonFormatColumnSerializer implements GenericColum
     try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(internalName, serializer.getSerializedSize())) {
       serializer.writeTo(smooshChannel, smoosher);
     }
+  }
+
+  protected void writeV0Header(WritableByteChannel channel, ByteBuffer columnNameBuffer) throws IOException
+  {
+    channel.write(ByteBuffer.wrap(new byte[]{NestedCommonFormatColumnSerializer.V0}));
+    channel.write(columnNameBuffer);
+  }
+
+  protected ByteBuffer computeFilenameBytes()
+  {
+    final String columnName = getColumnName();
+    final byte[] bytes = StringUtils.toUtf8(columnName);
+    final int length = VByte.computeIntSize(bytes.length);
+    final ByteBuffer buffer = ByteBuffer.allocate(length + bytes.length).order(ByteOrder.nativeOrder());
+    VByte.writeInt(buffer, bytes.length);
+    buffer.put(bytes);
+    buffer.flip();
+    return buffer;
   }
 
   public static String getInternalFileName(String fileNameBase, String field)

@@ -102,7 +102,7 @@ public class FloatNumericColumnPartSerde implements ColumnPartSerde
     return new Deserializer()
     {
       @Override
-      public void read(String columnName, ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+      public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
       {
         final CompressedColumnarFloatsSupplier column = CompressedColumnarFloatsSupplier.fromByteBuffer(
             buffer,

@@ -73,7 +73,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class StandardDoubleColumnSupplierTest extends InitializedNullHandlingTest
+public class ScalarDoubleColumnSupplierTest extends InitializedNullHandlingTest
 {
   private static final String NO_MATCH = "no";
 
@@ -153,7 +153,7 @@ public class StandardDoubleColumnSupplierTest extends InitializedNullHandlingTes
       );
       serializer.open();
 
-      NestedColumnSupplierTest.SettableSelector valueSelector = new NestedColumnSupplierTest.SettableSelector();
+      NestedDataColumnSupplierTest.SettableSelector valueSelector = new NestedDataColumnSupplierTest.SettableSelector();
       for (Object o : data) {
         valueSelector.setObject(StructuredData.wrap(o));
         serializer.serialize(valueSelector);
@@ -179,7 +179,6 @@ public class StandardDoubleColumnSupplierTest extends InitializedNullHandlingTes
     ColumnBuilder bob = new ColumnBuilder();
     bob.setFileMapper(fileMapper);
     ScalarDoubleColumnAndIndexSupplier supplier = ScalarDoubleColumnAndIndexSupplier.read(
-        "test",
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
         baseBuffer,
@@ -197,7 +196,6 @@ public class StandardDoubleColumnSupplierTest extends InitializedNullHandlingTes
     ColumnBuilder bob = new ColumnBuilder();
     bob.setFileMapper(fileMapper);
     ScalarDoubleColumnAndIndexSupplier supplier = ScalarDoubleColumnAndIndexSupplier.read(
-        "test",
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
         baseBuffer,

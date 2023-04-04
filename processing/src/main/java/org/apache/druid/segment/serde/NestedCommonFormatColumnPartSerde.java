@@ -105,9 +105,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
   public Deserializer getDeserializer()
   {
     if (logicalType.is(ValueType.STRING)) {
-      return ((columnName, buffer, builder, columnConfig) -> {
+      return ((buffer, builder, columnConfig) -> {
         ScalarStringColumnAndIndexSupplier supplier = ScalarStringColumnAndIndexSupplier.read(
-            columnName,
             byteOrder,
             bitmapSerdeFactory,
             buffer,
@@ -124,9 +123,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       });
     }
     if (logicalType.is(ValueType.LONG)) {
-      return ((columnName, buffer, builder, columnConfig) -> {
+      return ((buffer, builder, columnConfig) -> {
         ScalarLongColumnAndIndexSupplier supplier = ScalarLongColumnAndIndexSupplier.read(
-            columnName,
             byteOrder,
             bitmapSerdeFactory,
             buffer,
@@ -143,9 +141,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       });
     }
     if (logicalType.is(ValueType.DOUBLE)) {
-      return ((columnName, buffer, builder, columnConfig) -> {
+      return ((buffer, builder, columnConfig) -> {
         ScalarDoubleColumnAndIndexSupplier supplier = ScalarDoubleColumnAndIndexSupplier.read(
-            columnName,
             byteOrder,
             bitmapSerdeFactory,
             buffer,
@@ -162,9 +159,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       });
     }
     if (logicalType.isArray()) {
-      return ((columnName, buffer, builder, columnConfig) -> {
+      return ((buffer, builder, columnConfig) -> {
         VariantArrayColumnAndIndexSupplier supplier = VariantArrayColumnAndIndexSupplier.read(
-            columnName,
             logicalType,
             byteOrder,
             bitmapSerdeFactory,
@@ -180,9 +176,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
         builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
       });
     }
-    return (columnName, buffer, builder, columnConfig) -> {
+    return (buffer, builder, columnConfig) -> {
       NestedDataColumnSupplier supplier = NestedDataColumnSupplier.read(
-          columnName,
           hasNulls,
           buffer,
           builder,
