@@ -279,7 +279,11 @@ function getTimestampSpec(sampleResponse: SampleResponse | null): TimestampSpec 
   );
 
   return (
-    timestampSpecs.find(ts => /time/i.test(ts.column)) || // Use a suggestion that has time in the name if possible
+    // Prefer a suggestion that has "time" in the name and is not a numeric format
+    timestampSpecs.find(
+      ts => /time/i.test(ts.column) && !NUMERIC_TIME_FORMATS.includes(ts.format),
+    ) ||
+    timestampSpecs.find(ts => /time/i.test(ts.column)) || // Otherwise anything that has "time" in the name
     timestampSpecs.find(ts => !NUMERIC_TIME_FORMATS.includes(ts.format)) || // Use a suggestion that is not numeric
     timestampSpecs[0] || // Fall back to the first one
     CONSTANT_TIMESTAMP_SPEC // Ok, empty it is...
