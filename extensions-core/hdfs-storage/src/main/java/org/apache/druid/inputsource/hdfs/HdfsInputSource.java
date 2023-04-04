@@ -21,6 +21,7 @@ package org.apache.druid.inputsource.hdfs;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -95,6 +96,7 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
     this.inputPaths.forEach(p -> verifyProtocol(configuration, inputSourceConfig, p));
   }
 
+  @JsonIgnore
   @Nonnull
   @Override
   public Set<String> getTypes() {

@@ -30,6 +30,7 @@ import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
@@ -246,6 +247,7 @@ public class S3InputSource extends CloudObjectInputSource
     this.maxRetries = maxRetries;
   }
 
+  @JsonIgnore
   @Nonnull
   @Override
   public Set<String> getTypes() {

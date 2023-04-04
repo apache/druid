@@ -51,6 +51,7 @@ public class InlineInputSource extends AbstractInputSource
     this.data = data;
   }
 
+  @JsonIgnore
   @Nonnull
   @Override
   public Set<String> getTypes()

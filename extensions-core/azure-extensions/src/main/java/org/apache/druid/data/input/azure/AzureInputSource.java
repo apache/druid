@@ -21,6 +21,7 @@ package org.apache.druid.data.input.azure;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
@@ -93,6 +94,7 @@ public class AzureInputSource extends CloudObjectInputSource
     );
   }
 
+  @JsonIgnore
   @Nonnull
   @Override
   public Set<String> getTypes() {

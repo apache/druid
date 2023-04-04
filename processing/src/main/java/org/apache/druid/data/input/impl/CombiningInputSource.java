@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.AbstractInputSource;
@@ -64,6 +65,7 @@ public class CombiningInputSource extends AbstractInputSource implements Splitta
     this.delegates = delegates;
   }
 
+  @JsonIgnore
   @Nonnull
   @Override
   public Set<String> getTypes()

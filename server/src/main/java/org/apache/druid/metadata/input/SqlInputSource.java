@@ -21,6 +21,7 @@ package org.apache.druid.metadata.input;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
@@ -71,6 +72,7 @@ public class SqlInputSource extends AbstractInputSource implements SplittableInp
     this.objectMapper = objectMapper;
   }
 
+  @JsonIgnore
   @Nonnull
   @Override
   public Set<String> getTypes() {

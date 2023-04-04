@@ -21,6 +21,7 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
@@ -71,6 +72,7 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
     this.config = config;
   }
 
+  @JsonIgnore
   @Nonnull
   @Override
   public Set<String> getTypes()
