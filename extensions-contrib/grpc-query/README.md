@@ -187,6 +187,10 @@ The `grpc-query-it` project provides integration tests for the extension. These 
 run using the "new" IT framework as described in the `integration-tests-ex/doc/README.md`
 file.
 
+Take care when working with the shaded jar. The `grpc-query` project depends on the
+shaded jar, but we _must_ block transitive dependencies to avoid an IDE helpfully pulling
+in the very Guava version we want to avoid. See the various `pom.xml` files for details.
+
 ## Debugging
 
 Debugging of the gRPC extension requires extra care due to the nuances of loading

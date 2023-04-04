@@ -218,12 +218,17 @@
         <module>extensions-contrib/prometheus-emitter</module>
         <module>extensions-contrib/opentelemetry-emitter</module>
         <module>extensions-contrib/kubernetes-overlord-extensions</module>
-        <!-- Do not include the grpc-shaded module in this list. It is instead built
-             via an exec plugin in the grpc-query module. The shaded jar cannot appear
-             in this list as it will cause Guava conficts in an IDE. The IDE loads the
+        <!-- Do not include the grpc-shaded module when opening the Druid in an IDE.
+             The shaded jar module cannot be opened in your IDE
+             as it will cause Guava conficts. The IDE loads the
              pre-shaded dependencies, not the shaded jar, if this module is listed here.
-        <module>extensions-contrib/grpc-shaded</module>
+             Instead, use -P shaded profile when
+             building the grpc-query module: it will build the shaded jar for you in
+             lieu of the IDE doing so. Or, just let Maven build all of Druid outside
+             of the IDE, then refresh your IDE state: the shaded jar will appear in
+             your local Maven repo.
          -->
+        <module>extensions-contrib/grpc-shaded</module>
         <module>extensions-contrib/grpc-query</module>
         <!-- distribution packaging -->
         <module>distribution</module>
@@ -243,7 +248,7 @@
                <enabled>false</enabled>
             </snapshots>
         </repository>
-        
+
         <!-- Only used by core, but moved to root for parallel build dependency resolution -->
         <repository>
             <id>sigar</id>
@@ -253,7 +258,7 @@
             </snapshots>
         </repository>
     </repositories>
-    
+
     <pluginRepositories>
         <pluginRepository>
             <id>${repoOrgId}</id>

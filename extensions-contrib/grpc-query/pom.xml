@@ -46,12 +46,23 @@
   </parent>
 
   <dependencies>
-    <!-- The shaded gRPC module created by this module, but
-         not listed in the root pom.xml. -->
     <dependency>
       <groupId>org.apache.druid.extensions.contrib</groupId>
       <artifactId>druid-shaded-grpc</artifactId>
       <version>${project.parent.version}</version>
+      <exclusions>
+        <!-- gRPC uses a newer Guava version. It is shaded in the jar. Prevent the transitive
+             dependency via the above dependency.
+          -->
+        <exclusion>
+          <groupId>io.grpc</groupId>
+          <artifactId>grpc-bom</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.druid</groupId>
@@ -203,38 +214,6 @@
       </extension>
     </extensions>
     <plugins>
-      <!-- Build the shaded jar using a seprate Maven module.
-           Done inline here to avoid dependency conflicts in IDEs.
-           If the project is included in the top-level pom.xml, then the IDE will helpfully
-           bring in all that project's dependencies, including a newer version of Guava.
-           When we try to run tests, whichever version of Guava is on the command line first
-           wins, result in the very conflicts that the shaded jar is intendeded to avoid.
-           By building it here, manually, the top-level Maven file doesn't know about the
-           project and so neither does the IDE. The production build is identical either
-           way. -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>build-shaded-jar</id>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <phase>initialize</phase>
-            <configuration>
-              <workingDirectory>${project.basedir}/../grpc-shaded</workingDirectory>
-              <executable>mvn</executable>
-              <arguments>
-                <argument>install</argument>
-                <argument>-P</argument>
-                <argument>skip-static-checks,skip-tests</argument>
-                <argument>-Dmaven.javadoc.skip=true</argument>
-              </arguments>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
       <!--package all dependencies together-->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -347,6 +326,51 @@
   </build>
 
   <profiles>
+    <profile>
+      <id>shaded</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+        <property>
+          <name>tar</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <!-- Build the shaded jar using a separate Maven module.
+               Done inline here to avoid dependency conflicts in IDEs.
+               If the project is included in the top-level pom.xml, then the IDE will helpfully
+               bring in all that project's dependencies, including a newer version of Guava.
+               When we try to run tests, whichever version of Guava is on the command line first
+               wins, result in the very conflicts that the shaded jar is intended to avoid.
+               By building it here, manually, the top-level Maven file doesn't know about the
+               project and so neither does the IDE. The production build is identical either
+               way. -->
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>build-shaded-jar</id>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <phase>initialize</phase>
+                <configuration>
+                  <workingDirectory>${project.basedir}/../grpc-shaded</workingDirectory>
+                  <executable>mvn</executable>
+                  <arguments>
+                    <argument>install</argument>
+                    <argument>-P</argument>
+                    <argument>skip-static-checks,skip-tests</argument>
+                    <argument>-Dmaven.javadoc.skip=true</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
     <!-- Profile to build the .tar.gz file for the extension. This file contains both
          the grpc-query code and the shaded gRPC jar file.
          This form is needed for the IT. It is also a more convenient way to distribute
