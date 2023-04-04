@@ -63,7 +63,8 @@ public class MSQFaultSerdeTest
     assertFaultSerde(new InvalidNullByteFault("the column"));
     assertFaultSerde(new NotEnoughMemoryFault(1000, 1000, 900, 1, 2));
     assertFaultSerde(QueryNotSupportedFault.INSTANCE);
-    assertFaultSerde(new QueryStackFault("new error", "base error"));
+    assertFaultSerde(new QueryRuntimeFault("new error", "base error"));
+    assertFaultSerde(new QueryRuntimeFault("new error", null));
     assertFaultSerde(new RowTooLargeFault(1000));
     assertFaultSerde(new TaskStartTimeoutFault(10, 11));
     assertFaultSerde(new TooManyBucketsFault(10));

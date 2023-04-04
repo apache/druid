@@ -23,22 +23,24 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * Fault to throw when the error cames from the druid native query stack while running in the MSQ engine .
+ * Fault to throw when the error comes from the druid native query runtime while running in the MSQ engine .
  */
-@JsonTypeName(QueryStackFault.CODE)
-public class QueryStackFault extends BaseMSQFault
+@JsonTypeName(QueryRuntimeFault.CODE)
+public class QueryRuntimeFault extends BaseMSQFault
 {
-  public static final String CODE = "QueryStackError";
+  public static final String CODE = "QueryRuntimeError";
+  @Nullable
   private final String baseErrorMessage;
 
 
   @JsonCreator
-  public QueryStackFault(
+  public QueryRuntimeFault(
       @JsonProperty("errorMessage") String errorMessage,
-      @JsonProperty("baseErrorMessage") String baseErrorMessage
+      @Nullable @JsonProperty("baseErrorMessage") String baseErrorMessage
   )
   {
     super(CODE, errorMessage);
@@ -46,6 +48,7 @@ public class QueryStackFault extends BaseMSQFault
   }
 
   @JsonProperty
+  @Nullable
   public String getBaseErrorMessage()
   {
     return baseErrorMessage;
@@ -63,7 +66,7 @@ public class QueryStackFault extends BaseMSQFault
     if (!super.equals(o)) {
       return false;
     }
-    QueryStackFault that = (QueryStackFault) o;
+    QueryRuntimeFault that = (QueryRuntimeFault) o;
     return Objects.equals(baseErrorMessage, that.baseErrorMessage);
   }
 

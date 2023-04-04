@@ -49,7 +49,7 @@ public class MSQErrorReport
   MSQErrorReport(
       @JsonProperty("taskId") final String taskId,
       @JsonProperty("host") @Nullable final String host,
-      @JsonProperty("stageNumber") final Integer stageNumber,
+      @JsonProperty("stageNumber") @Nullable final Integer stageNumber,
       @JsonProperty("error") final MSQFault fault,
       @JsonProperty("exceptionStackTrace") @Nullable final String exceptionStackTrace
   )
@@ -193,12 +193,14 @@ public class MSQErrorReport
       } else if (cause instanceof FrameRowTooLargeException) {
         return new RowTooLargeFault(((FrameRowTooLargeException) cause).getMaxFrameSize());
       } else if (cause instanceof UnexpectedMultiValueDimensionException) {
-        return new QueryStackFault(StringUtils.format(
+        return new QueryRuntimeFault(StringUtils.format(
             "Column [%s] is a multi value string. Please wrap the column using MV_TO_ARRAY() to proceed further.",
             ((UnexpectedMultiValueDimensionException) cause).getDimensionName()
         ), cause.getMessage());
-      }
-      else {
+      } else if (cause.getClass().getPackage().getName().startsWith("org.apache.druid.query")) {
+        // catch all for all query runtime exception faults.
+        return new QueryRuntimeFault(e.getMessage(), null);
+      } else {
         cause = cause.getCause();
       }
     }
