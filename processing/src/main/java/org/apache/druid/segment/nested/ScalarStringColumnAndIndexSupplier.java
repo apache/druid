@@ -29,7 +29,6 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
 import org.apache.druid.segment.column.DruidPredicateIndex;
@@ -182,11 +181,6 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
       );
     }
     return new ScalarStringDictionaryEncodedColumn<>(encodedColumnSupplier.get(), stringDictionary.singleThreaded());
-  }
-
-  public ColumnType getLogicalType()
-  {
-    return ColumnType.STRING;
   }
 
   private static ByteBuffer loadInternalFile(

@@ -163,11 +163,6 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     );
   }
 
-  public ColumnType getLogicalType()
-  {
-    return ColumnType.DOUBLE;
-  }
-
   @Nullable
   @Override
   public <T> T as(Class<T> clazz)

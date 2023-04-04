@@ -232,7 +232,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
     Assert.assertEquals(expectedReason, failureReason.get());
   }
 
-  private void smokeTest(ScalarLongColumnAndIndexSupplier supplier, ScalarLongColumn column) throws IOException
+  private void smokeTest(ScalarLongColumnAndIndexSupplier supplier, ScalarLongColumn column)
   {
     SimpleAscendingOffset offset = new SimpleAscendingOffset(data.size());
     ColumnValueSelector<?> valueSelector = column.makeColumnValueSelector(offset);

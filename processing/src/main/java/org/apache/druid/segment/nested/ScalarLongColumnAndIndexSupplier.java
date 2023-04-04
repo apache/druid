@@ -163,11 +163,6 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     );
   }
 
-  public ColumnType getLogicalType()
-  {
-    return ColumnType.LONG;
-  }
-
   @Nullable
   @Override
   public <T> T as(Class<T> clazz)

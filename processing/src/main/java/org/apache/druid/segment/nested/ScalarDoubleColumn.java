@@ -36,7 +36,6 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 
 public class ScalarDoubleColumn implements NestedCommonFormatColumn
 {
@@ -168,7 +167,7 @@ public class ScalarDoubleColumn implements NestedCommonFormatColumn
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     valueColumn.close();
   }

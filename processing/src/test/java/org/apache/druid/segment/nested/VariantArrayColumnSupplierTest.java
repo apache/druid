@@ -231,7 +231,7 @@ public class VariantArrayColumnSupplierTest extends InitializedNullHandlingTest
     Assert.assertEquals(expectedReason, failureReason.get());
   }
 
-  private void smokeTest(VariantArrayColumnAndIndexSupplier supplier, VariantArrayColumn column) throws IOException
+  private void smokeTest(VariantArrayColumnAndIndexSupplier supplier, VariantArrayColumn column)
   {
     SimpleAscendingOffset offset = new SimpleAscendingOffset(data.size());
     ColumnValueSelector<?> valueSelector = column.makeColumnValueSelector(offset);

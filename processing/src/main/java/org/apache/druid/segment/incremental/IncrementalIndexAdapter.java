@@ -102,11 +102,6 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     }
   }
 
-  public IncrementalIndex getIncrementalIndex()
-  {
-    return index;
-  }
-
   @Override
   public Interval getDataInterval()
   {

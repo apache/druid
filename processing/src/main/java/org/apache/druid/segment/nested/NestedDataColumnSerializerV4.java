@@ -151,11 +151,6 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
     this.globalDictionaryIdLookup = new DictionaryIdLookup();
   }
 
-  public DictionaryIdLookup getGlobalLookup()
-  {
-    return globalDictionaryIdLookup;
-  }
-
   @Override
   public void open() throws IOException
   {

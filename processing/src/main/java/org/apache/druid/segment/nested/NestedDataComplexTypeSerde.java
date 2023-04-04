@@ -48,7 +48,6 @@ import java.nio.ByteBuffer;
 public class NestedDataComplexTypeSerde extends ComplexMetricSerde
 {
   public static final String TYPE_NAME = "json";
-  public static final ColumnType TYPE = ColumnType.ofComplex(TYPE_NAME);
 
   public static final ObjectMapper OBJECT_MAPPER;
 

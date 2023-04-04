@@ -469,7 +469,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     ImmutableMap.Builder<String, ColumnFormat> builder = ImmutableMap.builder();
 
     synchronized (dimensionDescs) {
-      timeAndMetricsColumnCapabilities.forEach((col, cap) -> builder.put(col, new CapabilitiesBasedFormat(cap)));
+      timeAndMetricsColumnFormats.forEach(builder::put);
       dimensionDescs.forEach((dimension, desc) -> builder.put(dimension, desc.getIndexer().getFormat()));
     }
     return builder.build();
@@ -491,25 +491,9 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   @Nullable
   public ColumnFormat getColumnFormat(String columnName)
   {
-    if (timeAndMetricsColumnCapabilities.containsKey(columnName)) {
-      final ColumnCapabilities capabilities = timeAndMetricsColumnCapabilities.get(columnName);
-      if (capabilities.is(ValueType.COMPLEX)) {
-        // normalize complex type name for these capabilities. the values in timeAndMetricsColumnCapabilities
-        // are direct from the AggregatorFactory, so might be too specific (think build vs merge aggs)
-        // for this method though, we want the 'normal' type name for the capabilities, since this is the true 'output'
-        // type of the column, so use the type from the MetricDesc instead, which is computed by round-tripping through
-        // something like ComplexMetrics.getSerdeForType(valueType.getComplexTypeName()).getTypeName()
-        return new CapabilitiesBasedFormat(
-            ColumnCapabilitiesImpl.snapshot(
-                ColumnCapabilitiesImpl.copyOf(capabilities)
-                                      .setType(ColumnType.ofComplex(metricDescs.get(columnName).getType())),
-                ColumnCapabilitiesImpl.ALL_FALSE
-            )
-        );
-      }
-      return new CapabilitiesBasedFormat(ColumnCapabilitiesImpl.snapshot(capabilities, ColumnCapabilitiesImpl.ALL_FALSE));
+    if (timeAndMetricsColumnFormats.containsKey(columnName)) {
+      return timeAndMetricsColumnFormats.get(columnName);
     }
-
 
     synchronized (dimensionDescs) {
       final DimensionDesc desc = dimensionDescs.get(columnName);

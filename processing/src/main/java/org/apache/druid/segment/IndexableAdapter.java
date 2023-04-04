@@ -89,11 +89,6 @@ public interface IndexableAdapter
       return valueDictionary;
     }
 
-    public SortedMap<String, FieldTypeInfo.MutableTypeSet> getFields()
-    {
-      return fields;
-    }
-
     public void mergeFieldsInto(SortedMap<String, FieldTypeInfo.MutableTypeSet> mergeInto)
     {
       for (Map.Entry<String, FieldTypeInfo.MutableTypeSet> entry : fields.entrySet()) {

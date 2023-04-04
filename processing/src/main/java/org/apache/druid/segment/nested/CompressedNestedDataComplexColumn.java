@@ -163,11 +163,6 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
 
   public abstract String getFieldFileName(String fileNameBase, String field, int fieldIndex);
 
-  public GenericIndexed<String> getFields()
-  {
-    return fields;
-  }
-
   @Override
   public SortedMap<String, FieldTypeInfo.MutableTypeSet> getFieldTypeInfo()
   {
