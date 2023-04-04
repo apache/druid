@@ -45,7 +45,7 @@ class BasicAuthClient:
     Manage Basic security. The Druid session must be logged in with the super
     user, or some other user who has permission to modify user credentials.
 
-    Each client works with one authorizor/authenticator pair. Create multiple clients if you have to
+    Each client works with one authorizer/authenticator pair. Create multiple clients if you have to
     work with multiple authenticators on a single server.
 
     The basic pattern to add users and permissions is:
@@ -71,7 +71,7 @@ class BasicAuthClient:
     ```
 
     Then use the various other methods to list users, roles and permissions to verify the
-    setup. You can now create a second Druid client that acts as the new user:
+    setup. You can then create a second Druid client that acts as the new user:
 
     ```
     bob_client = druidapi.jupyter_client('http://localhost:8888', auth=('bob', 'secret'))
@@ -228,7 +228,7 @@ class BasicAuthClient:
     def grant_permissions(self, role, triples):
         '''
         Set the permissions for a role given an array of triples of the form
-        [type, name, action].
+        `[[type, name, action], ...]`.
 
         Overwrites any existing permissions.
         '''

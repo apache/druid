@@ -124,9 +124,9 @@ class DruidClient:
         This client assumes the typical case of one authenticator and one authorizer. If
         you have more than one, create multiple clients.
 
-        The basic security API is not proxied through the router: it must work directly with
-        the coordinator. Create an ad-hoc Druid client for your coordinator. Because you have
-        Basic security enabled, you must specify the admin user and password:
+        The basic security API is not proxied through the Router: it must work directly with
+        the Coordinator. Create an ad hoc Druid client for your Coordinator. Because you have
+        basic security enabled, you must specify the admin user and password:
 
         ```
         coord = druidapi.jupyter_client('http://localhost:8081', auth=('admin', 'admin-pwd'))
@@ -139,9 +139,9 @@ class DruidClient:
             Authenticator name as set in the `druid.auth.authenticatorChain`
             runtime property.
 
-        authorizer: str, default = authenticator
-            Authorizor name as set in the `druid.auth.authorizers` runtime property.
-            Defaults to the same as `authenticator` for simple cases.
+        authorizer: str, default = same as authenticator
+            Authorizer name as set in the `druid.auth.authorizers` runtime property.
+            Defaults to the same name as the `authenticator` parameter for simple cases.
         '''
         return BasicAuthClient(self.rest_client, authenticator, authorizer)
 

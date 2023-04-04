@@ -103,13 +103,13 @@ class DruidRestClient:
         Parameters
         ----------
         endpoint: str
-            The Druid router endpoint of the form 'server:port'. Use
-            'localhost:8888' for a Druid running locally.
+            The Druid router endpoint of the form `'server:port'`. Use
+            `'localhost:8888'` for a Druid instance running locally.
 
-        auth: str, defult = None
-            Optional authorization credentials in the format describd
-            by the Requets library. For Basic auth use
-            auth=('user', 'password')
+        auth: str, default = None
+            Optional authorization credentials in the format described
+            by the Requests library. For Basic auth use
+            `auth=('user', 'password')`
         '''
         self.endpoint = endpoint
         self.trace = False

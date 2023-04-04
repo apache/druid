@@ -172,16 +172,17 @@ The following takes you through sample configuration steps for enabling basic au
 
 3. Restart the cluster.
 
-See
+See the following topics for more information:
 
 * [Authentication and Authorization](../design/auth.md) for more information about the Authenticator,
-Escalator, and Authorizer concepts.
+Escalator, and Authorizer.
 * [Basic Security](../development/extensions-core/druid-basic-security.md) for more information about
 the extension used in the examples above.
 * [Kerberos](../development/extensions-core/druid-kerberos.md) for Kerberos authentication.
-* [User authentication and authorization](security-user-auth.md) for details of permissions.
+* [User authentication and authorization](security-user-auth.md) for details about permissions.
 * [SQL permissions](security-user-auth.md#sql-permissions) for permissions on SQL system tables.
-* The `druidapi` Python library, provided as part of the Druid tutorisls, for functions you can
+* [The `druidapi` Python library](../tutorials/tutorial-jupyter-index.md#python-api-for-druid),
+  provided as part of the Druid tutorials, for functions you can
   use in a Jupyter notebook to learn how security works, and to set up users and roles for testing.
 
 ## Enable authorizers
