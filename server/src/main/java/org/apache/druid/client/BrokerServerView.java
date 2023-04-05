@@ -505,7 +505,10 @@ public class BrokerServerView implements TimelineServerView
     List<DataSegment> segmentsToRemove =
         dataSegmentChanges
             .stream()
-            .filter(segment -> !segment.isLoad())
+            .filter(segment ->
+                        !(segment.isLoad()
+                          || segment.getChangeReasons().contains(DataSegmentChange.ChangeReason.OVERSHADOWED_STATUS)
+                          || segment.getChangeReasons().contains(DataSegmentChange.ChangeReason.HANDED_OFF_STATUS)))
             .map(DataSegmentChange::getSegmentWithOvershadowedStatus)
             .map(SegmentWithOvershadowedStatus::getDataSegment)
             .collect(Collectors.toList());
