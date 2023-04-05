@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.BitmapResultFactory;
@@ -622,6 +623,12 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     public String getValue(int index)
     {
       return delegate.getValue(idMapping.getReverseId(index));
+    }
+
+    @Override
+    public BitmapFactory getBitmapFactory()
+    {
+      return delegate.getBitmapFactory();
     }
 
     @Override

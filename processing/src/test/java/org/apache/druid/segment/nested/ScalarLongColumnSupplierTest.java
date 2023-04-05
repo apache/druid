@@ -182,7 +182,8 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
         baseBuffer,
-        bob
+        bob,
+        NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES
     );
     try (ScalarLongColumn column = (ScalarLongColumn) supplier.get()) {
       smokeTest(supplier, column);
@@ -199,7 +200,8 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
         baseBuffer,
-        bob
+        bob,
+        NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES
     );
     final String expectedReason = "none";
     final AtomicReference<String> failureReason = new AtomicReference<>(expectedReason);

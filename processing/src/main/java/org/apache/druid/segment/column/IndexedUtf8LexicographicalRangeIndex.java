@@ -44,11 +44,14 @@ public final class IndexedUtf8LexicographicalRangeIndex<TDictionary extends Inde
   private final Indexed<ImmutableBitmap> bitmaps;
   private final boolean hasNull;
 
+  private final int skipRangeIndexThreshold;
+
   public IndexedUtf8LexicographicalRangeIndex(
       BitmapFactory bitmapFactory,
       TDictionary dictionary,
       Indexed<ImmutableBitmap> bitmaps,
-      boolean hasNull
+      boolean hasNull,
+      int skipRangeIndexThreshold
   )
   {
     Preconditions.checkArgument(dictionary.isSorted(), "Dictionary must be sorted");
@@ -56,6 +59,7 @@ public final class IndexedUtf8LexicographicalRangeIndex<TDictionary extends Inde
     this.dictionary = dictionary;
     this.bitmaps = bitmaps;
     this.hasNull = hasNull;
+    this.skipRangeIndexThreshold = skipRangeIndexThreshold;
   }
 
   @Override
@@ -67,6 +71,11 @@ public final class IndexedUtf8LexicographicalRangeIndex<TDictionary extends Inde
       boolean endStrict
   )
   {
+    final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
+    final int start = range.leftInt(), end = range.rightInt();
+    if ((end - start) > skipRangeIndexThreshold) {
+      return null;
+    }
     return new SimpleImmutableBitmapIterableIndex()
     {
       @Override

@@ -29,6 +29,7 @@ import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.column.BitmapColumnIndex;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
@@ -63,6 +64,26 @@ import java.util.TreeSet;
 public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingTest
 {
   private static final int ROW_COUNT = 10;
+  static final ColumnConfig ALWAYS_USE_INDEXES = new ColumnConfig()
+  {
+    @Override
+    public int columnCacheSizeBytes()
+    {
+      return 0;
+    }
+
+    @Override
+    public double skipValueRangeIndexScale()
+    {
+      return 1.0;
+    }
+
+    @Override
+    public double skipValuePredicateIndexScale()
+    {
+      return 1.0;
+    }
+  };
   BitmapSerdeFactory roaringFactory = RoaringBitmapSerdeFactory.getInstance();
   BitmapResultFactory<ImmutableBitmap> bitmapResultFactory = new DefaultBitmapResultFactory(
       roaringFactory.getBitmapFactory()
@@ -70,6 +91,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
   Supplier<Indexed<ByteBuffer>> globalStrings;
   Supplier<FixedIndexed<Long>> globalLongs;
   Supplier<FixedIndexed<Double>> globalDoubles;
+
 
   @Before
   public void setup() throws IOException
@@ -1406,6 +1428,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
                                               .getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
+        ALWAYS_USE_INDEXES,
         bitmaps,
         dictionarySupplier,
         stringIndexed,
@@ -1413,9 +1436,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         doubleIndexed,
         null,
         null,
-        ROW_COUNT,
-        1.0,
-        1.0
+        ROW_COUNT
     );
 
     StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
@@ -1447,11 +1468,30 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
   @Test
   public void testSkipIndexThresholds() throws IOException
   {
+    ColumnConfig twentyPercent = new ColumnConfig()
+    {
+      @Override
+      public int columnCacheSizeBytes()
+      {
+        return 0;
+      }
 
-    NestedFieldColumnIndexSupplier<?> singleTypeStringSupplier = makeSingleTypeStringSupplier(0.2, 0.2);
-    NestedFieldColumnIndexSupplier<?> singleTypeLongSupplier = makeSingleTypeLongSupplier(0.2, 0.2);
-    NestedFieldColumnIndexSupplier<?> singleTypeDoubleSupplier = makeSingleTypeDoubleSupplier(0.2, 0.2);
-    NestedFieldColumnIndexSupplier<?> variantSupplierWithNull = makeVariantSupplierWithNull(0.2, 0.2);
+      @Override
+      public double skipValueRangeIndexScale()
+      {
+        return 0.2;
+      }
+
+      @Override
+      public double skipValuePredicateIndexScale()
+      {
+        return 0.2;
+      }
+    };
+    NestedFieldColumnIndexSupplier<?> singleTypeStringSupplier = makeSingleTypeStringSupplier(twentyPercent);
+    NestedFieldColumnIndexSupplier<?> singleTypeLongSupplier = makeSingleTypeLongSupplier(twentyPercent);
+    NestedFieldColumnIndexSupplier<?> singleTypeDoubleSupplier = makeSingleTypeDoubleSupplier(twentyPercent);
+    NestedFieldColumnIndexSupplier<?> variantSupplierWithNull = makeVariantSupplierWithNull(twentyPercent);
 
     // value cardinality of all of these dictionaries is bigger than the skip threshold, so predicate index short
     // circuit early and return nothing
@@ -1527,13 +1567,10 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
 
   private NestedFieldColumnIndexSupplier<?> makeSingleTypeStringSupplier() throws IOException
   {
-    return makeSingleTypeStringSupplier(1.0, 1.0);
+    return makeSingleTypeStringSupplier(ALWAYS_USE_INDEXES);
   }
 
-  private NestedFieldColumnIndexSupplier<?> makeSingleTypeStringSupplier(
-      double skipRangeScale,
-      double skipPredicateScale
-  ) throws IOException
+  private NestedFieldColumnIndexSupplier<?> makeSingleTypeStringSupplier(ColumnConfig columnConfig) throws IOException
   {
     ByteBuffer localDictionaryBuffer = ByteBuffer.allocate(1 << 12).order(ByteOrder.nativeOrder());
     ByteBuffer bitmapsBuffer = ByteBuffer.allocate(1 << 12);
@@ -1596,6 +1633,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
             new FieldTypeInfo.MutableTypeSet().add(ColumnType.STRING).getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
+        columnConfig,
         bitmaps,
         dictionarySupplier,
         globalStrings,
@@ -1603,21 +1641,17 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         globalDoubles,
         null,
         null,
-        ROW_COUNT,
-        skipRangeScale,
-        skipPredicateScale
+        ROW_COUNT
     );
   }
 
   private NestedFieldColumnIndexSupplier<?> makeSingleTypeStringWithNullsSupplier() throws IOException
   {
-    return makeSingleTypeStringWithNullsSupplier(1.0, 1.0);
+    return makeSingleTypeStringWithNullsSupplier(ALWAYS_USE_INDEXES);
   }
 
-  private NestedFieldColumnIndexSupplier<?> makeSingleTypeStringWithNullsSupplier(
-      double skipRangeScale,
-      double skipPredicateScale
-  ) throws IOException
+  private NestedFieldColumnIndexSupplier<?> makeSingleTypeStringWithNullsSupplier(ColumnConfig columnConfig)
+      throws IOException
   {
     ByteBuffer localDictionaryBuffer = ByteBuffer.allocate(1 << 12).order(ByteOrder.nativeOrder());
     ByteBuffer bitmapsBuffer = ByteBuffer.allocate(1 << 12);
@@ -1683,6 +1717,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
             new FieldTypeInfo.MutableTypeSet().add(ColumnType.STRING).getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
+        columnConfig,
         bitmaps,
         dictionarySupplier,
         globalStrings,
@@ -1690,21 +1725,16 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         globalDoubles,
         null,
         null,
-        ROW_COUNT,
-        skipRangeScale,
-        skipPredicateScale
+        ROW_COUNT
     );
   }
 
   private NestedFieldColumnIndexSupplier<?> makeSingleTypeLongSupplier() throws IOException
   {
-    return makeSingleTypeLongSupplier(1.0, 1.0);
+    return makeSingleTypeLongSupplier(ALWAYS_USE_INDEXES);
   }
 
-  private NestedFieldColumnIndexSupplier<?> makeSingleTypeLongSupplier(
-      double skipRangeScale,
-      double skipPredicateScale
-  ) throws IOException
+  private NestedFieldColumnIndexSupplier<?> makeSingleTypeLongSupplier(ColumnConfig columnConfig) throws IOException
   {
     ByteBuffer localDictionaryBuffer = ByteBuffer.allocate(1 << 12).order(ByteOrder.nativeOrder());
     ByteBuffer bitmapsBuffer = ByteBuffer.allocate(1 << 12);
@@ -1767,6 +1797,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
             new FieldTypeInfo.MutableTypeSet().add(ColumnType.LONG).getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
+        columnConfig,
         bitmaps,
         dictionarySupplier,
         globalStrings,
@@ -1774,21 +1805,17 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         globalDoubles,
         null,
         null,
-        ROW_COUNT,
-        skipRangeScale,
-        skipPredicateScale
+        ROW_COUNT
     );
   }
 
   private NestedFieldColumnIndexSupplier<?> makeSingleTypeLongSupplierWithNull() throws IOException
   {
-    return makeSingleTypeLongSupplierWithNull(1.0, 1.0);
+    return makeSingleTypeLongSupplierWithNull(ALWAYS_USE_INDEXES);
   }
 
-  private NestedFieldColumnIndexSupplier<?> makeSingleTypeLongSupplierWithNull(
-      double skipRangeScale,
-      double skipPredicateScale
-  ) throws IOException
+  private NestedFieldColumnIndexSupplier<?> makeSingleTypeLongSupplierWithNull(ColumnConfig columnConfig)
+      throws IOException
   {
     ByteBuffer localDictionaryBuffer = ByteBuffer.allocate(1 << 12).order(ByteOrder.nativeOrder());
     ByteBuffer bitmapsBuffer = ByteBuffer.allocate(1 << 12);
@@ -1855,6 +1882,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
             new FieldTypeInfo.MutableTypeSet().add(ColumnType.LONG).getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
+        columnConfig,
         bitmaps,
         dictionarySupplier,
         globalStrings,
@@ -1862,21 +1890,16 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         globalDoubles,
         null,
         null,
-        ROW_COUNT,
-        skipRangeScale,
-        skipPredicateScale
+        ROW_COUNT
     );
   }
 
   private NestedFieldColumnIndexSupplier<?> makeSingleTypeDoubleSupplier() throws IOException
   {
-    return makeSingleTypeDoubleSupplier(1.0, 1.0);
+    return makeSingleTypeDoubleSupplier(ALWAYS_USE_INDEXES);
   }
 
-  private NestedFieldColumnIndexSupplier<?> makeSingleTypeDoubleSupplier(
-      double skipRangeScale,
-      double skipPredicateScale
-  ) throws IOException
+  private NestedFieldColumnIndexSupplier<?> makeSingleTypeDoubleSupplier(ColumnConfig columnConfig) throws IOException
   {
     ByteBuffer localDictionaryBuffer = ByteBuffer.allocate(1 << 12).order(ByteOrder.nativeOrder());
     ByteBuffer bitmapsBuffer = ByteBuffer.allocate(1 << 12);
@@ -1939,6 +1962,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
             new FieldTypeInfo.MutableTypeSet().add(ColumnType.DOUBLE).getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
+        columnConfig,
         bitmaps,
         dictionarySupplier,
         globalStrings,
@@ -1946,21 +1970,17 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         globalDoubles,
         null,
         null,
-        ROW_COUNT,
-        skipRangeScale,
-        skipPredicateScale
+        ROW_COUNT
     );
   }
 
   private NestedFieldColumnIndexSupplier<?> makeSingleTypeDoubleSupplierWithNull() throws IOException
   {
-    return makeSingleTypeDoubleSupplierWithNull(1.0, 1.0);
+    return makeSingleTypeDoubleSupplierWithNull(ALWAYS_USE_INDEXES);
   }
 
-  private NestedFieldColumnIndexSupplier<?> makeSingleTypeDoubleSupplierWithNull(
-      double skipRangeScale,
-      double skipPredicateScale
-  ) throws IOException
+  private NestedFieldColumnIndexSupplier<?> makeSingleTypeDoubleSupplierWithNull(ColumnConfig columnConfig)
+      throws IOException
   {
     ByteBuffer localDictionaryBuffer = ByteBuffer.allocate(1 << 12).order(ByteOrder.nativeOrder());
     ByteBuffer bitmapsBuffer = ByteBuffer.allocate(1 << 12);
@@ -2027,6 +2047,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
             new FieldTypeInfo.MutableTypeSet().add(ColumnType.DOUBLE).getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
+        columnConfig,
         bitmaps,
         dictionarySupplier,
         globalStrings,
@@ -2034,21 +2055,16 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         globalDoubles,
         null,
         null,
-        ROW_COUNT,
-        skipRangeScale,
-        skipPredicateScale
+        ROW_COUNT
     );
   }
 
   private NestedFieldColumnIndexSupplier<?> makeVariantSupplierWithNull() throws IOException
   {
-    return makeVariantSupplierWithNull(1.0, 1.0);
+    return makeVariantSupplierWithNull(ALWAYS_USE_INDEXES);
   }
 
-  private NestedFieldColumnIndexSupplier<?> makeVariantSupplierWithNull(
-      double skipRangeScale,
-      double skipPredicateScale
-  ) throws IOException
+  private NestedFieldColumnIndexSupplier<?> makeVariantSupplierWithNull(ColumnConfig columnConfig) throws IOException
   {
     ByteBuffer localDictionaryBuffer = ByteBuffer.allocate(1 << 12).order(ByteOrder.nativeOrder());
     ByteBuffer bitmapsBuffer = ByteBuffer.allocate(1 << 12);
@@ -2126,6 +2142,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
                                               .getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
+        columnConfig,
         bitmaps,
         dictionarySupplier,
         globalStrings,
@@ -2133,9 +2150,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         globalDoubles,
         null,
         null,
-        ROW_COUNT,
-        skipRangeScale,
-        skipPredicateScale
+        ROW_COUNT
     );
   }
 

@@ -180,7 +180,8 @@ public class VariantArrayColumnSupplierTest extends InitializedNullHandlingTest
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
         baseBuffer,
-        bob
+        bob,
+        NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES
     );
     try (VariantArrayColumn column = (VariantArrayColumn) supplier.get()) {
       smokeTest(supplier, column);
@@ -198,7 +199,8 @@ public class VariantArrayColumnSupplierTest extends InitializedNullHandlingTest
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
         baseBuffer,
-        bob
+        bob,
+        NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES
     );
     final String expectedReason = "none";
     final AtomicReference<String> failureReason = new AtomicReference<>(expectedReason);

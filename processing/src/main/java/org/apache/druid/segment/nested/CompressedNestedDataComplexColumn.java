@@ -977,13 +977,15 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
                    .setHasNulls(hasNull)
                    .setDictionaryEncodedColumnSupplier(columnSupplier);
 
-      ColumnarInts intsColumn = ints.get();
-      final int size = intsColumn.size();
-      intsColumn.close();
+      final int size;
+      try (ColumnarInts throwAway = ints.get()) {
+        size = throwAway.size();
+      }
       columnBuilder.setIndexSupplier(
           new NestedFieldColumnIndexSupplier(
               types,
               bitmapSerdeFactory.getBitmapFactory(),
+              columnConfig,
               rBitmaps,
               localDictionarySupplier,
               stringDictionarySupplier,
@@ -991,9 +993,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
               doubleDictionarySupplier,
               arrayElementDictionarySupplier,
               arrayElementBitmaps,
-              size,
-              columnConfig.skipValueRangeIndexScale(),
-              columnConfig.skipValuePredicateIndexScale()
+              size
           ),
           true,
           false

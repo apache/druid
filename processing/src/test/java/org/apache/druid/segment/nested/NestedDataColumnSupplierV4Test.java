@@ -219,7 +219,7 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
     NestedDataColumnSupplierV4 supplier = NestedDataColumnSupplierV4.read(
         baseBuffer,
         bob,
-        () -> 0,
+        NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES,
         NestedDataComplexTypeSerde.OBJECT_MAPPER,
         new OnlyPositionalReadsTypeStrategy<>(ColumnType.LONG.getStrategy()),
         new OnlyPositionalReadsTypeStrategy<>(ColumnType.DOUBLE.getStrategy())
@@ -238,7 +238,7 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
     NestedDataColumnSupplierV4 supplier = NestedDataColumnSupplierV4.read(
         baseBuffer,
         bob,
-        () -> 0,
+        NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES,
         NestedDataComplexTypeSerde.OBJECT_MAPPER
     );
     final String expectedReason = "none";

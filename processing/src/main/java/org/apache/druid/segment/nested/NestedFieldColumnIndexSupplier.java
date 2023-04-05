@@ -45,6 +45,7 @@ import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.IntListUtils;
 import org.apache.druid.segment.column.BitmapColumnIndex;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
@@ -98,6 +99,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
   public NestedFieldColumnIndexSupplier(
       FieldTypeInfo.TypeSet types,
       BitmapFactory bitmapFactory,
+      ColumnConfig columnConfig,
       GenericIndexed<ImmutableBitmap> bitmaps,
       Supplier<FixedIndexed<Integer>> localDictionarySupplier,
       Supplier<TStringDictionary> globalStringDictionarySupplier,
@@ -105,9 +107,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
       Supplier<FixedIndexed<Double>> globalDoubleDictionarySupplier,
       @Nullable Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier,
       @Nullable GenericIndexed<ImmutableBitmap> arrayElementBitmaps,
-      int numRows,
-      double skipValueRangeIndexScale,
-      double skipValuePredicateIndexScale
+      int numRows
   )
   {
     this.singleType = types.getSingleType();
@@ -121,8 +121,8 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     this.arrayElementBitmaps = arrayElementBitmaps;
     this.adjustLongId = globalStringDictionarySupplier.get().size();
     this.adjustDoubleId = adjustLongId + globalLongDictionarySupplier.get().size();
-    this.skipRangeIndexThreshold = (int) Math.ceil(skipValueRangeIndexScale * numRows);
-    this.skipPredicateIndex = localDictionarySupplier.get().size() > Math.ceil(skipValuePredicateIndexScale * numRows);
+    this.skipRangeIndexThreshold = (int) Math.ceil(columnConfig.skipValueRangeIndexScale() * numRows);
+    this.skipPredicateIndex = localDictionarySupplier.get().size() > Math.ceil(columnConfig.skipValuePredicateIndexScale() * numRows);
   }
 
   @Nullable
@@ -345,6 +345,12 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
 
     @Override
+    public BitmapFactory getBitmapFactory()
+    {
+      return bitmapFactory;
+    }
+
+    @Override
     public ImmutableBitmap getBitmap(int idx)
     {
       return NestedFieldColumnIndexSupplier.this.getBitmap(idx);
@@ -537,6 +543,9 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     @Nullable
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
+      if (skipPredicateIndex) {
+        return null;
+      }
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
@@ -742,6 +751,9 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     @Nullable
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
+      if (skipPredicateIndex) {
+        return null;
+      }
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
@@ -951,6 +963,9 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     @Nullable
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
+      if (skipPredicateIndex) {
+        return null;
+      }
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
@@ -1147,6 +1162,9 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     @Nullable
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
+      if (skipPredicateIndex) {
+        return null;
+      }
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override

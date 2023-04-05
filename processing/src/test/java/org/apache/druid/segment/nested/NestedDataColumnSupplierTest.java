@@ -50,7 +50,6 @@ import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DruidPredicateIndex;

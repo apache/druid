@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnBuilder;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.NullValueIndex;
@@ -56,7 +57,8 @@ public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommon
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
       ByteBuffer bb,
-      ColumnBuilder columnBuilder
+      ColumnBuilder columnBuilder,
+      ColumnConfig columnConfig
   )
   {
     final byte version = bb.get();
@@ -157,6 +159,10 @@ public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommon
             arrayDictionarybuffer,
             byteOrder
         );
+        final int size;
+        try (ColumnarInts throwAway = ints.get()) {
+          size = throwAway.size();
+        }
         return new VariantArrayColumnAndIndexSupplier(
             logicalType,
             stringDictionary,
@@ -166,7 +172,9 @@ public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommon
             arrayDictionarySupplier,
             ints,
             valueIndexes,
-            bitmapSerdeFactory.getBitmapFactory()
+            bitmapSerdeFactory.getBitmapFactory(),
+            columnConfig,
+            size
         );
       }
       catch (IOException ex) {
@@ -199,7 +207,9 @@ public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommon
       Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
       Supplier<ColumnarInts> encodedValueColumnSupplier,
       GenericIndexed<ImmutableBitmap> valueIndexes,
-      @SuppressWarnings("unused") BitmapFactory bitmapFactory
+      @SuppressWarnings("unused") BitmapFactory bitmapFactory,
+      @SuppressWarnings("unused") ColumnConfig columnConfig,
+      @SuppressWarnings("unused") int numRows
   )
   {
     this.logicalType = logicalType;

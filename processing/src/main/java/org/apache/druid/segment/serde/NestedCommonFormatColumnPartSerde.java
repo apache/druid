@@ -110,7 +110,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
             byteOrder,
             bitmapSerdeFactory,
             buffer,
-            builder
+            builder,
+            columnConfig
         );
         ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
         capabilitiesBuilder.setDictionaryEncoded(true);
@@ -128,7 +129,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
             byteOrder,
             bitmapSerdeFactory,
             buffer,
-            builder
+            builder,
+            columnConfig
         );
         ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
         capabilitiesBuilder.setDictionaryEncoded(true);
@@ -146,7 +148,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
             byteOrder,
             bitmapSerdeFactory,
             buffer,
-            builder
+            builder,
+            columnConfig
         );
         ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
         capabilitiesBuilder.setDictionaryEncoded(true);
@@ -165,7 +168,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
             byteOrder,
             bitmapSerdeFactory,
             buffer,
-            builder
+            builder,
+            columnConfig
         );
         ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
         capabilitiesBuilder.setDictionaryEncoded(true);
