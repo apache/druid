@@ -106,7 +106,6 @@ public class AzureStorageDruidModule implements DruidModule
     Binders.taskLogsBinder(binder).addBinding(SCHEME).to(AzureTaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs", AzureTaskLogsConfig.class);
     binder.bind(AzureTaskLogs.class).in(LazySingleton.class);
-    binder.bind(AzureCloudBlobHolderToCloudObjectLocationConverter.class).in(LazySingleton.class);
     binder.install(new FactoryModuleBuilder()
                        .build(AzureByteSourceFactory.class));
     binder.install(new FactoryModuleBuilder()
