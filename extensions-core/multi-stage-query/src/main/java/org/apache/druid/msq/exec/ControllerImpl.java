@@ -594,23 +594,20 @@ public class ControllerImpl implements Controller
         .put(
             MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE,
             isDurableStorageEnabled
-        )
-        .put(
+        ).put(
             MultiStageQueryContext.CTX_COMPOSED_INTERMEDIATE_SUPER_SORTER_STORAGE,
             MultiStageQueryContext.isComposedIntermediateSuperSorterStorageEnabled(
                 task.getQuerySpec().getQuery().context()
             )
-        )
-        .put(
+        ).put(
             MultiStageQueryContext.CTX_INTERMEDIATE_SUPER_SORTER_STORAGE_MAX_LOCAL_BYTES,
             MultiStageQueryContext.getIntermediateSuperSorterStorageMaxLocalBytes(
                 task.getQuerySpec().getQuery().context()
             )
-        )
-        .put(
+        ).put(
             MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED,
             maxParseExceptions
-        );
+    );
     this.workerTaskLauncher = new MSQWorkerTaskLauncher(
         id(),
         task.getDataSource(),
