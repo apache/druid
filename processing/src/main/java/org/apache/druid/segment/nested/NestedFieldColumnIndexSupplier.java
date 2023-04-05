@@ -142,10 +142,6 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
       return (T) new NestedFieldDictionaryEncodedStringValueIndex();
     }
 
-    if (skipPredicateIndex && clazz.equals(DruidPredicateIndex.class)) {
-      return null;
-    }
-
     if (singleType != null) {
       switch (singleType.getType()) {
         case STRING:
