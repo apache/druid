@@ -338,7 +338,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public Collection<? extends TaskRunnerWorkItem> getKnownTasks()
   {
     List<TaskRunnerWorkItem> result = new ArrayList<>();
-    log.info("Get known tasks");
     for (Job existingTask : client.listAllPeonJobs()) {
       log.info(existingTask.getMetadata().getName());
       try {
@@ -427,7 +426,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public Collection<TaskRunnerWorkItem> getRunningTasks()
   {
     List<TaskRunnerWorkItem> result = new ArrayList<>();
-    log.info("Get running tasks");
     for (Job existingTask : client.listAllPeonJobs().stream()
         .filter(job -> job.getStatus() != null && job.getStatus().getActive() != null && job.getStatus().getActive() > 0).collect(Collectors.toSet())
     ) {
