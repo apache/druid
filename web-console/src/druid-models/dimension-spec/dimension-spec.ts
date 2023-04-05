@@ -86,13 +86,13 @@ export function getDimensionSpecs(
   hasRollup: boolean,
 ): (string | DimensionSpec)[] {
   return filterMap(getHeaderNamesFromSampleResponse(sampleResponse, true), h => {
-    const type =
+    const dimensionType =
       typeHints[h] ||
       guessColumnTypeFromSampleResponse(sampleResponse, h, guessNumericStringsAsNumbers);
-    if (type === 'string') return h;
+    if (dimensionType === 'string') return h;
     if (hasRollup) return;
     return {
-      type,
+      type: dimensionType === 'COMPLEX<json>' ? 'json' : dimensionType,
       name: h,
     };
   });

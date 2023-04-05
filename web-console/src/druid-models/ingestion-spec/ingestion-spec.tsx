@@ -2431,6 +2431,7 @@ export function updateSchemaWithSample(
     newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery', true);
     newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.includeAllDimensions', true);
     newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions', []);
+    newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions');
   } else {
     newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery');
     newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.includeAllDimensions');
