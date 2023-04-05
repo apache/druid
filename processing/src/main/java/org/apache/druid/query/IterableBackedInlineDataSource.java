@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import org.apache.druid.frame.Frame;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.RowAdapter;

@@ -22,6 +22,7 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
+import com.google.common.math.IntMath;
 import com.google.common.math.LongMath;
 import com.google.inject.Inject;
 import org.apache.commons.lang.StringUtils;
@@ -40,6 +41,7 @@ import org.apache.druid.query.FluentQueryRunnerBuilder;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.FramesBackedInlineDataSource;
 import org.apache.druid.query.GlobalTableDataSource;
+import org.apache.druid.query.IterableBackedInlineDataSource;
 import org.apache.druid.query.PostProcessingOperator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
@@ -56,6 +58,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.joda.time.Interval;
@@ -634,7 +637,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       );
     }
 
-    FramesBackedInlineDataSource dataSource = null;
+    DataSource dataSource = null;
     // Try to serialize the results into a frame only if the memory limit is set on the server or the query
     if (memoryLimitSet) {
       if (!toolChest.canFetchResultsAsFrames()) {
@@ -642,19 +645,28 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       }
       try {
         Sequence<FrameSignaturePair> frames = toolChest.resultsAsFrames(query, results);
-        Long memoryUsed = frames.accumulate(
-            0L,
-            ((accumulated, in) -> LongMath.checkedAdd(
-                accumulated,
-                in.getFrame().numBytes()
-            ))
+        Pair<Long, Integer> memoryAndRowsUsed = frames.accumulate(
+            Pair.of(0L, 0),
+            ((accumulated, in) ->
+                Pair.of(
+                    LongMath.checkedAdd(accumulated.lhs, in.getFrame().numBytes()),
+                    IntMath.checkedAdd(accumulated.rhs, in.getFrame().numRows())
+                )
+            )
         );
         dataSource = new FramesBackedInlineDataSource(frames, toolChest.resultArraySignature(query));
 
-        if (memoryLimitAccumulator.addAndGet(memoryUsed) >= memoryLimitToUse) {
+        if (memoryLimitAccumulator.addAndGet(memoryAndRowsUsed.lhs) >= memoryLimitToUse) {
           throw ResourceLimitExceededException.withMessage(
               "Subquery generated results beyond maximum[%d] bytes",
               memoryLimitToUse
+          );
+        }
+
+        if (limitAccumulator.addAndGet(memoryAndRowsUsed.rhs) >= limitToUse) {
+          throw ResourceLimitExceededException.withMessage(
+              "Subquery generated results beyond maximum[%d] rows",
+              limitToUse
           );
         }
       }
@@ -667,6 +679,25 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             + "calculation"
         );
       }
+    } else {
+      final RowSignature signature = toolChest.resultArraySignature(query);
+
+      final ArrayList<Object[]> resultList = new ArrayList<>();
+
+      toolChest.resultsAsArrays(query, results).accumulate(
+          resultList,
+          (acc, in) -> {
+            if (limitAccumulator.getAndIncrement() >= limitToUse) {
+              throw ResourceLimitExceededException.withMessage(
+                  "Subquery generated results beyond maximum[%d] rows",
+                  limitToUse
+              );
+            }
+            acc.add(in);
+            return acc;
+          }
+      );
+      dataSource = IterableBackedInlineDataSource.fromIterable(resultList, signature);
     }
     return dataSource;
   }
