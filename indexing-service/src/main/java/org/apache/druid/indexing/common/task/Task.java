@@ -38,6 +38,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.PartialGenericSegmen
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialRangeSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.Query;
@@ -159,6 +160,14 @@ public interface Task
   {
     throw new UOE(StringUtils.format(
         "Task type [%s], does not support input source based security",
+        getType()
+    ));
+  }
+
+  default UOE getInputSecurityOnFirehoseUnsupportedError() {
+    throw new UOE(StringUtils.format(
+        "Input source based security cannot be performed '%s' task because it uses firehose."
+        + " Change the tasks configuration, or disable `isEnableInputSourceSecurity`",
         getType()
     ));
   }

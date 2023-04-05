@@ -281,7 +281,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   public Set<ResourceAction> getInputSourceResources()
   {
     if (getIngestionSchema().getIOConfig().getFirehoseFactory() != null) {
-      super.getInputSourceResources();
+      throw getInputSecurityOnFirehoseUnsupportedError();
     }
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
            getIngestionSchema().getIOConfig().getInputSource().getTypes()

@@ -203,7 +203,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   public Set<ResourceAction> getInputSourceResources()
   {
     if (getIngestionSchema().getIOConfig().getFirehoseFactory() != null) {
-      super.getInputSourceResources();
+      throw getInputSecurityOnFirehoseUnsupportedError();
     }
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
            getIngestionSchema().getIOConfig().getInputSource().getTypes()

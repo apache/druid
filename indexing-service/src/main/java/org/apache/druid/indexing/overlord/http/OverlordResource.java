@@ -62,6 +62,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.TaskLookup;
@@ -198,7 +199,7 @@ public class OverlordResource
     final Set<ResourceAction> resourceActions;
     try {
       resourceActions = getNeededResourceActionsForTask(task);
-    } catch (IAE e) {
+    } catch (UOE e) {
       return Response.status(Response.Status.BAD_REQUEST)
           .entity(
               ImmutableMap.of(
@@ -1103,21 +1104,13 @@ public class OverlordResource
   }
 
   @VisibleForTesting
-  Set<ResourceAction> getNeededResourceActionsForTask(Task task) throws IAE
+  Set<ResourceAction> getNeededResourceActionsForTask(Task task) throws UOE
   {
     final String dataSource = task.getDataSource();
     final Set<ResourceAction> resourceActions = new HashSet<>();
     resourceActions.add(new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.WRITE));
     if (authConfig.isEnableInputSourceSecurity()) {
-      try {
-        resourceActions.addAll(task.getInputSourceResources());
-      } catch (UnsupportedOperationException e) {
-        throw new IAE(StringUtils.format(
-            "Input source based security cannot be performed for Task[%s] because it uses firehose."
-            + " Change the tasks configuration, or disable `isEnableInputSourceSecurity`",
-            task.getId()
-        ));
-      }
+      resourceActions.addAll(task.getInputSourceResources());
     }
     return resourceActions;
   }

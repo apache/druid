@@ -300,7 +300,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   public Set<ResourceAction> getInputSourceResources()
   {
     if (ingestionSchema.getIOConfig().firehoseFactory != null) {
-      super.getInputSourceResources();
+      throw getInputSecurityOnFirehoseUnsupportedError();
     }
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
            getIngestionSchema().getIOConfig().getInputSource().getTypes()

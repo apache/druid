@@ -1527,12 +1527,13 @@ public class OverlordResourceTest
   {
 
     final String dataSource = "dataSourceTest";
+    final UOE expectedException = new UOE("unsupported");
     Task task = EasyMock.createMock(Task.class);
 
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
     EasyMock.expect(task.getId()).andReturn("taskId");
     EasyMock.expect(task.getDataSource()).andReturn(dataSource);
-    EasyMock.expect(task.getInputSourceResources()).andThrow(new UOE("unsupported"));
+    EasyMock.expect(task.getInputSourceResources()).andThrow(expectedException);
 
     EasyMock.replay(
         task,
@@ -1546,12 +1547,12 @@ public class OverlordResourceTest
     );
 
 
-    final IAE e = Assert.assertThrows(
-        IAE.class,
+    final UOE e = Assert.assertThrows(
+        UOE.class,
         () -> overlordResource.getNeededResourceActionsForTask(task)
     );
 
-    Assert.assertTrue(e.getMessage().contains("disable `isEnableInputSourceSecurity`"));
+    Assert.assertEquals(expectedException, e);
   }
 
   @Test
