@@ -88,7 +88,7 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
     this.filter = filter;
     if (pollPeriod == null) {
       // Warning because if JdbcExtractionNamespace is being used for lookups, any updates to the database will not
-      // be picked up after the node starts. So for use cases where nodes start at different times (like streaming
+      // be picked up after the node starts. So for use casses where nodes start at different times (like streaming
       // ingestion with peons) there can be data inconsistencies across the cluster.
       LOG.warn("No pollPeriod configured for JdbcExtractionNamespace - entries will be loaded only once at startup");
       this.pollPeriod = new Period(0L);
