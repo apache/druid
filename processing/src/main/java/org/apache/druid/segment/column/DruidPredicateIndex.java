@@ -36,4 +36,12 @@ public interface DruidPredicateIndex
    */
   @Nullable
   BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory);
+
+  static boolean checkSkipThreshold(@Nullable ColumnConfig columnConfig, int numRowsToScan, int dictionaryCardinality)
+  {
+    if (columnConfig == null) {
+      return false;
+    }
+    return dictionaryCardinality > (int) Math.ceil(columnConfig.skipValuePredicateIndexScale() * numRowsToScan);
+  }
 }

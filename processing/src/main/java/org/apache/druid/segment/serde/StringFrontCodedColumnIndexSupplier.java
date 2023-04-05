@@ -104,8 +104,7 @@ public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
             bitmapFactory,
             dict,
             singleThreadedBitmaps,
-            dict.get(0) == null,
-            Integer.MAX_VALUE
+            dict.get(0) == null
         );
       } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)
                  || clazz.equals(DictionaryEncodedValueIndex.class)) {

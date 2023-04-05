@@ -148,8 +148,8 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
 
   private final BitmapFactory bitmapFactory;
   private final ImmutableBitmap nullValueBitmap;
-  private final int skipRangeIndexThreshold;
-  private final boolean skipPredicateIndex;
+  private final ColumnConfig columnConfig;
+  private final int numRows;
 
   private ScalarDoubleColumnAndIndexSupplier(
       Supplier<FixedIndexed<Double>> longDictionary,
@@ -165,8 +165,8 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     this.valueIndexes = valueIndexes;
     this.bitmapFactory = bitmapFactory;
     this.nullValueBitmap = valueIndexes.get(0) == null ? bitmapFactory.makeEmptyImmutableBitmap() : valueIndexes.get(0);
-    this.skipRangeIndexThreshold = (int) Math.ceil(columnConfig.skipValueRangeIndexScale() * numRows);
-    this.skipPredicateIndex = doubleDictionarySupplier.get().size() > Math.ceil(columnConfig.skipValuePredicateIndexScale() * numRows);
+    this.columnConfig = columnConfig;
+    this.numRows = numRows;
   }
 
   @Override
@@ -349,7 +349,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
 
       final int startIndex = range.leftInt();
       final int endIndex = range.rightInt();
-      if (endIndex - startIndex > skipRangeIndexThreshold) {
+      if (NumericRangeIndex.checkSkipThreshold(columnConfig, numRows, endIndex - startIndex)) {
         return null;
       }
       return new SimpleImmutableBitmapIterableIndex()
@@ -384,7 +384,8 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     @Override
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
-      if (skipPredicateIndex) {
+      final FixedIndexed<Double> dictionary = doubleDictionarySupplier.get();
+      if (DruidPredicateIndex.checkSkipThreshold(columnConfig, numRows, dictionary.size())) {
         return null;
       }
       return new SimpleImmutableBitmapIterableIndex()

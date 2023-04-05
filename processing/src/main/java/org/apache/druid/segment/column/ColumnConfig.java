@@ -27,19 +27,19 @@ public interface ColumnConfig
    * If the total number of rows in a column multiplied by this value is smaller than the total number of bitmap
    * index operations required to perform to use a {@link LexicographicalRangeIndex} or {@link NumericRangeIndex},
    * then for any {@link ColumnIndexSupplier} which chooses to participate in this config it will skip computing the
-   * index, in favor of doing a full scan and using a {@link org.apache.druid.query.filter.ValueMatcher} instead.
-   * This is indicated returning null from {@link ColumnIndexSupplier#as(Class)} even though it would have otherwise
-   * been able to create a {@link BitmapColumnIndex}. For range indexes on columns where every value has an index, the
-   * number of bitmap operations is determined by how many individual values fall in the range, a subset of the columns
-   * total cardinality.
+   * index, indicated by a return value of null from the 'forRange' methods, to force the filter to be processed
+   * with a scan using a {@link org.apache.druid.query.filter.ValueMatcher} instead.
    * <p>
-   * Currently only the {@link org.apache.druid.segment.nested.NestedFieldLiteralColumnIndexSupplier} implements this
-   * behavior.
+   * For range indexes on columns where every value has an index, the number of bitmap operations is determined by how
+   * many individual values fall in the range, a subset of the columns total cardinality.
    * <p>
-   * This can make many standalone filters faster in cases where the overhead of doing bitmap operations to construct a
-   * {@link org.apache.druid.segment.BitmapOffset} or {@link org.apache.druid.segment.vector.BitmapVectorOffset} can
-   * often exceed the cost of just using doing a full scan and using a
-   * {@link org.apache.druid.query.filter.ValueMatcher}.
+   * Currently only the {@link org.apache.druid.segment.nested.NestedCommonFormatColumn} implementations of
+   * {@link ColumnIndexSupplier} support this behavior.
+   * <p>
+   * This can make some standalone filters faster in cases where the overhead of walking the value dictionary and
+   * combining bitmaps to construct a {@link org.apache.druid.segment.BitmapOffset} or
+   * {@link org.apache.druid.segment.vector.BitmapVectorOffset} can exceed the cost of just using doing a full scan
+   * and using a {@link org.apache.druid.query.filter.ValueMatcher}.
    * <p>
    * Where this is especially useful is in cases where the range index is used as part of some
    * {@link org.apache.druid.segment.filter.AndFilter}, which segment processing partitions into groups of 'pre'
@@ -65,13 +65,13 @@ public interface ColumnConfig
    * {@link BitmapColumnIndex}. For predicate indexes, this is determined by the total value cardinality of the column
    * for columns with an index for every value.
    * <p>
-   * Currently only the {@link org.apache.druid.segment.nested.NestedFieldLiteralColumnIndexSupplier} implements this
-   * behavior.
+   * Currently only the {@link org.apache.druid.segment.nested.NestedCommonFormatColumn} implementations of
+   * {@link ColumnIndexSupplier} support this behavior.
    * <p>
-   * This can make many standalone filters faster in cases where the overhead of doing bitmap operations to construct a
-   * {@link org.apache.druid.segment.BitmapOffset} or {@link org.apache.druid.segment.vector.BitmapVectorOffset} can
-   * often exceed the cost of just using doing a full scan and using a
-   * {@link org.apache.druid.query.filter.ValueMatcher}.
+   * This can make some standalone filters faster in cases where the overhead of walking the value dictionary and
+   * combining bitmaps to construct a {@link org.apache.druid.segment.BitmapOffset} or
+   * {@link org.apache.druid.segment.vector.BitmapVectorOffset} can exceed the cost of just using doing a full scan
+   * and using a {@link org.apache.druid.query.filter.ValueMatcher}.
    * <p>
    * Where this is especially useful is in cases where the predicate index is used as part of some
    * {@link org.apache.druid.segment.filter.AndFilter}, which segment processing partitions into groups of 'pre'

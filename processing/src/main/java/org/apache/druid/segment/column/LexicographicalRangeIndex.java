@@ -66,4 +66,12 @@ public interface LexicographicalRangeIndex
       boolean endStrict,
       Predicate<String> matcher
   );
+
+  static boolean checkSkipThreshold(@Nullable ColumnConfig columnConfig, int numRows, int rangeSize)
+  {
+    if (columnConfig == null) {
+      return false;
+    }
+    return rangeSize > (int) Math.ceil(columnConfig.skipValueRangeIndexScale() * numRows);
+  }
 }

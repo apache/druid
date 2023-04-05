@@ -93,8 +93,8 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
 
   private final int adjustLongId;
   private final int adjustDoubleId;
-  private final int skipRangeIndexThreshold;
-  private final boolean skipPredicateIndex;
+  private final ColumnConfig columnConfig;
+  private final int numRows;
 
   public NestedFieldColumnIndexSupplier(
       FieldTypeInfo.TypeSet types,
@@ -121,8 +121,8 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     this.arrayElementBitmaps = arrayElementBitmaps;
     this.adjustLongId = globalStringDictionarySupplier.get().size();
     this.adjustDoubleId = adjustLongId + globalLongDictionarySupplier.get().size();
-    this.skipRangeIndexThreshold = (int) Math.ceil(columnConfig.skipValueRangeIndexScale() * numRows);
-    this.skipPredicateIndex = localDictionarySupplier.get().size() > Math.ceil(columnConfig.skipValuePredicateIndexScale() * numRows);
+    this.columnConfig = columnConfig;
+    this.numRows = numRows;
   }
 
   @Nullable
@@ -285,7 +285,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     final int startIndex = localRange.leftInt();
     final int endIndex = localRange.rightInt();
     final int size = endIndex - startIndex;
-    if (size > skipRangeIndexThreshold) {
+    if (NumericRangeIndex.checkSkipThreshold(columnConfig, numRows, size)) {
       return null;
     }
     return new SimpleImmutableBitmapIterableIndex()
@@ -479,7 +479,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
           0
       );
       final int start = range.leftInt(), end = range.rightInt();
-      if ((end - start) > skipRangeIndexThreshold) {
+      if (NumericRangeIndex.checkSkipThreshold(columnConfig, numRows, end - start)) {
         return null;
       }
       return new SimpleImmutableBitmapIterableIndex()
@@ -539,7 +539,8 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     @Nullable
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
-      if (skipPredicateIndex) {
+      final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
+      if (DruidPredicateIndex.checkSkipThreshold(columnConfig, numRows, localDictionary.size())) {
         return null;
       }
       return new SimpleImmutableBitmapIterableIndex()
@@ -549,7 +550,6 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         {
           return () -> new Iterator<ImmutableBitmap>()
           {
-            final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
             final Indexed<ByteBuffer> stringDictionary = globalStringDictionarySupplier.get();
             final Predicate<String> stringPredicate = matcherFactory.makeStringPredicate();
 
@@ -747,7 +747,8 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     @Nullable
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
-      if (skipPredicateIndex) {
+      final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
+      if (DruidPredicateIndex.checkSkipThreshold(columnConfig, numRows, localDictionary.size())) {
         return null;
       }
       return new SimpleImmutableBitmapIterableIndex()
@@ -757,7 +758,6 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         {
           return () -> new Iterator<ImmutableBitmap>()
           {
-            final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
             final FixedIndexed<Long> longDictionary = globalLongDictionarySupplier.get();
             final DruidLongPredicate longPredicate = matcherFactory.makeLongPredicate();
 
@@ -959,7 +959,8 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     @Nullable
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
-      if (skipPredicateIndex) {
+      final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
+      if (DruidPredicateIndex.checkSkipThreshold(columnConfig, numRows, localDictionary.size())) {
         return null;
       }
       return new SimpleImmutableBitmapIterableIndex()
@@ -1158,7 +1159,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     @Nullable
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
-      if (skipPredicateIndex) {
+      if (DruidPredicateIndex.checkSkipThreshold(columnConfig, numRows, localDictionary.size())) {
         return null;
       }
       return new SimpleImmutableBitmapIterableIndex()

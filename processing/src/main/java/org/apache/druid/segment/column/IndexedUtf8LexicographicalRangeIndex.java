@@ -44,14 +44,27 @@ public final class IndexedUtf8LexicographicalRangeIndex<TDictionary extends Inde
   private final Indexed<ImmutableBitmap> bitmaps;
   private final boolean hasNull;
 
-  private final int skipRangeIndexThreshold;
+  @Nullable
+  private final ColumnConfig columnConfig;
+  private final int numRows;
+
+  public IndexedUtf8LexicographicalRangeIndex(
+      BitmapFactory bitmapFactory,
+      TDictionary dictionary,
+      Indexed<ImmutableBitmap> bitmaps,
+      boolean hasNull
+  )
+  {
+    this(bitmapFactory, dictionary, bitmaps, hasNull, null, Integer.MAX_VALUE);
+  }
 
   public IndexedUtf8LexicographicalRangeIndex(
       BitmapFactory bitmapFactory,
       TDictionary dictionary,
       Indexed<ImmutableBitmap> bitmaps,
       boolean hasNull,
-      int skipRangeIndexThreshold
+      @Nullable ColumnConfig columnConfig,
+      int numRows
   )
   {
     Preconditions.checkArgument(dictionary.isSorted(), "Dictionary must be sorted");
@@ -59,7 +72,8 @@ public final class IndexedUtf8LexicographicalRangeIndex<TDictionary extends Inde
     this.dictionary = dictionary;
     this.bitmaps = bitmaps;
     this.hasNull = hasNull;
-    this.skipRangeIndexThreshold = skipRangeIndexThreshold;
+    this.columnConfig = columnConfig;
+    this.numRows = numRows;
   }
 
   @Override
@@ -73,7 +87,7 @@ public final class IndexedUtf8LexicographicalRangeIndex<TDictionary extends Inde
   {
     final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
     final int start = range.leftInt(), end = range.rightInt();
-    if ((end - start) > skipRangeIndexThreshold) {
+    if (LexicographicalRangeIndex.checkSkipThreshold(columnConfig, numRows, end - start)) {
       return null;
     }
     return new SimpleImmutableBitmapIterableIndex()

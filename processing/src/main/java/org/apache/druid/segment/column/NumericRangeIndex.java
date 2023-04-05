@@ -43,4 +43,9 @@ public interface NumericRangeIndex
       @Nullable Number endValue,
       boolean endStrict
   );
+
+  static boolean checkSkipThreshold(ColumnConfig columnConfig, int numRowsToScan, int rangeSize)
+  {
+    return rangeSize > (int) Math.ceil(columnConfig.skipValueRangeIndexScale() * numRowsToScan);
+  }
 }

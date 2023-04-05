@@ -86,7 +86,6 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
       String name,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
-      @SuppressWarnings("unused") ProgressIndicator progressIndicator,
       Closer closer
   )
   {

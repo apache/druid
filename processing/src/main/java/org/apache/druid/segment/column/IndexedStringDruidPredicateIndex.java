@@ -34,6 +34,9 @@ public final class IndexedStringDruidPredicateIndex<TDictionary extends Indexed<
   private final BitmapFactory bitmapFactory;
   private final TDictionary dictionary;
   private final Indexed<ImmutableBitmap> bitmaps;
+  @Nullable
+  private final ColumnConfig columnConfig;
+  private final int numRows;
 
   public IndexedStringDruidPredicateIndex(
       BitmapFactory bitmapFactory,
@@ -41,15 +44,31 @@ public final class IndexedStringDruidPredicateIndex<TDictionary extends Indexed<
       Indexed<ImmutableBitmap> bitmaps
   )
   {
+    this(bitmapFactory, dictionary, bitmaps, null, Integer.MAX_VALUE);
+  }
+
+  public IndexedStringDruidPredicateIndex(
+      BitmapFactory bitmapFactory,
+      TDictionary dictionary,
+      Indexed<ImmutableBitmap> bitmaps,
+      @Nullable ColumnConfig columnConfig,
+      int numRows
+  )
+  {
     this.bitmapFactory = bitmapFactory;
     this.dictionary = dictionary;
     this.bitmaps = bitmaps;
+    this.columnConfig = columnConfig;
+    this.numRows = numRows;
   }
 
   @Override
   @Nullable
   public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
   {
+    if (DruidPredicateIndex.checkSkipThreshold(columnConfig, numRows, dictionary.size())) {
+      return null;
+    }
     return new SimpleImmutableBitmapIterableIndex()
     {
       @Override

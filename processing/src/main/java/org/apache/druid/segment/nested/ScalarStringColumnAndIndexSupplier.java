@@ -163,8 +163,8 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
   private final GenericIndexed<ImmutableBitmap> valueIndexes;
   private final ImmutableBitmap nullValueBitmap;
   private final BitmapFactory bitmapFactory;
-  private final int skipRangeIndexThreshold;
-  private final boolean skipPredicateIndex;
+  private final ColumnConfig columnConfig;
+  private final int numRows;
 
   private ScalarStringColumnAndIndexSupplier(
       GenericIndexed<ByteBuffer> stringDictionary,
@@ -182,11 +182,8 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
     this.valueIndexes = valueIndexes;
     this.bitmapFactory = serdeFactory.getBitmapFactory();
     this.nullValueBitmap = valueIndexes.get(0) == null ? bitmapFactory.makeEmptyImmutableBitmap() : valueIndexes.get(0);
-    this.skipRangeIndexThreshold = (int) Math.ceil(columnConfig.skipValueRangeIndexScale() * numRows);
-    final int stringCardinality = stringDictionary != null
-                                  ? stringDictionary.size()
-                                  : frontCodedStringDictionarySupplier.get().size();
-    this.skipPredicateIndex = stringCardinality > Math.ceil(columnConfig.skipValuePredicateIndexScale() * numRows);
+    this.columnConfig = columnConfig;
+    this.numRows = numRows;
   }
 
   @Override
@@ -221,13 +218,12 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
             singleThreadedBitmaps
         );
       } else if (clazz.equals(DruidPredicateIndex.class)) {
-        if (skipPredicateIndex) {
-          return null;
-        }
         return (T) new IndexedStringDruidPredicateIndex<>(
             bitmapFactory,
             new StringEncodingStrategies.Utf8ToStringIndexed(utf8Dictionary),
-            singleThreadedBitmaps
+            singleThreadedBitmaps,
+            columnConfig,
+            numRows
         );
       } else if (clazz.equals(LexicographicalRangeIndex.class)) {
         return (T) new IndexedUtf8LexicographicalRangeIndex<>(
@@ -235,7 +231,8 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
             utf8Dictionary,
             singleThreadedBitmaps,
             utf8Dictionary.get(0) == null,
-            skipRangeIndexThreshold
+            columnConfig,
+            numRows
         );
       } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)
                  || clazz.equals(DictionaryEncodedValueIndex.class)) {

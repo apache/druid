@@ -1495,10 +1495,14 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
 
     // value cardinality of all of these dictionaries is bigger than the skip threshold, so predicate index short
     // circuit early and return nothing
-    Assert.assertNull(singleTypeStringSupplier.as(DruidPredicateIndex.class));
-    Assert.assertNull(singleTypeLongSupplier.as(DruidPredicateIndex.class));
-    Assert.assertNull(singleTypeDoubleSupplier.as(DruidPredicateIndex.class));
-    Assert.assertNull(variantSupplierWithNull.as(DruidPredicateIndex.class));
+    DruidPredicateFactory predicateFactory = new InDimFilter.InFilterDruidPredicateFactory(
+        null,
+        new InDimFilter.ValuesSet(ImmutableSet.of("0"))
+    );
+    Assert.assertNull(singleTypeStringSupplier.as(DruidPredicateIndex.class).forPredicate(predicateFactory));
+    Assert.assertNull(singleTypeLongSupplier.as(DruidPredicateIndex.class).forPredicate(predicateFactory));
+    Assert.assertNull(singleTypeDoubleSupplier.as(DruidPredicateIndex.class).forPredicate(predicateFactory));
+    Assert.assertNull(variantSupplierWithNull.as(DruidPredicateIndex.class).forPredicate(predicateFactory));
 
     // range index computation is a bit more complicated and done inside of the index maker gizmo because we don't know
     // the range up front

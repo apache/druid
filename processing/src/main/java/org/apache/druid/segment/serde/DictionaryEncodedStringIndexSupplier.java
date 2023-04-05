@@ -97,8 +97,7 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
             bitmapFactory,
             singleThreadedUtf8,
             singleThreadedBitmaps,
-            NullHandling.isNullOrEquivalent(dictionary.get(0)),
-            Integer.MAX_VALUE
+            NullHandling.isNullOrEquivalent(dictionary.get(0))
         );
       } else if (clazz.equals(DictionaryEncodedStringValueIndex.class) || clazz.equals(DictionaryEncodedValueIndex.class)) {
         return (T) new IndexedStringDictionaryEncodedStringValueIndex<>(

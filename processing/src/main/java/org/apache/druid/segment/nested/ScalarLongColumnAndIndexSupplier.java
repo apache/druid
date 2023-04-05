@@ -147,8 +147,8 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
   private final BitmapFactory bitmapFactory;
 
   private final ImmutableBitmap nullValueBitmap;
-  private final int skipRangeIndexThreshold;
-  private final boolean skipPredicateIndex;
+  private final ColumnConfig columnConfig;
+  private final int numRows;
 
   private ScalarLongColumnAndIndexSupplier(
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
@@ -164,8 +164,8 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     this.valueIndexes = valueIndexes;
     this.bitmapFactory = bitmapFactory;
     this.nullValueBitmap = valueIndexes.get(0) == null ? bitmapFactory.makeEmptyImmutableBitmap() : valueIndexes.get(0);
-    this.skipRangeIndexThreshold = (int) Math.ceil(columnConfig.skipValueRangeIndexScale() * numRows);
-    this.skipPredicateIndex = longDictionarySupplier.get().size() > Math.ceil(columnConfig.skipValuePredicateIndexScale() * numRows);
+    this.columnConfig = columnConfig;
+    this.numRows = numRows;
   }
 
   @Override
@@ -348,7 +348,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
 
       final int startIndex = range.leftInt();
       final int endIndex = range.rightInt();
-      if (endIndex - startIndex > skipRangeIndexThreshold) {
+      if (NumericRangeIndex.checkSkipThreshold(columnConfig, numRows, endIndex - startIndex)) {
         return null;
       }
       return new SimpleImmutableBitmapIterableIndex()
@@ -383,7 +383,8 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     @Override
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
-      if (skipPredicateIndex) {
+      FixedIndexed<Long> dictionary = longDictionarySupplier.get();
+      if (DruidPredicateIndex.checkSkipThreshold(columnConfig, numRows, dictionary.size())) {
         return null;
       }
       return new SimpleImmutableBitmapIterableIndex()
@@ -393,7 +394,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         {
           return () -> new Iterator<ImmutableBitmap>()
           {
-            final Iterator<Long> iterator = longDictionarySupplier.get().iterator();
+            final Iterator<Long> iterator = dictionary.iterator();
             final DruidLongPredicate longPredicate = matcherFactory.makeLongPredicate();
 
             int next;
