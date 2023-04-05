@@ -219,9 +219,8 @@ public class MetadataSegmentView
       );
 
       if (isCacheEnabled) {
+        publishedSegments.stream().iterator().forEachRemaining(publishedSegmentsSet::add);
         dataSegmentChanges.forEach(dataSegmentChange -> {
-          publishedSegments.stream().iterator().forEachRemaining(publishedSegmentsSet::add);
-
           if (dataSegmentChange.isLoad()) {
             publishedSegmentsSet.add(dataSegmentChange.getSegmentWithOvershadowedStatus());
           } else {

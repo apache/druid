@@ -34,7 +34,7 @@ public class DataSegmentChange
 
   @JsonCreator
   public DataSegmentChange(
-      @JsonProperty("segment") SegmentWithOvershadowedStatus segmentWithOvershadowedStatus,
+      @JsonProperty("segmentWithOvershadowedStatus") SegmentWithOvershadowedStatus segmentWithOvershadowedStatus,
       @JsonProperty("load") boolean load,
       @JsonProperty("changeReasons") List<ChangeReason> changeReasons
   )

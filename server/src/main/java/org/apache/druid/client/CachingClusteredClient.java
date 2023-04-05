@@ -445,6 +445,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       final Set<SegmentServerSelector> segments = new LinkedHashSet<>();
       final Map<String, Optional<RangeSet<String>>> dimensionRangeCache = new HashMap<>();
+      List<SegmentId> unavailableSegmentsIds = new ArrayList<>();
       // Filter unneeded chunks based on partition dimension
       for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
         final Set<PartitionChunk<ServerSelector>> filteredChunks;
@@ -458,7 +459,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
         } else {
           filteredChunks = Sets.newHashSet(holder.getObject());
         }
-        List<SegmentId> unavailableSegmentsIds = new ArrayList<>();
         for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
           ServerSelector server = chunk.getObject();
           final SegmentDescriptor segment = new SegmentDescriptor(
@@ -471,19 +471,28 @@ public class CachingClusteredClient implements QuerySegmentWalker
             unavailableSegmentsIds.add(server.getSegment().getId());
           }
         }
+      }
 
-        if (unavailableSegmentsIds.size() > 0) {
-          log.warn("Detected [%d] unavailable segments, segment ids: [%s]", unavailableSegmentsIds.size(), unavailableSegmentsIds);
-          if (unavailableSegmentsAction == QueryContexts.UnavailableSegmentsAction.FAIL) {
-            throw new QueryException(
-                QueryException.UNAVAILABLE_SEGMENTS_ERROR_CODE,
-                StringUtils.format("Detected [%d] unavailable segments, segment ids: [%s]", unavailableSegmentsIds.size(), unavailableSegmentsIds),
-                null,
-                null
-            );
-          }
+      if (unavailableSegmentsIds.size() > 0) {
+        log.warn(
+            "Detected [%d] unavailable segments, segment ids: [%s]",
+            unavailableSegmentsIds.size(),
+            unavailableSegmentsIds
+        );
+        if (unavailableSegmentsAction == QueryContexts.UnavailableSegmentsAction.FAIL) {
+          throw new QueryException(
+              QueryException.UNAVAILABLE_SEGMENTS_ERROR_CODE,
+              StringUtils.format(
+                  "Detected [%d] unavailable segments, segment ids: [%s]",
+                  unavailableSegmentsIds.size(),
+                  unavailableSegmentsIds
+              ),
+              null,
+              null
+          );
         }
       }
+
       return segments;
     }
 
