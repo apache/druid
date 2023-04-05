@@ -25,33 +25,26 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
-import org.apache.commons.lang.StringUtils;
-import org.apache.druid.data.input.InputFileAttribute;
+import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.blob.CloudBlob;
 import org.apache.druid.data.input.InputSplit;
-import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.data.input.impl.CloudObjectSplitWidget;
 import org.apache.druid.data.input.impl.SplittableInputSource;
-import org.apache.druid.storage.azure.AzureCloudBlobHolderToCloudObjectLocationConverter;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
 import org.apache.druid.storage.azure.AzureInputDataConfig;
 import org.apache.druid.storage.azure.AzureStorage;
-import org.apache.druid.storage.azure.blob.CloudBlobHolder;
-import org.apache.druid.utils.Streams;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.URI;
-import java.nio.file.FileSystems;
-import java.nio.file.PathMatcher;
-import java.nio.file.Paths;
+import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Abstracts the Azure storage system where input data is stored. Allows users to retrieve entities in
@@ -64,7 +57,6 @@ public class AzureInputSource extends CloudObjectInputSource
   private final AzureStorage storage;
   private final AzureEntityFactory entityFactory;
   private final AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
-  private final AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobToLocationConverter;
   private final AzureInputDataConfig inputDataConfig;
 
   @JsonCreator
@@ -72,7 +64,6 @@ public class AzureInputSource extends CloudObjectInputSource
       @JacksonInject AzureStorage storage,
       @JacksonInject AzureEntityFactory entityFactory,
       @JacksonInject AzureCloudBlobIterableFactory azureCloudBlobIterableFactory,
-      @JacksonInject AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobToLocationConverter,
       @JacksonInject AzureInputDataConfig inputDataConfig,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
@@ -88,10 +79,6 @@ public class AzureInputSource extends CloudObjectInputSource
         "AzureCloudBlobIterableFactory"
     );
     this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "AzureInputDataConfig");
-    this.azureCloudBlobToLocationConverter = Preconditions.checkNotNull(
-        azureCloudBlobToLocationConverter,
-        "AzureCloudBlobToLocationConverter"
-    );
   }
 
   @JsonIgnore
@@ -109,7 +96,6 @@ public class AzureInputSource extends CloudObjectInputSource
         storage,
         entityFactory,
         azureCloudBlobIterableFactory,
-        azureCloudBlobToLocationConverter,
         inputDataConfig,
         null,
         null,
@@ -125,37 +111,48 @@ public class AzureInputSource extends CloudObjectInputSource
   }
 
   @Override
-  protected Stream<InputSplit<List<CloudObjectLocation>>> getPrefixesSplitStream(@Nonnull SplitHintSpec splitHintSpec)
+  protected CloudObjectSplitWidget getSplitWidget()
   {
-    final Iterator<List<CloudBlobHolder>> splitIterator = splitHintSpec.split(
-        getIterableObjectsFromPrefixes().iterator(),
-        blobHolder -> new InputFileAttribute(blobHolder.getBlobLength())
-    );
-
-    return Streams.sequentialStreamFrom(splitIterator)
-                  .map(objects -> objects.stream()
-                                         .map(azureCloudBlobToLocationConverter::createCloudObjectLocation)
-                                         .collect(Collectors.toList()))
-                  .map(InputSplit::new);
-  }
-
-  private Iterable<CloudBlobHolder> getIterableObjectsFromPrefixes()
-  {
-    return () -> {
-      Iterator<CloudBlobHolder> iterator = azureCloudBlobIterableFactory.create(getPrefixes(), inputDataConfig.getMaxListingLength()).iterator();
-
-      // Skip files that didn't match glob filter.
-      if (StringUtils.isNotBlank(getObjectGlob())) {
-        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + getObjectGlob());
-
-        iterator = Iterators.filter(
-            iterator,
-            object -> m.matches(Paths.get(object.getName()))
+    class SplitWidget implements CloudObjectSplitWidget
+    {
+      @Override
+      public Iterator<LocationWithSize> getDescriptorIteratorForPrefixes(List<URI> prefixes)
+      {
+        return Iterators.transform(
+            azureCloudBlobIterableFactory.create(getPrefixes(), inputDataConfig.getMaxListingLength()).iterator(),
+            blob -> {
+              try {
+                return new LocationWithSize(
+                    blob.getContainerName(),
+                    blob.getName(),
+                    blob.getBlobLength()
+                );
+              }
+              catch (URISyntaxException | StorageException e) {
+                throw new RuntimeException(e);
+              }
+            }
         );
       }
 
-      return iterator;
-    };
+      @Override
+      public long getObjectSize(CloudObjectLocation location)
+      {
+        try {
+          final CloudBlob blobWithAttributes = storage.getBlobReferenceWithAttributes(
+              location.getBucket(),
+              location.getPath()
+          );
+
+          return blobWithAttributes.getProperties().getLength();
+        }
+        catch (URISyntaxException | StorageException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    }
+
+    return new SplitWidget();
   }
 
   @Override
@@ -166,7 +163,6 @@ public class AzureInputSource extends CloudObjectInputSource
         storage,
         entityFactory,
         azureCloudBlobIterableFactory,
-        azureCloudBlobToLocationConverter,
         inputDataConfig
     );
   }
@@ -187,7 +183,6 @@ public class AzureInputSource extends CloudObjectInputSource
     return storage.equals(that.storage) &&
            entityFactory.equals(that.entityFactory) &&
            azureCloudBlobIterableFactory.equals(that.azureCloudBlobIterableFactory) &&
-           azureCloudBlobToLocationConverter.equals(that.azureCloudBlobToLocationConverter) &&
            inputDataConfig.equals(that.inputDataConfig);
   }
 

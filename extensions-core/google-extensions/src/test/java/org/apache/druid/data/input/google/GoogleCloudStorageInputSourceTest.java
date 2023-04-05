@@ -154,7 +154,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   }
 
   @Test
-  public void testGetTypes() throws Exception
+  public void testGetTypes()
   {
     final GoogleCloudStorageInputSource inputSource =
         new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, EXPECTED_URIS, ImmutableList.of(), null, null);
@@ -162,22 +162,50 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   }
 
   @Test
-  public void testWithUrisSplit()
+  public void testWithUrisSplit() throws Exception
   {
-
+    EasyMock.reset(STORAGE);
+    EasyMock.expect(
+        STORAGE.getMetadata(
+            EXPECTED_URIS.get(0).getAuthority(),
+            StringUtils.maybeRemoveLeadingSlash(EXPECTED_URIS.get(0).getPath())
+        )
+    ).andReturn(new StorageObject().setSize(BigInteger.valueOf(CONTENT.length)));
+    EasyMock.expect(
+        STORAGE.getMetadata(
+            EXPECTED_URIS.get(1).getAuthority(),
+            StringUtils.maybeRemoveLeadingSlash(EXPECTED_URIS.get(1).getPath())
+        )
+    ).andReturn(new StorageObject().setSize(BigInteger.valueOf(CONTENT.length)));
+    EasyMock.replay(STORAGE);
     GoogleCloudStorageInputSource inputSource =
         new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, EXPECTED_URIS, ImmutableList.of(), null, null);
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
-        null
+        null,
+        new MaxSizeSplitHintSpec(10, null)
     );
     Assert.assertEquals(EXPECTED_OBJECTS, splits.map(InputSplit::get).collect(Collectors.toList()));
+    EasyMock.verify(STORAGE);
   }
 
   @Test
-  public void testWithUrisGlob()
+  public void testWithUrisGlob() throws Exception
   {
+    EasyMock.reset(STORAGE);
+    EasyMock.expect(
+        STORAGE.getMetadata(
+            EXPECTED_URIS.get(0).getAuthority(),
+            StringUtils.maybeRemoveLeadingSlash(EXPECTED_URIS.get(0).getPath())
+        )
+    ).andReturn(new StorageObject().setSize(BigInteger.valueOf(CONTENT.length)));
+    EasyMock.expect(
+        STORAGE.getMetadata(
+            EXPECTED_URIS.get(1).getAuthority(),
+            StringUtils.maybeRemoveLeadingSlash(EXPECTED_URIS.get(1).getPath())
+        )
+    ).andReturn(new StorageObject().setSize(BigInteger.valueOf(CONTENT.length)));
+    EasyMock.replay(STORAGE);
     GoogleCloudStorageInputSource inputSource = new GoogleCloudStorageInputSource(
         STORAGE,
         INPUT_DATA_CONFIG,
@@ -188,10 +216,11 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
-        null
+        null,
+        new MaxSizeSplitHintSpec(10, null)
     );
     Assert.assertEquals(EXPECTED_OBJECTS, splits.map(InputSplit::get).collect(Collectors.toList()));
+    EasyMock.verify(STORAGE);
   }
 
   @Test
