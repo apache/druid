@@ -742,9 +742,8 @@ In addition to the common service properties, there are certain properties that 
 
 |Parameter          |Default                                 | Description          |
 |-------------------|----------------------------------------|----------------------|
-|`druid.msq.intermediate.storage.bucket` | n/a | The bucket in S3 where you want to store intermediate files.  |
-|`druid.msq.intermediate.storage.cleaner.enabled`| false | Optional. Whether durable storage cleaner should be enabled for the cluster. This should be set on the Overlord. |
-|`druid.msq.intermediate.storage.cleaner.delaySeconds`| 86400 | Optional. The delay (in seconds) after the last run post which the durable storage cleaner would clean the outputs. This should be set on the Overlord. |
+|`druid.msq.intermediate.storage.cleaner.enabled`| false | Optional. Whether durable storage cleaner should be enabled for the cluster.  |
+|`druid.msq.intermediate.storage.cleaner.delaySeconds`| 86400 | Optional. The delay (in seconds) after the last run post which the durable storage cleaner would clean the outputs.  |
 
 
 ## Limits
