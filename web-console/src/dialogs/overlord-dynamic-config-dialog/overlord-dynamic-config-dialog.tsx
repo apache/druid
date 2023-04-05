@@ -20,7 +20,8 @@ import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
-import { AutoForm, ExternalLink, Loader } from '../../components';
+import type { FormJsonTabs } from '../../components';
+import { AutoForm, ExternalLink, FormJsonSelector, JsonInput, Loader } from '../../components';
 import type { OverlordDynamicConfig } from '../../druid-models';
 import { OVERLORD_DYNAMIC_CONFIG_FIELDS } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
@@ -39,7 +40,9 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
   props: OverlordDynamicConfigDialogProps,
 ) {
   const { onClose } = props;
+  const [currentTab, setCurrentTab] = useState<FormJsonTabs>('form');
   const [dynamicConfig, setDynamicConfig] = useState<OverlordDynamicConfig | undefined>();
+  const [jsonError, setJsonError] = useState<Error | undefined>();
 
   const [historyRecordsState] = useQueryManager<null, any[]>({
     initQuery: null,
@@ -93,7 +96,8 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
   return (
     <SnitchDialog
       className="overlord-dynamic-config-dialog"
-      onSave={saveConfig}
+      saveDisabled={Boolean(jsonError)}
+      onSave={comment => void saveConfig(comment)}
       onClose={onClose}
       title="Overlord dynamic config"
       historyRecords={historyRecordsState.data}
@@ -101,7 +105,7 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
       {dynamicConfig ? (
         <>
           <p>
-            Edit the overlord dynamic configuration on the fly. For more information please refer to
+            Edit the overlord dynamic configuration at runtime. For more information please refer to
             the{' '}
             <ExternalLink
               href={`${getLink('DOCS')}/configuration/index.html#overlord-dynamic-configuration`}
@@ -110,11 +114,24 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
             </ExternalLink>
             .
           </p>
-          <AutoForm
-            fields={OVERLORD_DYNAMIC_CONFIG_FIELDS}
-            model={dynamicConfig}
-            onChange={setDynamicConfig}
-          />
+          <FormJsonSelector tab={currentTab} onChange={setCurrentTab} />
+          {currentTab === 'form' ? (
+            <AutoForm
+              fields={OVERLORD_DYNAMIC_CONFIG_FIELDS}
+              model={dynamicConfig}
+              onChange={setDynamicConfig}
+            />
+          ) : (
+            <JsonInput
+              value={dynamicConfig}
+              height="50vh"
+              onChange={v => {
+                setDynamicConfig(v);
+                setJsonError(undefined);
+              }}
+              onError={setJsonError}
+            />
+          )}
         </>
       ) : (
         <Loader />

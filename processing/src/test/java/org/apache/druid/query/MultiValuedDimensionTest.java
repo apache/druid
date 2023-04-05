@@ -550,7 +550,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
       TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-multi-multi");
     }
     finally {
-      ExpressionProcessing.initializeForTests(null);
+      ExpressionProcessing.initializeForTests();
     }
   }
 

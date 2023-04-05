@@ -93,7 +93,7 @@ public class S3Utils
    * Retries S3 operations that fail due to io-related exceptions. Service-level exceptions (access denied, file not
    * found, etc) are not retried.
    */
-  static <T> T retryS3Operation(Task<T> f) throws Exception
+  public static <T> T retryS3Operation(Task<T> f) throws Exception
   {
     return RetryUtils.retry(f, S3RETRY, RetryUtils.DEFAULT_MAX_TRIES);
   }
@@ -102,7 +102,7 @@ public class S3Utils
    * Retries S3 operations that fail due to io-related exceptions. Service-level exceptions (access denied, file not
    * found, etc) are not retried. Also provide a way to set maxRetries that can be useful, i.e. for testing.
    */
-  static <T> T retryS3Operation(Task<T> f, int maxRetries) throws Exception
+  public static <T> T retryS3Operation(Task<T> f, int maxRetries) throws Exception
   {
     return RetryUtils.retry(f, S3RETRY, maxRetries);
   }
@@ -243,51 +243,64 @@ public class S3Utils
    * Delete the files from S3 in a specified bucket, matching a specified prefix and filter
    *
    * @param s3Client s3 client
-   * @param config   specifies the configuration to use when finding matching files in S3 to delete
+   * @param maxListingLength  maximum number of keys to fetch and delete at a time
    * @param bucket   s3 bucket
    * @param prefix   the file prefix
    * @param filter   function which returns true if the prefix file found should be deleted and false otherwise.
    *
-   * @throws Exception
+   * @throws Exception in case of errors
    */
+
   public static void deleteObjectsInPath(
       ServerSideEncryptingAmazonS3 s3Client,
-      S3InputDataConfig config,
+      int maxListingLength,
       String bucket,
       String prefix,
       Predicate<S3ObjectSummary> filter
   )
       throws Exception
   {
-    final List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>(config.getMaxListingLength());
+    deleteObjectsInPath(s3Client, maxListingLength, bucket, prefix, filter, RetryUtils.DEFAULT_MAX_TRIES);
+  }
+
+  public static void deleteObjectsInPath(
+      ServerSideEncryptingAmazonS3 s3Client,
+      int maxListingLength,
+      String bucket,
+      String prefix,
+      Predicate<S3ObjectSummary> filter,
+      int maxRetries
+  )
+      throws Exception
+  {
+    final List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>(maxListingLength);
     final ObjectSummaryIterator iterator = new ObjectSummaryIterator(
         s3Client,
         ImmutableList.of(new CloudObjectLocation(bucket, prefix).toUri("s3")),
-        config.getMaxListingLength()
+        maxListingLength
     );
 
     while (iterator.hasNext()) {
       final S3ObjectSummary nextObject = iterator.next();
       if (filter.apply(nextObject)) {
         keysToDelete.add(new DeleteObjectsRequest.KeyVersion(nextObject.getKey()));
-        if (keysToDelete.size() == config.getMaxListingLength()) {
-          deleteBucketKeys(s3Client, bucket, keysToDelete);
-          log.info("Deleted %d files", keysToDelete.size());
+        if (keysToDelete.size() == maxListingLength) {
+          deleteBucketKeys(s3Client, bucket, keysToDelete, maxRetries);
           keysToDelete.clear();
         }
       }
     }
 
     if (keysToDelete.size() > 0) {
-      deleteBucketKeys(s3Client, bucket, keysToDelete);
-      log.info("Deleted %d files", keysToDelete.size());
+      deleteBucketKeys(s3Client, bucket, keysToDelete, maxRetries);
     }
   }
 
-  private static void deleteBucketKeys(
+  public static void deleteBucketKeys(
       ServerSideEncryptingAmazonS3 s3Client,
       String bucket,
-      List<DeleteObjectsRequest.KeyVersion> keysToDelete
+      List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+      int retries
   )
       throws Exception
   {
@@ -295,7 +308,8 @@ public class S3Utils
     S3Utils.retryS3Operation(() -> {
       s3Client.deleteObjects(deleteRequest);
       return null;
-    });
+    }, retries);
+    log.info("Deleted %d files", keysToDelete.size());
   }
 
   /**

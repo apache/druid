@@ -25,7 +25,7 @@
       "tutorials/tutorial-msq-convert-spec",
       "tutorials/tutorial-jdbc",
       "tutorials/tutorial-sql-query-view",
-      "tutorials/tutorial-unnest-datasource",
+      "tutorials/tutorial-unnest-arrays",
       "tutorials/tutorial-jupyter-index",
       "tutorials/tutorial-jdbc"
     ],

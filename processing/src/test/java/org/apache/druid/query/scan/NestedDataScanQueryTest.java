@@ -22,6 +22,7 @@ package org.apache.druid.query.scan;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -32,13 +33,15 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
@@ -71,10 +74,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
   {
     NestedDataModule.registerHandlersAndSerde();
     List<? extends Module> mods = NestedDataModule.getJacksonModulesList();
-    this.helper = AggregationTestHelper.createScanQueryAggregationTestHelper(
-        mods,
-        tempFolder
-    );
+    this.helper = AggregationTestHelper.createScanQueryAggregationTestHelper(mods, tempFolder);
     this.closer = Closer.create();
   }
 
@@ -97,7 +97,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              .limit(100)
                                              .context(ImmutableMap.of())
                                              .build();
-    List<Segment> segs = NestedDataTestUtils.createDefaultHourlySegments(helper, tempFolder, closer);
+    List<Segment> segs = NestedDataTestUtils.createSimpleNestedTestDataSegments(tempFolder, closer);
 
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
@@ -126,15 +126,16 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              .build();
     List<Segment> segs = ImmutableList.<Segment>builder().addAll(
         NestedDataTestUtils.createSegments(
-            helper,
             tempFolder,
             closer,
             NestedDataTestUtils.NUMERIC_DATA_FILE,
-            NestedDataTestUtils.NUMERIC_PARSER_FILE,
-            NestedDataTestUtils.SIMPLE_AGG_FILE,
+            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+            NestedDataTestUtils.TIMESTAMP_SPEC,
+            NestedDataTestUtils.AUTO_DISCOVERY,
+            TransformSpec.NONE,
+            NestedDataTestUtils.COUNT,
             Granularities.YEAR,
-            true,
-            1000
+            true
         )
     ).build();
 
@@ -171,9 +172,9 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              .context(ImmutableMap.of())
                                              .build();
     List<Segment> realtimeSegs = ImmutableList.of(
-        NestedDataTestUtils.createDefaultHourlyIncrementalIndex()
+        NestedDataTestUtils.createSimpleNestedTestDataIncrementalIndex(tempFolder)
     );
-    List<Segment> segs = NestedDataTestUtils.createDefaultHourlySegments(helper, tempFolder, closer);
+    List<Segment> segs = NestedDataTestUtils.createSimpleNestedTestDataSegments(tempFolder, closer);
 
 
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(realtimeSegs, scanQuery);
@@ -212,7 +213,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                                  new NestedFieldVirtualColumn(
                                                      "nester",
                                                      "x_0",
-                                                     NestedDataComplexTypeSerde.TYPE,
+                                                     ColumnType.NESTED_DATA,
                                                      null,
                                                      true,
                                                      "$.x[0]",
@@ -221,7 +222,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                                  new NestedFieldVirtualColumn(
                                                      "nester",
                                                      "y_c_1",
-                                                     NestedDataComplexTypeSerde.TYPE,
+                                                     ColumnType.NESTED_DATA,
                                                      null,
                                                      true,
                                                      "$.y.c[1]",
@@ -230,7 +231,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                                  new NestedFieldVirtualColumn(
                                                      "nester",
                                                      "nester_root",
-                                                     NestedDataComplexTypeSerde.TYPE,
+                                                     ColumnType.NESTED_DATA,
                                                      null,
                                                      true,
                                                      "$.",
@@ -242,9 +243,9 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              .context(ImmutableMap.of())
                                              .build();
     List<Segment> realtimeSegs = ImmutableList.of(
-        NestedDataTestUtils.createDefaultHourlyIncrementalIndex()
+        NestedDataTestUtils.createSimpleNestedTestDataIncrementalIndex(tempFolder)
     );
-    List<Segment> segs = NestedDataTestUtils.createDefaultHourlySegments(helper, tempFolder, closer);
+    List<Segment> segs = NestedDataTestUtils.createSimpleNestedTestDataSegments(tempFolder, closer);
 
 
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(realtimeSegs, scanQuery);
@@ -278,7 +279,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              .limit(100)
                                              .context(ImmutableMap.of())
                                              .build();
-    List<Segment> segs = NestedDataTestUtils.createDefaultHourlySegmentsTsv(helper, tempFolder, closer);
+    List<Segment> segs = NestedDataTestUtils.createSimpleSegmentsTsv(tempFolder, closer);
 
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
@@ -302,13 +303,12 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              .limit(100)
                                              .context(ImmutableMap.of())
                                              .build();
-    List<Segment> segs = NestedDataTestUtils.createSegments(
-        helper,
+    List<Segment> segs = NestedDataTestUtils.createSegmentsForJsonInput(
         tempFolder,
         closer,
+        NestedDataTestUtils.SIMPLE_DATA_FILE,
         Granularities.HOUR,
-        true,
-        3
+        true
     );
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
@@ -334,13 +334,12 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              .build();
 
 
-    List<Segment> segs = NestedDataTestUtils.createSegmentsWithConcatenatedInput(
-        helper,
+    List<Segment> segs = NestedDataTestUtils.createSegmentsWithConcatenatedJsonInput(
         tempFolder,
         closer,
+        NestedDataTestUtils.SIMPLE_DATA_FILE,
         Granularities.HOUR,
         false,
-        5,
         10,
         1
     );
@@ -369,13 +368,12 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
 
 
     // same rows over and over so expect same 8 rows after rollup
-    List<Segment> segs = NestedDataTestUtils.createSegmentsWithConcatenatedInput(
-        helper,
+    List<Segment> segs = NestedDataTestUtils.createSegmentsWithConcatenatedJsonInput(
         tempFolder,
         closer,
-        Granularities.HOUR,
+        NestedDataTestUtils.SIMPLE_DATA_FILE,
+        Granularities.YEAR,
         true,
-        5,
         100,
         1
     );
@@ -407,7 +405,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              .limit(100)
                                              .context(ImmutableMap.of())
                                              .build();
-    List<Segment> segs = NestedDataTestUtils.createDefaultHourlySegments(helper, tempFolder, closer);
+    List<Segment> segs = NestedDataTestUtils.createSimpleNestedTestDataSegments(tempFolder, closer);
 
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
@@ -446,7 +444,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              .limit(100)
                                              .context(ImmutableMap.of())
                                              .build();
-    List<Segment> segs = NestedDataTestUtils.createDefaultHourlySegments(helper, tempFolder, closer);
+    List<Segment> segs = NestedDataTestUtils.createSimpleNestedTestDataSegments(tempFolder, closer);
 
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
@@ -472,25 +470,87 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              .build();
     List<Segment> realtimeSegs = ImmutableList.of(
         NestedDataTestUtils.createIncrementalIndex(
+            tempFolder,
             NestedDataTestUtils.TYPES_DATA_FILE,
-            NestedDataTestUtils.TYPES_PARSER_FILE,
-            NestedDataTestUtils.SIMPLE_AGG_FILE,
+            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+            NestedDataTestUtils.TIMESTAMP_SPEC,
+            NestedDataTestUtils.AUTO_DISCOVERY,
+            TransformSpec.NONE,
+            NestedDataTestUtils.COUNT,
             Granularities.DAY,
-            true,
-            false,
-            1000
+            true
         )
     );
     List<Segment> segs = NestedDataTestUtils.createSegments(
-        helper,
         tempFolder,
         closer,
         NestedDataTestUtils.TYPES_DATA_FILE,
-        NestedDataTestUtils.TYPES_PARSER_FILE,
-        NestedDataTestUtils.SIMPLE_AGG_FILE,
+        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+        NestedDataTestUtils.TIMESTAMP_SPEC,
+        NestedDataTestUtils.AUTO_DISCOVERY,
+        TransformSpec.NONE,
+        NestedDataTestUtils.COUNT,
         Granularities.DAY,
-        true,
-        100
+        true
+    );
+
+
+    final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(realtimeSegs, scanQuery);
+    final Sequence<ScanResultValue> seq2 = helper.runQueryOnSegmentsObjs(segs, scanQuery);
+
+    List<ScanResultValue> resultsRealtime = seq.toList();
+    List<ScanResultValue> resultsSegments = seq2.toList();
+    logResults(resultsSegments);
+    logResults(resultsRealtime);
+    Assert.assertEquals(1, resultsRealtime.size());
+    Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
+    Assert.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
+  }
+
+  @Test
+  public void testIngestAndScanSegmentsRealtimeSchemaDiscoveryArrayTypes() throws Exception
+  {
+    Druids.ScanQueryBuilder builder = Druids.newScanQueryBuilder()
+                                            .dataSource("test_datasource")
+                                            .intervals(
+                                                new MultipleIntervalSegmentSpec(
+                                                    Collections.singletonList(Intervals.ETERNITY)
+                                                )
+                                            )
+                                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                            .limit(100)
+                                            .context(ImmutableMap.of());
+    if (NullHandling.replaceWithDefault()) {
+      // null elements are replaced with default values if druid.generic.useDefaultValueForNull=true
+      // ... but not until after they are persisted, so realtime query results don't match of course...
+      builder.columns("arrayString", "arrayLong", "arrayDouble");
+    }
+    Query<ScanResultValue> scanQuery = builder.build();
+    final AggregatorFactory[] aggs = new AggregatorFactory[]{new CountAggregatorFactory("count")};
+    List<Segment> realtimeSegs = ImmutableList.of(
+        NestedDataTestUtils.createIncrementalIndex(
+            tempFolder,
+            NestedDataTestUtils.ARRAY_TYPES_DATA_FILE,
+            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+            NestedDataTestUtils.TIMESTAMP_SPEC,
+            NestedDataTestUtils.AUTO_DISCOVERY,
+            TransformSpec.NONE,
+            aggs,
+            Granularities.NONE,
+            true
+        )
+    );
+    List<Segment> segs = NestedDataTestUtils.createSegments(
+        tempFolder,
+        closer,
+        NestedDataTestUtils.ARRAY_TYPES_DATA_FILE,
+        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+        NestedDataTestUtils.TIMESTAMP_SPEC,
+        NestedDataTestUtils.AUTO_DISCOVERY,
+        TransformSpec.NONE,
+        aggs,
+        Granularities.NONE,
+        true
     );
 
 

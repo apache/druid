@@ -40,7 +40,6 @@ import java.util.Objects;
 public class JsonInputFormat extends NestedInputFormat
 {
   public static final String TYPE_KEY = "json";
-
   private final Map<String, Boolean> featureSpec;
   private final ObjectMapper objectMapper;
   private final boolean keepNullColumns;

@@ -36,14 +36,17 @@ public class ExternalTableSpec
   public final InputSource inputSource;
   public final InputFormat inputFormat;
   @Nullable public final RowSignature signature;
+  public final String inputSourceType;
 
   public ExternalTableSpec(
       final InputSource inputSource,
       final InputFormat inputFormat,
-      final RowSignature signature)
+      final RowSignature signature,
+      final String inputSourceType)
   {
     this.inputSource = inputSource;
     this.inputFormat = inputFormat;
     this.signature = signature;
+    this.inputSourceType = inputSourceType;
   }
 }

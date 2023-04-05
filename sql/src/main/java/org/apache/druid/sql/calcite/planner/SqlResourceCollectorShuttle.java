@@ -51,19 +51,24 @@ public class SqlResourceCollectorShuttle extends SqlShuttle
   private final Set<ResourceAction> resourceActions;
   private final PlannerContext plannerContext;
   private final SqlValidator validator;
+  private final boolean inputSourceTypeSecurityEnabled;
 
   public SqlResourceCollectorShuttle(SqlValidator validator, PlannerContext plannerContext)
   {
     this.validator = validator;
     this.resourceActions = new HashSet<>();
     this.plannerContext = plannerContext;
+    inputSourceTypeSecurityEnabled = plannerContext.getPlannerToolbox().getAuthConfig().isEnableInputSourceSecurity();
   }
 
   @Override
   public SqlNode visit(SqlCall call)
   {
     if (call.getOperator() instanceof AuthorizableOperator) {
-      resourceActions.addAll(((AuthorizableOperator) call.getOperator()).computeResources(call));
+      resourceActions.addAll(((AuthorizableOperator) call.getOperator()).computeResources(
+          call,
+          inputSourceTypeSecurityEnabled
+      ));
     }
 
     return super.visit(call);

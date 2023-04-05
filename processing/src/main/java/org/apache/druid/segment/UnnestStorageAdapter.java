@@ -75,7 +75,7 @@ public class UnnestStorageAdapter implements StorageAdapter
   public UnnestStorageAdapter(
       final StorageAdapter baseAdapter,
       final VirtualColumn unnestColumn,
-      final DimFilter unnestFilter
+      @Nullable final DimFilter unnestFilter
   )
   {
     this.baseAdapter = baseAdapter;
@@ -100,9 +100,7 @@ public class UnnestStorageAdapter implements StorageAdapter
         unnestFilter != null ? unnestFilter.toFilter() : null,
         virtualColumns,
         inputColumn,
-        inputColumn == null || virtualColumns.exists(inputColumn)
-        ? null
-        : baseAdapter.getColumnCapabilities(inputColumn)
+        inputColumn == null ? null : virtualColumns.getColumnCapabilitiesWithFallback(baseAdapter, inputColumn)
     );
 
     final Sequence<Cursor> baseCursorSequence = baseAdapter.makeCursors(
@@ -118,37 +116,29 @@ public class UnnestStorageAdapter implements StorageAdapter
         baseCursorSequence,
         cursor -> {
           Objects.requireNonNull(cursor);
-          Cursor retVal = cursor;
-          ColumnCapabilities capabilities = unnestColumn.capabilities(
+          final ColumnCapabilities capabilities = unnestColumn.capabilities(
               cursor.getColumnSelectorFactory(),
               unnestColumn.getOutputName()
           );
-          if (capabilities != null) {
-            if (capabilities.isDictionaryEncoded().and(capabilities.areDictionaryValuesUnique()).isTrue()) {
-              retVal = new UnnestDimensionCursor(
-                  retVal,
-                  retVal.getColumnSelectorFactory(),
-                  unnestColumn,
-                  outputColumnName
-              );
-            } else {
-              retVal = new UnnestColumnValueSelectorCursor(
-                  retVal,
-                  retVal.getColumnSelectorFactory(),
-                  unnestColumn,
-                  outputColumnName
-              );
-            }
+          final Cursor unnestCursor;
+
+          if (useDimensionCursor(capabilities)) {
+            unnestCursor = new UnnestDimensionCursor(
+                cursor,
+                cursor.getColumnSelectorFactory(),
+                unnestColumn,
+                outputColumnName
+            );
           } else {
-            retVal = new UnnestColumnValueSelectorCursor(
-                retVal,
-                retVal.getColumnSelectorFactory(),
+            unnestCursor = new UnnestColumnValueSelectorCursor(
+                cursor,
+                cursor.getColumnSelectorFactory(),
                 unnestColumn,
                 outputColumnName
             );
           }
           return PostJoinCursor.wrap(
-              retVal,
+              unnestCursor,
               virtualColumns,
               filterPair.rhs
           );
@@ -183,7 +173,7 @@ public class UnnestStorageAdapter implements StorageAdapter
   @Nullable
   public Filter getUnnestFilter()
   {
-    return unnestFilter.toFilter();
+    return unnestFilter == null ? null : unnestFilter.toFilter();
   }
 
   @Override
@@ -400,6 +390,9 @@ public class UnnestStorageAdapter implements StorageAdapter
           }
           // add the entire query filter to unnest filter to be used in Value matcher
           filterSplitter.addPostFilterWithPreFilterIfRewritePossible(queryFilter, true);
+        } else {
+          // case where the outer filter has reference to the outputcolumn
+          filterSplitter.addPostFilterWithPreFilterIfRewritePossible(queryFilter, false);
         }
       } else {
         // normal case without any filter on unnested column
@@ -477,5 +470,32 @@ public class UnnestStorageAdapter implements StorageAdapter
              || filter instanceof LikeFilter
              || filter instanceof BoundFilter;
     }
+  }
+
+  /**
+   * Array and nested array columns are dictionary encoded, but not correctly for {@link UnnestDimensionCursor} which
+   * is tailored for scalar logical type values that are {@link ColumnCapabilities#isDictionaryEncoded()} and possibly
+   * with {@link ColumnCapabilities#hasMultipleValues()} (specifically {@link ValueType#STRING}), so we don't want to
+   * use this cursor if the capabilities are unknown or if the column type is {@link ValueType#ARRAY}.
+   */
+  private static boolean useDimensionCursor(@Nullable ColumnCapabilities capabilities)
+  {
+    if (capabilities == null) {
+      // capabilities being null here should be indicative of the column not existing or being a virtual column with
+      // no type information, chances are it is not going to be using a very cool dimension selector and so wont work
+      // with this, which requires real dictionary ids for the value matcher to work correctly
+      return false;
+    }
+    // the column needs real, unique value dictionary so that the value matcher id lookup works correctly, otherwise
+    // we must not use the dimension selector
+    if (capabilities.isDictionaryEncoded().and(capabilities.areDictionaryValuesUnique()).isTrue()) {
+      // if we got here, we only actually want to do this for dictionary encoded strings, since no other dictionary
+      // encoded column type should ever have multiple values set. nested and array columns are also dictionary encoded,
+      // but for arrays, the row is always a single dictionary id which maps to the entire array instead of an array
+      // of ids for each element, so we don't want to ever use the dimension selector cursor for that
+      return capabilities.is(ValueType.STRING);
+    }
+    // wasn't a dictionary encoded string, use the value selector
+    return false;
   }
 }
