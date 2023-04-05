@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.server.security.ResourceAction;
 
 import javax.annotation.Nonnull;
@@ -86,7 +87,7 @@ public interface SupervisorSpec
   @Nonnull
   default Set<ResourceAction> getInputSourceTypes() throws UnsupportedOperationException
   {
-    throw new UnsupportedOperationException(StringUtils.format(
+    throw new UOE(StringUtils.format(
         "SuperviserSpec type [%s], does not support input source based security",
         getType()
     ));

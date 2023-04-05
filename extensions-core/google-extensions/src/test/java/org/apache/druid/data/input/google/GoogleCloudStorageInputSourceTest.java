@@ -154,6 +154,14 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   }
 
   @Test
+  public void testGetTypes() throws Exception
+  {
+    final GoogleCloudStorageInputSource inputSource =
+        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, EXPECTED_URIS, ImmutableList.of(), null, null);
+    Assert.assertEquals(Collections.singleton(GoogleCloudStorageInputSource.TYPE_KEY), inputSource.getTypes());
+  }
+
+  @Test
   public void testWithUrisSplit()
   {
 

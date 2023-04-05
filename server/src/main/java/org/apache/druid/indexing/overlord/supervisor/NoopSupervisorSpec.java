@@ -119,7 +119,8 @@ public class NoopSupervisorSpec implements SupervisorSpec
   @Nonnull
   @JsonIgnore
   @Override
-  public Set<ResourceAction> getInputSourceTypes() {
+  public Set<ResourceAction> getInputSourceTypes()
+  {
     return ImmutableSet.of();
   }
 

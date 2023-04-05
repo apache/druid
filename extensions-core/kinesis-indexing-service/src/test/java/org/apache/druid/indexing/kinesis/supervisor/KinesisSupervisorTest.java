@@ -88,6 +88,10 @@ import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.server.metrics.ExceptionCapturingServiceEmitter;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMock;
@@ -4123,7 +4127,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
     );
 
     Assert.assertEquals(
-        Collections.singleton(KinesisIndexTask.INPUT_SOURCE_TYPE),
+        Collections.singleton(
+            new ResourceAction(
+                new Resource(ResourceType.EXTERNAL, KinesisSupervisorSpec.SUPERVISOR_TYPE),
+                Action.READ
+            )),
         supervisorSpec.getInputSourceTypes()
     );
   }

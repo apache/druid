@@ -52,7 +52,7 @@ import java.util.Set;
 
 public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
 {
-  private static final String SUPERVISOR_TYPE = "kinesis";
+  static final String SUPERVISOR_TYPE = "kinesis";
   private final AWSCredentialsConfig awsCredentialsConfig;
 
   @JsonCreator
@@ -125,7 +125,8 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
   @Nonnull
   @JsonIgnore
   @Override
-  public Set<ResourceAction> getInputSourceTypes() {
+  public Set<ResourceAction> getInputSourceTypes()
+  {
     return Collections.singleton(new ResourceAction(
         new Resource(ResourceType.EXTERNAL, SUPERVISOR_TYPE),
         Action.READ

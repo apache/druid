@@ -28,6 +28,7 @@ import org.apache.druid.data.input.impl.HttpInputSource;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.guice.annotations.UnstableApi;
+import org.apache.druid.java.util.common.UOE;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -99,6 +100,6 @@ public interface InputSource
   @Nonnull
   default Set<String> getTypes()
   {
-    throw new UnsupportedOperationException("This inputSource does not support input source based security");
+    throw new UOE("This inputSource does not support input source based security");
   }
 }
