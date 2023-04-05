@@ -176,7 +176,7 @@ ORDER BY SUM(added) DESC
 ## Query SQL over HTTP
 
 
-You can submit native queries [over HTTP](../querying/sql-api.md#submit-a-query). The request body should be a JSON object, with the value for the key `query` containing text of the query:
+You can submit native queries [over HTTP](../querying/sql-api.md#submit-a-query). The request body is a JSON object in which the `query` field contains the text of the query:
 
 ```json
 {
