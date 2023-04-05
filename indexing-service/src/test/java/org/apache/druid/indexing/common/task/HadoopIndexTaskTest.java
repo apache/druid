@@ -45,7 +45,7 @@ public class HadoopIndexTaskTest
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   @Test
-  public void testCorrectInputSourceTypes() throws Exception
+  public void testCorrectInputSourceTypes()
   {
     final HadoopIndexTask task = new HadoopIndexTask(
         null,

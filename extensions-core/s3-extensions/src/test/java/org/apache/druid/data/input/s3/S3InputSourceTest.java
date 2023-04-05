@@ -337,7 +337,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testGetTypes() throws Exception
+  public void testGetTypes()
   {
     final S3InputSource inputSource = new S3InputSource(
         SERVICE,

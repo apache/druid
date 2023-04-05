@@ -90,7 +90,7 @@ public class TaskTest
     }
 
     @Override
-    public boolean isReady(TaskActionClient taskActionClient) throws Exception
+    public boolean isReady(TaskActionClient taskActionClient)
     {
       return false;
     }
@@ -108,7 +108,7 @@ public class TaskTest
     }
 
     @Override
-    public TaskStatus run(TaskToolbox toolbox) throws Exception
+    public TaskStatus run(TaskToolbox toolbox)
     {
       return null;
     }

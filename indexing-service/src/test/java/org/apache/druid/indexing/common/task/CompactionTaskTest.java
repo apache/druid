@@ -674,7 +674,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testInputSourceResources() throws IOException
+  public void testInputSourceResources()
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
