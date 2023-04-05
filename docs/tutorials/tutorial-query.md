@@ -150,7 +150,7 @@ See [Query SQL over HTTP](#query-sql-over-http) for an example of how to use the
 
 ## More Druid SQL examples
 
-Try the following queries to learn a few more Duid SQL tricks:
+Try the following queries to learn a few more Druid SQL tricks:
 
 ### Query over time
 
