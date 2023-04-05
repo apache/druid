@@ -117,7 +117,7 @@ jobs:
           echo $DRUID_IT_IMAGE_NAME
           docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ inputs.build_jdk }}.tar.gz
 
-      - name: Load docker image
+      - name: Clean docker environment and Load docker image
         run: |
           echo "Stopping and pruning any remnant docker containers from previous run"
           docker ps -aq | xargs -r docker rm -f
