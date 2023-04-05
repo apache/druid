@@ -111,7 +111,8 @@ public class DruidKubernetesPeonClient implements KubernetesPeonClient
                           unit
                       );
       if (job == null) {
-        return new JobResponse(job, PeonPhase.FAILED);
+        log.info("K8s job for the task [%s] was not found. It can happen if the task was canceled", taskId);
+        return new JobResponse(null, PeonPhase.FAILED);
       }
       if (job.getStatus().getSucceeded() != null) {
         return new JobResponse(job, PeonPhase.SUCCEEDED);
@@ -133,7 +134,7 @@ public class DruidKubernetesPeonClient implements KubernetesPeonClient
       if (result) {
         log.info("Cleaned up k8s task: %s", taskId);
       } else {
-        log.info("Failed to cleanup task: %s", taskId);
+        log.info("K8s task does not exist: %s", taskId);
       }
       return result;
     } else {

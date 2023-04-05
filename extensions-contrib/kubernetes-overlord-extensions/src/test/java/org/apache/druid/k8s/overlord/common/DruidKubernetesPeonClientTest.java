@@ -141,6 +141,26 @@ public class DruidKubernetesPeonClientTest
   }
 
   @Test
+  void testCleanupReturnValue() throws KubernetesResourceNotFoundException
+  {
+    DruidKubernetesPeonClient peonClient = new DruidKubernetesPeonClient(new TestKubernetesClient(this.client), "test",
+        false
+    );
+    Assertions.assertFalse(peonClient.cleanUpJob(new K8sTaskId("sometask")));
+
+    Job job = new JobBuilder()
+        .withNewMetadata()
+        .withName("sometask")
+        .addToLabels(DruidK8sConstants.LABEL_KEY, "true")
+        .endMetadata()
+        .withNewSpec()
+        .withTemplate(new PodTemplateSpec(new ObjectMeta(), K8sTestUtils.getDummyPodSpec()))
+        .endSpec().build();
+    client.batch().v1().jobs().inNamespace("test").create(job);
+    Assertions.assertTrue(peonClient.cleanUpJob(new K8sTaskId("sometask")));
+  }
+
+  @Test
   void watchingALogThatDoesntExist()
   {
     DruidKubernetesPeonClient peonClient = new DruidKubernetesPeonClient(

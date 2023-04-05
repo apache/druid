@@ -27,15 +27,15 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
-public class ArrayFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<int[]>
+public class VariantArrayFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<int[]>
 {
 
-  protected ArrayFieldColumnWriter(
+  public VariantArrayFieldColumnWriter(
       String columnName,
       String fieldName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       IndexSpec indexSpec,
-      GlobalDictionaryIdLookup globalDictionaryIdLookup
+      DictionaryIdLookup globalDictionaryIdLookup
   )
   {
     super(columnName, fieldName, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);

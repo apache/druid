@@ -22,32 +22,37 @@ package org.apache.druid.segment.nested;
 import org.apache.druid.segment.DictionaryMergingIterator;
 import org.apache.druid.segment.data.Indexed;
 
+import javax.annotation.Nullable;
+import java.io.Closeable;
+import java.io.IOException;
+
 /**
  * Container to collect a set of sorted {@link Indexed} representing the global value dictionaries of some
  * {@link NestedDataComplexColumn}, to later use with {@link DictionaryMergingIterator}
  * to merge into a new global dictionary
  */
-public class GlobalDictionarySortedCollector
+public class SortedValueDictionary implements Closeable
 {
   private final Indexed<String> sortedStrings;
   private final Indexed<Long> sortedLongs;
   private final Indexed<Double> sortedDoubles;
-  private final Iterable<Object[]> sortedArrays;
-  private final int arrayCount;
+  private final Indexed<Object[]> sortedArrays;
+  @Nullable
+  private final Closeable closeable;
 
-  public GlobalDictionarySortedCollector(
+  public SortedValueDictionary(
       Indexed<String> sortedStrings,
       Indexed<Long> sortedLongs,
       Indexed<Double> sortedDoubles,
-      Iterable<Object[]> sortedArrays,
-      int arrayCount
+      Indexed<Object[]> sortedArrays,
+      @Nullable Closeable closeable
   )
   {
     this.sortedStrings = sortedStrings;
     this.sortedLongs = sortedLongs;
     this.sortedDoubles = sortedDoubles;
     this.sortedArrays = sortedArrays;
-    this.arrayCount = arrayCount;
+    this.closeable = closeable;
   }
 
   public Indexed<String> getSortedStrings()
@@ -65,7 +70,7 @@ public class GlobalDictionarySortedCollector
     return sortedDoubles;
   }
 
-  public Iterable<Object[]> getSortedArrays()
+  public Indexed<Object[]> getSortedArrays()
   {
     return sortedArrays;
   }
@@ -87,7 +92,7 @@ public class GlobalDictionarySortedCollector
 
   public int getArrayCardinality()
   {
-    return arrayCount;
+    return sortedArrays.size();
   }
 
   public boolean allNull()
@@ -103,6 +108,14 @@ public class GlobalDictionarySortedCollector
     if (sortedDoubles.size() > 0) {
       return false;
     }
-    return arrayCount == 0;
+    return sortedArrays.size() == 0;
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    if (closeable != null) {
+      closeable.close();
+    }
   }
 }

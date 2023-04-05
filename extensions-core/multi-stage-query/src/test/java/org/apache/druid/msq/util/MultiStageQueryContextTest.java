@@ -202,7 +202,7 @@ public class MultiStageQueryContextTest
     Assert.assertEquals(new IndexSpec(), decodeIndexSpec(Collections.emptyMap()));
 
     Assert.assertEquals(
-        new IndexSpec(null, null, new StringEncodingStrategy.FrontCoded(null), null, null, null, null),
+        new IndexSpec(null, null, new StringEncodingStrategy.FrontCoded(null, null), null, null, null, null),
         decodeIndexSpec("{\"stringDictionaryEncoding\":{\"type\":\"frontCoded\"}}")
     );
 

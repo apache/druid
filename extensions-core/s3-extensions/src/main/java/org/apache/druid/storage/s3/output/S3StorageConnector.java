@@ -27,6 +27,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
+import org.apache.commons.io.input.NullInputStream;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.RetryingInputStream;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
@@ -150,6 +151,7 @@ public class S3StorageConnector implements StorageConnector
     // build a sequence input stream from chunks
     return new SequenceInputStream(new Enumeration<InputStream>()
     {
+      boolean initStream = false;
       @Override
       public boolean hasMoreElements()
       {
@@ -166,6 +168,12 @@ public class S3StorageConnector implements StorageConnector
       @Override
       public InputStream nextElement()
       {
+        // since Sequence input stream calls nextElement in the constructor, we start chunking as soon as we call read.
+        // to avoid that we pass a nullInputStream for the first iteration.
+        if (!initStream) {
+          initStream = true;
+          return new NullInputStream();
+        }
         File outFile = new File(config.getTempDir().getAbsolutePath(), UUID.randomUUID().toString());
         // in a single chunk, only download a maximum of DOWNLOAD_MAX_CHUNK_SIZE
         long endPoint = Math.min(currReadStart.get() + DOWNLOAD_MAX_CHUNK_SIZE, readEnd) - 1;

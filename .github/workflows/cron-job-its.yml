@@ -24,10 +24,6 @@ on:
       - master
       - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
 
-  pull_request:
-    paths:
-      'owasp-dependency-check-suppressions.xml'
-
 jobs:
   build:
     if: github.event_name == 'schedule'

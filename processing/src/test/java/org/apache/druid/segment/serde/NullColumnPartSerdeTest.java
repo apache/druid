@@ -49,6 +49,7 @@ import java.nio.ByteBuffer;
 
 public class NullColumnPartSerdeTest extends InitializedNullHandlingTest
 {
+  private static final String COLUMN_NAME = "missing";
   private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
   private static final ColumnConfig A_CONFIG = () -> 0;
 

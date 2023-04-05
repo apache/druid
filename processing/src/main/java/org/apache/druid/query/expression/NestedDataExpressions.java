@@ -30,7 +30,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.NamedFunction;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.segment.nested.StructuredData;
@@ -47,7 +47,7 @@ import java.util.stream.Collectors;
 public class NestedDataExpressions
 {
   public static final ExpressionType TYPE = Preconditions.checkNotNull(
-      ExpressionType.fromColumnType(NestedDataComplexTypeSerde.TYPE)
+      ExpressionType.fromColumnType(ColumnType.NESTED_DATA)
   );
 
   public static class JsonObjectExprMacro implements ExprMacroTable.ExprMacro
