@@ -94,7 +94,9 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
           dataSchema: {
             dataSource: 'sample',
             timestampSpec: PLACEHOLDER_TIMESTAMP_SPEC,
-            dimensionsSpec: {},
+            dimensionsSpec: {
+              useSchemaDiscovery: true,
+            },
             granularitySpec: {
               rollup: false,
             },
