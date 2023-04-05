@@ -339,7 +339,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   {
     List<TaskRunnerWorkItem> result = new ArrayList<>();
     for (Job existingTask : client.listAllPeonJobs()) {
-      log.info(existingTask.getMetadata().getName());
       try {
         Task task = adapter.toTask(existingTask);
         ListenableFuture<TaskStatus> future = run(task);
@@ -429,7 +428,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     for (Job existingTask : client.listAllPeonJobs().stream()
         .filter(job -> job.getStatus() != null && job.getStatus().getActive() != null && job.getStatus().getActive() > 0).collect(Collectors.toSet())
     ) {
-      log.info(existingTask.getMetadata().getName());
       try {
         Task task = adapter.toTask(existingTask);
         ListenableFuture<TaskStatus> future = run(task);
