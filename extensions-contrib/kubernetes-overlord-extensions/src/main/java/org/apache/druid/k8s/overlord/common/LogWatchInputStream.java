@@ -17,26 +17,41 @@
  * under the License.
  */
 
-package org.apache.druid.storage.azure;
+package org.apache.druid.k8s.overlord.common;
 
-import org.apache.druid.data.input.impl.CloudObjectLocation;
-import org.apache.druid.java.util.common.RE;
-import org.apache.druid.storage.azure.blob.CloudBlobHolder;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.dsl.LogWatch;
+
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
- * Converts a {@link CloudBlobHolder} object to a {@link CloudObjectLocation} object
+ * This wraps the InputStream for k8s client
+ * When you call close on the stream, it will also close the open
+ * http connections and the client
  */
-public class AzureCloudBlobHolderToCloudObjectLocationConverter
-    implements ICloudSpecificObjectToCloudObjectLocationConverter<CloudBlobHolder>
+public class LogWatchInputStream extends InputStream
 {
-  @Override
-  public CloudObjectLocation createCloudObjectLocation(CloudBlobHolder cloudBlob)
+
+  private final KubernetesClient client;
+  private final LogWatch logWatch;
+
+  public LogWatchInputStream(KubernetesClient client, LogWatch logWatch)
   {
-    try {
-      return new CloudObjectLocation(cloudBlob.getContainerName(), cloudBlob.getName());
-    }
-    catch (Exception e) {
-      throw new RE(e);
-    }
+    this.client = client;
+    this.logWatch = logWatch;
+  }
+
+  @Override
+  public int read() throws IOException
+  {
+    return logWatch.getOutput().read();
+  }
+
+  @Override
+  public void close()
+  {
+    logWatch.close();
+    client.close();
   }
 }

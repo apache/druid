@@ -80,7 +80,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
     try {
       AZURE_ACCOUNT_NAME = "azureAccount1";
       AZURE_ACCOUNT_KEY = Base64.getUrlEncoder()
-                                .encodeToString("azureKey1".getBytes(StandardCharsets.UTF_8.toString()));
+                                .encodeToString("azureKey1".getBytes(StandardCharsets.UTF_8));
       AZURE_SHARED_ACCESS_TOKEN = "dummyToken";
       AZURE_CONTAINER = "azureContainer1";
       AZURE_PREFIX = "azurePrefix1";
@@ -191,17 +191,6 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
 
     AzureStorage azureStorage = injector.getInstance(AzureStorage.class);
     Assert.assertSame(cloudBlobClient.get(), azureStorage.getCloudBlobClient());
-  }
-
-  @Test
-  public void testGetAzureCloudBlobToLocationConverterExpectedConverted()
-  {
-    injector = makeInjectorWithProperties(PROPERTIES);
-    AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobLocationConverter1 = injector.getInstance(
-        AzureCloudBlobHolderToCloudObjectLocationConverter.class);
-    AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobLocationConverter2 = injector.getInstance(
-        AzureCloudBlobHolderToCloudObjectLocationConverter.class);
-    Assert.assertSame(azureCloudBlobLocationConverter1, azureCloudBlobLocationConverter2);
   }
 
   @Test
