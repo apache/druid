@@ -119,6 +119,9 @@ jobs:
 
       - name: Load docker image
         run: |
+          echo "Stopping and pruning any remnant docker containers from previous run"
+          docker ps -aq | xargs -r docker rm -f
+          docker system prune -af --volumes
           docker load --input druid-container-jdk${{ inputs.build_jdk }}.tar.gz
           docker images
 

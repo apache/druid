@@ -108,6 +108,7 @@ jobs:
   security_vulnerabilities:
     name: security vulnerabilities
     strategy:
+      fail-fast: false
       matrix:
         HADOOP_PROFILE: [ '', '-Phadoop3' ]
     runs-on: ubuntu-latest
