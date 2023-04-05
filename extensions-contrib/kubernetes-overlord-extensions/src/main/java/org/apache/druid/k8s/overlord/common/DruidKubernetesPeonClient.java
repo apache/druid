@@ -35,10 +35,8 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 public class DruidKubernetesPeonClient implements KubernetesPeonClient
 {
@@ -106,7 +104,7 @@ public class DruidKubernetesPeonClient implements KubernetesPeonClient
                       .inNamespace(namespace)
                       .withName(taskId.getK8sTaskId())
                       .waitUntilCondition(
-                          x -> (x == null) || (x.getStatus() != null && x.getStatus().getActive() == null),
+                          x -> !JobStatus.isActive(x),
                           howLong,
                           unit
                       );
@@ -178,23 +176,6 @@ public class DruidKubernetesPeonClient implements KubernetesPeonClient
                                                     .withLabel(DruidK8sConstants.LABEL_KEY)
                                                     .list()
                                                     .getItems());
-  }
-
-  @Override
-  public List<Pod> listPeonPods(Set<PeonPhase> phases)
-  {
-    return listPeonPods().stream()
-                  .filter(x -> phases.contains(PeonPhase.getPhaseFor(x)))
-                  .collect(Collectors.toList());
-  }
-
-  @Override
-  public List<Pod> listPeonPods()
-  {
-    PodList podList = clientApi.executeRequest(client -> client.pods().inNamespace(namespace))
-                               .withLabel(DruidK8sConstants.LABEL_KEY)
-                               .list();
-    return podList.getItems();
   }
 
   @Override

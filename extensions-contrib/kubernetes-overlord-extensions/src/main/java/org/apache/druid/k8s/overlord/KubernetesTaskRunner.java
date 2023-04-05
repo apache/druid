@@ -51,6 +51,7 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.JobResponse;
+import org.apache.druid.k8s.overlord.common.JobStatus;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.KubernetesResourceNotFoundException;
@@ -425,9 +426,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public Collection<TaskRunnerWorkItem> getRunningTasks()
   {
     List<TaskRunnerWorkItem> result = new ArrayList<>();
-    for (Job existingTask : client.listAllPeonJobs().stream()
-        .filter(job -> job.getStatus() != null && job.getStatus().getActive() != null && job.getStatus().getActive() > 0).collect(Collectors.toSet())
-    ) {
+    for (Job existingTask : client.listAllPeonJobs().stream().filter(JobStatus::isActive).collect(Collectors.toSet())) {
       try {
         Task task = adapter.toTask(existingTask);
         ListenableFuture<TaskStatus> future = run(task);

@@ -19,37 +19,32 @@
 
 package org.apache.druid.k8s.overlord.common;
 
-import com.google.common.base.Optional;
-import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 
-import java.io.InputStream;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-/**
- * A Kubernetes client wrapper to assist with peon task managment.
- * It provides a high level api to retreive jobs, launch jobs, delete jobs and various other
- * tasks like getting task logs, listing all active tasks.
- */
-public interface KubernetesPeonClient
+public class JobStatus
 {
 
-  Optional<Job> jobExists(K8sTaskId taskId);
+  public static boolean isActive(Job job)
+  {
+    if (job == null || job.getStatus() == null || job.getStatus().getActive() == null) {
+      return false;
+    }
+    return job.getStatus().getActive() > 0;
+  }
 
-  Pod launchJobAndWaitForStart(Job job, long howLong, TimeUnit timeUnit);
+  public static boolean isSucceeded(Job job)
+  {
+    if (job == null || job.getStatus() == null || job.getStatus().getSucceeded() == null) {
+      return false;
+    }
+    return job.getStatus().getSucceeded() > 0;
+  }
 
-  JobResponse waitForJobCompletion(K8sTaskId taskId, long howLong, TimeUnit timeUnit);
-
-  boolean cleanUpJob(K8sTaskId taskId);
-
-  Optional<InputStream> getPeonLogs(K8sTaskId taskId);
-
-  List<Job> listAllPeonJobs();
-
-  int cleanCompletedJobsOlderThan(long howFarBack, TimeUnit timeUnit);
-
-  Pod getMainJobPod(K8sTaskId taskId);
-
-
+  public static boolean isFailed(Job job)
+  {
+    if (job == null || job.getStatus() == null || job.getStatus().getFailed() == null) {
+      return false;
+    }
+    return job.getStatus().getFailed() > 0;
+  }
 }
