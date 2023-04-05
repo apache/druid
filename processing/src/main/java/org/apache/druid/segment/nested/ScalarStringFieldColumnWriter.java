@@ -28,16 +28,17 @@ import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
 /**
- * Literal field writer for string type nested columns of {@link NestedDataColumnSerializer}
+ * Field writer for string type nested columns of {@link NestedDataColumnSerializerV4} and
+ * {@link NestedDataColumnSerializer}
  */
-public final class StringFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<String>
+public final class ScalarStringFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<String>
 {
-  public StringFieldColumnWriter(
+  public ScalarStringFieldColumnWriter(
       String columnName,
       String fieldName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       IndexSpec indexSpec,
-      GlobalDictionaryIdLookup globalDictionaryIdLookup
+      DictionaryIdLookup globalDictionaryIdLookup
   )
   {
     super(columnName, fieldName, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);

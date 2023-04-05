@@ -32,10 +32,10 @@ import org.apache.druid.segment.data.FrontCodedIntArrayIndexedWriter;
 import javax.annotation.Nullable;
 
 /**
- * Ingestion time dictionary identifier lookup, used by {@link NestedDataColumnSerializer} to build a global dictionary
+ * Ingestion time dictionary identifier lookup, used by {@link NestedDataColumnSerializerV4} to build a global dictionary
  * id to value mapping for the 'stacked' global value dictionaries.
  */
-public class GlobalDictionaryIdLookup
+public class DictionaryIdLookup
 {
   private final Object2IntMap<String> stringLookup;
 
@@ -47,7 +47,7 @@ public class GlobalDictionaryIdLookup
 
   private int dictionarySize;
 
-  public GlobalDictionaryIdLookup()
+  public DictionaryIdLookup()
   {
     this.stringLookup = new Object2IntLinkedOpenHashMap<>();
     stringLookup.defaultReturnValue(-1);
@@ -67,6 +67,16 @@ public class GlobalDictionaryIdLookup
     );
     int id = dictionarySize++;
     stringLookup.put(value, id);
+  }
+
+  // used when there are no string values to ensure that 0 is used for the null value
+  public void addNumericNull()
+  {
+    Preconditions.checkState(
+        stringLookup.size() == 0 && longLookup.size() == 0 && doubleLookup.size() == 0,
+        "Lookup must be empty to add implicit null"
+    );
+    dictionarySize++;
   }
 
   public int lookupString(@Nullable String value)

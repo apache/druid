@@ -30,7 +30,6 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -830,11 +829,11 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
         ExpressionType.toColumnType(thePlan.getOutputType())
     );
     Assert.assertEquals(
-        NestedDataComplexTypeSerde.TYPE.getType(),
+        ColumnType.NESTED_DATA.getType(),
         inferred.getType()
     );
     Assert.assertEquals(
-        NestedDataExpressions.TYPE.getComplexTypeName(),
+        ColumnType.NESTED_DATA.getComplexTypeName(),
         inferred.getComplexTypeName()
     );
   }
