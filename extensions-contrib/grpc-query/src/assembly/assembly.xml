@@ -53,7 +53,7 @@
     </dependencySets>
     <files>
       <file>
-        <source>../../LICENSE.BINARY</source>
+        <source>../../LICENSE</source>
         <outputDirectory>/</outputDirectory>
         <destName>LICENSE</destName>
         <lineEnding>keep</lineEnding>
