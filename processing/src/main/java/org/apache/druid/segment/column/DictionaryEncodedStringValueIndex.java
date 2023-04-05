@@ -44,5 +44,6 @@ public interface DictionaryEncodedStringValueIndex extends DictionaryEncodedValu
   @Nullable
   String getValue(int index);
 
+  @SuppressWarnings("unreachable")
   BitmapFactory getBitmapFactory();
 }
