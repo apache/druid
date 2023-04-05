@@ -50,3 +50,17 @@ To interact with a query through the Overlord API, users need the following perm
 
 - `INSERT` or `REPLACE` queries: Users must have READ DATASOURCE permission on the output datasource.
 - `SELECT` queries: Users must have read permissions on the `__query_select` datasource, which is a stub datasource that gets created.
+
+## S3
+
+The MSQ task engine can use S3 to store intermediate files when running queries. This can increase its reliability but requires certain permissions in S3.
+
+Permissions for pushing and fetching intermediate stage results to and from S3:
+
+- `s3:GetObject`
+- `s3:PutObject`
+- `s3:AbortMultipartUpload`
+
+Permissions for removing intermediate stage results:
+
+- `s3:DeleteObject`
