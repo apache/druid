@@ -41,7 +41,6 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -214,7 +213,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                                  new NestedFieldVirtualColumn(
                                                      "nester",
                                                      "x_0",
-                                                     NestedDataComplexTypeSerde.TYPE,
+                                                     ColumnType.NESTED_DATA,
                                                      null,
                                                      true,
                                                      "$.x[0]",
@@ -223,7 +222,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                                  new NestedFieldVirtualColumn(
                                                      "nester",
                                                      "y_c_1",
-                                                     NestedDataComplexTypeSerde.TYPE,
+                                                     ColumnType.NESTED_DATA,
                                                      null,
                                                      true,
                                                      "$.y.c[1]",
@@ -232,7 +231,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                                  new NestedFieldVirtualColumn(
                                                      "nester",
                                                      "nester_root",
-                                                     NestedDataComplexTypeSerde.TYPE,
+                                                     ColumnType.NESTED_DATA,
                                                      null,
                                                      true,
                                                      "$.",
@@ -505,7 +504,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     logResults(resultsRealtime);
     Assert.assertEquals(1, resultsRealtime.size());
     Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
-    Assert.assertEquals(resultsSegments.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
+    Assert.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
   }
 
   @Test

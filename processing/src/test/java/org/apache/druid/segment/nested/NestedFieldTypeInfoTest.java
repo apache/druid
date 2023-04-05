@@ -75,11 +75,11 @@ public class NestedFieldTypeInfoTest
   @Test
   public void testEqualsAndHashCode()
   {
-    EqualsVerifier.forClass(NestedFieldTypeInfo.TypeSet.class)
+    EqualsVerifier.forClass(FieldTypeInfo.TypeSet.class)
                   .usingGetClass()
                   .verify();
 
-    EqualsVerifier.forClass(NestedFieldTypeInfo.MutableTypeSet.class)
+    EqualsVerifier.forClass(FieldTypeInfo.MutableTypeSet.class)
                   .suppress(Warning.NONFINAL_FIELDS)
                   .usingGetClass()
                   .verify();
@@ -87,60 +87,60 @@ public class NestedFieldTypeInfoTest
 
   private void testSingleType(ColumnType columnType) throws IOException
   {
-    NestedFieldTypeInfo.MutableTypeSet typeSet = new NestedFieldTypeInfo.MutableTypeSet();
+    FieldTypeInfo.MutableTypeSet typeSet = new FieldTypeInfo.MutableTypeSet();
     Assert.assertNull(typeSet.getSingleType());
     Assert.assertTrue(typeSet.isEmpty());
 
     typeSet.add(columnType);
 
     Assert.assertEquals(columnType, typeSet.getSingleType());
-    Assert.assertEquals(ImmutableSet.of(columnType), NestedFieldTypeInfo.convertToSet(typeSet.getByteValue()));
+    Assert.assertEquals(ImmutableSet.of(columnType), FieldTypeInfo.convertToSet(typeSet.getByteValue()));
 
     writeTypeSet(typeSet);
-    NestedFieldTypeInfo info = new NestedFieldTypeInfo(BUFFER);
+    FieldTypeInfo info = new FieldTypeInfo(BUFFER);
     Assert.assertEquals(0, BUFFER.position());
 
-    NestedFieldTypeInfo.TypeSet roundTrip = info.getTypes(0);
+    FieldTypeInfo.TypeSet roundTrip = info.getTypes(0);
     Assert.assertEquals(columnType, roundTrip.getSingleType());
 
-    NestedFieldTypeInfo info2 = NestedFieldTypeInfo.read(BUFFER, 1);
+    FieldTypeInfo info2 = FieldTypeInfo.read(BUFFER, 1);
     Assert.assertEquals(info.getTypes(0), info2.getTypes(0));
     Assert.assertEquals(1, BUFFER.position());
   }
 
   private void testMultiType(Set<ColumnType> columnTypes) throws IOException
   {
-    NestedFieldTypeInfo.MutableTypeSet typeSet = new NestedFieldTypeInfo.MutableTypeSet();
+    FieldTypeInfo.MutableTypeSet typeSet = new FieldTypeInfo.MutableTypeSet();
     Assert.assertNull(typeSet.getSingleType());
     Assert.assertTrue(typeSet.isEmpty());
 
-    NestedFieldTypeInfo.MutableTypeSet merge = new NestedFieldTypeInfo.MutableTypeSet();
+    FieldTypeInfo.MutableTypeSet merge = new FieldTypeInfo.MutableTypeSet();
     for (ColumnType columnType : columnTypes) {
       typeSet.add(columnType);
-      merge.merge(new NestedFieldTypeInfo.MutableTypeSet().add(columnType).getByteValue());
+      merge.merge(new FieldTypeInfo.MutableTypeSet().add(columnType).getByteValue());
     }
 
     Assert.assertEquals(merge.getByteValue(), typeSet.getByteValue());
     Assert.assertNull(typeSet.getSingleType());
-    Assert.assertEquals(columnTypes, NestedFieldTypeInfo.convertToSet(typeSet.getByteValue()));
+    Assert.assertEquals(columnTypes, FieldTypeInfo.convertToSet(typeSet.getByteValue()));
 
     writeTypeSet(typeSet);
-    NestedFieldTypeInfo info = new NestedFieldTypeInfo(BUFFER);
+    FieldTypeInfo info = new FieldTypeInfo(BUFFER);
     Assert.assertEquals(0, BUFFER.position());
 
-    NestedFieldTypeInfo.TypeSet roundTrip = info.getTypes(0);
+    FieldTypeInfo.TypeSet roundTrip = info.getTypes(0);
     Assert.assertNull(roundTrip.getSingleType());
-    Assert.assertEquals(columnTypes, NestedFieldTypeInfo.convertToSet(roundTrip.getByteValue()));
+    Assert.assertEquals(columnTypes, FieldTypeInfo.convertToSet(roundTrip.getByteValue()));
 
-    NestedFieldTypeInfo info2 = NestedFieldTypeInfo.read(BUFFER, 1);
+    FieldTypeInfo info2 = FieldTypeInfo.read(BUFFER, 1);
     Assert.assertEquals(info.getTypes(0), info2.getTypes(0));
     Assert.assertEquals(1, BUFFER.position());
   }
 
-  private static void writeTypeSet(NestedFieldTypeInfo.MutableTypeSet typeSet) throws IOException
+  private static void writeTypeSet(FieldTypeInfo.MutableTypeSet typeSet) throws IOException
   {
     BUFFER.position(0);
-    NestedFieldTypeInfo.Writer writer = new NestedFieldTypeInfo.Writer(new OnHeapMemorySegmentWriteOutMedium());
+    FieldTypeInfo.Writer writer = new FieldTypeInfo.Writer(new OnHeapMemorySegmentWriteOutMedium());
     writer.open();
     writer.write(typeSet);
     Assert.assertEquals(1, writer.getSerializedSize());

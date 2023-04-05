@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
@@ -337,7 +336,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         RowSignature.builder()
                     .add("x", ColumnType.STRING)
                     .add("y", ColumnType.STRING)
-                    .add("z", NestedDataComplexTypeSerde.TYPE)
+                    .add("z", ColumnType.NESTED_DATA)
                     .build()
         );
     testIngestionQuery()

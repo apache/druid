@@ -134,7 +134,7 @@ public class DruidKubernetesPeonClient implements KubernetesPeonClient
       if (result) {
         log.info("Cleaned up k8s task: %s", taskId);
       } else {
-        log.info("Failed to cleanup task: %s", taskId);
+        log.info("K8s task does not exist: %s", taskId);
       }
       return result;
     } else {
