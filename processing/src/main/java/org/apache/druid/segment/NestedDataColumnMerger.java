@@ -115,7 +115,6 @@ public class NestedDataColumnMerger implements DimensionMergerV9
           name,
           indexSpec,
           segmentWriteOutMedium,
-          progressIndicator,
           closer
       );
       serializer = defaultSerializer;

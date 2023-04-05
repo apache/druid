@@ -35,7 +35,6 @@ import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.filter.SelectorPredicateFactory;
 import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.AutoTypeColumnMerger;
-import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.IndexableAdapter;
@@ -125,7 +124,6 @@ public class ScalarDoubleColumnSupplierTest extends InitializedNullHandlingTest
           fileNameBase,
           new IndexSpec(),
           writeOutMediumFactory.makeSegmentWriteOutMedium(tempFolder.newFolder()),
-          new BaseProgressIndicator(),
           closer
       );
 
