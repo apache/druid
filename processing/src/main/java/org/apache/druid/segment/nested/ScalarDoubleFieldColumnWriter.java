@@ -33,20 +33,20 @@ import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
 /**
- * Literal field writer for double type nested columns of {@link NestedDataColumnSerializer}. In addition to the normal
+ * Literal field writer for double type nested columns of {@link NestedDataColumnSerializerV4}. In addition to the normal
  * dictionary encoded column, this writer also writes an additional double value column with {@link #doublesSerializer},
  * which is written to during {@link #addValue}.
  */
-public final class DoubleFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<Double>
+public final class ScalarDoubleFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<Double>
 {
   private ColumnarDoublesSerializer doublesSerializer;
 
-  protected DoubleFieldColumnWriter(
+  public ScalarDoubleFieldColumnWriter(
       String columnName,
       String fieldName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       IndexSpec indexSpec,
-      GlobalDictionaryIdLookup globalDictionaryIdLookup
+      DictionaryIdLookup globalDictionaryIdLookup
   )
   {
     super(columnName, fieldName, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);

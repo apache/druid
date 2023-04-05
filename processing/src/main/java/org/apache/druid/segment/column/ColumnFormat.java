@@ -17,26 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.storage.azure;
+package org.apache.druid.segment.column;
 
-import org.apache.druid.data.input.impl.CloudObjectLocation;
-import org.apache.druid.java.util.common.RE;
-import org.apache.druid.storage.azure.blob.CloudBlobHolder;
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.segment.DimensionHandler;
 
-/**
- * Converts a {@link CloudBlobHolder} object to a {@link CloudObjectLocation} object
- */
-public class AzureCloudBlobHolderToCloudObjectLocationConverter
-    implements ICloudSpecificObjectToCloudObjectLocationConverter<CloudBlobHolder>
+import javax.annotation.Nullable;
+
+public interface ColumnFormat
 {
-  @Override
-  public CloudObjectLocation createCloudObjectLocation(CloudBlobHolder cloudBlob)
-  {
-    try {
-      return new CloudObjectLocation(cloudBlob.getContainerName(), cloudBlob.getName());
-    }
-    catch (Exception e) {
-      throw new RE(e);
-    }
-  }
+  ColumnType getLogicalType();
+
+  ColumnCapabilities toColumnCapabilities();
+
+  DimensionHandler getColumnHandler(String columnName);
+
+  DimensionSchema getColumnSchema(String columnName);
+
+  ColumnFormat merge(@Nullable ColumnFormat otherFormat);
 }

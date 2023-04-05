@@ -25,7 +25,9 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.frame.util.DurableStorageUtils;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.ColumnMapping;
@@ -42,6 +44,7 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
+import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
@@ -308,6 +311,44 @@ public class MSQSelectTest extends MSQTestBase
             new Object[]{1L, "def"},
             new Object[]{1L, "abc"}
         )).verifyResults();
+  }
+
+  @Test
+  public void testSelectOnFooWhereMatchesNoSegments()
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("cnt", ColumnType.LONG)
+                                               .add("dim1", ColumnType.STRING)
+                                               .build();
+
+    // Filter [__time >= timestamp '3000-01-01 00:00:00'] matches no segments at all.
+    testSelectQuery()
+        .setSql("select cnt,dim1 from foo where __time >= timestamp '3000-01-01 00:00:00'")
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(
+                       newScanQueryBuilder()
+                           .dataSource(CalciteTests.DATASOURCE1)
+                           .intervals(
+                               querySegmentSpec(
+                                   Intervals.utc(
+                                       DateTimes.of("3000").getMillis(),
+                                       Intervals.ETERNITY.getEndMillis()
+                                   )
+                               )
+                           )
+                           .columns("cnt", "dim1")
+                           .context(defaultScanQueryContext(context, resultSignature))
+                           .build()
+                   )
+                   .columnMappings(ColumnMappings.identity(resultSignature))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .build()
+        )
+        .setQueryContext(context)
+        .setExpectedRowSignature(resultSignature)
+        .setExpectedResultRows(ImmutableList.of())
+        .verifyResults();
   }
 
   @Test
@@ -1218,6 +1259,73 @@ public class MSQSelectTest extends MSQTestBase
   }
 
   @Test
+  public void testHavingOnApproximateCountDistinct()
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("dim2", ColumnType.STRING)
+                                               .add("col", ColumnType.LONG)
+                                               .build();
+
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource(CalciteTests.DATASOURCE1)
+                                     .setInterval(querySegmentSpec(Filtration.eternity()))
+                                     .setGranularity(Granularities.ALL)
+                                     .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                                     .setAggregatorSpecs(
+                                         aggregators(
+                                             new CardinalityAggregatorFactory(
+                                                 "a0",
+                                                 null,
+                                                 ImmutableList.of(
+                                                     new DefaultDimensionSpec(
+                                                         "m1",
+                                                         "m1",
+                                                         ColumnType.FLOAT
+                                                     )
+                                                 ),
+                                                 false,
+                                                 true
+                                             )
+                                         )
+                                     )
+                                     .setHavingSpec(
+                                         having(
+                                             bound(
+                                                 "a0",
+                                                 "1",
+                                                 null,
+                                                 true,
+                                                 false,
+                                                 null,
+                                                 StringComparators.NUMERIC
+                                             )
+                                         )
+                                     )
+                                     .setContext(context)
+                                     .build();
+
+    testSelectQuery()
+        .setSql("SELECT dim2, COUNT(DISTINCT m1) as col FROM foo GROUP BY dim2 HAVING COUNT(DISTINCT m1) > 1")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(query)
+                                   .columnMappings(new ColumnMappings(ImmutableList.of(
+                                       new ColumnMapping("d0", "dim2"),
+                                       new ColumnMapping("a0", "col")
+                                   )))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .build())
+        .setQueryContext(context)
+        .setExpectedRowSignature(resultSignature)
+        .setExpectedResultRows(
+            NullHandling.replaceWithDefault()
+            ? ImmutableList.of(new Object[]{null, 3L}, new Object[]{"a", 2L})
+            : ImmutableList.of(new Object[]{null, 2L}, new Object[]{"a", 2L})
+
+        )
+        .verifyResults();
+  }
+
+  @Test
   public void testGroupByWithMultiValue()
   {
     Map<String, Object> localContext = enableMultiValueUnnesting(context, true);
@@ -1275,12 +1383,8 @@ public class MSQSelectTest extends MSQTestBase
         .setQueryContext(localContext)
         .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
             CoreMatchers.instanceOf(ISE.class),
-            ThrowableMessageMatcher.hasMessage(
-                !FAULT_TOLERANCE.equals(contextName)
-                ? CoreMatchers.containsString(
-                    "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false.")
-                :
-                CoreMatchers.containsString("exceeded max relaunch count")
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                "Column [dim3] is a multi value string. Please wrap the column using MV_TO_ARRAY() to proceed further.")
             )
         ))
         .verifyExecutionError();
@@ -1451,11 +1555,8 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
             CoreMatchers.instanceOf(ISE.class),
             ThrowableMessageMatcher.hasMessage(
-                !FAULT_TOLERANCE.equals(contextName)
-                ? CoreMatchers.containsString(
+                CoreMatchers.containsString(
                     "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false.")
-                :
-                CoreMatchers.containsString("exceeded max relaunch count")
             )
         ))
         .verifyExecutionError();
