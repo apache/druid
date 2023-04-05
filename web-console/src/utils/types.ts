@@ -25,24 +25,6 @@ function getEffectiveColumnType(column: Column): string | undefined {
   return column.nativeType || column.sqlType;
 }
 
-export function sqlTypeFromDruid(druidType: string): string {
-  druidType = druidType.toLowerCase();
-  switch (druidType) {
-    case 'string':
-      return 'VARCHAR';
-
-    case 'long':
-      return 'BIGINT';
-
-    case 'float':
-    case 'double':
-      return druidType.toUpperCase();
-
-    default:
-      return 'COMPLEX';
-  }
-}
-
 export function columnToIcon(column: Column): IconName | undefined {
   const effectiveType = getEffectiveColumnType(column);
   return effectiveType ? dataTypeToIcon(effectiveType) : undefined;

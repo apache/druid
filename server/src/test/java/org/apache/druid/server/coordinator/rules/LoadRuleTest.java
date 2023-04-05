@@ -249,6 +249,11 @@ public class LoadRuleTest
         .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, replicateAfterLoadTimeout))
         .withBalancerStrategy(mockBalancerStrategy)
         .withUsedSegmentsInTest(usedSegments)
+        .withDynamicConfigs(
+            CoordinatorDynamicConfig.builder()
+                                    .withUseRoundRobinSegmentAssignment(useRoundRobinAssignment)
+                                    .build()
+        )
         .build();
   }
 
@@ -679,6 +684,7 @@ public class LoadRuleTest
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
                                     .withMaxSegmentsInNodeLoadingQueue(maxSegmentsInQueue)
+                                    .withUseRoundRobinSegmentAssignment(useRoundRobinAssignment)
                                     .build()
         ).build();
 

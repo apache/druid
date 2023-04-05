@@ -71,7 +71,7 @@ public class VectorExpressionsSanityTest extends InitializedNullHandlingTest
   @AfterClass
   public static void teardownTests()
   {
-    ExpressionProcessing.initializeForTests(null);
+    ExpressionProcessing.initializeForTests();
   }
 
   static void testExpression(String expr, Expr parsed, Map<String, ExpressionType> types)

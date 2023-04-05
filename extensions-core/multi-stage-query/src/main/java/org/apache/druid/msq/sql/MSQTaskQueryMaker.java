@@ -62,7 +62,6 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -184,7 +183,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     final List<ColumnMapping> columnMappings = new ArrayList<>();
 
     for (final Pair<Integer, String> entry : fieldMapping) {
-      // Note: SQL generally allows output columns to be duplicates, but MultiStageQueryMakerFactory.validateNoDuplicateAliases
+      // Note: SQL generally allows output columns to be duplicates, but MSQTaskSqlEngine.validateNoDuplicateAliases
       // will prevent duplicate output columns from appearing here. So no need to worry about it.
 
       final String queryColumn = druidQuery.getOutputRowSignature().getColumnName(entry.getKey());

@@ -169,4 +169,14 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
   {
     return true;
   }
+
+  @Override
+  public String toString()
+  {
+    return "HttpInputSource{" +
+           "uris=\"" + uris +
+           "\", httpAuthenticationUsername=" + httpAuthenticationUsername +
+           ", httpAuthenticationPasswordProvider=" + httpAuthenticationPasswordProvider +
+           "}";
+  }
 }

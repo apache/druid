@@ -238,7 +238,8 @@ public class SqlResourceTest extends CalciteTestBase
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.createJoinableFactoryWrapper(),
-        CatalogResolver.NULL_RESOLVER
+        CatalogResolver.NULL_RESOLVER,
+        new AuthConfig()
     );
 
     lifecycleManager = new SqlLifecycleManager()
@@ -262,7 +263,6 @@ public class SqlResourceTest extends CalciteTestBase
         stubServiceEmitter,
         testRequestLogger,
         scheduler,
-        authConfig,
         defaultQueryConfig,
         lifecycleManager
     );
@@ -1373,7 +1373,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertTrue(
         exception.getMessage()
                  .contains("Query not supported. " +
-                           "Possible error: SQL query requires order by non-time column [dim1 ASC] that is not supported.")
+                           "Possible error: SQL query requires order by non-time column [dim1 ASC], which is not supported.")
     );
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());

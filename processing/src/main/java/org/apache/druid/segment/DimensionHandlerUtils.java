@@ -624,4 +624,15 @@ public final class DimensionHandlerUtils
   {
     return number == null ? ZERO_FLOAT : number;
   }
+
+  public static boolean isNumericNull(@Nullable Object o)
+  {
+    if (o instanceof Number) {
+      return false;
+    }
+    if (o instanceof String && Doubles.tryParse((String) o) != null) {
+      return false;
+    }
+    return true;
+  }
 }

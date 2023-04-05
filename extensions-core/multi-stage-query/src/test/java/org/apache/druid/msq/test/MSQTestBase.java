@@ -70,6 +70,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.input.InputSourceModule;
+import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.counters.QueryCounterSnapshot;
@@ -133,6 +134,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.SqlQueryPlus;
@@ -286,6 +288,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           2,
           10,
           2,
+          1,
           0
       )
   );
@@ -508,7 +511,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.createJoinableFactoryWrapper(),
-        catalogResolver
+        catalogResolver,
+        new AuthConfig()
     );
 
     sqlStatementFactory = CalciteTests.createSqlStatementFactory(engine, plannerFactory);
@@ -896,6 +900,18 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return asBuilder();
     }
 
+    public Builder setExpectedSegmentGenerationProgressCountersForStageWorker(
+        CounterSnapshotMatcher counterSnapshot,
+        int stage,
+        int worker
+    )
+    {
+      this.expectedStageWorkerChannelToCounters.computeIfAbsent(stage, s -> new HashMap<>())
+                                               .computeIfAbsent(worker, w -> new HashMap<>())
+                                               .put(CounterNames.getSegmentGenerationProgress(), counterSnapshot);
+      return asBuilder();
+    }
+
     @SuppressWarnings("unchecked")
     private Builder asBuilder()
     {
@@ -941,7 +957,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
                     worker,
                     channel
                 );
-                Assert.assertTrue(channelToCounters.containsKey(channel));
+                Assert.assertTrue(StringUtils.format("Counters not found for stage [%d], worker [%d], channel [%s]",
+                                                     stage,
+                                                     worker,
+                                                     channel), channelToCounters.containsKey(channel));
                 counter.matchQuerySnapshot(errorMessageFormat, channelToCounters.get(channel));
               }
           );
