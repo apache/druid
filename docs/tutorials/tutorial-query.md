@@ -144,12 +144,13 @@ performance issues. For more information, see [Native queries](../querying/query
 9. Finally, click  `...`  and **Edit context** to see how you can add additional parameters controlling the execution of the query execution. In the field, enter query context options as JSON key-value pairs, as described in [Context flags](../querying/query-context.md).  
 
 That's it! We've built a simple query using some of the query builder features built into the web console. The following
-sections provide a few more example queries you can try. Also, see [Other ways to invoke SQL queries](#other-ways-to-invoke-sql-queries) to learn how
-to run Druid SQL from the command line or over HTTP. 
+sections provide a few more example queries you can try.
+
+See [Query SQL over HTTP](#query-sql-over-http) for an example of how to use the Druid SQL HTTP API. 
 
 ## More Druid SQL examples
 
-Here is a collection of queries to try out:
+Try the following queries to learn a few more Duid SQL tricks:
 
 ### Query over time
 
