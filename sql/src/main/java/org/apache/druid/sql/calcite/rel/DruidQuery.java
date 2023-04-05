@@ -1439,21 +1439,13 @@ public class DruidQuery
     }
 
     if (!plannerContext.featureAvailable(EngineFeature.SCAN_ORDER_BY_NON_TIME) && !orderByColumns.isEmpty()) {
-      if (orderByColumns.size() > 1 || !ColumnHolder.TIME_COLUMN_NAME.equals(orderByColumns.get(0).getColumnName())) {
+      if (orderByColumns.size() > 1 || orderByColumns.stream()
+                                                     .anyMatch(orderBy -> !orderBy.getColumnName().equals(ColumnHolder.TIME_COLUMN_NAME))) {
         // Cannot handle this ordering.
         // Scan cannot ORDER BY non-time columns.
         plannerContext.setPlanningError(
             "SQL query requires order by non-time column %s, which is not supported.",
             orderByColumns
-        );
-        return null;
-      }
-      if (!dataSource.isConcrete()) {
-        // Cannot handle this ordering.
-        // Scan cannot ORDER BY non-concrete datasources on _any_ column.
-        plannerContext.setPlanningError(
-            "SQL query requires order by on non-concrete datasource [%s], which is not supported.",
-            dataSource
         );
         return null;
       }

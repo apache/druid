@@ -28,6 +28,7 @@ import com.microsoft.azure.storage.blob.BlobListingDetails;
 import com.microsoft.azure.storage.blob.CloudBlob;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
+import com.microsoft.azure.storage.blob.CloudBlockBlob;
 import com.microsoft.azure.storage.blob.ListBlobItem;
 import org.apache.druid.java.util.common.logger.Logger;
 
@@ -97,10 +98,18 @@ public class AzureStorage
     }
   }
 
+  public CloudBlob getBlobReferenceWithAttributes(final String containerName, final String blobPath)
+      throws URISyntaxException, StorageException
+  {
+    final CloudBlockBlob blobReference = getOrCreateCloudBlobContainer(containerName).getBlockBlobReference(blobPath);
+    blobReference.downloadAttributes();
+    return blobReference;
+  }
+
   public long getBlobLength(final String containerName, final String blobPath)
       throws URISyntaxException, StorageException
   {
-    return getOrCreateCloudBlobContainer(containerName).getBlockBlobReference(blobPath).getProperties().getLength();
+    return getBlobReferenceWithAttributes(containerName, blobPath).getProperties().getLength();
   }
 
   public InputStream getBlobInputStream(final String containerName, final String blobPath)

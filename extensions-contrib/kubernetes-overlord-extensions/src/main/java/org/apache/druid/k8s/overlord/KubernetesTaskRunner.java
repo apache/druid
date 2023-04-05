@@ -21,6 +21,7 @@ package org.apache.druid.k8s.overlord;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
@@ -46,6 +47,9 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.JobResponse;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
@@ -55,11 +59,13 @@ import org.apache.druid.k8s.overlord.common.PeonPhase;
 import org.apache.druid.k8s.overlord.common.TaskAdapter;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogStreamer;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -69,6 +75,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -99,6 +106,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private final TaskLogPusher taskLogPusher;
   private final ListeningExecutorService exec;
   private final KubernetesPeonClient client;
+  private final HttpClient httpClient;
 
 
   public KubernetesTaskRunner(
@@ -106,7 +114,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       KubernetesTaskRunnerConfig k8sConfig,
       TaskQueueConfig taskQueueConfig,
       TaskLogPusher taskLogPusher,
-      KubernetesPeonClient client
+      KubernetesPeonClient client,
+      HttpClient httpClient
   )
   {
     this.adapter = adapter;
@@ -114,6 +123,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     this.taskQueueConfig = taskQueueConfig;
     this.taskLogPusher = taskLogPusher;
     this.client = client;
+    this.httpClient = httpClient;
     this.cleanupExecutor = Executors.newScheduledThreadPool(1);
     this.exec = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(taskQueueConfig.getMaxSize(), "k8s-task-runner-%d")
@@ -170,6 +180,11 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                   TaskStatus status;
                   if (PeonPhase.SUCCEEDED.equals(completedPhase.getPhase())) {
                     status = TaskStatus.success(task.getId());
+                  } else if (completedPhase.getJob() == null) {
+                    status = TaskStatus.failure(
+                        task.getId(),
+                        "K8s Job for task disappeared before completion: " + k8sTaskId
+                    );
                   } else {
                     status = TaskStatus.failure(
                         task.getId(),
@@ -245,11 +260,41 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     client.cleanUpJob(new K8sTaskId(taskid));
   }
 
-
   @Override
-  public Optional<InputStream> streamTaskReports(String taskid)
+  public Optional<InputStream> streamTaskReports(String taskid) throws IOException
   {
-    return Optional.absent();
+    final K8sWorkItem workItem = tasks.get(taskid);
+    if (workItem == null) {
+      return Optional.absent();
+    }
+
+    final TaskLocation taskLocation = workItem.getLocation();
+
+    if (TaskLocation.unknown().equals(taskLocation)) {
+      // No location known for this task. It may have not been assigned one yet.
+      return Optional.absent();
+    }
+
+    final URL url = TaskRunnerUtils.makeTaskLocationURL(
+        taskLocation,
+        "/druid/worker/v1/chat/%s/liveReports",
+        taskid
+    );
+
+    try {
+      return Optional.of(httpClient.go(
+          new Request(HttpMethod.GET, url),
+          new InputStreamResponseHandler()
+      ).get());
+    }
+    catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    catch (ExecutionException e) {
+      // Unwrap if possible
+      Throwables.propagateIfPossible(e.getCause(), IOException.class);
+      throw new RuntimeException(e);
+    }
   }
 
   @Override
