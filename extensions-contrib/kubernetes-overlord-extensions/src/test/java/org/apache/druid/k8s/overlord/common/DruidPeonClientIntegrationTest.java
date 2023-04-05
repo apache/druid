@@ -59,6 +59,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 // must have a kind / minikube cluster installed and the image pushed to your repository
+@Disabled
 public class DruidPeonClientIntegrationTest
 {
   private StartupLoggingConfig startupLoggingConfig;

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import io.fabric8.kubernetes.client.Config;
+import io.fabric8.kubernetes.client.ConfigBuilder;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Self;
@@ -90,7 +91,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   {
     DruidKubernetesClient client;
     if (kubernetesTaskRunnerConfig.disableClientProxy) {
-      Config config = Config.autoConfigure(null);
+      Config config = new ConfigBuilder().build();
       config.setHttpsProxy(null);
       config.setHttpProxy(null);
       client = new DruidKubernetesClient(config);
@@ -143,7 +144,6 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
       );
     } else if (PodTemplateTaskAdapter.TYPE.equals(adapter)) {
       return new PodTemplateTaskAdapter(
-          client,
           kubernetesTaskRunnerConfig,
           taskConfig,
           druidNode,
