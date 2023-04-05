@@ -86,7 +86,6 @@ public class AvroStreamInputRowParserTest
   private static final ZonedDateTime DATE_TIME = ZonedDateTime.of(2015, 10, 25, 19, 30, 0, 0, ZoneOffset.UTC);
   static final List<String> DIMENSIONS = Arrays.asList(EVENT_TYPE, ID, SOME_OTHER_ID, IS_VALID);
   private static final List<String> DIMENSIONS_SCHEMALESS = Arrays.asList(
-      "nested",
       SOME_OTHER_ID,
       "someIntArray",
       "someFloat",

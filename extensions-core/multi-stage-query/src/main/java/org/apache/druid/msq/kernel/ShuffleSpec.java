@@ -27,7 +27,6 @@ import org.apache.druid.frame.key.ClusterBy;
  * Describes how outputs of a stage are shuffled. Property of {@link StageDefinition}.
  *
  * When the output of a stage is shuffled, it is globally sorted and partitioned according to the {@link ClusterBy}.
- * Hash-based (non-sorting) shuffle is not currently implemented.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {

@@ -204,7 +204,7 @@ public class Transformer
     {
       final RowFunction transform = transforms.get(dimension);
       if (transform != null) {
-        return Rows.objectToStrings(transform.eval(row));
+        return transform.evalDimension(row);
       } else {
         return row.getDimension(dimension);
       }
@@ -232,7 +232,7 @@ public class Transformer
       }
     }
 
-    public InputRow getRow()
+    public InputRow getBaseRow()
     {
       return row;
     }

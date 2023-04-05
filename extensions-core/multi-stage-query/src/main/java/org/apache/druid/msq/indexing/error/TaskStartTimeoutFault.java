@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 @JsonTypeName(TaskStartTimeoutFault.CODE)
 public class TaskStartTimeoutFault extends BaseMSQFault
@@ -32,24 +33,38 @@ public class TaskStartTimeoutFault extends BaseMSQFault
   static final String CODE = "TaskStartTimeout";
 
   private final int numTasks;
+  private final long timeout;
 
   @JsonCreator
-  public TaskStartTimeoutFault(@JsonProperty("numTasks") int numTasks)
+  public TaskStartTimeoutFault(
+      @JsonProperty("numTasks") int numTasks,
+      @JsonProperty("timeout") long timeout
+  )
   {
     super(
         CODE,
-        "Unable to launch all the worker tasks in time. There might be insufficient available slots to start all the worker tasks simultaneously."
-        + " Try lowering '%s' in your query context to lower than [%d] tasks, or increasing capacity.",
-        MultiStageQueryContext.CTX_MAX_NUM_TASKS,
-        numTasks
+        "Unable to launch [%d] worker tasks within [%,d] seconds. "
+        + "There might be insufficient available slots to start all worker tasks simultaneously. "
+        + "Try lowering '%s' in your query context to a number that fits within your available task capacity, "
+        + "or try increasing capacity.",
+        numTasks,
+        TimeUnit.MILLISECONDS.toSeconds(timeout),
+        MultiStageQueryContext.CTX_MAX_NUM_TASKS
     );
     this.numTasks = numTasks;
+    this.timeout = timeout;
   }
 
   @JsonProperty
   public int getNumTasks()
   {
     return numTasks;
+  }
+
+  @JsonProperty
+  public long getTimeout()
+  {
+    return timeout;
   }
 
   @Override
@@ -65,12 +80,21 @@ public class TaskStartTimeoutFault extends BaseMSQFault
       return false;
     }
     TaskStartTimeoutFault that = (TaskStartTimeoutFault) o;
-    return numTasks == that.numTasks;
+    return numTasks == that.numTasks && timeout == that.timeout;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), numTasks);
+    return Objects.hash(super.hashCode(), numTasks, timeout);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "TaskStartTimeoutFault{" +
+           "numTasks=" + numTasks +
+           ", timeout=" + timeout +
+           '}';
   }
 }

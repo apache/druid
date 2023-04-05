@@ -21,9 +21,9 @@ package org.apache.druid.k8s.overlord;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -35,40 +35,37 @@ import org.apache.commons.io.FileUtils;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.ForkingTaskRunner;
-import org.apache.druid.indexing.overlord.QuotableWhiteSpaceSplitter;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerUtils;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
-import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.JobResponse;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
-import org.apache.druid.k8s.overlord.common.PeonCommandContext;
+import org.apache.druid.k8s.overlord.common.KubernetesResourceNotFoundException;
 import org.apache.druid.k8s.overlord.common.PeonPhase;
 import org.apache.druid.k8s.overlord.common.TaskAdapter;
-import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogStreamer;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -78,6 +75,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -101,36 +99,31 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private final ScheduledExecutorService cleanupExecutor;
 
   protected final ConcurrentHashMap<String, K8sWorkItem> tasks = new ConcurrentHashMap<>();
-  private final StartupLoggingConfig startupLoggingConfig;
-  private final TaskAdapter<Pod, Job> adapter;
+  protected final TaskAdapter adapter;
 
   private final KubernetesTaskRunnerConfig k8sConfig;
   private final TaskQueueConfig taskQueueConfig;
   private final TaskLogPusher taskLogPusher;
   private final ListeningExecutorService exec;
   private final KubernetesPeonClient client;
-  private final DruidNode node;
-  private final TaskConfig taskConfig;
+  private final HttpClient httpClient;
 
 
   public KubernetesTaskRunner(
-      StartupLoggingConfig startupLoggingConfig,
-      TaskAdapter<Pod, Job> adapter,
+      TaskAdapter adapter,
       KubernetesTaskRunnerConfig k8sConfig,
       TaskQueueConfig taskQueueConfig,
       TaskLogPusher taskLogPusher,
       KubernetesPeonClient client,
-      DruidNode node,
-      TaskConfig taskConfig
+      HttpClient httpClient
   )
   {
-    this.startupLoggingConfig = startupLoggingConfig;
     this.adapter = adapter;
     this.k8sConfig = k8sConfig;
     this.taskQueueConfig = taskQueueConfig;
     this.taskLogPusher = taskLogPusher;
     this.client = client;
-    this.node = node;
+    this.httpClient = httpClient;
     this.cleanupExecutor = Executors.newScheduledThreadPool(1);
     this.exec = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(taskQueueConfig.getMaxSize(), "k8s-task-runner-%d")
@@ -139,7 +132,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         taskQueueConfig.getMaxSize() < Integer.MAX_VALUE,
         "The task queue bounds how many concurrent k8s tasks you can have"
     );
-    this.taskConfig = taskConfig;
   }
 
 
@@ -163,13 +155,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                   JobResponse completedPhase;
                   Optional<Job> existingJob = client.jobExists(k8sTaskId);
                   if (!existingJob.isPresent()) {
-                    PeonCommandContext context = new PeonCommandContext(
-                        generateCommand(task),
-                        javaOpts(task),
-                        new File(taskConfig.getBaseTaskDirPaths().get(0)),
-                        node.isEnableTlsPort()
-                    );
-                    Job job = adapter.fromTask(task, context);
+                    Job job = adapter.fromTask(task);
                     log.info("Job created %s and ready to launch", k8sTaskId);
                     Pod peonPod = client.launchJobAndWaitForStart(
                         job,
@@ -194,6 +180,11 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                   TaskStatus status;
                   if (PeonPhase.SUCCEEDED.equals(completedPhase.getPhase())) {
                     status = TaskStatus.success(task.getId());
+                  } else if (completedPhase.getJob() == null) {
+                    status = TaskStatus.failure(
+                        task.getId(),
+                        "K8s Job for task disappeared before completion: " + k8sTaskId
+                    );
                   } else {
                     status = TaskStatus.failure(
                         task.getId(),
@@ -269,11 +260,41 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     client.cleanUpJob(new K8sTaskId(taskid));
   }
 
-
   @Override
-  public Optional<InputStream> streamTaskReports(String taskid)
+  public Optional<InputStream> streamTaskReports(String taskid) throws IOException
   {
-    return Optional.absent();
+    final K8sWorkItem workItem = tasks.get(taskid);
+    if (workItem == null) {
+      return Optional.absent();
+    }
+
+    final TaskLocation taskLocation = workItem.getLocation();
+
+    if (TaskLocation.unknown().equals(taskLocation)) {
+      // No location known for this task. It may have not been assigned one yet.
+      return Optional.absent();
+    }
+
+    final URL url = TaskRunnerUtils.makeTaskLocationURL(
+        taskLocation,
+        "/druid/worker/v1/chat/%s/liveReports",
+        taskid
+    );
+
+    try {
+      return Optional.of(httpClient.go(
+          new Request(HttpMethod.GET, url),
+          new InputStreamResponseHandler()
+      ).get());
+    }
+    catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    catch (ExecutionException e) {
+      // Unwrap if possible
+      Throwables.propagateIfPossible(e.getCause(), IOException.class);
+      throw new RuntimeException(e);
+    }
   }
 
   @Override
@@ -311,61 +332,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public Map<String, Long> getTotalTaskSlotCount()
   {
     return ImmutableMap.of("taskQueue", (long) taskQueueConfig.getMaxSize());
-  }
-
-  private List<String> javaOpts(Task task)
-  {
-    final List<String> javaOpts = new ArrayList<>();
-    Iterables.addAll(javaOpts, k8sConfig.javaOptsArray);
-
-    // Override task specific javaOpts
-    Object taskJavaOpts = task.getContextValue(
-        ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY
-    );
-    if (taskJavaOpts != null) {
-      Iterables.addAll(
-          javaOpts,
-          new QuotableWhiteSpaceSplitter((String) taskJavaOpts)
-      );
-    }
-
-    javaOpts.add(StringUtils.format("-Ddruid.port=%d", DruidK8sConstants.PORT));
-    javaOpts.add(StringUtils.format("-Ddruid.plaintextPort=%d", DruidK8sConstants.PORT));
-    javaOpts.add(StringUtils.format("-Ddruid.tlsPort=%d", node.isEnableTlsPort() ? DruidK8sConstants.TLS_PORT : -1));
-    javaOpts.add(StringUtils.format(
-        "-Ddruid.task.executor.tlsPort=%d",
-        node.isEnableTlsPort() ? DruidK8sConstants.TLS_PORT : -1
-    ));
-    javaOpts.add(StringUtils.format("-Ddruid.task.executor.enableTlsPort=%s", node.isEnableTlsPort())
-    );
-    return javaOpts;
-  }
-
-  private List<String> generateCommand(Task task)
-  {
-    final List<String> command = new ArrayList<>();
-    command.add("/peon.sh");
-    command.add(taskConfig.getBaseTaskDirPaths().get(0));
-    command.add(task.getId());
-    command.add("1"); // the attemptId is always 1, we never run the task twice on the same pod.
-
-    String nodeType = task.getNodeType();
-    if (nodeType != null) {
-      command.add("--nodeType");
-      command.add(nodeType);
-    }
-
-    // If the task type is queryable, we need to load broadcast segments on the peon, used for
-    // join queries
-    if (task.supportsQueries()) {
-      command.add("--loadBroadcastSegments");
-      command.add("true");
-    }
-    log.info(
-        "Peon Command for K8s job: %s",
-        ForkingTaskRunner.getMaskedCommand(startupLoggingConfig.getMaskProperties(), command)
-    );
-    return command;
   }
 
   @Override
@@ -548,6 +514,10 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
             DruidK8sConstants.TLS_PORT,
             tlsEnabled
         );
+      }
+      catch (KubernetesResourceNotFoundException e) {
+        log.debug(e, "Error getting task location for task %s", taskId);
+        return TaskLocation.unknown();
       }
       catch (Exception e) {
         log.error(e, "Error getting task location for task %s", taskId);

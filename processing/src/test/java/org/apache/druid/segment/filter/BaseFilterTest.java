@@ -84,6 +84,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
+import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
@@ -350,7 +351,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
     StringEncodingStrategy[] stringEncoding = new StringEncodingStrategy[]{
         new StringEncodingStrategy.Utf8(),
-        new StringEncodingStrategy.FrontCoded(4)
+        new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V0),
+        new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1)
     };
     for (Map.Entry<String, BitmapSerdeFactory> bitmapSerdeFactoryEntry : bitmapSerdeFactories.entrySet()) {
       for (Map.Entry<String, SegmentWriteOutMediumFactory> segmentWriteOutMediumFactoryEntry :

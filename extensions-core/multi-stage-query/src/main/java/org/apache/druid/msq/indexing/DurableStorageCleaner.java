@@ -21,7 +21,6 @@ package org.apache.druid.msq.indexing;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.google.common.base.Optional;
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.apache.druid.frame.util.DurableStorageUtils;
@@ -37,6 +36,7 @@ import org.joda.time.Duration;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.Collectors;
@@ -93,19 +93,41 @@ public class DurableStorageCleaner implements OverlordHelper
               return;
             }
             TaskRunner taskRunner = taskRunnerOptional.get();
-            Set<String> allDirectories = new HashSet<>(storageConnector.listDir("/"));
+            Iterator<String> allFiles = storageConnector.listDir("");
             Set<String> runningTaskIds = taskRunner.getRunningTasks()
                                                    .stream()
                                                    .map(TaskRunnerWorkItem::getTaskId)
                                                    .map(DurableStorageUtils::getControllerDirectory)
                                                    .collect(Collectors.toSet());
-            Set<String> unknownDirectories = Sets.difference(allDirectories, runningTaskIds);
-            LOG.info(
-                "Following directories do not have a corresponding MSQ task associated with it:\n%s\nThese will get cleaned up.",
-                unknownDirectories
-            );
-            for (String unknownDirectory : unknownDirectories) {
-              storageConnector.deleteRecursively(unknownDirectory);
+
+            Set<String> filesToRemove = new HashSet<>();
+            while (allFiles.hasNext()) {
+              String currentFile = allFiles.next();
+              String taskIdFromPathOrEmpty = DurableStorageUtils.getControllerTaskIdWithPrefixFromPath(currentFile);
+              if (taskIdFromPathOrEmpty != null && !taskIdFromPathOrEmpty.isEmpty()) {
+                if (runningTaskIds.contains(taskIdFromPathOrEmpty)) {
+                  // do nothing
+                } else {
+                  filesToRemove.add(currentFile);
+                }
+              }
+            }
+            if (filesToRemove.isEmpty()) {
+              LOG.info("DurableStorageCleaner did not find any left over directories to delete");
+            } else {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug(
+                    "Number of files [%d] that do not have a corresponding MSQ task associated with it. These are:\n[%s]\nT",
+                    filesToRemove.size(),
+                    filesToRemove
+                );
+              } else {
+                LOG.info(
+                    "Number of files [%d] that do not have a corresponding MSQ task associated with it.",
+                    filesToRemove.size()
+                );
+              }
+              storageConnector.deleteFiles(filesToRemove);
             }
           }
           catch (IOException e) {

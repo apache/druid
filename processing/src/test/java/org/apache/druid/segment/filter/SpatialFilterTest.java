@@ -55,6 +55,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
@@ -99,7 +100,7 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
     final IndexSpec frontCodedIndexSpec = new IndexSpec(
         null,
         null,
-        new StringEncodingStrategy.FrontCoded(4),
+        new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1),
         null,
         null,
         null,

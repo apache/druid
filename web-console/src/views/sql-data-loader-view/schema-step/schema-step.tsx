@@ -451,11 +451,13 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
   }, [previewResultState]);
 
   const unusedColumns = ingestQueryPattern
-    ? ingestQueryPattern.mainExternalConfig.signature.filter(
-        ({ name }) =>
-          !ingestQueryPattern.dimensions.some(d => d.containsColumnName(name)) &&
-          !ingestQueryPattern.metrics?.some(m => m.containsColumnName(name)),
-      )
+    ? ingestQueryPattern.mainExternalConfig.signature.filter(columnDeclaration => {
+        const columnName = columnDeclaration.getColumnName();
+        return (
+          !ingestQueryPattern.dimensions.some(d => d.containsColumnName(columnName)) &&
+          !ingestQueryPattern.metrics?.some(m => m.containsColumnName(columnName))
+        );
+      })
     : [];
 
   const timeColumn =
@@ -699,23 +701,26 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                     )}
                     <MenuDivider />
                     {unusedColumns.length ? (
-                      unusedColumns.map((column, i) => (
-                        <MenuItem
-                          key={i}
-                          icon={dataTypeToIcon(column.type)}
-                          text={column.name}
-                          onClick={() => {
-                            handleQueryAction(q =>
-                              q.addSelect(
-                                C(column.name),
-                                ingestQueryPattern.metrics
-                                  ? { insertIndex: 'last-grouping', addToGroupBy: 'end' }
-                                  : {},
-                              ),
-                            );
-                          }}
-                        />
-                      ))
+                      unusedColumns.map((columnDeclaration, i) => {
+                        const columnName = columnDeclaration.getColumnName();
+                        return (
+                          <MenuItem
+                            key={i}
+                            icon={dataTypeToIcon(columnDeclaration.columnType.getNativeType())}
+                            text={columnName}
+                            onClick={() => {
+                              handleQueryAction(q =>
+                                q.addSelect(
+                                  C(columnName),
+                                  ingestQueryPattern.metrics
+                                    ? { insertIndex: 'last-grouping', addToGroupBy: 'end' }
+                                    : {},
+                                ),
+                              );
+                            }}
+                          />
+                        );
+                      })
                     ) : (
                       <MenuItem icon={IconNames.BLANK} text="No column suggestions" disabled />
                     )}

@@ -19,432 +19,455 @@
 
 package org.apache.druid.query;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.io.Files;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.LineIterator;
-import org.apache.druid.data.input.impl.StringInputRowParser;
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.ResourceInputSource;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.nary.TrinaryFn;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.aggregation.AggregationTestHelper;
+import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IncrementalIndexSegment;
+import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.transform.ExpressionTransform;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.SequenceInputStream;
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.BiFunction;
 
 public class NestedDataTestUtils
 {
-  public static final String SIMPLE_DATA_FILE = "simple-nested-test-data.json";
-  public static final String SIMPLE_PARSER_FILE = "simple-nested-test-data-parser.json";
-  public static final String SIMPLE_DATA_TSV_FILE = "simple-nested-test-data.tsv";
-  public static final String SIMPLE_PARSER_TSV_FILE = "simple-nested-test-data-tsv-parser.json";
-  public static final String SIMPLE_PARSER_TSV_TRANSFORM_FILE = "simple-nested-test-data-tsv-transform.json";
-  public static final String SIMPLE_AGG_FILE = "simple-nested-test-data-aggs.json";
-
-  public static final String TYPES_DATA_FILE = "types-test-data.json";
-  public static final String TYPES_PARSER_FILE = "types-test-data-parser.json";
-
-  public static final String NUMERIC_DATA_FILE = "numeric-nested-test-data.json";
-  public static final String NUMERIC_PARSER_FILE = "numeric-nested-test-data-parser.json";
+  public static final String SIMPLE_DATA_FILE = "nested-simple-test-data.json";
+  public static final String SIMPLE_DATA_TSV_FILE = "nested-simple-test-data.tsv";
+  public static final String NUMERIC_DATA_FILE = "nested-numeric-test-data.json";
+  public static final String TYPES_DATA_FILE = "nested-types-test-data.json";
+  public static final String ARRAY_TYPES_DATA_FILE = "nested-array-test-data.json";
 
   public static final ObjectMapper JSON_MAPPER;
+
+  public static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec("timestamp", null, null);
+
+  public static final JsonInputFormat DEFAULT_JSON_INPUT_FORMAT = new JsonInputFormat(
+      JSONPathSpec.DEFAULT,
+      null,
+      null,
+      null,
+      null
+  );
+
+  public static final DimensionsSpec AUTO_DISCOVERY =
+      DimensionsSpec.builder()
+                    .useSchemaDiscovery(true)
+                    .build();
+
+  public static final DimensionsSpec TSV_SCHEMA =
+      DimensionsSpec.builder()
+                    .setDimensions(
+                        Arrays.asList(
+                            new AutoTypeColumnSchema("dim"),
+                            new AutoTypeColumnSchema("nest_json"),
+                            new AutoTypeColumnSchema("nester_json"),
+                            new AutoTypeColumnSchema("variant_json"),
+                            new AutoTypeColumnSchema("list_json")
+                        )
+                    )
+                    .build();
+  public static final InputRowSchema AUTO_SCHEMA = new InputRowSchema(
+      TIMESTAMP_SPEC,
+      AUTO_DISCOVERY,
+      null
+  );
+
+  public static final InputRowSchema SIMPLE_DATA_TSV_SCHEMA = new InputRowSchema(
+      TIMESTAMP_SPEC,
+      TSV_SCHEMA,
+      null
+  );
+
+  public static DelimitedInputFormat SIMPLE_DATA_TSV_INPUT_FORMAT = new DelimitedInputFormat(
+      Arrays.asList(
+          "timestamp",
+          "dim",
+          "nest",
+          "nester",
+          "variant",
+          "list"
+      ),
+      null,
+      null,
+      false,
+      false,
+      0
+  );
+
+  public static final TransformSpec SIMPLE_DATA_TSV_TRANSFORM = new TransformSpec(
+      null,
+      Arrays.asList(
+          new ExpressionTransform("nest_json", "parse_json(nest)", TestExprMacroTable.INSTANCE),
+          new ExpressionTransform("nester_json", "parse_json(nester)", TestExprMacroTable.INSTANCE),
+          new ExpressionTransform("variant_json", "parse_json(variant)", TestExprMacroTable.INSTANCE),
+          new ExpressionTransform("list_json", "parse_json(list)", TestExprMacroTable.INSTANCE)
+      )
+  );
+
+  public static final AggregatorFactory[] COUNT = new AggregatorFactory[]{
+      new CountAggregatorFactory("count")
+  };
 
   static {
     JSON_MAPPER = TestHelper.makeJsonMapper();
     JSON_MAPPER.registerModules(NestedDataModule.getJacksonModulesList());
   }
 
-  public static List<Segment> createSegments(
-      AggregationTestHelper helper,
+  public static List<Segment> createSimpleSegmentsTsv(
       TemporaryFolder tempFolder,
-      Closer closer,
-      Granularity granularity,
-      boolean rollup,
-      int maxRowCount
-  ) throws Exception
+      Closer closer
+  )
+      throws Exception
   {
-    return createSegments(
-        helper,
+    return createSimpleNestedTestDataTsvSegments(
         tempFolder,
         closer,
-        SIMPLE_DATA_FILE,
-        SIMPLE_PARSER_FILE,
-        SIMPLE_AGG_FILE,
-        granularity,
-        rollup,
-        maxRowCount
+        Granularities.NONE,
+        true
     );
   }
 
-  public static List<Segment> createTsvSegments(
-      AggregationTestHelper helper,
+  public static List<Segment> createSimpleNestedTestDataTsvSegments(
       TemporaryFolder tempFolder,
       Closer closer,
       Granularity granularity,
-      boolean rollup,
-      int maxRowCount
+      boolean rollup
   ) throws Exception
   {
     return createSegments(
-        helper,
         tempFolder,
         closer,
         SIMPLE_DATA_TSV_FILE,
-        SIMPLE_PARSER_TSV_FILE,
-        SIMPLE_PARSER_TSV_TRANSFORM_FILE,
-        SIMPLE_AGG_FILE,
+        SIMPLE_DATA_TSV_INPUT_FORMAT,
+        TIMESTAMP_SPEC,
+        SIMPLE_DATA_TSV_SCHEMA.getDimensionsSpec(),
+        SIMPLE_DATA_TSV_TRANSFORM,
+        COUNT,
         granularity,
-        rollup,
-        maxRowCount
+        rollup
     );
   }
 
-  public static Segment createIncrementalIndex(
+  public static Segment createSimpleNestedTestDataIncrementalIndex(TemporaryFolder tempFolder) throws Exception
+  {
+    return createIncrementalIndexForJsonInput(
+        tempFolder,
+        SIMPLE_DATA_FILE,
+        Granularities.NONE,
+        true
+    );
+  }
+
+  public static List<Segment> createSimpleNestedTestDataSegments(
+      TemporaryFolder tempFolder,
+      Closer closer
+  )
+      throws Exception
+  {
+    return createSegmentsForJsonInput(
+        tempFolder,
+        closer,
+        SIMPLE_DATA_FILE,
+        Granularities.NONE,
+        true
+    );
+  }
+
+  public static Segment createIncrementalIndexForJsonInput(TemporaryFolder tempFolder, String fileName)
+      throws Exception
+  {
+    return createIncrementalIndexForJsonInput(
+        tempFolder,
+        fileName,
+        Granularities.NONE,
+        true
+    );
+  }
+
+  public static Segment createIncrementalIndexForJsonInput(
+      TemporaryFolder tempFolder,
+      String file,
       Granularity granularity,
-      boolean rollup,
-      boolean deserializeComplexMetrics,
-      int maxRowCount
+      boolean rollup
   )
       throws Exception
   {
     return createIncrementalIndex(
-        SIMPLE_DATA_FILE,
-        SIMPLE_PARSER_FILE,
-        SIMPLE_AGG_FILE,
+        tempFolder,
+        file,
+        DEFAULT_JSON_INPUT_FORMAT,
+        TIMESTAMP_SPEC,
+        AUTO_DISCOVERY,
+        TransformSpec.NONE,
+        COUNT,
         granularity,
-        rollup,
-        deserializeComplexMetrics,
-        maxRowCount
-    );
-  }
-
-  public static List<Segment> createSegments(
-      AggregationTestHelper helper,
-      TemporaryFolder tempFolder,
-      Closer closer,
-      String inputFileName,
-      String parserJsonFileName,
-      String aggJsonFileName,
-      Granularity granularity,
-      boolean rollup,
-      int maxRowCount
-  ) throws Exception
-  {
-    File segmentDir = tempFolder.newFolder();
-    File inputFile = readFileFromClasspath(inputFileName);
-    FileInputStream inputDataStream = new FileInputStream(inputFile);
-    String parserJson = readFileFromClasspathAsString(parserJsonFileName);
-    String aggJson = readFileFromClasspathAsString(aggJsonFileName);
-
-    helper.createIndex(
-        inputDataStream,
-        parserJson,
-        aggJson,
-        segmentDir,
-        0,
-        granularity,
-        maxRowCount,
         rollup
     );
-    inputDataStream.close();
-
-    final List<Segment> segments = Lists.transform(
-        ImmutableList.of(segmentDir),
-        dir -> {
-          try {
-            return closer.register(new QueryableIndexSegment(helper.getIndexIO().loadIndex(dir), SegmentId.dummy("")));
-          }
-          catch (IOException ex) {
-            throw new RuntimeException(ex);
-          }
-        }
-    );
-
-    return segments;
   }
 
-  public static List<Segment> createSegments(
-      AggregationTestHelper helper,
+  public static List<Segment> createSegmentsForJsonInput(
       TemporaryFolder tempFolder,
       Closer closer,
-      String inputFileName,
-      String parserJsonFileName,
-      String transformSpecJsonFileName,
-      String aggJsonFileName,
+      String inputFile,
       Granularity granularity,
-      boolean rollup,
-      int maxRowCount
+      boolean rollup
   ) throws Exception
   {
-    File segmentDir = tempFolder.newFolder();
-    File inputFile = readFileFromClasspath(inputFileName);
-    FileInputStream inputDataStream = new FileInputStream(inputFile);
-    String parserJson = readFileFromClasspathAsString(parserJsonFileName);
-    String transformSpecJson = readFileFromClasspathAsString(transformSpecJsonFileName);
-    String aggJson = readFileFromClasspathAsString(aggJsonFileName);
-
-    helper.createIndex(
-        inputDataStream,
-        parserJson,
-        transformSpecJson,
-        aggJson,
-        segmentDir,
-        0,
-        granularity,
-        maxRowCount,
-        rollup
-    );
-    inputDataStream.close();
-
-    final List<Segment> segments = Lists.transform(
-        ImmutableList.of(segmentDir),
-        dir -> {
-          try {
-            return closer.register(new QueryableIndexSegment(helper.getIndexIO().loadIndex(dir), SegmentId.dummy("")));
-          }
-          catch (IOException ex) {
-            throw new RuntimeException(ex);
-          }
-        }
-    );
-
-    return segments;
-  }
-
-  public static List<Segment> createSegmentsWithConcatenatedInput(
-      AggregationTestHelper helper,
-      TemporaryFolder tempFolder,
-      Closer closer,
-      Granularity granularity,
-      boolean rollup,
-      int maxRowCount,
-      int numCopies,
-      int numSegments
-  ) throws Exception
-  {
-    return createSegmentsWithConcatenatedInput(
-        helper,
+    return createSegments(
         tempFolder,
         closer,
-        SIMPLE_DATA_FILE,
-        SIMPLE_PARSER_FILE,
-        null,
-        SIMPLE_AGG_FILE,
+        inputFile,
+        DEFAULT_JSON_INPUT_FORMAT,
+        TIMESTAMP_SPEC,
+        AUTO_DISCOVERY,
+        TransformSpec.NONE,
+        COUNT,
         granularity,
-        rollup,
-        maxRowCount,
-        numCopies,
-        numSegments
+        rollup
     );
   }
 
-  /**
-   * turn small test data into bigger test data by duplicating itself into a bigger stream
-   */
-  public static List<Segment> createSegmentsWithConcatenatedInput(
-      AggregationTestHelper helper,
+  public static List<Segment> createSegmentsWithConcatenatedJsonInput(
       TemporaryFolder tempFolder,
       Closer closer,
-      String inputFileName,
-      String parserJsonFileName,
-      String transformSpecJsonFileName,
-      String aggJsonFileName,
+      String inputFile,
       Granularity granularity,
       boolean rollup,
-      int maxRowCount,
       int numCopies,
       int numSegments
   ) throws Exception
   {
-    String parserJson = readFileFromClasspathAsString(parserJsonFileName);
-    String transformSpecJson = transformSpecJsonFileName != null ? readFileFromClasspathAsString(transformSpecJsonFileName) : null;
-    String aggJson = readFileFromClasspathAsString(aggJsonFileName);
-
-    List<File> segmentDirs = Lists.newArrayListWithCapacity(numSegments);
+    List<InputSource> inputFiles = Lists.newArrayListWithCapacity(numSegments);
     for (int i = 0; i < numSegments; i++) {
-      List<InputStream> inputStreams = Lists.newArrayListWithCapacity(numCopies);
-      for (int j = 0; j < numCopies; j++) {
-        inputStreams.add(new FileInputStream(readFileFromClasspath(inputFileName)));
-        if (j + 1 < numCopies) {
-          inputStreams.add(new ByteArrayInputStream(StringUtils.toUtf8("\n")));
-        }
-      }
-      SequenceInputStream inputDataStream = new SequenceInputStream(Collections.enumeration(inputStreams));
-      File segmentDir = tempFolder.newFolder();
-      helper.createIndex(
-          inputDataStream,
-          parserJson,
-          transformSpecJson,
-          aggJson,
-          segmentDir,
-          0,
-          granularity,
-          maxRowCount,
-          rollup
-      );
-      inputDataStream.close();
-      segmentDirs.add(segmentDir);
+      File file = selfConcatenateResourceFile(tempFolder, inputFile, numCopies);
+      inputFiles.add(new LocalInputSource(file.getParentFile(), file.getName()));
     }
-
-    final List<Segment> segments = Lists.transform(
-        segmentDirs,
-        dir -> {
-          try {
-            return closer.register(new QueryableIndexSegment(helper.getIndexIO().loadIndex(dir), SegmentId.dummy("")));
-          }
-          catch (IOException ex) {
-            throw new RuntimeException(ex);
-          }
-        }
+    return createSegments(
+        tempFolder,
+        closer,
+        inputFiles,
+        DEFAULT_JSON_INPUT_FORMAT,
+        TIMESTAMP_SPEC,
+        AUTO_DISCOVERY,
+        TransformSpec.NONE,
+        COUNT,
+        granularity,
+        rollup
     );
+  }
 
-    return segments;
+  public static List<Segment> createSegmentsForJsonInput(
+      TemporaryFolder tempFolder,
+      Closer closer,
+      String inputFile
+  )
+      throws Exception
+  {
+    return createSegmentsForJsonInput(
+        tempFolder,
+        closer,
+        inputFile,
+        Granularities.NONE,
+        true
+    );
   }
 
   public static Segment createIncrementalIndex(
+      TemporaryFolder tempFolder,
       String inputFileName,
-      String parserJsonFileName,
-      String aggJsonFileName,
-      Granularity granularity,
-      boolean rollup,
-      boolean deserializeComplexMetrics,
-      int maxRowCount
+      InputFormat inputFormat,
+      TimestampSpec timestampSpec,
+      DimensionsSpec dimensionsSpec,
+      TransformSpec transformSpec,
+      AggregatorFactory[] aggregators,
+      Granularity queryGranularity,
+      boolean rollup
   )
       throws Exception
   {
-    File inputFile = readFileFromClasspath(inputFileName);
-    FileInputStream inputDataStream = new FileInputStream(inputFile);
-    String parserJson = readFileFromClasspathAsString(parserJsonFileName);
-    String aggJson = readFileFromClasspathAsString(aggJsonFileName);
-    StringInputRowParser parser = JSON_MAPPER.readValue(parserJson, StringInputRowParser.class);
+    IndexBuilder bob = IndexBuilder.create()
+                                   .schema(
+                                       IncrementalIndexSchema.builder()
+                                                             .withTimestampSpec(timestampSpec)
+                                                             .withDimensionsSpec(dimensionsSpec)
+                                                             .withMetrics(aggregators)
+                                                             .withQueryGranularity(queryGranularity)
+                                                             .withRollup(rollup)
+                                                             .withMinTimestamp(0)
+                                                             .build()
+                                   )
+                                   .inputSource(
+                                       ResourceInputSource.of(
+                                           NestedDataTestUtils.class.getClassLoader(),
+                                           inputFileName
+                                       )
+                                   )
+                                   .inputFormat(inputFormat)
+                                   .transform(transformSpec)
+                                   .inputTmpDir(tempFolder.newFolder());
 
-    LineIterator iter = IOUtils.lineIterator(inputDataStream, "UTF-8");
-    List<AggregatorFactory> aggregatorSpecs = JSON_MAPPER.readValue(
-        aggJson,
-        new TypeReference<List<AggregatorFactory>>()
-        {
-        }
-    );
-    IncrementalIndex index = AggregationTestHelper.createIncrementalIndex(
-        iter,
-        parser,
-        parser.getParseSpec().getDimensionsSpec().getDimensions(),
-        aggregatorSpecs.toArray(new AggregatorFactory[0]),
-        0,
-        granularity,
-        deserializeComplexMetrics,
-        maxRowCount,
+    return new IncrementalIndexSegment(bob.buildIncrementalIndex(), SegmentId.dummy("test_datasource"));
+  }
+
+  public static List<Segment> createSegments(
+      TemporaryFolder tempFolder,
+      Closer closer,
+      String input,
+      InputFormat inputFormat,
+      TimestampSpec timestampSpec,
+      DimensionsSpec dimensionsSpec,
+      TransformSpec transformSpec,
+      AggregatorFactory[] aggregators,
+      Granularity queryGranularity,
+      boolean rollup
+  ) throws Exception
+  {
+    return createSegments(
+        tempFolder,
+        closer,
+        Collections.singletonList(ResourceInputSource.of(NestedDataTestUtils.class.getClassLoader(), input)),
+        inputFormat,
+        timestampSpec,
+        dimensionsSpec,
+        transformSpec,
+        aggregators,
+        queryGranularity,
         rollup
     );
-    inputDataStream.close();
-    return new IncrementalIndexSegment(index, SegmentId.dummy("test_datasource"));
   }
 
-  public static Segment createDefaultHourlyIncrementalIndex() throws Exception
-  {
-    return createIncrementalIndex(Granularities.HOUR, true, true, 1000);
-  }
-
-  public static Segment createDefaultDailyIncrementalIndex() throws Exception
-  {
-    return createIncrementalIndex(Granularities.DAY, true, true, 1000);
-  }
-
-  public static List<Segment> createDefaultHourlySegments(
-      AggregationTestHelper helper,
+  public static List<Segment> createSegments(
       TemporaryFolder tempFolder,
-      Closer closer
-  )
-      throws Exception
+      Closer closer,
+      List<InputSource> inputs,
+      InputFormat inputFormat,
+      TimestampSpec timestampSpec,
+      DimensionsSpec dimensionsSpec,
+      TransformSpec transformSpec,
+      AggregatorFactory[] aggregators,
+      Granularity queryGranularity,
+      boolean rollup
+  ) throws Exception
   {
-    return createSegments(
-        helper,
-        tempFolder,
-        closer,
-        Granularities.HOUR,
-        true,
-        1000
-    );
+    final List<Segment> segments = Lists.newArrayListWithCapacity(inputs.size());
+    for (InputSource inputSource : inputs) {
+      final File segmentDir = tempFolder.newFolder();
+      IndexBuilder bob = IndexBuilder.create()
+                                     .tmpDir(segmentDir)
+                                     .schema(
+                                         IncrementalIndexSchema.builder()
+                                                               .withTimestampSpec(timestampSpec)
+                                                               .withDimensionsSpec(dimensionsSpec)
+                                                               .withMetrics(aggregators)
+                                                               .withQueryGranularity(queryGranularity)
+                                                               .withRollup(rollup)
+                                                               .withMinTimestamp(0)
+                                                               .build()
+                                     )
+                                     .inputSource(inputSource)
+                                     .inputFormat(inputFormat)
+                                     .transform(transformSpec)
+                                     .inputTmpDir(tempFolder.newFolder());
+      segments.add(
+          new QueryableIndexSegment(
+              closer.register(bob.buildMMappedIndex()),
+              SegmentId.dummy("test_datasource")
+          )
+      );
+    }
+
+    return segments;
   }
 
-  public static List<Segment> createDefaultHourlySegmentsTsv(
-      AggregationTestHelper helper,
+  /**
+   * turn a small file into bigger file with a bunch of copies of itself
+   */
+  public static File selfConcatenateResourceFile(
       TemporaryFolder tempFolder,
-      Closer closer
+      String inputFileName,
+      int numCopies
+  ) throws IOException
+  {
+    List<InputStream> inputStreams = Lists.newArrayListWithCapacity(numCopies);
+    for (int i = 0; i < numCopies; i++) {
+      InputStream stream = NestedDataTestUtils.class.getClassLoader().getResourceAsStream(inputFileName);
+      inputStreams.add(stream);
+      if (i + 1 < numCopies) {
+        inputStreams.add(new ByteArrayInputStream(StringUtils.toUtf8("\n")));
+      }
+    }
+    File tmpFile = tempFolder.newFile();
+    try (
+        SequenceInputStream inputDataStream = new SequenceInputStream(Collections.enumeration(inputStreams));
+        OutputStream outStream = Files.newOutputStream(tmpFile.toPath())
+    ) {
+      final byte[] buffer = new byte[8096];
+      int bytesRead;
+      while ((bytesRead = inputDataStream.read(buffer)) != -1) {
+        outStream.write(buffer, 0, bytesRead);
+      }
+    }
+
+    return tmpFile;
+  }
+
+  public static List<BiFunction<TemporaryFolder, Closer, List<Segment>>> getSegmentGenerators(
+      String jsonInputFile
   )
-      throws Exception
   {
-    return createTsvSegments(
-        helper,
-        tempFolder,
-        closer,
-        Granularities.HOUR,
-        true,
-        1000
-    );
-  }
-
-  public static List<Segment> createDefaultDaySegments(
-      AggregationTestHelper helper,
-      TemporaryFolder tempFolder,
-      Closer closer
-  )
-      throws Exception
-  {
-    return createSegments(
-        helper,
-        tempFolder,
-        closer,
-        Granularities.DAY,
-        true,
-        1000
-    );
-  }
-
-  public static File readFileFromClasspath(String fileName)
-  {
-    return new File(NestedDataTestUtils.class.getClassLoader().getResource(fileName).getFile());
-  }
-
-  public static String readFileFromClasspathAsString(String fileName) throws IOException
-  {
-    return Files.asCharSource(readFileFromClasspath(fileName), StandardCharsets.UTF_8).read();
-  }
-
-  public static List<TrinaryFn<AggregationTestHelper, TemporaryFolder, Closer, List<Segment>>> getSegmentGenerators()
-  {
-    final List<TrinaryFn<AggregationTestHelper, TemporaryFolder, Closer, List<Segment>>> segmentsGenerators = new ArrayList<>();
-    segmentsGenerators.add(new TrinaryFn<AggregationTestHelper, TemporaryFolder, Closer, List<Segment>>()
+    final List<BiFunction<TemporaryFolder, Closer, List<Segment>>> segmentsGenerators =
+        new ArrayList<>();
+    segmentsGenerators.add(new BiFunction<TemporaryFolder, Closer, List<Segment>>()
     {
       @Override
-      public List<Segment> apply(AggregationTestHelper helper, TemporaryFolder tempFolder, Closer closer)
+      public List<Segment> apply(TemporaryFolder tempFolder, Closer closer)
       {
         try {
           return ImmutableList.<Segment>builder()
-                              .addAll(NestedDataTestUtils.createDefaultHourlySegments(helper, tempFolder, closer))
-                              .add(NestedDataTestUtils.createDefaultHourlyIncrementalIndex())
+                              .addAll(
+                                  NestedDataTestUtils.createSegmentsForJsonInput(
+                                      tempFolder,
+                                      closer,
+                                      jsonInputFile
+                                  )
+                              )
+                              .add(NestedDataTestUtils.createIncrementalIndexForJsonInput(tempFolder, jsonInputFile))
                               .build();
         }
         catch (Exception e) {
@@ -458,15 +481,15 @@ public class NestedDataTestUtils
         return "mixed";
       }
     });
-    segmentsGenerators.add(new TrinaryFn<AggregationTestHelper, TemporaryFolder, Closer, List<Segment>>()
+    segmentsGenerators.add(new BiFunction<TemporaryFolder, Closer, List<Segment>>()
     {
       @Override
-      public List<Segment> apply(AggregationTestHelper helper, TemporaryFolder tempFolder, Closer closer)
+      public List<Segment> apply(TemporaryFolder tempFolder, Closer closer)
       {
         try {
           return ImmutableList.of(
-              NestedDataTestUtils.createDefaultHourlyIncrementalIndex(),
-              NestedDataTestUtils.createDefaultHourlyIncrementalIndex()
+              NestedDataTestUtils.createIncrementalIndexForJsonInput(tempFolder, jsonInputFile),
+              NestedDataTestUtils.createIncrementalIndexForJsonInput(tempFolder, jsonInputFile)
           );
         }
         catch (Exception e) {
@@ -480,15 +503,26 @@ public class NestedDataTestUtils
         return "incremental";
       }
     });
-    segmentsGenerators.add(new TrinaryFn<AggregationTestHelper, TemporaryFolder, Closer, List<Segment>>()
+    segmentsGenerators.add(new BiFunction<TemporaryFolder, Closer, List<Segment>>()
     {
       @Override
-      public List<Segment> apply(AggregationTestHelper helper, TemporaryFolder tempFolder, Closer closer)
+      public List<Segment> apply(TemporaryFolder tempFolder, Closer closer)
       {
         try {
           return ImmutableList.<Segment>builder()
-                              .addAll(NestedDataTestUtils.createDefaultHourlySegments(helper, tempFolder, closer))
-                              .addAll(NestedDataTestUtils.createDefaultHourlySegments(helper, tempFolder, closer))
+                              .addAll(
+                                  NestedDataTestUtils.createSegmentsForJsonInput(
+                                      tempFolder,
+                                      closer,
+                                      jsonInputFile
+                                  )
+                              )
+                              .addAll(NestedDataTestUtils.createSegmentsForJsonInput(
+                                  tempFolder,
+                                          closer,
+                                          jsonInputFile
+                                      )
+                              )
                               .build();
         }
         catch (Exception e) {
