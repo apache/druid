@@ -1785,7 +1785,7 @@ public class CompactionTaskTest
         .context(ImmutableMap.of("testKey", "testContext"))
         .build();
 
-    Assert.assertNull(task.getInputSourceResources());
+    Assert.assertTrue(task.getInputSourceResources().isEmpty());
   }
 
   private Granularity chooseFinestGranularityHelper(List<Granularity> granularities)

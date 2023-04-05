@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -152,6 +153,7 @@ public interface Task
    * @throws UnsupportedOperationException if the given task type does not suppoert input source based security. Such
    * would be the case, if the task uses firehose.
    */
+  @JsonIgnore
   @Nonnull
   default Set<ResourceAction> getInputSourceResources() throws UOE
   {
