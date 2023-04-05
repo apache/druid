@@ -150,7 +150,6 @@ import {
 } from '../../utils';
 import type {
   CacheRows,
-  ExampleManifest,
   SampleEntry,
   SampleResponse,
   SampleResponseWithExtraInfo,
@@ -162,7 +161,6 @@ import {
   getProxyOverlordModules,
   guessDimensionsFromSampleResponse,
   sampleForConnect,
-  sampleForExampleManifests,
   sampleForFilter,
   sampleForParser,
   sampleForSchema,
@@ -171,6 +169,7 @@ import {
 } from '../../utils/sampler';
 
 import { ExamplePicker } from './example-picker/example-picker';
+import { EXAMPLE_SPECS } from './example-specs';
 import { FilterTable, filterTableSelectedColumnName } from './filter-table/filter-table';
 import { FormEditor } from './form-editor/form-editor';
 import {
@@ -350,7 +349,6 @@ export interface LoadDataViewProps {
   mode: LoadDataViewMode;
   initSupervisorId?: string;
   initTaskId?: string;
-  exampleManifestsUrl?: string;
   goToIngestion: (taskGroupId: string | undefined, openDialog?: string) => void;
 }
 
@@ -373,7 +371,6 @@ export interface LoadDataViewState {
   // welcome
   overlordModules?: string[];
   selectedComboType?: IngestionComboTypeWithExtra;
-  exampleManifests?: ExampleManifest[];
 
   // general
   sampleStrategy: SampleStrategy;
@@ -645,9 +642,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { step } = this.state;
 
     switch (step) {
-      case 'welcome':
-        return this.queryForWelcome();
-
       case 'connect':
         return this.queryForConnect(initRun);
 
@@ -667,6 +661,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         return this.queryForSchema(initRun);
 
       case 'loading':
+      case 'welcome':
       case 'partition':
       case 'publish':
       case 'tuning':
@@ -806,25 +801,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   // ==================================================================
 
-  async queryForWelcome() {
-    const { exampleManifestsUrl } = this.props;
-    if (!exampleManifestsUrl) return;
-
-    let exampleManifests: ExampleManifest[] | undefined;
-    try {
-      exampleManifests = await sampleForExampleManifests(exampleManifestsUrl);
-    } catch (e) {
-      this.setState({
-        exampleManifests: undefined,
-      });
-      return;
-    }
-
-    this.setState({
-      exampleManifests,
-    });
-  }
-
   renderIngestionCard(
     comboType: IngestionComboTypeWithExtra,
     disabled?: boolean,
@@ -863,9 +839,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   renderWelcomeStep() {
-    const { mode, exampleManifestsUrl } = this.props;
-    const { spec, exampleManifests } = this.state;
-    const noExamples = Boolean(!exampleManifests || !exampleManifests.length);
+    const { mode } = this.props;
+    const { spec } = this.state;
 
     const welcomeMessage = this.renderWelcomeStepMessage();
     return (
@@ -889,7 +864,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 {this.renderIngestionCard('index_parallel:http')}
                 {this.renderIngestionCard('index_parallel:local')}
                 {this.renderIngestionCard('index_parallel:inline')}
-                {exampleManifestsUrl && this.renderIngestionCard('example', noExamples)}
+                {this.renderIngestionCard('example')}
               </>
             )}
             {this.renderIngestionCard('other')}
@@ -911,7 +886,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   renderWelcomeStepMessage(): JSX.Element | undefined {
-    const { selectedComboType, exampleManifests } = this.state;
+    const { selectedComboType } = this.state;
 
     if (!selectedComboType) {
       return <p>Please specify where your raw data is located.</p>;
@@ -1001,11 +976,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         );
 
       case 'example':
-        if (exampleManifests && exampleManifests.length) {
-          return; // Yield to example picker controls
-        } else {
-          return <p>Could not load examples.</p>;
-        }
+        return; // Yield to example picker controls
 
       case 'other':
         return (
@@ -1025,7 +996,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   renderWelcomeStepControls(): JSX.Element | undefined {
     const { goToIngestion } = this.props;
-    const { spec, selectedComboType, exampleManifests } = this.state;
+    const { spec, selectedComboType } = this.state;
 
     const issue = this.selectedIngestionTypeIssue();
     if (issue) return;
@@ -1095,12 +1066,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         );
 
       case 'example':
-        if (!exampleManifests) return;
         return (
           <ExamplePicker
-            exampleManifests={exampleManifests}
-            onSelectExample={exampleManifest => {
-              this.updateSpec(exampleManifest.spec);
+            exampleSpecs={EXAMPLE_SPECS}
+            onSelectExample={exampleSpec => {
+              this.updateSpec(exampleSpec.spec);
               this.updateStep('connect');
             }}
           />

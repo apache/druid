@@ -40,7 +40,6 @@ import {
   PLACEHOLDER_TIMESTAMP_SPEC,
   REINDEX_TIMESTAMP_SPEC,
   TIME_COLUMN,
-  upgradeSpec,
 } from '../druid-models';
 import { Api } from '../singletons';
 
@@ -112,12 +111,6 @@ export interface SampleEntry {
   parsed?: Record<string, any>;
   unparseable?: boolean;
   error?: string;
-}
-
-export interface ExampleManifest {
-  name: string;
-  description: string;
-  spec: any;
 }
 
 export function getCacheRowsFromSampleResponse(sampleResponse: SampleResponse): CacheRows {
@@ -603,56 +596,4 @@ export async function sampleForSchema(
   };
 
   return postToSampler(applyCache(sampleSpec, cacheRows), 'schema');
-}
-
-export async function sampleForExampleManifests(
-  exampleManifestUrl: string,
-): Promise<ExampleManifest[]> {
-  const exampleSpec: SampleSpec = {
-    type: 'index_parallel',
-    spec: {
-      ioConfig: {
-        type: 'index_parallel',
-        inputSource: { type: 'http', uris: [exampleManifestUrl] },
-        inputFormat: { type: 'tsv', findColumnsFromHeader: true },
-      },
-      dataSchema: {
-        dataSource: 'sample',
-        timestampSpec: {
-          column: 'timestamp',
-          missingValue: '2010-01-01T00:00:00Z',
-        },
-        dimensionsSpec: {},
-      },
-    },
-    samplerConfig: { numRows: 50, timeoutMs: 10000 },
-  };
-
-  const exampleData = await postToSampler(exampleSpec, 'example-manifest');
-
-  return filterMap(exampleData.data, datum => {
-    const parsed = datum.parsed;
-    if (!parsed) return;
-    let { name, description, spec } = parsed;
-    try {
-      spec = JSON.parse(spec);
-    } catch {
-      return;
-    }
-
-    if (
-      typeof name === 'string' &&
-      typeof description === 'string' &&
-      spec &&
-      typeof spec === 'object'
-    ) {
-      return {
-        name: parsed.name,
-        description: parsed.description,
-        spec: upgradeSpec(spec),
-      };
-    } else {
-      return;
-    }
-  });
 }
