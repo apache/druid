@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.external.model;
+package org.apache.druid.catalog.model.table;
 
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;

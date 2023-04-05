@@ -225,6 +225,8 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-multi-stage-query</argument>
                                         <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-catalog</argument>
+                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-protobuf-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:mysql-metadata-storage</argument>
@@ -256,6 +258,8 @@
                                         <argument>org.apache.druid.extensions:druid-ranger-security</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-kubernetes-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-catalog</argument>
                                         <argument>${druid.distribution.pulldeps.opts}</argument>
                                     </arguments>
                                 </configuration>

@@ -17,8 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.external.model;
+package org.apache.druid.catalog.model.table;
 
+import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.java.util.common.IAE;
 
 import java.util.List;

@@ -23,9 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.calcite.schema.FunctionParameter;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.sql.SqlNodeList;
+import org.apache.druid.catalog.model.ResolvedTable;
+import org.apache.druid.catalog.model.table.ExternalTableDefn;
+import org.apache.druid.catalog.model.table.ExternalTableSpec;
+import org.apache.druid.catalog.model.table.TableFunction;
 import org.apache.druid.sql.calcite.external.SchemaAwareUserDefinedTableMacro.ExtendedTableMacro;
-import org.apache.druid.sql.calcite.external.model.ExternalTableSpec;
-import org.apache.druid.sql.calcite.external.model.TableFunction;
 
 import java.util.List;
 
@@ -55,6 +57,18 @@ public class DruidTableMacro implements ExtendedTableMacro
     this.jsonMapper = jsonMapper;
     this.fn = fn;
     this.parameters = Externals.convertParameters(fn);
+  }
+
+  public DruidTableMacro(
+      final String tableName,
+      final ResolvedTable externalTable
+  )
+  {
+    this.name = tableName;
+    ExternalTableDefn tableDefn = (ExternalTableDefn) externalTable.defn();
+    this.fn = tableDefn.tableFn(externalTable);
+    this.parameters = Externals.convertParameters(fn);
+    this.jsonMapper = externalTable.jsonMapper();
   }
 
   /**
