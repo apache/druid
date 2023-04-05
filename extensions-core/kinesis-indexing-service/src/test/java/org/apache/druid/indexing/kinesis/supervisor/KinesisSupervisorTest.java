@@ -4085,7 +4085,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testCorrectInputSources() {
+  public void testCorrectInputSources()
+  {
     KinesisSupervisorSpec supervisorSpec = new KinesisSupervisorSpec(
         null,
         dataSchema,
