@@ -49,7 +49,7 @@ import java.util.Set;
 
 public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
 {
-  private static final String TASK_TYPE = "kafka";
+  static final String TASK_TYPE = "kafka";
 
   @JsonCreator
   public KafkaSupervisorSpec(

@@ -61,7 +61,8 @@ public class SupervisorSpecTest
   };
 
   @Test
-  public void test() {
+  public void test()
+  {
     Assert.assertThrows(UOE.class, () -> SUPERVISOR_SPEC.getInputSourceTypes());
   }
 }
