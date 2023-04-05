@@ -22,7 +22,6 @@ package org.apache.druid.indexing.common.task;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.HadoopIOConfig;
 import org.apache.druid.indexer.HadoopIngestionSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -44,6 +43,7 @@ import java.util.Collections;
 public class HadoopIndexTaskTest
 {
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
+
   @Test
   public void testCorrectInputSourceTypes() throws Exception
   {

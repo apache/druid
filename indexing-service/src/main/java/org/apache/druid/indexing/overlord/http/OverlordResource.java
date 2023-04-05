@@ -195,11 +195,11 @@ public class OverlordResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response taskPost(final Task task, @Context final HttpServletRequest req)
   {
-    final String dataSource = task.getDataSource();
     final Set<ResourceAction> resourceActions;
     try {
       resourceActions = getNeededResourceActionsForTask(task);
-    } catch (UOE e) {
+    }
+    catch (UOE e) {
       return Response.status(Response.Status.BAD_REQUEST)
           .entity(
               ImmutableMap.of(

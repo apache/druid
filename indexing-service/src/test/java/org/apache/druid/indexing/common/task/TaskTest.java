@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
@@ -38,7 +37,6 @@ import org.apache.druid.indexing.common.task.batch.parallel.PartialGenericSegmen
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialRangeSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.Query;
@@ -164,7 +162,8 @@ public interface Task
     ));
   }
 
-  default UOE getInputSecurityOnFirehoseUnsupportedError() {
+  default UOE getInputSecurityOnFirehoseUnsupportedError()
+  {
     throw new UOE(StringUtils.format(
         "Input source based security cannot be performed '%s' task because it uses firehose."
         + " Change the tasks configuration, or disable `isEnableInputSourceSecurity`",

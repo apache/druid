@@ -37,9 +37,12 @@ import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactor
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketch;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.testing.junit.LoggerCaptureRule;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.apache.logging.log4j.core.LogEvent;
@@ -365,6 +368,22 @@ public class PartialDimensionDistributionTaskTest
 
       Assert.assertEquals(ParallelIndexTestingFactory.ID, taskStatus.getId());
       Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
+    }
+
+    @Test
+    public void testInputSourceResources()
+    {
+      PartialDimensionDistributionTask task = new PartialDimensionDistributionTaskBuilder()
+          .build();
+
+      Assert.assertEquals(
+          Collections.singleton(
+              new ResourceAction(
+                  new Resource(ResourceType.EXTERNAL, InlineInputSource.TYPE_KEY),
+                  Action.READ
+              )),
+          task.getInputSourceResources()
+      );
     }
 
     private DimensionDistributionReport runTask(PartialDimensionDistributionTaskBuilder taskBuilder)
