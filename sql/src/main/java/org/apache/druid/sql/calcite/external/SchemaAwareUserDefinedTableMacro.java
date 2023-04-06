@@ -176,8 +176,9 @@ public abstract class SchemaAwareUserDefinedTableMacro
             ResourceType.EXTERNAL,
             ((ExternalTable) table).getInputSourceType()
         ), Action.READ));
+      } else {
+        resourceActions.addAll(base.computeResources(call, inputSourceTypeSecurityEnabled));
       }
-      resourceActions.addAll(base.computeResources(call, inputSourceTypeSecurityEnabled));
       return resourceActions;
     }
   }
