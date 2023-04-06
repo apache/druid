@@ -41,8 +41,7 @@ import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
-import org.apache.druid.frame.processor.FrameRowTooLargeException;
-import org.apache.druid.frame.write.FrameWriter;
+import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
@@ -78,6 +77,7 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -85,6 +85,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.BinaryOperator;
 
@@ -718,15 +719,13 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   }
 
   @Override
-  public boolean canFetchResultsAsFrames()
+  public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
+      GroupByQuery query,
+      Sequence<ResultRow> resultSequence,
+      @Nullable Long memoryLimitBytes
+  )
   {
-    return true;
-  }
-
-  @Override
-  public Sequence<FrameSignaturePair> resultsAsFrames(GroupByQuery query, Sequence<ResultRow> resultSequence)
-  {
-    RowSignature rowSignature = query.getResultRowSignature(RowSignature.Finalization.YES);
+    RowSignature rowSignature = resultArraySignature(query);
 
     FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
         FrameType.ROW_BASED,
@@ -736,25 +735,17 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
         true
     );
 
-    Frame frame;
 
     Cursor cursor = IterableRowsCursorHelper.getCursorFromSequence(
         resultSequence.map(ResultRow::getArray),
         rowSignature
     );
-    try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
-      while (!cursor.isDone()) {
-        if (!frameWriter.addSelection()) {
-          throw new FrameRowTooLargeException(frameWriterFactory.allocatorCapacity());
-        }
 
-        cursor.advance();
-      }
+    Frame frame = FrameCursorUtils.cursorToFrame(cursor, frameWriterFactory, memoryLimitBytes);
 
-      frame = Frame.wrap(frameWriter.toByteArray());
-    }
-
-    return Sequences.simple(ImmutableList.of(new FrameSignaturePair(frame, rowSignature)));
+    return Optional.of(
+        Sequences.simple(ImmutableList.of(new FrameSignaturePair(frame, rowSignature)))
+    );
   }
 
   /**

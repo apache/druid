@@ -31,8 +31,7 @@ import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
-import org.apache.druid.frame.processor.FrameRowTooLargeException;
-import org.apache.druid.frame.write.FrameWriter;
+import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
@@ -63,12 +62,14 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.BinaryOperator;
 
 /**
@@ -562,13 +563,11 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   }
 
   @Override
-  public boolean canFetchResultsAsFrames()
-  {
-    return true;
-  }
-
-  @Override
-  public Sequence<FrameSignaturePair> resultsAsFrames(TopNQuery query, Sequence<Result<TopNResultValue>> resultSequence)
+  public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
+      TopNQuery query,
+      Sequence<Result<TopNResultValue>> resultSequence,
+      @Nullable Long memoryLimitBytes
+  )
   {
     final RowSignature rowSignature = resultArraySignature(query);
     final Cursor cursor = IterableRowsCursorHelper.getCursorFromSequence(
@@ -584,21 +583,11 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         true
     );
 
-    Frame frame;
+    Frame frame = FrameCursorUtils.cursorToFrame(cursor, frameWriterFactory, memoryLimitBytes);
 
-    try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
-      while (!cursor.isDone()) {
-        if (!frameWriter.addSelection()) {
-          throw new FrameRowTooLargeException(frameWriterFactory.allocatorCapacity());
-        }
-
-        cursor.advance();
-      }
-
-      frame = Frame.wrap(frameWriter.toByteArray());
-    }
-
-    return Sequences.simple(ImmutableList.of(new FrameSignaturePair(frame, rowSignature)));
+    return Optional.of(
+        Sequences.simple(ImmutableList.of(new FrameSignaturePair(frame, rowSignature)))
+    );
   }
 
   static class ThresholdAdjustingQueryRunner implements QueryRunner<Result<TopNResultValue>>

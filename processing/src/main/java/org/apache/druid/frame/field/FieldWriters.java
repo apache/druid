@@ -63,6 +63,7 @@ public class FieldWriters
   )
   {
     if (columnType == null) {
+      // Returning Complex<Json> writer since we do not know the type of column.
       if (allowNullColumnType) {
         return makeComplexWriter(columnSelectorFactory, columnName, NestedDataComplexTypeSerde.TYPE_NAME);
       }

@@ -70,6 +70,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -172,6 +173,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final DataSource freeTradeDataSource = globalizeIfPossible(newQuery.getDataSource());
     // do an inlining dry run to see if any inlining is necessary, without actually running the queries.
     final int maxSubqueryRows = query.context().getMaxSubqueryRows(serverConfig.getMaxSubqueryRows());
+
+    // TODO:
     final long maxSubqueryMemory = query.context().getMaxSubqueryMemoryBytes(serverConfig.getMaxSubqueryMemory());
 
     final DataSource inlineDryRun = inlineIfNecessary(
@@ -640,11 +643,18 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     DataSource dataSource = null;
     // Try to serialize the results into a frame only if the memory limit is set on the server or the query
     if (memoryLimitSet) {
-      if (!toolChest.canFetchResultsAsFrames()) {
-        throw new ISE("The memory of the subqueries cannot be estimated correctly.");
-      }
       try {
-        Sequence<FrameSignaturePair> frames = toolChest.resultsAsFrames(query, results);
+        Optional<Sequence<FrameSignaturePair>> framesOptional = toolChest.resultsAsFrames(
+            query,
+            results,
+            memoryLimitAccumulator.get()
+        );
+
+        if (!framesOptional.isPresent()) {
+          throw new ISE("The memory of the subqueries cannot be estimated correctly.");
+        }
+
+        Sequence<FrameSignaturePair> frames = framesOptional.get();
         Pair<Long, Integer> memoryAndRowsUsed = frames.accumulate(
             Pair.of(0L, 0),
             ((accumulated, in) ->

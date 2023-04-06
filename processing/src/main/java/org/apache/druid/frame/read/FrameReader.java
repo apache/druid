@@ -72,6 +72,9 @@ public class FrameReader
   /**
    * Create a reader for frames with a given {@link RowSignature}. The signature must exactly match the frames to be
    * read, or else behavior is undefined.
+   * @param signature signature used to generate the reader
+   * @param allowNullTypes if ColumnTypes can be null. The column types that are null would be interpreted
+   *                       as Complex JSON types
    */
   public static FrameReader create(final RowSignature signature, final boolean allowNullTypes)
   {

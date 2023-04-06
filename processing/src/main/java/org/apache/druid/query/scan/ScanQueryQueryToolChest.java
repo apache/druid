@@ -28,8 +28,7 @@ import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
-import org.apache.druid.frame.processor.FrameRowTooLargeException;
-import org.apache.druid.frame.write.FrameWriter;
+import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
@@ -52,9 +51,12 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.CloseableUtils;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, ScanQuery>
 {
@@ -200,53 +202,48 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   }
 
   @Override
-  public boolean canFetchResultsAsFrames()
-  {
-    return true;
-  }
-
-  @Override
-  public Sequence<FrameSignaturePair> resultsAsFrames(
+  public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
       final ScanQuery query,
-      final Sequence<ScanResultValue> resultSequence
+      final Sequence<ScanResultValue> resultSequence,
+      @Nullable Long memoryLimitBytes
   )
   {
-    return resultSequence.map(
-        result -> {
-          final List rows = (List) result.getEvents();
-          final Function<?, Object[]> mapper = getResultFormatMapper(query);
-          final Iterable<Object[]> formattedRows = Iterables.transform(rows, (Function) mapper);
+    final AtomicLong memoryLimitAccumulator = memoryLimitBytes != null ? new AtomicLong(memoryLimitBytes) : null;
+    return
+        Optional.of(
+            resultSequence.map(
+                result -> {
+                  final List rows = (List) result.getEvents();
+                  final Function<?, Object[]> mapper = getResultFormatMapper(query);
+                  final Iterable<Object[]> formattedRows = Iterables.transform(rows, (Function) mapper);
 
-          RowBasedCursor cursor = IterableRowsCursorHelper.getCursorFromIterable(
-              formattedRows,
-              result.getRowSignature()
-          );
+                  RowBasedCursor cursor = IterableRowsCursorHelper.getCursorFromIterable(
+                      formattedRows,
+                      result.getRowSignature()
+                  );
 
-          FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
-              FrameType.ROW_BASED,
-              new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
-              result.getRowSignature(),
-              new ArrayList<>(),
-              true
-          );
+                  FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
+                      FrameType.ROW_BASED,
+                      new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+                      result.getRowSignature(),
+                      new ArrayList<>(),
+                      true
+                  );
 
-          Frame frame;
+                  Frame frame = FrameCursorUtils.cursorToFrame(
+                      cursor,
+                      frameWriterFactory,
+                      memoryLimitAccumulator != null ? memoryLimitAccumulator.get() : null
+                  );
 
-          try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
-            while (!cursor.isDone()) {
-              if (!frameWriter.addSelection()) {
-                throw new FrameRowTooLargeException(frameWriterFactory.allocatorCapacity());
-              }
+                  if (memoryLimitAccumulator != null) {
+                    memoryLimitAccumulator.getAndAdd(-frame.numBytes());
+                  }
 
-              cursor.advance();
-            }
-
-            frame = Frame.wrap(frameWriter.toByteArray());
-          }
-
-          return new FrameSignaturePair(frame, result.getRowSignature());
-        }
-    );
+                  return new FrameSignaturePair(frame, result.getRowSignature());
+                }
+            )
+        );
   }
 
   @Override

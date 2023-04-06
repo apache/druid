@@ -27,6 +27,8 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -81,41 +83,16 @@ public class FramesBackedInlineDataSource implements DataSource
     return rowSignature;
   }
 
-  public List<Object[]> getRowsAsList()
+  private List<Object[]> getRowsAsList()
   {
     List<Object[]> frameRows = new ArrayList<>();
-
-    final Sequence<Cursor> cursorSequence = frames
-        .flatMap(
-            frameSignaturePair -> {
-              Frame frame = frameSignaturePair.getFrame();
-              RowSignature frameSignature = frameSignaturePair.getRowSignature();
-              FrameReader frameReader = FrameReader.create(frameSignature, true);
-              return new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
-                  .makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null);
-            }
-        );
-
-    cursorSequence.accumulate(
-        null,
-        (accumulated, cursor) -> {
-          final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
-          final List<BaseObjectColumnValueSelector> selectors = rowSignature
-              .getColumnNames()
-              .stream()
-              .map(columnSelectorFactory::makeColumnValueSelector)
-              .collect(Collectors.toList());
-          while (!cursor.isDone()) {
-            Object[] row = new Object[rowSignature.size()];
-            for (int i = 0; i < rowSignature.size(); ++i) {
-              row[i] = selectors.get(i).getObject();
-            }
-            frameRows.add(row);
-            cursor.advance();
-          }
-          return null;
-        }
-    );
+    Sequence<Object[]> rowsAsSequence = getRowsAsSequence();
+    Yielder<Object[]> rowsYielder = Yielders.each(getRowsAsSequence());
+    while (!rowsYielder.isDone()) {
+      Object[] row = rowsYielder.get();
+      frameRows.add(row);
+      rowsYielder = rowsYielder.next(null);
+    }
     return frameRows;
   }
 

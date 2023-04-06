@@ -34,6 +34,7 @@ import org.apache.druid.timeline.LogicalSegment;
 import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.BinaryOperator;
 
 /**
@@ -333,7 +334,9 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
 
   /**
    * Converts a sequence of this query's ResultType into a sequence of {@link FrameSignaturePair}. The array signature
-   * is the one give by {@link #resultArraySignature(Query)}.
+   * is the one give by {@link #resultArraySignature(Query)}. If the toolchest doesn't support this method, then it can
+   * return an empty optional. It is the duty of the callees to throw an appropriate exception in that case or use an
+   * alternative fallback approach
    *
    * Check documentation of {@link #resultsAsArrays(Query, Sequence)} as the behaviour of the rows represented by the
    * frame sequence is identical.
@@ -342,17 +345,18 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * column in the final result might not be present in the individual ResultType (and subsequently Frame). Therefore,
    * this is done to preserve the space by not populating the column in that particular Frame and omitting it from its
    * signature
+   * 
+   * @param query Query being executed by the toolchest. Used to determine the rowSignature of the Frames
+   * @param resultSequence results of the form returned by {@link #mergeResults(QueryRunner)}
+   * @param memoryLimitBytes Limit the memory results. Throws {@link ResourceLimitExceededException} if the result exceed
+   *                    the memoryLimitBytes
    */
-  public Sequence<FrameSignaturePair> resultsAsFrames(QueryType query, Sequence<ResultType> resultSequence)
+  public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
+      QueryType query,
+      Sequence<ResultType> resultSequence,
+      @Nullable Long memoryLimitBytes
+  )
   {
-    throw new UOE("Query type '%s' does not support returning results as frames", query.getType());
-  }
-
-  /**
-   * @return true if the toolchest supports conversion of the results in the query's ResultType into frames
-   */
-  public boolean canFetchResultsAsFrames()
-  {
-    return false;
+    return Optional.empty();
   }
 }

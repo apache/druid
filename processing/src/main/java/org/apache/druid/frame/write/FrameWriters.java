@@ -53,6 +53,9 @@ public class FrameWriters
    * @param signature        signature of the frames
    * @param sortColumns      sort columns for the frames. If nonempty, {@link FrameSort#sort} is used to sort the
    *                         resulting frames.
+   * @param allowNullColumnTypes to allow null ColumnType in the signature. This should only be enabled when the user
+   *                             knows that the column objects exist as native Java POJOs (LinkedList, Maps etc), which
+   *                             can be serded using the Druid's nested columns
    */
   public static FrameWriterFactory makeFrameWriterFactory(
       final FrameType frameType,
