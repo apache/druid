@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.azure;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputSplit;
@@ -263,6 +264,23 @@ public class AzureInputSourceTest extends EasyMockSupport
 
     String actualToString = azureInputSource.toString();
     Assert.assertEquals("AzureInputSource{uris=[], prefixes=[azure://container/blob], objects=[], objectGlob=null}", actualToString);
+  }
+
+  @Test
+  public void test_getTypes_returnsExpectedTypes()
+  {
+    List<URI> prefixes = ImmutableList.of(PREFIX_URI);
+    azureInputSource = new AzureInputSource(
+        storage,
+        entityFactory,
+        azureCloudBlobIterableFactory,
+        inputDataConfig,
+        EMPTY_URIS,
+        prefixes,
+        EMPTY_OBJECTS,
+        null
+    );
+    Assert.assertEquals(ImmutableSet.of(AzureInputSource.SCHEME), azureInputSource.getTypes());
   }
 
   @Test

@@ -80,6 +80,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -1278,6 +1279,20 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     // Wait for the task to finish.
     final TaskStatus taskStatus = statusFuture.get();
     Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testInputSourceResourcesThrowException()
+  {
+    // Expect 2 segments as we will hit maxTotalRows
+    expectPublishedSegments(2);
+
+    final AppenderatorDriverRealtimeIndexTask task =
+        makeRealtimeTask(null, Integer.MAX_VALUE, 1500L);
+    Assert.assertThrows(
+        UOE.class,
+        task::getInputSourceResources
+    );
   }
 
   private ListenableFuture<TaskStatus> runTask(final Task task)
