@@ -33,7 +33,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 
 
-public class SimpleStorageAdapterTest
+public class TombstoneSegmentStorageAdapterTest
 {
   @Test
   public void testTombstoneDefaultInterface()
