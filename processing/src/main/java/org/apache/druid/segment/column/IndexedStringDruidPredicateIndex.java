@@ -31,10 +31,29 @@ import java.util.NoSuchElementException;
 
 public final class IndexedStringDruidPredicateIndex<TDictionary extends Indexed<String>> implements DruidPredicateIndex
 {
+  static final ColumnConfig ALWAYS_USE_INDEXES = new ColumnConfig()
+  {
+    @Override
+    public int columnCacheSizeBytes()
+    {
+      return 0;
+    }
+
+    @Override
+    public double skipValueRangeIndexScale()
+    {
+      return 1.0;
+    }
+
+    @Override
+    public double skipValuePredicateIndexScale()
+    {
+      return 1.0;
+    }
+  };
   private final BitmapFactory bitmapFactory;
   private final TDictionary dictionary;
   private final Indexed<ImmutableBitmap> bitmaps;
-  @Nullable
   private final ColumnConfig columnConfig;
   private final int numRows;
 
@@ -44,7 +63,7 @@ public final class IndexedStringDruidPredicateIndex<TDictionary extends Indexed<
       Indexed<ImmutableBitmap> bitmaps
   )
   {
-    this(bitmapFactory, dictionary, bitmaps, null, Integer.MAX_VALUE);
+    this(bitmapFactory, dictionary, bitmaps, ALWAYS_USE_INDEXES, Integer.MAX_VALUE);
   }
 
   public IndexedStringDruidPredicateIndex(
@@ -66,7 +85,7 @@ public final class IndexedStringDruidPredicateIndex<TDictionary extends Indexed<
   @Nullable
   public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
   {
-    if (DruidPredicateIndex.checkSkipThreshold(columnConfig, numRows, dictionary.size())) {
+    if (ColumnIndexSupplier.skipComputingPredicateIndexes(columnConfig, numRows, dictionary.size())) {
       return null;
     }
     return new SimpleImmutableBitmapIterableIndex()

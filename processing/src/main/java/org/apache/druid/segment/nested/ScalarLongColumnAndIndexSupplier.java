@@ -348,7 +348,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
 
       final int startIndex = range.leftInt();
       final int endIndex = range.rightInt();
-      if (NumericRangeIndex.checkSkipThreshold(columnConfig, numRows, endIndex - startIndex)) {
+      if (ColumnIndexSupplier.skipComputingRangeIndexes(columnConfig, numRows, endIndex - startIndex)) {
         return null;
       }
       return new SimpleImmutableBitmapIterableIndex()
@@ -384,7 +384,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
       FixedIndexed<Long> dictionary = longDictionarySupplier.get();
-      if (DruidPredicateIndex.checkSkipThreshold(columnConfig, numRows, dictionary.size())) {
+      if (ColumnIndexSupplier.skipComputingPredicateIndexes(columnConfig, numRows, dictionary.size())) {
         return null;
       }
       return new SimpleImmutableBitmapIterableIndex()

@@ -44,7 +44,6 @@ public final class IndexedUtf8LexicographicalRangeIndex<TDictionary extends Inde
   private final Indexed<ImmutableBitmap> bitmaps;
   private final boolean hasNull;
 
-  @Nullable
   private final ColumnConfig columnConfig;
   private final int numRows;
 
@@ -55,7 +54,14 @@ public final class IndexedUtf8LexicographicalRangeIndex<TDictionary extends Inde
       boolean hasNull
   )
   {
-    this(bitmapFactory, dictionary, bitmaps, hasNull, null, Integer.MAX_VALUE);
+    this(
+        bitmapFactory,
+        dictionary,
+        bitmaps,
+        hasNull,
+        IndexedStringDruidPredicateIndex.ALWAYS_USE_INDEXES,
+        Integer.MAX_VALUE
+    );
   }
 
   public IndexedUtf8LexicographicalRangeIndex(
@@ -87,7 +93,7 @@ public final class IndexedUtf8LexicographicalRangeIndex<TDictionary extends Inde
   {
     final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
     final int start = range.leftInt(), end = range.rightInt();
-    if (LexicographicalRangeIndex.checkSkipThreshold(columnConfig, numRows, end - start)) {
+    if (ColumnIndexSupplier.skipComputingRangeIndexes(columnConfig, numRows, end - start)) {
       return null;
     }
     return new SimpleImmutableBitmapIterableIndex()

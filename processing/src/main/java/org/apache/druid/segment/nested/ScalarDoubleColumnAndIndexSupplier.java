@@ -349,7 +349,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
 
       final int startIndex = range.leftInt();
       final int endIndex = range.rightInt();
-      if (NumericRangeIndex.checkSkipThreshold(columnConfig, numRows, endIndex - startIndex)) {
+      if (ColumnIndexSupplier.skipComputingRangeIndexes(columnConfig, numRows, endIndex - startIndex)) {
         return null;
       }
       return new SimpleImmutableBitmapIterableIndex()
@@ -385,7 +385,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
       final FixedIndexed<Double> dictionary = doubleDictionarySupplier.get();
-      if (DruidPredicateIndex.checkSkipThreshold(columnConfig, numRows, dictionary.size())) {
+      if (ColumnIndexSupplier.skipComputingPredicateIndexes(columnConfig, numRows, dictionary.size())) {
         return null;
       }
       return new SimpleImmutableBitmapIterableIndex()
