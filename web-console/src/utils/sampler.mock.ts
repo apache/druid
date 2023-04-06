@@ -31,7 +31,7 @@ export const EMPTY_SAMPLE: SampleResponse = {
 };
 
 /*
-This data is the returned sample when ingested with:
+This data is the returned sample when sampling (from the timestamp stage):
 
 {"timestamp":"2016-04-11T09:20:00Z","user":"Alice","followers":10,"spend":0,"id":"12232323","tags":null,"nums":[4]}
 {"timestamp":"2016-04-11T09:21:00Z","user":"Bob","followers":0,"spend":3,"id":"45345634","tags":["a"],"nums":[5,6]}
@@ -55,17 +55,17 @@ export const JSON_SAMPLE: SampleResponse = {
     { type: 'json', name: 'nums', multiValueHandling: 'SORTED_ARRAY', createBitmapIndex: true },
   ],
   physicalDimensions: [
-    { type: 'json', name: 'user', multiValueHandling: 'SORTED_ARRAY', createBitmapIndex: true },
+    { type: 'auto', name: 'user', multiValueHandling: 'SORTED_ARRAY', createBitmapIndex: true },
     {
-      type: 'json',
+      type: 'auto',
       name: 'followers',
       multiValueHandling: 'SORTED_ARRAY',
       createBitmapIndex: true,
     },
-    { type: 'json', name: 'spend', multiValueHandling: 'SORTED_ARRAY', createBitmapIndex: true },
-    { type: 'json', name: 'id', multiValueHandling: 'SORTED_ARRAY', createBitmapIndex: true },
-    { type: 'json', name: 'tags', multiValueHandling: 'SORTED_ARRAY', createBitmapIndex: true },
-    { type: 'json', name: 'nums', multiValueHandling: 'SORTED_ARRAY', createBitmapIndex: true },
+    { type: 'auto', name: 'spend', multiValueHandling: 'SORTED_ARRAY', createBitmapIndex: true },
+    { type: 'auto', name: 'id', multiValueHandling: 'SORTED_ARRAY', createBitmapIndex: true },
+    { type: 'auto', name: 'tags', multiValueHandling: 'SORTED_ARRAY', createBitmapIndex: true },
+    { type: 'auto', name: 'nums', multiValueHandling: 'SORTED_ARRAY', createBitmapIndex: true },
   ],
   logicalSegmentSchema: [
     { name: '__time', type: 'LONG' },
@@ -178,17 +178,17 @@ export const CSV_SAMPLE: SampleResponse = {
     { type: 'json', name: 'nums', multiValueHandling: 'SORTED_ARRAY', createBitmapIndex: true },
   ],
   physicalDimensions: [
-    { type: 'json', name: 'user', multiValueHandling: 'SORTED_ARRAY', createBitmapIndex: true },
+    { type: 'auto', name: 'user', multiValueHandling: 'SORTED_ARRAY', createBitmapIndex: true },
     {
-      type: 'json',
+      type: 'auto',
       name: 'followers',
       multiValueHandling: 'SORTED_ARRAY',
       createBitmapIndex: true,
     },
-    { type: 'json', name: 'spend', multiValueHandling: 'SORTED_ARRAY', createBitmapIndex: true },
-    { type: 'json', name: 'id', multiValueHandling: 'SORTED_ARRAY', createBitmapIndex: true },
-    { type: 'json', name: 'tags', multiValueHandling: 'SORTED_ARRAY', createBitmapIndex: true },
-    { type: 'json', name: 'nums', multiValueHandling: 'SORTED_ARRAY', createBitmapIndex: true },
+    { type: 'auto', name: 'spend', multiValueHandling: 'SORTED_ARRAY', createBitmapIndex: true },
+    { type: 'auto', name: 'id', multiValueHandling: 'SORTED_ARRAY', createBitmapIndex: true },
+    { type: 'auto', name: 'tags', multiValueHandling: 'SORTED_ARRAY', createBitmapIndex: true },
+    { type: 'auto', name: 'nums', multiValueHandling: 'SORTED_ARRAY', createBitmapIndex: true },
   ],
   logicalSegmentSchema: [
     { name: '__time', type: 'LONG' },

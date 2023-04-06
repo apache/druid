@@ -16,14 +16,16 @@
  * limitations under the License.
  */
 
-import { CSV_SAMPLE } from '../../utils/sampler.mock';
+import { CSV_SAMPLE, JSON_SAMPLE } from '../../utils/sampler.mock';
 
+import type { IngestionSpec } from './ingestion-spec';
 import {
   adjustId,
   cleanSpec,
   guessColumnTypeFromInput,
   guessColumnTypeFromSampleResponse,
   guessSimpleInputFormat,
+  updateSchemaWithSample,
   upgradeSpec,
 } from './ingestion-spec';
 
@@ -670,36 +672,36 @@ describe('ingestion-spec', () => {
 });
 
 describe('spec utils', () => {
-  // const ingestionSpec: IngestionSpec = {
-  //   type: 'index_parallel',
-  //   spec: {
-  //     ioConfig: {
-  //       type: 'index_parallel',
-  //       inputSource: {
-  //         type: 'http',
-  //         uris: ['https://website.com/wikipedia.json.gz'],
-  //       },
-  //       inputFormat: {
-  //         type: 'json',
-  //       },
-  //     },
-  //     tuningConfig: {
-  //       type: 'index_parallel',
-  //     },
-  //     dataSchema: {
-  //       dataSource: 'wikipedia',
-  //       granularitySpec: {
-  //         segmentGranularity: 'day',
-  //         queryGranularity: 'hour',
-  //       },
-  //       timestampSpec: {
-  //         column: 'timestamp',
-  //         format: 'iso',
-  //       },
-  //       dimensionsSpec: {},
-  //     },
-  //   },
-  // };
+  const ingestionSpec: IngestionSpec = {
+    type: 'index_parallel',
+    spec: {
+      ioConfig: {
+        type: 'index_parallel',
+        inputSource: {
+          type: 'http',
+          uris: ['https://website.com/wikipedia.json.gz'],
+        },
+        inputFormat: {
+          type: 'json',
+        },
+      },
+      tuningConfig: {
+        type: 'index_parallel',
+      },
+      dataSchema: {
+        dataSource: 'wikipedia',
+        granularitySpec: {
+          segmentGranularity: 'day',
+          queryGranularity: 'hour',
+        },
+        timestampSpec: {
+          column: 'timestamp',
+          format: 'iso',
+        },
+        dimensionsSpec: {},
+      },
+    },
+  };
 
   describe('guessColumnTypeFromInput', () => {
     it('works for empty', () => {
@@ -754,114 +756,128 @@ describe('spec utils', () => {
     });
   });
 
-  // it('updateSchemaWithSample', () => {
-  //   const withRollup = updateSchemaWithSample(
-  //     ingestionSpec,
-  //     { header: ['header'], rows: [] },
-  //     'specific',
-  //     true,
-  //   );
-  //
-  //   expect(withRollup).toMatchInlineSnapshot(`
-  //     Object {
-  //       "spec": Object {
-  //         "dataSchema": Object {
-  //           "dataSource": "wikipedia",
-  //           "dimensionsSpec": Object {
-  //             "dimensions": Array [
-  //               "header",
-  //             ],
-  //           },
-  //           "granularitySpec": Object {
-  //             "queryGranularity": "hour",
-  //             "rollup": true,
-  //             "segmentGranularity": "day",
-  //           },
-  //           "metricsSpec": Array [
-  //             Object {
-  //               "name": "count",
-  //               "type": "count",
-  //             },
-  //           ],
-  //           "timestampSpec": Object {
-  //             "column": "timestamp",
-  //             "format": "iso",
-  //           },
-  //         },
-  //         "ioConfig": Object {
-  //           "inputFormat": Object {
-  //             "type": "json",
-  //           },
-  //           "inputSource": Object {
-  //             "type": "http",
-  //             "uris": Array [
-  //               "https://website.com/wikipedia.json.gz",
-  //             ],
-  //           },
-  //           "type": "index_parallel",
-  //         },
-  //         "tuningConfig": Object {
-  //           "forceGuaranteedRollup": true,
-  //           "partitionsSpec": Object {
-  //             "type": "hashed",
-  //           },
-  //           "type": "index_parallel",
-  //         },
-  //       },
-  //       "type": "index_parallel",
-  //     }
-  //   `);
-  //
-  //   const noRollup = updateSchemaWithSample(
-  //     ingestionSpec,
-  //     { header: ['header'], rows: [] },
-  //     'specific',
-  //     false,
-  //   );
-  //
-  //   expect(noRollup).toMatchInlineSnapshot(`
-  //     Object {
-  //       "spec": Object {
-  //         "dataSchema": Object {
-  //           "dataSource": "wikipedia",
-  //           "dimensionsSpec": Object {
-  //             "dimensions": Array [
-  //               "header",
-  //             ],
-  //           },
-  //           "granularitySpec": Object {
-  //             "queryGranularity": "none",
-  //             "rollup": false,
-  //             "segmentGranularity": "day",
-  //           },
-  //           "timestampSpec": Object {
-  //             "column": "timestamp",
-  //             "format": "iso",
-  //           },
-  //         },
-  //         "ioConfig": Object {
-  //           "inputFormat": Object {
-  //             "type": "json",
-  //           },
-  //           "inputSource": Object {
-  //             "type": "http",
-  //             "uris": Array [
-  //               "https://website.com/wikipedia.json.gz",
-  //             ],
-  //           },
-  //           "type": "index_parallel",
-  //         },
-  //         "tuningConfig": Object {
-  //           "partitionsSpec": Object {
-  //             "type": "dynamic",
-  //           },
-  //           "type": "index_parallel",
-  //         },
-  //       },
-  //       "type": "index_parallel",
-  //     }
-  //   `);
-  // });
+  it('updateSchemaWithSample', () => {
+    const withRollup = updateSchemaWithSample(ingestionSpec, JSON_SAMPLE, 'specific', true);
+
+    expect(withRollup).toMatchInlineSnapshot(`
+      Object {
+        "spec": Object {
+          "dataSchema": Object {
+            "dataSource": "wikipedia",
+            "dimensionsSpec": Object {
+              "dimensions": Array [
+                "user",
+                "id",
+                "tags",
+                "nums",
+              ],
+            },
+            "granularitySpec": Object {
+              "queryGranularity": "hour",
+              "rollup": true,
+              "segmentGranularity": "day",
+            },
+            "metricsSpec": Array [
+              Object {
+                "name": "count",
+                "type": "count",
+              },
+              Object {
+                "fieldName": "followers",
+                "name": "sum_followers",
+                "type": "longSum",
+              },
+              Object {
+                "fieldName": "spend",
+                "name": "sum_spend",
+                "type": "doubleSum",
+              },
+            ],
+            "timestampSpec": Object {
+              "column": "timestamp",
+              "format": "iso",
+            },
+          },
+          "ioConfig": Object {
+            "inputFormat": Object {
+              "type": "json",
+            },
+            "inputSource": Object {
+              "type": "http",
+              "uris": Array [
+                "https://website.com/wikipedia.json.gz",
+              ],
+            },
+            "type": "index_parallel",
+          },
+          "tuningConfig": Object {
+            "forceGuaranteedRollup": true,
+            "partitionsSpec": Object {
+              "type": "hashed",
+            },
+            "type": "index_parallel",
+          },
+        },
+        "type": "index_parallel",
+      }
+    `);
+
+    const noRollup = updateSchemaWithSample(ingestionSpec, JSON_SAMPLE, 'specific', false);
+
+    expect(noRollup).toMatchInlineSnapshot(`
+      Object {
+        "spec": Object {
+          "dataSchema": Object {
+            "dataSource": "wikipedia",
+            "dimensionsSpec": Object {
+              "dimensions": Array [
+                "user",
+                Object {
+                  "name": "followers",
+                  "type": "long",
+                },
+                Object {
+                  "name": "spend",
+                  "type": "double",
+                },
+                "id",
+                "tags",
+                "nums",
+              ],
+            },
+            "granularitySpec": Object {
+              "queryGranularity": "none",
+              "rollup": false,
+              "segmentGranularity": "day",
+            },
+            "timestampSpec": Object {
+              "column": "timestamp",
+              "format": "iso",
+            },
+          },
+          "ioConfig": Object {
+            "inputFormat": Object {
+              "type": "json",
+            },
+            "inputSource": Object {
+              "type": "http",
+              "uris": Array [
+                "https://website.com/wikipedia.json.gz",
+              ],
+            },
+            "type": "index_parallel",
+          },
+          "tuningConfig": Object {
+            "partitionsSpec": Object {
+              "type": "dynamic",
+            },
+            "type": "index_parallel",
+          },
+        },
+        "type": "index_parallel",
+      }
+    `);
+  });
 
   it('adjustId', () => {
     expect(adjustId('')).toEqual('');
