@@ -40,7 +40,7 @@ The software requirements for the installation machine are:
 
 * Linux, Mac OS X, or other Unix-like OS. (Windows is not supported)
 * [Java 8u92+ or Java 11](../operations/java.md)
-* Python 2 or Python 3
+* Python 3 (preferred) or Python 2
 * Perl 5
 
 Java must be available. Either it is on your path, or set one of the `JAVA_HOME` or `DRUID_JAVA_HOME` environment variables.
