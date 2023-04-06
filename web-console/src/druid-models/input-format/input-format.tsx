@@ -79,6 +79,12 @@ function generateInputFormatFields(streamingType: 'kafka' | 'kinesis' | undefine
           </p>
         </>
       ),
+      adjustment: (model, oldModel) => {
+        if (model.type === 'kafka' && oldModel.type !== 'kafka') {
+          return deepSet(model, 'valueFormat', oldModel);
+        }
+        return model;
+      },
     },
     {
       name: 'featureSpec',
