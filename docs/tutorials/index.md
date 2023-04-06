@@ -43,8 +43,8 @@ The software requirements for the installation machine are:
 * Python 2 or Python 3
 * Perl 5
 
-You must set either the `JAVA_HOME` or `DRUID_JAVA_HOME` environment variable for Druid to find Java on the machine. If there is more than one version of Java installed, set
-`DRUID_JAVA_HOME`. You can run `apache-druid-{{DRUIDVERSION}}/bin/verify-java` to verify Java requirements for your environment.
+Java must be available. Either it is on your path, or set one of the `JAVA_HOME` or `DRUID_JAVA_HOME` environment variables.
+You can run `apache-druid-{{DRUIDVERSION}}/bin/verify-java` to verify Java requirements for your environment.
 
 Before installing a production Druid instance, be sure to review the [security
 overview](../operations/security-overview.md). In general, avoid running Druid as root user. Consider creating a
