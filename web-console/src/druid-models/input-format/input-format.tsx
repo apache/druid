@@ -234,7 +234,7 @@ function generateInputFormatFields(streaming: boolean) {
 
 export const BATCH_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = generateInputFormatFields(false);
 export const STREAMING_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = generateInputFormatFields(true);
-export const KAFKA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
+export const KAFKA_EXTRA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
   {
     name: 'timestampColumnName',
     label: 'Kafka timestamp column name',
@@ -242,189 +242,6 @@ export const KAFKA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     defaultValue: 'kafka.timestamp',
     defined: typeIs('kafka'),
     info: `Name of the column for the kafka record's timestamp.`,
-  },
-
-  // -----------------------------------------------------
-  // valueFormat fields
-
-  {
-    name: 'valueFormat.type',
-    label: 'Kafka payload input format',
-    type: 'string',
-    suggestions: ['json', 'csv', 'tsv', 'parquet', 'orc', 'avro_ocf', 'avro_stream', 'regex'],
-    required: true,
-    defined: typeIs('kafka'),
-    info: (
-      <>
-        <p>The parser used to parse the payload of the Kafka message.</p>
-        <p>
-          For more information see{' '}
-          <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats.html`}>
-            the documentation
-          </ExternalLink>
-          .
-        </p>
-      </>
-    ),
-  },
-  {
-    name: 'valueFormat.featureSpec',
-    label: 'Kafka payload JSON parser features',
-    type: 'json',
-    defined: inputFormat => deepGet(inputFormat, 'valueFormat.type') === 'json',
-    info: (
-      <>
-        <p>
-          <ExternalLink href="https://github.com/FasterXML/jackson-core/wiki/JsonParser-Features">
-            JSON parser features
-          </ExternalLink>{' '}
-          supported by Jackson library. Those features will be applied when parsing the input JSON
-          data.
-        </p>
-        <p>
-          Example:{' '}
-          <Code>{`{ "ALLOW_SINGLE_QUOTES": true, "ALLOW_UNQUOTED_FIELD_NAMES": true }`}</Code>
-        </p>
-      </>
-    ),
-  },
-  {
-    name: 'valueFormat.assumeNewlineDelimited',
-    label: 'Kafka payload assume newline delimited',
-    type: 'boolean',
-    defined: inputFormat => deepGet(inputFormat, 'valueFormat.type') === 'json',
-    disabled: inputFormat => Boolean(inputFormat.useJsonNodeReader),
-    defaultValue: false,
-    info: (
-      <>
-        <p>
-          In streaming ingestion, multi-line JSON events can be ingested (i.e. where a single JSON
-          event spans multiple lines). However, if a parsing exception occurs, all JSON events that
-          are present in the same streaming record will be discarded.
-        </p>
-        <p>
-          <Code>assumeNewlineDelimited</Code> and <Code>useJsonNodeReader</Code> (at most one can be{' '}
-          <Code>true</Code>) affect only how parsing exceptions are handled.
-        </p>
-        <p>
-          If the input is known to be newline delimited JSON (each individual JSON event is
-          contained in a single line, separated by newlines), setting this option to true allows for
-          more flexible parsing exception handling. Only the lines with invalid JSON syntax will be
-          discarded, while lines containing valid JSON events will still be ingested.
-        </p>
-      </>
-    ),
-  },
-  {
-    name: 'valueFormat.useJsonNodeReader',
-    label: 'Kafka payload use JSON node reader',
-    type: 'boolean',
-    defined: inputFormat => deepGet(inputFormat, 'valueFormat.type') === 'json',
-    disabled: inputFormat => Boolean(inputFormat.assumeNewlineDelimited),
-    defaultValue: false,
-    info: (
-      <>
-        {' '}
-        <p>
-          In streaming ingestion, multi-line JSON events can be ingested (i.e. where a single JSON
-          event spans multiple lines). However, if a parsing exception occurs, all JSON events that
-          are present in the same streaming record will be discarded.
-        </p>
-        <p>
-          <Code>assumeNewlineDelimited</Code> and <Code>useJsonNodeReader</Code> (at most one can be{' '}
-          <Code>true</Code>) affect only how parsing exceptions are handled.
-        </p>
-        <p>
-          When ingesting multi-line JSON events, enabling this option will enable the use of a JSON
-          parser which will retain any valid JSON events encountered within a streaming record prior
-          to when a parsing exception occurred.
-        </p>
-      </>
-    ),
-  },
-  {
-    name: 'valueFormat.delimiter',
-    label: 'Kafka payload delimiter',
-    type: 'string',
-    defaultValue: '\t',
-    suggestions: ['\t', ';', '|', '#'],
-    defined: inputFormat => deepGet(inputFormat, 'valueFormat.type') === 'tsv',
-    info: <>A custom delimiter for data values.</>,
-  },
-  {
-    name: 'valueFormat.pattern',
-    label: 'Kafka payload pattern',
-    type: 'string',
-    defined: inputFormat => deepGet(inputFormat, 'valueFormat.type') === 'regex',
-    required: true,
-  },
-  {
-    name: 'valueFormat.skipHeaderRows',
-    label: 'Kafka payload skip header rows',
-    type: 'number',
-    defaultValue: 0,
-    defined: inputFormat => oneOf(deepGet(inputFormat, 'valueFormat.type'), 'csv', 'tsv'),
-    min: 0,
-    info: (
-      <>
-        If this is set, skip the first <Code>skipHeaderRows</Code> rows from each file.
-      </>
-    ),
-  },
-  {
-    name: 'valueFormat.findColumnsFromHeader',
-    label: 'Kafka payload find columns from header',
-    type: 'boolean',
-    defined: inputFormat => oneOf(deepGet(inputFormat, 'valueFormat.type'), 'csv', 'tsv'),
-    required: true,
-    info: (
-      <>
-        If this is set, find the column names from the header row. Note that
-        <Code>skipHeaderRows</Code> will be applied before finding column names from the header. For
-        example, if you set <Code>skipHeaderRows</Code> to 2 and <Code>findColumnsFromHeader</Code>{' '}
-        to true, the task will skip the first two lines and then extract column information from the
-        third line.
-      </>
-    ),
-  },
-  {
-    name: 'valueFormat.columns',
-    label: 'Kafka payload columns',
-    type: 'string-array',
-    required: true,
-    defined: inputFormat =>
-      (oneOf(deepGet(inputFormat, 'valueFormat.type'), 'csv', 'tsv') &&
-        deepGet(inputFormat, 'valueFormat.findColumnsFromHeader') === false) ||
-      deepGet(inputFormat, 'valueFormat.type') === 'regex',
-    info: (
-      <>
-        Specifies the columns of the data. The columns should be in the same order with the columns
-        of your data.
-      </>
-    ),
-  },
-  {
-    name: 'valueFormat.listDelimiter',
-    label: 'Kafka payload list delimiter',
-    type: 'string',
-    defaultValue: '\x01',
-    suggestions: ['\x01', '\x00'],
-    defined: inputFormat => oneOf(deepGet(inputFormat, 'valueFormat.type'), 'csv', 'tsv', 'regex'),
-    info: <>A custom delimiter for multi-value dimensions.</>,
-  },
-  {
-    name: 'valueFormat.binaryAsString',
-    label: 'Kafka payload list binary as string',
-    type: 'boolean',
-    defaultValue: false,
-    defined: inputFormat =>
-      oneOf(deepGet(inputFormat, 'valueFormat.type'), 'parquet', 'orc', 'avro_ocf', 'avro_stream'),
-    info: (
-      <>
-        Specifies if the binary column which is not logically marked as a string should be treated
-        as a UTF-8 encoded string.
-      </>
-    ),
   },
 
   // -----------------------------------------------------
@@ -676,7 +493,7 @@ export const KAFKA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     label: 'Kafka header column prefix',
     type: 'string',
     defaultValue: 'kafka.header.',
-    defined: typeIs('kafka'),
+    defined: inputFormat => deepGet(inputFormat, 'headerFormat.type') === 'string',
     info: `Custom prefix for all the header columns.`,
   },
 ];

@@ -109,7 +109,7 @@ import {
   issueWithIoConfig,
   issueWithSampleData,
   joinFilter,
-  KAFKA_INPUT_FORMAT_FIELDS,
+  KAFKA_EXTRA_INPUT_FORMAT_FIELDS,
   KNOWN_FILTER_TYPES,
   MAX_INLINE_DATA_LENGTH,
   METRIC_SPEC_FIELDS,
@@ -1493,12 +1493,17 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
 
     const specType = getSpecType(spec);
-    const inputFormatFields =
-      inputFormat?.type === 'kafka'
-        ? KAFKA_INPUT_FORMAT_FIELDS
-        : isStreamingSpec(spec)
-        ? STREAMING_INPUT_FORMAT_FIELDS
-        : BATCH_INPUT_FORMAT_FIELDS;
+    const inputFormatFields = isStreamingSpec(spec)
+      ? STREAMING_INPUT_FORMAT_FIELDS
+      : BATCH_INPUT_FORMAT_FIELDS;
+
+    const normalInputAutoForm = (
+      <AutoForm
+        fields={inputFormatFields}
+        model={inputFormat}
+        onChange={p => this.updateSpecPreview(deepSet(spec, 'spec.ioConfig.inputFormat', p))}
+      />
+    );
 
     return (
       <>
@@ -1507,38 +1512,60 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <ParserMessage />
           {!selectedFlattenField && (
             <>
-              {specType === 'kafka' && (
-                <FormGroup>
-                  <Switch
-                    label="Only parse Kafka payload"
-                    checked={inputFormat?.type !== 'kafka'}
-                    onChange={() => {
-                      this.updateSpecPreview(
-                        inputFormat?.type === 'kafka'
-                          ? deepMove(
-                              spec,
-                              'spec.ioConfig.inputFormat.valueFormat',
-                              'spec.ioConfig.inputFormat',
-                            )
-                          : deepSet(spec, 'spec.ioConfig.inputFormat', {
-                              type: 'kafka',
-                              valueFormat: inputFormat,
-                            }),
-                      );
-                    }}
-                  />
-                </FormGroup>
+              {specType !== 'kafka' ? (
+                normalInputAutoForm
+              ) : (
+                <>
+                  {inputFormat?.type !== 'kafka' ? (
+                    normalInputAutoForm
+                  ) : (
+                    <AutoForm
+                      fields={inputFormatFields}
+                      model={inputFormat?.valueFormat}
+                      onChange={p =>
+                        this.updateSpecPreview(
+                          deepSet(spec, 'spec.ioConfig.inputFormat.valueFormat', p),
+                        )
+                      }
+                    />
+                  )}
+                  <FormGroup className="parse-metadata">
+                    <Switch
+                      label="Parse Kafka metadata (ts, headers, key)"
+                      checked={inputFormat?.type === 'kafka'}
+                      onChange={() => {
+                        this.updateSpecPreview(
+                          inputFormat?.type === 'kafka'
+                            ? deepMove(
+                                spec,
+                                'spec.ioConfig.inputFormat.valueFormat',
+                                'spec.ioConfig.inputFormat',
+                              )
+                            : deepSet(spec, 'spec.ioConfig.inputFormat', {
+                                type: 'kafka',
+                                valueFormat: inputFormat,
+                              }),
+                        );
+                      }}
+                    />
+                  </FormGroup>
+                  {inputFormat?.type === 'kafka' && (
+                    <AutoForm
+                      fields={KAFKA_EXTRA_INPUT_FORMAT_FIELDS}
+                      model={inputFormat}
+                      onChange={p =>
+                        this.updateSpecPreview(deepSet(spec, 'spec.ioConfig.inputFormat', p))
+                      }
+                    />
+                  )}
+                </>
               )}
-              <AutoForm
-                fields={inputFormatFields}
-                model={inputFormat}
-                onChange={p =>
-                  this.updateSpecPreview(deepSet(spec, 'spec.ioConfig.inputFormat', p))
-                }
-              />
               {this.renderApplyButtonBar(
                 parserQueryState,
-                AutoForm.issueWithModel(inputFormat, inputFormatFields),
+                AutoForm.issueWithModel(inputFormat, inputFormatFields) ||
+                  (inputFormat?.type === 'kafka'
+                    ? AutoForm.issueWithModel(inputFormat, KAFKA_EXTRA_INPUT_FORMAT_FIELDS)
+                    : undefined),
               )}
             </>
           )}
