@@ -58,6 +58,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.Grouping;
 import org.apache.druid.sql.calcite.run.QueryMaker;
+import org.apache.druid.sql.calcite.run.SqlResults;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.joda.time.Interval;
 
@@ -179,7 +180,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     final Map<String, ColumnType> aggregationIntermediateTypeMap =
         finalizeAggregations ? null /* Not needed */ : buildAggregationIntermediateTypeMap(druidQuery);
 
-    final List<String> sqlTypeNames = new ArrayList<>();
+    final List<SqlTypeName> sqlTypeNames = new ArrayList<>();
     final List<ColumnMapping> columnMappings = new ArrayList<>();
 
     for (final Pair<Integer, String> entry : fieldMapping) {
@@ -198,7 +199,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         sqlTypeName = druidQuery.getOutputRowType().getFieldList().get(entry.getKey()).getType().getSqlTypeName();
       }
 
-      sqlTypeNames.add(sqlTypeName.getName());
+      sqlTypeNames.add(sqlTypeName);
       columnMappings.add(new ColumnMapping(queryColumn, outputColumns));
     }
 
@@ -257,6 +258,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         querySpec,
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(plannerContext.getSql()),
         plannerContext.queryContextMap(),
+        SqlResults.Context.fromPlannerContext(plannerContext),
         sqlTypeNames,
         null
     );

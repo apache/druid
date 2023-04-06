@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
@@ -35,12 +36,12 @@ public class MSQResultsReport
 {
   private final RowSignature signature;
   @Nullable
-  private final List<String> sqlTypeNames;
+  private final List<SqlTypeName> sqlTypeNames;
   private final Yielder<Object[]> resultYielder;
 
   public MSQResultsReport(
       final RowSignature signature,
-      @Nullable final List<String> sqlTypeNames,
+      @Nullable final List<SqlTypeName> sqlTypeNames,
       final Yielder<Object[]> resultYielder
   )
   {
@@ -55,7 +56,7 @@ public class MSQResultsReport
   @JsonCreator
   static MSQResultsReport fromJson(
       @JsonProperty("signature") final RowSignature signature,
-      @JsonProperty("sqlTypeNames") @Nullable final List<String> sqlTypeNames,
+      @JsonProperty("sqlTypeNames") @Nullable final List<SqlTypeName> sqlTypeNames,
       @JsonProperty("results") final List<Object[]> results
   )
   {
@@ -71,7 +72,7 @@ public class MSQResultsReport
   @Nullable
   @JsonProperty("sqlTypeNames")
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public List<String> getSqlTypeNames()
+  public List<SqlTypeName> getSqlTypeNames()
   {
     return sqlTypeNames;
   }

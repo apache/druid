@@ -138,7 +138,7 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedRowSignature(resultSignature)
         .setQueryContext(context)
-        .setExpectedResultRows(ImmutableList.of(new Object[]{2L})).verifyResults();
+        .setExpectedResultRows(ImmutableList.of(new Object[]{2})).verifyResults();
   }
 
   @Test
@@ -183,7 +183,7 @@ public class MSQSelectTest extends MSQTestBase
             0, 0, "shuffle"
         )
         .setExpectedResultRows(ImmutableList.of(
-            new Object[]{1L, !useDefault ? "" : null},
+            new Object[]{1L, ""},
             new Object[]{1L, "10.1"},
             new Object[]{1L, "2"},
             new Object[]{1L, "1"},
@@ -455,7 +455,7 @@ public class MSQSelectTest extends MSQTestBase
             0, 0, "shuffle"
         )
         .setExpectedResultRows(ImmutableList.of(
-            new Object[]{1L, !useDefault ? "" : null},
+            new Object[]{1L, ""},
             new Object[]{1L, "10.1"},
             new Object[]{1L, "2"},
             new Object[]{1L, "1"},
@@ -598,7 +598,7 @@ public class MSQSelectTest extends MSQTestBase
       );
     } else {
       expectedResults = ImmutableList.of(
-          new Object[]{null, 3.6666666666666665},
+          new Object[]{"", 3.6666666666666665},
           new Object[]{"a", 2.5},
           new Object[]{"abc", 5.0}
       );
@@ -1162,31 +1162,51 @@ public class MSQSelectTest extends MSQTestBase
   @Test
   public void testScanWithMultiValueSelectQuery()
   {
-    RowSignature resultSignature = RowSignature.builder()
-                                               .add("dim3", ColumnType.STRING)
-                                               .build();
+    RowSignature expectedScanSignature = RowSignature.builder()
+                                                     .add("dim3", ColumnType.STRING)
+                                                     .add("v0", ColumnType.STRING_ARRAY)
+                                                     .build();
+
+    RowSignature expectedResultSignature = RowSignature.builder()
+                                                       .add("dim3", ColumnType.STRING)
+                                                       .add("dim3_array", ColumnType.STRING_ARRAY)
+                                                       .build();
 
     testSelectQuery()
-        .setSql("select dim3 from foo")
+        .setSql("select dim3, MV_TO_ARRAY(dim3) AS dim3_array from foo")
         .setExpectedMSQSpec(MSQSpec.builder()
                                    .query(newScanQueryBuilder()
                                               .dataSource(CalciteTests.DATASOURCE1)
                                               .intervals(querySegmentSpec(Filtration.eternity()))
-                                              .columns("dim3")
-                                              .context(defaultScanQueryContext(context, resultSignature))
+                                              .virtualColumns(
+                                                  expressionVirtualColumn(
+                                                      "v0",
+                                                      "mv_to_array(\"dim3\")",
+                                                      ColumnType.STRING_ARRAY
+                                                  )
+                                              )
+                                              .columns("dim3", "v0")
+                                              .context(defaultScanQueryContext(context, expectedScanSignature))
                                               .build())
-                                   .columnMappings(ColumnMappings.identity(resultSignature))
+                                   .columnMappings(
+                                       new ColumnMappings(
+                                           ImmutableList.of(
+                                               new ColumnMapping("dim3", "dim3"),
+                                               new ColumnMapping("v0", "dim3_array")
+                                           )
+                                       )
+                                   )
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
                                    .build())
-        .setExpectedRowSignature(resultSignature)
+        .setExpectedRowSignature(expectedResultSignature)
         .setQueryContext(context)
         .setExpectedResultRows(ImmutableList.of(
-            new Object[]{ImmutableList.of("a", "b")},
-            new Object[]{ImmutableList.of("b", "c")},
-            new Object[]{"d"},
-            new Object[]{!useDefault ? "" : null},
-            new Object[]{null},
-            new Object[]{null}
+            new Object[]{"[\"a\",\"b\"]", ImmutableList.of("a", "b")},
+            new Object[]{"[\"b\",\"c\"]", ImmutableList.of("b", "c")},
+            new Object[]{"d", ImmutableList.of("d")},
+            new Object[]{"", Collections.singletonList(useDefault ? null : "")},
+            new Object[]{NullHandling.defaultStringValue(), Collections.singletonList(null)},
+            new Object[]{NullHandling.defaultStringValue(), Collections.singletonList(null)}
         )).verifyResults();
   }
 
@@ -1250,7 +1270,7 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedRowSignature(resultSignature)
         .setExpectedResultRows(
             NullHandling.replaceWithDefault()
-            ? ImmutableList.of(new Object[]{null, 3L}, new Object[]{"a", 2L})
+            ? ImmutableList.of(new Object[]{"", 3L}, new Object[]{"a", 2L})
             : ImmutableList.of(new Object[]{null, 2L}, new Object[]{"a", 2L})
 
         )
@@ -1679,9 +1699,11 @@ public class MSQSelectTest extends MSQTestBase
   private List<Object[]> expectedMultiValueFooRowsGroup()
   {
     ArrayList<Object[]> expected = new ArrayList<>();
-    expected.add(new Object[]{null, !useDefault ? 2L : 3L});
-    if (!useDefault) {
+    if (useDefault) {
+      expected.add(new Object[]{"", 3L});
+    } else {
       expected.add(new Object[]{"", 1L});
+      expected.add(new Object[]{null, 2L});
     }
     expected.addAll(ImmutableList.of(
         new Object[]{"a", 1L},
