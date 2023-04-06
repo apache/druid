@@ -94,7 +94,9 @@ public abstract class AbstractTask implements Task
   private final String dataSource;
 
   private final Map<String, Object> context;
+
   private File reportsFile;
+  private File statusFile;
 
   private final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
 
@@ -147,6 +149,7 @@ public abstract class AbstractTask implements Task
       File attemptDir = Paths.get(taskDir.getAbsolutePath(), "attempt", toolbox.getAttemptId()).toFile();
       FileUtils.mkdirp(attemptDir);
       reportsFile = new File(attemptDir, "report.json");
+      statusFile = new File(attemptDir, "status.json");
       InetAddress hostName = InetAddress.getLocalHost();
       DruidNode node = toolbox.getTaskExecutorNode();
       toolbox.getTaskActionClient().submit(new UpdateLocationAction(TaskLocation.create(
@@ -185,23 +188,31 @@ public abstract class AbstractTask implements Task
 
   public void cleanUp(TaskToolbox toolbox, boolean failure) throws Exception
   {
-    if (toolbox.getConfig().isEncapsulatedTask()) {
-      // report back to the overlord
-      UpdateStatusAction status = new UpdateStatusAction("successful");
-      if (failure) {
-        status = new UpdateStatusAction("failure");
-      }
-      toolbox.getTaskActionClient().submit(status);
-      toolbox.getTaskActionClient().submit(new UpdateLocationAction(TaskLocation.unknown()));
-
-      if (reportsFile != null && reportsFile.exists()) {
-        toolbox.getTaskLogPusher().pushTaskReports(id, reportsFile);
-        log.debug("Pushed task reports");
-      } else {
-        log.debug("No task reports file exists to push");
-      }
-    } else {
+    if (!toolbox.getConfig().isEncapsulatedTask()) {
       log.debug("Not pushing task logs and reports from task.");
+      return;
+    }
+
+    // report back to the overlord
+    UpdateStatusAction status = new UpdateStatusAction("successful");
+    if (failure) {
+      status = new UpdateStatusAction("failure");
+    }
+    toolbox.getTaskActionClient().submit(status);
+    toolbox.getTaskActionClient().submit(new UpdateLocationAction(TaskLocation.unknown()));
+
+    if (reportsFile != null && reportsFile.exists()) {
+      toolbox.getTaskLogPusher().pushTaskReports(id, reportsFile);
+      log.debug("Pushed task reports");
+    } else {
+      log.debug("No task reports file exists to push");
+    }
+
+    if (statusFile != null && statusFile.exists()) {
+      toolbox.getTaskLogPusher().pushTaskStatus(id, statusFile);
+      log.debug("Pushed task status");
+    } else {
+      log.debug("No task status file exists to push");
     }
   }
 

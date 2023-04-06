@@ -66,8 +66,24 @@ public class AbstractTaskTest
     TaskLogPusher pusher = mock(TaskLogPusher.class);
     when(toolbox.getTaskLogPusher()).thenReturn(pusher);
 
-    TaskConfig config = mock(TaskConfig.class);
-    when(config.isEncapsulatedTask()).thenReturn(true);
+    TaskConfig config = new TaskConfig(
+        null,
+        null,
+        null,
+        null,
+        null,
+        false,
+        null,
+        null,
+        null,
+        false,
+        false,
+        null,
+        null,
+        true,
+        null
+    );
+
     when(toolbox.getConfig()).thenReturn(config);
     TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(
         ImmutableList.of(temporaryFolder.newFolder().getAbsolutePath())
@@ -92,7 +108,9 @@ public class AbstractTaskTest
             "attempt", toolbox.getAttemptId()
         ).toFile();
         File reportsDir = new File(attemptDir, "report.json");
+        File statusDir = new File(attemptDir, "status.json");
         FileUtils.write(reportsDir, "foo", StandardCharsets.UTF_8);
+        FileUtils.write(statusDir, "{}", StandardCharsets.UTF_8);
         return result;
       }
     };
@@ -101,6 +119,7 @@ public class AbstractTaskTest
     // call it 3 times, once to update location in setup, then one for status and location in cleanup
     Mockito.verify(taskActionClient, times(3)).submit(any());
     verify(pusher, times(1)).pushTaskReports(eq("myID"), any());
+    verify(pusher, times(1)).pushTaskStatus(eq("myID"), any());
   }
 
   @Test

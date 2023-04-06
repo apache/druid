@@ -19,6 +19,7 @@
 
 package org.apache.druid.k8s.overlord;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -45,6 +46,7 @@ import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -57,8 +59,8 @@ import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.KubernetesResourceNotFoundException;
 import org.apache.druid.k8s.overlord.common.PeonPhase;
 import org.apache.druid.k8s.overlord.common.TaskAdapter;
-import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogStreamer;
+import org.apache.druid.tasklogs.TaskLogs;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 
@@ -73,6 +75,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
@@ -100,28 +103,31 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
 
   protected final ConcurrentHashMap<String, K8sWorkItem> tasks = new ConcurrentHashMap<>();
   protected final TaskAdapter adapter;
+  protected final KubernetesPeonClient client;
 
+  private final ObjectMapper mapper;
   private final KubernetesTaskRunnerConfig k8sConfig;
   private final TaskQueueConfig taskQueueConfig;
-  private final TaskLogPusher taskLogPusher;
+  private final TaskLogs taskLogs;
   private final ListeningExecutorService exec;
-  private final KubernetesPeonClient client;
   private final HttpClient httpClient;
 
 
   public KubernetesTaskRunner(
+      ObjectMapper mapper,
       TaskAdapter adapter,
       KubernetesTaskRunnerConfig k8sConfig,
       TaskQueueConfig taskQueueConfig,
-      TaskLogPusher taskLogPusher,
+      TaskLogs taskLogs,
       KubernetesPeonClient client,
       HttpClient httpClient
   )
   {
+    this.mapper = mapper;
     this.adapter = adapter;
     this.k8sConfig = k8sConfig;
     this.taskQueueConfig = taskQueueConfig;
-    this.taskLogPusher = taskLogPusher;
+    this.taskLogs = taskLogs;
     this.client = client;
     this.httpClient = httpClient;
     this.cleanupExecutor = Executors.newScheduledThreadPool(1);
@@ -177,20 +183,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                       completedPhase = monitorJob(k8sTaskId);
                     }
                   }
-                  TaskStatus status;
-                  if (PeonPhase.SUCCEEDED.equals(completedPhase.getPhase())) {
-                    status = TaskStatus.success(task.getId());
-                  } else if (completedPhase.getJob() == null) {
-                    status = TaskStatus.failure(
-                        task.getId(),
-                        "K8s Job for task disappeared before completion: " + k8sTaskId
-                    );
-                  } else {
-                    status = TaskStatus.failure(
-                        task.getId(),
-                        "Task failed: " + k8sTaskId
-                    );
-                  }
+                  TaskStatus status = getTaskStatus(k8sTaskId, completedPhase);
                   if (completedPhase.getJobDuration().isPresent()) {
                     status = status.withDuration(completedPhase.getJobDuration().get());
                   }
@@ -209,7 +202,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                     if (logStream.isPresent()) {
                       FileUtils.copyInputStreamToFile(logStream.get(), log.toFile());
                     }
-                    taskLogPusher.pushTaskLog(task.getId(), log.toFile());
+                    taskLogs.pushTaskLog(task.getId(), log.toFile());
                   }
                   finally {
                     Files.deleteIfExists(log);
@@ -242,10 +235,32 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     );
   }
 
+  private TaskStatus getTaskStatus(K8sTaskId task, JobResponse jobResponse) throws IOException
+  {
+    if (PeonPhase.SUCCEEDED.equals(jobResponse.getPhase())) {
+      Optional<InputStream> maybeTaskStatusStream = taskLogs.streamTaskStatus(task.getOriginalTaskId());
+      if (maybeTaskStatusStream.isPresent()) {
+        return mapper.readValue(maybeTaskStatusStream.get(), TaskStatus.class);
+      }
+      return TaskStatus.failure(
+          task.getOriginalTaskId(),
+          StringUtils.format("Task [%s] failed: status file not found", task.getOriginalTaskId())
+      );
+    } else if (Objects.isNull(jobResponse.getJob())) {
+      return TaskStatus.failure(
+          task.getOriginalTaskId(),
+          StringUtils.format("Task [%s] failed kubernetes job disappeared before completion", task.getOriginalTaskId())
+      );
+    }
+    return TaskStatus.failure(
+        task.getOriginalTaskId(),
+        StringUtils.format("Task [%s] failed", task.getOriginalTaskId())
+    );
+  }
+
   @Override
   public void updateStatus(Task task, TaskStatus status)
   {
-    log.info("Updating task: %s with status %s", task.getId(), status);
     TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
   }
 
