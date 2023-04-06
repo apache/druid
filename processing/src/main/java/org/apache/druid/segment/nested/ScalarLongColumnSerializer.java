@@ -30,7 +30,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.ProgressIndicator;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.ColumnarLongsSerializer;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSerializer;
@@ -71,7 +70,6 @@ public class ScalarLongColumnSerializer extends NestedCommonFormatColumnSerializ
       String name,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
-      @SuppressWarnings("unused") ProgressIndicator progressIndicator,
       Closer closer
   )
   {

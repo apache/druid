@@ -80,7 +80,7 @@ public class NestedDataDimensionHandler implements DimensionHandler<StructuredDa
       Closer closer
   )
   {
-    return new NestedDataColumnMerger(name, indexSpec, segmentWriteOutMedium, progress, closer);
+    return new NestedDataColumnMerger(name, indexSpec, segmentWriteOutMedium, closer);
   }
 
   @Override

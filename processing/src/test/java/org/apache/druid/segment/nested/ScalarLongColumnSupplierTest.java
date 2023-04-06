@@ -35,7 +35,6 @@ import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.filter.SelectorPredicateFactory;
 import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.AutoTypeColumnMerger;
-import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.IndexableAdapter;
@@ -125,7 +124,6 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
           fileNameBase,
           new IndexSpec(),
           writeOutMediumFactory.makeSegmentWriteOutMedium(tempFolder.newFolder()),
-          new BaseProgressIndicator(),
           closer
       );
 
@@ -182,7 +180,8 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
         baseBuffer,
-        bob
+        bob,
+        NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES
     );
     try (ScalarLongColumn column = (ScalarLongColumn) supplier.get()) {
       smokeTest(supplier, column);
@@ -199,7 +198,8 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
         baseBuffer,
-        bob
+        bob,
+        NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES
     );
     final String expectedReason = "none";
     final AtomicReference<String> failureReason = new AtomicReference<>(expectedReason);

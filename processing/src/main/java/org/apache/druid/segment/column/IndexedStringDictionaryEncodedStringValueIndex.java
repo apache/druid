@@ -57,6 +57,12 @@ public final class IndexedStringDictionaryEncodedStringValueIndex<TDictionary ex
   }
 
   @Override
+  public BitmapFactory getBitmapFactory()
+  {
+    return bitmapFactory;
+  }
+
+  @Override
   public ImmutableBitmap getBitmap(int idx)
   {
     if (idx < 0) {
