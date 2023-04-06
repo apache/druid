@@ -138,7 +138,7 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
           case YEAR:
             return ExprEval.of(dateTime.year().get());
           case ISOYEAR:
-            return ExprEval.of(dateTime.year().get());
+            return ExprEval.of(dateTime.weekyear().get());
           case DECADE:
             // The year field divided by 10, See https://www.postgresql.org/docs/10/functions-datetime.html
             return ExprEval.of(dateTime.year().get() / 10);
