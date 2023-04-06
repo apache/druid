@@ -125,11 +125,11 @@ jobs:
 #        if: ${{ matrix.java == 'jdk8' }}
 #        run: ${MVN} spotbugs:check --fail-at-end -pl '!benchmarks'
 
-      - name: Run intellij inspections only on changed files in PR
+      - name: intellij inspections on changed files in PR
         if: ${{ matrix.java == 'jdk8' && github.event_name == 'pull_request' }}
         run: |
-          git diff ${GITHUB_BASE_REF}..${GITHUB_HEAD_REF} > ./pr_diff.patch
-          git checkout -b ${GITHUB_BASE_REF}-intellij-inspections ${GITHUB_BASE_REF}
+          git diff origin/${GITHUB_BASE_REF}..HEAD > ./pr_diff.patch
+          git checkout -b ${GITHUB_BASE_REF}-intellij-inspections origin/${GITHUB_BASE_REF}
           git apply ./pr_diff.patch
           sudo snap install intellij-idea-community --classic
           /bin/idea.sh inspect . ./.idea/inspectionProfiles/Druid.xml -v2 -changes
