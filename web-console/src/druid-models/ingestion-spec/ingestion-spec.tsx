@@ -897,6 +897,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Bootstrap servers',
           type: 'string',
           required: true,
+          placeholder: 'kafka_broker_host:9092',
           info: (
             <>
               <ExternalLink
@@ -918,6 +919,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string',
           required: true,
           defined: typeIs('kafka'),
+          placeholder: 'topic_name',
         },
         {
           name: 'consumerProperties',

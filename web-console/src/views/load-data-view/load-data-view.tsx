@@ -110,7 +110,6 @@ import {
   issueWithSampleData,
   joinFilter,
   KAFKA_INPUT_FORMAT_FIELDS,
-  KINESIS_INPUT_FORMAT_FIELDS,
   KNOWN_FILTER_TYPES,
   MAX_INLINE_DATA_LENGTH,
   METRIC_SPEC_FIELDS,
@@ -120,6 +119,7 @@ import {
   PRIMARY_PARTITION_RELATED_FORM_FIELDS,
   removeTimestampTransform,
   splitFilter,
+  STREAMING_INPUT_FORMAT_FIELDS,
   TIME_COLUMN,
   TIMESTAMP_SPEC_FIELDS,
   TRANSFORM_FIELDS,
@@ -134,6 +134,7 @@ import {
   compact,
   deepDelete,
   deepGet,
+  deepMove,
   deepSet,
   deepSetMulti,
   EMPTY_ARRAY,
@@ -1493,18 +1494,41 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     const specType = getSpecType(spec);
     const inputFormatFields =
-      specType === 'kafka'
+      inputFormat?.type === 'kafka'
         ? KAFKA_INPUT_FORMAT_FIELDS
-        : specType === 'kinesis'
-        ? KINESIS_INPUT_FORMAT_FIELDS
+        : isStreamingSpec(spec)
+        ? STREAMING_INPUT_FORMAT_FIELDS
         : BATCH_INPUT_FORMAT_FIELDS;
+
     return (
       <>
         <div className="main">{mainFill}</div>
         <div className="control">
-          <ParserMessage canHaveNestedData={canHaveNestedData} />
+          <ParserMessage />
           {!selectedFlattenField && (
             <>
+              {specType === 'kafka' && (
+                <FormGroup>
+                  <Switch
+                    label="Only parse Kafka payload"
+                    checked={inputFormat?.type !== 'kafka'}
+                    onChange={() => {
+                      this.updateSpecPreview(
+                        inputFormat?.type === 'kafka'
+                          ? deepMove(
+                              spec,
+                              'spec.ioConfig.inputFormat.valueFormat',
+                              'spec.ioConfig.inputFormat',
+                            )
+                          : deepSet(spec, 'spec.ioConfig.inputFormat', {
+                              type: 'kafka',
+                              valueFormat: inputFormat,
+                            }),
+                      );
+                    }}
+                  />
+                </FormGroup>
+              )}
               <AutoForm
                 fields={inputFormatFields}
                 model={inputFormat}
