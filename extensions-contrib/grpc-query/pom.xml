@@ -55,10 +55,6 @@
              dependency via the above dependency.
           -->
         <exclusion>
-          <groupId>io.grpc</groupId>
-          <artifactId>grpc-bom</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>com.google.guava</groupId>
           <artifactId>guava</artifactId>
         </exclusion>
@@ -155,11 +151,6 @@
     <dependency>
       <groupId>javax.ws.rs</groupId>
       <artifactId>jsr311-api</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>javax.servlet</groupId>
-      <artifactId>javax.servlet-api</artifactId>
       <scope>provided</scope>
     </dependency>
 

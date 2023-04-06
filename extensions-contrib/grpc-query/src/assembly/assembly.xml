@@ -46,6 +46,7 @@
                 <!-- Include only those items not included in Druid. That is, omit any
                      jar included with provided scope. In practice, this means the shaded
                      Protobuf jar (with protobuf message) and grpc-query itself. -->
+                <include>io.netty:netty-codec-http2</include>
                 <include>org.apache.druid.extensions.contrib:grpc-query</include>
                 <include>org.apache.druid.extensions.contrib:druid-shaded-grpc</include>
             </includes>
