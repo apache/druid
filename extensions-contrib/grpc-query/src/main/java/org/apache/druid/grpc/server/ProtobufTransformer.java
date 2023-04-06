@@ -44,6 +44,9 @@ public class ProtobufTransformer
   @Nullable
   public static Object transform(SqlRowTransformer rowTransformer, Object[] row, int i)
   {
+    if (row[i] == null) {
+      return null;
+    }
     final RelDataType rowType = rowTransformer.getRowType();
     final SqlTypeName sqlTypeName = rowType.getFieldList().get(i).getType().getSqlTypeName();
     final RowSignature signature = RowSignatures.fromRelDataType(rowType.getFieldNames(), rowType);

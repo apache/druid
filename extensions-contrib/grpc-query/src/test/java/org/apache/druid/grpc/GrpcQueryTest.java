@@ -20,6 +20,7 @@
 package org.apache.druid.grpc;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.grpc.client.GrpcResponseHandler;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
@@ -128,8 +129,8 @@ public class GrpcQueryTest
     QueryResponse response = client.client().submitQuery(request);
     GrpcResponseHandler<QueryResult> handler = GrpcResponseHandler.of(QueryResult.class);
     List<QueryResult> queryResults = handler.get(response.getData());
-    assertEquals(6, queryResults.size());
     assertEquals(QueryStatus.OK, response.getStatus());
+    assertEquals(6, queryResults.size());
   }
 
   @Test
@@ -144,7 +145,7 @@ public class GrpcQueryTest
     QueryResponse response = client.client().submitQuery(request);
     GrpcResponseHandler<QueryResult> handler = GrpcResponseHandler.of(QueryResult.class);
     List<QueryResult> queryResults = handler.get(response.getData());
-    assertEquals(0, queryResults.size());
     assertEquals(QueryStatus.OK, response.getStatus());
-  }
+    assertEquals(0, queryResults.size());
+   }
 }

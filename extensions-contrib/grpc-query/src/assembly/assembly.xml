@@ -47,8 +47,7 @@
                      jar included with provided scope. In practice, this means the shaded
                      Protobuf jar (with protobuf message) and grpc-query itself. -->
                 <include>io.netty:netty-codec-http2</include>
-                <include>org.apache.druid.extensions.contrib:grpc-query</include>
-                <include>org.apache.druid.extensions.contrib:druid-shaded-grpc</include>
+                <include>org.apache.druid.extensions.contrib:shaded-grpc</include>
             </includes>
         </dependencySet>
     </dependencySets>
@@ -58,6 +57,10 @@
         <outputDirectory>.</outputDirectory>
         <destName>LICENSE</destName>
         <lineEnding>keep</lineEnding>
+      </file>
+      <file>
+        <source>${project.build.directory}/${project.artifactId}-${project.parent.version}.jar</source>
+        <outputDirectory>.</outputDirectory>
       </file>
     </files>
 </assembly>

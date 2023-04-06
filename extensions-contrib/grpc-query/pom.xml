@@ -221,31 +221,6 @@
       </extension>
     </extensions>
     <plugins>
-      <!--package all dependencies together-->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <appendAssemblyId>false</appendAssemblyId>
-          <descriptorRefs>
-            <descriptorRef>jar-with-dependencies</descriptorRef>
-          </descriptorRefs>
-          <archive><!--add entries like Implementation-Title to MANIFEST.MF-->
-            <manifest>
-              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-            </manifest>
-          </archive>
-        </configuration>
-        <executions>
-          <execution>
-            <id>make-assembly</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
       <!-- Compiles the test protobufs. Here "compile" means to translate from .proto format
            to Java. Java compilation happens later. -->
       <plugin>
@@ -407,8 +382,9 @@
                   <goal>single</goal>
                 </goals>
                 <configuration>
-                  <finalName>${project.artifactId}-${project.parent.version}</finalName>
                   <tarLongFileMode>posix</tarLongFileMode>
+                  <formats>tar.gz</formats>
+                  <appendAssemblyId>false</appendAssemblyId>
                   <descriptors>
                     <descriptor>src/assembly/assembly.xml</descriptor>
                   </descriptors>

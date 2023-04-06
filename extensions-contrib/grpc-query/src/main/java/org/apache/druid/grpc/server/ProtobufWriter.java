@@ -79,6 +79,9 @@ public class ProtobufWriter implements ResultFormat.Writer
   @Override
   public void writeRowField(String name, @Nullable Object value)
   {
+    if (value == null) {
+      return;
+    }
     final Descriptors.FieldDescriptor fieldDescriptor =
               message.getDescriptorForType().findFieldByName(name);
       // we should throw an exception if fieldDescriptor is null
