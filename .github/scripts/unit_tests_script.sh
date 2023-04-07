@@ -21,7 +21,9 @@ unset _JAVA_OPTIONS
 
 sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
 free -m
-${MVN} test ${MAVEN_SKIP} -Ddruid.generic.useDefaultValueForNull=${DRUID_USE_DEFAULT_VALUE_FOR_NULL} -pl ${MAVEN_PROJECTS} jacoco:report
+# Although we want to test, must also do the package step
+# to ensure any build jars get put into the local cache.
+${MVN} package ${MAVEN_SKIP} -Ddruid.generic.useDefaultValueForNull=${DRUID_USE_DEFAULT_VALUE_FOR_NULL} -pl ${MAVEN_PROJECTS} jacoco:report
 
 # Determine the modified files that match the maven projects being tested. We use maven project lists that
 # either exclude (starts with "!") or include (does not start with "!"), so both cases need to be handled.
