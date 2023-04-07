@@ -234,7 +234,7 @@ function generateInputFormatFields(streaming: boolean) {
 
 export const BATCH_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = generateInputFormatFields(false);
 export const STREAMING_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = generateInputFormatFields(true);
-export const KAFKA_EXTRA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
+export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
   {
     name: 'timestampColumnName',
     label: 'Kafka timestamp column name',

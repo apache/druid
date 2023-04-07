@@ -109,7 +109,7 @@ import {
   issueWithIoConfig,
   issueWithSampleData,
   joinFilter,
-  KAFKA_EXTRA_INPUT_FORMAT_FIELDS,
+  KAFKA_METADATA_INPUT_FORMAT_FIELDS,
   KNOWN_FILTER_TYPES,
   MAX_INLINE_DATA_LENGTH,
   METRIC_SPEC_FIELDS,
@@ -1551,7 +1551,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   </FormGroup>
                   {inputFormat?.type === 'kafka' && (
                     <AutoForm
-                      fields={KAFKA_EXTRA_INPUT_FORMAT_FIELDS}
+                      fields={KAFKA_METADATA_INPUT_FORMAT_FIELDS}
                       model={inputFormat}
                       onChange={p =>
                         this.updateSpecPreview(deepSet(spec, 'spec.ioConfig.inputFormat', p))
@@ -1564,7 +1564,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 parserQueryState,
                 AutoForm.issueWithModel(inputFormat, inputFormatFields) ||
                   (inputFormat?.type === 'kafka'
-                    ? AutoForm.issueWithModel(inputFormat, KAFKA_EXTRA_INPUT_FORMAT_FIELDS)
+                    ? AutoForm.issueWithModel(inputFormat, KAFKA_METADATA_INPUT_FORMAT_FIELDS)
                     : undefined),
               )}
             </>
