@@ -1318,9 +1318,7 @@ public class MSQSelectTest extends MSQTestBase
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .build())
         .setExpectedRowSignature(rowSignature)
-        .setExpectedResultRows(
-            expectedMultiValueFooRowsGroup()
-        )
+        .setExpectedResultRows(expectedMultiValueFooRowsGroup())
         .verifyResults();
   }
 
@@ -1700,7 +1698,7 @@ public class MSQSelectTest extends MSQTestBase
   {
     ArrayList<Object[]> expected = new ArrayList<>();
     if (useDefault) {
-      expected.add(new Object[]{"", 3L});
+      expected.add(new Object[]{null, 3L});
     } else {
       expected.add(new Object[]{"", 1L});
       expected.add(new Object[]{null, 2L});
