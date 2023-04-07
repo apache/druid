@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.column.RowSignature;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -111,12 +112,12 @@ public class ExternalOperatorConversion extends DruidExternTableMacroConversion
         }
 
         String inputSrcStr = CatalogUtils.getString(args, INPUT_SOURCE_PARAM);
-        String inputSrcType = jsonMapper.readTree(inputSrcStr).get("type").asText();
+        InputSource inputSource = jsonMapper.readValue(inputSrcStr, InputSource.class);
         return new ExternalTableSpec(
-            jsonMapper.readValue(inputSrcStr, InputSource.class),
+            inputSource,
             jsonMapper.readValue(CatalogUtils.getString(args, INPUT_FORMAT_PARAM), InputFormat.class),
             rowSignature,
-            inputSrcType
+            inputSource::getTypes
         );
       }
       catch (JsonProcessingException e) {
