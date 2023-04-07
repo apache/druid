@@ -58,7 +58,7 @@ import static org.junit.Assert.assertThrows;
 
 @RunWith(DruidTestRunner.class)
 @Category(GrpcQueryBasicAuth.class)
-public class GrpcQueryBasicAuthTest extends GrpcQueryTestBase
+public class ITGrpcQueryBasicAuthTest extends GrpcQueryTestBase
 {
   public static final String ADMIN_USER = "admin";
   // This password must match that set up in the basic-auth.env config.

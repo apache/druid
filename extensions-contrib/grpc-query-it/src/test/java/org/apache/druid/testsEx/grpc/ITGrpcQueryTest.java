@@ -53,7 +53,7 @@ import static org.junit.Assert.assertTrue;
  */
 @RunWith(DruidTestRunner.class)
 @Category(GrpcQuery.class)
-public class GrpcQueryTest extends GrpcQueryTestBase
+public class ITGrpcQueryTest extends GrpcQueryTestBase
 {
   private final TestClient client = new TestClient(GRPC_ENDPOINT);
 
