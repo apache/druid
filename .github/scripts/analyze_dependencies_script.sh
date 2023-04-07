@@ -13,9 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!bin/bash
+#! /bin/bash
 
-${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true ${HADOOP_PROFILE} ||
+# Adding the install step to ensure that the rRPC shaded jar is created
+# so that the implied compilation step works.
+${MVN} ${MAVEN_SKIP} install dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true ${HADOOP_PROFILE} ||
 { echo "
     The dependency analysis has found a dependency that is either:
 
