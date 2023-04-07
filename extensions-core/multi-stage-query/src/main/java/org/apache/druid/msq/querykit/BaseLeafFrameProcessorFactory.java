@@ -271,7 +271,8 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
             resource = queueRef.get().poll();
           }
 
-          return new ResourceHolder<T>() {
+          return new ResourceHolder<T>()
+          {
             @Override
             public T get()
             {
@@ -281,16 +282,16 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
             @Override
             public void close()
             {
-                synchronized (queueRef) {
-                  final Queue<T> queue = queueRef.get();
-                  if (queue != null) {
-                    queue.add(resource);
-                    return;
-                  }
+              synchronized (queueRef) {
+                final Queue<T> queue = queueRef.get();
+                if (queue != null) {
+                  queue.add(resource);
+                  return;
                 }
+              }
 
-                // Queue was null
-                backupCloser.accept(resource);
+              // Queue was null
+              backupCloser.accept(resource);
             }
           };
         }
