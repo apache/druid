@@ -39,6 +39,7 @@ import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -135,7 +136,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
             TransformSpec.NONE,
             NestedDataTestUtils.COUNT,
             Granularities.YEAR,
-            true
+            true,
+            new IndexSpec()
         )
     ).build();
 
@@ -308,7 +310,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         closer,
         NestedDataTestUtils.SIMPLE_DATA_FILE,
         Granularities.HOUR,
-        true
+        true,
+        new IndexSpec()
     );
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
@@ -491,7 +494,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         TransformSpec.NONE,
         NestedDataTestUtils.COUNT,
         Granularities.DAY,
-        true
+        true,
+        new IndexSpec()
     );
 
 
@@ -550,7 +554,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         TransformSpec.NONE,
         aggs,
         Granularities.NONE,
-        true
+        true,
+        new IndexSpec()
     );
 
 
