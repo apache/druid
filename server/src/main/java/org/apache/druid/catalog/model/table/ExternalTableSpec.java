@@ -19,7 +19,6 @@
 
 package org.apache.druid.catalog.model.table;
 
-import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;

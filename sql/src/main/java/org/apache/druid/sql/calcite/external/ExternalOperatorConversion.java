@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.column.RowSignature;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
