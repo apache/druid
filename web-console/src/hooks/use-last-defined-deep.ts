@@ -16,27 +16,15 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
-import React from 'react';
+import { useEffect, useRef } from 'react';
 
-import { JSON_SAMPLE } from '../../../utils/sampler.mock';
+export function useLastDefinedDeep<T>(cur: T | undefined): T | undefined {
+  const last = useRef<T>();
 
-import { ParseDataTable } from './parse-data-table';
+  useEffect(() => {
+    if (typeof cur === 'undefined' || JSON.stringify(last.current) === JSON.stringify(cur)) return;
+    last.current = cur;
+  }, [cur]);
 
-describe('ParseDataTable', () => {
-  it('matches snapshot', () => {
-    const parseDataTable = (
-      <ParseDataTable
-        sampleResponse={JSON_SAMPLE}
-        columnFilter=""
-        canFlatten={false}
-        flattenedColumnsOnly={false}
-        flattenFields={[]}
-        onFlattenFieldSelect={() => {}}
-      />
-    );
-
-    const { container } = render(parseDataTable);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+  return typeof cur === 'undefined' ? last.current : cur;
+}
