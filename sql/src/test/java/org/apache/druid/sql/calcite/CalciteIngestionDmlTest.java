@@ -19,6 +19,8 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,8 +29,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
+import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
@@ -62,11 +69,15 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
+import javax.annotation.Nullable;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 {
@@ -144,7 +155,9 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
       public List<? extends Module> getJacksonModules()
       {
         // We want this module to bring input sources along for the ride.
-        return new InputSourceModule().getJacksonModules();
+        List<Module> modules = new ArrayList<>(new InputSourceModule().getJacksonModules());
+        modules.add(new SimpleModule("test-module").registerSubtypes(TestFileInputSource.class));
+        return modules;
       }
 
       @Override
@@ -366,7 +379,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
       final Throwable e = Assert.assertThrows(
           Throwable.class,
           () -> {
-            getSqlStatementFactory(plannerConfig).directStatement(sqlQuery()).execute();
+            getSqlStatementFactory(plannerConfig, authConfig).directStatement(sqlQuery()).execute();
           }
       );
 
@@ -422,6 +435,66 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
           .context(queryContext)
           .auth(authenticationResult)
           .build();
+    }
+  }
+
+  static class TestFileInputSource extends AbstractInputSource implements SplittableInputSource<File>
+  {
+    private final List<File> files;
+
+    @JsonCreator
+    TestFileInputSource(@JsonProperty("files") List<File> fileList)
+    {
+      files = fileList;
+    }
+
+    @JsonProperty
+    public List<File> getFiles()
+    {
+      return files;
+    }
+
+    @Override
+    public Stream<InputSplit<File>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
+    {
+      return files.stream().map(InputSplit::new);
+    }
+
+    @Override
+    public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
+    {
+      return files.size();
+    }
+
+    @Override
+    public SplittableInputSource<File> withSplit(InputSplit<File> split)
+    {
+      return new TestFileInputSource(ImmutableList.of(split.get()));
+    }
+
+    @Override
+    public boolean needsFormat()
+    {
+      return true;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      TestFileInputSource that = (TestFileInputSource) o;
+      return Objects.equals(files, that.files);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(files);
     }
   }
 }

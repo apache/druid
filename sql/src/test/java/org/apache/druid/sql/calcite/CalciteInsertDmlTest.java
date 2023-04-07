@@ -23,10 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
-import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.java.util.common.StringUtils;
@@ -59,7 +56,6 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
@@ -480,7 +476,59 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertFromExternalAnonymousInputSourceFunctionalStyleWithSchemaWithInputsourceSecurity()
+  public void testInsertFromExternalWithoutSecuritySupport()
+  {
+    InputSource inputSource =
+        new TestFileInputSource(ImmutableList.of(new File("testFile.csv").getAbsoluteFile()));
+    final ExternalDataSource externalDataSource = new ExternalDataSource(
+        inputSource,
+        new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0),
+        RowSignature.builder()
+                    .add("x", ColumnType.STRING)
+                    .add("y", ColumnType.STRING)
+                    .add("z", ColumnType.LONG)
+                    .build()
+    );
+    String extern;
+    ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
+    try {
+      extern = StringUtils.format(
+          "TABLE(extern("
+          + "inputSource => '%s',"
+          + "inputFormat => '%s'))",
+          queryJsonMapper.writeValueAsString(inputSource),
+          queryJsonMapper.writeValueAsString(
+              new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0)
+          )
+      );
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT * FROM %s\n" +
+             "  (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME",
+             extern
+        )
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .authConfig(AuthConfig.newBuilder().setEnableInputSourceSecurity(false).build())
+        .expectTarget("dst", externalDataSource.getSignature())
+        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(externalDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("x", "y", "z")
+                .context(PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .expectLogicalPlanFrom("InsertFromExternalWithoutSecuritySupport")
+        .verify();
+  }
+
+  @Test
+  public void testInsertFromExternalWithoutSecuritySupportWithInputsourceSecurityEnabled()
   {
     String extern;
     ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
@@ -489,32 +537,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
           "TABLE(extern("
           + "inputSource => '%s',"
           + "inputFormat => '%s'))",
-          queryJsonMapper.writeValueAsString(
-              new InputSource()
-              {
-                @Override
-                public boolean isSplittable()
-                {
-                  return false;
-                }
-
-                @Override
-                public boolean needsFormat()
-                {
-                  return false;
-                }
-
-                @Override
-                public InputSourceReader reader(
-                    InputRowSchema inputRowSchema,
-                    @Nullable InputFormat inputFormat,
-                    File temporaryDirectory
-                )
-                {
-                  return null;
-                }
-              }
-          ),
+          queryJsonMapper.writeValueAsString(new TestFileInputSource(ImmutableList.of(new File("testFile.csv").getAbsoluteFile()))),
           queryJsonMapper.writeValueAsString(
               new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0)
           )
@@ -531,17 +554,14 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         )
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .authConfig(AuthConfig.newBuilder().setEnableInputSourceSecurity(true).build())
-        .expectTarget("dst", externalDataSource.getSignature())
-        .expectResources(dataSourceWrite("dst"), externalRead("inline"))
-        .expectQuery(
-            newScanQueryBuilder()
-                .dataSource(externalDataSource)
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("x", "y", "z")
-                .context(PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
-                .build()
-        )
         .expectLogicalPlanFrom("insertFromExternal")
+        .expectValidationError(
+            CoreMatchers.allOf(
+                CoreMatchers.instanceOf(SqlPlanningException.class),
+                ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(
+                    "org.apache.druid.java.util.common.UOE: This inputSource does not support input source based security"))
+            )
+        )
         .verify();
   }
 
