@@ -134,12 +134,13 @@ The following example demonstrates a supervisor spec for Kafka that uses the `JS
 
 If you want to parse the Kafka metadata fields in addition to the Kafka payload value contents, you can use the `kafka` input format.
 
-The `kafka` input format wraps around the payload parsing input format and augents the data it outputs with the Kafka event timestamp, the Kafka event headers, and the key field that itself can be parsed using any avaialable InputFormat.
+The `kafka` input format wraps around the payload parsing input format and augments the data it outputs with the Kafka event timestamp,
+the Kafka event headers, and the key field that itself can be parsed using any available InputFormat.
 
 For example, consider the following structure for a Kafka message that represents a fictitious wiki edit in a development environment:
 
 - **Kafka timestamp**: `1680795276351`
-- **Kakfa headers**:
+- **Kafka headers**:
   - `env=development`
   - `zone=z1`
 - **Kafka key**: `wiki-edit`
@@ -155,7 +156,7 @@ You would configure it as follows:
 - `headerFormat`: The default "string" decodes UTF8-encoded strings from the Kafka header. If you need another format, you can implement your own parser.
 - `headerColumnPrefix`: Supply a prefix to the Kafka headers to avoid any conflicts with columns from the payload. The default is `kafka.header.`.
   Considering the header from the example, Druid maps the headers to the following columns: `kafka.header.env`, `kafka.header.zone`.
-- `keyFormat`: Suply an input format to parse the key. Only the first value will be used.
+- `keyFormat`: Supply an input format to parse the key. Only the first value will be used.
   If, as in the example, you key values are simple stings then you can use the `tsv` format to parse them.
   ```
   {
@@ -269,9 +270,9 @@ FROM "wikiticker"
 
 This query would output:
 
-| kafka.header.env | kafka.key | kafka.timestamp |
-|------------------|-----------|---------------|
-|development | wiki-edit | 1680795276351 |
+| `kafka.header.env` | `kafka.key` | `kafka.timestamp` |
+|--------------------|-----------|---------------|
+| `development`      | `wiki-edit` | `1680795276351` |
 
 For more information, see [`kafka` data format](../../ingestion/data-formats.md#kafka).
 

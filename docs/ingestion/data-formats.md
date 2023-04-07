@@ -540,7 +540,7 @@ For example:
 
 ### Kafka
 
-`kafka` is a special input format that wrappes a regular input format (which goes in `valueFormat`) and allows you
+`kafka` is a special input format that wraps a regular input format (which goes in `valueFormat`) and allows you
 to parse the Kafka metadata (kafka timestamp, headers, and key) that is part of Kafka messages.
 It should only be used when ingesting from Apache Kafka. 
 
@@ -556,12 +556,12 @@ Configure the Kafka `inputFormat` as follows:
 | `keyFormat` | [InputFormat](#input-format) | Any [InputFormat](#input-format) to parse the Kafka key. It only processes the first entry of the input format. For details, see [Specifying data format](../development/extensions-core/kafka-supervisor-reference.md#specifying-data-format). | no |
 | `keyColumnName` | String | Name of the column for the kafka record's key.| no (default = "kafka.key") |
 
-The Kafka input format augements the payload with information form the Kafka timestamp, headers, and key.
+The Kafka input format augments the payload with information form the Kafka timestamp, headers, and key.
 
-If there are conflicts between column names in the payload and those created from the metadata the payload takes precedense.
+If there are conflicts between column names in the payload and those created from the metadata the payload takes precedence.
 This is done to ensure that upgrading a Kafka ingestion to use the Kafka input format (by taking its existing input format and setting it as the `valueFormat` in the kafka format) can be done without losing any of the payload data.  
 
-Here is a minimal example that only augements the parsed payload with the Kafka timestamp column:
+Here is a minimal example that only augments the parsed payload with the Kafka timestamp column:
 
 ```
 "ioConfig": {
@@ -610,7 +610,7 @@ Note that if you want to use the `kafka.timestamp` as Druid's primary timestamp 
 }
 ```
 
-Similarly, if you wnat to use a timetamp extracted from the Kafka header:
+Similarly, if you want to use a timestamp extracted from the Kafka header:
 
 ```json
 "timestampSpec": {
