@@ -1,6 +1,6 @@
 ---
 id: native-batch-firehose
-title: "Legacy batch ingestion with firehose (Deprecated)"
+title: "JSON-based batch ingestion with firehose (Deprecated)"
 sidebar_label: "Firehose (deprecated)"
 ---
 

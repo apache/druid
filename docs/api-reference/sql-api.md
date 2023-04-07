@@ -23,10 +23,10 @@ sidebar_label: Druid SQL API
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+> Apache Druid supports two query languages: Druid SQL and [native queries](../querying/querying.md).
 > This document describes the SQL language.
 
-You can submit and cancel [Druid SQL](./sql.md) queries using the Druid SQL API.
+You can submit and cancel [Druid SQL](../querying/sql.md) queries using the Druid SQL API.
 The Druid SQL API is available at `https://ROUTER:8888/druid/v2/sql`, where `ROUTER` is the IP address of the Druid Router.
 
 ## Submit a query
@@ -50,8 +50,8 @@ Submit your query as the value of a "query" field in the JSON object within the 
 |`header`|Whether or not to include a header row for the query result. See [Responses](#responses) for details.|`false`|
 |`typesHeader`|Whether or not to include type information in the header. Can only be set when `header` is also `true`. See [Responses](#responses) for details.|`false`|
 |`sqlTypesHeader`|Whether or not to include SQL type information in the header. Can only be set when `header` is also `true`. See [Responses](#responses) for details.|`false`|
-|`context`|JSON object containing [SQL query context parameters](sql-query-context.md).|`{}` (empty)|
-|`parameters`|List of query parameters for parameterized queries. Each parameter in the list should be a JSON object like `{"type": "VARCHAR", "value": "foo"}`. The type should be a SQL type; see [Data types](sql-data-types.md) for a list of supported SQL types.|`[]` (empty)|
+|`context`|JSON object containing [SQL query context parameters](../querying/sql-query-context.md).|`{}` (empty)|
+|`parameters`|List of query parameters for parameterized queries. Each parameter in the list should be a JSON object like `{"type": "VARCHAR", "value": "foo"}`. The type should be a SQL type; see [Data types](../querying/sql-data-types.md) for a list of supported SQL types.|`[]` (empty)|
 
 You can use _curl_ to send SQL queries from the command-line:
 
@@ -63,7 +63,7 @@ $ curl -XPOST -H'Content-Type: application/json' http://ROUTER:8888/druid/v2/sql
 [{"TheCount":24433}]
 ```
 
-There are a variety of [SQL query context parameters](sql-query-context.md) you can provide by adding a "context" map,
+There are a variety of [SQL query context parameters](../querying/sql-query-context.md) you can provide by adding a "context" map,
 like:
 
 ```json
@@ -87,7 +87,7 @@ Parameterized SQL queries are also supported:
 }
 ```
 
-Metadata is available over HTTP POST by querying [metadata tables](sql-metadata-tables.md).
+Metadata is available over HTTP POST by querying [metadata tables](../querying/sql-metadata-tables.md).
 
 ### Responses
 
@@ -105,7 +105,7 @@ parameter, like:
 
 To request a header with information about column names, set `header` to true in your request.
 When you set `header` to true, you can optionally include `typesHeader` and `sqlTypesHeader` as well, which gives
-you information about [Druid runtime and SQL types](sql-data-types.md) respectively. You can request all these headers
+you information about [Druid runtime and SQL types](../querying/sql-data-types.md) respectively. You can request all these headers
 with a request like:
 
 ```json
@@ -128,10 +128,10 @@ The following table shows supported result formats:
 |`arrayLines`|Like `array`, but the JSON arrays are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|Same as `array`, except the rows are separated by newlines.|text/plain|
 |`csv`|Comma-separated values, with one row per line. Individual field values may be escaped by being surrounded in double quotes. If double quotes appear in a field value, they will be escaped by replacing them with double-double-quotes like `""this""`. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|Same as `array`, except the lists are in CSV format.|text/csv|
 
-If `typesHeader` is set to true, [Druid type](sql-data-types.md) information is included in the response. Complex types,
+If `typesHeader` is set to true, [Druid type](../querying/sql-data-types.md) information is included in the response. Complex types,
 like sketches, will be reported as `COMPLEX<typeName>` if a particular complex type name is known for that field,
 or as `COMPLEX` if the particular type name is unknown or mixed. If `sqlTypesHeader` is set to true,
-[SQL type](sql-data-types.md) information is included in the response. It is possible to set both `typesHeader` and
+[SQL type](../querying/sql-data-types.md) information is included in the response. It is possible to set both `typesHeader` and
 `sqlTypesHeader` at once. Both parameters require that `header` is also set.
 
 To aid in building clients that are compatible with older Druid versions, Druid returns the HTTP header
@@ -140,7 +140,7 @@ understands the `typesHeader` and `sqlTypesHeader` parameters. This HTTP respons
 whether `typesHeader` or `sqlTypesHeader` are set or not.
 
 Druid returns the SQL query identifier in the `X-Druid-SQL-Query-Id` HTTP header.
-This query id will be assigned the value of `sqlQueryId` from the [query context parameters](sql-query-context.md)
+This query id will be assigned the value of `sqlQueryId` from the [query context parameters](../querying/sql-query-context.md)
 if specified, else Druid will generate a SQL query id for you.
 
 #### Errors

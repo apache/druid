@@ -34,7 +34,7 @@ interface.
 When using the API for the MSQ task engine, the action you want to take determines the endpoint you use:
 
 - `/druid/v2/sql/task` endpoint: Submit a query for ingestion.
-- `/druid/indexer/v1/task` endpoint: Interact with a query, including getting its status, getting its details, or canceling it. This page describes a few of the Overlord Task APIs that you can use with the MSQ task engine. For information about Druid APIs, see the [API reference for Druid](../operations/api-reference.md#tasks).
+- `/druid/indexer/v1/task` endpoint: Interact with a query, including getting its status, getting its details, or canceling it. This page describes a few of the Overlord Task APIs that you can use with the MSQ task engine. For information about Druid APIs, see the [API reference for Druid](tasks.md).
 
 ## Submit a query
 
@@ -42,11 +42,11 @@ You submit queries to the MSQ task engine using the `POST /druid/v2/sql/task/` e
 
 #### Request
 
-The SQL task endpoint accepts [SQL requests in the JSON-over-HTTP form](../querying/sql-api.md#request-body) using the
+The SQL task endpoint accepts [SQL requests in the JSON-over-HTTP form](sql-api.md#request-body) using the
 `query`, `context`, and `parameters` fields, but ignoring the `resultFormat`, `header`, `typesHeader`, and
 `sqlTypesHeader` fields.
 
-This endpoint accepts [INSERT](reference.md#insert) and [REPLACE](reference.md#replace) statements.
+This endpoint accepts [INSERT](../multi-stage-query/reference.md#insert) and [REPLACE](../multi-stage-query/reference.md#replace) statements.
 
 As an experimental feature, this endpoint also accepts SELECT queries. SELECT query results are collected from workers
 by the controller, and written into the [task report](#get-the-report-for-a-query-task) as an array of arrays. The
@@ -123,7 +123,7 @@ print(response.text)
 
 | Field | Description |
 |---|---|
-| `taskId` | Controller task ID. You can use Druid's standard [task APIs](../operations/api-reference.md#overlord) to interact with this controller task. |
+| `taskId` | Controller task ID. You can use Druid's standard [task APIs](api-reference.md#overlord) to interact with this controller task. |
 | `state` | Initial state for the query, which is "RUNNING". |
 
 ## Get the status for a query task
@@ -564,8 +564,8 @@ The following table describes the response fields when you retrieve a report for
 | `multiStageQuery.payload.status.errorReport.taskId` | The task that reported the error, if known. May be a controller task or a worker task. |
 | `multiStageQuery.payload.status.errorReport.host` | The hostname and port of the task that reported the error, if known. |
 | `multiStageQuery.payload.status.errorReport.stageNumber` | The stage number that reported the error, if it happened during execution of a specific stage. |
-| `multiStageQuery.payload.status.errorReport.error` | Error object. Contains `errorCode` at a minimum, and may contain other fields as described in the [error code table](./reference.md#error-codes). Always present if there is an error. |
-| `multiStageQuery.payload.status.errorReport.error.errorCode` | One of the error codes from the [error code table](./reference.md#error-codes). Always present if there is an error. |
+| `multiStageQuery.payload.status.errorReport.error` | Error object. Contains `errorCode` at a minimum, and may contain other fields as described in the [error code table](../multi-stage-query/reference.md#error-codes). Always present if there is an error. |
+| `multiStageQuery.payload.status.errorReport.error.errorCode` | One of the error codes from the [error code table](../multi-stage-query/reference.md#error-codes). Always present if there is an error. |
 | `multiStageQuery.payload.status.errorReport.error.errorMessage` | User-friendly error message. Not always present, even if there is an error. |
 | `multiStageQuery.payload.status.errorReport.exceptionStackTrace` | Java stack trace in string form, if the error was due to a server-side exception. |
 | `multiStageQuery.payload.stages` | Array of query stages. |

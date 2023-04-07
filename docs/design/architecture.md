@@ -279,7 +279,7 @@ per version per time chunk. Druid will also only use a single version at a time 
 properties provide Druid's atomic replacement guarantees.
 
 Druid also supports an experimental _segment locking_ mode that is activated by setting
-[`forceTimeChunkLock`](../ingestion/tasks.md#context) to false in the context of an ingestion task. In this case, Druid
+[`forceTimeChunkLock`](../api-reference/tasks.md#context) to false in the context of an ingestion task. In this case, Druid
 creates an _atomic update group_ using the existing version for the time chunk, instead of creating a new core set
 with a new version number. There can be multiple atomic update groups with the same version number per time chunk. Each
 one replaces a specific set of earlier segments in the same time chunk and with the same version number. Druid will

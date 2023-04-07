@@ -1442,7 +1442,7 @@ segmentWriteOutMediumFactory
 product_category
 product_id
 product_name
- - ../docs/ingestion/tasks.md
+ - ../docs/api-reference/tasks.md
 BUILD_SEGMENTS
 DETERMINE_PARTITIONS
 forceTimeChunkLock
@@ -1557,7 +1557,7 @@ human_readable_decimal_byte_format
 human_readable_decimal_format
  - ../docs/misc/papers-and-talks.md
 RADStack
- - ../docs/operations/api-reference.md
+ - ../docs/api-reference/api-reference.md
 00.000Z
 2015-09-12T03
 2015-09-12T05

@@ -26,7 +26,7 @@ sidebar_label: "Query context"
 The query context is used for various query configuration parameters. Query context parameters can be specified in
 the following ways:
 
-- For [Druid SQL](sql-api.md), context parameters are provided either in a JSON object named `context` to the
+- For [Druid SQL](../api-reference/sql-api.md), context parameters are provided either in a JSON object named `context` to the
 HTTP POST API, or as properties to the JDBC connection.
 - For [native queries](querying.md), context parameters are provided in a JSON object named `context`.
 

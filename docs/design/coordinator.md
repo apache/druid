@@ -31,7 +31,7 @@ For basic tuning guidance for the Coordinator process, see [Basic cluster tuning
 
 ### HTTP endpoints
 
-For a list of API endpoints supported by the Coordinator, see [Coordinator API](../operations/api-reference.md#coordinator).
+For a list of API endpoints supported by the Coordinator, see [Coordinator API](../api-reference/api-reference.md#coordinator).
 
 ### Overview
 
@@ -88,16 +88,16 @@ Each run, the Coordinator compacts segments by merging small segments or splitti
 See [Segment size optimization](../operations/segment-optimization.md) for details.
 
 The Coordinator first finds the segments to compact based on the [segment search policy](#segment-search-policy-in-automatic-compaction).
-Once some segments are found, it issues a [compaction task](../ingestion/tasks.md#compact) to compact those segments.
+Once some segments are found, it issues a [compaction task](../api-reference/tasks.md#compact) to compact those segments.
 The maximum number of running compaction tasks is `min(sum of worker capacity * slotRatio, maxSlots)`.
 Note that even if `min(sum of worker capacity * slotRatio, maxSlots) = 0`, at least one compaction task is always submitted
 if the compaction is enabled for a dataSource.
-See [Automatic compaction configuration API](../operations/api-reference.md#automatic-compaction-configuration) and [Automatic compaction configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) to enable and configure automatic compaction.
+See [Automatic compaction configuration API](../api-reference/api-reference.md#automatic-compaction-configuration) and [Automatic compaction configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) to enable and configure automatic compaction.
 
 Compaction tasks might fail due to the following reasons:
 
 - If the input segments of a compaction task are removed or overshadowed before it starts, that compaction task fails immediately.
-- If a task of a higher priority acquires a [time chunk lock](../ingestion/tasks.md#locking) for an interval overlapping with the interval of a compaction task, the compaction task fails.
+- If a task of a higher priority acquires a [time chunk lock](../api-reference/tasks.md#locking) for an interval overlapping with the interval of a compaction task, the compaction task fails.
 
 Once a compaction task fails, the Coordinator simply checks the segments in the interval of the failed task again, and issues another compaction task in the next run.
 

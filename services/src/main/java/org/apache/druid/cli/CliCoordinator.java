@@ -260,7 +260,7 @@ public class CliCoordinator extends ServerRunnable
                   "'druid.coordinator.merge.on' is not supported anymore. "
                   + "Please consider using Coordinator's automatic compaction instead. "
                   + "See https://druid.apache.org/docs/latest/operations/segment-optimization.html and "
-                  + "https://druid.apache.org/docs/latest/operations/api-reference.html#compaction-configuration "
+                  + "https://druid.apache.org/docs/latest/api-reference/api-reference.html#compaction-configuration "
                   + "for more details about compaction."
               );
             }

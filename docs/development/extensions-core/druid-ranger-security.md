@@ -98,7 +98,7 @@ When installing a new Druid service in Apache Ranger for the first time, Ranger 
 
 ### HTTP methods
 
-For information on what HTTP methods are supported for a particular request endpoint, please refer to the [API documentation](../../operations/api-reference.md).
+For information on what HTTP methods are supported for a particular request endpoint, please refer to the [API documentation](../../api-reference/api-reference.md).
 
 GET requires READ permission, while POST and DELETE require WRITE permission.
 

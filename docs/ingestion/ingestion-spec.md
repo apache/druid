@@ -24,7 +24,7 @@ description: Reference for the configuration options in the ingestion spec.
   ~ under the License.
   -->
 
-All ingestion methods use ingestion tasks to load data into Druid. Streaming ingestion uses ongoing supervisors that run and supervise a set of tasks over time. Native batch and Hadoop-based ingestion use a one-time [task](tasks.md). All types of ingestion use an _ingestion spec_ to configure ingestion.
+All ingestion methods use ingestion tasks to load data into Druid. Streaming ingestion uses ongoing supervisors that run and supervise a set of tasks over time. Native batch and Hadoop-based ingestion use a one-time [task](../api-reference/tasks.md). All types of ingestion use an _ingestion spec_ to configure ingestion.
 
 Ingestion specs consists of three main components:
 

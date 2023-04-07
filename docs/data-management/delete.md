@@ -38,7 +38,7 @@ Deletion by time range happens in two steps:
    you have a backup.
 
 For documentation on disabling segments using the Coordinator API, see the
-[Coordinator API reference](../operations/api-reference.md#coordinator-datasources).
+[Coordinator API reference](../api-reference/api-reference.md#coordinator-datasources).
 
 A data deletion tutorial is available at [Tutorial: Deleting data](../tutorials/tutorial-delete-data.md).
 

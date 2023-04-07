@@ -25,7 +25,7 @@ description: "Reference topic for running and maintaining Apache Kafka superviso
   -->
 This topic contains operations reference information to run and maintain Apache Kafka supervisors for Apache Druid. It includes descriptions of how some supervisor APIs work within Kafka Indexing Service.
 
-For all supervisor APIs, see [Supervisor APIs](../../operations/api-reference.md#supervisors).
+For all supervisor APIs, see [Supervisor APIs](../../api-reference/api-reference.md#supervisors).
 
 ## Getting Supervisor Status Report
 
@@ -82,7 +82,7 @@ state until it is idle, stopped, suspended, or hits a task failure threshold and
 
 `GET /druid/indexer/v1/supervisor/<supervisorId>/stats` returns a snapshot of the current ingestion row counters for each task being managed by the supervisor, along with moving averages for the row counters.
 
-See [Task Reports: Row Stats](../../ingestion/tasks.md#row-stats) for more information.
+See [Task Reports: Row Stats](../../api-reference/tasks.md#row-stats) for more information.
 
 ## Supervisor Health Check
 

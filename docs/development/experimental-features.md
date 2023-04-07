@@ -32,7 +32,7 @@ Note that this document does not track the status of contrib extensions, all of 
 
 - [SQL-based ingestion](../multi-stage-query/index.md)
 - [SQL-based ingestion concepts](../multi-stage-query/concepts.md)
-- [SQL-based ingestion and multi-stage query task API](../multi-stage-query/api.md)
+- [SQL-based ingestion and multi-stage query task API](../api-reference/api.md)
 
 ## Indexer process
 
@@ -46,7 +46,7 @@ Note that this document does not track the status of contrib extensions, all of 
 ## Segment locking
 
 - [Configuration reference](../configuration/index.md#overlord-operations)
-- [Task reference](../ingestion/tasks.md#locking)
+- [Task reference](../api-reference/tasks.md#locking)
 - [Design](../design/architecture.md#availability-and-consistency)
 
 ## Front coding

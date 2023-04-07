@@ -23,10 +23,10 @@ sidebar_label: Task API
   ~ under the License.
   -->
 
-Tasks do all [ingestion](index.md)-related work in Druid.
+Tasks do all [ingestion](../ingestion/index.md)-related work in Druid.
 
 For batch ingestion, you will generally submit tasks directly to Druid using the
-[Task APIs](../operations/api-reference.md#tasks). For streaming ingestion, tasks are generally submitted for you by a
+[Task APIs](api-reference.md#tasks). For streaming ingestion, tasks are generally submitted for you by a
 supervisor.
 
 ## Task API
@@ -34,7 +34,7 @@ supervisor.
 Task APIs are available in two main places:
 
 - The [Overlord](../design/overlord.md) process offers HTTP APIs to submit tasks, cancel tasks, check their status,
-review logs and reports, and more. Refer to the [Tasks API reference page](../operations/api-reference.md#tasks) for a
+review logs and reports, and more. Refer to the [Tasks API reference page](../api-reference/api-reference.md#tasks) for a
 full list.
 - Druid SQL includes a [`sys.tasks`](../querying/sql-metadata-tables.md#tasks-table) table that provides information about currently
 running tasks. This table is read-only, and has a limited (but useful!) subset of the full information available through
@@ -177,7 +177,7 @@ the `rowStats` map contains information about row counts. There is one entry for
 - `processed`: Number of rows successfully ingested without parsing errors
 - `processedBytes`: Total number of uncompressed bytes processed by the task. This reports the total byte size of all rows i.e. even those that are included in `processedWithError`, `unparseable` or `thrownAway`.
 - `processedWithError`: Number of rows that were ingested, but contained a parsing error within one or more columns. This typically occurs where input rows have a parseable structure but invalid types for columns, such as passing in a non-numeric String value for a numeric column.
-- `thrownAway`: Number of rows skipped. This includes rows with timestamps that were outside of the ingestion task's defined time interval and rows that were filtered out with a [`transformSpec`](./ingestion-spec.md#transformspec), but doesn't include the rows skipped by explicit user configurations. For example, the rows skipped by `skipHeaderRows` or `hasHeaderRow` in the CSV format are not counted.
+- `thrownAway`: Number of rows skipped. This includes rows with timestamps that were outside of the ingestion task's defined time interval and rows that were filtered out with a [`transformSpec`](../ingestion/ingestion-spec.md#transformspec), but doesn't include the rows skipped by explicit user configurations. For example, the rows skipped by `skipHeaderRows` or `hasHeaderRow` in the CSV format are not counted.
 - `unparseable`: Number of rows that could not be parsed at all and were discarded. This tracks input rows without a parseable structure, such as passing in non-JSON data when using a JSON parser.
 
 The `errorMsg` field shows a message describing the error that caused a task to fail. It will be null if the task was successful.
@@ -186,7 +186,7 @@ The `errorMsg` field shows a message describing the error that caused a task to 
 
 ### Row stats
 
-The [native batch task](./native-batch.md), the Hadoop batch task, and Kafka and Kinesis ingestion tasks support retrieval of row stats while the task is running.
+The [native batch task](../ingestion/native-batch.md), the Hadoop batch task, and Kafka and Kinesis ingestion tasks support retrieval of row stats while the task is running.
 
 The live report can be accessed with a GET to the following URL on a Peon running a task:
 
@@ -344,7 +344,7 @@ Each task type has a different default lock priority. The below table shows the 
 |task type|default priority|
 |---------|----------------|
 |Realtime index task|75|
-|Batch index tasks, including [native batch](native-batch.md), [SQL](../multi-stage-query/index.md), and [Hadoop-based](hadoop.md)|50|
+|Batch index tasks, including [native batch](../ingestion/native-batch.md), [SQL](../multi-stage-query/index.md), and [Hadoop-based](../ingestion/hadoop.md)|50|
 |Merge/Append/Compaction task|25|
 |Other tasks|0|
 
@@ -393,7 +393,7 @@ The following parameters apply to all task types.
 |`forceTimeChunkLock`|true|_Setting this to false is still experimental_<br/> Force to always use time chunk lock. If not set, each task automatically chooses a lock type to use. If set, this parameter overwrites `druid.indexer.tasklock.forceTimeChunkLock` [configuration for the overlord](../configuration/index.md#overlord-operations). See [Locking](#locking) for more details.|
 |`priority`|Different based on task types. See [Priority](#priority).|Task priority|
 |`useLineageBasedSegmentAllocation`|false in 0.21 or earlier, true in 0.22 or later|Enable the new lineage-based segment allocation protocol for the native Parallel task with dynamic partitioning. This option should be off during the replacing rolling upgrade from one of the Druid versions between 0.19 and 0.21 to Druid 0.22 or higher. Once the upgrade is done, it must be set to true to ensure data correctness.|
-|`storeEmptyColumns`|true|Boolean value for whether or not to store empty columns during ingestion. When set to true, Druid stores every column specified in the [`dimensionsSpec`](ingestion-spec.md#dimensionsspec). If you use schemaless ingestion and don't specify any dimensions to ingest, you must also set [`includeAllDimensions`](ingestion-spec.md#dimensionsspec) for Druid to store empty columns.<br/><br/>If you set `storeEmptyColumns` to false, Druid SQL queries referencing empty columns will fail. If you intend to leave `storeEmptyColumns` disabled, you should either ingest dummy data for empty columns or else not query on empty columns.<br/><br/>When set in the task context, `storeEmptyColumns` overrides the system property [`druid.indexer.task.storeEmptyColumns`](../configuration/index.md#additional-peon-configuration).|
+|`storeEmptyColumns`|true|Boolean value for whether or not to store empty columns during ingestion. When set to true, Druid stores every column specified in the [`dimensionsSpec`](../ingestion/ingestion-spec.md#dimensionsspec). If you use schemaless ingestion and don't specify any dimensions to ingest, you must also set [`includeAllDimensions`](../ingestion/ingestion-spec.md#dimensionsspec) for Druid to store empty columns.<br/><br/>If you set `storeEmptyColumns` to false, Druid SQL queries referencing empty columns will fail. If you intend to leave `storeEmptyColumns` disabled, you should either ingest dummy data for empty columns or else not query on empty columns.<br/><br/>When set in the task context, `storeEmptyColumns` overrides the system property [`druid.indexer.task.storeEmptyColumns`](../configuration/index.md#additional-peon-configuration).|
 
 ## Task logs
 
@@ -405,7 +405,7 @@ The task then starts creating logs in a local directory of the middle manager (o
 
 When the task completes - whether it succeeds or fails - the middle manager (or indexer) will push the task log file into the location specified in [`druid.indexer.logs`](../configuration/index.md#task-logging).
 
-Task logs on the Druid web console are retrieved via an [API](../operations/api-reference.md#overlord) on the Overlord.  It automatically detects where the log file is, either in the middleManager / indexer or in long-term storage, and passes it back.
+Task logs on the Druid web console are retrieved via an [API](../api-reference/api-reference.md#overlord) on the Overlord.  It automatically detects where the log file is, either in the middleManager / indexer or in long-term storage, and passes it back.
 
 If you don't see the log file in long-term storage, it means either:
 
@@ -424,11 +424,11 @@ You can configure retention periods for logs in milliseconds by setting `druid.i
 
 ### `index_parallel`
 
-See [Native batch ingestion (parallel task)](native-batch.md).
+See [Native batch ingestion (parallel task)](../ingestion/native-batch.md).
 
 ### `index_hadoop`
 
-See [Hadoop-based ingestion](hadoop.md).
+See [Hadoop-based ingestion](../ingestion/hadoop.md).
 
 ### `index_kafka`
 

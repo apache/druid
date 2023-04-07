@@ -240,13 +240,13 @@ GROUP BY servers.server;
 ### TASKS table
 
 The tasks table provides information about active and recently-completed indexing tasks. For more information
-check out the documentation for [ingestion tasks](../ingestion/tasks.md).
+check out the documentation for [ingestion tasks](../api-reference/tasks.md).
 
 |Column|Type|Notes|
 |------|-----|-----|
 |task_id|VARCHAR|Unique task identifier|
 |group_id|VARCHAR|Task group ID for this task, the value depends on the task `type`. For example, for native index tasks, it's same as `task_id`, for sub tasks, this value is the parent task's ID|
-|type|VARCHAR|Task type, for example this value is "index" for indexing tasks. See [tasks-overview](../ingestion/tasks.md)|
+|type|VARCHAR|Task type, for example this value is "index" for indexing tasks. See [tasks-overview](../api-reference/tasks.md)|
 |datasource|VARCHAR|Datasource name being indexed|
 |created_time|VARCHAR|Timestamp in ISO8601 format corresponding to when the ingestion task was created. Note that this value is populated for completed and waiting tasks. For running and pending tasks this value is set to 1970-01-01T00:00:00Z|
 |queue_insertion_time|VARCHAR|Timestamp in ISO8601 format corresponding to when this task was added to the queue on the Overlord|

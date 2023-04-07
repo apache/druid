@@ -38,7 +38,7 @@ Retention rules are persistent: they remain in effect until you change them. Dru
 
 ## Set retention rules
 
-You can use the Druid [web console](./web-console.md) or the [Coordinator API](./api-reference.md#coordinator) to create and manage retention rules.
+You can use the Druid [web console](./web-console.md) or the [Coordinator API](../api-reference/api-reference.md#coordinator) to create and manage retention rules.
 
 ### Use the web console
 
@@ -317,7 +317,7 @@ Set the following property:
 
 ## Permanently delete data
 
-Druid can fully drop data from the cluster, wipe the metadata store entry, and remove the data from deep storage for any segments marked `unused`. Note that Druid always marks segments dropped from the cluster by rules as `unused`. You can submit a [kill task](../ingestion/tasks.md) to the [Overlord](../design/overlord.md) to do this.
+Druid can fully drop data from the cluster, wipe the metadata store entry, and remove the data from deep storage for any segments marked `unused`. Note that Druid always marks segments dropped from the cluster by rules as `unused`. You can submit a [kill task](../api-reference/tasks.md) to the [Overlord](../design/overlord.md) to do this.
 
 ## Reload dropped data
 

@@ -1,6 +1,6 @@
 ---
 id: native-batch
-title: "Legacy batch overview"
+title: "JSON-based batch overview"
 sidebar_label: "Overview"
 ---
 
@@ -42,7 +42,7 @@ For related information on batch indexing, see:
 
 To run either kind of native batch indexing task you can:
 - Use the **Load Data** UI in the web console to define and submit an ingestion spec.
-- Define an ingestion spec in JSON based upon the [examples](#parallel-indexing-example) and reference topics for batch indexing. Then POST the ingestion spec to the [Indexer API endpoint](../operations/api-reference.md#tasks), 
+- Define an ingestion spec in JSON based upon the [examples](#parallel-indexing-example) and reference topics for batch indexing. Then POST the ingestion spec to the [Indexer API endpoint](../api-reference/api-reference.md#tasks), 
 `/druid/indexer/v1/task`, the Overlord service. Alternatively you can use the indexing script included with Druid at `bin/post-index-task`.
 
 ## Parallel task indexing
@@ -196,7 +196,7 @@ The following table defines the primary sections of the input spec:
 |type|The task type. For parallel task indexing, set the value to `index_parallel`.|yes|
 |id|The task ID. If omitted, Druid generates the task ID using the task type, data source name, interval, and date-time stamp. |no|
 |spec|The ingestion spec that defines the [data schema](#dataschema), [IO config](#ioconfig), and [tuning config](#tuningconfig).|yes|
-|context|Context to specify various task configuration parameters. See [Task context parameters](tasks.md#context-parameters) for more details.|no|
+|context|Context to specify various task configuration parameters. See [Task context parameters](../api-reference/tasks.md#context-parameters) for more details.|no|
 
 ### `dataSchema`
 

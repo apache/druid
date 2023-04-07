@@ -70,7 +70,7 @@
       },
       {
         "type": "subcategory",
-        "label": "Legacy batch",
+        "label": "JSON-based batch",
         "ids": [
           "ingestion/native-batch",
           "ingestion/native-batch-input-sources",
@@ -161,11 +161,11 @@
       }
     ],
     "API reference":[
-      "multi-stage-query/api",
-      "querying/sql-api",
-      "querying/sql-jdbc",
-      "ingestion/tasks",
-      "operations/api-reference"
+      "api-reference/api",
+      "api-reference/sql-api",
+      "api-reference/sql-jdbc",
+      "api-reference/tasks",
+      "api-reference/api-reference"
     ],
     "Configuration": [
       "configuration/index",

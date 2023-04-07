@@ -40,7 +40,7 @@ This topic guides you through setting up automatic compaction for your Druid clu
 ## Enable automatic compaction
 
 You can enable automatic compaction for a datasource using the web console or programmatically via an API.
-This process differs for manual compaction tasks, which can be submitted from the [Tasks view of the web console](../operations/web-console.md) or the [Tasks API](../operations/api-reference.md#tasks).
+This process differs for manual compaction tasks, which can be submitted from the [Tasks view of the web console](../operations/web-console.md) or the [Tasks API](../api-reference/api-reference.md#tasks).
 
 ### web console
 
@@ -59,10 +59,10 @@ To disable auto-compaction for a datasource, click **Delete** from the **Compact
 
 ### Compaction configuration API
 
-Use the [Coordinator API](../operations/api-reference.md#automatic-compaction-status) to configure automatic compaction.
+Use the [Coordinator API](../api-reference/api-reference.md#automatic-compaction-status) to configure automatic compaction.
 To enable auto-compaction for a datasource, create a JSON object with the desired auto-compaction settings.
 See [Configure automatic compaction](#configure-automatic-compaction) for the syntax of an auto-compaction spec.
-Send the JSON object as a payload in a [`POST` request](../operations/api-reference.md#automatic-compaction-configuration) to `/druid/coordinator/v1/config/compaction`.
+Send the JSON object as a payload in a [`POST` request](../api-reference/api-reference.md#automatic-compaction-configuration) to `/druid/coordinator/v1/config/compaction`.
 The following example configures auto-compaction for the `wikipedia` datasource:
 
 ```sh
@@ -76,7 +76,7 @@ curl --location --request POST 'http://localhost:8081/druid/coordinator/v1/confi
 }'
 ```
 
-To disable auto-compaction for a datasource, send a [`DELETE` request](../operations/api-reference.md#automatic-compaction-configuration) to `/druid/coordinator/v1/config/compaction/{dataSource}`. Replace `{dataSource}` with the name of the datasource for which to disable auto-compaction. For example:
+To disable auto-compaction for a datasource, send a [`DELETE` request](../api-reference/api-reference.md#automatic-compaction-configuration) to `/druid/coordinator/v1/config/compaction/{dataSource}`. Replace `{dataSource}` with the name of the datasource for which to disable auto-compaction. For example:
 
 ```sh
 curl --location --request DELETE 'http://localhost:8081/druid/coordinator/v1/config/compaction/wikipedia'
@@ -129,7 +129,7 @@ For more details on each of the specs in an auto-compaction configuration, see [
 
 Compaction tasks may be interrupted when they interfere with ingestion. For example, this occurs when an ingestion task needs to write data to a segment for a time interval locked for compaction. If there are continuous failures that prevent compaction from making progress, consider one of the following strategies:
 * Set `skipOffsetFromLatest` to reduce the chance of conflicts between ingestion and compaction. See more details in this section below.
-* Increase the priority value of compaction tasks relative to ingestion tasks. Only recommended for advanced users. This approach can cause ingestion jobs to fail or lag. To change the priority of compaction tasks, set `taskPriority` to the desired priority value in the auto-compaction configuration. For details on the priority values of different task types, see [Lock priority](../ingestion/tasks.md#lock-priority).
+* Increase the priority value of compaction tasks relative to ingestion tasks. Only recommended for advanced users. This approach can cause ingestion jobs to fail or lag. To change the priority of compaction tasks, set `taskPriority` to the desired priority value in the auto-compaction configuration. For details on the priority values of different task types, see [Lock priority](../api-reference/tasks.md#lock-priority).
 
 The Coordinator compacts segments from newest to oldest. In the auto-compaction configuration, you can set a time period, relative to the end time of the most recent segment, for segments that should not be compacted. Assign this value to `skipOffsetFromLatest`. Note that this offset is not relative to the current time but to the latest segment time. For example, if you want to skip over segments from five days prior to the end time of the most recent segment, assign `"skipOffsetFromLatest": "P5D"`.
 
@@ -152,7 +152,7 @@ After the Coordinator has initiated auto-compaction, you can view compaction sta
 
 In the web console, the Datasources view displays auto-compaction statistics. The Tasks view shows the task information for compaction tasks that were triggered by the automatic compaction system.
 
-To get statistics by API, send a [`GET` request](../operations/api-reference.md#automatic-compaction-status) to `/druid/coordinator/v1/compaction/status`. To filter the results to a particular datasource, pass the datasource name as a query parameter to the request—for example, `/druid/coordinator/v1/compaction/status?dataSource=wikipedia`.
+To get statistics by API, send a [`GET` request](../api-reference/api-reference.md#automatic-compaction-status) to `/druid/coordinator/v1/compaction/status`. To filter the results to a particular datasource, pass the datasource name as a query parameter to the request—for example, `/druid/coordinator/v1/compaction/status?dataSource=wikipedia`.
 
 ## Examples
 

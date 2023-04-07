@@ -25,7 +25,7 @@ sidebar_label: JDBC connector
 
 Redirecting you to the JDBC driver API...
 <head>
-<script>window.location.replace("https://druid.apache.org/docs/latest/querying/sql-jdbc.html")</script>
+<script>window.location.replace("https://druid.apache.org/docs/latest/api-reference/sql-jdbc.html")</script>
 </head>
-<a href="https://druid.apache.org/docs/latest/querying/sql-jdbc.html">Click here if you are not redirected.</a>
+<a href="https://druid.apache.org/docs/latest/api-reference/sql-jdbc.html">Click here if you are not redirected.</a>
 

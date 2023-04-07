@@ -38,7 +38,7 @@ and at least one worker task. As an experimental feature, the MSQ task engine al
 batch tasks. The behavior and result format of plain SELECT (without INSERT or REPLACE) is subject to change.
 
 You can execute SQL statements using the MSQ task engine through the **Query** view in the [web
-console](../operations/web-console.md) or through the [`/druid/v2/sql/task` API](api.md).
+console](../operations/web-console.md) or through the [`/druid/v2/sql/task` API](../api-reference/api.md).
 
 For more details on how SQL queries are executed using the MSQ task engine, see [multi-stage query
 tasks](#multi-stage-query-tasks).
@@ -215,7 +215,7 @@ For an example, see [INSERT with rollup example](examples.md#insert-with-rollup)
 
 ### Execution flow
 
-When you execute a SQL statement using the task endpoint [`/druid/v2/sql/task`](api.md#submit-a-query), the following
+When you execute a SQL statement using the task endpoint [`/druid/v2/sql/task`](../api-reference/api.md#submit-a-query), the following
 happens:
 
 1. The Broker plans your SQL query into a native query, as usual.

@@ -5,6 +5,26 @@
     "previous": "Previous",
     "tagline": "A fast analytical database",
     "docs": {
+      "api-reference/api-reference": {
+        "title": "Druid API endpoints reference",
+        "sidebar_label": "API endpoints reference"
+      },
+      "api-reference/api": {
+        "title": "SQL-based ingestion and multi-stage task engine API",
+        "sidebar_label": "MSQ task engine API"
+      },
+      "api-reference/sql-api": {
+        "title": "Druid SQL API",
+        "sidebar_label": "Druid SQL API"
+      },
+      "api-reference/sql-jdbc": {
+        "title": "JDBC driver API",
+        "sidebar_label": "JDBC driver API"
+      },
+      "api-reference/tasks": {
+        "title": "Task API",
+        "sidebar_label": "Task API"
+      },
       "comparisons/druid-vs-elasticsearch": {
         "title": "Apache Druid vs Elasticsearch"
       },
@@ -54,9 +74,6 @@
       "data-management/update": {
         "title": "Data updates"
       },
-      "dependencies/zookeeper": {
-        "title": "ZooKeeper"
-      },
       "design/architecture": {
         "title": "Design"
       },
@@ -104,6 +121,9 @@
       },
       "design/segments": {
         "title": "Segments"
+      },
+      "design/zookeeper": {
+        "title": "ZooKeeper"
       },
       "development/build": {
         "title": "Build from source"
@@ -331,19 +351,19 @@
         "sidebar_label": "Migrate from firehose"
       },
       "ingestion/native-batch-firehose": {
-        "title": "Legacy batch ingestion with firehose (Deprecated)",
+        "title": "JSON-based batch ingestion with firehose (Deprecated)",
         "sidebar_label": "Firehose (deprecated)"
       },
       "ingestion/native-batch-input-sources": {
-        "title": "Legacy batch input sources",
-        "sidebar_label": "Legacy batch input sources"
+        "title": "JSON-based batch input sources",
+        "sidebar_label": "JSON-based batch input sources"
       },
       "ingestion/native-batch-simple-task": {
-        "title": "Legacy batch simple task indexing",
-        "sidebar_label": "Legacy batch (simple)"
+        "title": "JSON-based batch simple task indexing",
+        "sidebar_label": "JSON-based batch (simple)"
       },
       "ingestion/native-batch": {
-        "title": "Legacy batch overview",
+        "title": "JSON-based batch overview",
         "sidebar_label": "Overview"
       },
       "ingestion/partitioning": {
@@ -364,19 +384,11 @@
       "ingestion/standalone-realtime": {
         "title": "Realtime Process"
       },
-      "ingestion/tasks": {
-        "title": "Task API",
-        "sidebar_label": "Task API"
-      },
       "ingestion/tranquility": {
         "title": "Tranquility"
       },
       "misc/papers-and-talks": {
         "title": "Papers"
-      },
-      "multi-stage-query/api": {
-        "title": "SQL-based ingestion and multi-stage task engine API",
-        "sidebar_label": "MSQ task engine API"
       },
       "multi-stage-query/concepts": {
         "title": "SQL-based ingestion concepts",
@@ -404,10 +416,6 @@
       },
       "operations/alerts": {
         "title": "Alerts"
-      },
-      "operations/api-reference": {
-        "title": "Druid API endpoints reference",
-        "sidebar_label": "API endpoints reference"
       },
       "operations/auth-ldap": {
         "title": "Configure LDAP authentication",
@@ -606,10 +614,6 @@
         "title": "SQL aggregation functions",
         "sidebar_label": "Aggregation functions"
       },
-      "querying/sql-api": {
-        "title": "Druid SQL API",
-        "sidebar_label": "Druid SQL API"
-      },
       "querying/sql-data-types": {
         "title": "SQL data types",
         "sidebar_label": "SQL data types"
@@ -617,10 +621,6 @@
       "querying/sql-functions": {
         "title": "All Druid SQL functions",
         "sidebar_label": "All functions"
-      },
-      "querying/sql-jdbc": {
-        "title": "JDBC driver API",
-        "sidebar_label": "JDBC driver API"
       },
       "querying/sql-json-functions": {
         "title": "SQL JSON functions",
