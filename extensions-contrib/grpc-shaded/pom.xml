@@ -162,6 +162,19 @@
             </execution>
           </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <configuration>
+            <!--
+              ~ The analysis gets confused because it doesn't understand shading.
+              -->
+             <ignoredUnusedDeclaredDependencies>
+              <ignoredUnusedDeclaredDependency>io.grpc:grpc-core:jar</ignoredUnusedDeclaredDependency>
+              <ignoredUnusedDeclaredDependency>io.grpc:grpc-netty:jar</ignoredUnusedDeclaredDependency>
+            </ignoredUnusedDeclaredDependencies>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 </project>
