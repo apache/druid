@@ -82,7 +82,6 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
         query,
         baseInput,
         sideChannels,
-        new JoinableFactoryWrapper(frameContext.joinableFactory()),
         outputChannelHolder,
         new LazyResourceHolder<>(() -> Pair.of(frameWriterFactoryHolder.get(), frameWriterFactoryHolder)),
         runningCountForLimit,

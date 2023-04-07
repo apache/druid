@@ -39,7 +39,9 @@ import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -506,6 +508,87 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
         .verifyResults();
 
+  }
+
+  @Test
+  public void testSelectLookup()
+  {
+    final RowSignature rowSignature = RowSignature.builder().add("EXPR$0", ColumnType.LONG).build();
+
+    testSelectQuery()
+        .setSql("select count(*) from lookup.lookyloo")
+        .setQueryContext(context)
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(
+                       GroupByQuery.builder()
+                                   .setDataSource(new LookupDataSource("lookyloo"))
+                                   .setInterval(querySegmentSpec(Filtration.eternity()))
+                                   .setGranularity(Granularities.ALL)
+                                   .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                                   .setContext(context)
+                                   .build())
+                   .columnMappings(new ColumnMappings(ImmutableList.of(new ColumnMapping("a0", "EXPR$0"))))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(new Object[]{4L}))
+        .verifyResults();
+  }
+
+  @Test
+  public void testJoinWithLookup()
+  {
+    final RowSignature rowSignature =
+        RowSignature.builder()
+                    .add("v", ColumnType.STRING)
+                    .add("cnt", ColumnType.LONG)
+                    .build();
+
+    testSelectQuery()
+        .setSql("SELECT lookyloo.v, COUNT(*) AS cnt\n"
+                + "FROM foo LEFT JOIN lookup.lookyloo ON foo.dim2 = lookyloo.k\n"
+                + "WHERE lookyloo.v <> 'xa'\n"
+                + "GROUP BY lookyloo.v")
+        .setQueryContext(context)
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(
+                       GroupByQuery.builder()
+                                   .setDataSource(
+                                       join(
+                                           new TableDataSource(CalciteTests.DATASOURCE1),
+                                           new LookupDataSource("lookyloo"),
+                                           "j0.",
+                                           equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
+                                           JoinType.LEFT
+                                       )
+                                   )
+                                   .setInterval(querySegmentSpec(Filtration.eternity()))
+                                   .setDimFilter(not(selector("j0.v", "xa", null)))
+                                   .setGranularity(Granularities.ALL)
+                                   .setDimensions(dimensions(new DefaultDimensionSpec("j0.v", "d0")))
+                                   .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                                   .setContext(context)
+                                   .build())
+                   .columnMappings(
+                       new ColumnMappings(
+                           ImmutableList.of(
+                               new ColumnMapping("d0", "v"),
+                               new ColumnMapping("a0", "cnt")
+                           )
+                       )
+                   )
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(
+            ImmutableList.of(
+                new Object[]{null, 3L},
+                new Object[]{"xabc", 1L}
+            )
+        )
+        .verifyResults();
   }
 
   @Test

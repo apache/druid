@@ -38,7 +38,7 @@ public class CalciteTestInjectorBuilder extends CoreInjectorBuilder
         .withEmptyProperties()
         .build());
     add(
-        new BasicTestModule(),
+        new LookylooModule(),
         new SqlAggregationModule()
     );
   }

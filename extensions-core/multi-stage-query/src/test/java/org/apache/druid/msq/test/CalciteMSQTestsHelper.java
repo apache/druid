@@ -55,7 +55,6 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
-import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
@@ -83,7 +82,6 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -109,11 +107,6 @@ public class CalciteMSQTestsHelper
 
     Module customBindings =
         binder -> {
-          final LookupReferencesManager lookupReferencesManager =
-              EasyMock.createStrictMock(LookupReferencesManager.class);
-          EasyMock.expect(lookupReferencesManager.getAllLookupNames()).andReturn(Collections.emptySet()).anyTimes();
-          EasyMock.replay(lookupReferencesManager);
-          binder.bind(LookupReferencesManager.class).toInstance(lookupReferencesManager);
           binder.bind(AppenderatorsManager.class).toProvider(() -> null);
 
           // Requirements of JoinableFactoryModule
