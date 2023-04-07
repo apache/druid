@@ -479,7 +479,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   public void testInsertFromExternalWithoutSecuritySupport()
   {
     InputSource inputSource =
-        new TestFileInputSource(ImmutableList.of(new File("testFile.csv").getAbsoluteFile()));
+        new TestFileInputSource(ImmutableList.of(new File("/tmp/foo.csv").getAbsoluteFile()));
     final ExternalDataSource externalDataSource = new ExternalDataSource(
         inputSource,
         new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0),
@@ -537,7 +537,8 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
           "TABLE(extern("
           + "inputSource => '%s',"
           + "inputFormat => '%s'))",
-          queryJsonMapper.writeValueAsString(new TestFileInputSource(ImmutableList.of(new File("testFile.csv").getAbsoluteFile()))),
+          queryJsonMapper.writeValueAsString(
+              new TestFileInputSource(ImmutableList.of(new File("/tmp/foo.csv").getAbsoluteFile()))),
           queryJsonMapper.writeValueAsString(
               new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0)
           )
