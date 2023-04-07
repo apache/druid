@@ -1698,10 +1698,10 @@ public class MSQSelectTest extends MSQTestBase
   {
     ArrayList<Object[]> expected = new ArrayList<>();
     if (useDefault) {
-      expected.add(new Object[]{null, 3L});
+      expected.add(new Object[]{"", 3L});
     } else {
-      expected.add(new Object[]{"", 1L});
       expected.add(new Object[]{null, 2L});
+      expected.add(new Object[]{"", 1L});
     }
     expected.addAll(ImmutableList.of(
         new Object[]{"a", 1L},
