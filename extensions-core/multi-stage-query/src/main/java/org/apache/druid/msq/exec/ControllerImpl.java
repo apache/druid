@@ -1447,8 +1447,6 @@ public class ControllerImpl implements Controller
                           sqlTypeNames.get(i)
                       );
                     }
-
-                    StringUtils.format("%s", row[i]);
                   }
                   retVal.add(row);
                   cursor.advance();

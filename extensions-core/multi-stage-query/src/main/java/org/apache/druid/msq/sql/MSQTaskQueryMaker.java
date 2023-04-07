@@ -112,14 +112,23 @@ public class MSQTaskQueryMaker implements QueryMaker
     Hook.QUERY_PLAN.run(druidQuery.getQuery());
     String taskId = MSQTasks.controllerTaskId(plannerContext.getSqlQueryId());
 
-    QueryContext queryContext = plannerContext.queryContext();
-    String msqMode = MultiStageQueryContext.getMSQMode(queryContext);
+    // SQL query context: context provided by the user, and potentially modified by handlers during planning.
+    // Does not directly influence task execution, but it does form the basis for the initial native query context,
+    // which *does* influence task execution.
+    final QueryContext sqlQueryContext = plannerContext.queryContext();
+
+    // Query context overrides: things that we add to the native query context prior to creating a controller task.
+    // These influence task execution.
+    final Map<String, Object> queryContextOverrides = new HashMap<>();
+
+    final String msqMode = MultiStageQueryContext.getMSQMode(sqlQueryContext);
     if (msqMode != null) {
-      MSQMode.populateDefaultQueryContext(msqMode, plannerContext.queryContextMap());
+      MSQMode.populateDefaultQueryContext(msqMode, queryContextOverrides);
+      queryContextOverrides.entrySet().removeIf(entry -> sqlQueryContext.containsKey(entry.getKey()));
     }
 
     final String ctxDestination =
-        DimensionHandlerUtils.convertObjectToString(MultiStageQueryContext.getDestination(queryContext));
+        DimensionHandlerUtils.convertObjectToString(MultiStageQueryContext.getDestination(sqlQueryContext));
 
     Object segmentGranularity;
     try {
@@ -132,7 +141,7 @@ public class MSQTaskQueryMaker implements QueryMaker
                     + "segment graularity");
     }
 
-    final int maxNumTasks = MultiStageQueryContext.getMaxNumTasks(queryContext);
+    final int maxNumTasks = MultiStageQueryContext.getMaxNumTasks(sqlQueryContext);
 
     if (maxNumTasks < 2) {
       throw new IAE(MultiStageQueryContext.CTX_MAX_NUM_TASKS
@@ -141,23 +150,13 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     // This parameter is used internally for the number of worker tasks only, so we subtract 1
     final int maxNumWorkers = maxNumTasks - 1;
-
-    final int rowsPerSegment = MultiStageQueryContext.getRowsPerSegment(
-        queryContext,
-        DEFAULT_ROWS_PER_SEGMENT
-    );
-
-    final int maxRowsInMemory = MultiStageQueryContext.getRowsInMemory(
-        queryContext,
-        DEFAULT_ROWS_IN_MEMORY
-    );
-
-    final IndexSpec indexSpec = MultiStageQueryContext.getIndexSpec(queryContext, jsonMapper);
-
-    final boolean finalizeAggregations = MultiStageQueryContext.isFinalizeAggregations(queryContext);
+    final int rowsPerSegment = MultiStageQueryContext.getRowsPerSegment(sqlQueryContext, DEFAULT_ROWS_PER_SEGMENT);
+    final int maxRowsInMemory = MultiStageQueryContext.getRowsInMemory(sqlQueryContext, DEFAULT_ROWS_IN_MEMORY);
+    final IndexSpec indexSpec = MultiStageQueryContext.getIndexSpec(sqlQueryContext, jsonMapper);
+    final boolean finalizeAggregations = MultiStageQueryContext.isFinalizeAggregations(sqlQueryContext);
 
     final List<Interval> replaceTimeChunks =
-        Optional.ofNullable(plannerContext.queryContext().get(DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS))
+        Optional.ofNullable(sqlQueryContext.get(DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS))
                 .map(
                     s -> {
                       if (s instanceof String && "all".equals(StringUtils.toLowerCase((String) s))) {
@@ -218,7 +217,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         throw new ISE("Unable to convert %s to a segment granularity", segmentGranularity);
       }
 
-      final List<String> segmentSortOrder = MultiStageQueryContext.getSortOrder(queryContext);
+      final List<String> segmentSortOrder = MultiStageQueryContext.getSortOrder(sqlQueryContext);
 
       MSQTaskQueryMakerUtils.validateSegmentSortOrder(
           segmentSortOrder,
@@ -249,13 +248,13 @@ public class MSQTaskQueryMaker implements QueryMaker
                .query(druidQuery.getQuery().withOverriddenContext(nativeQueryContextOverrides))
                .columnMappings(new ColumnMappings(columnMappings))
                .destination(destination)
-               .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(queryContext))
+               .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(sqlQueryContext))
                .tuningConfig(new MSQTuningConfig(maxNumWorkers, maxRowsInMemory, rowsPerSegment, indexSpec))
                .build();
 
     final MSQControllerTask controllerTask = new MSQControllerTask(
         taskId,
-        querySpec,
+        querySpec.withOverriddenContext(queryContextOverrides),
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(plannerContext.getSql()),
         plannerContext.queryContextMap(),
         SqlResults.Context.fromPlannerContext(plannerContext),

@@ -292,7 +292,15 @@ public class MSQWarningsTest extends MSQTestBase
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1566172800000L, 10L}))
                      .setExpectedMSQSpec(
                          MSQSpec.builder()
-                                .query(defaultQuery.withOverriddenContext(userContext))
+                                .query(
+                                    defaultQuery.withOverriddenContext(userContext)
+                                                .withOverriddenContext(
+                                                    ImmutableMap.of(
+                                                        MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED,
+                                                        -1
+                                                    )
+                                                )
+                                )
                                 .columnMappings(defaultColumnMappings)
                                 .tuningConfig(MSQTuningConfig.defaultConfig())
                                 .build())
