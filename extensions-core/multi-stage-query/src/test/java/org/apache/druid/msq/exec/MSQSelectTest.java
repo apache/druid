@@ -560,7 +560,10 @@ public class MSQSelectTest extends MSQTestBase
                                            new TableDataSource(CalciteTests.DATASOURCE1),
                                            new LookupDataSource("lookyloo"),
                                            "j0.",
-                                           equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
+                                           equalsCondition(
+                                               DruidExpression.ofColumn(ColumnType.STRING, "dim2"),
+                                               DruidExpression.ofColumn(ColumnType.STRING, "j0.k")
+                                           ),
                                            JoinType.LEFT
                                        )
                                    )

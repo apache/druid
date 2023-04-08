@@ -184,7 +184,6 @@ public class CalciteTests
   public static final Injector INJECTOR = new CalciteTestInjectorBuilder()
       .withDefaultMacroTable()
       .build();
-  public static final GlobalTableDataSource CUSTOM_TABLE = TestDataBuilder.CUSTOM_TABLE;
 
   private CalciteTests()
   {

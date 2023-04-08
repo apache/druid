@@ -85,7 +85,7 @@ public class LookupInputSliceReader implements InputSliceReader
 
                           final Iterator<Segment> segmentIterator = segments.iterator();
                           if (!segmentIterator.hasNext()) {
-                            throw new ISE("Lookup[%s] is not loaded");
+                            throw new ISE("Lookup[%s] is not loaded", lookupName);
                           }
 
                           final Segment segment = segmentIterator.next();
@@ -96,7 +96,7 @@ public class LookupInputSliceReader implements InputSliceReader
                                 segment,
                                 e -> log.warn(e, "Failed to close segment for lookup[%s]", lookupName)
                             );
-                            throw new ISE("Lookup[%s] has multiple segments; cannot read");
+                            throw new ISE("Lookup[%s] has multiple segments; cannot read", lookupName);
                           }
 
                           return Pair.of(segment, segment);
