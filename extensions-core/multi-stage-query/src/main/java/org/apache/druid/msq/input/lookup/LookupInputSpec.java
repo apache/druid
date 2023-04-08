@@ -19,6 +19,9 @@
 
 package org.apache.druid.msq.input.lookup;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.apache.druid.msq.input.InputSpec;
 
 import java.util.Objects;
@@ -30,11 +33,13 @@ public class LookupInputSpec implements InputSpec
 {
   private final String lookupName;
 
-  public LookupInputSpec(final String lookupName)
+  @JsonCreator
+  public LookupInputSpec(@JsonProperty("lookupName") final String lookupName)
   {
-    this.lookupName = lookupName;
+    this.lookupName = Preconditions.checkNotNull(lookupName, "lookupName");
   }
 
+  @JsonProperty
   public String getLookupName()
   {
     return lookupName;

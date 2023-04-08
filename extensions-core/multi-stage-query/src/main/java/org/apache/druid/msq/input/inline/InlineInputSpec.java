@@ -21,6 +21,7 @@ package org.apache.druid.msq.input.inline;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.query.InlineDataSource;
 
@@ -36,7 +37,7 @@ public class InlineInputSpec implements InputSpec
   @JsonCreator
   public InlineInputSpec(@JsonProperty("dataSource") InlineDataSource dataSource)
   {
-    this.dataSource = dataSource;
+    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
   }
 
   @JsonProperty

@@ -19,6 +19,9 @@
 
 package org.apache.druid.msq.input.inline;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.query.InlineDataSource;
 
@@ -31,11 +34,13 @@ public class InlineInputSlice implements InputSlice
 {
   private final InlineDataSource dataSource;
 
-  public InlineInputSlice(InlineDataSource dataSource)
+  @JsonCreator
+  public InlineInputSlice(@JsonProperty("dataSource") InlineDataSource dataSource)
   {
-    this.dataSource = dataSource;
+    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
   }
 
+  @JsonProperty
   public InlineDataSource getDataSource()
   {
     return dataSource;
