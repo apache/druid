@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
@@ -102,7 +103,8 @@ public class RoundRobinAssignmentTest extends CoordinatorSimulationBaseTest
     // Run 1: all segments are assigned and loaded
     runCoordinatorCycle();
     loadQueuedSegments();
-    verifyValue(Metric.ASSIGNED_COUNT, 13000L);
+    verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.DATASOURCE, DS.KOALA), 10000L);
+    verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.DATASOURCE, DS.WIKI), 3000L);
 
     for (DruidServer historical : historicals) {
       Assert.assertEquals(1300, historical.getTotalSegments());

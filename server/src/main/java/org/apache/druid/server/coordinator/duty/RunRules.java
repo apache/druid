@@ -33,6 +33,7 @@ import org.apache.druid.server.coordinator.SegmentLoader;
 import org.apache.druid.server.coordinator.SegmentStateManager;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
@@ -144,8 +145,15 @@ public class RunRules implements CoordinatorDuty
     }
 
     segmentLoader.makeAlerts();
+
+    final CoordinatorRunStats stats = segmentLoader.getStats();
+    stats.forEachRowKey(
+        (dimensionValues, statValues) ->
+            log.info("Stats for dimensions [%s]: [%s]", dimensionValues, statValues)
+    );
+
     return params.buildFromExisting()
-                 .withCoordinatorStats(segmentLoader.getStats())
+                 .withCoordinatorStats(stats)
                  .withBroadcastDatasources(broadcastDatasources)
                  .withReplicationManager(replicationThrottler)
                  .build();

@@ -125,6 +125,12 @@ public class BalanceSegments implements CoordinatorDuty
 
     loader.makeAlerts();
     stats.accumulate(loader.getStats());
+
+    stats.forEachRowKey(
+        (dimensionValues, statValues) ->
+            log.info("Stats for dimensions [%s] are [%s]", dimensionValues, statValues)
+    );
+
     return params.buildFromExisting().withCoordinatorStats(stats).build();
   }
 
@@ -145,7 +151,7 @@ public class BalanceSegments implements CoordinatorDuty
     final List<ServerHolder> decommissioningServers = partitions.get(true);
     final List<ServerHolder> activeServers = partitions.get(false);
     log.info(
-        "Balancing segments in tier [%s] with [%d] active servers, [%d] decommissioning servers",
+        "Balancing segments in tier [%s] with [%d] active servers, [%d] decommissioning servers.",
         tier,
         activeServers.size(),
         decommissioningServers.size()
@@ -259,7 +265,7 @@ public class BalanceSegments implements CoordinatorDuty
               strategy.findNewSegmentHomeBalancer(segmentToMove, eligibleDestinationServers);
 
           if (destination == null || destination.getServer().equals(source.getServer())) {
-            log.debug("Segment [%s] is 'optimally' placed.", segmentToMove.getId());
+            log.debug("Segment [%s] is already 'optimally' placed.", segmentToMove.getId());
             unmoved++;
           } else if (moveSegment(segmentToMove, source, destination, loader)) {
             moved++;
@@ -312,8 +318,8 @@ public class BalanceSegments implements CoordinatorDuty
     }
 
     log.info(
-        "Tier [%s]: Number of loaded and loading segments [%d],"
-        + " configured maxSegmentsToMove [%d], calculated maxSegmentsToMove [%d]",
+        "Tier [%s]: Number of loaded + loading segments=[%d],"
+        + " configured maxSegmentsToMove=[%d], calculated maxSegmentsToMove=[%d]",
         tier,
         numSegmentsInTier,
         configuredMaxSegmentsToMove,

@@ -149,8 +149,10 @@ public class UnloadUnusedSegments implements CoordinatorDuty
           }
         }
       }
-      // TODO: this could have the dimension datasource with it
-      stats.addForTier(Stats.Segments.UNNEEDED, server.getTier(), totalUnneededCount);
+
+      if (totalUnneededCount > 0) {
+        stats.addSegmentStat(Stats.Segments.UNNEEDED, server.getTier(), dataSource.getName(), totalUnneededCount);
+      }
     }
   }
 }

@@ -20,14 +20,11 @@
 package org.apache.druid.server.coordinator.stats;
 
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.utils.CollectionUtils;
 
-import java.util.Collections;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
+import java.util.function.BiConsumer;
 
 /**
  * Contains statistics tracked during a single coordinator run or the runtime of
@@ -35,19 +32,31 @@ import java.util.Objects;
  */
 public class CoordinatorRunStats
 {
-  private static final RowKey EMPTY_ROW_KEY = new RowKey(Collections.emptyMap());
-
   private final Map<RowKey, Object2LongOpenHashMap<CoordinatorStat>> allStats = new HashMap<>();
 
-  /**
-   * @param statName the name of the statistics
-   * @param tier     the tier
-   * @return the value for the statistics {@code statName} under {@code tier} tier
-   * @throws NullPointerException if {@code statName} is not found
-   */
-  public long getTieredStat(CoordinatorStat statName, String tier)
+  public long getTieredStat(CoordinatorStat stat, String tier)
   {
-    return get(statName, RowKey.builder().add(Dimension.TIER, tier).build());
+    return get(stat, RowKey.builder().add(Dimension.TIER, tier).build());
+  }
+
+  public long getSegmentStat(CoordinatorStat stat, String tier, String datasource)
+  {
+    return get(stat, RowKey.builder().add(Dimension.DATASOURCE, datasource).add(Dimension.TIER, tier).build());
+  }
+
+  public long getDataSourceStat(CoordinatorStat stat, String dataSource)
+  {
+    return get(stat, RowKey.builder().add(Dimension.DATASOURCE, dataSource).build());
+  }
+
+  public long getDutyStat(CoordinatorStat stat, String duty)
+  {
+    return get(stat, RowKey.builder().add(Dimension.DUTY, duty).build());
+  }
+
+  public long get(CoordinatorStat stat)
+  {
+    return get(stat, RowKey.EMPTY);
   }
 
   public void forEachStat(StatHandler handler)
@@ -56,9 +65,19 @@ public class CoordinatorRunStats
         (rowKey, stats) -> stats.object2LongEntrySet().fastForEach(
             stat -> handler.handle(
                 stat.getKey(),
-                CollectionUtils.mapKeys(rowKey.values, Dimension::dimensionName),
+                CollectionUtils.mapKeys(rowKey.getValues(), Dimension::dimensionName),
                 stat.getLongValue()
             )
+        )
+    );
+  }
+
+  public void forEachRowKey(BiConsumer<Map<String, String>, Map<CoordinatorStat, Long>> consumer)
+  {
+    allStats.forEach(
+        (rowKey, stats) -> consumer.accept(
+            CollectionUtils.mapKeys(rowKey.getValues(), Dimension::dimensionName),
+            stats
         )
     );
   }
@@ -73,57 +92,9 @@ public class CoordinatorRunStats
     return false;
   }
 
-  public long getDataSourceStat(CoordinatorStat statName, String dataSource)
-  {
-    return get(statName, RowKey.builder().add(Dimension.DATASOURCE, dataSource).build());
-  }
-
-  private long get(CoordinatorStat stat, RowKey rowKey)
-  {
-    Object2LongOpenHashMap<CoordinatorStat> statValues = allStats.get(rowKey);
-    return statValues == null ? 0 : statValues.getLong(stat);
-  }
-
-  public long getDutyStat(CoordinatorStat statName, String duty)
-  {
-    return get(statName, RowKey.builder().add(Dimension.DUTY, duty).build());
-  }
-
-  public long get(CoordinatorStat statName)
-  {
-    return get(statName, EMPTY_ROW_KEY);
-  }
-
-  public void accumulateMaxTieredStat(CoordinatorStat stat, final String tier, final long value)
-  {
-    final RowKey rowKey = RowKey.builder().add(Dimension.TIER, tier).build();
-    allStats.computeIfAbsent(rowKey, d -> new Object2LongOpenHashMap<>())
-            .mergeLong(stat, value, Math::max);
-  }
-
-  public void accumulate(final CoordinatorRunStats stats)
-  {
-    stats.allStats.forEach(
-        (rowKey, otherStatValues) -> {
-          Object2LongOpenHashMap<CoordinatorStat> statValues =
-              this.allStats.computeIfAbsent(rowKey, d -> new Object2LongOpenHashMap<>());
-
-          otherStatValues.object2LongEntrySet().fastForEach(
-              stat -> statValues.addTo(stat.getKey(), stat.getLongValue())
-          );
-        }
-    );
-  }
-
-  private void add(long value, CoordinatorStat stat, RowKey rowKey)
-  {
-    allStats.computeIfAbsent(rowKey, d -> new Object2LongOpenHashMap<>())
-            .addTo(stat, value);
-  }
-
   public void add(CoordinatorStat stat, long value)
   {
-    add(value, stat, EMPTY_ROW_KEY);
+    add(value, stat, RowKey.EMPTY);
   }
 
   public void addForTier(CoordinatorStat stat, String tier, long value)
@@ -147,95 +118,49 @@ public class CoordinatorRunStats
   }
 
   public void addSegmentStat(
-      long value,
       CoordinatorStat stat,
-      String server,
       String tier,
-      String datasource
+      String datasource,
+      long value
   )
   {
-    RowKey dims = RowKey.builder()
-                        .add(Dimension.TIER, tier).add(Dimension.SERVER, server)
-                        .add(Dimension.DATASOURCE, datasource).build();
-    add(value, stat, dims);
+    RowKey rowKey = RowKey.builder()
+                          .add(Dimension.TIER, tier)
+                          .add(Dimension.DATASOURCE, datasource).build();
+    add(value, stat, rowKey);
   }
 
-  /**
-   * Represents a row key against which stats are reported.
-   */
-  private static class RowKey
+  public void accumulateMaxTieredStat(CoordinatorStat stat, final String tier, final long value)
   {
-    final Map<Dimension, String> values;
-    final int hashCode;
-
-    RowKey(Map<Dimension, String> values)
-    {
-      this.values = values;
-      this.hashCode = Objects.hash(values);
-    }
-
-    static RowKeyBuilder builder()
-    {
-      return new RowKeyBuilder();
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      RowKey that = (RowKey) o;
-      return Objects.equals(values, that.values);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return hashCode;
-    }
+    final RowKey rowKey = RowKey.builder().add(Dimension.TIER, tier).build();
+    allStats.computeIfAbsent(rowKey, d -> new Object2LongOpenHashMap<>())
+            .mergeLong(stat, value, Math::max);
   }
 
-  private static class RowKeyBuilder
+  public void accumulate(final CoordinatorRunStats stats)
   {
-    final Map<Dimension, String> values = new EnumMap<>(Dimension.class);
+    stats.allStats.forEach(
+        (rowKey, otherStatValues) -> {
+          Object2LongOpenHashMap<CoordinatorStat> statValues =
+              this.allStats.computeIfAbsent(rowKey, d -> new Object2LongOpenHashMap<>());
 
-    RowKeyBuilder add(Dimension dimension, String value)
-    {
-      values.put(dimension, value);
-      return this;
-    }
-
-    RowKey build()
-    {
-      return new RowKey(values);
-    }
+          otherStatValues.object2LongEntrySet().fastForEach(
+              stat -> statValues.addTo(stat.getKey(), stat.getLongValue())
+          );
+        }
+    );
   }
 
-  /**
-   * Dimensions used while reporting coordinator run stats.
-   */
-  private enum Dimension
+  private long get(CoordinatorStat stat, RowKey rowKey)
   {
-    TIER(DruidMetrics.TIER),
-    DATASOURCE(DruidMetrics.DATASOURCE),
-    DUTY(DruidMetrics.DUTY),
-    SERVER(DruidMetrics.SERVER);
+    Object2LongOpenHashMap<CoordinatorStat> statValues = allStats.get(rowKey);
+    return statValues == null ? 0 : statValues.getLong(stat);
+  }
 
-    private final String dimName;
-
-    Dimension(String name)
-    {
-      this.dimName = name;
-    }
-
-    private String dimensionName()
-    {
-      return dimName;
-    }
+  private void add(long value, CoordinatorStat stat, RowKey rowKey)
+  {
+    allStats.computeIfAbsent(rowKey, d -> new Object2LongOpenHashMap<>())
+            .addTo(stat, value);
   }
 
   public interface StatHandler

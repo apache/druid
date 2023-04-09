@@ -71,7 +71,7 @@ public class UnloadUnusedSegmentsTest
   private List<DataSegment> segmentsForRealtime;
   private List<ImmutableDruidDataSource> dataSources;
   private List<ImmutableDruidDataSource> dataSourcesForRealtime;
-  private Set<String> broadcastDatasourceNames;
+  private final String broadcastDatasource = "broadcastDatasource";
   private MetadataRuleManager databaseRuleManager;
 
   @Before
@@ -157,7 +157,6 @@ public class UnloadUnusedSegmentsTest
         Collections.singleton(segment2)
     );
 
-    broadcastDatasourceNames = Collections.singleton("broadcastDatasource");
     final ImmutableDruidDataSource broadcastDatasource = new ImmutableDruidDataSource(
         "broadcastDatasource",
         Collections.emptyMap(),
@@ -254,12 +253,8 @@ public class UnloadUnusedSegmentsTest
                     "tier2",
                     new ServerHolder(historicalServerTier2, historicalTier2Peon, false)
                 )
-                .withBrokers(
-                    new ServerHolder(brokerServer, brokerPeon, false)
-                )
-                .withRealtimes(
-                    new ServerHolder(indexerServer, indexerPeon, false)
-                )
+                .withBrokers(new ServerHolder(brokerServer, brokerPeon, false))
+                .withRealtimes(new ServerHolder(indexerServer, indexerPeon, false))
                 .build()
         )
         .withLoadManagementPeons(
@@ -271,7 +266,7 @@ public class UnloadUnusedSegmentsTest
             )
         )
         .withUsedSegmentsInTest(usedSegments)
-        .withBroadcastDatasources(broadcastDatasourceNames)
+        .withBroadcastDatasources(Collections.singleton(broadcastDatasource))
         .withDatabaseRuleManager(databaseRuleManager)
         .build();
 
@@ -279,8 +274,11 @@ public class UnloadUnusedSegmentsTest
     CoordinatorRunStats stats = params.getCoordinatorStats();
 
     // We drop segment1 and broadcast1 from all servers, realtimeSegment is not dropped by the indexer
-    Assert.assertEquals(5, stats.getTieredStat(Stats.Segments.UNNEEDED, DruidServer.DEFAULT_TIER));
-    Assert.assertEquals(2, stats.getTieredStat(Stats.Segments.UNNEEDED, "tier2"));
+    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.UNNEEDED, DruidServer.DEFAULT_TIER, segment1.getDataSource()));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.UNNEEDED, "tier2", segment1.getDataSource()));
+
+    Assert.assertEquals(3L, stats.getSegmentStat(Stats.Segments.UNNEEDED, DruidServer.DEFAULT_TIER, broadcastDatasource));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.UNNEEDED, "tier2", broadcastDatasource));
   }
 
   private static void mockDruidServer(
