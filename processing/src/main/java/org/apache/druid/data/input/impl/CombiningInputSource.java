@@ -60,7 +60,7 @@ public class CombiningInputSource extends AbstractInputSource implements Splitta
   {
     Preconditions.checkArgument(
         delegates != null && !delegates.isEmpty(),
-        "Must specify atleast one delegate inputSource"
+        "Must specify at least one delegate inputSource"
     );
     this.delegates = delegates;
   }
