@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
-import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidClusterBuilder;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -35,6 +34,8 @@ import org.apache.druid.server.coordinator.SegmentLoader;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.SegmentStateManager;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.assertj.core.util.Sets;
@@ -279,7 +280,7 @@ public class BroadcastDistributionRuleTest
     final ForeverBroadcastDistributionRule rule =
         new ForeverBroadcastDistributionRule();
 
-    CoordinatorStats stats = runRuleAndGetStats(
+    CoordinatorRunStats stats = runRuleAndGetStats(
         rule,
         smallSegment,
         makeCoordinartorRuntimeParams(
@@ -293,8 +294,7 @@ public class BroadcastDistributionRuleTest
         )
     );
 
-    Assert.assertEquals(5L, stats.getDataSourceStat(CoordinatorStats.BROADCAST_LOADS, DS_SMALL));
-    Assert.assertFalse(stats.hasPerTierStats());
+    Assert.assertEquals(5L, stats.getDataSourceStat(Stats.Segments.ASSIGNED_BROADCAST, DS_SMALL));
 
     Assert.assertTrue(
         holdersOfLargeSegments.stream()
@@ -341,7 +341,7 @@ public class BroadcastDistributionRuleTest
     final ForeverBroadcastDistributionRule rule =
         new ForeverBroadcastDistributionRule();
 
-    CoordinatorStats stats = runRuleAndGetStats(
+    CoordinatorRunStats stats = runRuleAndGetStats(
         rule,
         smallSegment,
         makeCoordinartorRuntimeParams(
@@ -352,8 +352,7 @@ public class BroadcastDistributionRuleTest
         )
     );
 
-    Assert.assertEquals(1L, stats.getDataSourceStat(CoordinatorStats.BROADCAST_LOADS, DS_SMALL));
-    Assert.assertFalse(stats.hasPerTierStats());
+    Assert.assertEquals(1L, stats.getDataSourceStat(Stats.Segments.ASSIGNED_BROADCAST, DS_SMALL));
 
     Assert.assertEquals(1, activeServer.getPeon().getSegmentsToLoad().size());
     Assert.assertEquals(1, decommissioningServer1.getPeon().getSegmentsToDrop().size());
@@ -365,7 +364,7 @@ public class BroadcastDistributionRuleTest
   {
     final ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule();
 
-    CoordinatorStats stats = runRuleAndGetStats(
+    CoordinatorRunStats stats = runRuleAndGetStats(
         rule,
         smallSegment,
         makeCoordinartorRuntimeParams(
@@ -379,8 +378,7 @@ public class BroadcastDistributionRuleTest
         )
     );
 
-    Assert.assertEquals(5L, stats.getDataSourceStat(CoordinatorStats.BROADCAST_LOADS, DS_SMALL));
-    Assert.assertFalse(stats.hasPerTierStats());
+    Assert.assertEquals(5L, stats.getDataSourceStat(Stats.Segments.ASSIGNED_BROADCAST, DS_SMALL));
 
     Assert.assertTrue(
         holdersOfLargeSegments.stream()
@@ -400,7 +398,7 @@ public class BroadcastDistributionRuleTest
   {
     final ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule();
 
-    CoordinatorStats stats = runRuleAndGetStats(
+    CoordinatorRunStats stats = runRuleAndGetStats(
         rule,
         smallSegment,
         makeCoordinartorRuntimeParams(
@@ -414,9 +412,7 @@ public class BroadcastDistributionRuleTest
         )
     );
 
-    Assert.assertEquals(5L, stats.getDataSourceStat(CoordinatorStats.BROADCAST_LOADS, DS_SMALL));
-    Assert.assertFalse(stats.hasPerTierStats());
-
+    Assert.assertEquals(5L, stats.getDataSourceStat(Stats.Segments.ASSIGNED_BROADCAST, DS_SMALL));
     Assert.assertTrue(
         druidCluster
             .getAllServers()
@@ -425,7 +421,7 @@ public class BroadcastDistributionRuleTest
     );
   }
 
-  private CoordinatorStats runRuleAndGetStats(
+  private CoordinatorRunStats runRuleAndGetStats(
       Rule rule,
       DataSegment segment,
       DruidCoordinatorRuntimeParams params

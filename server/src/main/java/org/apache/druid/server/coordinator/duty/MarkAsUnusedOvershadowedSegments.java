@@ -22,11 +22,12 @@ package org.apache.druid.server.coordinator.duty;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -63,7 +64,7 @@ public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
       return params;
     }
 
-    CoordinatorStats stats = new CoordinatorStats();
+    CoordinatorRunStats stats = new CoordinatorRunStats();
 
     DruidCluster cluster = params.getDruidCluster();
     final Map<String, SegmentTimeline> timelines = new HashMap<>();
@@ -88,10 +89,14 @@ public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
       if (timeline != null && timeline.isOvershadowed(dataSegment)) {
         datasourceToUnusedSegments.computeIfAbsent(dataSegment.getDataSource(), ds -> new HashSet<>())
                                   .add(dataSegment.getId());
-        stats.addToGlobalStat(CoordinatorStats.OVERSHADOWED_COUNT, 1);
       }
     }
-    datasourceToUnusedSegments.forEach(coordinator::markSegmentsAsUnused);
+    datasourceToUnusedSegments.forEach(
+        (datasource, unusedSegments) -> {
+          stats.addForDatasource(Stats.Segments.OVERSHADOWED, datasource, unusedSegments.size());
+          coordinator.markSegmentsAsUnused(datasource, unusedSegments);
+        }
+    );
 
     return params.buildFromExisting().withCoordinatorStats(stats).build();
   }

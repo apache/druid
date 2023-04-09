@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator;
 
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.ArrayList;
@@ -68,7 +69,7 @@ public class RandomBalancerStrategy implements BalancerStrategy
   }
 
   @Override
-  public void emitStats(String tier, CoordinatorStats stats, List<ServerHolder> serverHolderList)
+  public void emitStats(String tier, CoordinatorRunStats stats, List<ServerHolder> serverHolderList)
   {
   }
 }

@@ -17,33 +17,52 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.duty;
-
-import com.google.common.base.Preconditions;
-import org.joda.time.Interval;
+package org.apache.druid.server.coordinator.stats;
 
 /**
- * Util class used by {@link CompactSegments} and {@link CompactionSegmentSearchPolicy}.
+ * A coordinator statistic, which may or may not be emitted as a metric.
  */
-class SegmentCompactionUtil
+public class CoordinatorStat
 {
-  /**
-   * Removes {@code smallInterval} from {@code largeInterval}.  The end of both intervals should be same.
-   *
-   * @return an interval of {@code largeInterval} - {@code smallInterval}.
-   */
-  static Interval removeIntervalFromEnd(Interval largeInterval, Interval smallInterval)
+  private final String metricName;
+  private final String shortName;
+
+  public CoordinatorStat(String shortStatName)
   {
-    Preconditions.checkArgument(
-        largeInterval.getEnd().equals(smallInterval.getEnd()),
-        "end should be same. largeInterval[%s] smallInterval[%s]",
-        largeInterval,
-        smallInterval
-    );
-    return new Interval(largeInterval.getStart(), smallInterval.getStart());
+    this(shortStatName, null);
   }
 
-  private SegmentCompactionUtil()
+  public CoordinatorStat(String shortStatName, String metricName)
   {
+    this.metricName = metricName;
+    this.shortName = shortStatName;
   }
+
+  /**
+   * Name of the metric emitted for this stat, if any.
+   */
+  public String getMetricName()
+  {
+    return metricName;
+  }
+
+  public String getShortName()
+  {
+    return shortName;
+  }
+
+  /**
+   * Whether this statistic should be emitted as a metric.
+   */
+  public boolean shouldEmit()
+  {
+    return metricName != null;
+  }
+
+  @Override
+  public String toString()
+  {
+    return shortName;
+  }
+
 }

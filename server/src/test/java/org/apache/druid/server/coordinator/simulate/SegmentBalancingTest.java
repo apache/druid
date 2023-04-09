@@ -152,7 +152,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     verifyValue(
         Metric.LOAD_QUEUE_COUNT,
         filter(DruidMetrics.SERVER, historicalT12.getName()),
-        5
+        5L
     );
 
     runCoordinatorCycle();
@@ -162,7 +162,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     verifyValue(
         Metric.LOAD_QUEUE_COUNT,
         filter(DruidMetrics.SERVER, historicalT12.getName()),
-        5
+        5L
     );
 
     // Finish and verify balancing
@@ -188,7 +188,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     // Run 1: All segments are assigned to the first historical
     runCoordinatorCycle();
     verifyValue(Metric.ASSIGNED_COUNT, 10L);
-    verifyValue(Metric.LOAD_QUEUE_COUNT, filter(DruidMetrics.SERVER, historicalT11.getName()), 10);
+    verifyValue(Metric.LOAD_QUEUE_COUNT, filter(DruidMetrics.SERVER, historicalT11.getName()), 10L);
 
     // Run 2: Add new historical, some segments in the queue will be moved
     addServer(historicalT12);
@@ -197,8 +197,8 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     verifyValue(Metric.CANCELLED_LOADS, 5L);
     verifyValue(Metric.MOVED_COUNT, 5L);
 
-    verifyValue(Metric.LOAD_QUEUE_COUNT, filter(DruidMetrics.SERVER, historicalT11.getName()), 5);
-    verifyValue(Metric.LOAD_QUEUE_COUNT, filter(DruidMetrics.SERVER, historicalT12.getName()), 5);
+    verifyValue(Metric.LOAD_QUEUE_COUNT, filter(DruidMetrics.SERVER, historicalT11.getName()), 5L);
+    verifyValue(Metric.LOAD_QUEUE_COUNT, filter(DruidMetrics.SERVER, historicalT12.getName()), 5L);
 
     // Complete loading the segments
     loadQueuedSegments();

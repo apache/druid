@@ -21,6 +21,8 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.HashSet;
@@ -43,7 +45,7 @@ public class SegmentLoader
 
   private final SegmentStateManager stateManager;
   private final DruidCluster cluster;
-  private final CoordinatorStats stats = new CoordinatorStats();
+  private final CoordinatorRunStats stats = new CoordinatorRunStats();
   private final SegmentReplicantLookup replicantLookup;
   private final ReplicationThrottler replicationThrottler;
   private final RoundRobinServerSelector serverSelector;
@@ -71,7 +73,7 @@ public class SegmentLoader
     this.serverSelector = useRoundRobinAssigment ? new RoundRobinServerSelector(cluster) : null;
   }
 
-  public CoordinatorStats getStats()
+  public CoordinatorRunStats getStats()
   {
     return stats;
   }
@@ -79,7 +81,7 @@ public class SegmentLoader
   public void makeAlerts()
   {
     if (!emptyTiers.isEmpty()) {
-      log.makeAlert("Tiers %s have no servers! Check your cluster configuration.", emptyTiers).emit();
+      log.makeAlert("Tiers [%s] have no servers! Check your cluster configuration.", emptyTiers).emit();
     }
   }
 
@@ -97,7 +99,7 @@ public class SegmentLoader
     if (serverA.isLoadingSegment(segment)) {
       // Cancel the load on serverA and load on serverB instead
       if (serverA.cancelOperation(SegmentAction.LOAD, segment)) {
-        stats.addToTieredStat(CoordinatorStats.CANCELLED_LOADS, tier, 1);
+        stats.addForTier(Stats.Segments.CANCELLED_LOADS, tier, 1);
         int loadedCountOnTier = replicantLookup.getServedReplicas(segment.getId(), tier);
         return stateManager.loadSegment(segment, serverB, loadedCountOnTier < 1, replicationThrottler);
       }
@@ -176,7 +178,7 @@ public class SegmentLoader
     if (shouldCancelMoves) {
       int cancelledMoves =
           cancelOperations(SegmentAction.MOVE_TO, movingReplicas, segment, segmentStatus);
-      stats.addToTieredStat(CoordinatorStats.CANCELLED_MOVES, tier, cancelledMoves);
+      stats.addForTier(Stats.Segments.CANCELLED_MOVES, tier, cancelledMoves);
     }
 
     // Cancel drops and queue loads if the projected count is below the requirement
@@ -184,7 +186,7 @@ public class SegmentLoader
       int replicaDeficit = requiredReplicas - projectedReplicas;
       int cancelledDrops =
           cancelOperations(SegmentAction.DROP, replicaDeficit, segment, segmentStatus);
-      stats.addToTieredStat(CoordinatorStats.CANCELLED_DROPS, tier, cancelledDrops);
+      stats.addForTier(Stats.Segments.CANCELLED_DROPS, tier, cancelledDrops);
 
       // Cancelled drops can be counted as loaded replicas, thus reducing deficit
       int numReplicasToLoad = replicaDeficit - cancelledDrops;
@@ -192,8 +194,8 @@ public class SegmentLoader
         boolean isFirstLoadOnTier = replicantLookup.getServedReplicas(segment.getId(), tier)
                                     + cancelledDrops < 1;
         int numLoadsQueued = loadReplicas(numReplicasToLoad, segment, tier, segmentStatus, isFirstLoadOnTier);
-        stats.addToTieredStat(CoordinatorStats.ASSIGNED_COUNT, tier, numLoadsQueued);
-        stats.addToDataSourceStat(CoordinatorStats.UNDER_REPLICATED_COUNT, segment.getDataSource(), numReplicasToLoad);
+        stats.addForTier(Stats.Segments.ASSIGNED, tier, numLoadsQueued);
+        stats.addForDatasource(Stats.Segments.UNDER_REPLICATED, segment.getDataSource(), numReplicasToLoad);
       }
     }
 
@@ -202,12 +204,12 @@ public class SegmentLoader
       int replicaSurplus = projectedReplicas - requiredReplicas;
       int cancelledLoads =
           cancelOperations(SegmentAction.LOAD, replicaSurplus, segment, segmentStatus);
-      stats.addToTieredStat(CoordinatorStats.CANCELLED_LOADS, tier, cancelledLoads);
+      stats.addForTier(Stats.Segments.CANCELLED_LOADS, tier, cancelledLoads);
 
       int numReplicasToDrop = Math.min(replicaSurplus - cancelledLoads, maxReplicasToDrop);
       if (numReplicasToDrop > 0) {
         int dropsQueuedOnTier = dropReplicas(numReplicasToDrop, segment, tier, segmentStatus);
-        stats.addToTieredStat(CoordinatorStats.DROPPED_COUNT, tier, dropsQueuedOnTier);
+        stats.addForTier(Stats.Segments.DROPPED, tier, dropsQueuedOnTier);
         return dropsQueuedOnTier;
       }
     }
@@ -218,12 +220,12 @@ public class SegmentLoader
   private void reportTierCapacityStats(DataSegment segment, int requiredReplicas, String tier)
   {
     stats.accumulateMaxTieredStat(
-        CoordinatorStats.MAX_REPLICATION_FACTOR,
+        Stats.Tier.REPLICATION_FACTOR,
         tier,
         requiredReplicas
     );
-    stats.addToTieredStat(
-        CoordinatorStats.REQUIRED_CAPACITY,
+    stats.addForTier(
+        Stats.Tier.REQUIRED_CAPACITY,
         tier,
         segment.getSize() * requiredReplicas
     );
@@ -251,10 +253,10 @@ public class SegmentLoader
     }
 
     if (assignedCount > 0) {
-      stats.addToDataSourceStat(CoordinatorStats.BROADCAST_LOADS, segment.getDataSource(), assignedCount);
+      stats.addForDatasource(Stats.Segments.ASSIGNED_BROADCAST, segment.getDataSource(), assignedCount);
     }
     if (droppedCount > 0) {
-      stats.addToDataSourceStat(CoordinatorStats.BROADCAST_DROPS, segment.getDataSource(), droppedCount);
+      stats.addForDatasource(Stats.Segments.DROPPED_BROADCAST, segment.getDataSource(), droppedCount);
     }
   }
 
@@ -264,7 +266,7 @@ public class SegmentLoader
   public void deleteSegment(DataSegment segment)
   {
     stateManager.deleteSegment(segment);
-    stats.addToGlobalStat(CoordinatorStats.DELETED_COUNT, 1);
+    stats.add(Stats.Segments.DELETED, 1);
   }
 
   /**
@@ -352,9 +354,9 @@ public class SegmentLoader
     }
 
     if (numToDrop > numDropsQueued) {
-      stats.addToTieredStat(CoordinatorStats.DROP_SKIP_COUNT, tier, numToDrop - numDropsQueued);
+      stats.addForTier(Stats.Segments.DROP_SKIPPED, tier, numToDrop - numDropsQueued);
       log.debug(
-          "Queued only %d of %d drops of segment [%s] on tier [%s] due to failures.",
+          "Queued only [%d] of [%d] drops of segment [%s] on tier [%s] due to failures.",
           numDropsQueued,
           numToDrop,
           segment.getId(),
@@ -415,9 +417,9 @@ public class SegmentLoader
     }
 
     if (numToLoad > numLoadsQueued) {
-      stats.addToTieredStat(CoordinatorStats.ASSIGN_SKIP_COUNT, tier, numToLoad - numLoadsQueued);
+      stats.addForTier(Stats.Segments.ASSIGN_SKIPPED, tier, numToLoad - numLoadsQueued);
       log.debug(
-          "Queued only %d of %d loads of segment [%s] on tier [%s] due to throttling or failures.",
+          "Queued only [%d] of [%d] loads of segment [%s] on tier [%s] due to throttling or failures.",
           numLoadsQueued,
           numToLoad,
           segment.getId(),

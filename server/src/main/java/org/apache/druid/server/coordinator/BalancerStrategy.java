@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator;
 
 import org.apache.druid.server.coordinator.duty.BalanceSegments;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -190,5 +191,5 @@ public interface BalancerStrategy
    * @param stats stats object to add balancing strategy stats to
    * @param serverHolderList servers in tier being balanced
    */
-  void emitStats(String tier, CoordinatorStats stats, List<ServerHolder> serverHolderList);
+  void emitStats(String tier, CoordinatorRunStats stats, List<ServerHolder> serverHolderList);
 }

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.client.indexing.ClientCompactionTaskDimensionsSpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
@@ -39,10 +40,12 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CompactionStatistics;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
-import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.CoordinatorStat;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
@@ -58,22 +61,6 @@ import java.util.stream.Collectors;
 
 public class CompactSegments implements CoordinatorCustomDuty
 {
-  static final String COMPACTION_TASK_COUNT = "compactTaskCount";
-  static final String AVAILABLE_COMPACTION_TASK_SLOT = "availableCompactionTaskSlot";
-  static final String MAX_COMPACTION_TASK_SLOT = "maxCompactionTaskSlot";
-
-  static final String TOTAL_SIZE_OF_SEGMENTS_SKIPPED = "segmentSizeSkippedCompact";
-  static final String TOTAL_COUNT_OF_SEGMENTS_SKIPPED = "segmentCountSkippedCompact";
-  static final String TOTAL_INTERVAL_OF_SEGMENTS_SKIPPED = "segmentIntervalSkippedCompact";
-
-  static final String TOTAL_SIZE_OF_SEGMENTS_AWAITING = "segmentSizeWaitCompact";
-  static final String TOTAL_COUNT_OF_SEGMENTS_AWAITING = "segmentCountWaitCompact";
-  static final String TOTAL_INTERVAL_OF_SEGMENTS_AWAITING = "segmentIntervalWaitCompact";
-
-  static final String TOTAL_SIZE_OF_SEGMENTS_COMPACTED = "segmentSizeCompacted";
-  static final String TOTAL_COUNT_OF_SEGMENTS_COMPACTED = "segmentCountCompacted";
-  static final String TOTAL_INTERVAL_OF_SEGMENTS_COMPACTED = "segmentIntervalCompacted";
-
   /** Must be synced with org.apache.druid.indexing.common.task.CompactionTask.TYPE. */
   public static final String COMPACTION_TASK_TYPE = "compact";
   /** Must be synced with org.apache.druid.indexing.common.task.Tasks.STORE_COMPACTION_STATE_KEY */
@@ -123,7 +110,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     LOG.info("Compact segments");
 
     final CoordinatorCompactionConfig dynamicConfig = params.getCoordinatorCompactionConfig();
-    final CoordinatorStats stats = new CoordinatorStats();
+    final CoordinatorRunStats stats = new CoordinatorRunStats();
     List<DataSourceCompactionConfig> compactionConfigList = dynamicConfig.getCompactionConfigs();
     if (dynamicConfig.getMaxCompactionTaskSlots() > 0) {
       Map<String, SegmentTimeline> dataSources =
@@ -222,8 +209,8 @@ public class CompactSegments implements CoordinatorCustomDuty
             numAvailableCompactionTaskSlots,
             compactionTaskCapacity
         );
-        stats.addToGlobalStat(AVAILABLE_COMPACTION_TASK_SLOT, numAvailableCompactionTaskSlots);
-        stats.addToGlobalStat(MAX_COMPACTION_TASK_SLOT, compactionTaskCapacity);
+        stats.add(Stats.Compaction.AVAILABLE_SLOTS, numAvailableCompactionTaskSlots);
+        stats.add(Stats.Compaction.MAX_SLOTS, compactionTaskCapacity);
         final Map<String, AutoCompactionSnapshot.Builder> currentRunAutoCompactionSnapshotBuilders = new HashMap<>();
         if (numAvailableCompactionTaskSlots > 0) {
           stats.accumulate(
@@ -345,7 +332,7 @@ public class CompactSegments implements CoordinatorCustomDuty
         .collect(Collectors.toList());
   }
 
-  private CoordinatorStats doRun(
+  private CoordinatorRunStats doRun(
       Map<String, DataSourceCompactionConfig> compactionConfigs,
       Map<String, AutoCompactionSnapshot.Builder> currentRunAutoCompactionSnapshotBuilders,
       int numAvailableCompactionTaskSlots,
@@ -439,18 +426,21 @@ public class CompactSegments implements CoordinatorCustomDuty
         // This forcing code should be revised
         // when/if the autocompaction code policy to decide which segments to compact changes
         if (dropExisting == null || !dropExisting) {
-          if (segmentsToCompact.stream().allMatch(dataSegment -> dataSegment.isTombstone())) {
+          if (segmentsToCompact.stream().allMatch(DataSegment::isTombstone)) {
             dropExisting = true;
-            LOG.info("Forcing dropExisting to %s since all segments to compact are tombstones", dropExisting);
+            LOG.info("Forcing dropExisting to true since all segments to compact are tombstones.");
           }
         }
 
-        // make tuningConfig
         final String taskId = indexingServiceClient.compactSegments(
             "coordinator-issued",
             segmentsToCompact,
             config.getTaskPriority(),
-            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment(), config.getMetricsSpec() != null),
+            ClientCompactionTaskQueryTuningConfig.from(
+                config.getTuningConfig(),
+                config.getMaxRowsPerSegment(),
+                config.getMetricsSpec() != null
+            ),
             granularitySpec,
             dimensionsSpec,
             config.getMetricsSpec(),
@@ -485,15 +475,15 @@ public class CompactSegments implements CoordinatorCustomDuty
     return newContext;
   }
 
-  private CoordinatorStats makeStats(
+  private CoordinatorRunStats makeStats(
       Map<String, AutoCompactionSnapshot.Builder> currentRunAutoCompactionSnapshotBuilders,
       int numCompactionTasks,
       CompactionSegmentIterator iterator
   )
   {
     final Map<String, AutoCompactionSnapshot> currentAutoCompactionSnapshotPerDataSource = new HashMap<>();
-    final CoordinatorStats stats = new CoordinatorStats();
-    stats.addToGlobalStat(COMPACTION_TASK_COUNT, numCompactionTasks);
+    final CoordinatorRunStats stats = new CoordinatorRunStats();
+    stats.add(Stats.Compaction.SUBMITTED_TASKS, numCompactionTasks);
 
     // Iterate through all the remaining segments in the iterator.
     // As these segments could be compacted but were not compacted due to lack of task slot, we will aggregates
@@ -558,57 +548,35 @@ public class CompactSegments implements CoordinatorCustomDuty
       currentAutoCompactionSnapshotPerDataSource.put(dataSource, autoCompactionSnapshot);
 
       // Use the complete snapshot to emits metrics
-      stats.addToDataSourceStat(
-          TOTAL_SIZE_OF_SEGMENTS_AWAITING,
-          dataSource,
-          autoCompactionSnapshot.getBytesAwaitingCompaction()
-      );
-      stats.addToDataSourceStat(
-          TOTAL_COUNT_OF_SEGMENTS_AWAITING,
-          dataSource,
-          autoCompactionSnapshot.getSegmentCountAwaitingCompaction()
-      );
-      stats.addToDataSourceStat(
-          TOTAL_INTERVAL_OF_SEGMENTS_AWAITING,
-          dataSource,
-          autoCompactionSnapshot.getIntervalCountAwaitingCompaction()
-      );
-      stats.addToDataSourceStat(
-          TOTAL_SIZE_OF_SEGMENTS_COMPACTED,
-          dataSource,
-          autoCompactionSnapshot.getBytesCompacted()
-      );
-      stats.addToDataSourceStat(
-          TOTAL_COUNT_OF_SEGMENTS_COMPACTED,
-          dataSource,
-          autoCompactionSnapshot.getSegmentCountCompacted()
-      );
-      stats.addToDataSourceStat(
-          TOTAL_INTERVAL_OF_SEGMENTS_COMPACTED,
-          dataSource,
-          autoCompactionSnapshot.getIntervalCountCompacted()
-      );
-      stats.addToDataSourceStat(
-          TOTAL_SIZE_OF_SEGMENTS_SKIPPED,
-          dataSource,
-          autoCompactionSnapshot.getBytesSkipped()
-      );
-      stats.addToDataSourceStat(
-          TOTAL_COUNT_OF_SEGMENTS_SKIPPED,
-          dataSource,
-          autoCompactionSnapshot.getSegmentCountSkipped()
-      );
-      stats.addToDataSourceStat(
-          TOTAL_INTERVAL_OF_SEGMENTS_SKIPPED,
-          dataSource,
-          autoCompactionSnapshot.getIntervalCountSkipped()
-      );
+      addStatsForSnapshot(dataSource, autoCompactionSnapshot, stats);
     }
 
     // Atomic update of autoCompactionSnapshotPerDataSource with the latest from this coordinator run
     autoCompactionSnapshotPerDataSource.set(currentAutoCompactionSnapshotPerDataSource);
 
     return stats;
+  }
+
+  private void addStatsForSnapshot(
+      String dataSource,
+      AutoCompactionSnapshot autoCompactionSnapshot,
+      CoordinatorRunStats stats
+  )
+  {
+    final Object2LongOpenHashMap<CoordinatorStat> statToValue = new Object2LongOpenHashMap<>();
+    statToValue.addTo(Stats.Compaction.PENDING_BYTES, autoCompactionSnapshot.getBytesAwaitingCompaction());
+    statToValue.addTo(Stats.Compaction.PENDING_SEGMENTS, autoCompactionSnapshot.getSegmentCountAwaitingCompaction());
+    statToValue.addTo(Stats.Compaction.PENDING_INTERVALS, autoCompactionSnapshot.getIntervalCountAwaitingCompaction());
+    statToValue.addTo(Stats.Compaction.COMPACTED_BYTES, autoCompactionSnapshot.getBytesCompacted());
+    statToValue.addTo(Stats.Compaction.COMPACTED_SEGMENTS, autoCompactionSnapshot.getSegmentCountCompacted());
+    statToValue.addTo(Stats.Compaction.COMPACTED_INTERVALS, autoCompactionSnapshot.getIntervalCountCompacted());
+    statToValue.addTo(Stats.Compaction.SKIPPED_BYTES, autoCompactionSnapshot.getBytesSkipped());
+    statToValue.addTo(Stats.Compaction.SKIPPED_SEGMENTS, autoCompactionSnapshot.getSegmentCountSkipped());
+    statToValue.addTo(Stats.Compaction.SKIPPED_INTERVALS, autoCompactionSnapshot.getIntervalCountSkipped());
+
+    statToValue.forEach(
+        (stat, value) -> stats.addForDatasource(stat, dataSource, value)
+    );
   }
 
   @Nullable

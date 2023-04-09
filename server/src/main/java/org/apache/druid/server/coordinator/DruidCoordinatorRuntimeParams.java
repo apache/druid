@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataRuleManager;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 
@@ -67,7 +68,7 @@ public class DruidCoordinatorRuntimeParams
   private final ServiceEmitter emitter;
   private final CoordinatorDynamicConfig coordinatorDynamicConfig;
   private final CoordinatorCompactionConfig coordinatorCompactionConfig;
-  private final CoordinatorStats stats;
+  private final CoordinatorRunStats stats;
   private final BalancerStrategy balancerStrategy;
   private final Set<String> broadcastDatasources;
 
@@ -83,7 +84,7 @@ public class DruidCoordinatorRuntimeParams
       ServiceEmitter emitter,
       CoordinatorDynamicConfig coordinatorDynamicConfig,
       CoordinatorCompactionConfig coordinatorCompactionConfig,
-      CoordinatorStats stats,
+      CoordinatorRunStats stats,
       BalancerStrategy balancerStrategy,
       Set<String> broadcastDatasources
   )
@@ -165,7 +166,7 @@ public class DruidCoordinatorRuntimeParams
     return coordinatorCompactionConfig;
   }
 
-  public CoordinatorStats getCoordinatorStats()
+  public CoordinatorRunStats getCoordinatorStats()
   {
     return stats;
   }
@@ -253,7 +254,7 @@ public class DruidCoordinatorRuntimeParams
     private ServiceEmitter emitter;
     private CoordinatorDynamicConfig coordinatorDynamicConfig;
     private CoordinatorCompactionConfig coordinatorCompactionConfig;
-    private CoordinatorStats stats;
+    private CoordinatorRunStats stats;
     private BalancerStrategy balancerStrategy;
     private Set<String> broadcastDatasources;
 
@@ -268,7 +269,7 @@ public class DruidCoordinatorRuntimeParams
       this.loadManagementPeons = new HashMap<>();
       this.replicationManager = null;
       this.emitter = null;
-      this.stats = new CoordinatorStats();
+      this.stats = new CoordinatorRunStats();
       this.coordinatorDynamicConfig = CoordinatorDynamicConfig.builder().build();
       this.coordinatorCompactionConfig = CoordinatorCompactionConfig.empty();
       this.broadcastDatasources = new HashSet<>();
@@ -286,7 +287,7 @@ public class DruidCoordinatorRuntimeParams
         ServiceEmitter emitter,
         CoordinatorDynamicConfig coordinatorDynamicConfig,
         CoordinatorCompactionConfig coordinatorCompactionConfig,
-        CoordinatorStats stats,
+        CoordinatorRunStats stats,
         BalancerStrategy balancerStrategy,
         Set<String> broadcastDatasources
     )
@@ -407,7 +408,7 @@ public class DruidCoordinatorRuntimeParams
       return this;
     }
 
-    public Builder withCoordinatorStats(CoordinatorStats stats)
+    public Builder withCoordinatorStats(CoordinatorRunStats stats)
     {
       this.stats.accumulate(stats);
       return this;

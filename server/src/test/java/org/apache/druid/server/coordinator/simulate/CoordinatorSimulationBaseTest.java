@@ -206,7 +206,7 @@ public abstract class CoordinatorSimulationBaseTest implements
   static DruidServer createHistorical(int uniqueIdInTier, String tier, long serverSizeMb)
   {
     final String name = tier + "__" + "hist__" + uniqueIdInTier;
-    return new DruidServer(name, name, name, serverSizeMb, ServerType.HISTORICAL, tier, 1);
+    return new DruidServer(name, name, name, serverSizeMb << 20, ServerType.HISTORICAL, tier, 1);
   }
 
   // Utility and constant holder classes
@@ -230,12 +230,12 @@ public abstract class CoordinatorSimulationBaseTest implements
     static final String MOVED_COUNT = "segment/moved/count";
     static final String UNMOVED_COUNT = "segment/unmoved/count";
     static final String DROPPED_COUNT = "segment/dropped/count";
-    static final String THROTTLED_COUNT = "segment/throttledReplica/count";
+    static final String THROTTLED_COUNT = "segment/replicas/throttled";
     static final String LOAD_QUEUE_COUNT = "segment/loadQueue/count";
 
-    static final String BROADCAST_LOADS = "segment/broadcastLoad/count";
-    static final String BROADCAST_DROPS = "segment/broadcastDrop/count";
-    static final String CANCELLED_LOADS = "segment/cancelLoad/count";
+    static final String BROADCAST_LOADS = "segment/assigned/broadcast";
+    static final String BROADCAST_DROPS = "segment/dropped/broadcast";
+    static final String CANCELLED_LOADS = "segment/loadQueue/cancelled";
   }
 
   static class Segments

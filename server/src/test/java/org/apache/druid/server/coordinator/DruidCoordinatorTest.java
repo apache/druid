@@ -894,7 +894,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   public void testEmitClusterStatsAndMetricsNotAddedAgainWhenInDutyList()
   {
     DruidCoordinator.DutiesRunnable dutyRunnable = coordinator.new DutiesRunnable(
-        ImmutableList.of(new LogUsedSegments(), new EmitClusterStatsAndMetrics(coordinator, "TEST", false, null)),
+        ImmutableList.of(new LogUsedSegments(), new EmitClusterStatsAndMetrics(coordinator, "TEST", null)),
         0,
         "TEST"
     );

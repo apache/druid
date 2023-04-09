@@ -25,11 +25,12 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.BalancerSegmentHolder;
 import org.apache.druid.server.coordinator.BalancerStrategy;
-import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.SegmentLoader;
 import org.apache.druid.server.coordinator.SegmentStateManager;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
@@ -70,7 +71,7 @@ public class BalanceSegments implements CoordinatorDuty
 
       busyTiers.add(tier);
       log.info(
-          "Skipping balance for tier [%s] as it still has %,d segments in queue with lifetime [%d / %d].",
+          "Skipping balance for tier [%s] as it still has [%,d] segments in queue with lifetime [%d / %d].",
           tier,
           numMovingSegments,
           movingState.getLifetime(),
@@ -79,7 +80,7 @@ public class BalanceSegments implements CoordinatorDuty
 
       // Create alerts for stuck tiers
       if (movingState.getLifetime() <= 0) {
-        log.makeAlert("Balancing queue for tier [%s] has [%d] segments stuck .", tier, numMovingSegments)
+        log.makeAlert("Balancing queue for tier [%s] has [%d] segments stuck.", tier, numMovingSegments)
            .addData("segments", movingState.getCurrentlyProcessingSegmentsAndHosts())
            .emit();
       }
@@ -97,13 +98,13 @@ public class BalanceSegments implements CoordinatorDuty
     }
     int maxSegmentsToMove = params.getCoordinatorDynamicConfig().getMaxSegmentsToMove();
     if (maxSegmentsToMove == 0) {
-      log.info("Skipping balance as maxSegmentsToMove is %d.", maxSegmentsToMove);
+      log.info("Skipping balance as maxSegmentsToMove is [%d].", maxSegmentsToMove);
       return params;
     } else if (maxSegmentsToMove < 0) {
-      log.info("Auto-calculating maxSegmentsToMove for every tier since configured value is %d.", maxSegmentsToMove);
+      log.info("Auto-calculating maxSegmentsToMove for every tier since configured value is [%d].", maxSegmentsToMove);
     }
 
-    final CoordinatorStats stats = new CoordinatorStats();
+    final CoordinatorRunStats stats = new CoordinatorRunStats();
     final SegmentLoader loader = new SegmentLoader(
         stateManager,
         params.getDruidCluster(),
@@ -122,6 +123,7 @@ public class BalanceSegments implements CoordinatorDuty
       }
     });
 
+    loader.makeAlerts();
     stats.accumulate(loader.getStats());
     return params.buildFromExisting().withCoordinatorStats(stats).build();
   }
@@ -130,7 +132,7 @@ public class BalanceSegments implements CoordinatorDuty
       DruidCoordinatorRuntimeParams params,
       String tier,
       SortedSet<ServerHolder> servers,
-      CoordinatorStats stats,
+      CoordinatorRunStats stats,
       SegmentLoader loader
   )
   {
@@ -143,7 +145,7 @@ public class BalanceSegments implements CoordinatorDuty
     final List<ServerHolder> decommissioningServers = partitions.get(true);
     final List<ServerHolder> activeServers = partitions.get(false);
     log.info(
-        "Balancing segments in tier [%s] with %d active servers, %d decommissioning servers",
+        "Balancing segments in tier [%s] with [%d] active servers, [%d] decommissioning servers",
         tier,
         activeServers.size(),
         decommissioningServers.size()
@@ -166,7 +168,7 @@ public class BalanceSegments implements CoordinatorDuty
     int maxSegmentsToMoveFromDecommissioningNodes =
         (int) Math.ceil(maxSegmentsToMove * (decommissioningMaxPercentOfMaxSegmentsToMove / 100.0));
     log.info(
-        "Processing %d segments for moving from decommissioning servers",
+        "Processing [%d] segments for moving from decommissioning servers.",
         maxSegmentsToMoveFromDecommissioningNodes
     );
     Pair<Integer, Integer> decommissioningResult =
@@ -180,7 +182,7 @@ public class BalanceSegments implements CoordinatorDuty
 
     // After moving segments from decomissioning servers, move the remaining segments from the rest of the servers.
     int maxGeneralSegmentsToMove = maxSegmentsToMove - decommissioningResult.lhs;
-    log.info("Processing %d segments for balancing between active servers", maxGeneralSegmentsToMove);
+    log.info("Processing [%d] segments for balancing between active servers", maxGeneralSegmentsToMove);
     Pair<Integer, Integer> generalResult =
         balanceServers(params, activeServers, activeServers, maxGeneralSegmentsToMove, loader);
 
@@ -190,8 +192,8 @@ public class BalanceSegments implements CoordinatorDuty
       // Cluster should be alive and constantly adjusting
       log.info("No good moves found in tier [%s]", tier);
     }
-    stats.addToTieredStat("unmovedCount", tier, unmoved);
-    stats.addToTieredStat("movedCount", tier, moved);
+    stats.addForTier(Stats.Segments.UNMOVED, tier, unmoved);
+    stats.addForTier(Stats.Segments.MOVED, tier, moved);
 
     if (params.getCoordinatorDynamicConfig().emitBalancingStats()) {
       final BalancerStrategy strategy = params.getBalancerStrategy();
@@ -208,14 +210,7 @@ public class BalanceSegments implements CoordinatorDuty
       SegmentLoader loader
   )
   {
-    if (maxSegmentsToMove <= 0) {
-      log.debug("maxSegmentsToMove is 0; no balancing work can be performed.");
-      return new Pair<>(0, 0);
-    } else if (toMoveFrom.isEmpty()) {
-      log.debug("toMoveFrom is empty; no balancing work can be performed.");
-      return new Pair<>(0, 0);
-    } else if (toMoveTo.isEmpty()) {
-      log.debug("toMoveTo is empty; no balancing work can be peformed.");
+    if (maxSegmentsToMove <= 0 || toMoveFrom.isEmpty() || toMoveTo.isEmpty()) {
       return new Pair<>(0, 0);
     }
 
@@ -317,7 +312,7 @@ public class BalanceSegments implements CoordinatorDuty
     }
 
     log.info(
-        "Tier [%s]: Number of loaded/loading segments [%d],"
+        "Tier [%s]: Number of loaded and loading segments [%d],"
         + " configured maxSegmentsToMove [%d], calculated maxSegmentsToMove [%d]",
         tier,
         numSegmentsInTier,

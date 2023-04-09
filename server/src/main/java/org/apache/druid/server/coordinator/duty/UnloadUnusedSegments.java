@@ -22,13 +22,14 @@ package org.apache.druid.server.coordinator.duty;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadQueuePeon;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.HashMap;
@@ -47,7 +48,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    CoordinatorStats stats = new CoordinatorStats();
+    CoordinatorRunStats stats = new CoordinatorRunStats();
     Set<DataSegment> usedSegments = params.getUsedSegments();
     DruidCluster cluster = params.getDruidCluster();
 
@@ -98,7 +99,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
       ServerHolder serverHolder,
       Set<DataSegment> usedSegments,
       DruidCoordinatorRuntimeParams params,
-      CoordinatorStats stats,
+      CoordinatorRunStats stats,
       boolean dropBroadcastOnly,
       Map<String, Boolean> broadcastStatusByDatasource
   )
@@ -131,13 +132,14 @@ public class UnloadUnusedSegments implements CoordinatorDuty
         continue;
       }
 
+      int totalUnneededCount = 0;
       for (DataSegment segment : dataSource.getSegments()) {
         if (!usedSegments.contains(segment)) {
           LoadQueuePeon queuePeon = params.getLoadManagementPeons().get(server.getName());
 
           if (!queuePeon.getSegmentsToDrop().contains(segment)) {
             queuePeon.dropSegment(segment, success -> {});
-            stats.addToTieredStat("unneededCount", server.getTier(), 1);
+            totalUnneededCount++;
             log.info(
                 "Dropping uneeded segment [%s] from server [%s] in tier [%s]",
                 segment.getId(),
@@ -147,6 +149,8 @@ public class UnloadUnusedSegments implements CoordinatorDuty
           }
         }
       }
+      // TODO: this could have the dimension datasource with it
+      stats.addForTier(Stats.Segments.UNNEEDED, server.getTier(), totalUnneededCount);
     }
   }
 }

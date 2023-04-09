@@ -73,6 +73,7 @@ import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.duty.UnloadUnusedSegments;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.server.initialization.jetty.ServiceUnavailableException;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
@@ -92,7 +93,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -639,36 +639,31 @@ public class DruidCoordinator
   protected void initBalancerExecutor()
   {
     final int currentNumber = getDynamicConfigs().getBalancerComputeThreads();
-    final String threadNameFormat = "coordinator-cost-balancer-%s";
-    // fist time initialization
-    if (balancerExec == null) {
-      balancerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(
-          currentNumber,
-          threadNameFormat
-      ));
-      cachedBalancerThreadNumber = currentNumber;
-      return;
-    }
 
-    if (cachedBalancerThreadNumber != currentNumber) {
+    if (balancerExec == null) {
+      balancerExec = createNewBalancerExecutor(currentNumber);
+    } else if (cachedBalancerThreadNumber != currentNumber) {
       log.info(
-          "balancerComputeThreads has been changed from [%s] to [%s], recreating the thread pool.",
+          "balancerComputeThreads has changed from [%d] to [%d], recreating the thread pool.",
           cachedBalancerThreadNumber,
           currentNumber
       );
       balancerExec.shutdownNow();
-      balancerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(
-          currentNumber,
-          threadNameFormat
-      ));
-      cachedBalancerThreadNumber = currentNumber;
+      balancerExec = createNewBalancerExecutor(currentNumber);
     }
+  }
+
+  private ListeningExecutorService createNewBalancerExecutor(int numThreads)
+  {
+    cachedBalancerThreadNumber = numThreads;
+    return MoreExecutors.listeningDecorator(
+        Execs.multiThreaded(numThreads, "coordinator-cost-balancer-%s")
+    );
   }
 
   private List<CoordinatorDuty> makeHistoricalManagementDuties()
   {
     return ImmutableList.of(
-        new CreateBalancerStrategy(),
         new LogUsedSegments(),
         new UpdateCoordinatorStateAndPrepareCluster(),
         new RunRules(segmentStateManager),
@@ -698,15 +693,12 @@ public class DruidCoordinator
 
   private List<CoordinatorDuty> makeMetadataStoreManagementDuties()
   {
-    List<CoordinatorDuty> duties = ImmutableList.<CoordinatorDuty>builder()
-                                                .addAll(metadataStoreManagementDuties)
-                                                .build();
-
+    List<CoordinatorDuty> duties = ImmutableList.copyOf(metadataStoreManagementDuties);
     log.debug(
         "Done making metadata store management duties %s",
         duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
     );
-    return ImmutableList.copyOf(duties);
+    return duties;
   }
 
   @VisibleForTesting
@@ -753,10 +745,9 @@ public class DruidCoordinator
       // This is to avoid human coding error (forgetting to add the EmitClusterStatsAndMetrics duty to the group)
       // causing metrics from the duties to not being emitted.
       if (duties.stream().noneMatch(duty -> duty instanceof EmitClusterStatsAndMetrics)) {
-        boolean isContainCompactSegmentDuty = duties.stream().anyMatch(duty -> duty instanceof CompactSegments);
         List<CoordinatorDuty> allDuties = new ArrayList<>(duties);
         allDuties.add(
-            new EmitClusterStatsAndMetrics(DruidCoordinator.this, alias, isContainCompactSegmentDuty, emitter)
+            new EmitClusterStatsAndMetrics(DruidCoordinator.this, alias, emitter)
         );
         this.duties = allDuties;
       } else {
@@ -771,7 +762,7 @@ public class DruidCoordinator
     {
       try {
         log.info("Starting coordinator run for group [%s]", dutiesRunnableAlias);
-        final long globalStart = System.nanoTime();
+        final long globalStart = System.currentTimeMillis();
 
         synchronized (lock) {
           if (!coordLeaderSelector.isLeader()) {
@@ -812,9 +803,7 @@ public class DruidCoordinator
             && coordLeaderSelector.isLeader()
             && startingLeaderCounter == coordLeaderSelector.localTerm()) {
 
-          log.info(
-              "Coordination is paused via dynamic configs! I will not be running Coordination Duties at this time"
-          );
+          log.info("Coordination has been paused. Duties will not run until coordination is resumed.");
         }
 
         for (CoordinatorDuty duty : duties) {
@@ -823,26 +812,27 @@ public class DruidCoordinator
               && coordLeaderSelector.isLeader()
               && startingLeaderCounter == coordLeaderSelector.localTerm()) {
 
-            final long start = System.nanoTime();
+            final long start = System.currentTimeMillis();
             params = duty.run(params);
-            final long end = System.nanoTime();
+            final long end = System.currentTimeMillis();
 
+            final String dutyName = duty.getClass().getName();
             if (params == null) {
-              // This duty wanted to cancel the run. No log message, since the duty should have logged a reason.
+              log.info("Finishing coordinator run since duty [%s] requested to stop run.", dutyName);
               return;
             } else {
-              params.getCoordinatorStats().addToDutyStat("runtime", duty.getClass().getName(), TimeUnit.NANOSECONDS.toMillis(end - start));
+              params.getCoordinatorStats().addForDuty(Stats.Run.DUTY_TIME, dutyName, end - start);
             }
           }
         }
         // Emit the runtime of the full DutiesRunnable
-        final long runMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - globalStart);
+        final long runMillis = System.currentTimeMillis() - globalStart;
         params.getEmitter().emit(
             new ServiceMetricEvent.Builder()
                 .setDimension(DruidMetrics.DUTY_GROUP, dutiesRunnableAlias)
                 .build("coordinator/global/time", runMillis)
         );
-        log.info("Finished coordinator run for group [%s] in [%d ms]", dutiesRunnableAlias, runMillis);
+        log.info("Finished coordinator run for group [%s] in [%d] ms", dutiesRunnableAlias, runMillis);
       }
       catch (Exception e) {
         log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();
@@ -885,9 +875,18 @@ public class DruidCoordinator
 
       stopPeonsForDisappearedServers(currentServers);
 
+      initBalancerExecutor();
+      BalancerStrategy balancerStrategy = factory.createBalancerStrategy(balancerExec);
+      log.info(
+          "Created balancer strategy [%s], round-robin assignment is [%s]",
+          balancerStrategy.getClass().getSimpleName(),
+          getDynamicConfigs().isUseRoundRobinSegmentAssignment()
+      );
+
       return params.buildFromExisting()
                    .withDruidCluster(cluster)
                    .withLoadManagementPeons(loadManagementPeons)
+                   .withBalancerStrategy(balancerStrategy)
                    .withSegmentReplicantLookup(segmentReplicantLookup)
                    .build();
     }
@@ -956,23 +955,6 @@ public class DruidCoordinator
         LoadQueuePeon peon = loadManagementPeons.remove(name);
         peon.stop();
       }
-    }
-  }
-
-  /**
-   * Creates a balancer strategy used for loading/balancing segments.
-   */
-  private class CreateBalancerStrategy implements CoordinatorDuty
-  {
-    @Nullable
-    @Override
-    public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
-    {
-      initBalancerExecutor();
-      BalancerStrategy balancerStrategy = factory.createBalancerStrategy(balancerExec);
-      log.info("Created balancer strategy [%s].", balancerStrategy.getClass().getSimpleName());
-
-      return params.buildFromExisting().withBalancerStrategy(balancerStrategy).build();
     }
   }
 }

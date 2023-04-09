@@ -30,6 +30,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.duty.BalanceSegments;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
@@ -211,7 +213,7 @@ public class BalanceSegmentsTest
             .build();
 
     params = new BalanceSegments(stateManager).run(params);
-    Assert.assertEquals(3, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
+    Assert.assertEquals(3, params.getCoordinatorStats().getTieredStat(Stats.Segments.MOVED, "normal"));
   }
 
   /**
@@ -277,7 +279,7 @@ public class BalanceSegmentsTest
 
     params = new BalanceSegments(stateManager).run(params);
     EasyMock.verify(strategy);
-    Assert.assertEquals(3L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
+    Assert.assertEquals(3L, params.getCoordinatorStats().getTieredStat(Stats.Segments.MOVED, "normal"));
     Assert.assertEquals(
         ImmutableSet.of(segment1, segment3, segment4),
         peon3.getSegmentsToLoad()
@@ -289,7 +291,7 @@ public class BalanceSegmentsTest
   {
     DruidCoordinatorRuntimeParams params = setupParamsForDecommissioningMaxPercentOfMaxSegmentsToMove(0);
     params = new BalanceSegments(stateManager).run(params);
-    Assert.assertEquals(1L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
+    Assert.assertEquals(1L, params.getCoordinatorStats().getTieredStat(Stats.Segments.MOVED, "normal"));
     Assert.assertEquals(ImmutableSet.of(segment1), peon3.getSegmentsToLoad());
   }
 
@@ -298,7 +300,7 @@ public class BalanceSegmentsTest
   {
     DruidCoordinatorRuntimeParams params = setupParamsForDecommissioningMaxPercentOfMaxSegmentsToMove(10);
     params = new BalanceSegments(stateManager).run(params);
-    Assert.assertEquals(1L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
+    Assert.assertEquals(1L, params.getCoordinatorStats().getTieredStat(Stats.Segments.MOVED, "normal"));
     Assert.assertEquals(ImmutableSet.of(segment1), peon3.getSegmentsToLoad());
   }
 
@@ -348,7 +350,7 @@ public class BalanceSegmentsTest
 
     params = new BalanceSegments(stateManager).run(params);
     EasyMock.verify(strategy);
-    Assert.assertEquals(3L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
+    Assert.assertEquals(3L, params.getCoordinatorStats().getTieredStat(Stats.Segments.MOVED, "normal"));
     Assert.assertEquals(
         ImmutableSet.of(segment2, segment3, segment4),
         peon3.getSegmentsToLoad()
@@ -388,7 +390,7 @@ public class BalanceSegmentsTest
 
     params = new BalanceSegments(stateManager).run(params);
     EasyMock.verify(strategy);
-    Assert.assertEquals(0, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
+    Assert.assertEquals(0, params.getCoordinatorStats().getTieredStat(Stats.Segments.MOVED, "normal"));
   }
 
   @Test
@@ -419,7 +421,7 @@ public class BalanceSegmentsTest
 
     params = new BalanceSegments(stateManager).run(params);
     EasyMock.verify(strategy);
-    Assert.assertEquals(1, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
+    Assert.assertEquals(1, params.getCoordinatorStats().getTieredStat(Stats.Segments.MOVED, "normal"));
     Assert.assertEquals(0, peon1.getNumberOfSegmentsToLoad());
     Assert.assertEquals(1, peon2.getNumberOfSegmentsToLoad());
   }
@@ -471,7 +473,7 @@ public class BalanceSegmentsTest
     params = new BalanceSegments(stateManager).run(params);
 
     // max to move is 5, all segments on server 1, but only expect to move 1 to server 2 since max node load queue is 1
-    Assert.assertEquals(1, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
+    Assert.assertEquals(1, params.getCoordinatorStats().getTieredStat(Stats.Segments.MOVED, "normal"));
   }
 
   @Test
@@ -505,7 +507,7 @@ public class BalanceSegmentsTest
         .build();
 
     params = new BalanceSegments(stateManager).run(params);
-    Assert.assertEquals(1, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
+    Assert.assertEquals(1, params.getCoordinatorStats().getTieredStat(Stats.Segments.MOVED, "normal"));
   }
 
   @Test
@@ -524,7 +526,7 @@ public class BalanceSegmentsTest
     ).build();
 
     params = new BalanceSegments(stateManager).run(params);
-    Assert.assertTrue(params.getCoordinatorStats().getTieredStat("movedCount", "normal") > 0);
+    Assert.assertTrue(params.getCoordinatorStats().getTieredStat(Stats.Segments.MOVED, "normal") > 0);
   }
 
   @Test
@@ -539,7 +541,7 @@ public class BalanceSegmentsTest
     DruidCoordinatorRuntimeParams params = defaultRuntimeParamsBuilder(servers).build();
 
     params = new BalanceSegments(stateManager).run(params);
-    Assert.assertTrue(params.getCoordinatorStats().getTieredStat("movedCount", "normal") > 0);
+    Assert.assertTrue(params.getCoordinatorStats().getTieredStat(Stats.Segments.MOVED, "normal") > 0);
   }
 
   @Test
@@ -592,7 +594,7 @@ public class BalanceSegmentsTest
 
     params = new BalanceSegments(stateManager).run(params);
     EasyMock.verify(strategy);
-    Assert.assertEquals(1L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
+    Assert.assertEquals(1L, params.getCoordinatorStats().getTieredStat(Stats.Segments.MOVED, "normal"));
     Assert.assertEquals(ImmutableSet.of(segment3), peon3.getSegmentsToLoad());
   }
 
@@ -615,7 +617,7 @@ public class BalanceSegmentsTest
         .build();
 
     params = new BalanceSegments(stateManager).run(params);
-    Assert.assertEquals(2L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
+    Assert.assertEquals(2L, params.getCoordinatorStats().getTieredStat(Stats.Segments.MOVED, "normal"));
   }
 
   private DruidCoordinatorRuntimeParams.Builder defaultRuntimeParamsBuilder(
@@ -714,7 +716,7 @@ public class BalanceSegmentsTest
     }
 
     @Override
-    public void emitStats(String tier, CoordinatorStats stats, List<ServerHolder> serverHolderList)
+    public void emitStats(String tier, CoordinatorRunStats stats, List<ServerHolder> serverHolderList)
     {
       delegate.emitStats(tier, stats, serverHolderList);
     }

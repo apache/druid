@@ -75,7 +75,6 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
-import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -84,6 +83,8 @@ import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskTransformConfig;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -122,6 +123,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
@@ -234,8 +236,8 @@ public class CompactSegmentsTest
         interval,
         "version",
         null,
-        ImmutableList.of(),
-        ImmutableList.of(),
+        Collections.emptyList(),
+        Collections.emptyList(),
         shardSpec,
         0,
         10L
@@ -358,10 +360,10 @@ public class CompactSegmentsTest
       doCompactionAndAssertCompactSegmentStatistics(compactSegments, compactionRunCount);
     }
     // Test that stats does not change (and is still correct) when auto compaction runs with everything is fully compacted
-    final CoordinatorStats stats = doCompactSegments(compactSegments);
+    final CoordinatorRunStats stats = doCompactSegments(compactSegments);
     Assert.assertEquals(
         0,
-        stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+        stats.get(Stats.Compaction.SUBMITTED_TASKS)
     );
     for (int i = 0; i < 3; i++) {
       verifySnapshot(
@@ -407,7 +409,7 @@ public class CompactSegmentsTest
     doCompactSegments(compactSegments, new ArrayList<>());
     Assert.assertEquals(
         0,
-        stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+        stats.get(Stats.Compaction.SUBMITTED_TASKS)
     );
     Assert.assertTrue(compactSegments.getAutoCompactionSnapshot().isEmpty());
 
@@ -456,10 +458,10 @@ public class CompactSegmentsTest
     // 3 intervals, 120 byte, 12 segments already compacted before the run
     for (int compactionRunCount = 0; compactionRunCount < 8; compactionRunCount++) {
       // Do a cycle of auto compaction which creates one compaction task
-      final CoordinatorStats stats = doCompactSegments(compactSegments);
+      final CoordinatorRunStats stats = doCompactSegments(compactSegments);
       Assert.assertEquals(
           1,
-          stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+          stats.get(Stats.Compaction.SUBMITTED_TASKS)
       );
 
       verifySnapshot(
@@ -482,10 +484,10 @@ public class CompactSegmentsTest
     }
 
     // Test that stats does not change (and is still correct) when auto compaction runs with everything is fully compacted
-    final CoordinatorStats stats = doCompactSegments(compactSegments);
+    final CoordinatorRunStats stats = doCompactSegments(compactSegments);
     Assert.assertEquals(
         0,
-        stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+        stats.get(Stats.Compaction.SUBMITTED_TASKS)
     );
     verifySnapshot(
         compactSegments,
@@ -521,10 +523,10 @@ public class CompactSegmentsTest
       doCompactionAndAssertCompactSegmentStatistics(compactSegments, compactionRunCount);
     }
     // Test that stats does not change (and is still correct) when auto compaction runs with everything is fully compacted
-    final CoordinatorStats stats = doCompactSegments(compactSegments);
+    final CoordinatorRunStats stats = doCompactSegments(compactSegments);
     Assert.assertEquals(
         0,
-        stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+        stats.get(Stats.Compaction.SUBMITTED_TASKS)
     );
     for (int i = 0; i < 3; i++) {
       verifySnapshot(
@@ -616,10 +618,10 @@ public class CompactSegmentsTest
     // 3 intervals, 1200 byte (each segment is 100 bytes), 12 segments will be skipped by auto compaction
     for (int compactionRunCount = 0; compactionRunCount < 8; compactionRunCount++) {
       // Do a cycle of auto compaction which creates one compaction task
-      final CoordinatorStats stats = doCompactSegments(compactSegments);
+      final CoordinatorRunStats stats = doCompactSegments(compactSegments);
       Assert.assertEquals(
           1,
-          stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+          stats.get(Stats.Compaction.SUBMITTED_TASKS)
       );
 
       verifySnapshot(
@@ -640,10 +642,10 @@ public class CompactSegmentsTest
     }
 
     // Test that stats does not change (and is still correct) when auto compaction runs with everything is fully compacted
-    final CoordinatorStats stats = doCompactSegments(compactSegments);
+    final CoordinatorRunStats stats = doCompactSegments(compactSegments);
     Assert.assertEquals(
         0,
-        stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+        stats.get(Stats.Compaction.SUBMITTED_TASKS)
     );
     verifySnapshot(
         compactSegments,
@@ -670,10 +672,10 @@ public class CompactSegmentsTest
     final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
     final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, indexingServiceClient);
 
-    final CoordinatorStats stats = doCompactSegments(compactSegments, 3);
-    Assert.assertEquals(3, stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT));
-    Assert.assertEquals(3, stats.getGlobalStat(CompactSegments.MAX_COMPACTION_TASK_SLOT));
-    Assert.assertEquals(3, stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT));
+    final CoordinatorRunStats stats = doCompactSegments(compactSegments, 3);
+    Assert.assertEquals(3, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
+    Assert.assertEquals(3, stats.get(Stats.Compaction.MAX_SLOTS));
+    Assert.assertEquals(3, stats.get(Stats.Compaction.SUBMITTED_TASKS));
   }
 
   @Test
@@ -685,10 +687,10 @@ public class CompactSegmentsTest
     leaderClient.start();
     final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
     final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, indexingServiceClient);
-    final CoordinatorStats stats = doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot, true);
-    Assert.assertEquals(maxCompactionSlot, stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT));
-    Assert.assertEquals(maxCompactionSlot, stats.getGlobalStat(CompactSegments.MAX_COMPACTION_TASK_SLOT));
-    Assert.assertEquals(maxCompactionSlot, stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT));
+    final CoordinatorRunStats stats = doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot, true);
+    Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
+    Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.MAX_SLOTS));
+    Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.SUBMITTED_TASKS));
   }
 
   @Test
@@ -700,10 +702,10 @@ public class CompactSegmentsTest
     leaderClient.start();
     final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
     final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, indexingServiceClient);
-    final CoordinatorStats stats = doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot, true);
-    Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT));
-    Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.getGlobalStat(CompactSegments.MAX_COMPACTION_TASK_SLOT));
-    Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT));
+    final CoordinatorRunStats stats = doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot, true);
+    Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
+    Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.MAX_SLOTS));
+    Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.SUBMITTED_TASKS));
   }
 
   @Test
@@ -1269,10 +1271,10 @@ public class CompactSegmentsTest
     final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
     final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, indexingServiceClient);
 
-    final CoordinatorStats stats = doCompactSegments(compactSegments, createCompactionConfigs(2), 4);
-    Assert.assertEquals(4, stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT));
-    Assert.assertEquals(4, stats.getGlobalStat(CompactSegments.MAX_COMPACTION_TASK_SLOT));
-    Assert.assertEquals(2, stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT));
+    final CoordinatorRunStats stats = doCompactSegments(compactSegments, createCompactionConfigs(2), 4);
+    Assert.assertEquals(4, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
+    Assert.assertEquals(4, stats.get(Stats.Compaction.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Compaction.SUBMITTED_TASKS));
   }
 
   @Test
@@ -1302,8 +1304,8 @@ public class CompactSegmentsTest
     // Verify that locked intervals are skipped and only one compaction task
     // is submitted for dataSource_0
     CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, indexingServiceClient);
-    final CoordinatorStats stats = doCompactSegments(compactSegments, createCompactionConfigs(2), 4);
-    Assert.assertEquals(1, stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT));
+    final CoordinatorRunStats stats = doCompactSegments(compactSegments, createCompactionConfigs(2), 4);
+    Assert.assertEquals(1, stats.get(Stats.Compaction.SUBMITTED_TASKS));
     Assert.assertEquals(1, leaderClient.submittedCompactionTasks.size());
 
     final ClientCompactionTaskQuery compactionTask = leaderClient.submittedCompactionTasks.get(0);
@@ -1535,8 +1537,8 @@ public class CompactSegmentsTest
     // Verify that no locked intervals are skipped
     CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, indexingServiceClient);
     int maxTaskSlots = partitionsSpec instanceof SingleDimensionPartitionsSpec ? 5 : 3;
-    final CoordinatorStats stats = doCompactSegments(compactSegments, createCompactionConfigs(1), maxTaskSlots);
-    Assert.assertEquals(3, stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT));
+    final CoordinatorRunStats stats = doCompactSegments(compactSegments, createCompactionConfigs(1), maxTaskSlots);
+    Assert.assertEquals(3, stats.get(Stats.Compaction.SUBMITTED_TASKS));
     Assert.assertEquals(3, leaderClient.submittedCompactionTasks.size());
     leaderClient.submittedCompactionTasks.forEach(task -> {
       System.out.println(task.getDataSource() + " : " + task.getIoConfig().getInputSpec().getInterval());
@@ -1917,10 +1919,10 @@ public class CompactSegmentsTest
   {
     for (int dataSourceIndex = 0; dataSourceIndex < 3; dataSourceIndex++) {
       // One compaction task triggered
-      final CoordinatorStats stats = doCompactSegments(compactSegments);
+      final CoordinatorRunStats stats = doCompactSegments(compactSegments);
       Assert.assertEquals(
           1,
-          stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+          stats.get(Stats.Compaction.SUBMITTED_TASKS)
       );
       // Note: Subsequent compaction run after the dataSource was compacted will show different numbers than
       // on the run it was compacted. For example, in a compaction run, if a dataSource had 4 segments compacted,
@@ -1934,14 +1936,14 @@ public class CompactSegmentsTest
               compactSegments,
               AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
               DATA_SOURCE_PREFIX + i,
-              TOTAL_BYTE_PER_DATASOURCE - 40 * (compactionRunCount + 1),
-              40 * (compactionRunCount + 1),
+              TOTAL_BYTE_PER_DATASOURCE - 40L * (compactionRunCount + 1),
+              40L * (compactionRunCount + 1),
               40,
               TOTAL_INTERVAL_PER_DATASOURCE - (compactionRunCount + 1),
               (compactionRunCount + 1),
               1,
-              TOTAL_SEGMENT_PER_DATASOURCE - 4 * (compactionRunCount + 1),
-              2 * (compactionRunCount + 1),
+              TOTAL_SEGMENT_PER_DATASOURCE - 4L * (compactionRunCount + 1),
+              2L * (compactionRunCount + 1),
               4
           );
         } else {
@@ -1949,14 +1951,14 @@ public class CompactSegmentsTest
               compactSegments,
               AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
               DATA_SOURCE_PREFIX + i,
-              TOTAL_BYTE_PER_DATASOURCE - 40 * (compactionRunCount + 1),
-              40 * (compactionRunCount + 1),
+              TOTAL_BYTE_PER_DATASOURCE - 40L * (compactionRunCount + 1),
+              40L * (compactionRunCount + 1),
               40,
               TOTAL_INTERVAL_PER_DATASOURCE - (compactionRunCount + 1),
               (compactionRunCount + 1),
               1,
-              TOTAL_SEGMENT_PER_DATASOURCE - 4 * (compactionRunCount + 1),
-              2 * compactionRunCount + 4,
+              TOTAL_SEGMENT_PER_DATASOURCE - 4L * (compactionRunCount + 1),
+              2L * compactionRunCount + 4,
               4
           );
         }
@@ -1968,39 +1970,39 @@ public class CompactSegmentsTest
             compactSegments,
             AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
             DATA_SOURCE_PREFIX + i,
-            TOTAL_BYTE_PER_DATASOURCE - 40 * compactionRunCount,
-            40 * compactionRunCount,
+            TOTAL_BYTE_PER_DATASOURCE - 40L * compactionRunCount,
+            40L * compactionRunCount,
             40,
             TOTAL_INTERVAL_PER_DATASOURCE - compactionRunCount,
             compactionRunCount,
             1,
-            TOTAL_SEGMENT_PER_DATASOURCE - 4 * compactionRunCount,
-            2 * compactionRunCount,
+            TOTAL_SEGMENT_PER_DATASOURCE - 4L * compactionRunCount,
+            2L * compactionRunCount,
             4
         );
       }
     }
   }
 
-  private CoordinatorStats doCompactSegments(CompactSegments compactSegments)
+  private CoordinatorRunStats doCompactSegments(CompactSegments compactSegments)
   {
     return doCompactSegments(compactSegments, (Integer) null);
   }
 
-  private CoordinatorStats doCompactSegments(CompactSegments compactSegments, @Nullable Integer numCompactionTaskSlots)
+  private CoordinatorRunStats doCompactSegments(CompactSegments compactSegments, @Nullable Integer numCompactionTaskSlots)
   {
     return doCompactSegments(compactSegments, createCompactionConfigs(), numCompactionTaskSlots);
   }
 
-  private CoordinatorStats doCompactSegments(
+  private void doCompactSegments(
       CompactSegments compactSegments,
       List<DataSourceCompactionConfig> compactionConfigs
   )
   {
-    return doCompactSegments(compactSegments, compactionConfigs, null);
+    doCompactSegments(compactSegments, compactionConfigs, null);
   }
 
-  private CoordinatorStats doCompactSegments(
+  private CoordinatorRunStats doCompactSegments(
       CompactSegments compactSegments,
       List<DataSourceCompactionConfig> compactionConfigs,
       @Nullable Integer numCompactionTaskSlots
@@ -2009,7 +2011,7 @@ public class CompactSegmentsTest
     return doCompactSegments(compactSegments, compactionConfigs, numCompactionTaskSlots, false);
   }
 
-  private CoordinatorStats doCompactSegments(
+  private CoordinatorRunStats doCompactSegments(
       CompactSegments compactSegments,
       List<DataSourceCompactionConfig> compactionConfigs,
       @Nullable Integer numCompactionTaskSlots,
@@ -2022,7 +2024,7 @@ public class CompactSegmentsTest
         .withCompactionConfig(
             new CoordinatorCompactionConfig(
                 compactionConfigs,
-                numCompactionTaskSlots == null ? null : 1., // 100% when numCompactionTaskSlots is not null
+                numCompactionTaskSlots == null ? null : 1.0, // 100% when numCompactionTaskSlots is not null
                 numCompactionTaskSlots,
                 useAutoScaleSlots
             )
@@ -2040,29 +2042,29 @@ public class CompactSegmentsTest
   )
   {
     for (int i = 0; i < 3; i++) {
-      final CoordinatorStats stats = doCompactSegments(compactSegments);
+      final CoordinatorRunStats stats = doCompactSegments(compactSegments);
       Assert.assertEquals(
           expectedCompactTaskCount,
-          stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+          stats.get(Stats.Compaction.SUBMITTED_TASKS)
       );
 
-      // One of dataSource is compacted
+      // If expectedRemainingSegments is positive, we count the number of datasources
+      // which have that many segments waiting for compaction. Otherwise, we count
+      // all the datasources in the coordinator stats
+      final AtomicInteger numDatasources = new AtomicInteger();
+      stats.forEachStat(
+          (stat, dimensionValues, value) -> {
+            if (stat.equals(Stats.Compaction.PENDING_BYTES)
+                && (expectedRemainingSegments <= 0 || value == expectedRemainingSegments)) {
+              numDatasources.incrementAndGet();
+            }
+          }
+      );
+
       if (expectedRemainingSegments > 0) {
-        // If expectedRemainingSegments is positive, we check how many dataSources have the segments waiting for
-        // compaction.
-        long numDataSourceOfExpectedRemainingSegments = stats
-            .getDataSources(CompactSegments.TOTAL_SIZE_OF_SEGMENTS_AWAITING)
-            .stream()
-            .mapToLong(ds -> stats.getDataSourceStat(CompactSegments.TOTAL_SIZE_OF_SEGMENTS_AWAITING, ds))
-            .filter(stat -> stat == expectedRemainingSegments)
-            .count();
-        Assert.assertEquals(i + 1, numDataSourceOfExpectedRemainingSegments);
+        Assert.assertEquals(i + 1, numDatasources.get());
       } else {
-        // Otherwise, we check how many dataSources are in the coordinator stats.
-        Assert.assertEquals(
-            2 - i,
-            stats.getDataSources(CompactSegments.TOTAL_SIZE_OF_SEGMENTS_AWAITING).size()
-        );
+        Assert.assertEquals(2 - i, numDatasources.get());
       }
     }
 
@@ -2103,10 +2105,10 @@ public class CompactSegmentsTest
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     addMoreData(dataSource, 9);
 
-    CoordinatorStats stats = doCompactSegments(compactSegments);
+    CoordinatorRunStats stats = doCompactSegments(compactSegments);
     Assert.assertEquals(
         1,
-        stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+        stats.get(Stats.Compaction.SUBMITTED_TASKS)
     );
 
     addMoreData(dataSource, 10);
@@ -2114,7 +2116,7 @@ public class CompactSegmentsTest
     stats = doCompactSegments(compactSegments);
     Assert.assertEquals(
         1,
-        stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+        stats.get(Stats.Compaction.SUBMITTED_TASKS)
     );
   }
 

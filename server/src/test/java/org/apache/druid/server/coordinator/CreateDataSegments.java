@@ -89,7 +89,7 @@ public class CreateDataSegments
                 nextInterval,
                 new NumberedShardSpec(numPartition, numPartitions),
                 ++uniqueIdInInterval,
-                sizeMb
+                sizeMb << 20
             )
         );
       }

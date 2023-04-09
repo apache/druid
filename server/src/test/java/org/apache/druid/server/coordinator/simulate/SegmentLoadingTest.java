@@ -406,7 +406,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     verifyValue(
         Metric.LOAD_QUEUE_COUNT,
         filter(DruidMetrics.SERVER, historicalT12.getName()),
-        10
+        10L
     );
 
     // Add a new historical with the second replica of all the segments
@@ -420,7 +420,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     verifyValue(
         Metric.LOAD_QUEUE_COUNT,
         filter(DruidMetrics.SERVER, historicalT12.getName()),
-        0
+        0L
     );
   }
 

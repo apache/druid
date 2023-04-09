@@ -27,15 +27,15 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
-import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidClusterBuilder;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadQueuePeon;
-import org.apache.druid.server.coordinator.RunRulesTest;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -130,10 +130,12 @@ public class MarkAsUnusedOvershadowedSegmentsTest
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withUsedSegmentsInTest(usedSegments)
-        .withCoordinatorStats(new CoordinatorStats())
+        .withCoordinatorStats(new CoordinatorRunStats())
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(
-            RunRulesTest.COORDINATOR_CONFIG_WITH_ZERO_LEADING_TIME_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS
+            CoordinatorDynamicConfig.builder()
+                                    .withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(0)
+                                    .build()
         )
         .build();
     markAsUnusedOvershadowedSegments.run(params);

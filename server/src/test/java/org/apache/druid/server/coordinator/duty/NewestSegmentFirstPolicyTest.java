@@ -80,7 +80,7 @@ public class NewestSegmentFirstPolicyTest
   private static final String DATA_SOURCE = "dataSource";
   private static final long DEFAULT_SEGMENT_SIZE = 1000;
   private static final int DEFAULT_NUM_SEGMENTS_PER_SHARD = 4;
-  private ObjectMapper mapper = new DefaultObjectMapper();
+  private final ObjectMapper mapper = new DefaultObjectMapper();
   private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(mapper);
 
   @Test
@@ -1762,11 +1762,26 @@ public class NewestSegmentFirstPolicyTest
           segments.add(segment);
         }
 
-        remainingInterval = SegmentCompactionUtil.removeIntervalFromEnd(remainingInterval, segmentInterval);
+        remainingInterval = removeIntervalFromEnd(remainingInterval, segmentInterval);
       }
     }
 
     return SegmentTimeline.forSegments(segments);
+  }
+
+  /**
+   * Returns an interval [largeInterval.start - smallInterval.start) given that
+   * the end of both intervals is the same.
+   */
+  private static Interval removeIntervalFromEnd(Interval largeInterval, Interval smallInterval)
+  {
+    Preconditions.checkArgument(
+        largeInterval.getEnd().equals(smallInterval.getEnd()),
+        "end should be same. largeInterval[%s] smallInterval[%s]",
+        largeInterval,
+        smallInterval
+    );
+    return new Interval(largeInterval.getStart(), smallInterval.getStart());
   }
 
   private DataSourceCompactionConfig createCompactionConfig(
