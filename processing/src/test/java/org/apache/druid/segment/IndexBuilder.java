@@ -238,7 +238,10 @@ public class IndexBuilder
               )
           )
       );
-      // still merge it since that follows the normal path of persist then merge
+      // Do a 'merge' of the persisted segment even though there is only one; this time it will be reading from the
+      // queryable index instead of the incremental index, which also mimics the behavior of real ingestion tasks
+      // which persist incremental indexes as intermediate segments and then merges all the intermediate segments to
+      // publish
       return indexIO.loadIndex(
           indexMerger.merge(
               adapters,

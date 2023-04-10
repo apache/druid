@@ -176,8 +176,8 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       return null;
     }
     final ColumnFormat format = columnHolder.getColumnFormat();
-    if (!(format instanceof NestedCommonFormatColumn.Format)
-        && !(format instanceof NestedDataComplexTypeSerde.NestedColumnFormatV4)) {
+    if (!(format instanceof NestedCommonFormatColumn.Format
+          || format instanceof NestedDataComplexTypeSerde.NestedColumnFormatV4)) {
       return null;
     }
 
