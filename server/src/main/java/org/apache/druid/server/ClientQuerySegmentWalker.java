@@ -173,9 +173,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final DataSource freeTradeDataSource = globalizeIfPossible(newQuery.getDataSource());
     // do an inlining dry run to see if any inlining is necessary, without actually running the queries.
     final int maxSubqueryRows = query.context().getMaxSubqueryRows(serverConfig.getMaxSubqueryRows());
-
-    // TODO:
-    final long maxSubqueryMemory = query.context().getMaxSubqueryMemoryBytes(serverConfig.getMaxSubqueryMemory());
+    final long maxSubqueryMemory = query.context().getMaxSubqueryMemoryBytes(-1L);
 
     final DataSource inlineDryRun = inlineIfNecessary(
         freeTradeDataSource,
@@ -624,7 +622,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   {
     final int limitToUse = limit < 0 ? Integer.MAX_VALUE : limit;
     boolean memoryLimitSet = memoryLimit >= 0;
-    final long memoryLimitToUse = memoryLimitSet ? memoryLimit : Long.MAX_VALUE;
 
     if (limitAccumulator.get() >= limitToUse) {
       throw ResourceLimitExceededException.withMessage(
@@ -633,10 +630,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       );
     }
 
-    if (memoryLimitAccumulator.get() >= memoryLimitToUse) {
+    if (memoryLimitSet && memoryLimitAccumulator.get() >= memoryLimit) {
       throw ResourceLimitExceededException.withMessage(
           "Cannot issue subquery, maximum subquery result bytes[%d] reached",
-          memoryLimitToUse
+          memoryLimit
       );
     }
 
@@ -647,7 +644,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         Optional<Sequence<FrameSignaturePair>> framesOptional = toolChest.resultsAsFrames(
             query,
             results,
-            memoryLimitAccumulator.get()
+            memoryLimit - memoryLimitAccumulator.get()
         );
 
         if (!framesOptional.isPresent()) {
@@ -666,10 +663,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         );
         dataSource = new FramesBackedInlineDataSource(frames, toolChest.resultArraySignature(query));
 
-        if (memoryLimitAccumulator.addAndGet(memoryAndRowsUsed.lhs) >= memoryLimitToUse) {
+        if (memoryLimitAccumulator.addAndGet(memoryAndRowsUsed.lhs) >= memoryLimit) {
           throw ResourceLimitExceededException.withMessage(
               "Subquery generated results beyond maximum[%d] bytes",
-              memoryLimitToUse
+              memoryLimit
           );
         }
 

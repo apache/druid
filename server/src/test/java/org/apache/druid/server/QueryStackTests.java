@@ -28,6 +28,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.FramesBackedInlineDataSource;
 import org.apache.druid.query.IterableBackedInlineDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
@@ -70,6 +71,7 @@ import org.apache.druid.query.topn.TopNQueryRunnerFactory;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.join.FramesBackedInlineJoinableFactory;
 import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
@@ -372,8 +374,9 @@ public class QueryStackTests
     ImmutableSet.Builder<JoinableFactory> setBuilder = ImmutableSet.builder();
     ImmutableMap.Builder<Class<? extends JoinableFactory>, Class<? extends DataSource>> mapBuilder =
         ImmutableMap.builder();
-    setBuilder.add(new InlineJoinableFactory());
+    setBuilder.add(new InlineJoinableFactory(), new FramesBackedInlineJoinableFactory());
     mapBuilder.put(InlineJoinableFactory.class, IterableBackedInlineDataSource.class);
+    mapBuilder.put(FramesBackedInlineJoinableFactory.class, FramesBackedInlineDataSource.class);
     if (lookupProvider != null) {
       setBuilder.add(new LookupJoinableFactory(lookupProvider));
       mapBuilder.put(LookupJoinableFactory.class, LookupDataSource.class);

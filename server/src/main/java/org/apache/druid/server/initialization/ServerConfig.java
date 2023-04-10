@@ -57,7 +57,6 @@ public class ServerConfig
       long defaultQueryTimeout,
       long maxScatterGatherBytes,
       int maxSubqueryRows,
-      long maxSubqueryMemory,
       long maxQueryTimeout,
       int maxRequestHeaderSize,
       @NotNull Period gracefulShutdownTimeout,
@@ -79,7 +78,6 @@ public class ServerConfig
     this.defaultQueryTimeout = defaultQueryTimeout;
     this.maxScatterGatherBytes = HumanReadableBytes.valueOf(maxScatterGatherBytes);
     this.maxSubqueryRows = maxSubqueryRows;
-    this.maxSubqueryMemory = maxSubqueryMemory;
     this.maxQueryTimeout = maxQueryTimeout;
     this.maxRequestHeaderSize = maxRequestHeaderSize;
     this.gracefulShutdownTimeout = gracefulShutdownTimeout;
@@ -126,9 +124,6 @@ public class ServerConfig
   @JsonProperty
   @Min(1)
   private int maxSubqueryRows = 100000;
-
-  @JsonProperty
-  private long maxSubqueryMemory = -1L;
 
   @JsonProperty
   @Min(1)
@@ -209,11 +204,6 @@ public class ServerConfig
     return maxSubqueryRows;
   }
 
-  public long getMaxSubqueryMemory()
-  {
-    return maxSubqueryMemory;
-  }
-
   public long getMaxQueryTimeout()
   {
     return maxQueryTimeout;
@@ -290,7 +280,6 @@ public class ServerConfig
            enableRequestLimit == that.enableRequestLimit &&
            defaultQueryTimeout == that.defaultQueryTimeout &&
            maxSubqueryRows == that.maxSubqueryRows &&
-           maxSubqueryMemory == that.maxSubqueryMemory &&
            maxQueryTimeout == that.maxQueryTimeout &&
            maxRequestHeaderSize == that.maxRequestHeaderSize &&
            inflateBufferSize == that.inflateBufferSize &&
@@ -318,7 +307,6 @@ public class ServerConfig
         defaultQueryTimeout,
         maxScatterGatherBytes,
         maxSubqueryRows,
-        maxSubqueryMemory,
         maxQueryTimeout,
         maxRequestHeaderSize,
         gracefulShutdownTimeout,
@@ -345,7 +333,6 @@ public class ServerConfig
            ", defaultQueryTimeout=" + defaultQueryTimeout +
            ", maxScatterGatherBytes=" + maxScatterGatherBytes +
            ", maxSubqueryRows=" + maxSubqueryRows +
-           ", maxSubqueryMemory=" + maxSubqueryMemory +
            ", maxQueryTimeout=" + maxQueryTimeout +
            ", maxRequestHeaderSize=" + maxRequestHeaderSize +
            ", gracefulShutdownTimeout=" + gracefulShutdownTimeout +

@@ -31,7 +31,7 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * A {@link JoinableFactory} for {@link IterableBackedInlineDataSource} and {@link FramesBackedInlineDataSource}.
+ * A {@link JoinableFactory} for {@link IterableBackedInlineDataSource}.
  * It works by building an {@link IndexedTable}.
  *
  * It is not valid to pass any other DataSource type to the "build" method.
@@ -44,18 +44,13 @@ public class InlineJoinableFactory implements JoinableFactory
     // this should always be true if this is access through MapJoinableFactory, but check just in case...
     // further, this should not ever be legitimately called, because this method is used to avoid subquery joins
     // which use the InlineJoinableFactory
-    return dataSource instanceof IterableBackedInlineDataSource || dataSource instanceof FramesBackedInlineDataSource;
+    return dataSource instanceof IterableBackedInlineDataSource;
   }
 
   @Override
   public Optional<Joinable> build(final DataSource dataSource, final JoinConditionAnalysis condition)
   {
-    IterableBackedInlineDataSource iterableBackedInlineDataSource;
-    if (dataSource instanceof FramesBackedInlineDataSource) {
-      iterableBackedInlineDataSource = ((FramesBackedInlineDataSource) dataSource).toIterableBackedInlineDataSource();
-    } else {
-      iterableBackedInlineDataSource = (IterableBackedInlineDataSource) dataSource;
-    }
+    IterableBackedInlineDataSource iterableBackedInlineDataSource = (IterableBackedInlineDataSource) dataSource;
 
     if (condition.canHashJoin()) {
       final Set<String> rightKeyColumns = condition.getRightEquiConditionKeys();
