@@ -152,7 +152,7 @@ The following takes you through sample configuration steps for enabling basic au
    # You can use the authentication API to create new users and grant permissions
    druid.auth.authenticator.MyBasicMetadataAuthenticator.credentialsValidator.type=metadata
 
-   # If true and the request credential doesn't exist in this credentials store,
+   # If true and if the request credential doesn't exist in this credentials store,
    # the request will proceed to next Authenticator in the chain.
    druid.auth.authenticator.MyBasicMetadataAuthenticator.skipOnFailure=false
 
