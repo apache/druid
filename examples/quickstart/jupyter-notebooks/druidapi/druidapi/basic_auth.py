@@ -70,7 +70,7 @@ class BasicAuthClient:
     ac.grant_permissions('myRole', [[consts.DATASOURCE_RESOURCE, 'foo', consts.READ_ACTION]])
     ```
 
-    Then use the various other methods to list users, roles and permissions to verify the
+    Then use the various other methods to list users, roles, and permissions to verify the
     setup. You can then create a second Druid client that acts as the new user:
 
     ```
