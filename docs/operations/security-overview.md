@@ -196,8 +196,8 @@ The following steps walk through a sample setup procedure:
 
 > The default Coordinator API port is 8081 for non-TLS connections and 8281 for secured connections.
 
-1. Create a user by issuing a POST request to `druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/<USERNAME>`,
-   replacing USERNAME with the *new* username you are trying to create. For example:
+1. Create a user by issuing a POST request to `druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/<USERNAME>`.
+   Replace `<USERNAME>` with the *new* username you are trying to create. For example:
    ```bash
    curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/myname
    ```
