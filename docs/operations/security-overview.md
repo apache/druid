@@ -82,12 +82,12 @@ $> keytool -import -file public.cert -alias druid -keystore truststore.jks
 Druid uses Jetty as its embedded web server. See [Configuring SSL/TLS KeyStores
 ](https://www.eclipse.org/jetty/documentation/jetty-11/operations-guide/index.html#og-keystore) from the Jetty documentation.
 
-   > WARNING: Do not use use self-signed certificates for production environments. Instead, rely on your current public key infrastructure to generate and distribute trusted keys.
+   > WARNING: Do not use self-signed certificates for production environments. Instead, rely on your current public key infrastructure to generate and distribute trusted keys.
 
 ### Update Druid TLS configurations
 Edit `common.runtime.properties` for all Druid services on all nodes. Add or update the following TLS options. Restart the cluster when you are finished.
 
-```
+```properties
 # Turn on TLS globally
 druid.enableTlsPort=true
 
@@ -110,7 +110,6 @@ druid.server.https.keyStoreType=jks
 druid.server.https.keyStorePath=my-keystore.jks # replace with correct keyStore file
 druid.server.https.keyStorePassword=secret123 # replace with your own password
 druid.server.https.certAlias=druid
-
 ```
 For more information, see [TLS support](tls-support.md) and [Simple SSLContext Provider Module](../development/extensions-core/simple-client-sslcontext.md).
 
@@ -138,7 +137,7 @@ The following takes you through sample configuration steps for enabling basic au
 
    An example configuration:
 
-   ```text
+   ```properties
    # Druid basic security
    druid.auth.authenticatorChain=["MyBasicMetadataAuthenticator"]
    druid.auth.authenticator.MyBasicMetadataAuthenticator.type=basic
@@ -229,23 +228,23 @@ The following steps walk through a sample setup procedure:
 	 ```
 	The payload of `perms.json` should be in the form:
  	```json
-  [
-    {
-      "resource": {
-        "type": "DATASOURCE",
-        "name": "<PATTERN>"
-      },
-      "action": "READ"
-    },
-    {
-      "resource": {
-        "type": "STATE",
-        "name": "STATE"
-      },
-      "action": "READ"
-    }
-  ]
-  ```
+      [
+        {
+          "resource": {
+            "type": "DATASOURCE",
+            "name": "<PATTERN>"
+          },
+          "action": "READ"
+        },
+        {
+          "resource": {
+            "type": "STATE",
+            "name": "STATE"
+          },
+          "action": "READ"
+        }
+      ]
+    ```
   > Note: Druid treats the resource name as a regular expression (regex). You can use a specific datasource name or regex to grant permissions for multiple datasources at a time.
 
 
