@@ -225,7 +225,7 @@ The following steps walk through a sample setup procedure:
    ```bash
    curl -u admin:password1 -H'Content-Type: application/json' -XPOST --data-binary @perms.json https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/myrole/permissions
    ```
-   payload of `perms.json` should be in the form:
+   The payload of `perms.json` should be in the following form:
    ```json
    [
       {
