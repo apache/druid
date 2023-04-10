@@ -57,7 +57,7 @@ public class HadoopTuningConfig implements TuningConfig
         DEFAULT_INDEX_SPEC,
         DEFAULT_INDEX_SPEC,
         DEFAULT_APPENDABLE_INDEX,
-        DEFAULT_MAX_ROWS_IN_MEMORY,
+        DEFAULT_MAX_ROWS_IN_MEMORY_BATCH,
         0L,
         false,
         true,
@@ -141,7 +141,7 @@ public class HadoopTuningConfig implements TuningConfig
     this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
                                             this.indexSpec : indexSpecForIntermediatePersists;
     this.maxRowsInMemory = maxRowsInMemory == null ? maxRowsInMemoryCOMPAT == null
-                                                      ? DEFAULT_MAX_ROWS_IN_MEMORY
+                                                      ? DEFAULT_MAX_ROWS_IN_MEMORY_BATCH
                                                       : maxRowsInMemoryCOMPAT : maxRowsInMemory;
     this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
     // initializing this to 0, it will be lazily initialized to a value

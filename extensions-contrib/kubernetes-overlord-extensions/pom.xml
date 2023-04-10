@@ -30,7 +30,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>26.0.0-SNAPSHOT</version>
+    <version>27.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
@@ -81,6 +81,12 @@
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
+      <artifactId>netty</artifactId>
+      <version>${netty3.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
       <artifactId>netty-common</artifactId>
       <version>${netty4.version}</version>
       <scope>provided</scope>
@@ -98,7 +104,7 @@
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-model-core</artifactId>
-      <version>5.12.2</version>
+      <version>6.4.1</version>
     </dependency>
     <dependency>
       <groupId>javax.validation</groupId>
@@ -108,12 +114,18 @@
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-model-batch</artifactId>
-      <version>5.12.2</version>
+      <version>6.4.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.fabric8</groupId>
+      <artifactId>kubernetes-client-api</artifactId>
+      <version>6.4.1</version>
     </dependency>
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-client</artifactId>
-      <version>5.12.2</version>
+      <version>6.4.1</version>
+      <scope>runtime</scope>
     </dependency>
 
     <!-- Tests -->
@@ -130,7 +142,7 @@
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-server-mock</artifactId>
-      <version>5.12.2</version>
+      <version>6.4.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>

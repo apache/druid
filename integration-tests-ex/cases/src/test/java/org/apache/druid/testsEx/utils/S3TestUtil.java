@@ -19,9 +19,12 @@
 
 package org.apache.druid.testsEx.utils;
 
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.Protocol;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
@@ -81,10 +84,16 @@ public class S3TestUtil
   private AmazonS3 s3Client()
   {
     AWSCredentials credentials = new BasicAWSCredentials(S3_ACCESS_KEY, S3_SECRET_KEY);
+    ClientConfiguration clientConfig = new ClientConfiguration();
+    clientConfig.setProtocol(Protocol.HTTP);
     return AmazonS3ClientBuilder
         .standard()
         .withCredentials(new AWSStaticCredentialsProvider(credentials))
-        .withRegion(S3_REGION)
+        // Setting endpoint to MinIO S3 API endpoint (e.g., "http://localhost:9000")
+        // configured in integration-tests-ex/cases/cluster/Common/dependencies.yaml
+        .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration("http://localhost:9000", S3_REGION))
+        .withPathStyleAccessEnabled(true)
+        .withClientConfiguration(clientConfig)
         .build();
   }
 

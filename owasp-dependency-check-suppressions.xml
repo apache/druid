@@ -68,6 +68,9 @@
       ~ dependency on hadoop 2.8.5 is blocking us from updating this dependency. Not a major concern since Druid
       ~ eats uncaught exceptions, and only displays them in logs. This issue also should only affect ingestion
       ~ jobs which can only be run by admin type users.
+
+      ~ CVE-2022-45688:
+      ~ We do not use XML, so not impact that by this CVE
       -->
     <notes><![CDATA[
    file name: json-smart-2.3.jar
@@ -75,7 +78,18 @@
     <packageUrl regex="true">^pkg:maven/net\.minidev/json\-smart@.*$</packageUrl>
     <cve>CVE-2021-27568</cve>
     <cve>CVE-2021-31684</cve>
+    <cve>CVE-2022-45688</cve>
+    <cve>CVE-2023-1370</cve>
   </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+     file name: json-path-2.3.0.jar
+     ]]></notes>
+    <packageUrl regex="true">^pkg:maven/net\.minidev/json\-path@.*$</packageUrl>
+    <cve>CVE-2022-45688</cve>
+  </suppress>
+
   <suppress>
     <!--
       accessors-smart-1.2 is a dependency of json-smart-2.3.
@@ -87,6 +101,7 @@
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/net\.minidev/accessors\-smart@.*$</packageUrl>
     <cve>CVE-2021-27568</cve>
+    <cve>CVE-2022-45688</cve>
   </suppress>
   <suppress>
     <!--
@@ -191,6 +206,7 @@
     <cve>CVE-2019-16869</cve>
     <cve>CVE-2019-20444</cve>
     <cve>CVE-2019-20445</cve>
+    <cve>CVE-2020-11612</cve>
     <cve>CVE-2021-37136</cve>
     <cve>CVE-2021-37137</cve>
     <cve>CVE-2022-41881</cve>
@@ -599,10 +615,12 @@
 
   <suppress>
     <!-- Jackson CVEs when processing objects of large depth. Consider updating -->
+
     <notes><![CDATA[
    file name: *jackson-*.jar
    ]]></notes>
     <cve>CVE-2020-36518</cve>
+    <cve>CVE-2022-45688</cve>
   </suppress>
 
   <suppress>

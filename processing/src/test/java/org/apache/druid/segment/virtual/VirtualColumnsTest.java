@@ -51,7 +51,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ZeroIndexedInts;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -485,7 +484,7 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
           return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG);
         }
         if ("n".equals(column)) {
-          return ColumnCapabilitiesImpl.createDefault().setType(NestedDataComplexTypeSerde.TYPE);
+          return ColumnCapabilitiesImpl.createDefault().setType(ColumnType.NESTED_DATA);
         }
         return null;
       }

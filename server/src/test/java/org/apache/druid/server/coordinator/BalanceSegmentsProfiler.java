@@ -135,7 +135,9 @@ public class BalanceSegmentsProfiler
         .addTier("normal", serverHolderList.toArray(new ServerHolder[0]))
         .build();
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
-        .newBuilder(druidCluster)
+        .newBuilder()
+        .withDruidCluster(druidCluster)
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, false))
         .withLoadManagementPeons(peonMap)
         .withUsedSegmentsInTest(segments)
         .withDynamicConfigs(

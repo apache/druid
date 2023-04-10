@@ -379,7 +379,6 @@ class ArrayExpr extends ConstantExpr<Object[]>
   {
     super(outputType, value);
     Preconditions.checkArgument(outputType.isArray(), "Output type %s is not an array", outputType);
-    ExpressionType.checkNestedArrayAllowed(outputType);
   }
 
   @Override

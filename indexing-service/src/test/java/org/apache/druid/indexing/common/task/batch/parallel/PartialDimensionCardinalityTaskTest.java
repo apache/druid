@@ -44,6 +44,10 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.testing.junit.LoggerCaptureRule;
 import org.apache.logging.log4j.core.LogEvent;
 import org.easymock.Capture;
@@ -112,6 +116,21 @@ public class PartialDimensionCardinalityTaskTest
       PartialDimensionCardinalityTask task = new PartialDimensionCardinalityTaskBuilder()
           .build();
       TestHelper.testSerializesDeserializes(OBJECT_MAPPER, task);
+    }
+
+    @Test
+    public void hasCorrectInputSourceTypes()
+    {
+      PartialDimensionCardinalityTask task = new PartialDimensionCardinalityTaskBuilder()
+          .build();
+      Assert.assertEquals(
+          Collections.singleton(
+              new ResourceAction(new Resource(
+                  ResourceType.EXTERNAL,
+                  InlineInputSource.TYPE_KEY
+              ), Action.READ)),
+          task.getInputSourceResources()
+      );
     }
 
     @Test

@@ -38,11 +38,17 @@ import org.apache.calcite.sql.type.SqlOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlOperandTypeInference;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.expression.AuthorizableOperator;
+import org.apache.druid.sql.calcite.table.ExternalTable;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Table macro designed for use with the Druid EXTEND operator. Example:
@@ -163,9 +169,19 @@ public abstract class SchemaAwareUserDefinedTableMacro
     }
 
     @Override
-    public Set<ResourceAction> computeResources(final SqlCall call)
+    public Set<ResourceAction> computeResources(final SqlCall call, final boolean inputSourceTypeSecurityEnabled)
     {
-      return base.computeResources(call);
+      Set<ResourceAction> resourceActions = new HashSet<>();
+      if (table instanceof ExternalTable && inputSourceTypeSecurityEnabled) {
+        resourceActions.addAll(((ExternalTable) table)
+                                   .getInputSourceTypeSupplier().get().stream()
+                                   .map(inputSourceType ->
+                                 new ResourceAction(new Resource(ResourceType.EXTERNAL, inputSourceType), Action.READ))
+                                   .collect(Collectors.toSet()));
+      } else {
+        resourceActions.addAll(base.computeResources(call, inputSourceTypeSecurityEnabled));
+      }
+      return resourceActions;
     }
   }
 

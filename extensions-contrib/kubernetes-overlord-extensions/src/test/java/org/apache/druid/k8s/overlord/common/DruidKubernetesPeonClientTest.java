@@ -23,15 +23,13 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.PodListBuilder;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.JobStatus;
+import io.fabric8.kubernetes.api.model.batch.v1.JobStatusBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.KubernetesClientTimeoutException;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import org.junit.jupiter.api.Assertions;
@@ -60,9 +58,27 @@ public class DruidKubernetesPeonClientTest
     DruidKubernetesPeonClient client = new DruidKubernetesPeonClient(new TestKubernetesClient(this.client), "test",
                                                                      false
     );
-    Assertions.assertThrows(KubernetesClientTimeoutException.class, () -> {
-      client.waitForJobCompletion(new K8sTaskId("some-task"), 1, TimeUnit.SECONDS);
-    });
+    JobResponse jobResponse = client.waitForJobCompletion(new K8sTaskId("some-task"), 1, TimeUnit.SECONDS);
+    Assertions.assertEquals(PeonPhase.FAILED, jobResponse.getPhase());
+    Assertions.assertNull(jobResponse.getJob());
+  }
+
+  @Test
+  void testWaitingForAPodToGetReadySuccess()
+  {
+    DruidKubernetesPeonClient peonClient = new DruidKubernetesPeonClient(new TestKubernetesClient(this.client), "test",
+        false
+    );
+    Job job = new JobBuilder()
+        .withNewMetadata()
+        .withName("sometask")
+        .endMetadata()
+        .withStatus(new JobStatusBuilder().withActive(null).withSucceeded(1).build())
+        .build();
+    client.batch().v1().jobs().inNamespace("test").create(job);
+    JobResponse jobResponse = peonClient.waitForJobCompletion(new K8sTaskId("sometask"), 1, TimeUnit.SECONDS);
+    Assertions.assertEquals(PeonPhase.SUCCEEDED, jobResponse.getPhase());
+    Assertions.assertEquals(job.getStatus().getSucceeded(), jobResponse.getJob().getStatus().getSucceeded());
   }
 
   @Test
@@ -87,24 +103,6 @@ public class DruidKubernetesPeonClientTest
   }
 
   @Test
-  void testListPeonPods()
-  {
-    Pod pod = new PodBuilder()
-        .withNewMetadata()
-        .withName("foo")
-        .addToLabels(DruidK8sConstants.LABEL_KEY, "true")
-        .endMetadata()
-        .withSpec(K8sTestUtils.getDummyPodSpec())
-        .build();
-    client.pods().inNamespace("test").create(pod);
-    DruidKubernetesPeonClient peonClient = new DruidKubernetesPeonClient(new TestKubernetesClient(this.client), "test",
-                                                                         false
-    );
-    List<Pod> pods = peonClient.listPeonPods();
-    Assertions.assertEquals(1, pods.size());
-  }
-
-  @Test
   void testCleanup() throws KubernetesResourceNotFoundException
   {
     DruidKubernetesPeonClient peonClient = new DruidKubernetesPeonClient(new TestKubernetesClient(this.client), "test",
@@ -120,6 +118,26 @@ public class DruidKubernetesPeonClientTest
     List<Job> toDelete = peonClient.getJobsToCleanup(jobs, 30, TimeUnit.MINUTES);
     Assertions.assertEquals(1, toDelete.size()); // should only cleanup one job
     Assertions.assertEquals(killThisOne, Iterables.getOnlyElement(toDelete)); // should only cleanup one job
+  }
+
+  @Test
+  void testCleanupReturnValue() throws KubernetesResourceNotFoundException
+  {
+    DruidKubernetesPeonClient peonClient = new DruidKubernetesPeonClient(new TestKubernetesClient(this.client), "test",
+        false
+    );
+    Assertions.assertFalse(peonClient.cleanUpJob(new K8sTaskId("sometask")));
+
+    Job job = new JobBuilder()
+        .withNewMetadata()
+        .withName("sometask")
+        .addToLabels(DruidK8sConstants.LABEL_KEY, "true")
+        .endMetadata()
+        .withNewSpec()
+        .withTemplate(new PodTemplateSpec(new ObjectMeta(), K8sTestUtils.getDummyPodSpec()))
+        .endSpec().build();
+    client.batch().v1().jobs().inNamespace("test").create(job);
+    Assertions.assertTrue(peonClient.cleanUpJob(new K8sTaskId("sometask")));
   }
 
   @Test
