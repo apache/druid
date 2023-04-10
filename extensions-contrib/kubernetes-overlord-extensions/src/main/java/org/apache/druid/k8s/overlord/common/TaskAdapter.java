@@ -19,7 +19,6 @@
 
 package org.apache.druid.k8s.overlord.common;
 
-import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import org.apache.druid.indexing.common.task.Task;
 
@@ -30,6 +29,6 @@ public interface TaskAdapter
 
   Job fromTask(Task task) throws IOException;
 
-  Task toTask(Pod from) throws IOException;
+  Task toTask(Job from) throws IOException;
 
 }

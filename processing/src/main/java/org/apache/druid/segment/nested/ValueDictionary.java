@@ -21,6 +21,7 @@ package org.apache.druid.segment.nested;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.ComparatorDimensionDictionary;
 import org.apache.druid.segment.ComparatorSortedDimensionDictionary;
 import org.apache.druid.segment.DimensionDictionary;
@@ -38,11 +39,11 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * Used by {@link NestedDataColumnIndexer} to build the global value dictionary, which can be converted into a
- * {@link GlobalDictionarySortedCollector} to sort and write out the values to a segment with
- * {@link #getSortedCollector()}.
+ * Used by {@link AutoTypeColumnIndexer} and {@link NestedDataColumnIndexer} to build the
+ * value dictionary, which can be converted into a {@link SortedValueDictionary} to sort and write out the values to a
+ * segment with {@link #getSortedCollector()}.
  */
-public class GlobalDimensionDictionary
+public class ValueDictionary
 {
   private final ComparatorDimensionDictionary<String> stringDictionary;
   private final ComparatorDimensionDictionary<Long> longDictionary;
@@ -53,7 +54,7 @@ public class GlobalDimensionDictionary
 
   private int arrayBytesSizeEstimate;
 
-  public GlobalDimensionDictionary()
+  public ValueDictionary()
   {
     this.stringDictionary = new ComparatorDimensionDictionary<String>(GenericIndexed.STRING_STRATEGY)
     {
@@ -150,7 +151,7 @@ public class GlobalDimensionDictionary
     return sizeEstimate;
   }
 
-  public GlobalDictionarySortedCollector getSortedCollector()
+  public SortedValueDictionary getSortedCollector()
   {
     final ComparatorSortedDimensionDictionary<String> sortedStringDimensionDictionary =
         stringDictionary.sort();
@@ -313,8 +314,41 @@ public class GlobalDimensionDictionary
     sortedArrays.addAll(stringArrays);
     sortedArrays.addAll(longArrays);
     sortedArrays.addAll(doubleArrays);
+    Indexed<Object[]> sortedArraysIndexed = new Indexed<Object[]>()
+    {
+      @Override
+      public Iterator<Object[]> iterator()
+      {
+        return sortedArrays.iterator();
+      }
 
-    return new GlobalDictionarySortedCollector(strings, longs, doubles, sortedArrays, sortedArrays.size());
+      @Override
+      public int size()
+      {
+        return sortedArrays.size();
+      }
+
+      @Nullable
+      @Override
+      public Object[] get(int index)
+      {
+        return new Object[0];
+      }
+
+      @Override
+      public int indexOf(@Nullable Object[] value)
+      {
+        throw new UnsupportedOperationException("indexOf not supported");
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        // nothing to inspect
+      }
+    };
+
+    return new SortedValueDictionary(strings, longs, doubles, sortedArraysIndexed, null);
   }
 
   public long sizeInBytes()

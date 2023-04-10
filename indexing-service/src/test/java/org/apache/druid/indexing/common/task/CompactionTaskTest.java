@@ -92,7 +92,6 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DoubleDimensionHandler;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -672,6 +671,25 @@ public class CompactionTaskTest
     final byte[] bytes = mapper.writeValueAsBytes(oldTask);
     final CompactionTask fromJson = mapper.readValue(bytes, CompactionTask.class);
     assertEquals(expectedFromJson, fromJson);
+  }
+
+  @Test
+  public void testInputSourceResources()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory,
+        RETRY_POLICY_FACTORY
+    );
+    final CompactionTask task = builder
+        .inputSpec(
+            new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS))
+        )
+        .tuningConfig(createTuningConfig())
+        .context(ImmutableMap.of("testKey", "testContext"))
+        .build();
+
+    Assert.assertTrue(task.getInputSourceResources().isEmpty());
   }
 
   @Test
@@ -1668,107 +1686,6 @@ public class CompactionTaskTest
         null
     );
     Assert.assertNull(chooseFinestGranularityHelper(input));
-  }
-
-  @Test
-  public void testCreateDimensionSchema()
-  {
-    final String dimensionName = "dim";
-    DimensionHandlerUtils.registerDimensionHandlerProvider(
-        ExtensionDimensionHandler.TYPE_NAME,
-        d -> new ExtensionDimensionHandler(d)
-    );
-    DimensionSchema stringSchema = CompactionTask.createDimensionSchema(
-        dimensionName,
-        ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities()
-                              .setHasBitmapIndexes(true)
-                              .setDictionaryEncoded(true)
-                              .setDictionaryValuesUnique(true)
-                              .setDictionaryValuesUnique(true),
-        DimensionSchema.MultiValueHandling.SORTED_SET
-    );
-
-    Assert.assertTrue(stringSchema instanceof StringDimensionSchema);
-
-    DimensionSchema floatSchema = CompactionTask.createDimensionSchema(
-        dimensionName,
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
-        null
-    );
-    Assert.assertTrue(floatSchema instanceof FloatDimensionSchema);
-
-    DimensionSchema doubleSchema = CompactionTask.createDimensionSchema(
-        dimensionName,
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE),
-        null
-    );
-    Assert.assertTrue(doubleSchema instanceof DoubleDimensionSchema);
-
-    DimensionSchema longSchema = CompactionTask.createDimensionSchema(
-        dimensionName,
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG),
-        null
-    );
-    Assert.assertTrue(longSchema instanceof LongDimensionSchema);
-
-    DimensionSchema extensionSchema = CompactionTask.createDimensionSchema(
-        dimensionName,
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(
-            ColumnType.ofComplex(ExtensionDimensionHandler.TYPE_NAME)
-        ),
-        null
-    );
-    Assert.assertTrue(extensionSchema instanceof ExtensionDimensionSchema);
-  }
-
-  @Test
-  public void testCreateDimensionSchemaIllegalFloat()
-  {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("multi-value dimension [foo] is not supported for float type yet");
-    CompactionTask.createDimensionSchema(
-        "foo",
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
-        DimensionSchema.MultiValueHandling.SORTED_SET
-    );
-  }
-
-  @Test
-  public void testCreateDimensionSchemaIllegalDouble()
-  {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("multi-value dimension [foo] is not supported for double type yet");
-    CompactionTask.createDimensionSchema(
-        "foo",
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE),
-        DimensionSchema.MultiValueHandling.SORTED_SET
-    );
-  }
-
-  @Test
-  public void testCreateDimensionSchemaIllegalLong()
-  {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("multi-value dimension [foo] is not supported for long type yet");
-    CompactionTask.createDimensionSchema(
-        "foo",
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG),
-        DimensionSchema.MultiValueHandling.SORTED_SET
-    );
-  }
-
-  @Test
-  public void testCreateDimensionSchemaIllegalComplex()
-  {
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage("Can't find DimensionHandlerProvider for typeName [unknown]");
-    CompactionTask.createDimensionSchema(
-        "foo",
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(
-            ColumnType.ofComplex("unknown")
-        ),
-        DimensionSchema.MultiValueHandling.SORTED_SET
-    );
   }
 
   private Granularity chooseFinestGranularityHelper(List<Granularity> granularities)

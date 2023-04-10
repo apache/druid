@@ -38,6 +38,7 @@ This topic covers how to submit a supervisor spec to ingest event data, also kno
 - For a walk-through, see the [Loading from Apache Kafka](../../tutorials/tutorial-kafka.md) tutorial.
 
 ## Kafka support
+
 The Kafka indexing service supports transactional topics introduced in Kafka 0.11.x by default. The consumer for Kafka indexing service is incompatible with older Kafka brokers. If you are using an older version, refer to the [Kafka upgrade guide](https://kafka.apache.org/documentation/#upgrade).
 
 Additionally, you can set `isolation.level` to `read_uncommitted` in `consumerProperties` if either:
@@ -51,6 +52,7 @@ If your Kafka cluster enables consumer-group based ACLs, you can set `group.id` 
 To use the Kafka indexing service, load the `druid-kafka-indexing-service` extension on both the Overlord and the MiddleManagers. See [Loading extensions](../../configuration/extensions.md) for instructions on how to configure extensions.
 
 ## Define a supervisor spec
+
 Similar to the ingestion spec for batch ingestion, the supervisor spec configures the data ingestion for Kafka streaming ingestion. A supervisor spec has the following sections:
 - `dataSchema` to specify the Druid datasource name, primary timestamp, dimensions, metrics, transforms, and any necessary filters.
 - `ioConfig` to configure Kafka connection settings and configure how Druid parses the data. Kafka-specific connection details go in the `consumerProperties`. The `ioConfig` is also where you define the input format (`inputFormat`) of your Kafka data. For supported formats for Kafka and information on how to configure the input format, see [Data formats](../../ingestion/data-formats.md).  
@@ -128,6 +130,7 @@ The following example demonstrates a supervisor spec for Kafka that uses the `JS
 ```
 
 ### Kafka input format supervisor spec example
+
 If you want to ingest data from other fields in addition to the Kafka message contents, you can use the `kafka` input format. The `kafka` input format lets you ingest:
 - the event key field
 - event headers
@@ -141,7 +144,7 @@ For example, consider the following structure for a message that represents a fi
 - **Event timestamp**: "Nov. 10, 2021 at 14:06"
 
 When you use the `kafka` input format, you configure the way that Druid names the dimensions created from the Kafka message:
-- `headerLabelPrefix`: Supply a prefix to the Kafka headers to avoid any conflicts with named dimensions. The default is `kafka.header`. Considering the header from the example, Druid maps the header to the following column: `kafka.header.environment`.
+- `headerColumnPrefix`: Supply a prefix to the Kafka headers to avoid any conflicts with named dimensions. The default is `kafka.header`. Considering the header from the example, Druid maps the header to the following column: `kafka.header.environment`.
 - `timestampColumnName`: Supply a custom name for the Kafka timestamp in the Druid schema to avoid conflicts with other time columns. The default is `kafka.timestamp`.
 - `keyColumnName`: Supply the name for the Kafka key column in Druid. The default is `kafka.key`.
 Additionally, you must provide information about how Druid should parse the data in the Kafka message:
@@ -159,7 +162,7 @@ Additionally, you must provide information about how Druid should parse the data
 
 For more information on data formats, see [Data formats](../../ingestion/data-formats.md).
 
-Finally, add the Kafka message columns to the `dimensionsSpec`. For the key and timestamp, you can use the dimension names you defined for `keyColumnName` and `timestampColumnName`. For header dimensions, append the header key to the `headerLabelPrefix`. For example `kafka.header.environment`.
+Finally, add the Kafka message columns to the `dimensionsSpec`. For the key and timestamp, you can use the dimension names you defined for `keyColumnName` and `timestampColumnName`. For header dimensions, append the header key to the `headerColumnPrefix`. For example `kafka.header.environment`.
      
 The following supervisor spec demonstrates how to ingest the Kafka header, key, and timestamp into Druid dimensions:
 ```
@@ -174,7 +177,7 @@ The following supervisor spec demonstrates how to ingest the Kafka header, key, 
       "topic": "wiki-edits",
       "inputFormat": {
         "type": "kafka",
-        "headerLabelPrefix": "kafka.header.",
+        "headerColumnPrefix": "kafka.header.",
         "timestampColumnName": "kafka.timestamp",
         "keyColumnName": "kafka.key",
         "headerFormat": {

@@ -21,12 +21,9 @@ package org.apache.druid.k8s.overlord.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
-import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -48,13 +45,10 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Properties;
 
-@EnableKubernetesMockClient()
 public class PodTemplateTaskAdapterTest
 {
   @TempDir private Path tempDir;
-  private KubernetesClient client;
   private KubernetesTaskRunnerConfig taskRunnerConfig;
-  private TestKubernetesClient testClient;
   private PodTemplate podTemplateSpec;
   private TaskConfig taskConfig;
   private DruidNode node;
@@ -64,7 +58,6 @@ public class PodTemplateTaskAdapterTest
   public void setup()
   {
     taskRunnerConfig = new KubernetesTaskRunnerConfig();
-    testClient = new TestKubernetesClient(client);
     taskConfig = new TaskConfig(
         "/tmp",
         null,
@@ -92,14 +85,7 @@ public class PodTemplateTaskAdapterTest
         false
     );
     mapper = new TestUtils().getTestObjectMapper();
-    podTemplateSpec = client
-        .v1()
-        .podTemplates()
-        .load(this.getClass()
-            .getClassLoader()
-            .getResourceAsStream("basePodTemplate.yaml")
-        )
-        .get();
+    podTemplateSpec = K8sTestUtils.fileToResource("basePodTemplate.yaml", PodTemplate.class);
   }
 
   @Test
@@ -109,7 +95,6 @@ public class PodTemplateTaskAdapterTest
         "Pod template task adapter requires a base pod template to be specified",
         IAE.class,
         () -> new PodTemplateTaskAdapter(
-        testClient,
         taskRunnerConfig,
         taskConfig,
         node,
@@ -130,7 +115,6 @@ public class PodTemplateTaskAdapterTest
         "Pod template task adapter requires a base pod template to be specified",
         ISE.class,
         () -> new PodTemplateTaskAdapter(
-        testClient,
         taskRunnerConfig,
         taskConfig,
         node,
@@ -149,7 +133,6 @@ public class PodTemplateTaskAdapterTest
     props.setProperty("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
 
     PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
-        testClient,
         taskRunnerConfig,
         taskConfig,
         node,
@@ -168,15 +151,7 @@ public class PodTemplateTaskAdapterTest
         null
     );
     Job actual = adapter.fromTask(task);
-    Job expected = client
-        .batch()
-        .v1()
-        .jobs()
-        .load(this.getClass()
-            .getClassLoader()
-            .getResourceAsStream("expectedNoopJob.yaml")
-        )
-        .get();
+    Job expected = K8sTestUtils.fileToResource("expectedNoopJob.yaml", Job.class);
 
     Assertions.assertEquals(expected, actual);
   }
@@ -191,7 +166,6 @@ public class PodTemplateTaskAdapterTest
     props.setProperty("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
 
     PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
-        testClient,
         taskRunnerConfig,
         taskConfig,
         new DruidNode(
@@ -219,15 +193,7 @@ public class PodTemplateTaskAdapterTest
     );
 
     Job actual = adapter.fromTask(task);
-    Job expected = client
-        .batch()
-        .v1()
-        .jobs()
-        .load(this.getClass()
-            .getClassLoader()
-            .getResourceAsStream("expectedNoopJobTlsEnabled.yaml")
-        )
-        .get();
+    Job expected = K8sTestUtils.fileToResource("expectedNoopJobTlsEnabled.yaml", Job.class);
 
     Assertions.assertEquals(expected, actual);
   }
@@ -244,7 +210,6 @@ public class PodTemplateTaskAdapterTest
     props.setProperty("druid.indexer.runner.k8s.podTemplate.noop", noopTemplatePath.toString());
 
     Assert.assertThrows(ISE.class, () -> new PodTemplateTaskAdapter(
-        testClient,
         taskRunnerConfig,
         taskConfig,
         node,
@@ -264,7 +229,6 @@ public class PodTemplateTaskAdapterTest
     props.setProperty("druid.indexer.runner.k8s.podTemplate.noop", templatePath.toString());
 
     PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
-        testClient,
         taskRunnerConfig,
         taskConfig,
         node,
@@ -284,15 +248,7 @@ public class PodTemplateTaskAdapterTest
     );
 
     Job actual = adapter.fromTask(task);
-    Job expected = client
-        .batch()
-        .v1()
-        .jobs()
-        .load(this.getClass()
-            .getClassLoader()
-            .getResourceAsStream("expectedNoopJob.yaml")
-        )
-        .get();
+    Job expected = K8sTestUtils.fileToResource("expectedNoopJob.yaml", Job.class);
 
     Assertions.assertEquals(expected, actual);
   }
@@ -307,7 +263,6 @@ public class PodTemplateTaskAdapterTest
     props.setProperty("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
 
     PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
-        testClient,
         taskRunnerConfig,
         taskConfig,
         node,
@@ -315,15 +270,10 @@ public class PodTemplateTaskAdapterTest
         props
     );
 
-    Pod pod = client
-        .pods()
-        .load(this.getClass()
-            .getClassLoader()
-            .getResourceAsStream("basePodWithoutAnnotations.yaml")
-        )
-        .get();
+    Job job = K8sTestUtils.fileToResource("baseJobWithoutAnnotations.yaml", Job.class);
 
-    Assert.assertThrows(IOE.class, () -> adapter.toTask(pod));
+
+    Assert.assertThrows(IOE.class, () -> adapter.toTask(job));
   }
 
   @Test
@@ -336,7 +286,6 @@ public class PodTemplateTaskAdapterTest
     props.put("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
 
     PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
-        testClient,
         taskRunnerConfig,
         taskConfig,
         node,
@@ -344,21 +293,18 @@ public class PodTemplateTaskAdapterTest
         props
     );
 
-    Pod basePod = client
-        .pods()
-        .load(this.getClass()
-            .getClassLoader()
-            .getResourceAsStream("basePodWithoutAnnotations.yaml")
-        )
-        .get();
+    Job baseJob = K8sTestUtils.fileToResource("baseJobWithoutAnnotations.yaml", Job.class);
 
-    Pod pod = new PodBuilder(basePod)
+    Job job = new JobBuilder(baseJob)
+        .editSpec()
+        .editTemplate()
         .editMetadata()
         .addToAnnotations(Collections.emptyMap())
         .endMetadata()
+        .endTemplate()
+        .endSpec()
         .build();
-
-    Assert.assertThrows(IOE.class, () -> adapter.toTask(pod));
+    Assert.assertThrows(IOE.class, () -> adapter.toTask(job));
   }
 
   @Test
@@ -371,7 +317,6 @@ public class PodTemplateTaskAdapterTest
     props.put("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
 
     PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
-        testClient,
         taskRunnerConfig,
         taskConfig,
         node,
@@ -379,15 +324,8 @@ public class PodTemplateTaskAdapterTest
         props
     );
 
-    Pod pod = client
-        .pods()
-        .load(this.getClass()
-            .getClassLoader()
-            .getResourceAsStream("basePod.yaml")
-        )
-        .get();
-
-    Task actual = adapter.toTask(pod);
+    Job job = K8sTestUtils.fileToResource("baseJob.yaml", Job.class);
+    Task actual = adapter.toTask(job);
     Task expected = NoopTask.create("id", 1);
 
     Assertions.assertEquals(expected, actual);

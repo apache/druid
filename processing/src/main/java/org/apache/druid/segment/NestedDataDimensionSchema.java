@@ -44,7 +44,13 @@ public class NestedDataDimensionSchema extends DimensionSchema
   @Override
   public ColumnType getColumnType()
   {
-    return NestedDataComplexTypeSerde.TYPE;
+    return ColumnType.NESTED_DATA;
+  }
+
+  @Override
+  public DimensionHandler getDimensionHandler()
+  {
+    return new NestedDataDimensionHandler(getName());
   }
 }
 

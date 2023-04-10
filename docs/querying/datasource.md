@@ -397,7 +397,7 @@ When you use the `unnest` datasource, the unnested column looks like this:
 When unnesting data, keep the following in mind:
 
 - The total number of rows will grow to accommodate the new rows that the unnested data occupy.
-- You can unnest the values in more than one column in a single `unnest` datasource. This can lead to a very large number of new rows depending on your dataset. You can see an example of this in the [unnest tutorial](../tutorials/tutorial-unnest-datasource.md#unnest-multiple-columns).
+- You can unnest the values in more than one column in a single `unnest` datasource, but this can lead to a very large number of new rows depending on your dataset.
 
 The `unnest` datasource uses the following syntax:
 
@@ -410,6 +410,7 @@ The `unnest` datasource uses the following syntax:
     },
     "virtualColumn": {
       "type": "expression",
+      "name": "output_column",
       "expression": "\"column_reference\""
     },
     "outputName": "unnested_target_column"
@@ -421,4 +422,4 @@ The `unnest` datasource uses the following syntax:
   * `dataSource.base.type`: The type of datasource you want to unnest, such as a table.
 * `dataSource.virtualColumn`: [Virtual column](virtual-columns.md) that references the nested values. The output name of this column is reused as the name of the column that contains unnested values. You can replace the source column with the unnested column by specifying the source column's name or a new column by specifying a different name. Outputting it to a new column can help you verify that you get the results that you expect but isn't required.
 
-To learn more about how to use the `unnest` datasource, see the [unnest tutorial](../tutorials/tutorial-unnest-datasource.md).
+To learn more about how to use the `unnest` datasource, see the [unnest tutorial](../tutorials/tutorial-unnest-arrays.md).

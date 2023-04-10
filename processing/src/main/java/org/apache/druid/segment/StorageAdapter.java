@@ -119,4 +119,12 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector
   {
     return false;
   }
+
+  /**
+   * @return true if this index was created from a tombstone or false otherwise
+   */
+  default boolean isFromTombstone()
+  {
+    return false;
+  }
 }

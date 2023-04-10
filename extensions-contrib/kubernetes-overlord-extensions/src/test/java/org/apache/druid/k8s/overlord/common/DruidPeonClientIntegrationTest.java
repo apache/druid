@@ -59,6 +59,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 // must have a kind / minikube cluster installed and the image pushed to your repository
+@Disabled
 public class DruidPeonClientIntegrationTest
 {
   private StartupLoggingConfig startupLoggingConfig;
@@ -160,7 +161,7 @@ public class DruidPeonClientIntegrationTest
     thread.start();
 
     // assert that the env variable is corret
-    Task taskFromEnvVar = adapter.toTask(peonClient.getMainJobPod(new K8sTaskId(task.getId())));
+    Task taskFromEnvVar = adapter.toTask(job);
     assertEquals(task, taskFromEnvVar);
 
     // now copy the task.json file from the pod and make sure its the same as our task.json we expected

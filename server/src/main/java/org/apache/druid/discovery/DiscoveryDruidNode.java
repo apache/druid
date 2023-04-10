@@ -21,6 +21,7 @@ package org.apache.druid.discovery;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
@@ -30,6 +31,7 @@ import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -162,6 +164,18 @@ public class DiscoveryDruidNode
   public DruidNode getDruidNode()
   {
     return druidNode;
+  }
+
+  @Nullable
+  @JsonIgnore
+  public <T extends DruidService> T getService(String key, Class<T> clazz)
+  {
+    final DruidService o = services.get(key);
+    if (o != null && clazz.isAssignableFrom(o.getClass())) {
+      //noinspection unchecked
+      return (T) o;
+    }
+    return null;
   }
 
   @Override

@@ -17,26 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.storage.azure;
+package org.apache.druid.data.input.impl;
 
-import org.apache.druid.data.input.impl.CloudObjectLocation;
-import org.apache.druid.java.util.common.RE;
-import org.apache.druid.storage.azure.blob.CloudBlobHolder;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- * Converts a {@link CloudBlobHolder} object to a {@link CloudObjectLocation} object
- */
-public class AzureCloudBlobHolderToCloudObjectLocationConverter
-    implements ICloudSpecificObjectToCloudObjectLocationConverter<CloudBlobHolder>
+import java.util.Collections;
+
+public class InlineInputSourceTest
 {
-  @Override
-  public CloudObjectLocation createCloudObjectLocation(CloudBlobHolder cloudBlob)
+  @Test
+  public void testGetTypes()
   {
-    try {
-      return new CloudObjectLocation(cloudBlob.getContainerName(), cloudBlob.getName());
-    }
-    catch (Exception e) {
-      throw new RE(e);
-    }
+    InlineInputSource inputSource = new InlineInputSource("data");
+    Assert.assertEquals(Collections.singleton(InlineInputSource.TYPE_KEY), inputSource.getTypes());
   }
 }

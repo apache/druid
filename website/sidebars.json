@@ -23,8 +23,9 @@
       "tutorials/docker",
       "tutorials/tutorial-kerberos-hadoop",
       "tutorials/tutorial-sql-query-view",
-      "tutorials/tutorial-unnest-datasource",
-      "tutorials/tutorial-jupyter-index"
+      "tutorials/tutorial-unnest-arrays",
+      "tutorials/tutorial-jupyter-index",
+      "tutorials/tutorial-jdbc"
     ],
     "Design": [
       "design/architecture",

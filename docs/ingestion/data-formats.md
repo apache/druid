@@ -171,7 +171,7 @@ Configure the Kafka `inputFormat` to load complete kafka records including heade
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `type` | String | Set value to `kafka`. | yes |
-| `headerLabelPrefix` | String | Custom label prefix for all the header columns. | no (default = "kafka.header.") |
+| `headerColumnPrefix` | String | Custom prefix for all the header columns. | no (default = "kafka.header.") |
 | `timestampColumnName` | String | Name of the column for the kafka record's timestamp.| no (default = "kafka.timestamp") |
 | `keyColumnName` | String | Name of the column for the kafka record's key.| no (default = "kafka.key") |
 | `headerFormat` | Object | `headerFormat` specifies how to parse the Kafka headers. Supports String types. Because Kafka header values are bytes, the parser decodes them as UTF-8 encoded strings. To change this behavior, implement your own parser based on the encoding style. Change the 'encoding' type in `KafkaStringHeaderFormat` to match your custom implementation. | no |
@@ -184,7 +184,7 @@ For example:
 "ioConfig": {
   "inputFormat": {
       "type": "kafka",
-      "headerLabelPrefix": "kafka.header.",
+      "headerColumnPrefix": "kafka.header.",
       "timestampColumnName": "kafka.timestamp",
       "keyColumnName": "kafka.key",
       "headerFormat":

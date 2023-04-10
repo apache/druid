@@ -36,6 +36,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DoubleColumnSelector;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
@@ -336,7 +337,8 @@ public class NestedFieldColumnSelectorsTest
         TransformSpec.NONE,
         NestedDataTestUtils.COUNT,
         Granularities.NONE,
-        true
+        true,
+        new IndexSpec()
     );
     Assert.assertEquals(1, segments.size());
     StorageAdapter storageAdapter = segments.get(0).asStorageAdapter();
@@ -366,7 +368,8 @@ public class NestedFieldColumnSelectorsTest
         TransformSpec.NONE,
         NestedDataTestUtils.COUNT,
         Granularities.NONE,
-        true
+        true,
+        new IndexSpec()
     );
     Assert.assertEquals(1, segments.size());
     StorageAdapter storageAdapter = segments.get(0).asStorageAdapter();

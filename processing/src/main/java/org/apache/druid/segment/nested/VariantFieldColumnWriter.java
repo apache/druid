@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
 /**
- * Literal field writer for mixed type nested columns of {@link NestedDataColumnSerializer}
+ * Literal field writer for mixed type nested columns of {@link NestedDataColumnSerializerV4}
  */
 public final class VariantFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<Object>
 {
@@ -37,7 +37,7 @@ public final class VariantFieldColumnWriter extends GlobalDictionaryEncodedField
       String fieldName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       IndexSpec indexSpec,
-      GlobalDictionaryIdLookup globalDictionaryIdLookup
+      DictionaryIdLookup globalDictionaryIdLookup
   )
   {
     super(columnName, fieldName, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);

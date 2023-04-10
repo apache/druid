@@ -224,6 +224,12 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
     }
   }
 
+  @Override
+  public int getCardinality()
+  {
+    return numWritten + (hasNulls ? 1 : 0);
+  }
+
   private long getBucketOffset(int index) throws IOException
   {
     getOffsetBuffer.clear();

@@ -4237,6 +4237,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByWithImpossibleTimeFilter()
   {
+    msqCompatible();
     // this gets optimized into 'false'
     testQuery(
         "SELECT dim1, COUNT(*) FROM druid.foo\n"
@@ -8175,6 +8176,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByLimitPushDownWithHavingOnLong()
   {
+    if (NullHandling.sqlCompatible()) {
+      msqCompatible();
+    }
+
     testQuery(
         "SELECT dim1, dim2, SUM(cnt) AS thecnt "
         + "FROM druid.foo "
