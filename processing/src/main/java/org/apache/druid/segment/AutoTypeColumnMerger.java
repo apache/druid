@@ -77,7 +77,6 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
   private final String name;
   private final IndexSpec indexSpec;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
-  private final ProgressIndicator progressIndicator;
   private final Closer closer;
   private NestedCommonFormatColumnSerializer serializer;
 
@@ -87,7 +86,6 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
       String name,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
-      ProgressIndicator progressIndicator,
       Closer closer
   )
   {
@@ -95,7 +93,6 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
     this.name = name;
     this.indexSpec = indexSpec;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
-    this.progressIndicator = progressIndicator;
     this.closer = closer;
   }
 
@@ -142,7 +139,6 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
                 name,
                 indexSpec,
                 segmentWriteOutMedium,
-                progressIndicator,
                 closer
             );
             serializer = longSerializer;
@@ -152,7 +148,6 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
                 name,
                 indexSpec,
                 segmentWriteOutMedium,
-                progressIndicator,
                 closer
             );
             serializer = doubleSerializer;
@@ -162,7 +157,6 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
                 name,
                 indexSpec,
                 segmentWriteOutMedium,
-                progressIndicator,
                 closer
             );
             serializer = stringSerializer;
@@ -172,7 +166,6 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
                 name,
                 indexSpec,
                 segmentWriteOutMedium,
-                progressIndicator,
                 closer
             );
             serializer = arraySerializer;
@@ -191,7 +184,6 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
             name,
             indexSpec,
             segmentWriteOutMedium,
-            progressIndicator,
             closer
         );
         serializer = defaultSerializer;

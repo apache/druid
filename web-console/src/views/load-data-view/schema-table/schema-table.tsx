@@ -35,15 +35,17 @@ import {
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../../react-table';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
-import type { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
+import type { SampleEntry, SampleResponse } from '../../../utils/sampler';
+import { getHeaderNamesFromSampleResponse } from '../../../utils/sampler';
 
 import './schema-table.scss';
 
 export interface SchemaTableProps {
   sampleBundle: {
-    headerAndRows: SampleHeaderAndRows;
+    sampleResponse: SampleResponse;
     dimensions: (string | DimensionSpec)[] | undefined;
     metricsSpec: MetricSpec[] | undefined;
+    definedDimensions: boolean;
   };
   columnFilter: string;
   selectedAutoDimension: string | undefined;
@@ -65,17 +67,17 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
     onDimensionSelect,
     onMetricSelect,
   } = props;
-  const { headerAndRows, dimensions, metricsSpec } = sampleBundle;
+  const { sampleResponse, dimensions, metricsSpec, definedDimensions } = sampleBundle;
 
   return (
     <ReactTable
       className={classNames('schema-table', DEFAULT_TABLE_CLASS_NAME)}
-      data={headerAndRows.rows}
+      data={sampleResponse.data}
       sortable={false}
       defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
       pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
-      showPagination={headerAndRows.rows.length > STANDARD_TABLE_PAGE_SIZE}
-      columns={filterMap(headerAndRows.header, (columnName, i) => {
+      showPagination={sampleResponse.data.length > STANDARD_TABLE_PAGE_SIZE}
+      columns={filterMap(getHeaderNamesFromSampleResponse(sampleResponse), (columnName, i) => {
         if (!caseInsensitiveContains(columnName, columnFilter)) return;
 
         const metricSpecIndex = metricsSpec
@@ -130,7 +132,7 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
                 onClick={() => {
                   if (isTimestamp) return;
 
-                  if (dimensionSpec) {
+                  if (definedDimensions && dimensionSpec) {
                     onDimensionSelect(inflateDimensionSpec(dimensionSpec), dimensionSpecIndex);
                   } else {
                     onAutoDimensionSelect(columnName);
@@ -139,7 +141,7 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
               >
                 <div className="column-name">{columnName}</div>
                 <div className="column-detail">
-                  {isTimestamp ? 'long (time column)' : dimensionSpecType || 'string (auto)'}&nbsp;
+                  {isTimestamp ? 'long (time column)' : dimensionSpecType || '(auto)'}&nbsp;
                 </div>
               </div>
             ),

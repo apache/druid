@@ -36,7 +36,6 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.ProgressIndicator;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.Types;
@@ -140,7 +139,6 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
       String name,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
-      @SuppressWarnings("unused") ProgressIndicator progressIndicator,
       Closer closer
   )
   {

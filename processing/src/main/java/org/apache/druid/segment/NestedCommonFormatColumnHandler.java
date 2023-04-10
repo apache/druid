@@ -80,7 +80,7 @@ public class NestedCommonFormatColumnHandler implements DimensionHandler<Structu
       Closer closer
   )
   {
-    return new AutoTypeColumnMerger(name, indexSpec, segmentWriteOutMedium, progress, closer);
+    return new AutoTypeColumnMerger(name, indexSpec, segmentWriteOutMedium, closer);
   }
 
   @Override

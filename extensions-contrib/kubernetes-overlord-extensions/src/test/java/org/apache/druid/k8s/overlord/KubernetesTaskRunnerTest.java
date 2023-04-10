@@ -407,11 +407,11 @@ public class KubernetesTaskRunnerTest
 
     K8sTaskAdapter adapter = mock(K8sTaskAdapter.class);
     when(adapter.fromTask(eq(task))).thenReturn(job);
-    when(adapter.toTask(eq(peonPod))).thenReturn(task);
+    when(adapter.toTask(eq(job))).thenReturn(task);
 
     DruidKubernetesPeonClient peonClient = mock(DruidKubernetesPeonClient.class);
 
-    when(peonClient.listPeonPods()).thenReturn(Collections.singletonList(peonPod));
+    when(peonClient.listAllPeonJobs()).thenReturn(Collections.singletonList(job));
     when(peonClient.jobExists(eq(k8sTaskId))).thenReturn(Optional.of(job));
     when(peonClient.launchJobAndWaitForStart(isA(Job.class), anyLong(), isA(TimeUnit.class))).thenReturn(peonPod);
     when(peonClient.getMainJobPod(eq(k8sTaskId))).thenReturn(peonPod);
@@ -478,11 +478,11 @@ public class KubernetesTaskRunnerTest
 
     K8sTaskAdapter adapter = mock(K8sTaskAdapter.class);
     when(adapter.fromTask(eq(task))).thenReturn(job);
-    when(adapter.toTask(eq(peonPod))).thenReturn(task);
+    when(adapter.toTask(eq(job))).thenReturn(task);
 
     DruidKubernetesPeonClient peonClient = mock(DruidKubernetesPeonClient.class);
 
-    when(peonClient.listPeonPods()).thenReturn(Collections.singletonList(peonPod));
+    when(peonClient.listAllPeonJobs()).thenReturn(Collections.singletonList(job));
     when(peonClient.jobExists(eq(k8sTaskId))).thenReturn(Optional.of(job));
     when(peonClient.launchJobAndWaitForStart(isA(Job.class), anyLong(), isA(TimeUnit.class))).thenReturn(peonPod);
     when(peonClient.getMainJobPod(eq(k8sTaskId))).thenReturn(peonPod);
@@ -888,7 +888,7 @@ public class KubernetesTaskRunnerTest
 
     K8sTaskAdapter adapter = mock(K8sTaskAdapter.class);
     when(adapter.fromTask(eq(task))).thenReturn(job);
-    when(adapter.toTask(eq(peonPod))).thenReturn(task);
+    when(adapter.toTask(eq(job))).thenReturn(task);
 
     DruidKubernetesPeonClient peonClient = mock(DruidKubernetesPeonClient.class);
 

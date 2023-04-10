@@ -1316,7 +1316,7 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
             CoreMatchers.instanceOf(ISE.class),
             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Column [dim3] is a multi value string. Please wrap the column using MV_TO_ARRAY() to proceed further.")
+                "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further.")
             )
         ))
         .verifyExecutionError();
