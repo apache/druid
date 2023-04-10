@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import org.joda.time.DateTime;
 
+import java.util.Objects;
+
 /**
  * DataSegment object plus the overshadowed status for the segment. An immutable object.
  *
@@ -41,31 +43,26 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
   @JsonUnwrapped
   private final DataSegment dataSegment;
 
-  private final boolean handedOff;
-
   private final DateTime handedOffTime;
 
   @JsonCreator
   public SegmentWithOvershadowedStatus(
       @JsonProperty("overshadowed") boolean overshadowed,
-      @JsonProperty("handedOff") boolean handedOff,
       @JsonProperty("handedOffTime") DateTime handedOffTime
   )
   {
     // Jackson will overwrite dataSegment if needed (even though the field is final)
-    this(null, overshadowed, handedOff, handedOffTime);
+    this(null, overshadowed, handedOffTime);
   }
 
   public SegmentWithOvershadowedStatus(
       DataSegment dataSegment,
       boolean overshadowed,
-      boolean handedOff,
       DateTime handedOffTime
   )
   {
     this.dataSegment = dataSegment;
     this.overshadowed = overshadowed;
-    this.handedOff = handedOff;
     this.handedOffTime = handedOffTime;
   }
 
@@ -79,12 +76,6 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
   public DataSegment getDataSegment()
   {
     return dataSegment;
-  }
-
-  @JsonProperty
-  public boolean isHandedOff()
-  {
-    return handedOff;
   }
 
   @JsonProperty
@@ -109,7 +100,7 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
     if (overshadowed != (that.overshadowed)) {
       return false;
     }
-    if (handedOff != (that.handedOff)) {
+    if (!Objects.equals(handedOffTime, that.handedOffTime)) {
       return false;
     }
 
@@ -121,7 +112,7 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
   {
     int result = dataSegment.hashCode();
     result = 31 * result + Boolean.hashCode(overshadowed);
-    result = 31 * result + Boolean.hashCode(handedOff);
+    result = 31 * result + Objects.hashCode(handedOffTime);
     return result;
   }
 
@@ -136,7 +127,6 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
   {
     return "SegmentWithOvershadowedStatus{" +
            "overshadowed=" + overshadowed +
-           ", handedOff=" + handedOff +
            ", handedOffTime=" + handedOffTime +
            ", dataSegment=" + dataSegment +
            '}';

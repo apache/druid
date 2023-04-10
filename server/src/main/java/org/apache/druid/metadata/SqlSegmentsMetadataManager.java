@@ -898,7 +898,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     //
     // setting connection to read-only will allow some database such as MySQL
     // to automatically use read-only transaction mode, further optimizing the query
-    final Map<String, Map<SegmentId, Pair<Boolean, DateTime>>> handedOffState = new HashMap<>();
+    final Map<String, Map<SegmentId, DateTime>> handedOffState = new HashMap<>();
     final List<DataSegment> segments = connector.inReadOnlyTransaction(
         new TransactionCallback<List<DataSegment>>()
         {
@@ -917,9 +917,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                         try {
                           DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
                           if (null != (r.getString("handed_off_time"))) {
-                            boolean handedOff = r.getBoolean("handed_off");
                             DateTime handedOffTime = DateTimes.of(r.getString("handed_off_time"));
-                            handedOffState.computeIfAbsent(segment.getDataSource(), v -> new HashMap<>()).put(segment.getId(), Pair.of(handedOff, handedOffTime));
+                            handedOffState.computeIfAbsent(segment.getDataSource(), v -> new HashMap<>()).put(segment.getId(), handedOffTime);
                           }
                           return replaceWithExistingSegmentIfPresent(segment);
                         }

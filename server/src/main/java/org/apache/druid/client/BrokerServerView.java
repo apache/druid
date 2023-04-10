@@ -190,24 +190,21 @@ public class BrokerServerView implements TimelineServerView
         {
 
           @Override
-          public CallbackAction fullSync(List<DataSegmentChange> segments)
+          public void fullSync(List<DataSegmentChange> segments)
           {
             handedOffSegmentsFullSync(segments);
-            return CallbackAction.CONTINUE;
           }
 
           @Override
-          public CallbackAction deltaSync(List<DataSegmentChange> segments)
+          public void deltaSync(List<DataSegmentChange> segments)
           {
             handedOffSegmentsDeltaSync(segments);
-            return CallbackAction.CONTINUE;
           }
 
           @Override
-          public CallbackAction segmentViewInitialized()
+          public void segmentViewInitialized()
           {
             metadataInitialized.countDown();
-            return CallbackAction.CONTINUE;
           }
         }
     );
@@ -442,7 +439,7 @@ public class BrokerServerView implements TimelineServerView
             dataSegmentChanges
                 .stream()
                 .map(DataSegmentChange::getSegmentWithOvershadowedStatus)
-                .filter(SegmentWithOvershadowedStatus::isHandedOff)
+                .filter(segmentWithOvershadowedStatus -> null != segmentWithOvershadowedStatus.getHandedOffTime())
                 .collect(Collectors.groupingBy(segment -> segment.getDataSegment().getDataSource(), Collectors.toSet())),
             segmentSet -> segmentSet.stream().collect(
                 Collectors.toMap(
@@ -474,11 +471,13 @@ public class BrokerServerView implements TimelineServerView
 
         Set<SegmentId> segmentIdsToRemoveFromTimeline = Sets.difference(segmentIdPartitionChunkEntryMap.keySet(), segments.keySet());
 
-        segmentIdsToRemoveFromTimeline.forEach(segmentId -> removeSegmentFromTimeline(segments.get(segmentId).getDataSegment()));
+        segmentIdsToRemoveFromTimeline.forEach(segmentId -> removeSegmentFromTimeline(segmentIdPartitionChunkEntryMap.get(segmentId).getChunk().getObject()
+                                                                                                                     .getSegment()));
 
         List<SegmentWithOvershadowedStatus> segmentsToAdd = new ArrayList<>();
         for (Map.Entry<SegmentId, SegmentWithOvershadowedStatus> segmentWithOvershadowedStatusEntry : entry.getValue().entrySet()) {
           if (selectors.containsKey(segmentWithOvershadowedStatusEntry.getKey())) {
+            // update handed off time for already existing segments
             selectors.get(segmentWithOvershadowedStatusEntry.getKey())
                      .setHandedOffTime(segmentWithOvershadowedStatusEntry.getValue().getHandedOffTime());
           }
@@ -499,7 +498,7 @@ public class BrokerServerView implements TimelineServerView
             .stream()
             .filter(DataSegmentChange::isLoad)
             .map(DataSegmentChange::getSegmentWithOvershadowedStatus)
-            .filter(SegmentWithOvershadowedStatus::isHandedOff)
+            .filter(segmentWithOvershadowedStatus -> null != segmentWithOvershadowedStatus.getHandedOffTime())
             .collect(Collectors.toList());
 
     List<DataSegment> segmentsToRemove =

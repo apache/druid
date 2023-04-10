@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
@@ -45,6 +44,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -75,7 +75,7 @@ public class DataSourcesSnapshot
   public static DataSourcesSnapshot fromUsedSegments(
       Iterable<DataSegment> segments,
       ImmutableMap<String, String> dataSourceProperties,
-      Map<String, Map<SegmentId, Pair<Boolean, DateTime>>> handedOffState
+      Map<String, Map<SegmentId, DateTime>> handedOffState
   )
   {
     return fromUsedSegments(
@@ -90,7 +90,7 @@ public class DataSourcesSnapshot
   public static DataSourcesSnapshot fromUsedSegments(
       Iterable<DataSegment> segments,
       ImmutableMap<String, String> dataSourceProperties,
-      Map<String, Map<SegmentId, Pair<Boolean, DateTime>>> handedOffState,
+      Map<String, Map<SegmentId, DateTime>> handedOffState,
       Set<SegmentWithOvershadowedStatus> oldSegments,
       CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> oldChanges
   )
@@ -140,7 +140,7 @@ public class DataSourcesSnapshot
   private final Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource;
   private final ImmutableSet<DataSegment> overshadowedSegments;
 
-  private final Map<String, Map<SegmentId, Pair<Boolean, DateTime>>> handedOffStatePerDataSource;
+  private final Map<String, Map<SegmentId, DateTime>> handedOffStatePerDataSource;
 
   private final CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> changes;
 
@@ -162,7 +162,7 @@ public class DataSourcesSnapshot
   private DataSourcesSnapshot(
       Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments,
       Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource,
-      Map<String, Map<SegmentId, Pair<Boolean, DateTime>>> handedOffStatePerDataSource,
+      Map<String, Map<SegmentId, DateTime>> handedOffStatePerDataSource,
       CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> changes
   )
   {
@@ -179,7 +179,7 @@ public class DataSourcesSnapshot
       Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments,
       Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource,
       ImmutableSet<DataSegment> overshadowedSegments,
-      Map<String, Map<SegmentId, Pair<Boolean, DateTime>>> handedOffStatePerDataSource,
+      Map<String, Map<SegmentId, DateTime>> handedOffStatePerDataSource,
       CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> changes
   )
   {
@@ -216,7 +216,7 @@ public class DataSourcesSnapshot
     return overshadowedSegments;
   }
 
-  public Map<String, Map<SegmentId, Pair<Boolean, DateTime>>> getHandedOffStatePerDataSource()
+  public Map<String, Map<SegmentId, DateTime>> getHandedOffStatePerDataSource()
   {
     return handedOffStatePerDataSource;
   }
@@ -332,7 +332,7 @@ public class DataSourcesSnapshot
   public static Set<SegmentWithOvershadowedStatus> getSegmentsWithOvershadowedStatus(
       Collection<ImmutableDruidDataSource> segments,
       Set<DataSegment> overshadowedSegments,
-      Map<String, Map<SegmentId, Pair<Boolean, DateTime>>> handedOffState)
+      Map<String, Map<SegmentId, DateTime>> handedOffState)
   {
 
     final Stream<DataSegment> usedSegments = segments
@@ -343,21 +343,20 @@ public class DataSourcesSnapshot
         .map(segment -> new SegmentWithOvershadowedStatus(
             segment,
             overshadowedSegments.contains(segment),
-            getHandedOffStateForSegment(handedOffState, segment.getDataSource(), segment.getId()).lhs,
-            getHandedOffStateForSegment(handedOffState, segment.getDataSource(), segment.getId()).rhs
+            getHandedOffStateForSegment(handedOffState, segment.getDataSource(), segment.getId())
             )
         )
         .collect(Collectors.toSet());
   }
 
-  private static Pair<Boolean, DateTime> getHandedOffStateForSegment(
-      Map<String, Map<SegmentId, Pair<Boolean, DateTime>>> handedOffState,
+  private static DateTime getHandedOffStateForSegment(
+      Map<String, Map<SegmentId, DateTime>> handedOffState,
       String dataSource, SegmentId segmentId
   )
   {
     return handedOffState
         .getOrDefault(dataSource, new HashMap<>())
-        .getOrDefault(segmentId, new Pair<>(false, null));
+        .get(segmentId);
   }
 
   private static CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> computeChanges(
@@ -399,7 +398,7 @@ public class DataSourcesSnapshot
       List<DataSegmentChange.ChangeReason> changeReasons = new ArrayList<>();
       if (null == newSegment) {
         changeReasons.add(DataSegmentChange.ChangeReason.SEGMENT_ID);
-      } else if (newSegment.isHandedOff() != segment.isHandedOff()) {
+      } else if (!Objects.equals(newSegment.getHandedOffTime(), segment.getHandedOffTime())) {
         changeReasons.add(DataSegmentChange.ChangeReason.HANDED_OFF_STATUS);
       } else {
         changeReasons.add(DataSegmentChange.ChangeReason.OVERSHADOWED_STATUS);
@@ -414,7 +413,7 @@ public class DataSourcesSnapshot
       List<DataSegmentChange.ChangeReason> changeReasons = new ArrayList<>();
       if (null == oldSegment) {
         changeReasons.add(DataSegmentChange.ChangeReason.SEGMENT_ID);
-      } else if (oldSegment.isHandedOff() != segment.isHandedOff()) {
+      } else if (!Objects.equals(oldSegment.getHandedOffTime(), segment.getHandedOffTime())) {
         changeReasons.add(DataSegmentChange.ChangeReason.HANDED_OFF_STATUS);
       } else {
         changeReasons.add(DataSegmentChange.ChangeReason.OVERSHADOWED_STATUS);

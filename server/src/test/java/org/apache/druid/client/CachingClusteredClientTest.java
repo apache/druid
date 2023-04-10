@@ -74,6 +74,7 @@ import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChestWarehouse;
@@ -1914,7 +1915,9 @@ public class CachingClusteredClientTest
         segment,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
     );
-    selector.addServerAndUpdateSegment(new QueryableDruidServer(server, null), segment);
+    if (null != server) {
+      selector.addServerAndUpdateSegment(new QueryableDruidServer(server, null), segment);
+    }
     return selector;
   }
 
@@ -3344,6 +3347,60 @@ public class CachingClusteredClientTest
     getDefaultQueryRunner().run(QueryPlus.wrap(query2), responseContext);
     final String etag2 = responseContext.getEntityTag();
     Assert.assertNotEquals(etag1, etag2);
+  }
+
+  @Test(expected = QueryException.class)
+  public void testFailOnUnavailableSegments()
+  {
+    Map<String, Object> context = new HashMap<>(CONTEXT);
+    context.put(QueryContexts.UNAVAILABLE_SEGMENTS_ACTION_KEY, QueryContexts.UnavailableSegmentsAction.FAIL.toString());
+
+    final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
+                                                        .dataSource(DATA_SOURCE)
+                                                        .granularity(GRANULARITY)
+                                                        .intervals(SEG_SPEC)
+                                                        .context(context)
+                                                        .intervals("2011-01-05/2011-01-10")
+                                                        .aggregators(RENAMED_AGGS)
+                                                        .postAggregators(RENAMED_POST_AGGS);
+
+    TimeseriesQuery query = builder.randomQueryId().build();
+
+    final Interval interval1 = Intervals.of("2011-01-06/2011-01-07");
+    final Interval interval2 = Intervals.of("2011-01-07/2011-01-08");
+    final Interval interval3 = Intervals.of("2011-01-08/2011-01-09");
+
+    QueryRunner runner = new FinalizeResultsQueryRunner(getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest());
+
+    final DruidServer lastServer = servers[random.nextInt(servers.length)];
+    ServerSelector selector1 = makeMockSingleDimensionSelector(lastServer, "dim1", null, "b", 0);
+    ServerSelector selector2 = makeMockSingleDimensionSelector(null, "dim1", "e", "f", 1);
+    ServerSelector selector3 = makeMockSingleDimensionSelector(lastServer, "dim1", "hi", "zzz", 2);
+    ServerSelector selector4 = makeMockSingleDimensionSelector(lastServer, "dim2", "a", "e", 0);
+    ServerSelector selector5 = makeMockSingleDimensionSelector(lastServer, "dim2", null, null, 1);
+    ServerSelector selector6 = makeMockSingleDimensionSelector(lastServer, "other", "b", null, 0);
+
+    timeline.add(interval1, "v", new NumberedPartitionChunk<>(0, 3, selector1));
+    timeline.add(interval1, "v", new NumberedPartitionChunk<>(1, 3, selector2));
+    timeline.add(interval1, "v", new NumberedPartitionChunk<>(2, 3, selector3));
+    timeline.add(interval2, "v", new NumberedPartitionChunk<>(0, 2, selector4));
+    timeline.add(interval2, "v", new NumberedPartitionChunk<>(1, 2, selector5));
+    timeline.add(interval3, "v", new NumberedPartitionChunk<>(0, 1, selector6));
+
+    final Capture<QueryPlus> capture = Capture.newInstance();
+    final Capture<ResponseContext> contextCap = Capture.newInstance();
+
+    QueryRunner mockRunner = EasyMock.createNiceMock(QueryRunner.class);
+    EasyMock.expect(mockRunner.run(EasyMock.capture(capture), EasyMock.capture(contextCap)))
+            .andReturn(Sequences.empty())
+            .anyTimes();
+    EasyMock.expect(serverView.getQueryRunner(lastServer))
+            .andReturn(mockRunner)
+            .anyTimes();
+    EasyMock.replay(serverView);
+    EasyMock.replay(mockRunner);
+
+    runner.run(QueryPlus.wrap(query)).toList();
   }
 
   @SuppressWarnings("unchecked")

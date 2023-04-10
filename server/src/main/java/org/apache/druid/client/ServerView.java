@@ -99,11 +99,11 @@ public interface ServerView
 
   interface HandedOffSegmentCallback
   {
-    CallbackAction fullSync(List<DataSegmentChange> segments);
+    void fullSync(List<DataSegmentChange> segments);
 
-    CallbackAction deltaSync(List<DataSegmentChange> segments);
+    void deltaSync(List<DataSegmentChange> segments);
 
-    CallbackAction segmentViewInitialized();
+    void segmentViewInitialized();
   }
 
   abstract class BaseSegmentCallback implements SegmentCallback

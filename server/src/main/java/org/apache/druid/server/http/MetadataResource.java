@@ -31,7 +31,6 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.JettyUtils;
@@ -211,8 +210,7 @@ public class MetadataResource
                            new SegmentWithOvershadowedStatus(
                                segment,
                                dataSourcesSnapshot.getOvershadowedSegments().contains(segment),
-                               getHandedOffStateForSegment(dataSourcesSnapshot, segment.getDataSource(), segment.getId()).lhs,
-                               getHandedOffStateForSegment(dataSourcesSnapshot, segment.getDataSource(), segment.getId()).rhs
+                               getHandedOffStateForSegment(dataSourcesSnapshot, segment.getDataSource(), segment.getId())
                            ),
                            true,
                            Collections.singletonList(DataSegmentChange.ChangeReason.SEGMENT_ID)))
@@ -275,8 +273,7 @@ public class MetadataResource
         .map(segment -> new SegmentWithOvershadowedStatus(
             segment,
             overshadowedSegments.contains(segment),
-            getHandedOffStateForSegment(dataSourcesSnapshot, segment.getDataSource(), segment.getId()).lhs,
-            getHandedOffStateForSegment(dataSourcesSnapshot, segment.getDataSource(), segment.getId()).rhs
+            getHandedOffStateForSegment(dataSourcesSnapshot, segment.getDataSource(), segment.getId())
             ));
 
     final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>> raGenerator = segment -> Collections
@@ -293,14 +290,14 @@ public class MetadataResource
     return builder.entity(authorizedSegments).build();
   }
 
-  private Pair<Boolean, DateTime> getHandedOffStateForSegment(
+  private DateTime getHandedOffStateForSegment(
       DataSourcesSnapshot dataSourcesSnapshot,
       String dataSource, SegmentId segmentId
   )
   {
     return dataSourcesSnapshot.getHandedOffStatePerDataSource()
                        .getOrDefault(dataSource, new HashMap<>())
-                       .getOrDefault(segmentId, new Pair<>(false, null));
+                       .get(segmentId);
   }
 
   /**

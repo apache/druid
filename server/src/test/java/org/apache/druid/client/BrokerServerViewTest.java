@@ -32,7 +32,9 @@ import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.curator.CuratorTestBase;
+import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -41,14 +43,19 @@ import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.server.coordination.ChangeRequestHistory;
+import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegmentChange;
+import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
 import org.easymock.EasyMock;
@@ -58,6 +65,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -131,11 +140,13 @@ public class BrokerServerViewTest extends CuratorTestBase
     unannounceSegmentForServer(druidServer, segment, zkPathsConfig);
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
 
-    Assert.assertEquals(
-        0,
-        timeline.lookup(intervals).size()
-    );
-    Assert.assertNull(timeline.findChunk(intervals, "v1", partition));
+    List<TimelineObjectHolder<String, ServerSelector>> unavailableSegments = timeline.lookup(intervals);
+    Assert.assertEquals(1, unavailableSegments.size());
+    ServerSelector serverSelector = unavailableSegments.get(0).getObject().iterator().next().getObject();
+    Assert.assertTrue(serverSelector.isEmpty());
+
+    PartitionChunk<ServerSelector> partitionChunks = timeline.findChunk(intervals, "v1", partition);
+    Assert.assertTrue(partitionChunks.getObject().isEmpty());
   }
 
   @Test
@@ -199,8 +210,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     assertValues(
         Arrays.asList(
             createExpected("2011-04-01/2011-04-02", "v3", druidServers.get(4), segments.get(4)),
-            createExpected("2011-04-02/2011-04-03", "v1", druidServers.get(0), segments.get(0)),
-            createExpected("2011-04-03/2011-04-06", "v1", druidServers.get(1), segments.get(1)),
+            createExpected("2011-04-02/2011-04-06", "v2", null, segments.get(2)),
             createExpected("2011-04-06/2011-04-09", "v3", druidServers.get(3), segments.get(3))
         ),
         (List<TimelineObjectHolder>) timeline.lookup(
@@ -219,9 +229,17 @@ public class BrokerServerViewTest extends CuratorTestBase
     }
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
 
-    Assert.assertEquals(
-        0,
-        ((List<TimelineObjectHolder>) timeline.lookup(Intervals.of("2011-04-01/2011-04-09"))).size()
+    assertValues(
+        Arrays.asList(
+            createExpected("2011-04-01/2011-04-02", "v3", null, segments.get(4)),
+            createExpected("2011-04-02/2011-04-06", "v2", null, segments.get(2)),
+            createExpected("2011-04-06/2011-04-09", "v3", null, segments.get(3))
+        ),
+        (List<TimelineObjectHolder>) timeline.lookup(
+            Intervals.of(
+                "2011-04-01/2011-04-09"
+            )
+        )
     );
   }
 
@@ -526,6 +544,228 @@ public class BrokerServerViewTest extends CuratorTestBase
     setupViews(null, Collections.emptySet(), true);
   }
 
+  @Test
+  public void testHandedOffSegmentsFullSync() throws Exception
+  {
+    final List<DataSegmentChange> dataSegmentChanges = Lists.transform(
+        ImmutableList.of(
+            Pair.of("2011-04-01/2011-04-03", "v1"),
+            Pair.of("2011-04-06/2011-04-09", "v3"),
+            Pair.of("2011-04-01/2011-04-02", "v3"),
+            Pair.of("2011-04-11/2011-04-13", "v3")
+        ),
+        input -> new DataSegmentChange(
+            new SegmentWithOvershadowedStatus(
+                dataSegmentWithIntervalAndVersion(input.lhs, input.rhs),
+                false,
+                DateTimes.nowUtc()
+            ),
+            true,
+            Collections.singletonList(DataSegmentChange.ChangeReason.SEGMENT_ID))
+    );
+
+    ChangeRequestsSnapshot<DataSegmentChange> changeRequestsSnapshot = new ChangeRequestsSnapshot<>(true, "", ChangeRequestHistory.Counter.ZERO, dataSegmentChanges);
+
+    byte[] bytes = jsonMapper.writeValueAsBytes(changeRequestsSnapshot);
+    InputStream expectedObject = new ByteArrayInputStream(bytes);
+
+    DruidLeaderClient druidLeaderClient = EasyMock.mock(DruidLeaderClient.class);
+    EasyMock.expect(druidLeaderClient.getThingsFromLeaderNode(EasyMock.anyString()))
+        .andReturn(expectedObject);
+
+    BrokerSegmentWatcherConfig brokerSegmentWatcherConfig = getBrokerSegmentWatcherConfig(null, null, false);
+    SegmentMetadataCacheConfig segmentMetadataCacheConfig = EasyMock.mock(SegmentMetadataCacheConfig.class);
+    EasyMock.expect(segmentMetadataCacheConfig.isMetadataSegmentCacheEnable()).andReturn(false);
+    EasyMock.expect(segmentMetadataCacheConfig.isDetectUnavailableSegments()).andReturn(true).times(1);
+    EasyMock.expect(segmentMetadataCacheConfig.isDetectUnavailableSegments()).andReturn(false).times(1);
+    EasyMock.expect(segmentMetadataCacheConfig.getMetadataSegmentPollPeriod()).andReturn(60000L);
+    EasyMock.replay(druidLeaderClient);
+    EasyMock.replay(segmentMetadataCacheConfig);
+
+    MetadataSegmentView metadataSegmentView = new MetadataSegmentView(
+        druidLeaderClient,
+        jsonMapper,
+        brokerSegmentWatcherConfig,
+        segmentMetadataCacheConfig);
+
+    segmentViewInitLatch = new CountDownLatch(1);
+    segmentAddedLatch = new CountDownLatch(5);
+    segmentRemovedLatch = new CountDownLatch(5);
+
+    baseView = getBaseView();
+
+    brokerServerView = getBrokerServerView(
+        null,
+        baseView,
+        brokerSegmentWatcherConfig,
+        metadataSegmentView,
+        segmentMetadataCacheConfig
+    );
+
+    baseView.start();
+    brokerServerView.start();
+
+    final List<DruidServer> druidServers = Lists.transform(
+        ImmutableList.of("locahost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
+        hostname -> setupHistoricalServer("default_tier", hostname, 0)
+    );
+
+    final List<DataSegment> segments = Lists.transform(
+        ImmutableList.of(
+            Pair.of("2011-04-01/2011-04-03", "v1"),
+            Pair.of("2011-04-03/2011-04-06", "v1"),
+            Pair.of("2011-04-01/2011-04-09", "v2"),
+            Pair.of("2011-04-06/2011-04-09", "v3"),
+            Pair.of("2011-04-01/2011-04-02", "v3")
+        ), input -> dataSegmentWithIntervalAndVersion(input.lhs, input.rhs)
+    );
+
+    for (int i = 0; i < 5; ++i) {
+      announceSegmentForServer(druidServers.get(i), segments.get(i), zkPathsConfig, jsonMapper);
+    }
+    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
+    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
+
+    metadataSegmentView.pollChangedSegments();
+
+    TimelineLookup timeline = brokerServerView.getTimeline(
+        (new TableDataSource("test_broker_server_view")).getAnalysis()
+    ).get();
+    assertValues(
+        Arrays.asList(
+            createExpected("2011-04-01/2011-04-02", "v3", druidServers.get(4), segments.get(4)),
+            createExpected("2011-04-02/2011-04-03", "v1", druidServers.get(0), segments.get(0)),
+            createExpected("2011-04-06/2011-04-09", "v3", druidServers.get(3), segments.get(3)),
+            createExpected(
+                "2011-04-11/2011-04-13",
+                "v3",
+                null,
+                dataSegmentChanges.get(3).getSegmentWithOvershadowedStatus().getDataSegment())
+        ),
+        (List<TimelineObjectHolder>) timeline.lookup(
+            Intervals.of(
+                "2011-04-01/2011-04-13"
+            )
+        )
+    );
+  }
+
+  @Test
+  public void testHandedOffSegmentsDeltaSync() throws Exception
+  {
+    final List<DataSegmentChange> dataSegmentChanges = Lists.transform(
+        ImmutableList.of(
+            ImmutableList.of("2011-04-01/2011-04-03", "v1", Boolean.FALSE.toString(),
+                             DataSegmentChange.ChangeReason.SEGMENT_ID.toString()),
+            ImmutableList.of("2011-04-06/2011-04-09", "v3", Boolean.FALSE.toString(),
+                             DataSegmentChange.ChangeReason.SEGMENT_ID.toString()),
+            ImmutableList.of("2011-04-01/2011-04-02", "v3", Boolean.FALSE.toString(),
+                             DataSegmentChange.ChangeReason.HANDED_OFF_STATUS.toString()),
+            ImmutableList.of("2011-04-01/2011-04-02", "v3", Boolean.FALSE.toString(),
+                             DataSegmentChange.ChangeReason.OVERSHADOWED_STATUS.toString()),
+            ImmutableList.of("2011-04-11/2011-04-13", "v3", Boolean.TRUE.toString(),
+                             DataSegmentChange.ChangeReason.SEGMENT_ID.toString())
+        ),
+        input -> new DataSegmentChange(
+            new SegmentWithOvershadowedStatus(
+                dataSegmentWithIntervalAndVersion(input.get(0), input.get(1)),
+                false,
+                DateTimes.nowUtc()
+            ),
+            Boolean.parseBoolean(input.get(2)),
+            Collections.singletonList(DataSegmentChange.ChangeReason.fromString(input.get(3))))
+    );
+
+    ChangeRequestsSnapshot<DataSegmentChange> changeRequestsSnapshot = new ChangeRequestsSnapshot<>(
+        false,
+        "",
+        ChangeRequestHistory.Counter.ZERO,
+        dataSegmentChanges
+    );
+
+    byte[] bytes = jsonMapper.writeValueAsBytes(changeRequestsSnapshot);
+    InputStream expectedObject = new ByteArrayInputStream(bytes);
+
+    DruidLeaderClient druidLeaderClient = EasyMock.mock(DruidLeaderClient.class);
+    EasyMock.expect(druidLeaderClient.getThingsFromLeaderNode(EasyMock.anyString()))
+            .andReturn(expectedObject);
+
+    BrokerSegmentWatcherConfig brokerSegmentWatcherConfig = getBrokerSegmentWatcherConfig(null, null, false);
+    SegmentMetadataCacheConfig segmentMetadataCacheConfig = EasyMock.mock(SegmentMetadataCacheConfig.class);
+    EasyMock.expect(segmentMetadataCacheConfig.isMetadataSegmentCacheEnable()).andReturn(false);
+    EasyMock.expect(segmentMetadataCacheConfig.isDetectUnavailableSegments()).andReturn(true).times(1);
+    EasyMock.expect(segmentMetadataCacheConfig.isDetectUnavailableSegments()).andReturn(false).times(1);
+    EasyMock.expect(segmentMetadataCacheConfig.getMetadataSegmentPollPeriod()).andReturn(60000L);
+    EasyMock.replay(druidLeaderClient);
+    EasyMock.replay(segmentMetadataCacheConfig);
+
+    MetadataSegmentView metadataSegmentView = new MetadataSegmentView(
+        druidLeaderClient,
+        jsonMapper,
+        brokerSegmentWatcherConfig,
+        segmentMetadataCacheConfig);
+
+    segmentViewInitLatch = new CountDownLatch(1);
+    segmentAddedLatch = new CountDownLatch(5);
+    segmentRemovedLatch = new CountDownLatch(5);
+
+    baseView = getBaseView();
+
+    brokerServerView = getBrokerServerView(
+        null,
+        baseView,
+        brokerSegmentWatcherConfig,
+        metadataSegmentView,
+        segmentMetadataCacheConfig
+    );
+
+    baseView.start();
+    brokerServerView.start();
+
+    final List<DruidServer> druidServers = Lists.transform(
+        ImmutableList.of("locahost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
+        hostname -> setupHistoricalServer("default_tier", hostname, 0)
+    );
+
+    final List<DataSegment> segments = Lists.transform(
+        ImmutableList.of(
+            Pair.of("2011-04-01/2011-04-03", "v1"),
+            Pair.of("2011-04-03/2011-04-06", "v1"),
+            Pair.of("2011-04-01/2011-04-09", "v2"),
+            Pair.of("2011-04-06/2011-04-09", "v3"),
+            Pair.of("2011-04-01/2011-04-02", "v3")
+        ), input -> dataSegmentWithIntervalAndVersion(input.lhs, input.rhs)
+    );
+
+    for (int i = 0; i < 5; ++i) {
+      announceSegmentForServer(druidServers.get(i), segments.get(i), zkPathsConfig, jsonMapper);
+    }
+    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
+    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
+
+    metadataSegmentView.pollChangedSegments();
+
+    TimelineLookup timeline = brokerServerView.getTimeline(
+        (new TableDataSource("test_broker_server_view")).getAnalysis()
+    ).get();
+    assertValues(
+        Arrays.asList(
+            createExpected("2011-04-01/2011-04-02", "v3", druidServers.get(4), segments.get(4)),
+            createExpected("2011-04-02/2011-04-09", "v2", druidServers.get(2), segments.get(2)),
+            createExpected(
+                "2011-04-11/2011-04-13",
+                "v3",
+                null,
+                dataSegmentChanges.get(4).getSegmentWithOvershadowedStatus().getDataSegment())
+        ),
+        (List<TimelineObjectHolder>) timeline.lookup(
+            Intervals.of(
+                "2011-04-01/2011-04-13"
+            )
+        )
+    );
+  }
+
   /**
    * Creates a DruidServer of type HISTORICAL and sets up a ZNode for it.
    */
@@ -581,8 +821,12 @@ public class BrokerServerViewTest extends CuratorTestBase
 
       ServerSelector selector = ((SingleElementPartitionChunk<ServerSelector>) actualPartitionHolder.iterator()
                                                                                                     .next()).getObject();
-      Assert.assertFalse(selector.isEmpty());
-      Assert.assertEquals(expectedPair.rhs.rhs.lhs, selector.pick(null).getServer());
+      if (null == expectedPair.rhs.rhs.lhs) {
+        Assert.assertTrue(selector.isEmpty());
+      }
+      if (null != expectedPair.rhs.rhs.lhs) {
+        Assert.assertEquals(expectedPair.rhs.rhs.lhs, selector.pick(null).getServer());
+      }
       Assert.assertEquals(expectedPair.rhs.rhs.rhs, selector.getSegment());
     }
   }
@@ -594,7 +838,68 @@ public class BrokerServerViewTest extends CuratorTestBase
 
   private void setupViews(Set<String> watchedTiers, Set<String> ignoredTiers, boolean watchRealtimeTasks) throws Exception
   {
-    baseView = new BatchServerInventoryView(
+    baseView = getBaseView();
+
+    brokerServerView = getBrokerServerView(
+        ignoredTiers,
+        baseView,
+        getBrokerSegmentWatcherConfig(watchedTiers, ignoredTiers, watchRealtimeTasks),
+        EasyMock.mock(MetadataSegmentView.class),
+        EasyMock.mock(SegmentMetadataCacheConfig.class)
+    );
+
+    baseView.start();
+    brokerServerView.start();
+  }
+
+  private BrokerSegmentWatcherConfig getBrokerSegmentWatcherConfig(Set<String> watchedTiers, Set<String> ignoredTiers, boolean watchRealtimeTasks)
+  {
+    return new BrokerSegmentWatcherConfig()
+    {
+      @Override
+      public Set<String> getWatchedTiers()
+      {
+        return watchedTiers;
+      }
+
+      @Override
+      public boolean isWatchRealtimeTasks()
+      {
+        return watchRealtimeTasks;
+      }
+
+      @Override
+      public Set<String> getIgnoredTiers()
+      {
+        return ignoredTiers;
+      }
+    };
+  }
+
+  private BrokerServerView getBrokerServerView(
+      Set<String> ignoredTiers,
+      BatchServerInventoryView baseView,
+      BrokerSegmentWatcherConfig brokerSegmentWatcherConfig,
+      MetadataSegmentView metadataSegmentView,
+      SegmentMetadataCacheConfig segmentMetadataCacheConfig)
+  {
+    return new BrokerServerView(
+        EasyMock.createMock(QueryToolChestWarehouse.class),
+        EasyMock.createMock(QueryWatcher.class),
+        getSmileMapper(),
+        EasyMock.createMock(HttpClient.class),
+        baseView,
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        new NoopServiceEmitter(),
+        brokerSegmentWatcherConfig,
+        metadataSegmentView,
+        segmentMetadataCacheConfig
+    );
+  }
+
+  private BatchServerInventoryView getBaseView()
+  {
+    return new BatchServerInventoryView(
         zkPathsConfig,
         curator,
         jsonMapper,
@@ -636,41 +941,6 @@ public class BrokerServerViewTest extends CuratorTestBase
         );
       }
     };
-
-    brokerServerView = new BrokerServerView(
-        EasyMock.createMock(QueryToolChestWarehouse.class),
-        EasyMock.createMock(QueryWatcher.class),
-        getSmileMapper(),
-        EasyMock.createMock(HttpClient.class),
-        baseView,
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
-        new NoopServiceEmitter(),
-        new BrokerSegmentWatcherConfig()
-        {
-          @Override
-          public Set<String> getWatchedTiers()
-          {
-            return watchedTiers;
-          }
-
-          @Override
-          public boolean isWatchRealtimeTasks()
-          {
-            return watchRealtimeTasks;
-          }
-
-          @Override
-          public Set<String> getIgnoredTiers()
-          {
-            return ignoredTiers;
-          }
-        },
-        EasyMock.createMock(MetadataSegmentView.class),
-        EasyMock.createMock(SegmentMetadataCacheConfig.class)
-    );
-
-    baseView.start();
-    brokerServerView.start();
   }
 
   private DataSegment dataSegmentWithIntervalAndVersion(String intervalStr, String version)

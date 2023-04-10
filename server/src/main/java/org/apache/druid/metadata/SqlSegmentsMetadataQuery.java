@@ -169,7 +169,7 @@ public class SqlSegmentsMetadataQuery
     final PreparedBatch batch =
         handle.prepareBatch(
             StringUtils.format(
-                "UPDATE %s SET handed_off = true, handed_off_time = ? WHERE datasource = ? AND id = ? AND handed_off_time IS NULL",
+                "UPDATE %s SET handed_off_time = ? WHERE datasource = ? AND id = ? AND handed_off_time IS NULL",
                 dbTables.getSegmentsTable()
             )
         );

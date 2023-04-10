@@ -74,7 +74,7 @@ public class SegmentWithOvershadowedStatusTest
         1
     );
 
-    return new SegmentWithOvershadowedStatus(dataSegment, OVERSHADOWED, false, null);
+    return new SegmentWithOvershadowedStatus(dataSegment, OVERSHADOWED, null);
   }
 
   @Test
@@ -85,7 +85,7 @@ public class SegmentWithOvershadowedStatusTest
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    Assert.assertEquals(11, objectMap.size());
+    Assert.assertEquals(12, objectMap.size());
     Assert.assertEquals("something", objectMap.get("dataSource"));
     Assert.assertEquals(INTERVAL.toString(), objectMap.get("interval"));
     Assert.assertEquals("1", objectMap.get("version"));

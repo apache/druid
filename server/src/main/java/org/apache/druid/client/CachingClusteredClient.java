@@ -479,6 +479,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
             unavailableSegmentsIds.size(),
             unavailableSegmentsIds
         );
+        // todo set header for missing segments/intervals
         if (unavailableSegmentsAction == QueryContexts.UnavailableSegmentsAction.FAIL) {
           throw new QueryException(
               QueryException.UNAVAILABLE_SEGMENTS_ERROR_CODE,

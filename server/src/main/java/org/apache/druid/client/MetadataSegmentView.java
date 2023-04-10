@@ -21,7 +21,6 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.util.concurrent.Uninterruptibles;
@@ -57,6 +56,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -169,7 +169,7 @@ public class MetadataSegmentView
     cachePopulated.countDown();
   }
 
-  private void pollChangedSegments()
+  protected void pollChangedSegments()
   {
     log.info("polling changed segments from coordinator");
     final ChangeRequestsSnapshot<DataSegmentChange> changedRequestsSnapshot = getChangedSegments(
@@ -253,7 +253,6 @@ public class MetadataSegmentView
     return new SegmentWithOvershadowedStatus(
         interned,
         segment.isOvershadowed(),
-        segment.isHandedOff(),
         segment.getHandedOffTime()
     );
   }
@@ -267,12 +266,12 @@ public class MetadataSegmentView
   }
 
   private void runSegmentCallbacks(
-      final Function<ServerView.HandedOffSegmentCallback, ServerView.CallbackAction> fn
+      final Consumer<ServerView.HandedOffSegmentCallback> fn
   )
   {
     for (final Map.Entry<ServerView.HandedOffSegmentCallback, Executor> entry : segmentCallbacks.entrySet()) {
       entry.getValue().execute(
-          () -> fn.apply(entry.getKey())
+          () -> fn.accept(entry.getKey())
       );
     }
   }
