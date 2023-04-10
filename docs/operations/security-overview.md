@@ -149,7 +149,7 @@ The following takes you through sample configuration steps for enabling basic au
    druid.auth.authenticator.MyBasicMetadataAuthenticator.initialInternalClientPassword=password2
 
    # Uses the metadata store for storing users.
-   # You can use authentication API to create new users and grant permissions
+   # You can use the authentication API to create new users and grant permissions
    druid.auth.authenticator.MyBasicMetadataAuthenticator.credentialsValidator.type=metadata
 
    # If true and the request credential doesn't exist in this credentials store,
