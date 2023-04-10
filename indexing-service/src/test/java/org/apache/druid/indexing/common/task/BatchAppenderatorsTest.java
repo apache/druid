@@ -582,6 +582,7 @@ public class BatchAppenderatorsTest
           mode.name(),
           null,
           false,
+          null,
           null
       );
       return new TaskToolbox.Builder()

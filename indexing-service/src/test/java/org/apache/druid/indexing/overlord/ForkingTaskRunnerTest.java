@@ -207,6 +207,7 @@ public class ForkingTaskRunnerTest
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
         false,
+        null,
         null
     );
     TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
@@ -277,6 +278,7 @@ public class ForkingTaskRunnerTest
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
         false,
+        null,
         null
     );
     TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
@@ -352,6 +354,7 @@ public class ForkingTaskRunnerTest
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
         false,
+        null,
         null
     );
     TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
@@ -417,6 +420,7 @@ public class ForkingTaskRunnerTest
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
         false,
+        null,
         null
     );
     TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
@@ -463,6 +467,7 @@ public class ForkingTaskRunnerTest
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
         false,
+        null,
         null
     );
     TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
@@ -534,6 +539,7 @@ public class ForkingTaskRunnerTest
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
         false,
+        null,
         null
     );
     TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
@@ -598,7 +604,8 @@ public class ForkingTaskRunnerTest
         ImmutableList.of(
             temporaryFolder.newFolder().getAbsolutePath(),
             temporaryFolder.newFolder().getAbsolutePath()
-        )
+        ),
+        null
     );
     TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
     ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(

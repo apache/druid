@@ -120,6 +120,7 @@ public class TaskToolboxTest
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
         false,
+        null,
         null
     );
     taskToolbox = new TaskToolboxFactory(

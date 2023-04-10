@@ -102,6 +102,7 @@ public class SingleTaskBackgroundRunnerTest
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
         false,
+        null,
         null
     );
     final ServiceEmitter emitter = new NoopServiceEmitter();

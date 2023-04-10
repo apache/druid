@@ -169,6 +169,7 @@ public class WorkerTaskMonitorTest
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
         false,
+        null,
         null
     );
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);

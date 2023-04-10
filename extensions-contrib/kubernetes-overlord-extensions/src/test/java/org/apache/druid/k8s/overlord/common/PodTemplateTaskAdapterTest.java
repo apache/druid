@@ -74,7 +74,8 @@ public class PodTemplateTaskAdapterTest
         null,
         null,
         false,
-        ImmutableList.of("/tmp")
+        ImmutableList.of("/tmp"),
+        null
     );
     node = new DruidNode(
         "test",

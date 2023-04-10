@@ -913,6 +913,7 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
         false,
+        null,
         null
     );
     final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, mdc);

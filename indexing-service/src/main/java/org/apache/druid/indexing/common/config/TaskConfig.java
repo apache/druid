@@ -78,6 +78,7 @@ public class TaskConfig
   private static final Period DEFAULT_DIRECTORY_LOCK_TIMEOUT = new Period("PT10M");
   private static final Period DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = new Period("PT5M");
   private static final boolean DEFAULT_STORE_EMPTY_COLUMNS = true;
+  private static final long DEFAULT_TMP_STORAGE_BYTES_PER_TASK = Long.MAX_VALUE; // TODO: check!!!
 
   @JsonProperty
   private final String baseDir;
@@ -118,6 +119,9 @@ public class TaskConfig
   @JsonProperty
   private final boolean encapsulatedTask;
 
+  @JsonProperty
+  private final long tmpStorageBytesPerTask;
+
   @Deprecated
   @JsonProperty("baseTaskDir")
   private final String baseTaskDirPath;
@@ -142,7 +146,8 @@ public class TaskConfig
       @JsonProperty("batchProcessingMode") String batchProcessingMode,
       @JsonProperty("storeEmptyColumns") @Nullable Boolean storeEmptyColumns,
       @JsonProperty("encapsulatedTask") boolean enableTaskLevelLogPush,
-      @JsonProperty("baseTaskDirPaths") @Nullable List<String> baseTaskDirPaths
+      @JsonProperty("baseTaskDirPaths") @Nullable List<String> baseTaskDirPaths,
+      @JsonProperty("tmpStorageBytesPerTask") Long tmpStorageBytesPerTask
   )
   {
     this.baseDir = baseDir == null ? System.getProperty("java.io.tmpdir") : baseDir;
@@ -194,6 +199,7 @@ public class TaskConfig
       baseTaskDirPaths = Collections.singletonList(baseTaskFile);
     }
     this.baseTaskDirPaths = ImmutableList.copyOf(baseTaskDirPaths);
+    this.tmpStorageBytesPerTask = tmpStorageBytesPerTask == null ? DEFAULT_TMP_STORAGE_BYTES_PER_TASK : tmpStorageBytesPerTask;
   }
 
   @JsonProperty
@@ -300,4 +306,9 @@ public class TaskConfig
     return configParameter;
   }
 
+  @JsonProperty
+  public long getTmpStorageBytesPerTask()
+  {
+    return tmpStorageBytesPerTask;
+  }
 }

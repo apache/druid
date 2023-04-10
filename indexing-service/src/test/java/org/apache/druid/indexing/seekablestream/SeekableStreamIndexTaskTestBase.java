@@ -579,6 +579,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
         false,
+        null,
         null
     );
     final TestDerbyConnector derbyConnector = derby.getConnector();

@@ -64,6 +64,7 @@ public class ThreadingTaskRunnerTest
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
         false,
+        null,
         null
     );
     ThreadingTaskRunner runner = new ThreadingTaskRunner(

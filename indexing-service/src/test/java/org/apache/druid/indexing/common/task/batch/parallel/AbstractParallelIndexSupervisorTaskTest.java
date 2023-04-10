@@ -262,6 +262,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
         false,
+        null,
         null
     );
     intermediaryDataManager = new LocalIntermediaryDataManager(
@@ -667,6 +668,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
         false,
+        null,
         null
     );
 
@@ -717,6 +719,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
         false,
+        null,
         null
     );
     return new TaskToolbox.Builder()

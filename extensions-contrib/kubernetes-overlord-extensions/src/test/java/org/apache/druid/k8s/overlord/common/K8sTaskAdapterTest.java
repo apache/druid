@@ -108,7 +108,8 @@ class K8sTaskAdapterTest
         null,
         null,
         false,
-        ImmutableList.of("src/test/resources")
+        ImmutableList.of("src/test/resources"),
+        null
     );
   }
 

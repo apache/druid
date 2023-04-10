@@ -1604,6 +1604,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
         false,
+        null,
         null
     );
     return new TaskToolbox.Builder()

@@ -131,7 +131,8 @@ public class WorkerTaskManagerTest
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
         false,
-        baseTaskDirPaths
+        baseTaskDirPaths,
+        null
     );
     TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);

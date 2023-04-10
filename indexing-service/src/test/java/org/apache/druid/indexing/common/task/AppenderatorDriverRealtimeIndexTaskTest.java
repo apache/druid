@@ -1559,6 +1559,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
         false,
+        null,
         null
     );
 

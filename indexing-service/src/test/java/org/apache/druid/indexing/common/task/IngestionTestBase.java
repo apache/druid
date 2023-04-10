@@ -387,6 +387,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
             null,
             false,
+            null,
             null
         );
         final TaskToolbox box = new TaskToolbox.Builder()

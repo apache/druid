@@ -87,7 +87,8 @@ public class KubernetesTaskRunnerFactoryTest
         null,
         null,
         false,
-        ImmutableList.of("/tmp")
+        ImmutableList.of("/tmp"),
+        null
     );
     properties = new Properties();
   }

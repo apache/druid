@@ -80,6 +80,7 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
         false,
+        null,
         null
     );
     this.overlordClient = new NoopOverlordClient()

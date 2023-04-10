@@ -106,6 +106,7 @@ public class ShuffleResourceTest
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
         false,
+        null,
         null
     );
     final OverlordClient overlordClient = new NoopOverlordClient()

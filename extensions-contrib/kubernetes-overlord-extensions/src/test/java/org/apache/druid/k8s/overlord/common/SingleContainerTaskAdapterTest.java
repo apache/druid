@@ -91,7 +91,8 @@ class SingleContainerTaskAdapterTest
         null,
         null,
         false,
-        ImmutableList.of("src/test/resources")
+        ImmutableList.of("src/test/resources"),
+        null
     );
   }
 

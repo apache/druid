@@ -627,7 +627,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         ImmutableList.of(
             taskDirA,
             taskDirB
-        )
+        ),
+        null
     );
 
     return new TaskToolboxFactory(
