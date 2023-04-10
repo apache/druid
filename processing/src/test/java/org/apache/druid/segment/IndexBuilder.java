@@ -53,6 +53,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -222,15 +223,31 @@ public class IndexBuilder
     Preconditions.checkNotNull(indexMerger, "indexMerger");
     Preconditions.checkNotNull(tmpDir, "tmpDir");
     try (final IncrementalIndex incrementalIndex = buildIncrementalIndex()) {
+      List<IndexableAdapter> adapters = Collections.singletonList(
+          new QueryableIndexIndexableAdapter(
+              indexIO.loadIndex(
+                  indexMerger.persist(
+                      incrementalIndex,
+                      new File(
+                          tmpDir,
+                          StringUtils.format("testIndex-%s", ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE))
+                      ),
+                      indexSpec,
+                      null
+                  )
+              )
+          )
+      );
+      // still merge it since that follows the normal path of persist then merge
       return indexIO.loadIndex(
-          indexMerger.persist(
-              incrementalIndex,
-              new File(
-                  tmpDir,
-                  StringUtils.format("testIndex-%s", ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE))
-              ),
+          indexMerger.merge(
+              adapters,
+              schema.isRollup(),
+              schema.getMetrics(),
+              tmpDir,
+              schema.getDimensionsSpec(),
               indexSpec,
-              null
+              Integer.MAX_VALUE
           )
       );
     }
