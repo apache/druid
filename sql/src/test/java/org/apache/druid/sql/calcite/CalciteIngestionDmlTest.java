@@ -154,6 +154,9 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 
         // Set up the EXTERN macro.
         SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
+
+        // Enable the extended table functions for testing even though these
+        // are not enabled in production in Druid 26.
         SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
         SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
         SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);

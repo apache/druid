@@ -45,7 +45,6 @@ import {
 import './console-application.scss';
 
 export interface ConsoleApplicationProps {
-  exampleManifestsUrl?: string;
   defaultQueryContext?: Record<string, any>;
   mandatoryQueryContext?: Record<string, any>;
 }
@@ -213,15 +212,12 @@ export class ConsoleApplication extends React.PureComponent<
   };
 
   private readonly wrappedDataLoaderView = () => {
-    const { exampleManifestsUrl } = this.props;
-
     return this.wrapInViewContainer(
       'data-loader',
       <LoadDataView
         mode="all"
         initTaskId={this.taskId}
         initSupervisorId={this.supervisorId}
-        exampleManifestsUrl={exampleManifestsUrl}
         goToIngestion={this.goToIngestionWithTaskGroupId}
       />,
       'narrow-pad',
@@ -241,14 +237,11 @@ export class ConsoleApplication extends React.PureComponent<
   };
 
   private readonly wrappedClassicBatchDataLoaderView = () => {
-    const { exampleManifestsUrl } = this.props;
-
     return this.wrapInViewContainer(
       'classic-batch-data-loader',
       <LoadDataView
         mode="batch"
         initTaskId={this.taskId}
-        exampleManifestsUrl={exampleManifestsUrl}
         goToIngestion={this.goToIngestionWithTaskGroupId}
       />,
       'narrow-pad',

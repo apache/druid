@@ -45,6 +45,12 @@ public interface InputSpecSlicer
    * If there is a conflict between maxNumSlices and maxFilesPerSlice or maxBytesPerSlice, then maxNumSlices wins.
    * This means that for small values of maxNumSlices, slices may have more than maxFilesPerSlice files, or more
    * than maxBytesPerSlice bytes.
+   *
+   * The design of this method assumes that the ideal number of {@link InputSlice} can be determined by looking at
+   * just one {@link InputSpec} at a time. This makes sense today, since there are no situations where a
+   * {@link org.apache.druid.msq.kernel.StageDefinition} would be created with two {@link InputSpec} other than
+   * {@link org.apache.druid.msq.input.stage.StageInputSpec} (which is not dynamically splittable, so would not
+   * use this method anyway). If this changes in the future, we'll want to revisit the design of this method.
    */
   List<InputSlice> sliceDynamic(InputSpec inputSpec, int maxNumSlices, int maxFilesPerSlice, long maxBytesPerSlice);
 }

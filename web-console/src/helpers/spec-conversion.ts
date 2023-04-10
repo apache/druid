@@ -36,7 +36,7 @@ import type {
   Transform,
 } from '../druid-models';
 import { inflateDimensionSpec, upgradeSpec } from '../druid-models';
-import { deepGet, filterMap, oneOf } from '../utils';
+import { deepGet, filterMap, nonEmptyArray, oneOf } from '../utils';
 
 export function getSpecDatasourceName(spec: IngestionSpec): string {
   return deepGet(spec, 'spec.dataSchema.dataSource') || 'unknown_datasource';
@@ -85,6 +85,10 @@ export function convertSpecToSql(spec: any): QueryWithContext {
   const lines: string[] = [];
 
   const rollup = deepGet(spec, 'spec.dataSchema.granularitySpec.rollup') ?? true;
+
+  if (nonEmptyArray(deepGet(spec, 'spec.dataSchema.dimensionsSpec.spatialDimensions'))) {
+    throw new Error(`spatialDimensions are not currently supported in SQL-based ingestion`);
+  }
 
   const timestampSpec: TimestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec');
   if (!timestampSpec) throw new Error(`spec.dataSchema.timestampSpec is not defined`);

@@ -5264,4 +5264,62 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testJoinWithAliasAndOrderByNoGroupBy()
+  {
+    minTopNThreshold = 1;
+    Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
+    testQuery(
+        "select t1.__time from druid.foo as t1 join\n"
+        + "  druid.numfoo as t2 on t1.dim2 = t2.dim2\n"
+        + " order by t1.__time ASC ",
+        context, // turn on exact topN
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dataSource(
+                    JoinDataSource.create(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE3)
+                                .intervals(querySegmentSpec(Intervals.of(
+                                    "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
+                                .columns("dim2")
+                                .context(context)
+                                .build()
+                        ),
+                        "j0.",
+                        "(\"dim2\" == \"j0.dim2\")",
+                        JoinType.INNER,
+                        null,
+                        ExprMacroTable.nil(),
+                        CalciteTests.createJoinableFactoryWrapper()
+                    )
+                )
+                .columns("__time")
+                .order(ScanQuery.Order.ASCENDING)
+                .context(context)
+                .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{946684800000L},
+            new Object[]{946684800000L},
+            new Object[]{946857600000L},
+            new Object[]{978307200000L},
+            new Object[]{978307200000L},
+            new Object[]{978393600000L}
+        )
+        : ImmutableList.of(
+            new Object[]{946684800000L},
+            new Object[]{946684800000L},
+            new Object[]{978307200000L},
+            new Object[]{978307200000L},
+            new Object[]{978393600000L}
+        )
+    );
+  }
 }

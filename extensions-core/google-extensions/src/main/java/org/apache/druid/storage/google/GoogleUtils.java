@@ -77,6 +77,7 @@ public class GoogleUtils
    * @param bucket  Google Storage bucket
    * @param prefix  the file prefix
    * @param filter  function which returns true if the prefix file found should be deleted and false otherwise.
+   *
    * @throws Exception
    */
   public static void deleteObjectsInPath(

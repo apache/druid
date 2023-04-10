@@ -180,10 +180,15 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                   TaskStatus status;
                   if (PeonPhase.SUCCEEDED.equals(completedPhase.getPhase())) {
                     status = TaskStatus.success(task.getId());
+                  } else if (completedPhase.getJob() == null) {
+                    status = TaskStatus.failure(
+                        task.getId(),
+                        "K8s Job for task disappeared before completion: " + k8sTaskId
+                    );
                   } else {
                     status = TaskStatus.failure(
                         task.getId(),
-                        "Task failed %s: " + k8sTaskId
+                        "Task failed: " + k8sTaskId
                     );
                   }
                   if (completedPhase.getJobDuration().isPresent()) {
@@ -240,6 +245,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public void updateStatus(Task task, TaskStatus status)
   {
+    log.info("Updating task: %s with status %s", task.getId(), status);
     TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
   }
 

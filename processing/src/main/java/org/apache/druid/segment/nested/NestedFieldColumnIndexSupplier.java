@@ -45,6 +45,7 @@ import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.IntListUtils;
 import org.apache.druid.segment.column.BitmapColumnIndex;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
@@ -92,17 +93,21 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
 
   private final int adjustLongId;
   private final int adjustDoubleId;
+  private final ColumnConfig columnConfig;
+  private final int numRows;
 
   public NestedFieldColumnIndexSupplier(
-      NestedFieldTypeInfo.TypeSet types,
+      FieldTypeInfo.TypeSet types,
       BitmapFactory bitmapFactory,
+      ColumnConfig columnConfig,
       GenericIndexed<ImmutableBitmap> bitmaps,
       Supplier<FixedIndexed<Integer>> localDictionarySupplier,
       Supplier<TStringDictionary> globalStringDictionarySupplier,
       Supplier<FixedIndexed<Long>> globalLongDictionarySupplier,
       Supplier<FixedIndexed<Double>> globalDoubleDictionarySupplier,
       @Nullable Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier,
-      @Nullable GenericIndexed<ImmutableBitmap> arrayElementBitmaps
+      @Nullable GenericIndexed<ImmutableBitmap> arrayElementBitmaps,
+      int numRows
   )
   {
     this.singleType = types.getSingleType();
@@ -116,6 +121,8 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     this.arrayElementBitmaps = arrayElementBitmaps;
     this.adjustLongId = globalStringDictionarySupplier.get().size();
     this.adjustDoubleId = adjustLongId + globalLongDictionarySupplier.get().size();
+    this.columnConfig = columnConfig;
+    this.numRows = numRows;
   }
 
   @Nullable
@@ -132,36 +139,36 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
       }
       return (T) (NullValueIndex) () -> nullIndex;
     } else if (clazz.equals(DictionaryEncodedStringValueIndex.class) || clazz.equals(DictionaryEncodedValueIndex.class)) {
-      return (T) new NestedLiteralDictionaryEncodedStringValueIndex();
+      return (T) new NestedFieldDictionaryEncodedStringValueIndex();
     }
 
     if (singleType != null) {
       switch (singleType.getType()) {
         case STRING:
           if (clazz.equals(StringValueSetIndex.class)) {
-            return (T) new NestedStringLiteralValueSetIndex();
+            return (T) new NestedStringValueSetIndex();
           } else if (clazz.equals(LexicographicalRangeIndex.class)) {
-            return (T) new NestedStringLiteralLexicographicalRangeIndex();
+            return (T) new NestedStringLexicographicalRangeIndex();
           } else if (clazz.equals(DruidPredicateIndex.class)) {
-            return (T) new NestedStringLiteralPredicateIndex();
+            return (T) new NestedStringPredicateIndex();
           }
           return null;
         case LONG:
           if (clazz.equals(StringValueSetIndex.class)) {
-            return (T) new NestedLongLiteralValueSetIndex();
+            return (T) new NestedLongValueSetIndex();
           } else if (clazz.equals(NumericRangeIndex.class)) {
-            return (T) new NestedLongLiteralNumericRangeIndex();
+            return (T) new NestedLongNumericRangeIndex();
           } else if (clazz.equals(DruidPredicateIndex.class)) {
-            return (T) new NestedLongLiteralPredicateIndex();
+            return (T) new NestedLongPredicateIndex();
           }
           return null;
         case DOUBLE:
           if (clazz.equals(StringValueSetIndex.class)) {
-            return (T) new NestedDoubleLiteralValueSetIndex();
+            return (T) new NestedDoubleValueSetIndex();
           } else if (clazz.equals(NumericRangeIndex.class)) {
-            return (T) new NestedDoubleLiteralNumericRangeIndex();
+            return (T) new NestedDoubleNumericRangeIndex();
           } else if (clazz.equals(DruidPredicateIndex.class)) {
-            return (T) new NestedDoubleLiteralPredicateIndex();
+            return (T) new NestedDoublePredicateIndex();
           }
           return null;
         default:
@@ -169,9 +176,9 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
       }
     }
     if (clazz.equals(StringValueSetIndex.class)) {
-      return (T) new NestedVariantLiteralValueSetIndex();
+      return (T) new NestedVariantValueSetIndex();
     } else if (clazz.equals(DruidPredicateIndex.class)) {
-      return (T) new NestedVariantLiteralPredicateIndex();
+      return (T) new NestedVariantPredicateIndex();
     }
     return null;
   }
@@ -255,6 +262,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
   }
 
 
+  @Nullable
   private <T> BitmapColumnIndex makeRangeIndex(
       @Nullable T startValue,
       boolean startStrict,
@@ -276,6 +284,10 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     );
     final int startIndex = localRange.leftInt();
     final int endIndex = localRange.rightInt();
+    final int size = endIndex - startIndex;
+    if (ColumnIndexSupplier.skipComputingRangeIndexes(columnConfig, numRows, size)) {
+      return null;
+    }
     return new SimpleImmutableBitmapIterableIndex()
     {
       @Override
@@ -301,7 +313,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     };
   }
 
-  private class NestedLiteralDictionaryEncodedStringValueIndex implements DictionaryEncodedStringValueIndex
+  private class NestedFieldDictionaryEncodedStringValueIndex implements DictionaryEncodedStringValueIndex
   {
     final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
     final Indexed<ByteBuffer> stringDictionary = globalStringDictionarySupplier.get();
@@ -329,13 +341,19 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
 
     @Override
+    public BitmapFactory getBitmapFactory()
+    {
+      return bitmapFactory;
+    }
+
+    @Override
     public ImmutableBitmap getBitmap(int idx)
     {
       return NestedFieldColumnIndexSupplier.this.getBitmap(idx);
     }
   }
 
-  private class NestedStringLiteralValueSetIndex implements StringValueSetIndex
+  private class NestedStringValueSetIndex implements StringValueSetIndex
   {
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
@@ -417,9 +435,10 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
   }
 
-  private class NestedStringLiteralLexicographicalRangeIndex implements LexicographicalRangeIndex
+  private class NestedStringLexicographicalRangeIndex implements LexicographicalRangeIndex
   {
     @Override
+    @Nullable
     public BitmapColumnIndex forRange(
         @Nullable String startValue,
         boolean startStrict,
@@ -439,6 +458,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
 
     @Override
+    @Nullable
     public BitmapColumnIndex forRange(
         @Nullable String startValue,
         boolean startStrict,
@@ -447,24 +467,26 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         Predicate<String> matcher
     )
     {
+      final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
+      final Indexed<ByteBuffer> stringDictionary = globalStringDictionarySupplier.get();
+      final IntIntPair range = getLocalRangeFromDictionary(
+          StringUtils.toUtf8ByteBuffer(startValue),
+          startStrict,
+          StringUtils.toUtf8ByteBuffer(endValue),
+          endStrict,
+          localDictionary,
+          stringDictionary,
+          0
+      );
+      final int start = range.leftInt(), end = range.rightInt();
+      if (ColumnIndexSupplier.skipComputingRangeIndexes(columnConfig, numRows, end - start)) {
+        return null;
+      }
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
         {
-
-          final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
-          final Indexed<ByteBuffer> stringDictionary = globalStringDictionarySupplier.get();
-          final IntIntPair range = getLocalRangeFromDictionary(
-              StringUtils.toUtf8ByteBuffer(startValue),
-              startStrict,
-              StringUtils.toUtf8ByteBuffer(endValue),
-              endStrict,
-              localDictionary,
-              stringDictionary,
-              0
-          );
-          final int start = range.leftInt(), end = range.rightInt();
           return () -> new Iterator<ImmutableBitmap>()
           {
             int currIndex = start;
@@ -511,21 +533,23 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
   }
 
-  private class NestedStringLiteralPredicateIndex implements DruidPredicateIndex
+  private class NestedStringPredicateIndex implements DruidPredicateIndex
   {
     @Override
+    @Nullable
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
+      final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
+      if (ColumnIndexSupplier.skipComputingPredicateIndexes(columnConfig, numRows, localDictionary.size())) {
+        return null;
+      }
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
         {
-
           return () -> new Iterator<ImmutableBitmap>()
           {
-
-            final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
             final Indexed<ByteBuffer> stringDictionary = globalStringDictionarySupplier.get();
             final Predicate<String> stringPredicate = matcherFactory.makeStringPredicate();
 
@@ -574,7 +598,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
   }
 
-  private class NestedLongLiteralValueSetIndex implements StringValueSetIndex
+  private class NestedLongValueSetIndex implements StringValueSetIndex
   {
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
@@ -694,9 +718,10 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
   }
 
-  private class NestedLongLiteralNumericRangeIndex implements NumericRangeIndex
+  private class NestedLongNumericRangeIndex implements NumericRangeIndex
   {
     @Override
+    @Nullable
     public BitmapColumnIndex forRange(
         @Nullable Number startValue,
         boolean startStrict,
@@ -716,11 +741,16 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
   }
 
-  private class NestedLongLiteralPredicateIndex implements DruidPredicateIndex
+  private class NestedLongPredicateIndex implements DruidPredicateIndex
   {
     @Override
+    @Nullable
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
+      final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
+      if (ColumnIndexSupplier.skipComputingPredicateIndexes(columnConfig, numRows, localDictionary.size())) {
+        return null;
+      }
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
@@ -728,7 +758,6 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         {
           return () -> new Iterator<ImmutableBitmap>()
           {
-            final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
             final FixedIndexed<Long> longDictionary = globalLongDictionarySupplier.get();
             final DruidLongPredicate longPredicate = matcherFactory.makeLongPredicate();
 
@@ -782,7 +811,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
   }
 
-  private class NestedDoubleLiteralValueSetIndex implements StringValueSetIndex
+  private class NestedDoubleValueSetIndex implements StringValueSetIndex
   {
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
@@ -901,9 +930,10 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
   }
 
-  private class NestedDoubleLiteralNumericRangeIndex implements NumericRangeIndex
+  private class NestedDoubleNumericRangeIndex implements NumericRangeIndex
   {
     @Override
+    @Nullable
     public BitmapColumnIndex forRange(
         @Nullable Number startValue,
         boolean startStrict,
@@ -923,11 +953,16 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
   }
 
-  private class NestedDoubleLiteralPredicateIndex implements DruidPredicateIndex
+  private class NestedDoublePredicateIndex implements DruidPredicateIndex
   {
     @Override
+    @Nullable
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
+      final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
+      if (ColumnIndexSupplier.skipComputingPredicateIndexes(columnConfig, numRows, localDictionary.size())) {
+        return null;
+      }
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
@@ -1039,7 +1074,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
   /**
    * {@link StringValueSetIndex} but for variant typed nested literal columns
    */
-  private class NestedVariantLiteralValueSetIndex extends NestedVariantLiteralIndex implements StringValueSetIndex
+  private class NestedVariantValueSetIndex extends NestedVariantLiteralIndex implements StringValueSetIndex
   {
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
@@ -1118,11 +1153,15 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
   /**
    * {@link DruidPredicateIndex} but for variant typed nested literal columns
    */
-  private class NestedVariantLiteralPredicateIndex extends NestedVariantLiteralIndex implements DruidPredicateIndex
+  private class NestedVariantPredicateIndex extends NestedVariantLiteralIndex implements DruidPredicateIndex
   {
     @Override
+    @Nullable
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
+      if (ColumnIndexSupplier.skipComputingPredicateIndexes(columnConfig, numRows, localDictionary.size())) {
+        return null;
+      }
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override

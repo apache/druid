@@ -794,9 +794,7 @@ public class IndexIO
         SmooshedFileMapper smooshedFiles
     ) throws IOException
     {
-      ColumnDescriptor serde = mapper.readValue(
-          SERIALIZER_UTILS.readString(byteBuffer), ColumnDescriptor.class
-      );
+      ColumnDescriptor serde = mapper.readValue(SERIALIZER_UTILS.readString(byteBuffer), ColumnDescriptor.class);
       return serde.read(byteBuffer, columnConfig, smooshedFiles);
     }
   }
