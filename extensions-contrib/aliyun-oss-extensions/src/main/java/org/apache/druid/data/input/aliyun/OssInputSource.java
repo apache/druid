@@ -21,6 +21,7 @@ package org.apache.druid.data.input.aliyun;
 
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.model.OSSObjectSummary;
+import com.aliyun.oss.model.ObjectMetadata;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -30,18 +31,15 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterators;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.InputEntity;
-import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputSplit;
-import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.data.input.impl.CloudObjectSplitWidget;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.storage.aliyun.OssInputDataConfig;
 import org.apache.druid.storage.aliyun.OssStorageDruidModule;
 import org.apache.druid.storage.aliyun.OssUtils;
-import org.apache.druid.utils.Streams;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.URI;
 import java.nio.file.FileSystems;
@@ -50,8 +48,6 @@ import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class OssInputSource extends CloudObjectInputSource
 {
@@ -113,18 +109,37 @@ public class OssInputSource extends CloudObjectInputSource
   }
 
   @Override
-  protected Stream<InputSplit<List<CloudObjectLocation>>> getPrefixesSplitStream(@Nonnull SplitHintSpec splitHintSpec)
+  protected CloudObjectSplitWidget getSplitWidget()
   {
-    final Iterator<List<OSSObjectSummary>> splitIterator = splitHintSpec.split(
-        getIterableObjectsFromPrefixes().iterator(),
-        object -> new InputFileAttribute(object.getSize())
-    );
+    class SplitWidget implements CloudObjectSplitWidget
+    {
+      @Override
+      public Iterator<LocationWithSize> getDescriptorIteratorForPrefixes(List<URI> prefixes)
+      {
+        return Iterators.transform(
+            OssUtils.objectSummaryIterator(
+                clientSupplier.get(),
+                getPrefixes(),
+                inputDataConfig.getMaxListingLength()
+            ),
+            object -> new LocationWithSize(object.getBucketName(), object.getKey(), object.getSize())
+        );
+      }
 
-    return Streams.sequentialStreamFrom(splitIterator)
-                  .map(objects -> objects.stream()
-                                         .map(OssUtils::summaryToCloudObjectLocation)
-                                         .collect(Collectors.toList()))
-                  .map(InputSplit::new);
+      @Override
+      public long getObjectSize(CloudObjectLocation location)
+      {
+        final ObjectMetadata objectMetadata = OssUtils.getSingleObjectMetadata(
+            clientSupplier.get(),
+            location.getBucket(),
+            location.getPath()
+        );
+
+        return objectMetadata.getContentLength();
+      }
+    }
+
+    return new SplitWidget();
   }
 
   @Override

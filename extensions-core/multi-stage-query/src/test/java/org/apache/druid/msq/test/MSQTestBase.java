@@ -852,7 +852,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     public Builder setExpectedResultRows(List<Object[]> expectedResultRows)
     {
-      Preconditions.checkArgument(expectedResultRows.size() > 0, "Results rows cannot be empty");
       this.expectedResultRows = expectedResultRows;
       return asBuilder();
     }
@@ -1041,7 +1040,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       Preconditions.checkArgument(expectedRowSignature != null, "expectedRowSignature cannot be null");
       Preconditions.checkArgument(
           expectedResultRows != null || expectedMSQFault != null || expectedMSQFaultClass != null,
-          "atleast one of expectedResultRows, expectedMSQFault or expectedMSQFaultClass should be set to non null"
+          "at least one of expectedResultRows, expectedMSQFault or expectedMSQFaultClass should be set to non null"
       );
       Preconditions.checkArgument(expectedShardSpec != null, "shardSpecClass cannot be null");
       readyToRun();

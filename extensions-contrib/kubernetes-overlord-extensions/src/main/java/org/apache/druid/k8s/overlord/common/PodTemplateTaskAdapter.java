@@ -34,6 +34,7 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
+import io.fabric8.kubernetes.client.utils.Serialization;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
@@ -47,6 +48,7 @@ import org.apache.druid.server.DruidNode;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -74,7 +76,6 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   private static final Logger log = new Logger(PodTemplateTaskAdapter.class);
   private static final String TASK_PROPERTY = IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX + ".k8s.podTemplate.%s";
 
-  private final KubernetesClientApi client;
   private final KubernetesTaskRunnerConfig taskRunnerConfig;
   private final TaskConfig taskConfig;
   private final DruidNode node;
@@ -82,7 +83,6 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   private final HashMap<String, PodTemplate> templates;
 
   public PodTemplateTaskAdapter(
-      KubernetesClientApi client,
       KubernetesTaskRunnerConfig taskRunnerConfig,
       TaskConfig taskConfig,
       DruidNode node,
@@ -90,7 +90,6 @@ public class PodTemplateTaskAdapter implements TaskAdapter
       Properties properties
   )
   {
-    this.client = client;
     this.taskRunnerConfig = taskRunnerConfig;
     this.taskConfig = taskConfig;
     this.node = node;
@@ -198,7 +197,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
       return Optional.empty();
     }
     try {
-      return Optional.of(client.executeRequest(client -> client.v1().podTemplates().load(new File(podTemplateFile)).get()));
+      return Optional.of(Serialization.unmarshal(Files.newInputStream(new File(podTemplateFile).toPath()), PodTemplate.class));
     }
     catch (Exception e) {
       throw new ISE(e, "Failed to load pod template file for [%s] at [%s]", property, podTemplateFile);

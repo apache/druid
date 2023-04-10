@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.filter.SelectorPredicateFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexSpec;
@@ -167,7 +166,6 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
           fileNameBase,
           new IndexSpec(),
           writeOutMediumFactory.makeSegmentWriteOutMedium(tempFolder.newFolder()),
-          new BaseProgressIndicator(),
           closer
       );
 
@@ -219,7 +217,7 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
     NestedDataColumnSupplierV4 supplier = NestedDataColumnSupplierV4.read(
         baseBuffer,
         bob,
-        () -> 0,
+        NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES,
         NestedDataComplexTypeSerde.OBJECT_MAPPER,
         new OnlyPositionalReadsTypeStrategy<>(ColumnType.LONG.getStrategy()),
         new OnlyPositionalReadsTypeStrategy<>(ColumnType.DOUBLE.getStrategy())
@@ -238,7 +236,7 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
     NestedDataColumnSupplierV4 supplier = NestedDataColumnSupplierV4.read(
         baseBuffer,
         bob,
-        () -> 0,
+        NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES,
         NestedDataComplexTypeSerde.OBJECT_MAPPER
     );
     final String expectedReason = "none";

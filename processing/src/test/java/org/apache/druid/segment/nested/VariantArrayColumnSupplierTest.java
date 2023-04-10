@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.AutoTypeColumnMerger;
-import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.IndexableAdapter;
@@ -122,7 +121,6 @@ public class VariantArrayColumnSupplierTest extends InitializedNullHandlingTest
           fileNameBase,
           new IndexSpec(),
           writeOutMediumFactory.makeSegmentWriteOutMedium(tempFolder.newFolder()),
-          new BaseProgressIndicator(),
           closer
       );
 
@@ -180,7 +178,8 @@ public class VariantArrayColumnSupplierTest extends InitializedNullHandlingTest
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
         baseBuffer,
-        bob
+        bob,
+        NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES
     );
     try (VariantArrayColumn column = (VariantArrayColumn) supplier.get()) {
       smokeTest(supplier, column);
@@ -198,7 +197,8 @@ public class VariantArrayColumnSupplierTest extends InitializedNullHandlingTest
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
         baseBuffer,
-        bob
+        bob,
+        NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES
     );
     final String expectedReason = "none";
     final AtomicReference<String> failureReason = new AtomicReference<>(expectedReason);

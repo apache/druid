@@ -230,7 +230,7 @@ public class MSQTasks
 
     if (errorReport.getExceptionStackTrace() != null) {
       if (errorReport.getFault() instanceof UnknownFault || errorReport.getFault() instanceof QueryRuntimeFault) {
-        // Log full stack trace for unknown and QueryStack faults
+        // Log full stack trace for UnknownFault and QueryRuntimeFault
         logMessage.append('\n').append(errorReport.getExceptionStackTrace());
       } else {
         // Log first line only (error class, message) for known faults, to avoid polluting logs.
