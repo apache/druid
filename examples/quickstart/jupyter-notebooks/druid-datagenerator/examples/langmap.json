@@ -1,0 +1,50 @@
+{
+  "target": {"type": "stdout"},
+  "emitters": [
+    {
+      "name": "example_record_1",
+      "dimensions": [
+        {
+          "type": "string",
+          "name": "channel",
+          "length_distribution": {
+            "type": "constant",
+            "value": 13
+          },
+          "cardinality": 0,
+          "chars": "#.abcdefghijklmnopqrstuvwxyz"
+        },
+        {
+          "type": "string",
+          "name": "language",
+          "length_distribution": {
+            "type": "constant",
+            "value": 10
+          },
+          "cardinality": 0,
+          "chars": "abcdefghijklmnopqrstuvwxyz"
+        }
+      ]
+    }
+  ],
+  "interarrival": {
+    "type": "constant",
+    "value": 1
+  },
+  "states": [
+    {
+      "name": "state_1",
+      "emitter": "example_record_1",
+      "delay": {
+        "type": "constant",
+        "value": 1
+      },
+      "transitions": [
+        {
+          "next": "state_1",
+          "probability": 1.0
+        }
+      ]
+    }
+  ]
+}

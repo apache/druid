@@ -1,0 +1,188 @@
+{
+  "queries": [
+    {
+      "target": "http://localhost:8888/druid/v2/sql",
+      "delay": {"type": "exponential", "mean": 1},
+      "query": "SELECT * FROM \"clickstream-data\" WHERE TIME_IN_INTERVAL(\"__time\", '$begin_time/$end_time')",
+      "variables": [
+        {
+          "name": "begin_time",
+          "type": "timestamp",
+          "distribution": {
+            "type": "uniform",
+            "min": {"type": "minus", "base": {"type": "now"}, "delta": {"type": "constant", "value": 600}},
+            "max": {"type": "minus", "base": {"type": "now"}, "delta": {"type": "constant", "value": 300}}
+          },
+          "cardinality": 0
+        },
+        {
+          "name": "end_time",
+          "type": "timestamp",
+          "distribution": {
+            "type": "now"
+          },
+          "cardinality": 0
+        }
+      ]
+    },
+    {
+      "target": "http://localhost:8888/druid/v2/sql",
+      "delay": {"type": "exponential", "mean": 1},
+      "query": "SELECT * FROM \"clickstream-data\" WHERE TIME_IN_INTERVAL(\"__time\", '$begin_time/$end_time') AND client_lang = '$lang'",
+      "variables": [
+        {
+          "name": "begin_time",
+          "type": "timestamp",
+          "distribution": {
+            "type": "uniform",
+            "min": {"type": "minus", "base": {"type": "now"}, "delta": {"type": "constant", "value": 1200}},
+            "max": {"type": "minus", "base": {"type": "now"}, "delta": {"type": "constant", "value": 30}}
+          },
+          "cardinality": 0
+        },
+        {
+          "name": "end_time",
+          "type": "timestamp",
+          "distribution": {
+            "type": "now"
+          },
+          "cardinality": 0
+        },
+        {
+          "type": "enum",
+          "name": "lang",
+          "values": [
+            "Russian",
+            "French",
+            "Mandarin",
+            "English",
+            "Hindi",
+            "Spanish",
+            "Arabic",
+            "Portuguese"
+          ],
+          "cardinality_distribution": {"type": "normal", "mean": 3, "stddev": 2}
+        }
+      ]
+    },
+    {
+      "target": "http://localhost:8888/druid/v2/sql",
+      "delay": {"type": "exponential", "mean": 1},
+      "query": "SELECT * FROM \"clickstream-data\" WHERE TIME_IN_INTERVAL(\"__time\", '$begin_time/$end_time') AND client_country = '$country'",
+      "variables": [
+        {
+          "name": "begin_time",
+          "type": "timestamp",
+          "distribution": {
+            "type": "uniform",
+            "min": {"type": "minus", "base": {"type": "now"}, "delta": {"type": "constant", "value": 900}},
+            "max": {"type": "minus", "base": {"type": "now"}, "delta": {"type": "constant", "value": 60}}
+          },
+          "cardinality": 0
+        },
+        {
+          "name": "end_time",
+          "type": "timestamp",
+          "distribution": {
+            "type": "now"
+          },
+          "cardinality": 0
+        },
+        {
+          "type": "enum",
+          "name": "country",
+          "values": [
+            "Vietnam",
+            "Philippines",
+            "Mexico",
+            "Bazil",
+            "Pakistan",
+            "United States",
+            "China",
+            "India",
+            "Indonesia",
+            "Nigeria",
+            "Russia",
+            "Japan",
+            "Egypt"
+          ],
+          "cardinality_distribution": {"type": "normal", "mean": 6, "stddev": 4}
+        }
+      ]
+    },
+    {
+      "target": "http://localhost:8888/druid/v2/sql",
+      "delay": {"type": "exponential", "mean": 1},
+      "query": "SELECT * FROM \"clickstream-data\" WHERE TIME_IN_INTERVAL(\"__time\", '$begin_time/$end_time') AND client_ip = '$ip'",
+      "variables": [
+        {
+          "name": "begin_time",
+          "type": "timestamp",
+          "distribution": {
+            "type": "uniform",
+            "min": {"type": "minus", "base": {"type": "now"}, "delta": {"type": "constant", "value": 900}},
+            "max": {"type": "minus", "base": {"type": "now"}, "delta": {"type": "constant", "value": 60}}
+          },
+          "cardinality": 0
+        },
+        {
+          "name": "end_time",
+          "type": "timestamp",
+          "distribution": {
+            "type": "now"
+          },
+          "cardinality": 0
+        },
+        {
+          "type": "ipaddress",
+          "name": "ip",
+          "distribution": {"type": "uniform", "min": 2130706433, "max": 2147483647},
+          "cardinality": 1000,
+          "cardinality_distribution": {"type": "exponential", "mean": 100}
+        }
+      ]
+    },
+    {
+      "target": "http://localhost:8888/druid/v2/sql",
+      "delay": {"type": "exponential", "mean": 1},
+      "query": "SELECT * FROM \"clickstream-data\" WHERE TIME_IN_INTERVAL(\"__time\", '$begin_time/$end_time') AND referrer = '$referrer'",
+      "variables": [
+        {
+          "name": "begin_time",
+          "type": "timestamp",
+          "distribution": {
+            "type": "uniform",
+            "min": {"type": "minus", "base": {"type": "now"}, "delta": {"type": "constant", "value": 900}},
+            "max": {"type": "minus", "base": {"type": "now"}, "delta": {"type": "constant", "value": 60}}
+          },
+          "cardinality": 0
+        },
+        {
+          "name": "end_time",
+          "type": "timestamp",
+          "distribution": {
+            "type": "now"
+          },
+          "cardinality": 0
+        },
+        {
+          "type": "enum",
+          "name": "referrer",
+          "values": [
+            "abc.com/affiliate",
+            "google.com/search",
+            "facebook.com/referring-group",
+            "learn.imply.io/druid-basics",
+            "learn.imply.io/data-modeling",
+            "github.com/apache/druid",
+            "druid.apache.org/druid-powered",
+            "stackoverflow.com/questions",
+            "druidforum.org/",
+            "unknown"
+          ],
+          "cardinality_distribution": {"type": "normal", "mean": 5, "stddev": 3}
+        }
+      ]
+    }
+  ]
+}

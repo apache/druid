@@ -1,0 +1,206 @@
+{
+  "target": {"type": "stdout"},
+  "emitters": [
+    {
+    "name": "enter",
+    "dimensions": [
+      {"type": "variable", "name": "client_ip", "variable": "client_ip"},
+      {"type": "variable", "name": "client_device","variable": "client_device"},
+      {"type": "variable", "name": "client_lang", "variable": "client_lang"},
+      {"type": "variable", "name": "client_country", "variable": "client_country"},
+      {"type": "variable", "name": "referrer", "variable": "referrer"},
+      {"type": "enum", "name": "event_type", "values": ["page_view"],"cardinality_distribution": {"type": "constant", "value": 0}}
+    ]
+    },
+    {
+    "name": "hit",
+    "dimensions": [
+      {"type": "variable", "name": "client_ip", "variable": "client_ip"},
+      {"type": "variable", "name": "client_device","variable": "client_device"},
+      {"type": "variable", "name": "client_lang", "variable": "client_lang"},
+      {"type": "variable", "name": "client_country", "variable": "client_country"},
+      {"type": "variable", "name": "referrer", "variable": "referrer"},
+      {"type": "enum", "name": "event_type",
+        "values": [
+          "page_view",
+          "search",
+          "purchase",
+          "exception"
+        ],
+        "cardinality_distribution": {"type": "uniform", "min": 0, "max": 3}
+        }
+      ]
+    },
+    {
+      "name": "purchase",
+      "dimensions": [
+        {"type": "variable", "name": "client_ip", "variable": "client_ip"},
+        {"type": "variable", "name": "client_device","variable": "client_device"},
+        {"type": "variable", "name": "client_lang", "variable": "client_lang"},
+        {"type": "variable", "name": "client_country", "variable": "client_country"},
+        {"type": "variable", "name": "referrer", "variable": "referrer"},
+        {"type": "enum", "name": "event_type",
+          "values": [
+            "page_view",
+            "purchase"
+          ],
+          "cardinality_distribution": {"type": "uniform", "min": 0, "max": 1}
+        }
+      ]
+    },
+    {
+      "name": "leave",
+      "dimensions": [
+        {"type": "variable", "name": "client_ip", "variable": "client_ip"},
+        {"type": "variable", "name": "client_device","variable": "client_device"},
+        {"type": "variable", "name": "client_lang", "variable": "client_lang"},
+        {"type": "variable", "name": "client_country", "variable": "client_country"},
+        {"type": "variable", "name": "referrer", "variable": "referrer"},
+        {"type": "enum", "name": "event_type", "values": ["exit"],"cardinality_distribution": {"type": "constant", "value": 0}}
+      ]
+    }
+  ],
+  "interarrival": {"type": "exponential", "mean": 0.1},
+  "states": [
+    {
+      "name": "home",
+      "emitter": "enter",
+      "variables": [
+        {
+          "type": "ipaddress",
+          "name": "client_ip",
+          "distribution": {"type": "uniform", "min": 2130706433, "max": 2147483647},
+          "cardinality": 1000,
+          "cardinality_distribution": {"type": "exponential", "mean": 100}
+        },
+        {
+          "type": "enum",
+          "name": "client_device",
+          "values": [
+            "game console",
+            "mobile",
+            "tablet",
+            "desktop"
+          ],
+          "cardinality_distribution": {"type": "uniform", "min": 0, "max": 3}
+        },
+        {
+          "type": "enum",
+          "name": "client_lang",
+          "values": [
+            "Russian",
+            "French",
+            "Mandarin",
+            "English",
+            "Hindi",
+            "Spanish",
+            "Arabic",
+            "Portuguese"
+          ],
+          "cardinality_distribution": {"type": "normal", "mean": 3, "stddev": 2}
+        },
+        {
+          "type": "enum",
+          "name": "client_country",
+          "values": [
+            "Vietnam",
+            "Philippines",
+            "Mexico",
+            "Bazil",
+            "Pakistan",
+            "United States",
+            "China",
+            "India",
+            "Indonesia",
+            "Nigeria",
+            "Russia",
+            "Japan",
+            "Egypt"
+          ],
+          "cardinality_distribution": {"type": "normal", "mean": 6, "stddev": 4}
+        },
+        {
+          "type": "enum",
+          "name": "referrer",
+          "values": [
+            "abc.com/affiliate",
+            "google.com/search",
+            "facebook.com/referring-group",
+            "learn.imply.io/druid-basics",
+            "learn.imply.io/data-modeling",
+            "github.com/apache/druid",
+            "druid.apache.org/druid-powered",
+            "stackoverflow.com/questions",
+            "druidforum.org/",
+            "unknown"          ],
+          "cardinality_distribution": {"type": "normal", "mean": 5, "stddev": 3}
+        }
+      ],
+      "delay": {"type": "exponential", "mean": 10},
+      "transitions": [
+        {"next": "leave", "probability": 0.5},
+        {"next": "products", "probability": 0.4},
+        {"next": "jobs", "probability": 0.1}
+      ]
+    },
+    {
+      "name": "leave",
+      "emitter": "leave",
+      "delay": {"type": "constant", "value": 0},
+      "transitions": [
+        {"next": "stop", "probability": 1.0}
+      ]
+    },
+    {
+      "name": "jobs",
+      "emitter": "hit",
+      "delay": {"type": "exponential", "mean": 30},
+      "transitions": [
+        {"next": "leave", "probability": 0.5},
+        {"next": "home", "probability": 0.5}
+      ]
+    },
+    {
+      "name": "products",
+      "emitter": "hit",
+      "delay": {"type": "exponential", "mean": 10},
+      "transitions": [
+        {"next": "leave", "probability": 0.1},
+        {"next": "home", "probability": 0.1},
+        {"next": "big widget", "probability": 0.4},
+        {"next": "medium widget", "probability": 0.2},
+        {"next": "small widget", "probability": 0.2}
+      ]
+    },
+    {
+      "name": "big widget",
+      "emitter": "purchase",
+      "delay": {"type": "exponential", "mean": 15},
+      "transitions": [
+        {"next": "leave", "probability": 0.5},
+        {"next": "home", "probability": 0.1},
+        {"next": "products", "probability": 0.4}
+      ]
+    },
+    {
+      "name": "medium widget",
+      "emitter": "purchase",
+      "delay": {"type": "exponential", "mean": 20},
+      "transitions": [
+        {"next": "leave", "probability": 0.3},
+        {"next": "home", "probability": 0.1},
+        {"next": "products", "probability": 0.6}
+      ]
+    },
+    {
+      "name": "small widget",
+      "emitter": "purchase",
+      "delay": {"type": "exponential", "mean": 25},
+      "transitions": [
+        {"next": "leave", "probability": 0.2},
+        {"next": "home", "probability": 0.1},
+        {"next": "products", "probability": 0.7}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "queries": [
+    {
+      "target": "http://localhost:8888/druid/v2/sql",
+      "delay": {"type": "constant", "value": 1},
+      "query": "SELECT * FROM \"clickstream-data\" LIMIT 1",
+      "variables": []
+    }
+  ]
+}

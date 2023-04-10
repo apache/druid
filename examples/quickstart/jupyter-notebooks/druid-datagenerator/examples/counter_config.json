@@ -1,0 +1,97 @@
+{
+  "target": {"type": "stdout"},
+  "emitters": [
+    {
+      "name": "example_record_1",
+      "dimensions": [
+        {
+          "type": "counter",
+          "name": "default_counter1"
+        },
+        {
+          "type": "counter",
+          "name": "start_counter1",
+          "start": 5
+        },
+        {
+          "type": "counter",
+          "name": "increment_counter1",
+          "increment": 5
+        },
+        {
+          "type": "counter",
+          "name": "both_counter1",
+          "start": 5,
+          "increment": 5
+        }
+      ]
+    },
+    {
+      "name": "example_record_2",
+      "dimensions": [
+        {
+          "type": "counter",
+          "name": "default_counter2"
+        },
+        {
+          "type": "counter",
+          "name": "start_counter2",
+          "start": 5
+        },
+        {
+          "type": "counter",
+          "name": "increment_counter2",
+          "increment": 5
+        },
+        {
+          "type": "counter",
+          "name": "both_counter2",
+          "start": 5,
+          "increment": 5
+        }
+      ]
+    }
+  ],
+  "interarrival": {
+    "type": "constant",
+    "value": 1
+  },
+  "states": [
+    {
+      "name": "state_1",
+      "emitter": "example_record_1",
+      "delay": {
+        "type": "constant",
+        "value": 1
+      },
+      "transitions": [
+        {
+          "next": "state_1",
+          "probability": 0.5
+        },
+        {
+          "next": "state_2",
+          "probability": 0.5
+        }
+      ]
+    },
+    {
+      "name": "state_2",
+      "emitter": "example_record_2",
+      "delay": {
+        "type": "constant",
+        "value": 1
+      },
+      "transitions": [
+        {
+          "next": "state_1",
+          "probability": 0.5
+        },
+        {
+          "next": "state_2",
+          "probability": 0.5
+        }
+      ]
+    }
+  ]
+}

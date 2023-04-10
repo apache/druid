@@ -1,0 +1,105 @@
+{
+  "target": {"type": "stdout"},
+  "emitters": [
+    {
+      "name": "example_record_1",
+      "dimensions": [
+        {
+          "type": "enum",
+          "name": "enum_dim",
+          "values": ["A","B","C"],
+          "cardinality_distribution": {
+            "type": "uniform",
+            "min": 0,
+            "max": 2
+          },
+          "percent_missing": 50.0
+        },
+        {
+          "type": "string",
+          "name": "string_dim",
+          "length_distribution": {
+            "type": "constant",
+            "value": 5
+          },
+          "cardinality": 0,
+          "chars": "ABC123",
+          "percent_missing": 50.0
+        },
+        {
+          "type": "int",
+          "name": "int_dim",
+          "distribution": {
+            "type": "uniform",
+            "min": 0,
+            "max": 1000
+          },
+          "cardinality": 10,
+          "cardinality_distribution": {
+            "type": "exponential",
+            "mean": 5
+          },
+          "percent_missing": 50.0
+        },
+        {
+          "type": "float",
+          "name": "dim_float",
+          "distribution": {
+            "type": "uniform",
+            "min": 0,
+            "max": 1000
+          },
+          "cardinality": 10,
+          "cardinality_distribution": {
+            "type": "normal",
+            "mean": 5,
+            "stddev": 2
+          },
+          "percent_missing": 50.0
+        },
+        {
+          "type": "timestamp",
+          "name": "dim_timestamp",
+          "distribution": {
+            "type": "uniform",
+            "min": "2008-09-03T10:00:00.0Z",
+            "max": "2008-09-03T20:00:00.0Z"
+          },
+          "cardinality": 0,
+          "percent_missing": 50.0
+        },
+        {
+          "type": "ipaddress",
+          "name": "dim_ip",
+          "distribution": {
+            "type": "uniform",
+            "min": 2130706433,
+            "max": 2130706440
+          },
+          "cardinality": 0,
+          "percent_missing": 50.0
+        }
+      ]
+    }
+  ],
+  "interarrival": {
+    "type": "constant",
+    "value": 1
+  },
+  "states": [
+    {
+      "name": "state_1",
+      "emitter": "example_record_1",
+      "delay": {
+        "type": "constant",
+        "value": 1
+      },
+      "transitions": [
+        {
+          "next": "state_1",
+          "probability": 1.0
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,148 @@
+{
+  "queries": [
+    {
+      "target": "http://localhost:8888/druid/v2/sql",
+      "delay": {"type": "exponential", "mean": 1},
+      "query": "SELECT * FROM \"clickstream-data\" WHERE TIME_IN_INTERVAL(\"__time\", '$begin_time/$end_time') AND client_lang = '$lang'",
+      "variables": [
+        {
+          "name": "begin_time",
+          "type": "timestamp",
+          "distribution": {
+            "type": "uniform",
+            "min": {"type": "constant", "value": "2008-09-03T10:00:00.0Z"},
+            "max": {"type": "constant", "value": "2008-09-03T20:00:00.0Z"}
+          },
+          "cardinality": 0
+        },
+        {
+          "name": "end_time",
+          "type": "timestamp",
+          "distribution": {
+            "type": "uniform",
+            "min": {"type": "minus", "base": {"type": "now"}, "delta": {"type": "constant", "value": 300}},
+            "max": {"type": "now"}
+          },
+          "cardinality": 0
+        }
+      ]
+    },
+    {
+      "target": "http://localhost:8888/druid/v2/sql",
+      "delay": {"type": "exponential", "mean": 1},
+      "query": "SELECT * FROM \"clickstream-data\" WHERE client_lang = '$lang'",
+      "variables": [
+        {
+          "type": "enum",
+          "name": "lang",
+          "values": [
+            "Russian",
+            "French",
+            "Mandarin",
+            "English",
+            "Hindi",
+            "Spanish",
+            "Arabic",
+            "Portuguese"
+          ],
+          "cardinality_distribution": {"type": "normal", "mean": 3, "stddev": 2}
+        }
+      ]
+    },
+    {
+      "target": "http://localhost:8888/druid/v2/sql",
+      "delay": {"type": "exponential", "mean": 1},
+      "query": "SELECT * FROM \"clickstream-data\" WHERE client_lang = ''$lang'",
+      "variables": [
+        {
+          "type": "string",
+          "name": "lang",
+          "length_distribution": {
+            "type": "constant",
+            "value": 5
+          },
+          "cardinality": 0,
+          "chars": "abcdefghijklmnopqrstuvwxyz"
+        }
+      ]
+    },
+    {
+      "target": "http://localhost:8888/druid/v2/sql",
+      "delay": {"type": "exponential", "mean": 1},
+      "query": "SELECT * FROM \"some-table\" WHERE bogus_value < $target_value",
+      "variables": [
+        {
+          "type": "int",
+          "name": "target_value",
+          "distribution": {
+            "type": "uniform",
+            "min": 0,
+            "max": 1000
+          },
+          "cardinality": 10,
+          "cardinality_distribution": {
+            "type": "exponential",
+            "mean": 5
+          }
+        }
+      ]
+    },
+    {
+      "target": "http://localhost:8888/druid/v2/sql",
+      "delay": {"type": "exponential", "mean": 1},
+      "query": "SELECT * FROM \"some-table\" WHERE bogus_value < $target_value",
+      "variables": [
+        {
+          "type": "float",
+          "name": "target_value",
+          "distribution": {
+            "type": "uniform",
+            "min": 0,
+            "max": 1000
+          },
+          "cardinality": 10,
+          "cardinality_distribution": {
+            "type": "normal",
+            "mean": 5,
+            "stddev": 2
+          },
+          "precision": 3
+        }
+      ]
+    },
+    {
+      "target": "http://localhost:8888/druid/v2/sql",
+      "delay": {"type": "exponential", "mean": 1},
+      "query": "SELECT * FROM \"some-table\" WHERE bogus_timestamp < '$target_value'",
+      "variables": [
+        {
+          "type": "timestamp",
+          "name": "target_value",
+          "distribution": {
+            "type": "uniform",
+            "min": {"type": "constant", "value": "2008-09-03T10:00:00.0Z"},
+            "max": {"type": "constant", "value": "2008-09-03T20:00:00.0Z"}
+          },
+          "cardinality": 0
+        }
+      ]
+    },
+    {
+      "target": "http://localhost:8888/druid/v2/sql",
+      "delay": {"type": "exponential", "mean": 1},
+      "query": "SELECT * FROM \"some-table\" WHERE some_ip = '$target_value'",
+      "variables": [
+        {
+          "type": "ipaddress",
+          "name": "target_value",
+          "distribution": {
+            "type": "uniform",
+            "min": 2130706433,
+            "max": 2130706440
+          },
+          "cardinality": 0
+        }
+      ]
+    }
+  ]
+}

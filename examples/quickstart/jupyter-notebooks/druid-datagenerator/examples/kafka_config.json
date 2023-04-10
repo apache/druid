@@ -1,0 +1,47 @@
+{
+  "target": {
+    "type": "kafka",
+    "endpoint": "127.0.0.1:9092",
+    "topic": "example_topic",
+    "security_protocol": "SSL",
+    "compression_type": "gzip"
+  },
+  "emitters": [
+    {
+      "name": "example_record_1",
+      "dimensions": [
+        {
+          "type": "enum",
+          "name": "enum_dim",
+          "values": ["A","B","C"],
+          "cardinality_distribution": {
+            "type": "uniform",
+            "min": 0,
+            "max": 2
+          }
+
+        }
+      ]
+    }
+  ],
+  "interarrival": {
+    "type": "constant",
+    "value": 1
+  },
+  "states": [
+    {
+      "name": "state_1",
+      "emitter": "example_record_1",
+      "delay": {
+        "type": "constant",
+        "value": 1
+      },
+      "transitions": [
+        {
+          "next": "state_1",
+          "probability": 1.0
+        }
+      ]
+    }
+  ]
+}

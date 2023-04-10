@@ -1,0 +1,104 @@
+{
+  "target": {"type": "stdout"},
+  "emitters": [
+    {
+      "name": "example_record_1",
+      "dimensions": [
+        {
+          "type": "enum",
+          "name": "enum_dim",
+          "values": ["A","B","C"],
+          "cardinality_distribution": {
+            "type": "uniform",
+            "min": 0,
+            "max": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "example_record_2",
+      "dimensions": [
+        {
+          "type": "variable",
+          "name": "var_dim1",
+          "variable": "string_var"
+        },
+        {
+          "type": "variable",
+          "name": "var_dim2",
+          "variable": "int_var"
+        }
+      ]
+    }
+  ],
+  "interarrival": {
+    "type": "constant",
+    "value": 1
+  },
+  "states": [
+    {
+      "name": "state_1",
+      "emitter": "example_record_1",
+      "variables": [
+        {
+          "type": "string",
+          "name": "string_var",
+          "length_distribution": {
+            "type": "constant",
+            "value": 5
+          },
+          "cardinality": 0,
+          "chars": "ABC123"
+        },
+        {
+          "type": "int",
+          "name": "int_var",
+          "distribution": {
+            "type": "exponential",
+            "mean": 10
+          },
+          "cardinality": 0
+        }
+     ],
+      "delay": {
+        "type": "constant",
+        "value": 1
+      },
+      "transitions": [
+        {
+          "next": "state_2",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "state_2",
+      "emitter": "example_record_2",
+      "delay": {
+        "type": "constant",
+        "value": 1
+      },
+      "transitions": [
+        {
+          "next": "state_3",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "state_3",
+      "emitter": "example_record_2",
+      "delay": {
+        "type": "constant",
+        "value": 1
+      },
+      "transitions": [
+        {
+          "next": "stop",
+          "probability": 1.0
+        }
+      ]
+    }
+  ]
+}

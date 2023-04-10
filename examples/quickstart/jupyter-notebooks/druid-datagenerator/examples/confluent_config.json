@@ -1,0 +1,47 @@
+{
+  "target": {
+    "type": "confluent",
+    "servers": "pkc-lzvrd.us-west4.gcp.confluent.cloud:9092",
+    "topic": "topic_0",
+    "username": "username goes here",
+    "password": "password goes here"
+  },
+  "emitters": [
+    {
+      "name": "example_record_1",
+      "dimensions": [
+        {
+          "type": "enum",
+          "name": "enum_dim",
+          "values": ["A","B","C"],
+          "cardinality_distribution": {
+            "type": "uniform",
+            "min": 0,
+            "max": 2
+          }
+
+        }
+      ]
+    }
+  ],
+  "interarrival": {
+    "type": "constant",
+    "value": 1
+  },
+  "states": [
+    {
+      "name": "state_1",
+      "emitter": "example_record_1",
+      "delay": {
+        "type": "constant",
+        "value": 1
+      },
+      "transitions": [
+        {
+          "next": "state_1",
+          "probability": 1.0
+        }
+      ]
+    }
+  ]
+}
