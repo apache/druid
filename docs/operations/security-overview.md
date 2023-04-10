@@ -67,16 +67,16 @@ The server uses a KeyStore that contains private keys and certificate chain used
 The following example demonstrates how to use Java keytool to generate the KeyStore for the server and then create a trustStore to trust the key for the client:
 
 1. Generate the KeyStore with the Java `keytool` command:
-```
-$> keytool -keystore keystore.jks -alias druid -genkey -keyalg RSA
+```bash
+keytool -keystore keystore.jks -alias druid -genkey -keyalg RSA
 ```
 2. Export a public certificate:
-```
-$> keytool -export -alias druid -keystore keystore.jks -rfc -file public.cert
+```bash
+keytool -export -alias druid -keystore keystore.jks -rfc -file public.cert
 ```
 3. Create the trustStore:
-```
-$> keytool -import -file public.cert -alias druid -keystore truststore.jks
+```bash
+keytool -import -file public.cert -alias druid -keystore truststore.jks
 ```
 
 Druid uses Jetty as its embedded web server. See [Configuring SSL/TLS KeyStores
@@ -130,7 +130,7 @@ To authenticate requests in Druid, you configure an Authenticator. Authenticator
 The following takes you through sample configuration steps for enabling basic auth:
 
 1. Add the `druid-basic-security` extension to `druid.extensions.loadList` in `common.runtime.properties`. For the quickstart installation, for example, the properties file is at `conf/druid/cluster/_common`:
-   ```
+   ```properties
    druid.extensions.loadList=["druid-basic-security", "druid-histogram", "druid-datasketches", "druid-kafka-indexing-service"]
    ```
 2. Configure the basic Authenticator, Authorizer, and Escalator settings in the same common.runtime.properties file. The Escalator defines how Druid processes authenticate with one another.
@@ -209,42 +209,42 @@ The following steps walk through a sample setup procedure:
    ```bash
    curl -u admin:password1 -H'Content-Type: application/json' -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/myname/credentials --data-raw '{"password": "my_password"}'
    ```
-2. For each authenticator user you create, create a corresponding authorizer user by issuing a POST request to `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/<USERNAME>`. For example:
-	 ```bash
-	 curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/myname
-	 ```
-3. Create authorizer roles to control permissions by issuing a POST request to `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/<ROLENAME>`. For example:
-	 ```bash
+3. For each authenticator user you create, create a corresponding authorizer user by issuing a POST request to `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/<USERNAME>`. For example:
+   ```bash
+   curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/myname
+   ```
+4. Create authorizer roles to control permissions by issuing a POST request to `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/<ROLENAME>`. For example:
+   ```bash
    curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/myrole
    ```
-4. Assign roles to users by issuing a POST request to `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/<USERNAME>/roles/<ROLENAME>`. For example:
-	 ```bash
-	 curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/myname/roles/myrole | jq
-	 ```
-5. Finally, attach permissions to the roles to control how they can interact with Druid at `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/<ROLENAME>/permissions`.
-	 For example:
-	 ```bash
-	 curl -u admin:password1 -H'Content-Type: application/json' -XPOST --data-binary @perms.json https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/myrole/permissions
-	 ```
-	The payload of `perms.json` should be in the form:
- 	```json
-      [
-        {
-          "resource": {
-            "type": "DATASOURCE",
-            "name": "<PATTERN>"
-          },
-          "action": "READ"
+5. Assign roles to users by issuing a POST request to `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/<USERNAME>/roles/<ROLENAME>`. For example:
+   ```bash
+   curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/myname/roles/myrole | jq
+   ```
+
+6. Finally, attach permissions to the roles to control how they can interact with Druid at `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/<ROLENAME>/permissions`. For example:
+   ```bash
+   curl -u admin:password1 -H'Content-Type: application/json' -XPOST --data-binary @perms.json https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/myrole/permissions
+   ```
+   payload of `perms.json` should be in the form:
+   ```json
+   [
+      {
+        "resource": {
+          "type": "DATASOURCE",
+          "name": "<PATTERN>"
         },
-        {
-          "resource": {
-            "type": "STATE",
-            "name": "STATE"
-          },
-          "action": "READ"
-        }
-      ]
-    ```
+        "action": "READ"
+      },
+      {
+        "resource": {
+          "type": "STATE",
+          "name": "STATE"
+        },
+        "action": "READ"
+      }
+   ]
+   ```
   > Note: Druid treats the resource name as a regular expression (regex). You can use a specific datasource name or regex to grant permissions for multiple datasources at a time.
 
 
@@ -260,7 +260,7 @@ Within Druid's trust model there users can have different authorization levels:
 
 Additionally, Druid operates according to the following principles:
 
-From the inner most layer:
+From the innermost layer:
 1. Druid processes have the same access to the local files granted to the specified system user running the process.
 2. The Druid ingestion system can create new processes to execute tasks. Those tasks inherit the user of their parent process. This means that any user authorized to submit an ingestion task can use the ingestion task permissions to read or write any local files or external resources that the Druid process has access to.
 
@@ -269,7 +269,7 @@ From the inner most layer:
 Within the cluster:
 1. Druid assumes it operates on an isolated, protected network where no reachable IP within the network is under adversary control. When you implement Druid, take care to setup firewalls and other security measures to secure both inbound and outbound connections.
 Druid assumes network traffic within the cluster is encrypted, including API calls and data transfers. The default encryption implementation uses TLS.
-3. Druid assumes auxiliary services such as the metadata store and ZooKeeper nodes are not under adversary control.
+2. Druid assumes auxiliary services such as the metadata store and ZooKeeper nodes are not under adversary control.
 
 Cluster to deep storage:
 1. Druid does not make assumptions about the security for deep storage. It follows the system's native security policies to authenticate and authorize with deep storage.

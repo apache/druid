@@ -42,7 +42,7 @@ REQ_USER_MAP = AUTHORIZATION_BASE + '/cachedSerializedUserMap'
 
 class BasicAuthClient:
     '''
-    Manage Basic security. The Druid session must be logged in with the super
+    Manage basic security. The Druid session must be logged in with the super
     user, or some other user who has permission to modify user credentials.
 
     Each client works with one authorizer/authenticator pair. Create multiple clients if you have to
@@ -197,8 +197,8 @@ class BasicAuthClient:
         Returns the list of authenticator and authorizer users.
         '''
         return {
-            "authenticator": self.authorization_users(),
-            "authorizer": self.authentication_users()
+            "authenticator": self.authentication_users(),
+            "authorizer": self.authorization_users()
         }
 
     def status(self):
@@ -206,8 +206,8 @@ class BasicAuthClient:
         Returns both the authenticator and authorizer status.
         '''
         return {
-            "authenticator": self.authorization_status(),
-            "authorizer": self.authentication_status()
+            "authenticator": self.authentication_status(),
+            "authorizer": self.authorization_status()
         }
     
     def resource(self, type, name):
