@@ -20,15 +20,31 @@
 package org.apache.druid.k8s.overlord.common;
 
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
-import org.apache.druid.indexing.common.task.Task;
 
-import java.io.IOException;
-
-public interface TaskAdapter
+public class JobStatus
 {
 
-  Job fromTask(Task task) throws IOException;
+  public static boolean isActive(Job job)
+  {
+    if (job == null || job.getStatus() == null || job.getStatus().getActive() == null) {
+      return false;
+    }
+    return job.getStatus().getActive() > 0;
+  }
 
-  Task toTask(Job from) throws IOException;
+  public static boolean isSucceeded(Job job)
+  {
+    if (job == null || job.getStatus() == null || job.getStatus().getSucceeded() == null) {
+      return false;
+    }
+    return job.getStatus().getSucceeded() > 0;
+  }
 
+  public static boolean isFailed(Job job)
+  {
+    if (job == null || job.getStatus() == null || job.getStatus().getFailed() == null) {
+      return false;
+    }
+    return job.getStatus().getFailed() > 0;
+  }
 }
