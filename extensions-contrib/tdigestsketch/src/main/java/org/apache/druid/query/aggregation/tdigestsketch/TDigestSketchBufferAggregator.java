@@ -20,17 +20,12 @@
 package org.apache.druid.query.aggregation.tdigestsketch;
 
 import com.google.common.base.Preconditions;
-import com.tdunning.math.stats.MergingDigest;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.IdentityHashMap;
 
 /**
  * Aggregator that builds T-Digest backed sketch using numeric values read from {@link ByteBuffer}
@@ -40,8 +35,7 @@ public class TDigestSketchBufferAggregator implements BufferAggregator
 
   @Nonnull
   private final ColumnValueSelector selector;
-  private final int compression;
-  private final IdentityHashMap<ByteBuffer, Int2ObjectMap<MergingDigest>> sketchCache = new IdentityHashMap();
+  private final TDigestSketchAggregatorHelper innerAggregator;
 
   public TDigestSketchBufferAggregator(
       final ColumnValueSelector valueSelector,
@@ -50,18 +44,15 @@ public class TDigestSketchBufferAggregator implements BufferAggregator
   {
     Preconditions.checkNotNull(valueSelector);
     this.selector = valueSelector;
-    if (compression != null) {
-      this.compression = compression;
-    } else {
-      this.compression = TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION;
-    }
+    this.innerAggregator = new TDigestSketchAggregatorHelper(compression == null
+                                                             ? TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION
+                                                             : compression);
   }
 
   @Override
   public void init(ByteBuffer buffer, int position)
   {
-    MergingDigest emptyDigest = new MergingDigest(compression);
-    addToCache(buffer, position, emptyDigest);
+    innerAggregator.init(buffer, position);
   }
 
   @Override
@@ -71,61 +62,36 @@ public class TDigestSketchBufferAggregator implements BufferAggregator
     if (x == null) {
       return;
     }
-    MergingDigest sketch = sketchCache.get(buffer).get(position);
-    if (x instanceof Number) {
-      sketch.add(((Number) x).doubleValue());
-    } else if (x instanceof MergingDigest) {
-      sketch.add((MergingDigest) x);
-    } else {
-      throw new IAE(
-          "Expected a number or an instance of MergingDigest, but received [%s] of type [%s]",
-          x,
-          x.getClass()
-      );
-    }
+    innerAggregator.merge(x, buffer, position);
   }
 
   @Override
   public Object get(final ByteBuffer buffer, final int position)
   {
-    // sketchCache is an IdentityHashMap where the reference of buffer is used for equality checks.
-    // So the returned object isn't impacted by the changes in the buffer object made by concurrent threads.
-    return sketchCache.get(buffer).get(position);
+    return innerAggregator.get(buffer, position);
   }
 
   @Override
   public float getFloat(final ByteBuffer buffer, final int position)
   {
-    throw new UnsupportedOperationException("Not implemented");
+    return innerAggregator.getFloat(buffer, position);
   }
 
   @Override
   public long getLong(final ByteBuffer buffer, final int position)
   {
-    throw new UnsupportedOperationException("Not implemented");
+    return innerAggregator.getLong(buffer, position);
   }
 
   @Override
   public void close()
   {
-    sketchCache.clear();
+    innerAggregator.close();
   }
 
   @Override
   public void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
   {
-    MergingDigest sketch = sketchCache.get(oldBuffer).get(oldPosition);
-    addToCache(newBuffer, newPosition, sketch);
-    final Int2ObjectMap<MergingDigest> map = sketchCache.get(oldBuffer);
-    map.remove(oldPosition);
-    if (map.isEmpty()) {
-      sketchCache.remove(oldBuffer);
-    }
-  }
-
-  private void addToCache(final ByteBuffer buffer, final int position, final MergingDigest sketch)
-  {
-    Int2ObjectMap<MergingDigest> map = sketchCache.computeIfAbsent(buffer, b -> new Int2ObjectOpenHashMap<>());
-    map.put(position, sketch);
+    innerAggregator.relocate(oldPosition, newPosition, oldBuffer, newBuffer);
   }
 }

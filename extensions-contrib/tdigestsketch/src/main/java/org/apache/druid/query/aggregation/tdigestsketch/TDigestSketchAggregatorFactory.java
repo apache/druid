@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.tdunning.math.stats.MergingDigest;
 import com.tdunning.math.stats.TDigest;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -31,10 +32,15 @@ import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
+import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -312,4 +318,24 @@ public class TDigestSketchAggregatorFactory extends AggregatorFactory
            + ", compression=" + compression
            + "}";
   }
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    return true;
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
+  {
+    final ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
+    ValueType type = capabilities.getType();
+    if (type == ValueType.COMPLEX) {
+      return new TDigestVectorizedAggregator(compression, selectorFactory.makeObjectSelector(fieldName));
+    } else if (type.isNumeric()) {
+      return new TDigestNumericVectorizedAggregator(compression, selectorFactory.makeValueSelector(fieldName));
+    }
+    throw new IAE("cannot vectorize fixed SpectatorHistogrm aggregation for type %s", type);
+  }
+
 }
