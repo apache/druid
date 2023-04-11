@@ -588,6 +588,9 @@ public class ControllerImpl implements Controller
                                    .orElse(MSQWarnings.DEFAULT_MAX_PARSE_EXCEPTIONS_ALLOWED);
     }
 
+    WorkerStorageParameters workerStorageParameters =
+        WorkerStorageParameters.createProductionInstanceForController(context.injector(), isDurableStorageEnabled);
+
     ImmutableMap.Builder<String, Object> taskContextOverridesBuilder = ImmutableMap.builder();
     taskContextOverridesBuilder
         .put(
@@ -595,14 +598,10 @@ public class ControllerImpl implements Controller
             isDurableStorageEnabled
         ).put(
             MultiStageQueryContext.CTX_COMPOSED_INTERMEDIATE_SUPER_SORTER_STORAGE,
-            MultiStageQueryContext.isComposedIntermediateSuperSorterStorageEnabled(
-                task.getQuerySpec().getQuery().context()
-            )
+            isDurableStorageEnabled // If Durable Storage is enabled, then super sorter intermediate storage can be enabled.
         ).put(
             MultiStageQueryContext.CTX_INTERMEDIATE_SUPER_SORTER_STORAGE_MAX_LOCAL_BYTES,
-            MultiStageQueryContext.getIntermediateSuperSorterStorageMaxLocalBytes(
-                task.getQuerySpec().getQuery().context()
-            )
+            workerStorageParameters.getIntermediateSuperSorterStorageMaxLocalBytes()
         ).put(
             MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED,
             maxParseExceptions
