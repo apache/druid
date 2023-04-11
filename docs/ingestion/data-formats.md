@@ -556,7 +556,7 @@ Configure the Kafka `inputFormat` as follows:
 | `keyFormat` | [InputFormat](#input-format) | Any [InputFormat](#input-format) to parse the Kafka key. It only processes the first entry of the input format. For details, see [Specifying data format](../development/extensions-core/kafka-supervisor-reference.md#specifying-data-format). | no |
 | `keyColumnName` | String | Name of the column for the kafka record's key.| no (default = "kafka.key") |
 
-The Kafka input format augments the payload with information form the Kafka timestamp, headers, and key.
+The Kafka input format augments the payload with information from the Kafka timestamp, headers, and key.
 
 If there are conflicts between column names in the payload and those created from the metadata the payload takes precedence.
 This is done to ensure that upgrading a Kafka ingestion to use the Kafka input format (by taking its existing input format and setting it as the `valueFormat` in the kafka format) can be done without losing any of the payload data.  
