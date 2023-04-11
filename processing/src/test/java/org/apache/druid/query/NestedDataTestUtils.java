@@ -100,7 +100,8 @@ public class NestedDataTestUtils
                             new NestedDataDimensionSchema("nest_json"),
                             new NestedDataDimensionSchema("nester_json"),
                             new NestedDataDimensionSchema("variant_json"),
-                            new NestedDataDimensionSchema("list_json")
+                            new NestedDataDimensionSchema("list_json"),
+                            new NestedDataDimensionSchema("nonexistent")
                         )
                     )
                     .build();
