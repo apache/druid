@@ -24,6 +24,7 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.BalancerSegmentHolder;
 import org.apache.druid.server.coordinator.BalancerStrategy;
+import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.SegmentLoader;
 import org.apache.druid.server.coordinator.SegmentStateManager;
@@ -36,7 +37,6 @@ import org.apache.druid.timeline.SegmentId;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.SortedSet;
 import java.util.stream.Collectors;
 
@@ -79,16 +79,24 @@ public class BalanceSegments implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
+    reduceLifetimesAndAlert();
+
     if (params.getUsedSegments().isEmpty()) {
       log.info("Skipping balance as there are no used segments.");
       return params;
     }
-    int maxSegmentsToMove = params.getCoordinatorDynamicConfig().getMaxSegmentsToMove();
-    if (maxSegmentsToMove == 0) {
+
+    final DruidCluster cluster = params.getDruidCluster();
+    final int maxSegmentsToMove = params.getCoordinatorDynamicConfig().getMaxSegmentsToMove();
+    if (maxSegmentsToMove <= 0) {
       log.info("Skipping balance as maxSegmentsToMove is [%d].", maxSegmentsToMove);
       return params;
-    } else if (maxSegmentsToMove < 0) {
-      log.info("Auto-calculating maxSegmentsToMove since configured value is [%d].", maxSegmentsToMove);
+    } else {
+      int maxLifetime = params.getCoordinatorDynamicConfig().getReplicantLifetime();
+      log.info(
+          "Balancing segments in tiers [%s] with maxSegmentsToMove=[%d], maxLifetime=[%d].",
+          cluster.getTierNames(), maxSegmentsToMove, maxLifetime
+      );
     }
 
     final CoordinatorRunStats stats = new CoordinatorRunStats();
@@ -101,8 +109,7 @@ public class BalanceSegments implements CoordinatorDuty
         params.getCoordinatorDynamicConfig().isUseRoundRobinSegmentAssignment()
     );
 
-    reduceLifetimesAndAlert();
-    params.getDruidCluster().getHistoricals().forEach(
+    cluster.getHistoricals().forEach(
         (tier, servers) -> balanceTier(params, tier, servers, stats, loader)
     );
 
@@ -134,62 +141,46 @@ public class BalanceSegments implements CoordinatorDuty
     final List<ServerHolder> decommissioningServers = partitions.get(true);
     final List<ServerHolder> activeServers = partitions.get(false);
 
+    log.info(
+        "Balancing segments in tier [%s] with [%d] activeServers and [%d] decommissioning servers.",
+        tier, activeServers.size(), decommissioningServers.size()
+    );
+
     if ((decommissioningServers.isEmpty() && activeServers.size() <= 1) || activeServers.isEmpty()) {
       log.warn("Skipping balance for tier [%s] as there are [%d] active servers.", tier, activeServers.size());
       return;
     }
 
-    final int maxSegmentsToMove = calculateMaxSegmentsToMoveInTier(tier, servers, params);
+    final int maxSegmentsToMove = params.getCoordinatorDynamicConfig().getMaxSegmentsToMove();
     if (maxSegmentsToMove <= 0) {
       return;
     }
 
     // Move segments from decommissioning to active servers
-    int decommissioningMaxPercentOfMaxSegmentsToMove =
-        params.getCoordinatorDynamicConfig().getDecommissioningMaxPercentOfMaxSegmentsToMove();
-    int maxSegmentsToMoveFromDecommissioningNodes =
-        (int) Math.ceil(maxSegmentsToMove * (decommissioningMaxPercentOfMaxSegmentsToMove / 100.0));
-    log.info(
-        "Moving [%d] segments from [%d] decommissioning servers to [%d] active servers.",
-        maxSegmentsToMoveFromDecommissioningNodes,
-        decommissioningServers.size(),
-        activeServers.size()
-    );
+    int maxDecommPercentToMove = params.getCoordinatorDynamicConfig()
+                                       .getDecommissioningMaxPercentOfMaxSegmentsToMove();
+    int maxDecommSegmentsToMove = (int) Math.ceil(maxSegmentsToMove * (maxDecommPercentToMove / 100.0));
 
-    MoveStats decommissioningResult =
-        balanceServers(
-            params,
-            decommissioningServers,
-            activeServers,
-            maxSegmentsToMoveFromDecommissioningNodes,
-            loader
-        );
+    log.info("Moving [%d] segments from decommissioning servers to active servers.", maxDecommSegmentsToMove);
+    final MoveStats decommissioningResult =
+        balanceServers(params, decommissioningServers, activeServers, maxDecommSegmentsToMove, loader);
 
     // Move segments amongst active servers
     int maxGeneralSegmentsToMove = maxSegmentsToMove - decommissioningResult.movedCount;
     log.info("Moving [%d] segments between active servers", maxGeneralSegmentsToMove);
-    MoveStats generalResult =
+    final MoveStats generalResult =
         balanceServers(params, activeServers, activeServers, maxGeneralSegmentsToMove, loader);
 
-    int moved = generalResult.movedCount + decommissioningResult.movedCount;
-    int unmoved = generalResult.unmovedCount + decommissioningResult.unmovedCount;
-    if (unmoved == maxSegmentsToMove) {
-      // Cluster should be alive and constantly adjusting
-      log.info("No good moves found in tier [%s]", tier);
-    }
-    stats.addForTier(Stats.Segments.UNMOVED, tier, unmoved);
-    stats.addForTier(Stats.Segments.MOVED, tier, moved);
+    int totalMoved = generalResult.movedCount + decommissioningResult.movedCount;
+    int totalUnmoved = generalResult.unmovedCount + decommissioningResult.unmovedCount;
+    stats.addForTier(Stats.Segments.UNMOVED, tier, totalUnmoved);
+    stats.addForTier(Stats.Segments.MOVED, tier, totalMoved);
+    log.info("In tier [%s], moved [%d] segments and left [%d] segments unmoved.", tier, totalMoved, totalUnmoved);
 
     if (params.getCoordinatorDynamicConfig().emitBalancingStats()) {
       final BalancerStrategy strategy = params.getBalancerStrategy();
       strategy.emitStats(tier, stats, Lists.newArrayList(servers));
     }
-
-    int maxLifetime = params.getCoordinatorDynamicConfig().getReplicantLifetime();
-    log.info(
-        "In tier [%s], queued [%d] segments for moving with max lifetime [%d]"
-        + " and left [%d] segments unmoved.", tier, moved, maxLifetime, unmoved
-    );
   }
 
   private MoveStats balanceServers(
@@ -311,38 +302,6 @@ public class BalanceSegments implements CoordinatorDuty
       log.makeAlert(e, "Exception while moving segment [%s]", segment.getId()).emit();
       return false;
     }
-  }
-
-  private int calculateMaxSegmentsToMoveInTier(
-      String tier,
-      Set<ServerHolder> serversInTier,
-      DruidCoordinatorRuntimeParams params
-  )
-  {
-    int numSegmentsInTier = 0;
-    for (ServerHolder sourceHolder : serversInTier) {
-      numSegmentsInTier += sourceHolder.getServer().getNumSegments()
-                           + sourceHolder.getPeon().getNumberOfSegmentsToLoad();
-    }
-
-    final int configuredMaxSegmentsToMove =
-        params.getCoordinatorDynamicConfig().getMaxSegmentsToMove();
-    final int calculatedMaxSegmentsToMove;
-    if (configuredMaxSegmentsToMove < 0) {
-      calculatedMaxSegmentsToMove = (int) (numSegmentsInTier / 100.0);
-    } else {
-      calculatedMaxSegmentsToMove = Math.min(configuredMaxSegmentsToMove, numSegmentsInTier);
-    }
-
-    log.info(
-        "Tier [%s]: loaded + loading segments=[%d],"
-        + " configured maxSegmentsToMove=[%d], calculated maxSegmentsToMove=[%d]",
-        tier,
-        numSegmentsInTier,
-        configuredMaxSegmentsToMove,
-        calculatedMaxSegmentsToMove
-    );
-    return calculatedMaxSegmentsToMove;
   }
 
   /**

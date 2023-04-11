@@ -239,38 +239,4 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     Assert.assertEquals(5, historicalT12.getTotalSegments());
   }
 
-  @Test
-  public void testCalculatedMaxSegmentsToMove()
-  {
-    // Create hist11 with capacity 5TB
-    final DruidServer historicalT11 = createHistorical(1, Tier.T1, 5_000_000);
-
-    // negative maxSegmentsToMove, unlimited load queue, replicationThrottleLimit = 0
-    final CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(-1, 0, 0);
-    CoordinatorSimulation sim =
-        CoordinatorSimulation.builder()
-                             .withDynamicConfig(dynamicConfig)
-                             .withSegments(Segments.KOALA_100X100D)
-                             .withServers(historicalT11)
-                             .withRules(DS.KOALA, Load.on(Tier.T1, 1).forever())
-                             .build();
-
-    startSimulation(sim);
-
-    // Run 1: All segments are assigned to hist11
-    runCoordinatorCycle();
-    verifyValue(Metric.ASSIGNED_COUNT, 10_000L);
-
-    // Add another historical
-    addServer(createHistorical(2, Tier.T1, 5_000_000));
-
-    // Run 2: Some segments are now moved
-    runCoordinatorCycle();
-
-    // Verify that maxSegmentsToMove = moved + unmoved
-    // = 1% of total segments in tier (loaded + loading)
-    int movedCount = getValue(Metric.MOVED_COUNT, null).intValue();
-    int unmovedCount = getValue(Metric.UNMOVED_COUNT, null).intValue();
-    Assert.assertEquals(100, movedCount + unmovedCount);
-  }
 }

@@ -428,59 +428,30 @@ public class CoordinatorDynamicConfig
 
     CoordinatorDynamicConfig that = (CoordinatorDynamicConfig) o;
 
-    if (leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments !=
-        that.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments) {
-      return false;
-    }
-    if (mergeBytesLimit != that.mergeBytesLimit) {
-      return false;
-    }
-    if (mergeSegmentsLimit != that.mergeSegmentsLimit) {
-      return false;
-    }
-    if (maxSegmentsToMove != that.maxSegmentsToMove) {
-      return false;
-    }
-    if (percentOfSegmentsToConsiderPerMove != that.percentOfSegmentsToConsiderPerMove) {
-      return false;
-    }
-    if (useBatchedSegmentSampler != that.useBatchedSegmentSampler) {
-      return false;
-    }
-    if (replicantLifetime != that.replicantLifetime) {
-      return false;
-    }
-    if (replicationThrottleLimit != that.replicationThrottleLimit) {
-      return false;
-    }
-    if (balancerComputeThreads != that.balancerComputeThreads) {
-      return false;
-    }
-    if (emitBalancingStats != that.emitBalancingStats) {
-      return false;
-    }
-    if (maxSegmentsInNodeLoadingQueue != that.maxSegmentsInNodeLoadingQueue) {
-      return false;
-    }
-    if (!Objects.equals(specificDataSourcesToKillUnusedSegmentsIn, that.specificDataSourcesToKillUnusedSegmentsIn)) {
-      return false;
-    }
-    if (!Objects.equals(dataSourcesToNotKillStalePendingSegmentsIn, that.dataSourcesToNotKillStalePendingSegmentsIn)) {
-      return false;
-    }
-    if (!Objects.equals(decommissioningNodes, that.decommissioningNodes)) {
-      return false;
-    }
-    if (pauseCoordination != that.pauseCoordination) {
-      return false;
-    }
-    if (replicateAfterLoadTimeout != that.replicateAfterLoadTimeout) {
-      return false;
-    }
-    if (maxNonPrimaryReplicantsToLoad != that.maxNonPrimaryReplicantsToLoad) {
-      return false;
-    }
-    return decommissioningMaxPercentOfMaxSegmentsToMove == that.decommissioningMaxPercentOfMaxSegmentsToMove;
+    return leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments
+           == that.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments
+           && mergeBytesLimit == that.mergeBytesLimit
+           && mergeSegmentsLimit == that.mergeSegmentsLimit
+           && maxSegmentsToMove == that.maxSegmentsToMove
+           && percentOfSegmentsToConsiderPerMove == that.percentOfSegmentsToConsiderPerMove
+           && decommissioningMaxPercentOfMaxSegmentsToMove == that.decommissioningMaxPercentOfMaxSegmentsToMove
+           && useBatchedSegmentSampler == that.useBatchedSegmentSampler
+           && balancerComputeThreads == that.balancerComputeThreads
+           && emitBalancingStats == that.emitBalancingStats
+           && replicantLifetime == that.replicantLifetime
+           && replicationThrottleLimit == that.replicationThrottleLimit
+           && replicateAfterLoadTimeout == that.replicateAfterLoadTimeout
+           && maxSegmentsInNodeLoadingQueue == that.maxSegmentsInNodeLoadingQueue
+           && maxNonPrimaryReplicantsToLoad == that.maxNonPrimaryReplicantsToLoad
+           && useRoundRobinSegmentAssignment == that.useRoundRobinSegmentAssignment
+           && pauseCoordination == that.pauseCoordination
+           && Objects.equals(
+               specificDataSourcesToKillUnusedSegmentsIn,
+               that.specificDataSourcesToKillUnusedSegmentsIn)
+           && Objects.equals(
+               dataSourcesToNotKillStalePendingSegmentsIn,
+               that.dataSourcesToNotKillStalePendingSegmentsIn)
+           && Objects.equals(decommissioningNodes, that.decommissioningNodes);
   }
 
   @Override
