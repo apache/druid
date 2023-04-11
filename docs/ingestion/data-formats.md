@@ -541,7 +541,7 @@ For example:
 ### Kafka
 
 `kafka` is a special input format that wraps a regular input format (which goes in `valueFormat`) and allows you
-to parse the Kafka metadata (kafka timestamp, headers, and key) that is part of Kafka messages.
+to parse the Kafka metadata (timestamp, headers, and key) that is part of Kafka messages.
 It should only be used when ingesting from Apache Kafka. 
 
 Configure the Kafka `inputFormat` as follows:
