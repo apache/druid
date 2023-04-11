@@ -174,7 +174,7 @@ public class CoordinatorServerView implements InventoryView
           .getSnapshotOfDataSourcesWithAllUsedSegments()
           .getHandedOffStatePerDataSource()
           .getOrDefault(segment.getDataSource(), new HashMap<>())
-          .getOrDefault(segmentId, null);
+          .get(segmentId);
 
       if (null == handedOffTime) {
         sqlSegmentsMetadataManager.markSegmentAsHandedOff(segmentId);
