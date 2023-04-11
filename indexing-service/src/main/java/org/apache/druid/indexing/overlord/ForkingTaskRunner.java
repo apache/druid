@@ -156,7 +156,6 @@ public class ForkingTaskRunner
                 {
 
                   final String attemptId = String.valueOf(getNextAttemptID(dirTracker.getTaskDir(task.getId())));
-                  final String baseTaskDir = dirTracker.getBaseTaskDir(task.getId()).getAbsolutePath();
                   final File taskDir = dirTracker.getTaskDir(task.getId());
                   final File attemptDir = Paths.get(taskDir.getAbsolutePath(), "attempt", attemptId).toFile();
 
@@ -368,6 +367,7 @@ public class ForkingTaskRunner
                         // for more information
                         // command.add("-XX:+UseThreadPriorities");
                         // command.add("-XX:ThreadPriorityPolicy=42");
+                        command.add(StringUtils.format("-Ddruid.indexing.task.baseTaskDir=%s", taskDir.getAbsolutePath()));
 
                         command.add("org.apache.druid.cli.Main");
                         command.add("internal");

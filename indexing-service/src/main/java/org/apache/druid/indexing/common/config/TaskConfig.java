@@ -40,7 +40,7 @@ import java.util.List;
 
 /**
  * Configurations for ingestion tasks. These configurations can be applied per middleManager, indexer, or overlord.
- *
+ * <p>
  * See {@link org.apache.druid.indexing.overlord.config.DefaultTaskConfig} if you want to apply the same configuration
  * to all tasks submitted to the overlord.
  */
@@ -133,7 +133,8 @@ public class TaskConfig
       @JsonProperty("directoryLockTimeout") Period directoryLockTimeout,
       @JsonProperty("shuffleDataLocations") List<StorageLocationConfig> shuffleDataLocations,
       @JsonProperty("ignoreTimestampSpecForDruidInputSource") boolean ignoreTimestampSpecForDruidInputSource,
-      @JsonProperty("batchMemoryMappedIndex") boolean batchMemoryMappedIndex, // deprecated, only set to true to fall back to older behavior
+      @JsonProperty("batchMemoryMappedIndex") boolean batchMemoryMappedIndex,
+      // deprecated, only set to true to fall back to older behavior
       @JsonProperty("batchProcessingMode") String batchProcessingMode,
       @JsonProperty("storeEmptyColumns") @Nullable Boolean storeEmptyColumns,
       @JsonProperty("encapsulatedTask") boolean enableTaskLevelLogPush
@@ -182,6 +183,39 @@ public class TaskConfig
     }
     log.debug("Batch processing mode:[%s]", this.batchProcessingMode);
     this.storeEmptyColumns = storeEmptyColumns == null ? DEFAULT_STORE_EMPTY_COLUMNS : storeEmptyColumns;
+  }
+
+  private TaskConfig(
+      String baseDir,
+      File baseTaskDir,
+      String hadoopWorkingPath,
+      int defaultRowFlushBoundary,
+      List<String> defaultHadoopCoordinates,
+      boolean restoreTasksOnRestart,
+      Period gracefulShutdownTimeout,
+      Period directoryLockTimeout,
+      List<StorageLocationConfig> shuffleDataLocations,
+      boolean ignoreTimestampSpecForDruidInputSource,
+      boolean batchMemoryMappedIndex,
+      BatchProcessingMode batchProcessingMode,
+      boolean storeEmptyColumns,
+      boolean encapsulatedTask
+  )
+  {
+    this.baseDir = baseDir;
+    this.baseTaskDir = baseTaskDir;
+    this.hadoopWorkingPath = hadoopWorkingPath;
+    this.defaultRowFlushBoundary = defaultRowFlushBoundary;
+    this.defaultHadoopCoordinates = defaultHadoopCoordinates;
+    this.restoreTasksOnRestart = restoreTasksOnRestart;
+    this.gracefulShutdownTimeout = gracefulShutdownTimeout;
+    this.directoryLockTimeout = directoryLockTimeout;
+    this.shuffleDataLocations = shuffleDataLocations;
+    this.ignoreTimestampSpecForDruidInputSource = ignoreTimestampSpecForDruidInputSource;
+    this.batchMemoryMappedIndex = batchMemoryMappedIndex;
+    this.batchProcessingMode = batchProcessingMode;
+    this.storeEmptyColumns = storeEmptyColumns;
+    this.encapsulatedTask = encapsulatedTask;
   }
 
   @JsonProperty
@@ -299,5 +333,25 @@ public class TaskConfig
     }
 
     return configParameter;
+  }
+
+  public TaskConfig withBaseTaskDir(File baseTaskDir)
+  {
+    return new TaskConfig(
+        baseDir,
+        baseTaskDir,
+        hadoopWorkingPath,
+        defaultRowFlushBoundary,
+        defaultHadoopCoordinates,
+        restoreTasksOnRestart,
+        gracefulShutdownTimeout,
+        directoryLockTimeout,
+        shuffleDataLocations,
+        ignoreTimestampSpecForDruidInputSource,
+        batchMemoryMappedIndex,
+        batchProcessingMode,
+        storeEmptyColumns,
+        encapsulatedTask
+    );
   }
 }
