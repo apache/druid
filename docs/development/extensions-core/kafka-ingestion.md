@@ -157,7 +157,7 @@ You would configure it as follows:
 - `headerColumnPrefix`: Supply a prefix to the Kafka headers to avoid any conflicts with columns from the payload. The default is `kafka.header.`.
   Considering the header from the example, Druid maps the headers to the following columns: `kafka.header.env`, `kafka.header.zone`.
 - `keyFormat`: Supply an input format to parse the key. Only the first value will be used.
-  If, as in the example, you key values are simple stings then you can use the `tsv` format to parse them.
+  If, as in the example, your key values are simple strings, then you can use the `tsv` format to parse them.
   ```
   {
     "type": "tsv",
