@@ -136,7 +136,8 @@ public class BalancerStrategyBenchmark
       iterator = balancerStrategy.pickSegmentsToMove(
           serverHolders,
           Collections.emptySet(),
-          reservoirSize
+          reservoirSize,
+          false
       );
     } else {
       iterator = balancerStrategy.pickSegmentsToMove(

@@ -23,9 +23,11 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -199,6 +201,21 @@ public class ServerHolder implements Comparable<ServerHolder>
     return segments;
   }
 
+  /**
+   * Segments that are currently in the queue for being loaded on this server.
+   * This does not include segments that are being moved to this server.
+   */
+  public List<DataSegment> getLoadingSegments()
+  {
+    final List<DataSegment> loadingSegments = new ArrayList<>();
+    queuedSegments.forEach((segment, action) -> {
+      if (action == SegmentAction.LOAD) {
+        loadingSegments.add(segment);
+      }
+    });
+
+    return loadingSegments;
+  }
 
   /**
    * Returns true if this server has the segment loaded and is not dropping it.

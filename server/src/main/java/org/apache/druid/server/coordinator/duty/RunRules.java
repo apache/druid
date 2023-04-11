@@ -175,18 +175,21 @@ public class RunRules implements CoordinatorDuty
 
       busyTiers.add(tier);
       log.info(
-          "Skipping replication on tier [%s] as is still has %d segments in queue with lifetime [%d / %d]",
+          "Skipping replication on tier [%s] as is it still has"
+          + " [%d] segments in queue with lifetime [%d / %d].",
           tier,
           numReplicatingSegments,
-          replicatingState.getLifetime(),
+          replicatingState.getMinLifetime(),
           dynamicConfig.getReplicantLifetime()
       );
 
       // Create alerts for stuck tiers
-      if (replicatingState.getLifetime() <= 0) {
-        log.makeAlert("Replication queue for tier [%s] has [%d] segments stuck.", tier, numReplicatingSegments)
-           .addData("segments", replicatingState.getCurrentlyProcessingSegmentsAndHosts())
-           .emit();
+      if (replicatingState.getMinLifetime() <= 0) {
+        log.makeAlert(
+            "Replication queue for tier [%s] has [%d] segments stuck.",
+            tier,
+            replicatingState.getNumExpiredSegments()
+        ).addData("segments", replicatingState.getExpiredSegments()).emit();
       }
     });
 

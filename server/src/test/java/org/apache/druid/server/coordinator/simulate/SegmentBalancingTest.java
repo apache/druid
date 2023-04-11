@@ -207,6 +207,38 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
   }
 
   @Test
+  public void testBalancingMovesSegmentsWhenSomeAreAlreadyMoving()
+  {
+    CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withDynamicConfig(createDynamicConfig(3, 0, 10))
+                             .withSegments(segments)
+                             .withServers(historicalT11, historicalT12)
+                             .withRules(datasource, Load.on(Tier.T1, 1).forever())
+                             .build();
+
+    startSimulation(sim);
+
+    // Keep all the segments loaded on histT11
+    segments.forEach(historicalT11::addDataSegment);
+
+    // Run 1: Some segments are moved to histT12
+    runCoordinatorCycle();
+    verifyValue(Metric.MOVED_COUNT, 3L);
+    verifyValue(Metric.LOAD_QUEUE_COUNT, filter(DruidMetrics.SERVER, historicalT12.getName()), 3L);
+
+    // Run 2: Some more segments are moved to histT12
+    runCoordinatorCycle();
+    verifyValue(Metric.MOVED_COUNT, 2L);
+    verifyValue(Metric.LOAD_QUEUE_COUNT, filter(DruidMetrics.SERVER, historicalT12.getName()), 5L);
+
+    // Complete loading the segments
+    loadQueuedSegments();
+    Assert.assertEquals(5, historicalT11.getTotalSegments());
+    Assert.assertEquals(5, historicalT12.getTotalSegments());
+  }
+
+  @Test
   public void testCalculatedMaxSegmentsToMove()
   {
     // Create hist11 with capacity 5TB

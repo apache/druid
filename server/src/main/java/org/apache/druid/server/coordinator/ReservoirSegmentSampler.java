@@ -23,6 +23,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -35,7 +36,8 @@ final class ReservoirSegmentSampler
   static List<BalancerSegmentHolder> getRandomBalancerSegmentHolders(
       final List<ServerHolder> serverHolders,
       Set<String> broadcastDatasources,
-      int k
+      int k,
+      boolean pickLoadingSegments
   )
   {
     List<BalancerSegmentHolder> holders = new ArrayList<>(k);
@@ -47,7 +49,10 @@ final class ReservoirSegmentSampler
         continue;
       }
 
-      Set<DataSegment> movableSegments = server.getProjectedSegments(false);
+      final Collection<DataSegment> movableSegments = pickLoadingSegments
+                                                      ? server.getLoadingSegments()
+                                                      : server.getServer().iterateAllSegments();
+
       for (DataSegment segment : movableSegments) {
         if (broadcastDatasources.contains(segment.getDataSource())) {
           // we don't need to rebalance segments that were assigned via broadcast rules

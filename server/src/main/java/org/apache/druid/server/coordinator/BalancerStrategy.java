@@ -74,13 +74,15 @@ public interface BalancerStrategy
    *                                   the interval or period-based broadcast rules. For simplicity of the initial
    *                                   implementation, only forever broadcast rules are supported.
    * @param reservoirSize the reservoir size maintained by the Reservoir Sampling algorithm.
+   * @param pickLoadingSegments
    * @return Iterator for set of {@link BalancerSegmentHolder} containing segment to move and server they currently
    * reside on, or empty if there are no segments to pick from (i.e. all provided serverHolders are empty).
    */
   default Iterator<BalancerSegmentHolder> pickSegmentsToMove(
       List<ServerHolder> serverHolders,
       Set<String> broadcastDatasources,
-      int reservoirSize
+      int reservoirSize,
+      boolean pickLoadingSegments
   )
   {
     return new Iterator<BalancerSegmentHolder>()
@@ -91,7 +93,8 @@ public interface BalancerStrategy
         return ReservoirSegmentSampler.getRandomBalancerSegmentHolders(
             serverHolders,
             broadcastDatasources,
-            reservoirSize
+            reservoirSize,
+            pickLoadingSegments
         ).iterator();
       }
 
@@ -130,7 +133,7 @@ public interface BalancerStrategy
    * @return Iterator for set of {@link BalancerSegmentHolder} containing segment to move and server they currently
    * reside on, or empty if there are no segments to pick from (i. e. all provided serverHolders are empty).
    *
-   * @deprecated Use {@link #pickSegmentsToMove(List, Set, int)} instead as it is
+   * @deprecated Use {@link #pickSegmentsToMove(List, Set, int, boolean)} instead as it is
    * a much more performant sampling method which does not allow duplicates. This
    * method will be removed in future releases.
    */

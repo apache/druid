@@ -448,6 +448,42 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     verifyNotEmitted(Metric.BROADCAST_DROPS);
   }
 
+  @Test
+  public void testReplicasAreNotAssignedIfTierIsBusy()
+  {
+    // disable balancing, unlimited load queue, replicationThrottleLimit = 1
+    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(0, 0, 5);
+
+    final CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(segments)
+                             .withServers(historicalT11, historicalT12)
+                             .withDynamicConfig(dynamicConfig)
+                             .withRules(datasource, Load.on(Tier.T1, 2).forever())
+                             .build();
+
+    startSimulation(sim);
+
+    // All segments are loaded on histT11
+    segments.forEach(historicalT11::addDataSegment);
+
+    // Run 1: Some replicas are assigned to histT12
+    runCoordinatorCycle();
+    verifyValue(Metric.ASSIGNED_COUNT, 5L);
+
+    // Run 2: No more replicas are assigned because tier is already busy with replication
+    runCoordinatorCycle();
+    verifyValue(Metric.ASSIGNED_COUNT, 0L);
+
+    // Run 3: Remaining replicas are assigned
+    loadQueuedSegments();
+    runCoordinatorCycle();
+    verifyValue(Metric.ASSIGNED_COUNT, 5L);
+
+    Assert.assertEquals(10, historicalT11.getTotalSegments());
+    Assert.assertEquals(5, historicalT12.getTotalSegments());
+  }
+
   private int getNumLoadedSegments(DruidServer... servers)
   {
     int numLoaded = 0;

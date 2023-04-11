@@ -90,8 +90,8 @@ public class SegmentStateManager
         throttler.incrementAssignedReplicas(tier);
 
         final TierLoadingState replicatingInTier = currentlyReplicatingSegments
-            .computeIfAbsent(tier, t -> new TierLoadingState(throttler.getMaxLifetime()));
-        replicatingInTier.markStarted(segment.getId(), server.getServer().getHost());
+            .computeIfAbsent(tier, t -> new TierLoadingState());
+        replicatingInTier.markStarted(segment.getId(), server.getServer().getHost(), throttler.getMaxLifetime());
         callback = success -> replicatingInTier.markCompleted(segment.getId());
       }
 
@@ -129,7 +129,7 @@ public class SegmentStateManager
   {
     final TierLoadingState segmentsMovingInTier = currentlyMovingSegments.computeIfAbsent(
         serverB.getServer().getTier(),
-        t -> new TierLoadingState(maxLifetimeInBalancingQueue)
+        t -> new TierLoadingState()
     );
     final LoadQueuePeon peonA = serverA.getPeon();
     final LoadPeonCallback moveFinishCallback = success -> {
@@ -141,7 +141,11 @@ public class SegmentStateManager
     // to be able to account for this information in BalancerStrategy immediately
     serverB.startOperation(SegmentAction.MOVE_TO, segment);
     peonA.markSegmentToDrop(segment);
-    segmentsMovingInTier.markStarted(segment.getId(), serverA.getServer().getHost());
+    segmentsMovingInTier.markStarted(
+        segment.getId(),
+        serverA.getServer().getHost(),
+        maxLifetimeInBalancingQueue
+    );
 
     final LoadQueuePeon peonB = serverB.getPeon();
     final String serverNameB = serverB.getServer().getName();
@@ -152,7 +156,7 @@ public class SegmentStateManager
           success -> {
             // Drop segment only if:
             // (1) segment load was successful on serverB
-            // AND (2) segment not already queued for drop on serverA
+            // AND (2) segment is not already queued for drop on serverA
             // AND (3a) loading is http-based
             //     OR (3b) inventory shows segment loaded on serverB
 

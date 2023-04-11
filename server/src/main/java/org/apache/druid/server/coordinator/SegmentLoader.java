@@ -61,7 +61,7 @@ public class SegmentLoader
       SegmentReplicantLookup replicantLookup,
       ReplicationThrottler replicationThrottler,
       BalancerStrategy strategy,
-      boolean useRoundRobinAssigment
+      boolean useRoundRobinAssignment
   )
   {
     this.cluster = cluster;
@@ -69,8 +69,8 @@ public class SegmentLoader
     this.stateManager = stateManager;
     this.replicantLookup = replicantLookup;
     this.replicationThrottler = replicationThrottler;
-    this.useRoundRobinAssignment = useRoundRobinAssigment;
-    this.serverSelector = useRoundRobinAssigment ? new RoundRobinServerSelector(cluster) : null;
+    this.useRoundRobinAssignment = useRoundRobinAssignment;
+    this.serverSelector = useRoundRobinAssignment ? new RoundRobinServerSelector(cluster) : null;
   }
 
   public CoordinatorRunStats getStats()
@@ -104,7 +104,7 @@ public class SegmentLoader
         return stateManager.loadSegment(segment, serverB, loadedCountOnTier < 1, replicationThrottler);
       }
 
-      // Could not cancel load, let the segment load on serverA and fail this move operation
+      // Could not cancel load, let the segment load on serverA and count it as unmoved
       return false;
     } else if (serverA.isServingSegment(segment)) {
       return stateManager.moveSegment(segment, serverA, serverB, replicationThrottler.getMaxLifetime());

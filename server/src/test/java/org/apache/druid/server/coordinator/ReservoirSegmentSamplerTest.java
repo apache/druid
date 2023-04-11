@@ -71,7 +71,7 @@ public class ReservoirSegmentSamplerTest
       // due to the pseudo-randomness of this method, we may not select a segment every single time no matter what.
       segmentCountMap.compute(
           ReservoirSegmentSampler
-              .getRandomBalancerSegmentHolders(servers, Collections.emptySet(), 1)
+              .getRandomBalancerSegmentHolders(servers, Collections.emptySet(), 1, false)
               .get(0).getSegment(),
           (segment, count) -> count == null ? 1 : count + 1
       );
@@ -116,7 +116,7 @@ public class ReservoirSegmentSamplerTest
   }
 
   @Test
-  public void testLoadingSegmentGetsPicked()
+  public void testPickLoadingOrLoadedSegments()
   {
     final List<DataSegment> loadedSegments = Arrays.asList(segments.get(0), segments.get(1));
     final List<DataSegment> loadingSegments = Arrays.asList(segments.get(2), segments.get(3));
@@ -127,13 +127,23 @@ public class ReservoirSegmentSamplerTest
     final ServerHolder server2 = createHistorical("server2", loadedSegments.get(1));
     server2.startOperation(SegmentAction.LOAD, loadingSegments.get(1));
 
+    // Pick only loading segments
     Set<DataSegment> pickedSegments = ReservoirSegmentSampler
-        .getRandomBalancerSegmentHolders(Arrays.asList(server1, server2), Collections.emptySet(), 10)
+        .getRandomBalancerSegmentHolders(Arrays.asList(server1, server2), Collections.emptySet(), 10, true)
         .stream().map(BalancerSegmentHolder::getSegment).collect(Collectors.toSet());
 
-    // Verify that both loaded and loading segments are picked
-    Assert.assertTrue(pickedSegments.containsAll(loadedSegments));
+    // Verify that only loading segments are picked
+    Assert.assertEquals(loadingSegments.size(), pickedSegments.size());
     Assert.assertTrue(pickedSegments.containsAll(loadingSegments));
+
+    // Pick only loaded segments
+    pickedSegments = ReservoirSegmentSampler
+        .getRandomBalancerSegmentHolders(Arrays.asList(server1, server2), Collections.emptySet(), 10, false)
+        .stream().map(BalancerSegmentHolder::getSegment).collect(Collectors.toSet());
+
+    // Verify that only loaded segments are picked
+    Assert.assertEquals(loadedSegments.size(), pickedSegments.size());
+    Assert.assertTrue(pickedSegments.containsAll(loadedSegments));
   }
 
   @Test
@@ -153,7 +163,8 @@ public class ReservoirSegmentSamplerTest
     List<BalancerSegmentHolder> pickedSegments = ReservoirSegmentSampler.getRandomBalancerSegmentHolders(
         Arrays.asList(historical, broker),
         Collections.emptySet(),
-        10
+        10,
+        false
     );
 
     // Verify that only the segments on the historical are picked
@@ -182,7 +193,7 @@ public class ReservoirSegmentSamplerTest
 
     // Try to pick all the segments on the servers
     List<BalancerSegmentHolder> pickedSegments = ReservoirSegmentSampler
-        .getRandomBalancerSegmentHolders(servers, Collections.singleton(broadcastDatasource), 10);
+        .getRandomBalancerSegmentHolders(servers, Collections.singleton(broadcastDatasource), 10, false);
 
     // Verify that none of the broadcast segments are picked
     Assert.assertEquals(2, pickedSegments.size());
@@ -234,7 +245,7 @@ public class ReservoirSegmentSamplerTest
     int numIterations = 1;
     for (; numIterations < 10000; ++numIterations) {
       ReservoirSegmentSampler
-          .getRandomBalancerSegmentHolders(servers, Collections.emptySet(), sampleSize)
+          .getRandomBalancerSegmentHolders(servers, Collections.emptySet(), sampleSize, false)
           .forEach(holder -> pickedSegments.add(holder.getSegment()));
 
       if (pickedSegments.size() >= numSegments) {
