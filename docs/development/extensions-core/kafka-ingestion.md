@@ -205,7 +205,7 @@ would parse the example message as follows:
 
 For more information on data formats, see [Data formats](../../ingestion/data-formats.md).
 
-Finally, you would want to add these Kafka metadata columns to the `dimensionsSpec` (alternatively you can set your `dimensionsSpec` to auto-detect columns.
+Finally, add these Kafka metadata columns to the `dimensionsSpec` or  set your `dimensionsSpec` to auto-detect columns.
      
 The following supervisor spec demonstrates how to ingest the Kafka header, key, and timestamp into Druid dimensions:
 
