@@ -24,7 +24,6 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.ISE;
 
-import javax.inject.Inject;
 import java.io.File;
 import java.util.HashMap;
 import java.util.List;
@@ -54,7 +53,6 @@ public class TaskStorageDirTracker
 
   private final Map<String, File> taskToTempDirMap = new HashMap<>();
 
-  @Inject
   public TaskStorageDirTracker(List<File> baseTaskDirs)
   {
     this.baseTaskDirs = baseTaskDirs;
@@ -63,11 +61,6 @@ public class TaskStorageDirTracker
   public File getTaskDir(String taskId)
   {
     return new File(getBaseTaskDir(taskId), taskId);
-  }
-
-  public File getTaskWorkDir(String taskId)
-  {
-    return new File(getTaskDir(taskId), "work");
   }
 
   public File getTaskTempDir(String taskId)
