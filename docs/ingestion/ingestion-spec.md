@@ -24,7 +24,7 @@ description: Reference for the configuration options in the ingestion spec.
   ~ under the License.
   -->
 
-All ingestion methods use ingestion tasks to load data into Druid. Streaming ingestion uses ongoing supervisors that run and supervise a set of tasks over time. Native batch and Hadoop-based ingestion use a one-time [task](tasks.md). All types of ingestion use an _ingestion spec_ to configure ingestion.
+All ingestion methods use ingestion tasks to load data into Druid. Streaming ingestion uses ongoing supervisors that run and supervise a set of tasks over time. Native batch and Hadoop-based ingestion use a one-time [task](tasks.md). Other than with SQL-based ingestion,  use an _ingestion spec_ to configure your ingestion.
 
 Ingestion specs consists of three main components:
 
@@ -188,13 +188,12 @@ Treat `__time` as a millisecond timestamp: the number of milliseconds since Jan 
 The `dimensionsSpec` is located in `dataSchema` → `dimensionsSpec` and is responsible for
 configuring [dimensions](./data-model.md#dimensions). 
 
-You can either manually specify the dimensions or take advantage of Schema auto-discovery where you allow Druid to discover the schema for the data. This means that you don't have to explicitly To do schemaless ingestion, configure the following properties:
+You can either manually specify the dimensions or take advantage of Schema auto-discovery where you allow Druid to discover the schema for the data. This means that you don't have to explicitly specify your dimensions and their type. To use Schema auto-discovery, configure the following properties:
 
 - Set `dimensionsSpec` to empty 
 - Set `spec.tuningConfig.appendableIndexSpec.useSchemaDiscovery` to `true`.
 
 Keep in mind that you cannot partially define a schema for Schema auto-discovery.
-
 
 `dimensionsSpec` examples:
 
@@ -262,6 +261,8 @@ Dimension objects can have the following components:
 Druid will interpret a `dimensionsSpec` in two possible ways: _normal_ or _schemaless_.
 
 Normal interpretation occurs when either `dimensions` or `spatialDimensions` is non-empty. In this case, the combination of the two lists will be taken as the set of dimensions to be ingested, and the list of `dimensionExclusions` will be ignored.
+
+> The following description of schemaless refers to the previous method where these dimensions were treated as strings. We recommend you use Schema auto-discovery instead. For more information, see [`dimensionsSpec](#dimensionsspec).
 
 Schemaless interpretation occurs when both `dimensions` and `spatialDimensions` are empty or null. In this case, the set of dimensions is determined in the following way:
 
@@ -496,7 +497,7 @@ is:
 |skipBytesInMemoryOverheadCheck|The calculation of maxBytesInMemory takes into account overhead objects created during ingestion and each intermediate persist. Setting this to true can exclude the bytes of these overhead objects from maxBytesInMemory check.|false|
 |indexSpec|Defines segment storage format options to use at indexing time.|See [`indexSpec`](#indexspec) for more information.|
 |indexSpecForIntermediatePersists|Defines segment storage format options to use at indexing time for intermediate persisted temporary segments.|See [`indexSpec`](#indexspec) for more information.|
-| appendableIndexSpec.useSchemaDiscovery | Configure Druid to use Schema auto-discoveyr to discover the schema for your ingestion. You can use this for native batch or streaming ingestion. To use this feature, set this property to true along with an empty `dimensionsSpec`. For an example, see [`dimensionsSpec`](#dimensionsspec). | false  | 
+| appendableIndexSpec.useSchemaDiscovery | Configure Druid to use Schema auto-discovey to discover the schema for your ingestion. You can use this for native batch or streaming ingestion. To use this feature, set this property to true along with an empty `dimensionsSpec`. For an example, see [`dimensionsSpec`](#dimensionsspec). | false  | 
 |Other properties|Each ingestion method has its own list of additional tuning properties. See the documentation for each method for a full list: [Kafka indexing service](../development/extensions-core/kafka-supervisor-reference.md#tuningconfig), [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md#tuningconfig), [Native batch](native-batch.md#tuningconfig), and [Hadoop-based](hadoop.md#tuningconfig).||
 
 ### `indexSpec`

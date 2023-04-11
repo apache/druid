@@ -107,7 +107,7 @@ to compute percentiles or quantiles, use Druid's [approximate aggregators](../qu
 row in your Druid datasource. This can be useful if you want to store data at a different time granularity than it is
 naturally emitted. It is also useful if you want to combine timeseries and non-timeseries data in the same datasource.
 * If you don't know ahead of time what columns you'll want to ingest, use an empty dimensions list to trigger
-[automatic detection of dimension columns](#schema-less-dimensions).
+[automatic detection of dimension columns](#schema-auto-discovery-for-dimensions).
 
 ### Log aggregation model
 
@@ -121,7 +121,7 @@ you must be more explicit. Druid columns have types specific upfront.
 Tips for modeling log data in Druid:
 
 * If you don't know ahead of time what columns you'll want to ingest, use an empty dimensions list to trigger
-[automatic detection of dimension columns](#schema-less-dimensions).
+[automatic detection of dimension columns](#schema-auto-discovery-for-dimensions).
 * If you have nested data, you can ingest it using the [nested columns](../querying/nested-columns.md) feature or flatten it using a [`flattenSpec`](./ingestion-spec.md#flattenspec).
 * Consider enabling [rollup](./rollup.md) if you have mainly analytical use cases for your log data. This will
 mean you lose the ability to retrieve individual events from Druid, but you potentially gain substantial compression and
@@ -241,12 +241,9 @@ You should query for the number of ingested rows with:
 ]
 ```
 
-### Schema-less dimensions
+### Schema auto-discovery for dimensions
 
-If the `dimensions` field is left empty in your ingestion spec, Druid will treat every column that is not the timestamp column,
-a dimension that has been excluded, or a metric column as a dimension.
-
-Note that when using schema-less ingestion, all dimensions will be ingested as String-typed dimensions.
+If you set the `dimensions` field to empty and  `tuningappendableIndexSpec.useSchemaDiscovery` to `true`, Druid performs Schema auto-discovery where Druid will discover your dimensions and their type.
 
 ### Including the same column as a dimension and a metric
 
