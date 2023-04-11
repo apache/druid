@@ -30,6 +30,7 @@ import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
@@ -77,22 +78,7 @@ class MultiContainerTaskAdapterTest
         false
     );
     startupLoggingConfig = new StartupLoggingConfig();
-    taskConfig = new TaskConfig(
-        "src/test/resources",
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        null,
-        null,
-        false
-    );
+    taskConfig = new TaskConfigBuilder().setBaseDir("src/test/resources").build();
   }
 
   @Test

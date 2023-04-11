@@ -62,6 +62,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
 import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.index.RealtimeAppenderatorIngestionSpec;
 import org.apache.druid.indexing.common.index.RealtimeAppenderatorTuningConfig;
@@ -1543,22 +1544,12 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     };
 
     taskLockbox = new TaskLockbox(taskStorage, mdc);
-    final TaskConfig taskConfig = new TaskConfig(
-        directory.getPath(),
-        null,
-        null,
-        50000,
-        null,
-        true,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false
-    );
+    final TaskConfig taskConfig = new TaskConfigBuilder()
+        .setBaseDir(directory.getPath())
+        .setDefaultRowFlushBoundary(50000)
+        .setRestoreTasksOnRestart(true)
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
 
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
         taskLockbox,

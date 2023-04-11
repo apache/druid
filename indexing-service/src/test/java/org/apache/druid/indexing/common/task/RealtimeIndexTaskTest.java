@@ -52,6 +52,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
 import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -897,22 +898,12 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
       final File directory
   )
   {
-    final TaskConfig taskConfig = new TaskConfig(
-        directory.getPath(),
-        null,
-        null,
-        50000,
-        null,
-        true,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false
-    );
+    final TaskConfig taskConfig = new TaskConfigBuilder()
+        .setBaseDir(directory.getPath())
+        .setDefaultRowFlushBoundary(50000)
+        .setRestoreTasksOnRestart(true)
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
     final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, mdc);
     try {
       taskStorage.insert(task, TaskStatus.running(task.getId()));

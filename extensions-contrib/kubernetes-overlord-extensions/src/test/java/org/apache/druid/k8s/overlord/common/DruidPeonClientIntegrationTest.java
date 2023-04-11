@@ -30,6 +30,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
@@ -92,22 +93,7 @@ public class DruidPeonClientIntegrationTest
         false
     );
     startupLoggingConfig = new StartupLoggingConfig();
-    taskConfig = new TaskConfig(
-        "src/test/resources",
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        null,
-        null,
-        false
-    );
+    taskConfig = new TaskConfigBuilder().setBaseDir("src/test/resources").build();
   }
 
   @Disabled

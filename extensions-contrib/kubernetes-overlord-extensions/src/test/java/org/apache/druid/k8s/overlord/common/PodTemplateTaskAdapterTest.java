@@ -25,6 +25,7 @@ import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.IAE;
@@ -57,22 +58,7 @@ public class PodTemplateTaskAdapterTest
   public void setup()
   {
     taskRunnerConfig = new KubernetesTaskRunnerConfig();
-    taskConfig = new TaskConfig(
-        "/tmp",
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        null,
-        null,
-        false
-    );
+    taskConfig = new TaskConfigBuilder().setBaseDir("/tmp").build();
     node = new DruidNode(
         "test",
         "",

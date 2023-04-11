@@ -27,6 +27,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -566,22 +567,9 @@ public class BatchAppenderatorsTest
         TaskConfig.BatchProcessingMode mode
     )
     {
-      TaskConfig config = new TaskConfig(
-          null,
-          null,
-          null,
-          null,
-          null,
-          false,
-          null,
-          null,
-          null,
-          false,
-          false,
-          mode.name(),
-          null,
-          false
-      );
+      TaskConfig config = new TaskConfigBuilder()
+          .setBatchProcessingMode(mode.name())
+          .build();
       return new TaskToolbox.Builder()
           .config(config)
           .joinableFactory(NoopJoinableFactory.INSTANCE)

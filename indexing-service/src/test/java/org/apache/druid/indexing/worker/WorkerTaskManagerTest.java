@@ -37,6 +37,7 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
@@ -116,22 +117,12 @@ public class WorkerTaskManagerTest
           FileUtils.createTempDir()
       );
     }
-    TaskConfig taskConfig = new TaskConfig(
-        FileUtils.createTempDir().toString(),
-        null,
-        null,
-        0,
-        null,
-        restoreTasksOnRestart,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false
-    );
+    TaskConfig taskConfig = new TaskConfigBuilder()
+        .setBaseDir(FileUtils.createTempDir().toString())
+        .setDefaultRowFlushBoundary(0)
+        .setRestoreTasksOnRestart(restoreTasksOnRestart)
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
 
     TaskStorageDirTracker dirTracker;
     if (useMultipleBaseTaskDirPaths) {
