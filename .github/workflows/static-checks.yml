@@ -128,6 +128,8 @@ jobs:
       - name: intellij inspections on changed files in PR
         if: ${{ matrix.java == 'jdk8' && github.event_name == 'pull_request' }}
         run: |
+          echo $JAVA_HOME
+          git remote set-branches --add origin ${GITHUB_BASE_REF} && git fetch
           git diff origin/${GITHUB_BASE_REF}..HEAD > ./pr_diff.patch
           git checkout -b ${GITHUB_BASE_REF}-intellij-inspections origin/${GITHUB_BASE_REF}
           git apply ./pr_diff.patch
