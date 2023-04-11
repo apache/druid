@@ -146,7 +146,7 @@ For example, consider the following structure for a Kafka message that represent
 - **Kafka key**: `wiki-edit`
 - **Kafka payload value**: `{"channel":"#sv.wikipedia","timestamp":"2016-06-27T00:00:11.080Z","page":"Salo Toraut","delta":31,"namespace":"Main"}`
 
-Using a `{ "type": "json" }` input format would only parse the payload value.
+Using `{ "type": "json" }` as the input format would only parse the payload value.
 You can parse out the Kafka metadata in addition to the payload by using the `kafka` input format.
 
 You would configure it as follows:
