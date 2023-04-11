@@ -55,11 +55,9 @@ public class BalanceSegments implements CoordinatorDuty
 
   /**
    * Reduces the lifetimes of segments currently being moved in all the tiers.
-   * Raises alerts for segments stuck in queue
-   * Returns the set of tiers that are currently moving some segments and won't be
-   * eligible for assigning more balancing moves in this run.
+   * Raises alerts for segments stuck in the queue.
    */
-  private void reduceLifetimesAndAlert(int maxLifetime)
+  private void reduceLifetimesAndAlert()
   {
     stateManager.reduceLifetimesOfMovingSegments().forEach((tier, movingState) -> {
       int numMovingSegments = movingState.getNumProcessingSegments();
@@ -103,7 +101,7 @@ public class BalanceSegments implements CoordinatorDuty
         params.getCoordinatorDynamicConfig().isUseRoundRobinSegmentAssignment()
     );
 
-    reduceLifetimesAndAlert(params.getCoordinatorDynamicConfig().getReplicantLifetime());
+    reduceLifetimesAndAlert();
     params.getDruidCluster().getHistoricals().forEach(
         (tier, servers) -> balanceTier(params, tier, servers, stats, loader)
     );
@@ -187,7 +185,11 @@ public class BalanceSegments implements CoordinatorDuty
       strategy.emitStats(tier, stats, Lists.newArrayList(servers));
     }
 
-    log.info("Moved [%d] segments and let alone [%d] segments in tier [%s].", moved, unmoved, tier);
+    int maxLifetime = params.getCoordinatorDynamicConfig().getReplicantLifetime();
+    log.info(
+        "In tier [%s], queued [%d] segments for moving with max lifetime [%d]"
+        + " and left [%d] segments unmoved.", tier, moved, maxLifetime, unmoved
+    );
   }
 
   private MoveStats balanceServers(
