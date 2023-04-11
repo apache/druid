@@ -114,8 +114,6 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testComputingSketchOnNumericValues()
   {
-    cannotVectorize();
-
     testQuery(
         "SELECT\n"
         + "TDIGEST_GENERATE_SKETCH(m1, 200)"
@@ -142,8 +140,6 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testComputingSketchOnCastedString()
   {
-    cannotVectorize();
-
     testQuery(
         "SELECT\n"
         + "TDIGEST_GENERATE_SKETCH(CAST(dim1 AS DOUBLE), 200)"
@@ -182,8 +178,6 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testDefaultCompressionForTDigestGenerateSketchAgg()
   {
-    cannotVectorize();
-
     testQuery(
         "SELECT\n"
         + "TDIGEST_GENERATE_SKETCH(m1)"
@@ -208,8 +202,6 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testComputingQuantileOnPreAggregatedSketch()
   {
-    cannotVectorize();
-
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             1.1,
@@ -250,8 +242,6 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testGeneratingSketchAndComputingQuantileOnFly()
   {
-    cannotVectorize();
-
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             1.0,
@@ -305,8 +295,6 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testQuantileOnNumericValues()
   {
-    cannotVectorize();
-
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             1.0,
@@ -342,7 +330,6 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testCompressionParamForTDigestQuantileAgg()
   {
-    cannotVectorize();
     testQuery(
         "SELECT\n"
         + "TDIGEST_QUANTILE(m1, 0.0), TDIGEST_QUANTILE(m1, 0.5, 200), TDIGEST_QUANTILE(m1, 1.0, 300)\n"
@@ -380,8 +367,6 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testQuantileOnCastedString()
   {
-    cannotVectorize();
-
     testQuery(
         "SELECT\n"
         + "  TDIGEST_QUANTILE(CAST(dim1 AS DOUBLE), 0.0),\n"
@@ -433,8 +418,6 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testEmptyTimeseriesResults()
   {
-    cannotVectorize();
-
     testQuery(
         "SELECT\n"
         + "TDIGEST_GENERATE_SKETCH(m1),"
@@ -465,7 +448,6 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByAggregatorDefaultValues()
   {
-    cannotVectorize();
     testQuery(
         "SELECT\n"
         + "dim2,\n"
