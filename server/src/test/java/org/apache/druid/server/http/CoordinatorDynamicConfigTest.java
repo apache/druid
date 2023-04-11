@@ -679,7 +679,7 @@ public class CoordinatorDynamicConfigTest
         900000,
         524288000,
         100,
-        -1,
+        500,
         100,
         true,
         15,

@@ -211,7 +211,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
   {
     CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
-                             .withDynamicConfig(createDynamicConfig(3, 0, 10))
+                             .withDynamicConfig(createDynamicConfig(3, 0, 0))
                              .withSegments(segments)
                              .withServers(historicalT11, historicalT12)
                              .withRules(datasource, Load.on(Tier.T1, 1).forever())
@@ -228,6 +228,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     verifyValue(Metric.LOAD_QUEUE_COUNT, filter(DruidMetrics.SERVER, historicalT12.getName()), 3L);
 
     // Run 2: Some more segments are moved to histT12
+    setDynamicConfig(createDynamicConfig(10, 0, 0));
     runCoordinatorCycle();
     verifyValue(Metric.MOVED_COUNT, 2L);
     verifyValue(Metric.LOAD_QUEUE_COUNT, filter(DruidMetrics.SERVER, historicalT12.getName()), 5L);
