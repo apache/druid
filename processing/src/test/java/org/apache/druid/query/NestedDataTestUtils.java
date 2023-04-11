@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexSpec;
@@ -92,7 +93,7 @@ public class NestedDataTestUtils
                     .useSchemaDiscovery(true)
                     .build();
 
-  public static final DimensionsSpec TSV_SCHEMA =
+  public static final DimensionsSpec TSV_V4_SCHEMA =
       DimensionsSpec.builder()
                     .setDimensions(
                         Arrays.asList(
@@ -105,15 +106,23 @@ public class NestedDataTestUtils
                         )
                     )
                     .build();
+
+  public static final DimensionsSpec TSV_SCHEMA =
+      DimensionsSpec.builder()
+                    .setDimensions(
+                        Arrays.asList(
+                            new AutoTypeColumnSchema("dim"),
+                            new AutoTypeColumnSchema("nest_json"),
+                            new AutoTypeColumnSchema("nester_json"),
+                            new AutoTypeColumnSchema("variant_json"),
+                            new AutoTypeColumnSchema("list_json"),
+                            new AutoTypeColumnSchema("nonexistent")
+                        )
+                    )
+                    .build();
   public static final InputRowSchema AUTO_SCHEMA = new InputRowSchema(
       TIMESTAMP_SPEC,
       AUTO_DISCOVERY,
-      null
-  );
-
-  public static final InputRowSchema SIMPLE_DATA_TSV_SCHEMA = new InputRowSchema(
-      TIMESTAMP_SPEC,
-      TSV_SCHEMA,
       null
   );
 
@@ -162,6 +171,22 @@ public class NestedDataTestUtils
         tempFolder,
         closer,
         Granularities.NONE,
+        TSV_SCHEMA,
+        true
+    );
+  }
+
+  public static List<Segment> createSimpleSegmentsTsvV4(
+      TemporaryFolder tempFolder,
+      Closer closer
+  )
+      throws Exception
+  {
+    return createSimpleNestedTestDataTsvSegments(
+        tempFolder,
+        closer,
+        Granularities.NONE,
+        TSV_V4_SCHEMA,
         true
     );
   }
@@ -170,6 +195,7 @@ public class NestedDataTestUtils
       TemporaryFolder tempFolder,
       Closer closer,
       Granularity granularity,
+      DimensionsSpec dimensionsSpec,
       boolean rollup
   ) throws Exception
   {
@@ -179,7 +205,7 @@ public class NestedDataTestUtils
         SIMPLE_DATA_TSV_FILE,
         SIMPLE_DATA_TSV_INPUT_FORMAT,
         TIMESTAMP_SPEC,
-        SIMPLE_DATA_TSV_SCHEMA.getDimensionsSpec(),
+        dimensionsSpec,
         SIMPLE_DATA_TSV_TRANSFORM,
         COUNT,
         granularity,
