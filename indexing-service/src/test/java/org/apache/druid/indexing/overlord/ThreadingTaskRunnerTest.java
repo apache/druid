@@ -63,8 +63,7 @@ public class ThreadingTaskRunnerTest
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false,
-        null
+        false
     );
     ThreadingTaskRunner runner = new ThreadingTaskRunner(
         mockTaskToolboxFactory(),
@@ -75,7 +74,7 @@ public class ThreadingTaskRunnerTest
         new TestAppenderatorsManager(),
         new MultipleFileTaskReportFileWriter(),
         new DruidNode("middleManager", "host", false, 8091, null, true, false),
-        new TaskStorageDirTracker(taskConfig)
+        TaskStorageDirTracker.fromConfigs(null, taskConfig)
     );
 
     Future<TaskStatus> statusFuture = runner.run(new AbstractTask("id", "datasource", null)

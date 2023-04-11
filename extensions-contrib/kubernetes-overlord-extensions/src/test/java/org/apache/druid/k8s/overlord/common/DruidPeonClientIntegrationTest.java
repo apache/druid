@@ -22,7 +22,6 @@ package org.apache.druid.k8s.overlord.common;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.google.common.collect.ImmutableList;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -107,8 +106,7 @@ public class DruidPeonClientIntegrationTest
         false,
         null,
         null,
-        false,
-        ImmutableList.of("src/test/resources")
+        false
     );
   }
 

@@ -19,37 +19,45 @@
 
 package org.apache.druid.indexing.common;
 
-import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.inject.Inject;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class TaskStorageDirTracker
 {
+  public static TaskStorageDirTracker fromConfigs(WorkerConfig workerConfig, TaskConfig taskConfig)
+  {
+    if (workerConfig == null) {
+      return new TaskStorageDirTracker(ImmutableList.of(taskConfig.getBaseTaskDir()));
+    } else {
+      final List<String> basePaths = workerConfig.getBaseTaskDirs();
+      if (basePaths == null) {
+        return new TaskStorageDirTracker(ImmutableList.of(taskConfig.getBaseTaskDir()));
+      }
+      return new TaskStorageDirTracker(
+          basePaths.stream().map(File::new).collect(Collectors.toList())
+      );
+    }
+  }
+
   private int taskDirIndex = 0;
 
-  private final List<File> baseTaskDirs = new ArrayList<>();
+  private final List<File> baseTaskDirs;
 
   private final Map<String, File> taskToTempDirMap = new HashMap<>();
 
   @Inject
-  public TaskStorageDirTracker(final TaskConfig taskConfig)
+  public TaskStorageDirTracker(List<File> baseTaskDirs)
   {
-    this(taskConfig.getBaseTaskDirPaths());
-  }
-
-  @VisibleForTesting
-  public TaskStorageDirTracker(final List<String> baseTaskDirPaths)
-  {
-    for (String baseTaskDirPath : baseTaskDirPaths) {
-      baseTaskDirs.add(new File(baseTaskDirPath));
-    }
+    this.baseTaskDirs = baseTaskDirs;
   }
 
   public File getTaskDir(String taskId)

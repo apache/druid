@@ -206,10 +206,8 @@ public class ForkingTaskRunnerTest
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false,
-        null
+        false
     );
-    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
     ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
         new ForkingTaskRunnerConfig(),
         taskConfig,
@@ -219,7 +217,7 @@ public class ForkingTaskRunnerTest
         new DefaultObjectMapper(),
         new DruidNode("middleManager", "host", false, 8091, null, true, false),
         new StartupLoggingConfig(),
-        dirTracker
+        TaskStorageDirTracker.fromConfigs(null, taskConfig)
     )
     {
       @Override
@@ -276,10 +274,8 @@ public class ForkingTaskRunnerTest
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false,
-        null
+        false
     );
-    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
     ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
         new ForkingTaskRunnerConfig(),
         taskConfig,
@@ -289,7 +285,7 @@ public class ForkingTaskRunnerTest
         mapper,
         new DruidNode("middleManager", "host", false, 8091, null, true, false),
         new StartupLoggingConfig(),
-        dirTracker
+        TaskStorageDirTracker.fromConfigs(null, taskConfig)
     )
     {
       @Override
@@ -351,10 +347,9 @@ public class ForkingTaskRunnerTest
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false,
-        null
+        false
     );
-    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
+    TaskStorageDirTracker dirTracker = TaskStorageDirTracker.fromConfigs(null, taskConfig);
     ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
         new ForkingTaskRunnerConfig(),
         taskConfig,
@@ -416,14 +411,13 @@ public class ForkingTaskRunnerTest
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false,
-        null
+        false
     );
-    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
+    TaskStorageDirTracker dirTracker = TaskStorageDirTracker.fromConfigs(null, taskConfig);
     String taskId = "foo";
-    assertEquals(1, ForkingTaskRunner.getNextAttemptID(dirTracker, taskId));
-    assertEquals(2, ForkingTaskRunner.getNextAttemptID(dirTracker, taskId));
-    assertEquals(3, ForkingTaskRunner.getNextAttemptID(dirTracker, taskId));
+    assertEquals(1, ForkingTaskRunner.getNextAttemptID(dirTracker.getTaskDir(taskId)));
+    assertEquals(2, ForkingTaskRunner.getNextAttemptID(dirTracker.getTaskDir(taskId)));
+    assertEquals(3, ForkingTaskRunner.getNextAttemptID(dirTracker.getTaskDir(taskId)));
   }
 
   @Test
@@ -462,10 +456,8 @@ public class ForkingTaskRunnerTest
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false,
-        null
+        false
     );
-    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
     ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
         new ForkingTaskRunnerConfig(),
         taskConfig,
@@ -475,7 +467,7 @@ public class ForkingTaskRunnerTest
         mapper,
         new DruidNode("middleManager", "host", false, 8091, null, true, false),
         new StartupLoggingConfig(),
-        dirTracker
+        TaskStorageDirTracker.fromConfigs(null, taskConfig)
     )
     {
       @Override
@@ -533,10 +525,8 @@ public class ForkingTaskRunnerTest
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false,
-        null
+        false
     );
-    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
     ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
         new ForkingTaskRunnerConfig(),
         taskConfig,
@@ -546,7 +536,7 @@ public class ForkingTaskRunnerTest
         mapper,
         new DruidNode("middleManager", "host", false, 8091, null, true, false),
         new StartupLoggingConfig(),
-        dirTracker
+        TaskStorageDirTracker.fromConfigs(null, taskConfig)
     )
     {
       @Override
@@ -594,13 +584,15 @@ public class ForkingTaskRunnerTest
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false,
+        false
+    );
+
+    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(
         ImmutableList.of(
-            temporaryFolder.newFolder().getAbsolutePath(),
-            temporaryFolder.newFolder().getAbsolutePath()
+            temporaryFolder.newFolder().getAbsoluteFile(),
+            temporaryFolder.newFolder().getAbsoluteFile()
         )
     );
-    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
     ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
         new ForkingTaskRunnerConfig(),
         taskConfig,

@@ -119,8 +119,7 @@ public class TaskToolboxTest
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false,
-        null
+        false
     );
     taskToolbox = new TaskToolboxFactory(
         taskConfig,
@@ -160,8 +159,7 @@ public class TaskToolboxTest
         null,
         null,
         null,
-        "1",
-        new TaskStorageDirTracker(taskConfig)
+        "1"
     );
   }
 

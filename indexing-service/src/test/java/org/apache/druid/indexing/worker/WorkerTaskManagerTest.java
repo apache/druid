@@ -109,11 +109,11 @@ public class WorkerTaskManagerTest
 
   private WorkerTaskManager createWorkerTaskManager()
   {
-    List<String> baseTaskDirPaths = null;
+    List<File> baseTaskDirPaths = null;
     if (useMultipleBaseTaskDirPaths) {
       baseTaskDirPaths = ImmutableList.of(
-          FileUtils.createTempDir().toString(),
-          FileUtils.createTempDir().toString()
+          FileUtils.createTempDir(),
+          FileUtils.createTempDir()
       );
     }
     TaskConfig taskConfig = new TaskConfig(
@@ -130,10 +130,16 @@ public class WorkerTaskManagerTest
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false,
-        baseTaskDirPaths
+        false
     );
-    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
+
+    TaskStorageDirTracker dirTracker;
+    if (useMultipleBaseTaskDirPaths) {
+      dirTracker = new TaskStorageDirTracker(baseTaskDirPaths);
+    } else {
+      dirTracker = new TaskStorageDirTracker(ImmutableList.of(taskConfig.getBaseTaskDir()));
+    }
+
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
     TaskActionClient taskActionClient = EasyMock.createNiceMock(TaskActionClient.class);
     EasyMock.expect(taskActionClientFactory.create(EasyMock.anyObject())).andReturn(taskActionClient).anyTimes();
@@ -181,8 +187,7 @@ public class WorkerTaskManagerTest
                 null,
                 null,
                 null,
-                "1",
-                dirTracker
+                "1"
             ),
             taskConfig,
             location

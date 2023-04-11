@@ -155,7 +155,7 @@ public class ForkingTaskRunner
                 public TaskStatus call()
                 {
 
-                  final String attemptId = String.valueOf(getNextAttemptID(dirTracker, task.getId()));
+                  final String attemptId = String.valueOf(getNextAttemptID(dirTracker.getTaskDir(task.getId())));
                   final String baseTaskDir = dirTracker.getBaseTaskDir(task.getId()).getAbsolutePath();
                   final File taskDir = dirTracker.getTaskDir(task.getId());
                   final File attemptDir = Paths.get(taskDir.getAbsolutePath(), "attempt", attemptId).toFile();
@@ -372,8 +372,7 @@ public class ForkingTaskRunner
                         command.add("org.apache.druid.cli.Main");
                         command.add("internal");
                         command.add("peon");
-                        command.add(baseTaskDir);
-                        command.add(task.getId());
+                        command.add(taskDir.toString());
                         command.add(attemptId);
                         String nodeType = task.getNodeType();
                         if (nodeType != null) {
@@ -578,7 +577,6 @@ public class ForkingTaskRunner
     } else {
       LOGGER.warn("Ran out of time, not waiting for executor to finish!");
     }
-    super.stop();
   }
 
   @Override
@@ -891,9 +889,8 @@ public class ForkingTaskRunner
   }
 
   @VisibleForTesting
-  static int getNextAttemptID(TaskStorageDirTracker dirTracker, String taskId)
+  static int getNextAttemptID(File taskDir)
   {
-    File taskDir = dirTracker.getTaskDir(taskId);
     File attemptDir = new File(taskDir, "attempt");
     try {
       FileUtils.mkdirp(attemptDir);

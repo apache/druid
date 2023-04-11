@@ -83,11 +83,10 @@ public class LocalIntermediaryDataManagerManualAddAndDeleteTest
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false,
-        null
+        false
     );
     final OverlordClient overlordClient = new NoopOverlordClient();
-    final TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
+    final TaskStorageDirTracker dirTracker = TaskStorageDirTracker.fromConfigs(null, taskConfig);
     intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient, dirTracker);
     intermediaryDataManager.start();
   }

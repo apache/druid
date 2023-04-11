@@ -35,7 +35,7 @@ public class TaskStorageDirTrackerTest
   @Before
   public void setup()
   {
-    dirTracker = new TaskStorageDirTracker(ImmutableList.of("A", "B", "C"));
+    dirTracker = new TaskStorageDirTracker(ImmutableList.of(new File("A"), new File("B"), new File("C")));
   }
 
   @Test

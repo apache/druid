@@ -79,8 +79,7 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false,
-        null
+        false
     );
     this.overlordClient = new NoopOverlordClient()
     {
@@ -139,7 +138,7 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
 
     // Setup data manager with expiry timeout 1s and initial delay of 1 second
     WorkerConfig workerConfig = new TestWorkerConfig(1, 1, timeoutPeriod);
-    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
+    TaskStorageDirTracker dirTracker = TaskStorageDirTracker.fromConfigs(null, taskConfig);
     LocalIntermediaryDataManager intermediaryDataManager =
         new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient, dirTracker);
     intermediaryDataManager.addSegment(supervisorTaskId, subTaskId, segment, segmentFile);

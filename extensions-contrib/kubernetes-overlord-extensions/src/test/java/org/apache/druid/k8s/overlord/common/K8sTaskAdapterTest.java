@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.api.client.util.Joiner;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.fabric8.kubernetes.api.model.Container;
@@ -106,8 +105,7 @@ class K8sTaskAdapterTest
         false,
         null,
         null,
-        false,
-        ImmutableList.of("src/test/resources")
+        false
     );
   }
 

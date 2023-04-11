@@ -20,7 +20,6 @@
 package org.apache.druid.k8s.overlord.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
@@ -72,8 +71,7 @@ public class PodTemplateTaskAdapterTest
         false,
         null,
         null,
-        false,
-        ImmutableList.of("/tmp")
+        false
     );
     node = new DruidNode(
         "test",

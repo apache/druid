@@ -89,7 +89,7 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
           taskRestoreInfos.put(baseDir, jsonMapper.readValue(restoreFile, TaskRestoreInfo.class));
         }
         catch (Exception e) {
-          LOG.error(e, "Failed to read restorable tasks from file[%s]. Skipping restore.", restoreFile);
+          LOG.warn(e, "Failed to read restorable tasks from file[%s]. Skipping restore.", restoreFile);
         }
       }
     }
@@ -207,28 +207,6 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
       }
       catch (Exception e) {
         LOG.warn(e, "Failed to save tasks to restore file[%s]. Skipping this save.", restoreFile);
-      }
-    }
-  }
-
-  @Override
-  public void stop()
-  {
-    if (!taskConfig.isRestoreTasksOnRestart()) {
-      return;
-    }
-
-    for (File baseDir : dirTracker.getBaseTaskDirs()) {
-      File restoreFile = new File(baseDir, TASK_RESTORE_FILENAME);
-      if (restoreFile.exists()) {
-        try {
-          TaskRestoreInfo taskRestoreInfo = jsonMapper.readValue(restoreFile, TaskRestoreInfo.class);
-          LOG.info("Path[%s] contains restore data for tasks[%s] on restart",
-                   baseDir, taskRestoreInfo.getRunningTasks());
-        }
-        catch (Exception e) {
-          LOG.error(e, "Failed to read task restore info from file[%s].", restoreFile);
-        }
       }
     }
   }

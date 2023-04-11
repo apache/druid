@@ -26,7 +26,6 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -101,8 +100,7 @@ public class SingleTaskBackgroundRunnerTest
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false,
-        null
+        false
     );
     final ServiceEmitter emitter = new NoopServiceEmitter();
     EmittingLogger.registerEmitter(emitter);
@@ -144,8 +142,7 @@ public class SingleTaskBackgroundRunnerTest
         null,
         null,
         null,
-        "1",
-        new TaskStorageDirTracker(taskConfig)
+        "1"
     );
     runner = new SingleTaskBackgroundRunner(
         toolboxFactory,

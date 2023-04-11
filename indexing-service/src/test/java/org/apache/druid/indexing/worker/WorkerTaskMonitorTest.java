@@ -168,15 +168,14 @@ public class WorkerTaskMonitorTest
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false,
-        null
+        false
     );
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
     TaskActionClient taskActionClient = EasyMock.createNiceMock(TaskActionClient.class);
     EasyMock.expect(taskActionClientFactory.create(EasyMock.anyObject())).andReturn(taskActionClient).anyTimes();
     SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
     EasyMock.replay(taskActionClientFactory, taskActionClient, notifierFactory);
-    final TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
+    final TaskStorageDirTracker dirTracker = TaskStorageDirTracker.fromConfigs(null, taskConfig);
     return new WorkerTaskMonitor(
         jsonMapper,
         new SingleTaskBackgroundRunner(
@@ -218,8 +217,7 @@ public class WorkerTaskMonitorTest
                 null,
                 null,
                 null,
-                "1",
-                dirTracker
+                "1"
             ),
             taskConfig,
             new NoopServiceEmitter(),

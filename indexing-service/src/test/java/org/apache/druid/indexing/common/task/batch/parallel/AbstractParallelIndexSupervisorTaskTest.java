@@ -261,14 +261,13 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false,
-        null
+        false
     );
     intermediaryDataManager = new LocalIntermediaryDataManager(
         new WorkerConfig(),
         taskConfig,
         null,
-        new TaskStorageDirTracker(taskConfig)
+        TaskStorageDirTracker.fromConfigs(null, taskConfig)
     );
     remoteApiExecutor = Execs.singleThreaded("coordinator-api-executor");
     coordinatorClient = new LocalCoordinatorClient(remoteApiExecutor);
@@ -666,8 +665,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false,
-        null
+        false
     );
 
     objectMapper.setInjectableValues(
@@ -716,8 +714,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false,
-        null
+        false
     );
     return new TaskToolbox.Builder()
         .config(config)
@@ -754,7 +751,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .shuffleClient(new LocalShuffleClient(intermediaryDataManager))
         .taskLogPusher(null)
         .attemptId("1")
-        .dirTracker(new TaskStorageDirTracker(config))
         .build();
   }
 

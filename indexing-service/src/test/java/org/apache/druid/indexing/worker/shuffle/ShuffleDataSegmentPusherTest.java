@@ -113,11 +113,10 @@ public class ShuffleDataSegmentPusherTest
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false,
-        null
+        false
     );
     final OverlordClient overlordClient = new NoopOverlordClient();
-    final TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
+    final TaskStorageDirTracker dirTracker = TaskStorageDirTracker.fromConfigs(null, taskConfig);
     if (LOCAL.equals(intermediateDataStore)) {
       intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient, dirTracker);
     } else if (DEEPSTORE.equals(intermediateDataStore)) {

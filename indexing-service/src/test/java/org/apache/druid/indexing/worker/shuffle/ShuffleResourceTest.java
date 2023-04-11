@@ -105,8 +105,7 @@ public class ShuffleResourceTest
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false,
-        null
+        false
     );
     final OverlordClient overlordClient = new NoopOverlordClient()
     {
@@ -120,7 +119,7 @@ public class ShuffleResourceTest
         return Futures.immediateFuture(result);
       }
     };
-    final TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
+    final TaskStorageDirTracker dirTracker = TaskStorageDirTracker.fromConfigs(null, taskConfig);
     intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient, dirTracker);
     shuffleMetrics = new ShuffleMetrics();
     shuffleResource = new ShuffleResource(intermediaryDataManager, Optional.of(shuffleMetrics));

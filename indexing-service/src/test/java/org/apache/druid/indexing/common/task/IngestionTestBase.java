@@ -38,7 +38,6 @@ import org.apache.druid.data.input.impl.RegexParseSpec;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
@@ -386,8 +385,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             false,
             TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
             null,
-            false,
-            null
+            false
         );
         final TaskToolbox box = new TaskToolbox.Builder()
             .config(config)
@@ -408,7 +406,6 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             .appenderatorsManager(new TestAppenderatorsManager())
             .taskLogPusher(null)
             .attemptId("1")
-            .dirTracker(new TaskStorageDirTracker(config))
             .build();
 
 

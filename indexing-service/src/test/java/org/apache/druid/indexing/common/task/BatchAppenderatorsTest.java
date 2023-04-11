@@ -25,7 +25,6 @@ import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -581,8 +580,7 @@ public class BatchAppenderatorsTest
           false,
           mode.name(),
           null,
-          false,
-          null
+          false
       );
       return new TaskToolbox.Builder()
           .config(config)
@@ -596,7 +594,6 @@ public class BatchAppenderatorsTest
           .appenderatorsManager(new TestAppenderatorsManager())
           .taskLogPusher(null)
           .attemptId("1")
-          .dirTracker(new TaskStorageDirTracker(config))
           .build();
 
     }

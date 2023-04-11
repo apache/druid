@@ -20,7 +20,6 @@
 package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
@@ -86,8 +85,7 @@ public class KubernetesTaskRunnerFactoryTest
         false,
         null,
         null,
-        false,
-        ImmutableList.of("/tmp")
+        false
     );
     properties = new Properties();
   }
