@@ -134,7 +134,9 @@ jobs:
           git checkout -b ${GITHUB_BASE_REF}-intellij-inspections origin/${GITHUB_BASE_REF}
           git apply ./pr_diff.patch
           sudo snap install intellij-idea-community --classic
-          /bin/idea.sh inspect . ./.idea/inspectionProfiles/Druid.xml -v2 -changes
+          ls /snap/
+          ls /snap/intellij-idea-community/
+          /snap/intellij-idea-community/current/bin/idea.sh inspect . ./.idea/inspectionProfiles/Druid.xml -v2 -changes
 
       # Checkout PR branch after running intellij-inspections
       - name: checkout branch
