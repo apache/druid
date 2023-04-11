@@ -186,13 +186,9 @@ public class MetadataResource
   {
     Set<String> requiredDataSources = (null == dataSources) ? new HashSet<>() : dataSources;
 
-    log.info("Changed segments requested. counter [%d], hash [%d], dataSources [%s]", counter, hash, requiredDataSources);
+    log.debug("Changed segments requested. counter [%d], hash [%d], dataSources [%s]", counter, hash, requiredDataSources);
 
     DataSourcesSnapshot dataSourcesSnapshot = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments();
-    Stream<DataSegment> usedSegments =
-        dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()
-                           .stream()
-                           .flatMap(druidDataSource -> druidDataSource.getSegments().stream());
 
     ChangeRequestsSnapshot<DataSegmentChange> changeRequestsSnapshot = dataSourcesSnapshot.getChangesSince(new ChangeRequestHistory.Counter(counter, hash));
     List<DataSegmentChange> dataSegmentChanges;
@@ -203,7 +199,10 @@ public class MetadataResource
     if (changeRequestsSnapshot.isResetCounter()) {
       reset = true;
       dataSegmentChanges =
-          usedSegments
+          dataSourcesSnapshot
+              .getDataSourcesWithAllUsedSegments()
+              .stream()
+              .flatMap(druidDataSource -> druidDataSource.getSegments().stream())
               .filter(segment -> requiredDataSources.size() == 0 || requiredDataSources.contains(segment.getDataSource()))
               .map(segment ->
                        new DataSegmentChange(
@@ -217,7 +216,7 @@ public class MetadataResource
               .collect(Collectors.toList());
       lastCounter = DataSourcesSnapshot.getLastCounter(dataSourcesSnapshot.getChanges());
       resetCause = changeRequestsSnapshot.getResetCause();
-      log.info("Returning full snapshot. segment count [%d], counter [%d], hash [%d]",
+      log.debug("Returning full snapshot. segment count [%d], counter [%d], hash [%d]",
                dataSegmentChanges.size(), lastCounter.getCounter(), lastCounter.getHash());
     } else {
       dataSegmentChanges = changeRequestsSnapshot.getRequests();
@@ -226,7 +225,7 @@ public class MetadataResource
           .filter(segment -> requiredDataSources.size() == 0 || requiredDataSources.contains(segment.getSegmentWithOvershadowedStatus().getDataSegment().getDataSource()))
           .collect(Collectors.toList());
       lastCounter = changeRequestsSnapshot.getCounter();
-      log.info("Returning delta snapshot. segment count [%d], counter [%d], hash [%d]",
+      log.debug("Returning delta snapshot. segment count [%d], counter [%d], hash [%d]",
                dataSegmentChanges.size(), lastCounter.getCounter(), lastCounter.getHash());
     }
 

@@ -428,7 +428,7 @@ public class DataSourcesSnapshot
       oldChanges.add(new ChangeRequestHistory.Holder<>(changeList, lastCounter.inc()));
     }
 
-    log.info(
+    log.debug(
         "Finished computing segment changes. Changes count [%d], current counter [%d]",
         changeList.size(), getLastCounter(oldChanges).getCounter());
     return oldChanges;

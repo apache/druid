@@ -202,8 +202,11 @@ public class MetadataSegmentView
 
     counter = changedRequestsSnapshot.getCounter();
 
+
+    log.debug("counter [%d], hash [%d], segments changed [%d], full sync: [%s]",
+              counter.getCounter(), counter.getHash(), dataSegmentChanges.size(), changedRequestsSnapshot.isResetCounter());
+
     if (changedRequestsSnapshot.isResetCounter()) {
-      log.info("full sync");
       runSegmentCallbacks(
           input -> input.fullSync(dataSegmentChanges)
       );
@@ -213,7 +216,6 @@ public class MetadataSegmentView
             dataSegmentChange -> publishedSegmentsSet.add(dataSegmentChange.getSegmentWithOvershadowedStatus()));
       }
     } else {
-      log.info("delta sync");
       runSegmentCallbacks(
           input -> input.deltaSync(dataSegmentChanges)
       );
@@ -230,12 +232,9 @@ public class MetadataSegmentView
       }
     }
 
-    log.info("counter [%d], hash [%d], segments changed [%d]",
-             counter.getCounter(), counter.getHash(), dataSegmentChanges.size());
-
     if (initializationLatch.getCount() > 0) {
       initializationLatch.countDown();
-      log.info("synced successfully for the first time.");
+      log.info("synced segments metadata successfully for the first time.");
       runSegmentCallbacks(ServerView.HandedOffSegmentCallback::segmentViewInitialized);
     }
 
