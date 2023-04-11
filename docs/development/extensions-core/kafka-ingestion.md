@@ -168,7 +168,7 @@ You would configure it as follows:
   Note that for `tsv`,`csv`, and `regex` formats, you need to provide a `columns` array to make a valid input format. Only the first one is used, and its name will be ignored in favor of `keyColumnName`.
 - `keyColumnName`: Supply the name for the Kafka key column to avoid conflicts with columns from the payload. The default is `kafka.key`.
 
-Putting it together, the following input format (that accepts default values for `timestampColumnName`, `headerColumnPrefix`, and `keyColumnName`)
+Putting it together, the following input format (that uses the default values for `timestampColumnName`, `headerColumnPrefix`, and `keyColumnName`)
 
 ```json
 {
