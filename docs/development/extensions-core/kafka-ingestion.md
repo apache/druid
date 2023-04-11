@@ -268,7 +268,7 @@ SELECT
 FROM "wikiticker"
 ```
 
-This query would output:
+This query returns:
 
 | `kafka.header.env` | `kafka.key` | `kafka.timestamp` |
 |--------------------|-----------|---------------|
