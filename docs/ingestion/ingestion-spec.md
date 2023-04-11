@@ -200,7 +200,7 @@ Keep in mind that you cannot partially define a schema for Schema auto-discovery
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Explicit dimensions-->
 
-```
+```json
 "dimensionsSpec" : {
   "dimensions": [
     "page",
@@ -221,6 +221,7 @@ Keep in mind that you cannot partially define a schema for Schema auto-discovery
         ...,
         "useSchemaDiscovery": true
       },
+    },
       ...
       "dimensionsSpec": {}
 ```
@@ -483,7 +484,10 @@ is:
     "bitmap": { "type": "roaring" },
     "dimensionCompression": "lz4",
     "metricCompression": "lz4",
-    "longEncoding": "longs"
+    "longEncoding": "longs",
+    "appendableIndexSpec": {
+      "useSchemaDiscovery": true
+    }
   },
   <other ingestion-method-specific properties>
 }
@@ -497,7 +501,7 @@ is:
 |skipBytesInMemoryOverheadCheck|The calculation of maxBytesInMemory takes into account overhead objects created during ingestion and each intermediate persist. Setting this to true can exclude the bytes of these overhead objects from maxBytesInMemory check.|false|
 |indexSpec|Defines segment storage format options to use at indexing time.|See [`indexSpec`](#indexspec) for more information.|
 |indexSpecForIntermediatePersists|Defines segment storage format options to use at indexing time for intermediate persisted temporary segments.|See [`indexSpec`](#indexspec) for more information.|
-| appendableIndexSpec.useSchemaDiscovery | Configure Druid to use Schema auto-discovey to discover the schema for your ingestion. You can use this for native batch or streaming ingestion. To use this feature, set this property to true along with an empty `dimensionsSpec`. For an example, see [`dimensionsSpec`](#dimensionsspec). | false  | 
+| appendableIndexSpec.useSchemaDiscovery | Configure Druid to use Schema auto-discovey to discover the dimensions and types for your ingestion. You can use this for native batch or streaming ingestion. To use this feature, set this property to true along with an empty `dimensionsSpec`. For an example, see [`dimensionsSpec`](#dimensionsspec). | false  | 
 |Other properties|Each ingestion method has its own list of additional tuning properties. See the documentation for each method for a full list: [Kafka indexing service](../development/extensions-core/kafka-supervisor-reference.md#tuningconfig), [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md#tuningconfig), [Native batch](native-batch.md#tuningconfig), and [Hadoop-based](hadoop.md#tuningconfig).||
 
 ### `indexSpec`
