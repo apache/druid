@@ -559,7 +559,7 @@ Configure the Kafka `inputFormat` as follows:
 The Kafka input format augments the payload with information from the Kafka timestamp, headers, and key.
 
 If there are conflicts between column names in the payload and those created from the metadata, the payload takes precedence.
-This is done to ensure that upgrading a Kafka ingestion to use the Kafka input format (by taking its existing input format and setting it as the `valueFormat` in the kafka format) can be done without losing any of the payload data.  
+This ensures that upgrading a Kafka ingestion to use the Kafka input format (by taking its existing input format and setting it as the `valueFormat`) can be done without losing any of the payload data.  
 
 Here is a minimal example that only augments the parsed payload with the Kafka timestamp column:
 
