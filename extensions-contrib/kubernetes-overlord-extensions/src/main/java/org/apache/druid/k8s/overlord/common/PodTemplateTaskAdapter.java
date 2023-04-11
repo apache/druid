@@ -209,7 +209,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     return ImmutableList.of(
         new EnvVarBuilder()
             .withName(DruidK8sConstants.TASK_DIR_ENV)
-            .withValue(taskConfig.getBaseTaskDir().getAbsolutePath())
+            .withValue(taskConfig.getBaseDir())
             .build(),
         new EnvVarBuilder()
             .withName(DruidK8sConstants.TASK_ID_ENV)
