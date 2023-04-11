@@ -601,7 +601,7 @@ Here is a complete example:
 }
 ```
 
-Note that if you want to use the `kafka.timestamp` as Druid's primary timestamp (`__time`) you would need to refer to it as the `column` in the `timestampSpec`:
+If you want to use `kafka.timestamp` as Druid's primary timestamp (`__time`), specify it as the value for `column` in the `timestampSpec`:
 
 ```json
 "timestampSpec": {
