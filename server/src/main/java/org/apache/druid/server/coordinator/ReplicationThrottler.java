@@ -25,11 +25,14 @@ import java.util.Set;
 
 /**
  * The ReplicationThrottler is used to throttle the number of segment replicas
- * that are assigned to a load queue in a single run.
- * This is achieved by setting the values of these configs:
+ * that are assigned to a load queue in a single run. This is achieved by setting
+ * the values of the following configs:
  * <ul>
- *   <li>{@link CoordinatorDynamicConfig#getReplicationThrottleLimit()}, and</li>
- *   <li>{@link CoordinatorDynamicConfig#getMaxNonPrimaryReplicantsToLoad()}</li>
+ *   <li>{@link CoordinatorDynamicConfig#getReplicationThrottleLimit()} - Maximum
+ *   number of replicas that can be assigned to a tier in a single run.</li>
+ *   <li>{@link CoordinatorDynamicConfig#getMaxNonPrimaryReplicantsToLoad()} -
+ *   Maximum number of total replicas that can be assigned across all tiers in a
+ *   single run.</li>
  * </ul>
  */
 public class ReplicationThrottler
@@ -49,12 +52,12 @@ public class ReplicationThrottler
    *
    * @param eligibleTiers              Set of tiers eligible for replication.
    * @param replicationThrottleLimit   Maximum number of replicas that can be
-   *                                   actively loading on a tier at any given time.
+   *                                   assigned to a single tier in the current run.
    * @param maxLifetime                Number of coordinator runs after which a
    *                                   replica remaining in the queue is considered
    *                                   to be stuck and triggers an alert.
-   * @param maxReplicaAssignmentsInRun Max number of replicas that can be assigned
-   *                                   for loading in the current coordinator run.
+   * @param maxReplicaAssignmentsInRun Max number of total replicas that can be
+   *                                   assigned across all tiers in the current run.
    */
   public ReplicationThrottler(
       Set<String> eligibleTiers,

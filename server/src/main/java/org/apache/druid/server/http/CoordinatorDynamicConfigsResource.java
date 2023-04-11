@@ -121,8 +121,7 @@ public class CoordinatorDynamicConfigsResource
                 CoordinatorDynamicConfig.CONFIG_KEY,
                 count
             )
-        )
-                       .build();
+        ).build();
       }
       catch (IllegalArgumentException e) {
         return Response.status(Response.Status.BAD_REQUEST)
@@ -136,8 +135,7 @@ public class CoordinatorDynamicConfigsResource
             CoordinatorDynamicConfig.CONFIG_KEY,
             theInterval
         )
-    )
-                   .build();
+    ).build();
   }
 
 }
