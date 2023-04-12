@@ -69,7 +69,9 @@ import java.util.Map;
 
 /**
  * Calcite tests which involve subqueries and materializing the intermediate results on {@link org.apache.druid.server.ClientQuerySegmentWalker}
- * The tests are run with two different
+ * The tests are run with two different codepaths:
+ * 1. Where the memory limit is not set. The intermediate results are materialized as inline rows
+ * 2. Where the memory limit is set. The intermediate results are materialized as frames
  */
 @RunWith(Parameterized.class)
 public class CalciteSubqueryTest extends BaseCalciteQueryTest
@@ -103,7 +105,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @Test
   public void testExactCountDistinctUsingSubqueryWithWhereToOuterFilter()
   {
-    msqCompatible();
     // Cannot vectorize topN operator.
     cannotVectorize();
 
@@ -152,7 +153,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @Test
   public void testExactCountDistinctOfSemiJoinResult()
   {
-    msqCompatible();
     // Cannot vectorize due to extraction dimension spec.
     cannotVectorize();
 
@@ -224,7 +224,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   public void testTwoExactCountDistincts()
   {
     requireMergeBuffers(6);
-    msqCompatible();
     testQuery(
         PLANNER_CONFIG_NO_HLL,
         queryContext,
@@ -353,7 +352,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByWithPostAggregatorReferencingTimeFloorColumnOnTimeseries()
   {
-    msqCompatible();
     cannotVectorize();
 
     testQuery(
@@ -454,7 +452,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @Test
   public void testUsingSubqueryAsFilterOnTwoColumns()
   {
-    msqCompatible();
     testQuery(
         "SELECT __time, cnt, dim1, dim2 FROM druid.foo "
         + " WHERE (dim1, dim2) IN ("
@@ -541,19 +538,24 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                             )
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setLimitSpec(
-                            new DefaultLimitSpec(
-                                ImmutableList.of(),
-                                1
-                            )
-                        )
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(
+                            useDefault ?
                             aggregators(
                                 new LongMaxAggregatorFactory("_a0", "a0"),
                                 new LongMinAggregatorFactory("_a1", "a0"),
                                 new LongSumAggregatorFactory("_a2:sum", "a0"),
                                 new CountAggregatorFactory("_a2:count"),
+                                new LongMaxAggregatorFactory("_a3", "d0"),
+                                new CountAggregatorFactory("_a4")
+                            ) : aggregators(
+                                new LongMaxAggregatorFactory("_a0", "a0"),
+                                new LongMinAggregatorFactory("_a1", "a0"),
+                                new LongSumAggregatorFactory("_a2:sum", "a0"),
+                                new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("_a2:count"),
+                                    not(selector("a0", null, null))
+                                ),
                                 new LongMaxAggregatorFactory("_a3", "d0"),
                                 new CountAggregatorFactory("_a4")
                             )
@@ -568,10 +570,10 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                         new FieldAccessPostAggregator(null, "_a2:count")
                                     )
                                 ),
-                                expressionPostAgg("s0", "timestamp_extract(\"_a3\",'EPOCH','UTC')")
+                                expressionPostAgg("p0", "timestamp_extract(\"_a3\",'EPOCH','UTC')")
                             )
                         )
-                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setContext(queryContext)
                         .build()
         ),
         ImmutableList.of(new Object[]{1L, 1L, 1L, 978480000L, 6L})
@@ -667,7 +669,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @Test
   public void testZeroMaxNumericInFilter()
   {
-    msqCompatible();
     expectedException.expect(UOE.class);
     expectedException.expectMessage("[maxNumericInFilters] must be greater than 0");
 
@@ -692,7 +693,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @Test
   public void testUseTimeFloorInsteadOfGranularityOnJoinResult()
   {
-    msqCompatible();
     cannotVectorize();
 
     testQuery(
@@ -775,7 +775,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @Test
   public void testJoinWithTimeDimension()
   {
-    msqCompatible();
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         queryContext,
@@ -812,7 +811,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @Test
   public void testUsingSubqueryWithLimit()
   {
-    msqCompatible();
     // Cannot vectorize scan query.
     cannotVectorize();
 
@@ -845,7 +843,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelfJoin()
   {
-    msqCompatible();
     // Cannot vectorize due to virtual columns.
     cannotVectorize();
 
