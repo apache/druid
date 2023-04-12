@@ -54,7 +54,7 @@ import java.util.Map;
  * a Druid JSON signature, or an SQL {@code EXTEND} list of columns.
  * As with all table functions, the {@code EXTEND} is optional.
  */
-public class ExternalOperatorConversion extends DruidUserDefinedTableMacroConversion
+public class ExternalOperatorConversion extends DruidExternTableMacroConversion
 {
   public static final String FUNCTION_NAME = "EXTERN";
 
@@ -110,10 +110,13 @@ public class ExternalOperatorConversion extends DruidUserDefinedTableMacroConver
           rowSignature = jsonMapper.readValue(sigValue, RowSignature.class);
         }
 
+        String inputSrcStr = CatalogUtils.getString(args, INPUT_SOURCE_PARAM);
+        InputSource inputSource = jsonMapper.readValue(inputSrcStr, InputSource.class);
         return new ExternalTableSpec(
-            jsonMapper.readValue(CatalogUtils.getString(args, INPUT_SOURCE_PARAM), InputSource.class),
+            inputSource,
             jsonMapper.readValue(CatalogUtils.getString(args, INPUT_FORMAT_PARAM), InputFormat.class),
-            rowSignature
+            rowSignature,
+            inputSource::getTypes
         );
       }
       catch (JsonProcessingException e) {

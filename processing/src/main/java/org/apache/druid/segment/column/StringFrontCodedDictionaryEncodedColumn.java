@@ -31,12 +31,14 @@ import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarMultiInts;
 import org.apache.druid.segment.data.FrontCodedIndexed;
+import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.data.SingleIndexedInt;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.apache.druid.segment.historical.HistoricalDimensionSelector;
 import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelector;
+import org.apache.druid.segment.nested.NestedCommonFormatColumn;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
@@ -56,7 +58,8 @@ import java.util.BitSet;
  * This class is otherwise nearly identical to {@link StringDictionaryEncodedColumn} other than the dictionary
  * difference.
  */
-public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncodedColumn<String>
+public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncodedColumn<String>,
+    NestedCommonFormatColumn
 {
   @Nullable
   private final ColumnarInts column;
@@ -478,5 +481,17 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
   public void close() throws IOException
   {
     CloseableUtils.closeAll(column, multiValueColumn);
+  }
+
+  @Override
+  public ColumnType getLogicalType()
+  {
+    return ColumnType.STRING;
+  }
+
+  @Override
+  public Indexed<String> getStringDictionary()
+  {
+    return new StringEncodingStrategies.Utf8ToStringIndexed(utf8Dictionary);
   }
 }

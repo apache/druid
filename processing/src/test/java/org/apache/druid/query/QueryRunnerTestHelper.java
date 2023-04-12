@@ -111,7 +111,8 @@ public class QueryRunnerTestHelper
           "\"" + QueryRunnerTestHelper.PLACEMENTISH_DIMENSION + "\"",
           null,
           ExprMacroTable.nil()
-      )
+      ),
+      null
   );
 
   public static final Granularity DAY_GRAN = Granularities.DAY;

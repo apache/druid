@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -36,10 +37,15 @@ import org.apache.druid.indexing.common.task.batch.parallel.PartialGenericSegmen
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialRangeSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.server.security.ResourceAction;
 
+import javax.annotation.Nonnull;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Represents a task that can run on a worker. The general contracts surrounding Tasks are:
@@ -137,6 +143,33 @@ public interface Task
    * Returns the datasource this task operates on. Each task can operate on only one datasource.
    */
   String getDataSource();
+
+  /**
+   * @return The types of {@link org.apache.druid.data.input.InputSource} that the task uses. Empty set is returned if
+   * the task does not use any. Users can be given permission to access particular types of
+   * input sources but not others, using the
+   * {@link org.apache.druid.server.security.AuthConfig#enableInputSourceSecurity} config.
+   * @throws UnsupportedOperationException if the given task type does not suppoert input source based security. Such
+   * would be the case, if the task uses firehose.
+   */
+  @JsonIgnore
+  @Nonnull
+  default Set<ResourceAction> getInputSourceResources() throws UOE
+  {
+    throw new UOE(StringUtils.format(
+        "Task type [%s], does not support input source based security",
+        getType()
+    ));
+  }
+
+  default UOE getInputSecurityOnFirehoseUnsupportedError()
+  {
+    throw new UOE(StringUtils.format(
+        "Input source based security cannot be performed '%s' task because it uses firehose."
+        + " Change the tasks configuration, or disable `isEnableInputSourceSecurity`",
+        getType()
+    ));
+  }
 
   /**
    * Returns query runners for this task. If this task is not meant to answer queries over its datasource, this method

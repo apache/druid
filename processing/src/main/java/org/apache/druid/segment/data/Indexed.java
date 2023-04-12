@@ -23,8 +23,11 @@ import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.Iterator;
 
 /**
  * Indexed is a fixed-size, immutable, indexed set of values which allows
@@ -36,6 +39,43 @@ import javax.annotation.Nullable;
 @PublicApi
 public interface Indexed<T> extends Iterable<T>, HotLoopCallee
 {
+  static <T> Indexed<T> empty()
+  {
+    return new Indexed<T>()
+    {
+      @Override
+      public int size()
+      {
+        return 0;
+      }
+
+      @Nullable
+      @Override
+      public T get(int index)
+      {
+        Indexed.checkIndex(index, 0);
+        return null;
+      }
+
+      @Override
+      public int indexOf(@Nullable T value)
+      {
+        return -1;
+      }
+
+      @Override
+      public Iterator<T> iterator()
+      {
+        return Collections.emptyIterator();
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        // nothing to inspect
+      }
+    };
+  }
 
   /**
    * Number of elements in the value set

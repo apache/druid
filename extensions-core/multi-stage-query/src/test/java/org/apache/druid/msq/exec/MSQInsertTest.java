@@ -128,6 +128,11 @@ public class MSQInsertTest extends MSQTestBase
                              .with().rows(expectedArray).frames(expectedArray),
                          2, 0, "input0"
                      )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(Arrays.stream(expectedArray).sum()),
+                         2, 0
+                     )
                      .verifyResults();
 
   }
@@ -187,6 +192,11 @@ public class MSQInsertTest extends MSQTestBase
                          CounterSnapshotMatcher
                              .with().rows(1).frames(1),
                          2, 0, "input0"
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(1),
+                         2, 0
                      )
                      .verifyResults();
 
@@ -362,6 +372,11 @@ public class MSQInsertTest extends MSQTestBase
                              .with().rows(expectedArray).frames(expectedArray),
                          2, 0, "input0"
                      )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(Arrays.stream(expectedArray).sum()),
+                         2, 0
+                     )
                      .verifyResults();
 
   }
@@ -481,11 +496,8 @@ public class MSQInsertTest extends MSQTestBase
                      .setQueryContext(localContext)
                      .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
                          CoreMatchers.instanceOf(ISE.class),
-                         ThrowableMessageMatcher.hasMessage(!FAULT_TOLERANCE.equals(contextName)
-                                                            ? CoreMatchers.containsString(
-                             "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false.")
-                                                            :
-                                                            CoreMatchers.containsString("exceeded max relaunch count")
+                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                             "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further.")
                          )
                      ))
                      .verifyExecutionError();
@@ -539,6 +551,11 @@ public class MSQInsertTest extends MSQTestBase
                              .with().rows(expectedArray).frames(expectedArray),
                          2, 0, "input0"
                      )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(Arrays.stream(expectedArray).sum()),
+                         2, 0
+                     )
                      .verifyResults();
 
   }
@@ -590,6 +607,11 @@ public class MSQInsertTest extends MSQTestBase
                          CounterSnapshotMatcher
                              .with().rows(expectedArray).frames(expectedArray),
                          2, 0, "input0"
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(Arrays.stream(expectedArray).sum()),
+                         2, 0
                      )
                      .verifyResults();
 
@@ -703,6 +725,11 @@ public class MSQInsertTest extends MSQTestBase
                              .with().rows(1).frames(1),
                          2, 0, "input0"
                      )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(1),
+                         2, 0
+                     )
                      .verifyResults();
   }
 
@@ -772,6 +799,11 @@ public class MSQInsertTest extends MSQTestBase
                          CounterSnapshotMatcher
                              .with().rows(6).frames(1),
                          2, 0, "input0"
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(6),
+                         2, 0
                      )
                      .verifyResults();
 

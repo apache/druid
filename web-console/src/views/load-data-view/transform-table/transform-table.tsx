@@ -30,22 +30,28 @@ import {
 } from '../../../react-table';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
 import { escapeColumnName } from '../../../utils/druid-expression';
-import type { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
+import type { SampleEntry, SampleResponse } from '../../../utils/sampler';
+import { getHeaderNamesFromSampleResponse } from '../../../utils/sampler';
 
 import './transform-table.scss';
 
 export function transformTableSelectedColumnName(
-  sampleData: SampleHeaderAndRows,
+  sampleResponse: SampleResponse,
   selectedTransform: Partial<Transform> | undefined,
 ): string | undefined {
   if (!selectedTransform) return;
   const selectedTransformName = selectedTransform.name;
-  if (selectedTransformName && !sampleData.header.includes(selectedTransformName)) return;
+  if (
+    selectedTransformName &&
+    !getHeaderNamesFromSampleResponse(sampleResponse).includes(selectedTransformName)
+  ) {
+    return;
+  }
   return selectedTransformName;
 }
 
 export interface TransformTableProps {
-  sampleData: SampleHeaderAndRows;
+  sampleResponse: SampleResponse;
   columnFilter: string;
   transformedColumnsOnly: boolean;
   transforms: Transform[];
@@ -55,7 +61,7 @@ export interface TransformTableProps {
 
 export const TransformTable = React.memo(function TransformTable(props: TransformTableProps) {
   const {
-    sampleData,
+    sampleResponse,
     columnFilter,
     transformedColumnsOnly,
     transforms,
@@ -66,12 +72,12 @@ export const TransformTable = React.memo(function TransformTable(props: Transfor
   return (
     <ReactTable
       className={classNames('transform-table', DEFAULT_TABLE_CLASS_NAME)}
-      data={sampleData.rows}
+      data={sampleResponse.data}
       sortable={false}
       defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
       pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
-      showPagination={sampleData.rows.length > STANDARD_TABLE_PAGE_SIZE}
-      columns={filterMap(sampleData.header, (columnName, i) => {
+      showPagination={sampleResponse.data.length > STANDARD_TABLE_PAGE_SIZE}
+      columns={filterMap(getHeaderNamesFromSampleResponse(sampleResponse), (columnName, i) => {
         if (!caseInsensitiveContains(columnName, columnFilter)) return;
         const timestamp = columnName === '__time';
         const transformIndex = transforms.findIndex(f => f.name === columnName);

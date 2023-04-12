@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.dimension.ColumnSelectorStrategy;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
@@ -321,6 +322,8 @@ public final class DimensionHandlerUtils
       return (Long) valObj;
     } else if (valObj instanceof Number) {
       return ((Number) valObj).longValue();
+    } else if (valObj instanceof Boolean) {
+      return Evals.asLong((Boolean) valObj);
     } else if (valObj instanceof String) {
       Long ret = DimensionHandlerUtils.getExactLongFromDecimalString((String) valObj);
       if (reportParseExceptions && ret == null) {
@@ -623,5 +626,16 @@ public final class DimensionHandlerUtils
   public static Float nullToZero(@Nullable Float number)
   {
     return number == null ? ZERO_FLOAT : number;
+  }
+
+  public static boolean isNumericNull(@Nullable Object o)
+  {
+    if (o instanceof Number) {
+      return false;
+    }
+    if (o instanceof String && Doubles.tryParse((String) o) != null) {
+      return false;
+    }
+    return true;
   }
 }

@@ -745,7 +745,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
       );
     }
     finally {
-      ExpressionProcessing.initializeForTests(null);
+      ExpressionProcessing.initializeForTests();
     }
   }
 

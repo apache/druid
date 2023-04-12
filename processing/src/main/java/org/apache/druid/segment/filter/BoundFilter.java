@@ -89,11 +89,13 @@ public class BoundFilter implements Filter
             boundDimFilter.getUpper(),
             boundDimFilter.isUpperStrict()
         );
-        // preserve sad backwards compatible behavior where bound filter matches 'null' if the lower bound is not set
-        if (boundDimFilter.hasLowerBound() && !NullHandling.isNullOrEquivalent(boundDimFilter.getLower())) {
-          return rangeBitmaps;
-        } else {
-          return wrapRangeIndexWithNullValueIndex(indexSupplier, rangeBitmaps);
+        if (rangeBitmaps != null) {
+          // preserve sad backwards compatible behavior where bound filter matches 'null' if the lower bound is not set
+          if (boundDimFilter.hasLowerBound() && !NullHandling.isNullOrEquivalent(boundDimFilter.getLower())) {
+            return rangeBitmaps;
+          } else {
+            return wrapRangeIndexWithNullValueIndex(indexSupplier, rangeBitmaps);
+          }
         }
       }
     }
@@ -112,16 +114,20 @@ public class BoundFilter implements Filter
             upper,
             boundDimFilter.isUpperStrict()
         );
-        // preserve sad backwards compatible behavior where bound filter matches 'null' if the lower bound is not set
-        if (boundDimFilter.hasLowerBound() && !NullHandling.isNullOrEquivalent(boundDimFilter.getLower())) {
-          return rangeBitmaps;
-        } else {
-          return wrapRangeIndexWithNullValueIndex(indexSupplier, rangeBitmaps);
+        if (rangeBitmaps != null) {
+          // preserve sad backwards compatible behavior where bound filter matches 'null' if the lower bound is not set
+          if (boundDimFilter.hasLowerBound() && !NullHandling.isNullOrEquivalent(boundDimFilter.getLower())) {
+            return rangeBitmaps;
+          } else {
+            return wrapRangeIndexWithNullValueIndex(indexSupplier, rangeBitmaps);
+          }
         }
       }
     }
+
     // fall back to predicate based index if it is available
     return Filters.makePredicateIndex(boundDimFilter.getDimension(), selector, getPredicateFactory());
+
   }
 
   @Nullable

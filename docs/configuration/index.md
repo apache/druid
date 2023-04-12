@@ -1168,9 +1168,9 @@ There are additional configs for autoscaling (if it is enabled):
 
 The `druid.supervisor.idleConfig.*` specified in the runtime properties of the overlord defines the default behavior for the entire cluster. See [Idle Configuration in Kafka Supervisor IOConfig](../development/extensions-core/kafka-supervisor-reference.md#kafkasupervisorioconfig) to override it for an individual supervisor.
 
-#### Overlord Dynamic Configuration
+#### Overlord dynamic configuration
 
-The Overlord can dynamically change worker behavior.
+The Overlord can be dynamically configured to specify how tasks are assigned to workers.
 
 The JSON object can be submitted to the Overlord via a POST request at:
 
@@ -1178,14 +1178,14 @@ The JSON object can be submitted to the Overlord via a POST request at:
 http://<OVERLORD_IP>:<port>/druid/indexer/v1/worker
 ```
 
-Optional Header Parameters for auditing the config change can also be specified.
+Optional header parameters for auditing the config change can also be specified.
 
 |Header Param Name| Description | Default |
 |----------|-------------|---------|
 |`X-Druid-Author`| author making the config change|""|
 |`X-Druid-Comment`| comment describing the change being done|""|
 
-A sample worker config spec is shown below:
+An example Overlord dynamic config is shown below:
 
 ```json
 {
@@ -1223,12 +1223,12 @@ A sample worker config spec is shown below:
 }
 ```
 
-Issuing a GET request at the same URL will return the current worker config spec that is currently in place. The worker config spec list above is just a sample for EC2 and it is possible to extend the code base for other deployment environments. A description of the worker config spec is shown below.
+Issuing a GET request to the same URL returns the current Overlord dynamic config.
 
-|Property|Description|Default|
-|--------|-----------|-------|
-|`selectStrategy`|How to assign tasks to MiddleManagers. Choices are `fillCapacity`, `equalDistribution`, and `javascript`.|equalDistribution|
-|`autoScaler`|Only used if autoscaling is enabled. See below.|null|
+|Property| Description                                                                                                                                                                                 | Default                       |
+|--------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------|
+|`selectStrategy`| Describes how to assign tasks to MiddleManagers. The type can be `equalDistribution`, `equalDistributionWithCategorySpec`, `fillCapacity`, `fillCapacityWithCategorySpec`, and `javascript`. | `{"type":"equalDistribution"}` |
+|`autoScaler`| Only used if autoscaling is enabled. See below. | null |
 
 To view the audit history of worker config issue a GET request to the URL -
 
@@ -1236,39 +1236,73 @@ To view the audit history of worker config issue a GET request to the URL -
 http://<OVERLORD_IP>:<port>/druid/indexer/v1/worker/history?interval=<interval>
 ```
 
-default value of interval can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in Overlord runtime.properties.
+The default value of `interval` can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in Overlord runtime.properties.
 
-To view last `n` entries of the audit history of worker config issue a GET request to the URL -
+To view the last `n` entries of the audit history of worker config, issue a GET request to the following URL:
 
 ```
 http://<OVERLORD_IP>:<port>/druid/indexer/v1/worker/history?count=<n>
 ```
 
-##### Worker Select Strategy
+##### Worker select strategy
 
-Worker select strategies control how Druid assigns tasks to MiddleManagers.
+The select strategy controls how Druid assigns tasks to workers (MiddleManagers).
+At a high level, the select strategy determines the list of eligible workers for a given task using
+either an `affinityConfig` or a `categorySpec`. Then, Druid assigns the task by either trying to distribute load equally
+(`equalDistribution`) or to fill as many workers as possible to capacity (`fillCapacity`).
+There are 4 options for select strategies:
 
-###### Equal Distribution
+- [`equalDistribution`](#equaldistribution)
+- [`equalDistributionWithCategorySpec`](#equaldistributionwithcategoryspec)
+- [`fillCapacity`](#fillcapacity)
+- [`fillCapacityWithCategorySpec`](#fillcapacitywithcategoryspec)
 
-Tasks are assigned to the MiddleManager with the most free slots at the time the task begins running. This is useful if
-you want work evenly distributed across your MiddleManagers.
+A `javascript` option is also available but should only be used for prototyping new strategies.
+
+If an `affinityConfig` is provided (as part of `fillCapacity` and `equalDistribution` strategies) for a given task, the list of workers eligible to be assigned is determined as follows:
+
+- a non-affinity worker if no affinity is specified for that datasource. Any worker not listed in the `affinityConfig` is considered a non-affinity worker.
+- a non-affinity worker if preferred workers are not available and the affinity is _weak_ i.e. `strong: false`.
+- a preferred worker listed in the `affinityConfig` for this datasource if it has available capacity
+- no worker if preferred workers are not available and affinity is _strong_ i.e. `strong: true`. In this case, the task remains in "pending" state. The chosen provisioning strategy (e.g. `pendingTaskBased`) may then use the total number of pending tasks to determine if a new node should be provisioned.
+
+Note that every worker listed in the `affinityConfig` will only be used for the assigned datasources and no other.
+
+If a `categorySpec` is provided (as part of `fillCapacityWithCategorySpec` and `equalDistributionWithCategorySpec` strategies), then a task of a given datasource may be assigned to:
+
+- any worker if no category config is given for task type
+- any worker if category config is given for task type but no category is given for datasource and there's no default category
+- a preferred worker (based on category config and category for datasource) if available
+- any worker if category config and category are given but no preferred worker is available and category config is `weak`
+- not assigned at all if preferred workers are not available and category config is `strong`
+
+In both the cases, Druid determines the list of eligible workers and selects one depending on their load with the goal of either distributing the load equally or filling as few workers as possible.
+
+If you are using auto-scaling, use the `fillCapacity` select strategy since auto-scaled nodes can
+not be assigned a category, and you want the work to be concentrated on the fewest number of workers to allow the empty ones to scale down.
+
+###### `equalDistribution`
+
+Tasks are assigned to the MiddleManager with the most free slots at the time the task begins running.
+This evenly distributes work across your MiddleManagers.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`type`|`equalDistribution`.|required; must be `equalDistribution`|
-|`affinityConfig`|[Affinity config](#affinity) object|null (no affinity)|
+|`type`|`equalDistribution`|required; must be `equalDistribution`|
+|`affinityConfig`|[`AffinityConfig`](#affinityconfig) object|null (no affinity)|
 
-###### Equal Distribution With Category Spec
+###### `equalDistributionWithCategorySpec`
 
-This strategy is a variant of `Equal Distribution`, which support `workerCategorySpec` field rather than `affinityConfig`. By specifying `workerCategorySpec`, you can assign tasks to run on different categories of MiddleManagers based on the tasks' **taskType** and **dataSource name**. This strategy can't work with `AutoScaler` since the behavior is undefined.
+This strategy is a variant of `equalDistribution`, which supports `workerCategorySpec` field rather than `affinityConfig`.
+By specifying `workerCategorySpec`, you can assign tasks to run on different categories of MiddleManagers based on the **type** and **dataSource** of the task.
+This strategy doesn't work with `AutoScaler` since the behavior is undefined.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`type`|`equalDistributionWithCategorySpec`.|required; must be `equalDistributionWithCategorySpec`|
-|`workerCategorySpec`|[Worker Category Spec](#workercategoryspec) object|null (no worker category spec)|
+|`type`|`equalDistributionWithCategorySpec`|required; must be `equalDistributionWithCategorySpec`|
+|`workerCategorySpec`|[`WorkerCategorySpec`](#workercategoryspec) object|null (no worker category spec)|
 
-Example: specify tasks default to run on **c1** whose task
-type is "index_kafka", while dataSource "ds1" run on **c2**.
+Example: tasks of type "index_kafka" default to running on MiddleManagers of category `c1`, except for tasks that write to datasource "ds1," which  run on MiddleManagers of category `c2`.
 
 ```json
 {
@@ -1278,10 +1312,10 @@ type is "index_kafka", while dataSource "ds1" run on **c2**.
       "strong": false,
       "categoryMap": {
         "index_kafka": {
-           "defaultCategory": "c1",
-           "categoryAffinity": {
-              "ds1": "c2"
-           }
+          "defaultCategory": "c1", 
+          "categoryAffinity": {
+            "ds1": "c2"
+          }
         }
       }
     }
@@ -1289,34 +1323,34 @@ type is "index_kafka", while dataSource "ds1" run on **c2**.
 }
 ```
 
-###### Fill Capacity
+###### `fillCapacity`
 
-Tasks are assigned to the worker with the most currently-running tasks at the time the task begins running. This is
-useful in situations where you are elastically auto-scaling MiddleManagers, since it will tend to pack some full and
+Tasks are assigned to the worker with the most currently-running tasks. This is
+useful when you are auto-scaling MiddleManagers since it tends to pack some full and
 leave others empty. The empty ones can be safely terminated.
 
 Note that if `druid.indexer.runner.pendingTasksRunnerNumThreads` is set to _N_ > 1, then this strategy will fill _N_
 MiddleManagers up to capacity simultaneously, rather than a single MiddleManager.
 
-|Property|Description|Default|
-|--------|-----------|-------|
-|`type`|`fillCapacity`.|required; must be `fillCapacity`|
-|`affinityConfig`|[Affinity config](#affinity) object|null (no affinity)|
+|Property| Description                             |Default|
+|--------|-----------------------------------------|-------|
+|`type`| `fillCapacity`                          |required; must be `fillCapacity`|
+|`affinityConfig`| [`AffinityConfig`](#affinityconfig) object |null (no affinity)|
 
-###### Fill Capacity With Category Spec
+###### `fillCapacityWithCategorySpec`
 
-This strategy is a variant of `Fill Capacity`, which support `workerCategorySpec` field rather than `affinityConfig`. The usage is the same with _equalDistributionWithCategorySpec_ strategy. This strategy can't work with `AutoScaler` since the behavior is undefined.
+This strategy is a variant of `fillCapacity`, which supports `workerCategorySpec` instead of an `affinityConfig`.
+The usage is the same as `equalDistributionWithCategorySpec` strategy.
+This strategy doesn't work with `AutoScaler` since the behavior is undefined.
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`type`|`fillCapacityWithCategorySpec`.|required; must be `fillCapacityWithCategorySpec`|
-|`workerCategorySpec`|[Worker Category Spec](#workercategoryspec) object|null (no worker category spec)|
-
-> Before using the _equalDistributionWithCategorySpec_ and _fillCapacityWithCategorySpec_ strategies, you must upgrade overlord and all MiddleManagers to the version that support this feature.
+|`workerCategorySpec`|[`WorkerCategorySpec`](#workercategoryspec) object|null (no worker category spec)|
 
 <a name="javascript-worker-select-strategy"></a>
 
-###### JavaScript
+###### `javascript`
 
 Allows defining arbitrary logic for selecting workers to run task using a JavaScript function.
 The function is passed remoteTaskRunnerConfig, map of workerId to available workers and task to be executed and returns the workerId on which the task should be run or null if the task cannot be run.
@@ -1326,32 +1360,33 @@ its better to write a druid extension module with extending current worker selec
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`type`|`javascript`.|required; must be `javascript`|
+|`type`|`javascript`|required; must be `javascript`|
 |`function`|String representing JavaScript function| |
 
 Example: a function that sends batch_index_task to workers 10.0.0.1 and 10.0.0.2 and all other tasks to other available workers.
 
 ```
 {
-"type":"javascript",
-"function":"function (config, zkWorkers, task) {\nvar batch_workers = new java.util.ArrayList();\nbatch_workers.add(\"middleManager1_hostname:8091\");\nbatch_workers.add(\"middleManager2_hostname:8091\");\nworkers = zkWorkers.keySet().toArray();\nvar sortedWorkers = new Array()\n;for(var i = 0; i < workers.length; i++){\n sortedWorkers[i] = workers[i];\n}\nArray.prototype.sort.call(sortedWorkers,function(a, b){return zkWorkers.get(b).getCurrCapacityUsed() - zkWorkers.get(a).getCurrCapacityUsed();});\nvar minWorkerVer = config.getMinWorkerVersion();\nfor (var i = 0; i < sortedWorkers.length; i++) {\n var worker = sortedWorkers[i];\n  var zkWorker = zkWorkers.get(worker);\n  if(zkWorker.canRunTask(task) && zkWorker.isValidVersion(minWorkerVer)){\n    if(task.getType() == 'index_hadoop' && batch_workers.contains(worker)){\n      return worker;\n    } else {\n      if(task.getType() != 'index_hadoop' && !batch_workers.contains(worker)){\n        return worker;\n      }\n    }\n  }\n}\nreturn null;\n}"
+  "type":"javascript",
+  "function":"function (config, zkWorkers, task) {\nvar batch_workers = new java.util.ArrayList();\nbatch_workers.add(\"middleManager1_hostname:8091\");\nbatch_workers.add(\"middleManager2_hostname:8091\");\nworkers = zkWorkers.keySet().toArray();\nvar sortedWorkers = new Array()\n;for(var i = 0; i < workers.length; i++){\n sortedWorkers[i] = workers[i];\n}\nArray.prototype.sort.call(sortedWorkers,function(a, b){return zkWorkers.get(b).getCurrCapacityUsed() - zkWorkers.get(a).getCurrCapacityUsed();});\nvar minWorkerVer = config.getMinWorkerVersion();\nfor (var i = 0; i < sortedWorkers.length; i++) {\n var worker = sortedWorkers[i];\n  var zkWorker = zkWorkers.get(worker);\n  if(zkWorker.canRunTask(task) && zkWorker.isValidVersion(minWorkerVer)){\n    if(task.getType() == 'index_hadoop' && batch_workers.contains(worker)){\n      return worker;\n    } else {\n      if(task.getType() != 'index_hadoop' && !batch_workers.contains(worker)){\n        return worker;\n      }\n    }\n  }\n}\nreturn null;\n}"
 }
 ```
 
 > JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
 
-###### Affinity
+###### affinityConfig
 
-Use the `affinityConfig` field to pass affinity configuration to the _equalDistribution_ and _fillCapacity_ strategies. If not provided, the default is to not use affinity at all.
+Use the `affinityConfig` field to pass affinity configuration to the `equalDistribution` and `fillCapacity` strategies.
+If not provided, the default is to have no affinity.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`affinity`|JSON object mapping a datasource String name to a list of indexing service MiddleManager host:port String values. Druid doesn't perform DNS resolution, so the 'host' value must match what is configured on the MiddleManager and what the MiddleManager announces itself as (examine the Overlord logs to see what your MiddleManager announces itself as).|{}|
+|`affinity`|JSON object mapping a datasource String name to a list of indexing service MiddleManager `host:port` values. Druid doesn't perform DNS resolution, so the 'host' value must match what is configured on the MiddleManager and what the MiddleManager announces itself as (examine the Overlord logs to see what your MiddleManager announces itself as).|{}|
 |`strong`|When `true` tasks for a datasource must be assigned to affinity-mapped MiddleManagers. Tasks remain queued until a slot becomes available.  When `false`, Druid may assign tasks for a datasource to other MiddleManagers when affinity-mapped MiddleManagers are unavailable to run queued tasks.|false|
 
-###### WorkerCategorySpec
+###### workerCategorySpec
 
-WorkerCategorySpec can be provided to the _equalDistributionWithCategorySpec_ and _fillCapacityWithCategorySpec_ strategies using the "workerCategorySpec"
+WorkerCategorySpec can be provided to the `equalDistributionWithCategorySpec` and `fillCapacityWithCategorySpec` strategies using the `workerCategorySpec`
 field. If not provided, the default is to not use it at all.
 
 |Property|Description|Default|
@@ -1372,13 +1407,14 @@ Amazon's EC2 together with Google's GCE are currently the only supported autosca
 
 EC2's autoscaler properties are:
 
-|Property|Description|Default|
-|--------|-----------|-------|
-|`minNumWorkers`|The minimum number of workers that can be in the cluster at any given time.|0|
-|`maxNumWorkers`|The maximum number of workers that can be in the cluster at any given time.|0|
-|`availabilityZone`|What availability zone to run in.|none|
-|`nodeData`|A JSON object that describes how to launch new nodes.|none; required|
-|`userData`|A JSON object that describes how to configure new nodes. If you have set druid.indexer.autoscale.workerVersion, this must have a versionReplacementString. Otherwise, a versionReplacementString is not necessary.|none; optional|
+| Property                     | Description                                                                                                                                                                                                        |Default|
+|------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------|
+| `type`                       | `ec2`                                                                                                                                                                                                              |0|
+| `minNumWorkers`              | The minimum number of workers that can be in the cluster at any given time.                                                                                                                                        |0|
+| `maxNumWorkers`              | The maximum number of workers that can be in the cluster at any given time.                                                                                                                                        |0|
+| `envConfig.availabilityZone` | What Amazon availability zone to run in.                                                                                                                                                                           |none|
+| `envConfig.nodeData`         | A JSON object that describes how to launch new nodes.                                                                                                                                                              |none; required|
+| `envConfig.userData`         | A JSON object that describes how to configure new nodes. If you have set druid.indexer.autoscale.workerVersion, this must have a versionReplacementString. Otherwise, a versionReplacementString is not necessary. |none; optional|
 
 For GCE's properties, please refer to the [gce-extensions](../development/extensions-contrib/gce-extensions.md).
 
@@ -1808,7 +1844,7 @@ This laning strategy is best suited for cases where one or more external applica
 
 ##### Server Configuration
 
-Druid uses Jetty to serve HTTP requests. Each query being processed consumes a single thread from `druid.server.http.numThreads`, so consider defining `druid.query.scheduler.numThreads` to a lower value in order to reserve HTTP threads for responding to health checks, lookup loading, and other non-query, and in most cases comparatively very short lived, HTTP requests.
+Druid uses Jetty to serve HTTP requests. Each query being processed consumes a single thread from `druid.server.http.numThreads`, so consider defining `druid.query.scheduler.numThreads` to a lower value in order to reserve HTTP threads for responding to health checks, lookup loading, and other non-query, (in most cases) comparatively very short-lived, HTTP requests.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1828,7 +1864,7 @@ Druid uses Jetty to serve HTTP requests. Each query being processed consumes a s
 
 ##### Client Configuration
 
-Druid Brokers use an HTTP client to communicate with with data servers (Historical servers and real-time tasks). This
+Druid Brokers use an HTTP client to communicate with data servers (Historical servers and real-time tasks). This
 client has the following configuration options.
 
 |Property|Description|Default|

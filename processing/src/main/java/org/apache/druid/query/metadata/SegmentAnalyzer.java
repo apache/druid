@@ -134,6 +134,9 @@ public class SegmentAnalyzer
             analysis = analyzeStringColumn(capabilities, storageAdapter, columnName);
           }
           break;
+        case ARRAY:
+          analysis = analyzeArrayColumn(capabilities);
+          break;
         case COMPLEX:
           final ColumnHolder columnHolder = index != null ? index.getColumnHolder(columnName) : null;
           analysis = analyzeComplexColumn(capabilities, numRows, columnHolder);
@@ -384,5 +387,20 @@ public class SegmentAnalyzer
           null
       );
     }
+  }
+
+  private ColumnAnalysis analyzeArrayColumn(final ColumnCapabilities capabilities)
+  {
+    return new ColumnAnalysis(
+        capabilities.toColumnType(),
+        capabilities.getType().name(),
+        false,
+        capabilities.hasNulls().isTrue(),
+        0L,
+        null,
+        null,
+        null,
+        null
+    );
   }
 }

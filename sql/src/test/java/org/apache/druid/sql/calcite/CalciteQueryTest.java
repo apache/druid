@@ -3502,7 +3502,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNullDoubleTopN()
   {
-    msqCompatible();
+    // Disabled test in MSQ till https://github.com/apache/druid/issues/13951 is resolved
+    // msqCompatible();
     List<Object[]> expected;
     if (useDefault) {
       expected = ImmutableList.of(
@@ -3543,7 +3544,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNullFloatTopN()
   {
-    msqCompatible();
+    // Disabled test in MSQ till https://github.com/apache/druid/issues/13951 is resolved
+    // msqCompatible();
     List<Object[]> expected;
     if (useDefault) {
       expected = ImmutableList.of(
@@ -3584,7 +3586,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNullLongTopN()
   {
-    msqCompatible();
+    // Disabled test in MSQ till https://github.com/apache/druid/issues/13951 is resolved
+    // msqCompatible();
     List<Object[]> expected;
     if (useDefault) {
       expected = ImmutableList.of(
@@ -4058,6 +4061,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByWithImpossibleTimeFilter()
   {
+    msqCompatible();
     // this gets optimized into 'false'
     testQuery(
         "SELECT dim1, COUNT(*) FROM druid.foo\n"
@@ -5471,6 +5475,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  /**
+   * Same query as {@link org.apache.druid.msq.test.CalciteSelectQueryMSQTest#testArrayAggQueryOnComplexDatatypes()}.
+   * ARRAY_AGG is not supported in MSQ currently, but is supported as sql-native. Once support is added,
+   * the overriding test can be removed and msqCompatible() can be added here instead.
+   */
   @Test
   public void testArrayAggQueryOnComplexDatatypes()
   {
@@ -6380,7 +6389,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     // When HLL is disabled, APPROX_COUNT_DISTINCT is still approximate.
 
-    msqCompatible();
+    // Disabled test in MSQ till https://github.com/apache/druid/issues/13950 is resolved
+    // msqCompatible();
     testQuery(
         PLANNER_CONFIG_NO_HLL,
         "SELECT APPROX_COUNT_DISTINCT(dim2) FROM druid.foo",
@@ -6413,7 +6423,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testApproxCountDistinctBuiltin()
   {
-    msqCompatible();
+    // Disabled test in MSQ till https://github.com/apache/druid/issues/13950 is resolved
+    // msqCompatible();
     testQuery(
         "SELECT APPROX_COUNT_DISTINCT_BUILTIN(dim2) FROM druid.foo",
         ImmutableList.of(
@@ -6958,7 +6969,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
-
 
   @Test
   public void testAvgDailyCountDistinct()
@@ -7629,6 +7639,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByLimitPushDownWithHavingOnLong()
   {
+    if (NullHandling.sqlCompatible()) {
+      msqCompatible();
+    }
+
     testQuery(
         "SELECT dim1, dim2, SUM(cnt) AS thecnt "
         + "FROM druid.foo "
@@ -13821,6 +13835,90 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{6L}
+        )
+    );
+  }
+
+  @Test
+  public void testOrderByAlongWithInternalScanQuery()
+  {
+    testQuery(
+        "select __time as t, m1 from druid.foo where (m1 in (select distinct m1 from druid.foo)) order by 1 limit 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dataSource(
+                    JoinDataSource.create(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setGranularity(Granularities.ALL)
+                                        .setDataSource(CalciteTests.DATASOURCE1)
+                                        .setInterval(querySegmentSpec(Intervals.of(
+                                            "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
+                                        .setDimensions(new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT))
+                                        .build()
+                        ),
+                        "j0.",
+                        "(\"m1\" == \"j0.d0\")",
+                        JoinType.INNER,
+                        null,
+                        ExprMacroTable.nil(),
+                        CalciteTests.createJoinableFactoryWrapper()
+                    )
+                )
+                .context(QUERY_CONTEXT_DEFAULT)
+                .intervals(querySegmentSpec(Intervals.of(
+                    "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
+                .limit(1)
+                .columns(ImmutableList.of("__time", "m1"))
+                .order(ScanQuery.Order.ASCENDING)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946684800000L, 1.0f}
+        )
+    );
+  }
+
+  @Test
+  public void testOrderByAlongWithInternalScanQueryNoDistinct()
+  {
+    testQuery(
+        "select __time, m1 from druid.foo where (m1 in (select m1 from druid.foo)) order by __time DESC limit 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dataSource(
+                    JoinDataSource.create(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setGranularity(Granularities.ALL)
+                                        .setDataSource(CalciteTests.DATASOURCE1)
+                                        .setInterval(querySegmentSpec(Intervals.of(
+                                            "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
+                                        .setDimensions(new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT))
+                                        .build()
+                        ),
+                        "j0.",
+                        "(\"m1\" == \"j0.d0\")",
+                        JoinType.INNER,
+                        null,
+                        ExprMacroTable.nil(),
+                        CalciteTests.createJoinableFactoryWrapper()
+                    )
+                )
+                .context(QUERY_CONTEXT_DEFAULT)
+                .intervals(querySegmentSpec(Intervals.of(
+                    "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
+                .limit(1)
+                .columns(ImmutableList.of("__time", "m1"))
+                .order(ScanQuery.Order.DESCENDING)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{978480000000L, 6.0f}
         )
     );
   }

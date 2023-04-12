@@ -47,6 +47,7 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ComplexMetrics;
@@ -169,6 +170,39 @@ public class FrameWriterTest extends InitializedNullHandlingTest
     // Complex types can't be sorted, so skip the sortedness tests.
     Assume.assumeThat(sortedness, CoreMatchers.is(KeyOrder.NONE));
     testWithDataset(FrameWriterTestData.TEST_COMPLEX);
+  }
+
+  @Test
+  public void test_readNullAsDefaultValue()
+  {
+    // Test that nulls written in SQL-compatible mode are read as default values in defaut-value mode.
+    Assume.assumeTrue(NullHandling.sqlCompatible());
+
+    final RowSignature signature =
+        RowSignature.builder()
+                    .add("l", ColumnType.LONG)
+                    .add("f", ColumnType.FLOAT)
+                    .add("d", ColumnType.DOUBLE)
+                    .add("s", ColumnType.STRING)
+                    .build();
+
+    final Sequence<List<Object>> rowSequence =
+        Sequences.simple(Collections.singletonList(Arrays.asList(null, null, null, null)));
+    final Pair<Frame, Integer> writeResult = writeFrame(rowSequence, signature, signature.getColumnNames());
+
+    Assert.assertEquals(1, (int) writeResult.rhs);
+
+    try {
+      NullHandling.initializeForTestsWithValues(true, null);
+      verifyFrame(
+          Sequences.simple(Collections.singletonList(Arrays.asList(0L, 0f, 0d, null))),
+          writeResult.lhs,
+          signature
+      );
+    }
+    finally {
+      NullHandling.initializeForTests();
+    }
   }
 
   @Test

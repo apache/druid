@@ -106,7 +106,10 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
   public void test_sliceStatic_noDataSource()
   {
     final TableInputSpec spec = new TableInputSpec("no such datasource", null, null);
-    Assert.assertEquals(Collections.emptyList(), slicer.sliceStatic(spec, 2));
+    Assert.assertEquals(
+        ImmutableList.of(NilInputSlice.INSTANCE, NilInputSlice.INSTANCE),
+        slicer.sliceStatic(spec, 2)
+    );
   }
 
   @Test
@@ -166,7 +169,10 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
         null
     );
 
-    Assert.assertEquals(Collections.emptyList(), slicer.sliceStatic(spec, 2));
+    Assert.assertEquals(
+        ImmutableList.of(NilInputSlice.INSTANCE, NilInputSlice.INSTANCE),
+        slicer.sliceStatic(spec, 2)
+    );
   }
 
   @Test

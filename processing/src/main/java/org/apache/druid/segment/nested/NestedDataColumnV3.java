@@ -24,32 +24,39 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.List;
 
 public final class NestedDataColumnV3<TStringDictionary extends Indexed<ByteBuffer>>
     extends CompressedNestedDataComplexColumn<TStringDictionary>
 {
   public NestedDataColumnV3(
-      NestedDataColumnMetadata metadata,
+      String columnName,
+      ColumnType logicalType,
       ColumnConfig columnConfig,
       CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
       ImmutableBitmap nullValues,
       GenericIndexed<String> fields,
-      NestedLiteralTypeInfo fieldInfo,
+      FieldTypeInfo fieldInfo,
       Supplier<TStringDictionary> stringDictionary,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
-      SmooshedFileMapper fileMapper
+      SmooshedFileMapper fileMapper,
+      BitmapSerdeFactory bitmapSerdeFactory,
+      ByteOrder byteOrder
   )
   {
     super(
-        metadata,
+        columnName,
+        logicalType,
         columnConfig,
         compressedRawColumnSupplier,
         nullValues,
@@ -58,7 +65,10 @@ public final class NestedDataColumnV3<TStringDictionary extends Indexed<ByteBuff
         stringDictionary,
         longDictionarySupplier,
         doubleDictionarySupplier,
+        null,
         fileMapper,
+        bitmapSerdeFactory,
+        byteOrder,
         NestedPathFinder.JQ_PATH_ROOT
     );
   }
