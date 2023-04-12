@@ -239,7 +239,6 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     return correlateRel.explainTerms(pw)
                        .item("query", queryString)
                        .item("signature", druidQuery.getOutputRowSignature());
-    // todo?
   }
 
   // This is called from the DruidRelToDruidRule which converts from the NONE convention to the DRUID convention

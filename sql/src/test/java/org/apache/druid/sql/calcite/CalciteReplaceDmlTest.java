@@ -617,7 +617,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     final String legacyExplanation =
         "DruidQueryRel(query=["
         + queryJsonMapper.writeValueAsString(expectedQuery)
-        + "], signature=[{x:STRING, y:STRING, z:LONG}], statementKind=[REPLACE], targetDataSource=[dst])\n";
+        + "], signature=[{x:STRING, y:STRING, z:LONG}])\n";
 
     final String explanation = "[{"
                 + "\"query\":{\"queryType\":\"scan\","

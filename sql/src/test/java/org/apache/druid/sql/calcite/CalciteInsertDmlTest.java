@@ -873,7 +873,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     final String legacyExplanation =
         "DruidQueryRel(query=["
         + queryJsonMapper.writeValueAsString(expectedQuery)
-        + "], signature=[{x:STRING, y:STRING, z:LONG}], statementKind=[INSERT], targetDataSource=[dst])\n";
+        + "], signature=[{x:STRING, y:STRING, z:LONG}])\n";
 
     final String explanation =
         "["
