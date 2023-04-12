@@ -54,6 +54,7 @@ To interact with a query through the Overlord API, users need the following perm
 ## S3
 
 The MSQ task engine can use S3 to store intermediate files when running queries. This can increase its reliability but requires certain permissions in S3.
+These permissions are required if you configure durable storage. 
 
 Permissions for pushing and fetching intermediate stage results to and from S3:
 

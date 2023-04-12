@@ -715,7 +715,7 @@ druid.msq.intermediate.storage.prefix=YOUR_PREFIX
 druid.msq.intermediate.storage.tempDir=/path/to/your/temp/dir
 ```
 
-For information about these settings and others related to durable storage, see [Durable storage configurations](#durable-storage-configurations).
+For detailed information about the settings related to durable storage, see [Durable storage configurations](#durable-storage-configurations).
 
 
 ### Use durable storage for queries
@@ -738,7 +738,7 @@ The following common service properties control how durable storage behaves:
 |`druid.msq.intermediate.storage.prefix` | n/a | S3 prefix to store intermediate stage results. Provide a unique value for the prefix. Don't share the same prefix between clusters. If the location  includes other files or directories, then they will get cleaned up as well.  |
 | `druid.msq.intermediate.storage.tempDir`|  | Required. Directory path on the local disk to temporarily store intermediate stage results.  |
 
-In addition to the common service properties, there are certain properties that you configure on the Overlord specifically:
+In addition to the common service properties, there are certain properties that you configure on the Overlord specifically to clean up intermediate files:
 
 |Parameter          |Default                                 | Description          |
 |-------------------|----------------------------------------|----------------------|
