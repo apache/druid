@@ -51,13 +51,6 @@ import java.util.stream.Collectors;
  * List of context parameters not present in external docs:
  * <br></br>
  * <ol>
- * <li><b>composedIntermediateSuperSorterStorageEnabled</b>: Whether to enable automatic fallback to durable storage from
- * local storage for sorting's intermediate data. Requires to set-up `intermediateSuperSorterStorageMaxLocalBytes` limit
- * for local storage and durable shuffle storage feature as well. Default value is <b>false</b>.</li>
- *
- * <li><b>intermediateSuperSorterStorageMaxLocalBytes</b>: Whether to enable a byte limit on local storage for
- * sorting's intermediate data. If that limit is crossed,the task fails with {@link org.apache.druid.query.ResourceLimitExceededException}`.
- * Default value is <b>9223372036854775807</b> </li>
  *
  * <li><b>maxInputBytesPerWorker</b>: Should be used in conjunction with taskAssignment `auto` mode. When dividing the
  * input of a stage among the workers, this parameter determines the maximum size in bytes that are given to a single worker
