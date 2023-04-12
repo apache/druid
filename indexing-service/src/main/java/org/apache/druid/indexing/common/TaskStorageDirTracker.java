@@ -56,7 +56,7 @@ public class TaskStorageDirTracker
 
   public TaskStorageDirTracker(List<File> baseTaskDirs)
   {
-    this.baseTaskDirs = baseTaskDirs.toArray(new File[]{});
+    this.baseTaskDirs = baseTaskDirs.toArray(new File[0]);
   }
 
   @LifecycleStart
