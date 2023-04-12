@@ -428,7 +428,6 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       nativeQueriesArrayNode.add(objectNode);
     }
 
-    // TODO: maybe we should include it inside the for loop, so it's flattened, but repetitive info.
     nativeQueriesArrayNode.add(jsonMapper.createObjectNode().put(
         "statementKind", jsonMapper.convertValue(rel.getPlannerContext().getStatementKind(), String.class)));
     nativeQueriesArrayNode.add(jsonMapper.createObjectNode().put(
