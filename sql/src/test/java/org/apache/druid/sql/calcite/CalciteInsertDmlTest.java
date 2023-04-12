@@ -870,33 +870,25 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         )
         .build();
 
-    final String expectedExplanation =
+    final String expectedLegacyExplanation =
         "DruidQueryRel(query=["
         + queryJsonMapper.writeValueAsString(expectedQuery)
         + "], signature=[{x:STRING, y:STRING, z:LONG}], statementKind=[INSERT], targetDataSource=[dst])\n";
 
+    final String expectedNativeExplanation =
+        "["
+        + "{\"query\":{\"queryType\":\"scan\","
+        + "\"dataSource\":{\"type\":\"external\",\"inputSource\":{\"type\":\"inline\",\"data\":\"a,b,1\\nc,d,2\\n\"},"
+        + "\"inputFormat\":{\"type\":\"csv\",\"columns\":[\"x\",\"y\",\"z\"]},"
+        + "\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]},"
+        + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},"
+        + "\"resultFormat\":\"compactedList\",\"columns\":[\"x\",\"y\",\"z\"],\"legacy\":false,"
+        + "\"context\":{\"sqlInsertSegmentGranularity\":\"{\\\"type\\\":\\\"all\\\"}\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
+        + "\"granularity\":{\"type\":\"all\"}},\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]},"
+        + "{\"statementKind\":\"INSERT\"},"
+        + "{\"targetDataSource\":\"dst\"}"
+        + "]";
 
-    testQuery(
-        PlannerConfig.builder().useNativeQueryExplain(true).build(),
-        ImmutableMap.of("sqlQueryId", "dummy"),
-        Collections.emptyList(),
-        StringUtils.format(
-            "EXPLAIN PLAN FOR INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME",
-            externSql(externalDataSource)
-        ),
-        CalciteTests.SUPER_USER_AUTH_RESULT,
-        ImmutableList.of(),
-        new DefaultResultsVerifier(
-            ImmutableList.of(
-                new Object[]{
-                    expectedExplanation,
-                    "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]"
-                }
-            ),
-            null
-        ),
-        null
-    );
 
     // Use testQuery for EXPLAIN (not testIngestionQuery).
     testQuery(
@@ -912,7 +904,30 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         new DefaultResultsVerifier(
             ImmutableList.of(
                 new Object[]{
-                    expectedExplanation,
+                    expectedLegacyExplanation,
+                    "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]"
+                }
+            ),
+            null
+        ),
+        null
+    );
+
+
+    testQuery(
+        PlannerConfig.builder().useNativeQueryExplain(true).build(),
+        ImmutableMap.of("sqlQueryId", "dummy"),
+        Collections.emptyList(),
+        StringUtils.format(
+            "EXPLAIN PLAN FOR INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME",
+            externSql(externalDataSource)
+        ),
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        new DefaultResultsVerifier(
+            ImmutableList.of(
+                new Object[]{
+                    expectedNativeExplanation,
                     "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]"
                 }
             ),

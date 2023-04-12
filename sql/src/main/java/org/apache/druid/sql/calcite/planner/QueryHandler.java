@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -57,6 +58,7 @@ import org.apache.calcite.util.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
@@ -430,7 +432,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     nativeQueriesArrayNode.add(jsonMapper.createObjectNode().put(
         "statementKind", jsonMapper.convertValue(rel.getPlannerContext().getStatementKind(), String.class)));
     nativeQueriesArrayNode.add(jsonMapper.createObjectNode().put(
-        "targetDataSource", jsonMapper.convertValue(rel.getPlannerContext().getTargetDataSource(), String.class)));
+        "targetDataSource", StringUtils.format("%s", rel.getPlannerContext().getTargetDataSource())));
     return jsonMapper.writeValueAsString(nativeQueriesArrayNode);
   }
 
