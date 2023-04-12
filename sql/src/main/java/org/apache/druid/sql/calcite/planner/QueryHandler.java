@@ -234,6 +234,9 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     return "SELECT";
   }
 
+  /**
+   * No target datasource for SELECT/non-DML statements.
+   */
   @Nullable
   @Override
   public SqlNode targetDataSource()

@@ -43,7 +43,17 @@ public interface SqlStatementHandler
   void prepare();
   PrepareResult prepareResult();
   PlannerResult plan() throws ValidationException;
+
+  /**
+   * @return the statement kind for a SQL statement. For example, SELECT, INSERT, or REPLACE.
+   */
   String statementKind();
+
+  /**
+   *
+   * @return the SQL node representing the target table in a SQL statement. Returns
+   * null for SELECT/non-DML statements.
+   */
   @Nullable SqlNode targetDataSource();
 
   /**
