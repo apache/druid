@@ -66,7 +66,9 @@ public class FramesBackedInlineDataSourceSerializer extends StdSerializer<Frames
         JacksonUtils.writeObjectUsingSerializerProvider(jg, serializers, row);
       }
       catch (IOException e) {
-        // Do nothing, shouldn't be possible for now
+        // Ideally, this shouldn't be reachable.
+        // Wrap the IO exception in the runtime exception and propogate it forward
+        throw new RuntimeException(e);
       }
     });
 

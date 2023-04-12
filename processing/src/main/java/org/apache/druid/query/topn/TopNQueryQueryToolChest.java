@@ -562,6 +562,9 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     );
   }
 
+  /**
+   * This returns a single frame containing the rows of the topN query's results
+   */
   @Override
   public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
       TopNQuery query,

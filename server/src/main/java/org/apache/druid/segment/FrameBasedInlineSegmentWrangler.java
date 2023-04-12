@@ -21,16 +21,12 @@ package org.apache.druid.segment;
 
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameSegment;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.FramesBackedInlineDataSource;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.stream.Collectors;
 
 public class FrameBasedInlineSegmentWrangler implements SegmentWrangler
 {
@@ -45,21 +41,12 @@ public class FrameBasedInlineSegmentWrangler implements SegmentWrangler
   {
     final FramesBackedInlineDataSource framesBackedInlineDataSource = (FramesBackedInlineDataSource) dataSource;
 
-    Yielder<FrameSignaturePair> framesYielder = Yielders.each(framesBackedInlineDataSource.getFrames());
-    List<Segment> retVal = new ArrayList<>();
-
-    while (!framesYielder.isDone()) {
-      FrameSignaturePair frameSignaturePair = framesYielder.get();
-
-      retVal.add(new FrameSegment(
-          frameSignaturePair.getFrame(),
-          FrameReader.create(frameSignaturePair.getRowSignature()),
-          SegmentId.dummy(SEGMENT_ID)
-      ));
-
-      framesYielder = framesYielder.next(null);
-    }
-
-    return retVal;
+    return framesBackedInlineDataSource.getFrames().stream().map(
+        frameSignaturePair -> new FrameSegment(
+            frameSignaturePair.getFrame(),
+            FrameReader.create(frameSignaturePair.getRowSignature(), true),
+            SegmentId.dummy(SEGMENT_ID)
+        )
+    ).collect(Collectors.toList());
   }
 }

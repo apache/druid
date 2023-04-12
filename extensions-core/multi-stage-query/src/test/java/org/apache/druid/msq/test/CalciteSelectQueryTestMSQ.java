@@ -148,13 +148,6 @@ public class CalciteSelectQueryTestMSQ extends CalciteQueryTest
 
   @Ignore
   @Override
-  public void testMaxSubqueryRows()
-  {
-
-  }
-
-  @Ignore
-  @Override
   public void testQueryWithMoreThanMaxNumericInFilter()
   {
 

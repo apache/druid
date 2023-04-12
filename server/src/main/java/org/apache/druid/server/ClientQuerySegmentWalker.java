@@ -22,8 +22,6 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
-import com.google.common.math.IntMath;
-import com.google.common.math.LongMath;
 import com.google.inject.Inject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.client.CachingClusteredClient;
@@ -193,17 +191,16 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
     // Now that we know the structure is workable, actually do the inlining (if necessary).
     AtomicLong memoryLimitAcc = new AtomicLong(0);
-    newQuery = newQuery.withDataSource(
-        inlineIfNecessary(
-            freeTradeDataSource,
-            toolChest,
-            new AtomicInteger(),
-            memoryLimitAcc,
-            maxSubqueryRows,
-            maxSubqueryMemory,
-            false
-        )
+    DataSource maybeInlinedDataSource = inlineIfNecessary(
+        freeTradeDataSource,
+        toolChest,
+        new AtomicInteger(),
+        memoryLimitAcc,
+        maxSubqueryRows,
+        maxSubqueryMemory,
+        false
     );
+    newQuery = newQuery.withDataSource(maybeInlinedDataSource);
 
     log.info("Memory used by subqueries of query [%s] is [%d]", query, memoryLimitAcc.get());
 
@@ -617,7 +614,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       final AtomicInteger limitAccumulator,
       final AtomicLong memoryLimitAccumulator,
       final int limit,
-      final long memoryLimit
+      long memoryLimit
   )
   {
     final int limitToUse = limit < 0 ? Integer.MAX_VALUE : limit;
@@ -652,30 +649,26 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         }
 
         Sequence<FrameSignaturePair> frames = framesOptional.get();
-        Pair<Long, Integer> memoryAndRowsUsed = frames.accumulate(
-            Pair.of(0L, 0),
-            ((accumulated, in) ->
-                Pair.of(
-                    LongMath.checkedAdd(accumulated.lhs, in.getFrame().numBytes()),
-                    IntMath.checkedAdd(accumulated.rhs, in.getFrame().numRows())
-                )
-            )
+        List<FrameSignaturePair> frameSignaturePairs = new ArrayList<>();
+        frames.forEach(
+            frame -> {
+              if (memoryLimitAccumulator.addAndGet(frame.getFrame().numBytes()) >= memoryLimit) {
+                throw ResourceLimitExceededException.withMessage(
+                    "Subquery generated results beyond maximum[%d] bytes",
+                    memoryLimit
+                );
+
+              }
+              if (limitAccumulator.addAndGet(frame.getFrame().numRows()) >= limitToUse) {
+                throw ResourceLimitExceededException.withMessage(
+                    "Subquery generated results beyond maximum[%d] rows",
+                    limitToUse
+                );
+              }
+              frameSignaturePairs.add(frame);
+            }
         );
-        dataSource = new FramesBackedInlineDataSource(frames, toolChest.resultArraySignature(query));
-
-        if (memoryLimitAccumulator.addAndGet(memoryAndRowsUsed.lhs) >= memoryLimit) {
-          throw ResourceLimitExceededException.withMessage(
-              "Subquery generated results beyond maximum[%d] bytes",
-              memoryLimit
-          );
-        }
-
-        if (limitAccumulator.addAndGet(memoryAndRowsUsed.rhs) >= limitToUse) {
-          throw ResourceLimitExceededException.withMessage(
-              "Subquery generated results beyond maximum[%d] rows",
-              limitToUse
-          );
-        }
+        dataSource = new FramesBackedInlineDataSource(frameSignaturePairs, toolChest.resultArraySignature(query));
       }
       catch (ResourceLimitExceededException rlee) {
         throw rlee;
@@ -685,6 +678,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             "Unable to write the subquery results to a frame. Results won't be accounted for in the memory "
             + "calculation"
         );
+        throw e;
       }
     } else {
       final RowSignature signature = toolChest.resultArraySignature(query);

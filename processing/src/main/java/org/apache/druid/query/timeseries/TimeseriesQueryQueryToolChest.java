@@ -463,6 +463,9 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     );
   }
 
+  /**
+   * This returns a single frame containing the results of the timeseries query
+   */
   @Override
   public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
       TimeseriesQuery query,

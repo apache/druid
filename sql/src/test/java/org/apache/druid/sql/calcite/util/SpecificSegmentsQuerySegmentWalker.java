@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import com.google.common.io.Closeables;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.FramesBackedInlineDataSource;
 import org.apache.druid.query.IterableBackedInlineDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
@@ -32,6 +33,7 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.segment.FrameBasedInlineSegmentWrangler;
 import org.apache.druid.segment.IterableBasedInlineSegmentWrangler;
 import org.apache.druid.segment.LookupSegmentWrangler;
 import org.apache.druid.segment.MapSegmentWrangler;
@@ -111,6 +113,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
             new MapSegmentWrangler(
                 ImmutableMap.<Class<? extends DataSource>, SegmentWrangler>builder()
                             .put(IterableBackedInlineDataSource.class, new IterableBasedInlineSegmentWrangler())
+                            .put(FramesBackedInlineDataSource.class, new FrameBasedInlineSegmentWrangler())
                             .put(LookupDataSource.class, new LookupSegmentWrangler(lookupProvider))
                             .build()
             ),

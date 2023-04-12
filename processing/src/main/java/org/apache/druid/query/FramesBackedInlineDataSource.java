@@ -48,11 +48,11 @@ import java.util.stream.Collectors;
 
 /**
  * Represents an inline datasource where the rows are embedded within the DataSource object itself.
- *
+ * <p>
  * The rows are backed by a sequence of {@link FrameSignaturePair}, which contain the Frame representation of the rows
  * represented by the datasource. {@link #getRowsAsList()} and {@link #getRowsAsSequence()} return the iterables which
  * read the rows that are encapsulated in the frames.
- *
+ * <p>
  * Note that the signature of the datasource can be different from the signatures of the constituent frames that it
  * consists of. While fetching the iterables, it is the job of this class to make sure that the rows correspond to the
  * {@link #rowSignature}. For frames that donot contain the columns present in the {@link #rowSignature}, they are
@@ -61,11 +61,11 @@ import java.util.stream.Collectors;
 public class FramesBackedInlineDataSource implements DataSource
 {
 
-  final Sequence<FrameSignaturePair> frames;
+  final List<FrameSignaturePair> frames;
   final RowSignature rowSignature;
 
   public FramesBackedInlineDataSource(
-      Sequence<FrameSignaturePair> frames,
+      List<FrameSignaturePair> frames,
       RowSignature rowSignature
   )
   {
@@ -73,7 +73,7 @@ public class FramesBackedInlineDataSource implements DataSource
     this.rowSignature = rowSignature;
   }
 
-  public Sequence<FrameSignaturePair> getFrames()
+  public List<FrameSignaturePair> getFrames()
   {
     return frames;
   }
@@ -86,7 +86,6 @@ public class FramesBackedInlineDataSource implements DataSource
   private List<Object[]> getRowsAsList()
   {
     List<Object[]> frameRows = new ArrayList<>();
-    Sequence<Object[]> rowsAsSequence = getRowsAsSequence();
     Yielder<Object[]> rowsYielder = Yielders.each(getRowsAsSequence());
     while (!rowsYielder.isDone()) {
       Object[] row = rowsYielder.get();
@@ -98,16 +97,19 @@ public class FramesBackedInlineDataSource implements DataSource
 
   public Sequence<Object[]> getRowsAsSequence()
   {
-    final Sequence<Cursor> cursorSequence = frames
-        .flatMap(
-            frameSignaturePair -> {
-              Frame frame = frameSignaturePair.getFrame();
-              RowSignature frameSignature = frameSignaturePair.getRowSignature();
-              FrameReader frameReader = FrameReader.create(frameSignature, true);
-              return new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
-                  .makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null);
-            }
-        );
+
+    final Sequence<Cursor> cursorSequence =
+        Sequences.simple(frames)
+                 .flatMap(
+                     frameSignaturePair -> {
+                       Frame frame = frameSignaturePair.getFrame();
+                       RowSignature frameSignature = frameSignaturePair.getRowSignature();
+                       FrameReader frameReader = FrameReader.create(frameSignature, true);
+                       return new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
+                           .makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null);
+                     }
+                 );
+
     return cursorSequence.flatMap(
         (cursor) -> {
           final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
@@ -116,6 +118,7 @@ public class FramesBackedInlineDataSource implements DataSource
               .stream()
               .map(columnSelectorFactory::makeColumnValueSelector)
               .collect(Collectors.toList());
+
           return Sequences.simple(
               () -> new Iterator<Object[]>()
               {
@@ -142,7 +145,6 @@ public class FramesBackedInlineDataSource implements DataSource
           );
         }
     );
-
   }
 
   @Override

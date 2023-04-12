@@ -21,7 +21,6 @@ package org.apache.druid.segment.join;
 
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.FramesBackedInlineDataSource;
 import org.apache.druid.query.IterableBackedInlineDataSource;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;

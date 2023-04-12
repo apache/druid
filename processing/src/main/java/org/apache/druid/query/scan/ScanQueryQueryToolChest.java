@@ -201,6 +201,10 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
     }
   }
 
+  /**
+   * This returns as many frames as the number of {@link ScanResultValue} that are passed. This can be batched and
+   * should be optimized depending on the performance.
+   */
   @Override
   public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
       final ScanQuery query,

@@ -37,9 +37,7 @@ public class FramesBackedInlineJoinableFactory implements JoinableFactory
   }
 
   @Override
-  public Optional<Joinable> build(
-      DataSource dataSource, JoinConditionAnalysis condition
-  )
+  public Optional<Joinable> build(DataSource dataSource, JoinConditionAnalysis condition)
   {
     FramesBackedInlineDataSource framesBackedInlineDataSource = (FramesBackedInlineDataSource) dataSource;
     IterableBackedInlineDataSource iterableBackedInlineDataSource = framesBackedInlineDataSource.toIterableBackedInlineDataSource();

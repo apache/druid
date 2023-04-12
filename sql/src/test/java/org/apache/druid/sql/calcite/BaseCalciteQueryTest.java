@@ -233,6 +233,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
   );
 
+  public static final Map<String, Object> QUERY_CONTEXT_WITH_SUBQUERY_MEMORY_LIMIT =
+      DEFAULT_QUERY_CONTEXT_BUILDER.put(QueryContexts.MAX_SUBQUERY_MEMORY_BYTES_KEY, "100000")
+                                   .build();
+
   // Add additional context to the given context map for when the
   // timeseries query has timestamp_floor expression on the timestamp dimension
   public static Map<String, Object> getTimeseriesContextWithFloorTime(

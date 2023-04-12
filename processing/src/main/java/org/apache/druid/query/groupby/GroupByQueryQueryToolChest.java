@@ -718,6 +718,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     return resultSequence.map(ResultRow::getArray);
   }
 
+  /**
+   * This returns a single frame containing the results of the group by query.
+   */
   @Override
   public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
       GroupByQuery query,
