@@ -32,7 +32,6 @@ import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.common.IndexingServiceCondition;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestIndexTask;
 import org.apache.druid.indexing.common.TestTasks;
@@ -160,12 +159,12 @@ public class WorkerTaskMonitorTest
         .setDefaultRowFlushBoundary(0)
         .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
+
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
     TaskActionClient taskActionClient = EasyMock.createNiceMock(TaskActionClient.class);
     EasyMock.expect(taskActionClientFactory.create(EasyMock.anyObject())).andReturn(taskActionClient).anyTimes();
     SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
     EasyMock.replay(taskActionClientFactory, taskActionClient, notifierFactory);
-    final TaskStorageDirTracker dirTracker = TaskStorageDirTracker.fromConfigs(null, taskConfig);
     return new WorkerTaskMonitor(
         jsonMapper,
         new SingleTaskBackgroundRunner(
@@ -214,10 +213,11 @@ public class WorkerTaskMonitorTest
             DUMMY_NODE,
             new ServerConfig()
         ),
+        taskConfig,
+        new WorkerConfig(),
         cf,
         workerCuratorCoordinator,
-        EasyMock.createNiceMock(DruidLeaderClient.class),
-        dirTracker
+        EasyMock.createNiceMock(DruidLeaderClient.class)
     );
   }
 

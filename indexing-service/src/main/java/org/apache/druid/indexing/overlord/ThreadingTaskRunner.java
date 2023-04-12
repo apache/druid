@@ -61,6 +61,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -155,9 +156,21 @@ public class ThreadingTaskRunner
                         @Override
                         public TaskStatus call()
                         {
-                          final String attemptUUID = UUID.randomUUID().toString();
-                          final File baseDirForTask = dirTracker.getBaseTaskDir(task.getId());
+                          final File baseDirForTask;
+                          try {
+                            baseDirForTask = getTracker().pickBaseDir(task.getId());
+                          }
+                          catch (IOException e) {
+                            LOG.error(e, "Failed to get directory for task [%s], cannot schedule.", task.getId());
+                            return TaskStatus.failure(
+                                task.getId(),
+                                StringUtils.format("Could not schedule due to error [%s]", e.getMessage())
+                            );
+
+                          }
                           final File taskDir = new File(baseDirForTask, task.getId());
+
+                          final String attemptUUID = UUID.randomUUID().toString();
                           final File attemptDir = new File(taskDir, attemptUUID);
 
                           final TaskLocation taskLocation = TaskLocation.create(

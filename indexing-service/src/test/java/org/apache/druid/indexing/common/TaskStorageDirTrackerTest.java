@@ -22,11 +22,11 @@ package org.apache.druid.indexing.common;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
-import org.apache.druid.java.util.common.ISE;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -44,7 +44,7 @@ public class TaskStorageDirTrackerTest
   }
 
   @Test
-  public void testGetOrSelectTaskDir()
+  public void testGetOrSelectTaskDir() throws IOException
   {
     validateRoundRobinAllocation(defaultInstance());
 
@@ -61,60 +61,35 @@ public class TaskStorageDirTrackerTest
     ));
   }
 
-  private void validateRoundRobinAllocation(TaskStorageDirTracker dirTracker)
+  private void validateRoundRobinAllocation(TaskStorageDirTracker dirTracker) throws IOException
   {
     // Test round-robin allocation
-    Assert.assertEquals("A", dirTracker.getBaseTaskDir("task0").getPath());
-    Assert.assertEquals("B", dirTracker.getBaseTaskDir("task1").getPath());
-    Assert.assertEquals("C", dirTracker.getBaseTaskDir("task2").getPath());
-    Assert.assertEquals("A", dirTracker.getBaseTaskDir("task3").getPath());
-    Assert.assertEquals("B", dirTracker.getBaseTaskDir("task4").getPath());
-    Assert.assertEquals("C", dirTracker.getBaseTaskDir("task5").getPath());
+    Assert.assertEquals("A", dirTracker.pickBaseDir("task0").getPath());
+    Assert.assertEquals("B", dirTracker.pickBaseDir("task1").getPath());
+    Assert.assertEquals("C", dirTracker.pickBaseDir("task2").getPath());
+    Assert.assertEquals("A", dirTracker.pickBaseDir("task3").getPath());
+    Assert.assertEquals("B", dirTracker.pickBaseDir("task4").getPath());
+    Assert.assertEquals("C", dirTracker.pickBaseDir("task5").getPath());
 
     // Test that the result is always the same
     for (int i = 0; i < 10; i++) {
-      Assert.assertEquals("A", dirTracker.getBaseTaskDir("task0").getPath());
+      Assert.assertEquals("A", dirTracker.pickBaseDir("task0").getPath());
     }
   }
 
   @Test
-  public void testFallBackToTaskConfig()
+  public void testFallBackToTaskConfig() throws IOException
   {
     final TaskStorageDirTracker tracker = TaskStorageDirTracker.fromConfigs(
         new WorkerConfig(),
         new TaskConfigBuilder().setBaseDir("A").build()
     );
 
-    Assert.assertEquals("A/persistent/task", tracker.getBaseTaskDir("task0").getPath());
-    Assert.assertEquals("A/persistent/task", tracker.getBaseTaskDir("task1").getPath());
-    Assert.assertEquals("A/persistent/task", tracker.getBaseTaskDir("task2").getPath());
-    Assert.assertEquals("A/persistent/task", tracker.getBaseTaskDir("task3").getPath());
-    Assert.assertEquals("A/persistent/task", tracker.getBaseTaskDir("task1").getPath());
-    Assert.assertEquals("A/persistent/task", tracker.getBaseTaskDir("task10293721").getPath());
-  }
-
-  @Test
-  public void testAddTask()
-  {
-    TaskStorageDirTracker dirTracker = defaultInstance();
-
-    // Test add after get. task0 -> "A"
-    Assert.assertEquals("A", dirTracker.getBaseTaskDir("task0").getPath());
-    dirTracker.addTask("task0", new File("A"));
-    Assert.assertEquals("A", dirTracker.getBaseTaskDir("task0").getPath());
-
-    // Assign base path directly
-    dirTracker.addTask("task1", new File("C"));
-    Assert.assertEquals("C", dirTracker.getBaseTaskDir("task1").getPath());
-  }
-
-  @Test
-  public void testAddTaskThrowsISE()
-  {
-    TaskStorageDirTracker dirTracker = defaultInstance();
-
-    // Test add after get. task0 -> "A"
-    Assert.assertEquals("A", dirTracker.getBaseTaskDir("task0").getPath());
-    Assert.assertThrows(ISE.class, () -> dirTracker.addTask("task0", new File("B")));
+    Assert.assertEquals("A/persistent/task", tracker.pickBaseDir("task0").getPath());
+    Assert.assertEquals("A/persistent/task", tracker.pickBaseDir("task1").getPath());
+    Assert.assertEquals("A/persistent/task", tracker.pickBaseDir("task2").getPath());
+    Assert.assertEquals("A/persistent/task", tracker.pickBaseDir("task3").getPath());
+    Assert.assertEquals("A/persistent/task", tracker.pickBaseDir("task1").getPath());
+    Assert.assertEquals("A/persistent/task", tracker.pickBaseDir("task10293721").getPath());
   }
 }

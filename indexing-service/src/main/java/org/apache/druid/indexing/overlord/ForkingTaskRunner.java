@@ -155,7 +155,18 @@ public class ForkingTaskRunner
                 public TaskStatus call()
                 {
 
-                  final File baseDirForTask = dirTracker.getBaseTaskDir(task.getId());
+                  final File baseDirForTask;
+                  try {
+                    baseDirForTask = getTracker().pickBaseDir(task.getId());
+                  }
+                  catch (IOException e) {
+                    LOG.error(e, "Failed to get directory for task [%s], cannot schedule.", task.getId());
+                    return TaskStatus.failure(
+                        task.getId(),
+                        StringUtils.format("Could not schedule due to error [%s]", e.getMessage())
+                    );
+                  }
+
                   final File taskDir = new File(baseDirForTask, task.getId());
                   final String attemptId = String.valueOf(getNextAttemptID(taskDir));
                   final File attemptDir = Paths.get(taskDir.getAbsolutePath(), "attempt", attemptId).toFile();

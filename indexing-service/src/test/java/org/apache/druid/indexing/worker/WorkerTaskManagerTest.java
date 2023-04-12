@@ -29,7 +29,6 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestTasks;
@@ -44,6 +43,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.TestTaskRunner;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
@@ -66,8 +66,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
+ *
  */
 @RunWith(Parameterized.class)
 public class WorkerTaskManagerTest
@@ -110,13 +112,6 @@ public class WorkerTaskManagerTest
 
   private WorkerTaskManager createWorkerTaskManager()
   {
-    List<File> baseTaskDirPaths = null;
-    if (useMultipleBaseTaskDirPaths) {
-      baseTaskDirPaths = ImmutableList.of(
-          FileUtils.createTempDir(),
-          FileUtils.createTempDir()
-      );
-    }
     TaskConfig taskConfig = new TaskConfigBuilder()
         .setBaseDir(FileUtils.createTempDir().toString())
         .setDefaultRowFlushBoundary(0)
@@ -124,11 +119,20 @@ public class WorkerTaskManagerTest
         .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
 
-    TaskStorageDirTracker dirTracker;
+    WorkerConfig workerConfig;
     if (useMultipleBaseTaskDirPaths) {
-      dirTracker = new TaskStorageDirTracker(baseTaskDirPaths);
+      workerConfig = new WorkerConfig()
+      {
+        List<File> baseTaskDirPaths = ImmutableList.of(FileUtils.createTempDir(), FileUtils.createTempDir());
+
+        @Override
+        public List<String> getBaseTaskDirs()
+        {
+          return baseTaskDirPaths.stream().map(File::toString).collect(Collectors.toList());
+        }
+      };
     } else {
-      dirTracker = new TaskStorageDirTracker(ImmutableList.of(taskConfig.getBaseTaskDir()));
+      workerConfig = new WorkerConfig();
     }
 
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
@@ -183,8 +187,9 @@ public class WorkerTaskManagerTest
             taskConfig,
             location
         ),
-        EasyMock.createNiceMock(DruidLeaderClient.class),
-        dirTracker
+        taskConfig,
+        workerConfig,
+        EasyMock.createNiceMock(DruidLeaderClient.class)
     )
     {
       @Override
@@ -218,26 +223,21 @@ public class WorkerTaskManagerTest
     Task task2 = createNoopTask("task2-completed-already");
     Task task3 = createNoopTask("task3-assigned-explicitly");
 
-    for (File completedTaskDir : workerTaskManager.getCompletedTaskDirs()) {
-      FileUtils.mkdirp(completedTaskDir);
-    }
-    for (File assignedTaskDir : workerTaskManager.getAssignedTaskDirs()) {
-      FileUtils.mkdirp(assignedTaskDir);
-    }
+    FileUtils.mkdirp(workerTaskManager.getAssignedTaskDir());
+    FileUtils.mkdirp(workerTaskManager.getCompletedTaskDir());
 
     // create a task in assigned task directory, to simulate MM shutdown right after a task was assigned.
-    jsonMapper.writeValue(workerTaskManager.getAssignedTaskFile(task1.getId()), task1);
+    jsonMapper.writeValue(new File(workerTaskManager.getAssignedTaskDir(), task1.getId()), task1);
 
     // simulate an already completed task
     jsonMapper.writeValue(
-        workerTaskManager.getCompletedTaskFile(task2.getId()),
+        new File(workerTaskManager.getCompletedTaskDir(), task2.getId()),
         TaskAnnouncement.create(
             task2,
             TaskStatus.success(task2.getId()),
             location
         )
     );
-
     workerTaskManager.start();
 
     Assert.assertTrue(workerTaskManager.getCompletedTasks().get(task2.getId()).getTaskStatus().isSuccess());
@@ -246,8 +246,8 @@ public class WorkerTaskManagerTest
       Thread.sleep(100);
     }
     Assert.assertTrue(workerTaskManager.getCompletedTasks().get(task1.getId()).getTaskStatus().isSuccess());
-    Assert.assertTrue(workerTaskManager.getCompletedTaskFile(task1.getId()).exists());
-    Assert.assertFalse(workerTaskManager.getAssignedTaskFile(task1.getId()).exists());
+    Assert.assertTrue(new File(workerTaskManager.getCompletedTaskDir(), task1.getId()).exists());
+    Assert.assertFalse(new File(workerTaskManager.getAssignedTaskDir(), task1.getId()).exists());
 
     ChangeRequestsSnapshot<WorkerHistoryItem> baseHistory = workerTaskManager
         .getChangesSince(new ChangeRequestHistory.Counter(-1, 0))
@@ -279,8 +279,8 @@ public class WorkerTaskManagerTest
     }
 
     Assert.assertTrue(workerTaskManager.getCompletedTasks().get(task3.getId()).getTaskStatus().isSuccess());
-    Assert.assertTrue(workerTaskManager.getCompletedTaskFile(task3.getId()).exists());
-    Assert.assertFalse(workerTaskManager.getAssignedTaskFile(task3.getId()).exists());
+    Assert.assertTrue(new File(workerTaskManager.getCompletedTaskDir(), task3.getId()).exists());
+    Assert.assertFalse(new File(workerTaskManager.getAssignedTaskDir(), task3.getId()).exists());
 
     ChangeRequestsSnapshot<WorkerHistoryItem> changes = workerTaskManager.getChangesSince(baseHistory.getCounter())
                                                                          .get();

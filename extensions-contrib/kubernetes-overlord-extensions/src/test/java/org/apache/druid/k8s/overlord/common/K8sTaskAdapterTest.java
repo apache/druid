@@ -100,12 +100,14 @@ class K8sTaskAdapterTest
   void testAddingLabelsAndAnnotations() throws IOException
   {
     final PodSpec podSpec = K8sTestUtils.getDummyPodSpec();
-    TestKubernetesClient testClient = new TestKubernetesClient(client){
+    TestKubernetesClient testClient = new TestKubernetesClient(client)
+    {
       @SuppressWarnings("unchecked")
       @Override
       public <T> T executeRequest(KubernetesExecutor<T> executor) throws KubernetesResourceNotFoundException
       {
-        return (T) new Pod(){
+        return (T) new Pod()
+        {
           @Override
           public PodSpec getSpec()
           {

@@ -22,12 +22,11 @@ package org.apache.druid.indexing.common;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
-import org.apache.druid.java.util.common.ISE;
 
 import java.io.File;
-import java.util.HashMap;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 public class TaskStorageDirTracker
@@ -47,54 +46,40 @@ public class TaskStorageDirTracker
     }
   }
 
-  private int taskDirIndex = 0;
-
   private final List<File> baseTaskDirs;
-
-  private final Map<String, File> taskToTempDirMap = new HashMap<>();
 
   public TaskStorageDirTracker(List<File> baseTaskDirs)
   {
     this.baseTaskDirs = baseTaskDirs;
   }
 
-  public File getTaskDir(String taskId)
+  public File pickBaseDir(String taskId) throws IOException
   {
-    return new File(getBaseTaskDir(taskId), taskId);
-  }
+    File leastUsed = null;
+    long numEntries = Long.MAX_VALUE;
 
-  public File getTaskTempDir(String taskId)
-  {
-    return new File(getTaskDir(taskId), "temp");
-  }
+    for (File baseTaskDir : baseTaskDirs) {
+      if (new File(baseTaskDir, taskId).exists()) {
+        return baseTaskDir;
+      }
 
-  public List<File> getBaseTaskDirs()
-  {
-    return baseTaskDirs;
-  }
-
-  public synchronized File getBaseTaskDir(final String taskId)
-  {
-    if (!taskToTempDirMap.containsKey(taskId)) {
-      addTask(taskId, baseTaskDirs.get(taskDirIndex));
-      taskDirIndex = (taskDirIndex + 1) % baseTaskDirs.size();
+      long numFiles = Files.list(baseTaskDir.toPath()).count();
+      if (numFiles < numEntries) {
+        numEntries = numFiles;
+        leastUsed = baseTaskDir;
+      }
     }
-
-    return taskToTempDirMap.get(taskId);
+    return leastUsed;
   }
 
-  public synchronized void addTask(final String taskId, final File taskDir)
+  public File findExistingTaskDir(String taskId)
   {
-    final File existingTaskDir = taskToTempDirMap.get(taskId);
-    if (existingTaskDir != null && !existingTaskDir.equals(taskDir)) {
-      throw new ISE("Task [%s] is already assigned to worker path[%s]", taskId, existingTaskDir.getPath());
+    for (File baseTaskDir : baseTaskDirs) {
+      final File candidateLocation = new File(baseTaskDir, taskId);
+      if (candidateLocation.exists()) {
+        return candidateLocation;
+      }
     }
-
-    taskToTempDirMap.put(taskId, taskDir);
-  }
-
-  public synchronized void removeTask(final String taskId)
-  {
-    taskToTempDirMap.remove(taskId);
+    return null;
   }
 }

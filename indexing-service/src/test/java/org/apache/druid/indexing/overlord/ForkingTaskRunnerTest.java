@@ -271,7 +271,7 @@ public class ForkingTaskRunnerTest
 
         for (String param : command) {
           if (param.endsWith(task.getId())) {
-            File resultFile = Paths.get(dirTracker.getTaskDir(task.getId()).getAbsolutePath(), "attempt", "1", "status.json").toFile();
+            File resultFile = Paths.get(getTracker().findExistingTaskDir(task.getId()).getAbsolutePath(), "attempt", "1", "status.json").toFile();
             mapper.writeValue(resultFile, TaskStatus.success(task.getId()));
             break;
           }
@@ -332,7 +332,7 @@ public class ForkingTaskRunnerTest
 
         for (String param : command) {
           if (param.endsWith(task.getId())) {
-            File resultFile = Paths.get(dirTracker.getTaskDir(task.getId()).getAbsolutePath(), "attempt", "1", "status.json").toFile();
+            File resultFile = Paths.get(dirTracker.findExistingTaskDir(task.getId()).getAbsolutePath(), "attempt", "1", "status.json").toFile();
             mapper.writeValue(resultFile, TaskStatus.failure(task.getId(), "task failure test"));
             break;
           }
@@ -363,9 +363,9 @@ public class ForkingTaskRunnerTest
         .build();
     TaskStorageDirTracker dirTracker = TaskStorageDirTracker.fromConfigs(null, taskConfig);
     String taskId = "foo";
-    assertEquals(1, ForkingTaskRunner.getNextAttemptID(dirTracker.getTaskDir(taskId)));
-    assertEquals(2, ForkingTaskRunner.getNextAttemptID(dirTracker.getTaskDir(taskId)));
-    assertEquals(3, ForkingTaskRunner.getNextAttemptID(dirTracker.getTaskDir(taskId)));
+    assertEquals(1, ForkingTaskRunner.getNextAttemptID(new File(dirTracker.pickBaseDir(taskId), taskId)));
+    assertEquals(2, ForkingTaskRunner.getNextAttemptID(new File(dirTracker.pickBaseDir(taskId), taskId)));
+    assertEquals(3, ForkingTaskRunner.getNextAttemptID(new File(dirTracker.pickBaseDir(taskId), taskId)));
   }
 
   @Test
