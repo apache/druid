@@ -20,76 +20,91 @@
 package org.apache.druid.indexing.common;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class TaskStorageDirTrackerTest
 {
-  public static final ImmutableList<File> MULTIPLE_FILES = ImmutableList.of(
-      new File("A"),
-      new File("B"),
-      new File("C")
-  );
-
-  private static TaskStorageDirTracker defaultInstance()
-  {
-    return new TaskStorageDirTracker(MULTIPLE_FILES);
-  }
+  @ClassRule
+  public static final TemporaryFolder TMP = new TemporaryFolder();
 
   @Test
   public void testGetOrSelectTaskDir() throws IOException
   {
-    validateRoundRobinAllocation(defaultInstance());
+    File tmpFolder = TMP.newFolder();
+    List<File> files = ImmutableList.of(
+        new File(tmpFolder, "A"),
+        new File(tmpFolder, "B"),
+        new File(tmpFolder, "C")
+    );
 
-    validateRoundRobinAllocation(TaskStorageDirTracker.fromConfigs(
+    final TaskStorageDirTracker tracker = new TaskStorageDirTracker(files);
+    tracker.ensureDirectories();
+
+    validateRoundRobinAllocation(tmpFolder, tracker);
+    for (File file : Objects.requireNonNull(tmpFolder.listFiles())) {
+      FileUtils.forceDelete(file);
+    }
+
+    final TaskStorageDirTracker otherTracker = TaskStorageDirTracker.fromConfigs(
         new WorkerConfig()
         {
           @Override
           public List<String> getBaseTaskDirs()
           {
-            return MULTIPLE_FILES.stream().map(File::toString).collect(Collectors.toList());
+            return files.stream().map(File::toString).collect(Collectors.toList());
           }
         },
         null
-    ));
+    );
+    otherTracker.ensureDirectories();
+    validateRoundRobinAllocation(tmpFolder, otherTracker);
   }
 
-  private void validateRoundRobinAllocation(TaskStorageDirTracker dirTracker) throws IOException
+  private void validateRoundRobinAllocation(File tmpFolder, TaskStorageDirTracker dirTracker) throws IOException
   {
     // Test round-robin allocation
-    Assert.assertEquals("A", dirTracker.pickBaseDir("task0").getPath());
-    Assert.assertEquals("B", dirTracker.pickBaseDir("task1").getPath());
-    Assert.assertEquals("C", dirTracker.pickBaseDir("task2").getPath());
-    Assert.assertEquals("A", dirTracker.pickBaseDir("task3").getPath());
-    Assert.assertEquals("B", dirTracker.pickBaseDir("task4").getPath());
-    Assert.assertEquals("C", dirTracker.pickBaseDir("task5").getPath());
+    Assert.assertEquals(new File(tmpFolder, "A").toString(), dirTracker.pickBaseDir("task0").getPath());
+    Assert.assertEquals(new File(tmpFolder, "B").toString(), dirTracker.pickBaseDir("task1").getPath());
+    Assert.assertEquals(new File(tmpFolder, "C").toString(), dirTracker.pickBaseDir("task2").getPath());
+    Assert.assertEquals(new File(tmpFolder, "A").toString(), dirTracker.pickBaseDir("task3").getPath());
+    Assert.assertEquals(new File(tmpFolder, "B").toString(), dirTracker.pickBaseDir("task4").getPath());
+    Assert.assertEquals(new File(tmpFolder, "C").toString(), dirTracker.pickBaseDir("task5").getPath());
 
     // Test that the result is always the same
+    new File(new File(tmpFolder, "A"), "task0").mkdirs();
     for (int i = 0; i < 10; i++) {
-      Assert.assertEquals("A", dirTracker.pickBaseDir("task0").getPath());
+      Assert.assertEquals(new File(tmpFolder, "A").toString(), dirTracker.pickBaseDir("task0").getPath());
     }
   }
 
   @Test
   public void testFallBackToTaskConfig() throws IOException
   {
+    final File baseDir = new File(TMP.newFolder(), "A");
     final TaskStorageDirTracker tracker = TaskStorageDirTracker.fromConfigs(
         new WorkerConfig(),
-        new TaskConfigBuilder().setBaseDir("A").build()
+        new TaskConfigBuilder().setBaseDir(baseDir.toString()).build()
     );
+    tracker.ensureDirectories();
 
-    Assert.assertEquals("A/persistent/task", tracker.pickBaseDir("task0").getPath());
-    Assert.assertEquals("A/persistent/task", tracker.pickBaseDir("task1").getPath());
-    Assert.assertEquals("A/persistent/task", tracker.pickBaseDir("task2").getPath());
-    Assert.assertEquals("A/persistent/task", tracker.pickBaseDir("task3").getPath());
-    Assert.assertEquals("A/persistent/task", tracker.pickBaseDir("task1").getPath());
-    Assert.assertEquals("A/persistent/task", tracker.pickBaseDir("task10293721").getPath());
+    final String expected = new File(baseDir, "persistent/task").toString();
+    Assert.assertEquals(expected, tracker.pickBaseDir("task0").getPath());
+    Assert.assertEquals(expected, tracker.pickBaseDir("task1").getPath());
+    Assert.assertEquals(expected, tracker.pickBaseDir("task2").getPath());
+    Assert.assertEquals(expected, tracker.pickBaseDir("task3").getPath());
+    Assert.assertEquals(expected, tracker.pickBaseDir("task1").getPath());
+    Assert.assertEquals(expected, tracker.pickBaseDir("task10293721").getPath());
   }
 }

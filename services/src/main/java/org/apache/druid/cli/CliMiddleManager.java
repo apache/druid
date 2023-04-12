@@ -252,7 +252,7 @@ public class CliMiddleManager extends ServerRunnable
       }
 
       @Provides
-      @LazySingleton
+      @ManageLifecycle
       public TaskStorageDirTracker getTaskStorageDirTracker(WorkerConfig workerConfig, TaskConfig taskConfig)
       {
         return TaskStorageDirTracker.fromConfigs(workerConfig, taskConfig);

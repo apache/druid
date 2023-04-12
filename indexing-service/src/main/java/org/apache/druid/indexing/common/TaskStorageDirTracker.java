@@ -22,11 +22,13 @@ package org.apache.druid.indexing.common;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class TaskStorageDirTracker
@@ -46,34 +48,53 @@ public class TaskStorageDirTracker
     }
   }
 
-  private final List<File> baseTaskDirs;
+  private final File[] baseTaskDirs;
+  private final AtomicInteger iterationCounter = new AtomicInteger(0);
 
   public TaskStorageDirTracker(List<File> baseTaskDirs)
   {
-    this.baseTaskDirs = baseTaskDirs;
+    this.baseTaskDirs = baseTaskDirs.toArray(new File[]{});
+  }
+
+  @LifecycleStart
+  public void ensureDirectories()
+  {
+    for (File baseTaskDir : baseTaskDirs) {
+      if (baseTaskDir.exists() || baseTaskDir.mkdirs()) {
+        continue;
+      }
+      throw new ISE(
+          "base task directory [%s] likely does not exist, please ensure it exists and the user has permissions.",
+          baseTaskDir
+      );
+    }
   }
 
   public File pickBaseDir(String taskId) throws IOException
   {
-    File leastUsed = null;
-    long numEntries = Long.MAX_VALUE;
+    if (baseTaskDirs.length == 1) {
+      return baseTaskDirs[0];
+    }
 
+    // if the task directory already exists, we want to give it precedence, so check.
     for (File baseTaskDir : baseTaskDirs) {
       if (new File(baseTaskDir, taskId).exists()) {
         return baseTaskDir;
       }
-
-      long numFiles = Files.list(baseTaskDir.toPath()).count();
-      if (numFiles < numEntries) {
-        numEntries = numFiles;
-        leastUsed = baseTaskDir;
-      }
     }
-    return leastUsed;
+
+    // if it doesn't exist, pick one round-robin and return.  This will roll negative, but that's okay because we
+    // are always modding it.
+    final int currIncrement = iterationCounter.getAndIncrement() % baseTaskDirs.length;
+    return baseTaskDirs[currIncrement % baseTaskDirs.length];
   }
 
   public File findExistingTaskDir(String taskId)
   {
+    if (baseTaskDirs.length == 1) {
+      return new File(baseTaskDirs[0], taskId);
+    }
+
     for (File baseTaskDir : baseTaskDirs) {
       final File candidateLocation = new File(baseTaskDir, taskId);
       if (candidateLocation.exists()) {

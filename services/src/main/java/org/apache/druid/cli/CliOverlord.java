@@ -354,7 +354,7 @@ public class CliOverlord extends ServerRunnable
               }
 
               @Provides
-              @LazySingleton
+              @ManageLifecycle
               public TaskStorageDirTracker getTaskStorageDirTracker(WorkerConfig workerConfig, TaskConfig taskConfig)
               {
                 return TaskStorageDirTracker.fromConfigs(workerConfig, taskConfig);
