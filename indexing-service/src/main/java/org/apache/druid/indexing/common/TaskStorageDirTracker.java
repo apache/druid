@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -50,7 +51,8 @@ public class TaskStorageDirTracker
   }
 
   private final File[] baseTaskDirs;
-  private final AtomicInteger iterationCounter = new AtomicInteger(0);
+  // Initialize to a negative number because it ensures that we can handle the overflow-rollover case
+  private final AtomicInteger iterationCounter = new AtomicInteger(Integer.MIN_VALUE);
 
   public TaskStorageDirTracker(List<File> baseTaskDirs)
   {
@@ -89,12 +91,12 @@ public class TaskStorageDirTracker
       }
     }
 
-    // if it doesn't exist, pick one round-robin and return.  This will roll negative, but that's okay because we
-    // are always modding it.
-    final int currIncrement = iterationCounter.getAndIncrement() % baseTaskDirs.length;
+    // if it doesn't exist, pick one round-robin and return.  This can be negative, so abs() it
+    final int currIncrement = Math.abs(iterationCounter.getAndIncrement() % baseTaskDirs.length);
     return baseTaskDirs[currIncrement % baseTaskDirs.length];
   }
 
+  @Nullable
   public File findExistingTaskDir(String taskId)
   {
     if (baseTaskDirs.length == 1) {

@@ -20,9 +20,9 @@
 package org.apache.druid.indexing.common;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.java.util.common.FileUtils;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -54,7 +54,7 @@ public class TaskStorageDirTrackerTest
 
     validateRoundRobinAllocation(tmpFolder, tracker);
     for (File file : Objects.requireNonNull(tmpFolder.listFiles())) {
-      FileUtils.forceDelete(file);
+      FileUtils.deleteDirectory(file);
     }
 
     final TaskStorageDirTracker otherTracker = TaskStorageDirTracker.fromConfigs(
@@ -74,18 +74,19 @@ public class TaskStorageDirTrackerTest
 
   private void validateRoundRobinAllocation(File tmpFolder, TaskStorageDirTracker dirTracker) throws IOException
   {
-    // Test round-robin allocation
-    Assert.assertEquals(new File(tmpFolder, "A").toString(), dirTracker.pickBaseDir("task0").getPath());
+    // Test round-robin allocation, it starts from "C" and goes "backwards" because the counter is initialized
+    // negatively, which modulos to 2 -> 1 -> 0
+    Assert.assertEquals(new File(tmpFolder, "C").toString(), dirTracker.pickBaseDir("task0").getPath());
     Assert.assertEquals(new File(tmpFolder, "B").toString(), dirTracker.pickBaseDir("task1").getPath());
-    Assert.assertEquals(new File(tmpFolder, "C").toString(), dirTracker.pickBaseDir("task2").getPath());
-    Assert.assertEquals(new File(tmpFolder, "A").toString(), dirTracker.pickBaseDir("task3").getPath());
+    Assert.assertEquals(new File(tmpFolder, "A").toString(), dirTracker.pickBaseDir("task2").getPath());
+    Assert.assertEquals(new File(tmpFolder, "C").toString(), dirTracker.pickBaseDir("task3").getPath());
     Assert.assertEquals(new File(tmpFolder, "B").toString(), dirTracker.pickBaseDir("task4").getPath());
-    Assert.assertEquals(new File(tmpFolder, "C").toString(), dirTracker.pickBaseDir("task5").getPath());
+    Assert.assertEquals(new File(tmpFolder, "A").toString(), dirTracker.pickBaseDir("task5").getPath());
 
     // Test that the result is always the same
-    new File(new File(tmpFolder, "A"), "task0").mkdirs();
+    FileUtils.mkdirp(new File(new File(tmpFolder, "C"), "task0"));
     for (int i = 0; i < 10; i++) {
-      Assert.assertEquals(new File(tmpFolder, "A").toString(), dirTracker.pickBaseDir("task0").getPath());
+      Assert.assertEquals(new File(tmpFolder, "C").toString(), dirTracker.pickBaseDir("task0").getPath());
     }
   }
 
