@@ -28,6 +28,7 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.joda.time.DateTimeZone;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Set;
 
@@ -43,7 +44,7 @@ public interface SqlStatementHandler
   PrepareResult prepareResult();
   PlannerResult plan() throws ValidationException;
   String statementKind();
-  SqlNode targetDataSource();
+  @Nullable SqlNode targetDataSource();
 
   /**
    * Context available to statement handlers.

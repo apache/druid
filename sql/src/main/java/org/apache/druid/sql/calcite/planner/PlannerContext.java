@@ -513,14 +513,15 @@ public class PlannerContext
     return this.statementKind;
   }
 
-  public void setStatementKind(String sqlKind)
+  public void setStatementKind(String statementKind)
   {
     if (this.statementKind != null) {
       throw new ISE("StatementKind has already been set");
     }
-    this.statementKind = sqlKind;
+    this.statementKind = statementKind;
   }
 
+  @Nullable
   public SqlNode getTargetDataSource()
   {
     return this.targetDataSource;
