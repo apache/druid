@@ -210,7 +210,9 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
     }
 
     return pw.item("query", queryString)
-             .item("signature", druidQuery.getOutputRowSignature());
+             .item("signature", druidQuery.getOutputRowSignature())
+             .item("statementKind", getPlannerContext().getStatementKind())
+             .item("targetDataSource", getPlannerContext().getTargetDataSource()); // todo: this would be null for SELECT queries; do we have INSERT come here as well?
   }
 
   @Override

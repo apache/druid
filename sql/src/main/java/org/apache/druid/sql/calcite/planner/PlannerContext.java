@@ -28,6 +28,7 @@ import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
@@ -111,6 +112,10 @@ public class PlannerContext
   private String planningError;
   private QueryMaker queryMaker;
   private VirtualColumnRegistry joinExpressionVirtualColumnRegistry;
+  private String statementKind;
+  // Only valid for INSERT/REPLACE queries
+  @Nullable
+  private SqlNode targetDataSource;
 
   private PlannerContext(
       final PlannerToolbox plannerToolbox,
@@ -501,5 +506,32 @@ public class PlannerContext
   public void setJoinExpressionVirtualColumnRegistry(VirtualColumnRegistry joinExpressionVirtualColumnRegistry)
   {
     this.joinExpressionVirtualColumnRegistry = joinExpressionVirtualColumnRegistry;
+  }
+
+  public String getStatementKind()
+  {
+    return this.statementKind;
+  }
+  public void setStatementKind(String sqlKind)
+  {
+    if (this.statementKind != null)
+    {
+      throw new ISE("StatementKind has already been set");
+    }
+    this.statementKind = sqlKind;
+  }
+
+  public SqlNode getTargetDataSource()
+  {
+    return this.targetDataSource;
+  }
+
+  public void setTargetDataSource(SqlNode targetDataSource)
+  {
+    if (this.targetDataSource != null)
+    {
+      throw new ISE("TargetDataSource has already been set");
+    }
+    this.targetDataSource = targetDataSource;
   }
 }

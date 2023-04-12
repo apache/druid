@@ -310,6 +310,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     return joinRel.explainTerms(pw)
                   .item("query", queryString)
                   .item("signature", druidQuery.getOutputRowSignature());
+    // todo?
   }
 
   @Override

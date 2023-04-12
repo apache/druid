@@ -617,7 +617,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     final String expectedExplanation =
         "DruidQueryRel(query=["
         + queryJsonMapper.writeValueAsString(expectedQuery)
-        + "], signature=[{x:STRING, y:STRING, z:LONG}])\n";
+        + "], signature=[{x:STRING, y:STRING, z:LONG}], statementKind=[REPLACE], targetDataSource=[dst])\n";
 
     // Use testQuery for EXPLAIN (not testIngestionQuery).
     testQuery(

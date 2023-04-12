@@ -228,6 +228,18 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       throw new UnsupportedSQLQueryException(errorMessage);
     }
   }
+  @Override
+  public String statementKind()
+  {
+    return "SELECT";
+  }
+
+  @Override
+  public SqlNode targetDataSource()
+  {
+    // nothing for SELECT queries.
+    return null;
+  }
 
   private static Set<RelOptTable> getBindableTables(final RelNode relNode)
   {
@@ -384,7 +396,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
 
   /**
    * This method doesn't utilize the Calcite's internal {@link RelOptUtil#dumpPlan} since that tends to be verbose
-   * and not indicative of the native Druid Queries which will get executed
+   * and not indicative of the native Druid Queries which will get executed.
    * This method assumes that the Planner has converted the RelNodes to DruidRels, and thereby we can implicitly cast it
    *
    * @param rel Instance of the root {@link DruidRel} which is formed by running the planner transformations on it
@@ -414,6 +426,11 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       nativeQueriesArrayNode.add(objectNode);
     }
 
+    // TODO: maybe we should include it inside the for loop, so it's flattened, but repetitive info.
+    nativeQueriesArrayNode.add(jsonMapper.createObjectNode().put(
+        "statementKind", jsonMapper.convertValue(rel.getPlannerContext().getStatementKind(), String.class)));
+    nativeQueriesArrayNode.add(jsonMapper.createObjectNode().put(
+        "targetDataSource", jsonMapper.convertValue(rel.getPlannerContext().getTargetDataSource(), String.class)));
     return jsonMapper.writeValueAsString(nativeQueriesArrayNode);
   }
 

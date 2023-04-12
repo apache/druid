@@ -873,7 +873,30 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     final String expectedExplanation =
         "DruidQueryRel(query=["
         + queryJsonMapper.writeValueAsString(expectedQuery)
-        + "], signature=[{x:STRING, y:STRING, z:LONG}])\n";
+        + "], signature=[{x:STRING, y:STRING, z:LONG}], statementKind=[INSERT], targetDataSource=[dst])\n";
+
+
+    testQuery(
+        PlannerConfig.builder().useNativeQueryExplain(true).build(),
+        ImmutableMap.of("sqlQueryId", "dummy"),
+        Collections.emptyList(),
+        StringUtils.format(
+            "EXPLAIN PLAN FOR INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME",
+            externSql(externalDataSource)
+        ),
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        new DefaultResultsVerifier(
+            ImmutableList.of(
+                new Object[]{
+                    expectedExplanation,
+                    "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]"
+                }
+            ),
+            null
+        ),
+        null
+    );
 
     // Use testQuery for EXPLAIN (not testIngestionQuery).
     testQuery(

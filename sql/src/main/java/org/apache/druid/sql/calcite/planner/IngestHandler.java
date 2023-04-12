@@ -273,6 +273,18 @@ public abstract class IngestHandler extends QueryHandler
       }
       super.validate();
     }
+
+    @Override
+    public String statementKind()
+    {
+      return DruidSqlInsert.OPERATOR.getName();
+    }
+
+    @Override
+    public SqlNode targetDataSource()
+    {
+      return sqlNode.getTargetTable();
+    }
   }
 
   /**
@@ -330,6 +342,18 @@ public abstract class IngestHandler extends QueryHandler
             String.join(",", replaceIntervals)
         );
       }
+    }
+
+    @Override
+    public String statementKind()
+    {
+      return DruidSqlReplace.OPERATOR.getName();
+    }
+
+    @Override
+    public SqlNode targetDataSource()
+    {
+      return sqlNode.getTargetTable();
     }
   }
 }

@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.security.ResourceAction;
@@ -41,6 +42,8 @@ public interface SqlStatementHandler
   void prepare();
   PrepareResult prepareResult();
   PlannerResult plan() throws ValidationException;
+  String statementKind();
+  SqlNode targetDataSource();
 
   /**
    * Context available to statement handlers.
