@@ -336,6 +336,12 @@ To prevent durable storage from getting filled up with temporary files in case t
 cleaner can be scheduled to clean the directories corresponding to which there isn't a controller task running. It utilizes
 the storage connector to work upon the durable storage. The durable storage location should only be utilized to store the output
 for cluster's MSQ tasks. If the location contains other files or directories, then they will get cleaned up as well.
+
+Enabling durable storage also enables the use of local disk to store temporary files, such as the intermediate files produced
+by the super sorter. The limit set by `druid.indexer.task.tmpStorageBytesPerTask` for maximum number of bytes of local
+storage to be used per task will be respected by MSQ tasks. If the configured limit is too low, `NotEnoughTemporaryStorageFault`
+may be thrown.
+
 Following table lists the properties that can be set to control the behavior of the durable storage of the cluster.
 
 |Parameter          |Default                                 | Description          |

@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.exec;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.inject.Injector;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -59,18 +60,24 @@ public class WorkerStorageParameters
 
   private final long intermediateSuperSorterStorageMaxLocalBytes;
 
-  WorkerStorageParameters(final long intermediateSuperSorterStorageMaxLocalBytes)
+  private WorkerStorageParameters(final long intermediateSuperSorterStorageMaxLocalBytes)
   {
     this.intermediateSuperSorterStorageMaxLocalBytes = intermediateSuperSorterStorageMaxLocalBytes;
   }
 
-  public static WorkerStorageParameters createProductionInstanceForController(
+  public static WorkerStorageParameters createProductionInstance(
       final Injector injector,
       final boolean isIntermediateSuperSorterStorageEnabled
   )
   {
     long tmpStorageBytesPerTask = injector.getInstance(TaskConfig.class).getTmpStorageBytesPerTask();
     return createInstance(tmpStorageBytesPerTask, isIntermediateSuperSorterStorageEnabled);
+  }
+
+  @VisibleForTesting
+  public static WorkerStorageParameters createInstanceForTests(final long tmpStorageBytesPerTask)
+  {
+    return new WorkerStorageParameters(tmpStorageBytesPerTask);
   }
 
   /**
