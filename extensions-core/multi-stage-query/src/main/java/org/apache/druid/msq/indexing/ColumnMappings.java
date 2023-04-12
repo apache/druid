@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.column.RowSignature;
 
 import java.util.HashMap;
@@ -47,20 +48,20 @@ import java.util.stream.Collectors;
 public class ColumnMappings
 {
   private final List<ColumnMapping> mappings;
-  private final Map<String, IntList> outputNameToPositionMap;
-  private final Map<String, IntList> queryNameToPositionMap;
+  private final Map<String, IntList> outputColumnNameToPositionMap;
+  private final Map<String, IntList> queryColumnNameToPositionMap;
 
   @JsonCreator
   public ColumnMappings(final List<ColumnMapping> mappings)
   {
     this.mappings = Preconditions.checkNotNull(mappings, "mappings");
-    this.outputNameToPositionMap = new HashMap<>();
-    this.queryNameToPositionMap = new HashMap<>();
+    this.outputColumnNameToPositionMap = new HashMap<>();
+    this.queryColumnNameToPositionMap = new HashMap<>();
 
     for (int i = 0; i < mappings.size(); i++) {
       final ColumnMapping mapping = mappings.get(i);
-      outputNameToPositionMap.computeIfAbsent(mapping.getOutputColumn(), k -> new IntArrayList()).add(i);
-      queryNameToPositionMap.computeIfAbsent(mapping.getQueryColumn(), k -> new IntArrayList()).add(i);
+      outputColumnNameToPositionMap.computeIfAbsent(mapping.getOutputColumn(), k -> new IntArrayList()).add(i);
+      queryColumnNameToPositionMap.computeIfAbsent(mapping.getQueryColumn(), k -> new IntArrayList()).add(i);
     }
   }
 
@@ -110,38 +111,53 @@ public class ColumnMappings
   /**
    * Whether a particular output column name exists.
    */
-  public boolean hasOutputColumn(final String columnName)
+  public boolean hasOutputColumn(final String outputColumnName)
   {
-    return outputNameToPositionMap.containsKey(columnName);
+    return outputColumnNameToPositionMap.containsKey(outputColumnName);
   }
 
   /**
    * Query column name for a particular output column position.
+   *
+   * @throws IllegalArgumentException if the output column position is out of range
    */
   public String getQueryColumnName(final int outputColumn)
   {
+    if (outputColumn < 0 || outputColumn >= mappings.size()) {
+      throw new IAE("Output column position[%d] out of range", outputColumn);
+    }
+
     return mappings.get(outputColumn).getQueryColumn();
   }
 
   /**
    * Output column name for a particular output column position.
+   *
+   * @throws IllegalArgumentException if the output column position is out of range
    */
   public String getOutputColumnName(final int outputColumn)
   {
+    if (outputColumn < 0 || outputColumn >= mappings.size()) {
+      throw new IAE("Output column position[%d] out of range", outputColumn);
+    }
+
     return mappings.get(outputColumn).getOutputColumn();
   }
 
-  public IntList getOutputColumnsByName(final String columnName)
+  /**
+   * Output column positions for a particular output column name.
+   */
+  public IntList getOutputColumnsByName(final String outputColumnName)
   {
-    return outputNameToPositionMap.getOrDefault(columnName, IntLists.emptyList());
+    return outputColumnNameToPositionMap.getOrDefault(outputColumnName, IntLists.emptyList());
   }
 
   /**
    * Output column positions for a particular query column name.
    */
-  public IntList getOutputColumnsForQueryColumn(final String queryColumn)
+  public IntList getOutputColumnsForQueryColumn(final String queryColumnName)
   {
-    final IntList outputColumnPositions = queryNameToPositionMap.get(queryColumn);
+    final IntList outputColumnPositions = queryColumnNameToPositionMap.get(queryColumnName);
 
     if (outputColumnPositions == null) {
       return IntLists.emptyList();

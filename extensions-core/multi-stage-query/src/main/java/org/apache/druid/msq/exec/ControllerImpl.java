@@ -187,6 +187,7 @@ import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -1856,8 +1857,10 @@ public class ControllerImpl implements Controller
     if (isRollupQuery) {
       // Populate aggregators from the native query when doing an ingest in rollup mode.
       for (AggregatorFactory aggregatorFactory : ((GroupByQuery) query).getAggregatorSpecs()) {
-        final int outputColumn =
-            Iterables.getOnlyElement(columnMappings.getOutputColumnsForQueryColumn(aggregatorFactory.getName()));
+        final int outputColumn = CollectionUtils.getOnlyElement(
+            columnMappings.getOutputColumnsForQueryColumn(aggregatorFactory.getName()),
+            xs -> new ISE("Expected single output for query column[%s] but got[%s]", aggregatorFactory.getName(), xs)
+        );
         final String outputColumnName = columnMappings.getOutputColumnName(outputColumn);
         if (outputColumnAggregatorFactories.containsKey(outputColumnName)) {
           throw new ISE("There can only be one aggregation for column [%s].", outputColumn);
@@ -1874,9 +1877,12 @@ public class ControllerImpl implements Controller
     // For non-complex columns, If the aggregator factory of the column is not available, we treat the column as
     // a dimension. For complex columns, certains hacks are in place.
     for (final String outputColumnName : outputColumnsInOrder) {
-      // Iterables.getOnlyElement because this method is only called during ingestion, where we require
+      // CollectionUtils.getOnlyElement because this method is only called during ingestion, where we require
       // that output names be unique.
-      final int outputColumn = Iterables.getOnlyElement(columnMappings.getOutputColumnsByName(outputColumnName));
+      final int outputColumn = CollectionUtils.getOnlyElement(
+          columnMappings.getOutputColumnsByName(outputColumnName),
+          xs -> new ISE("Expected single output column for name [%s], but got [%s]", outputColumnName, xs)
+      );
       final String queryColumn = columnMappings.getQueryColumnName(outputColumn);
       final ColumnType type =
           querySignature.getColumnType(queryColumn)
