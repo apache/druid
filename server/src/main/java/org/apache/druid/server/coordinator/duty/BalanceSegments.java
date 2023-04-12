@@ -173,8 +173,8 @@ public class BalanceSegments implements CoordinatorDuty
 
     int totalMoved = generalResult.movedCount + decommissioningResult.movedCount;
     int totalUnmoved = generalResult.unmovedCount + decommissioningResult.unmovedCount;
-    stats.addForTier(Stats.Segments.UNMOVED, tier, totalUnmoved);
-    stats.addForTier(Stats.Segments.MOVED, tier, totalMoved);
+    stats.addToTieredStat(Stats.Segments.UNMOVED, tier, totalUnmoved);
+    stats.addToTieredStat(Stats.Segments.MOVED, tier, totalMoved);
     log.info("In tier [%s], moved [%d] segments and left [%d] segments unmoved.", tier, totalMoved, totalUnmoved);
 
     if (params.getCoordinatorDynamicConfig().emitBalancingStats()) {

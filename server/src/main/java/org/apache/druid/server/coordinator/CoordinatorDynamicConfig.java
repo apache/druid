@@ -493,7 +493,7 @@ public class CoordinatorDynamicConfig
     static final long LEADING_MILLIS_BEFORE_MARK_UNUSED = TimeUnit.MINUTES.toMillis(15);
     static final long MERGE_BYTES_LIMIT = 524_288_000L;
     static final int MERGE_SEGMENTS_LIMIT = 100;
-    static final int MAX_SEGMENTS_TO_MOVE = 500;
+    static final int MAX_SEGMENTS_TO_MOVE = 5;
     static final double PERCENT_OF_SEGMENTS_TO_CONSIDER_PER_MOVE = 100;
     static final int REPLICANT_LIFETIME = 15;
     static final int REPLICATION_THROTTLE_LIMIT = 10;

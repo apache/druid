@@ -64,11 +64,11 @@ public class CoordinatorRunStatsTest
   @Test
   public void testAddToTieredStat()
   {
-    stats.addForTier(STAT_1, "tier1", 1);
-    stats.addForTier(STAT_1, "tier2", 1);
-    stats.addForTier(STAT_1, "tier1", -5);
-    stats.addForTier(STAT_2, "tier1", 1);
-    stats.addForTier(STAT_1, "tier2", 1);
+    stats.addToTieredStat(STAT_1, "tier1", 1);
+    stats.addToTieredStat(STAT_1, "tier2", 1);
+    stats.addToTieredStat(STAT_1, "tier1", -5);
+    stats.addToTieredStat(STAT_2, "tier1", 1);
+    stats.addToTieredStat(STAT_1, "tier2", 1);
 
     Assert.assertFalse(stats.hasStat(STAT_3));
 
@@ -87,7 +87,7 @@ public class CoordinatorRunStatsTest
     );
 
     expected.forEach(
-        (tier, count) -> stats.addForTier(STAT_1, tier, count)
+        (tier, count) -> stats.addToTieredStat(STAT_1, tier, count)
     );
 
     final Map<String, Long> actual = new HashMap<>();
@@ -107,21 +107,21 @@ public class CoordinatorRunStatsTest
   {
     stats.add(STAT_1, 1);
     stats.add(STAT_2, 1);
-    stats.addForTier(STAT_1, "tier1", 1);
-    stats.addForTier(STAT_1, "tier2", 1);
-    stats.addForTier(STAT_2, "tier1", 1);
-    stats.addForDuty(STAT_1, "duty1", 1);
-    stats.addForDuty(STAT_1, "duty2", 1);
-    stats.addForDuty(STAT_2, "duty1", 1);
+    stats.addToTieredStat(STAT_1, "tier1", 1);
+    stats.addToTieredStat(STAT_1, "tier2", 1);
+    stats.addToTieredStat(STAT_2, "tier1", 1);
+    stats.addToDutyStat(STAT_1, "duty1", 1);
+    stats.addToDutyStat(STAT_1, "duty2", 1);
+    stats.addToDutyStat(STAT_2, "duty1", 1);
 
     final CoordinatorRunStats stats2 = new CoordinatorRunStats();
     stats2.add(STAT_1, 1);
-    stats2.addForTier(STAT_1, "tier2", 1);
-    stats2.addForTier(STAT_2, "tier2", 1);
-    stats2.addForTier(STAT_3, "tier1", 1);
-    stats2.addForDuty(STAT_1, "duty2", 1);
-    stats2.addForDuty(STAT_2, "duty2", 1);
-    stats2.addForDuty(STAT_3, "duty1", 1);
+    stats2.addToTieredStat(STAT_1, "tier2", 1);
+    stats2.addToTieredStat(STAT_2, "tier2", 1);
+    stats2.addToTieredStat(STAT_3, "tier1", 1);
+    stats2.addToDutyStat(STAT_1, "duty2", 1);
+    stats2.addToDutyStat(STAT_2, "duty2", 1);
+    stats2.addToDutyStat(STAT_3, "duty1", 1);
 
     stats.accumulate(stats2);
 
@@ -165,11 +165,11 @@ public class CoordinatorRunStatsTest
   @Test
   public void testAddToDutyStat()
   {
-    stats.addForDuty(STAT_1, "duty1", 1);
-    stats.addForDuty(STAT_1, "duty2", 1);
-    stats.addForDuty(STAT_1, "duty1", -5);
-    stats.addForDuty(STAT_2, "duty1", 1);
-    stats.addForDuty(STAT_1, "duty2", 1);
+    stats.addToDutyStat(STAT_1, "duty1", 1);
+    stats.addToDutyStat(STAT_1, "duty2", 1);
+    stats.addToDutyStat(STAT_1, "duty1", -5);
+    stats.addToDutyStat(STAT_2, "duty1", 1);
+    stats.addToDutyStat(STAT_1, "duty2", 1);
 
     Assert.assertFalse(stats.hasStat(STAT_3));
     Assert.assertEquals(-4, stats.getDutyStat(STAT_1, "duty1"));
@@ -186,7 +186,7 @@ public class CoordinatorRunStatsTest
         "duty3", 3L
     );
     expected.forEach(
-        (duty, count) -> stats.addForDuty(STAT_1, duty, count)
+        (duty, count) -> stats.addToDutyStat(STAT_1, duty, count)
     );
 
     final Map<String, Long> actual = new HashMap<>();

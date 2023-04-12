@@ -43,7 +43,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * TODO convert benchmarks to JMH
@@ -81,7 +80,6 @@ public class BalanceSegmentsProfiler
     EasyMock.expect(manager.getRulesWithDefault(EasyMock.anyObject())).andReturn(rules).anyTimes();
     EasyMock.replay(manager);
 
-    Map<String, LoadQueuePeon> peonMap = new HashMap<>();
     List<ServerHolder> serverHolderList = new ArrayList<>();
     List<DataSegment> segments = new ArrayList<>();
     for (int i = 0; i < numSegments; i++) {
@@ -117,19 +115,17 @@ public class BalanceSegmentsProfiler
       EasyMock.replay(server);
 
       LoadQueuePeon peon = new LoadQueuePeonTester();
-      peonMap.put(Integer.toString(i), peon);
       serverHolderList.add(new ServerHolder(server, peon));
     }
 
-    DruidCluster druidCluster = DruidClusterBuilder
-        .newBuilder()
+    DruidCluster druidCluster = DruidCluster
+        .builder()
         .addTier("normal", serverHolderList.toArray(new ServerHolder[0]))
         .build();
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(druidCluster)
         .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, false))
-        .withLoadManagementPeons(peonMap)
         .withUsedSegmentsInTest(segments)
         .withDynamicConfigs(
             CoordinatorDynamicConfig
@@ -176,8 +172,8 @@ public class BalanceSegmentsProfiler
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(
-            DruidClusterBuilder
-                .newBuilder()
+            DruidCluster
+                .builder()
                 .addTier(
                     "normal",
                     new ServerHolder(druidServer1, fromPeon),
@@ -185,7 +181,6 @@ public class BalanceSegmentsProfiler
                 )
                 .build()
         )
-        .withLoadManagementPeons(ImmutableMap.of("from", fromPeon, "to", toPeon))
         .withUsedSegmentsInTest(segments)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build())
         .build();

@@ -30,10 +30,11 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
-import org.apache.druid.server.coordinator.DruidClusterBuilder;
+import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.SegmentStateManager;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
@@ -73,6 +74,7 @@ public class UnloadUnusedSegmentsTest
   private List<ImmutableDruidDataSource> dataSourcesForRealtime;
   private final String broadcastDatasource = "broadcastDatasource";
   private MetadataRuleManager databaseRuleManager;
+  private SegmentStateManager segmentStateManager;
 
   @Before
   public void setUp()
@@ -83,6 +85,7 @@ public class UnloadUnusedSegmentsTest
     brokerServer = EasyMock.createMock(ImmutableDruidServer.class);
     indexerServer = EasyMock.createMock(ImmutableDruidServer.class);
     databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
+    segmentStateManager = new SegmentStateManager(null, null, null);
 
     DateTime start1 = DateTimes.of("2012-01-01");
     DateTime start2 = DateTimes.of("2012-02-01");
@@ -121,7 +124,7 @@ public class UnloadUnusedSegmentsTest
         7L
     );
     final DataSegment broadcastSegment = new DataSegment(
-        "broadcastDatasource",
+        broadcastDatasource,
         new Interval(start1, start1.plusHours(1)),
         version.toString(),
         Collections.emptyMap(),
@@ -243,8 +246,8 @@ public class UnloadUnusedSegmentsTest
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(
-            DruidClusterBuilder
-                .newBuilder()
+            DruidCluster
+                .builder()
                 .addTier(
                     DruidServer.DEFAULT_TIER,
                     new ServerHolder(historicalServer, historicalPeon, false)
@@ -253,24 +256,16 @@ public class UnloadUnusedSegmentsTest
                     "tier2",
                     new ServerHolder(historicalServerTier2, historicalTier2Peon, false)
                 )
-                .withBrokers(new ServerHolder(brokerServer, brokerPeon, false))
-                .withRealtimes(new ServerHolder(indexerServer, indexerPeon, false))
+                .addBrokers(new ServerHolder(brokerServer, brokerPeon, false))
+                .addRealtimes(new ServerHolder(indexerServer, indexerPeon, false))
                 .build()
-        )
-        .withLoadManagementPeons(
-            ImmutableMap.of(
-                "historical", historicalPeon,
-                "historicalTier2", historicalTier2Peon,
-                "broker", brokerPeon,
-                "indexer", indexerPeon
-            )
         )
         .withUsedSegmentsInTest(usedSegments)
         .withBroadcastDatasources(Collections.singleton(broadcastDatasource))
         .withDatabaseRuleManager(databaseRuleManager)
         .build();
 
-    params = new UnloadUnusedSegments().run(params);
+    params = new UnloadUnusedSegments(segmentStateManager).run(params);
     CoordinatorRunStats stats = params.getCoordinatorStats();
 
     // We drop segment1 and broadcast1 from all servers, realtimeSegment is not dropped by the indexer

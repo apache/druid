@@ -32,7 +32,6 @@ import org.apache.druid.timeline.SegmentTimeline;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -63,7 +62,6 @@ public class DruidCoordinatorRuntimeParams
   private final SegmentReplicantLookup segmentReplicantLookup;
   private final @Nullable TreeSet<DataSegment> usedSegments;
   private final @Nullable DataSourcesSnapshot dataSourcesSnapshot;
-  private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final ReplicationThrottler replicationManager;
   private final ServiceEmitter emitter;
   private final CoordinatorDynamicConfig coordinatorDynamicConfig;
@@ -79,7 +77,6 @@ public class DruidCoordinatorRuntimeParams
       SegmentReplicantLookup segmentReplicantLookup,
       @Nullable TreeSet<DataSegment> usedSegments,
       @Nullable DataSourcesSnapshot dataSourcesSnapshot,
-      Map<String, LoadQueuePeon> loadManagementPeons,
       ReplicationThrottler replicationManager,
       ServiceEmitter emitter,
       CoordinatorDynamicConfig coordinatorDynamicConfig,
@@ -95,7 +92,6 @@ public class DruidCoordinatorRuntimeParams
     this.segmentReplicantLookup = segmentReplicantLookup;
     this.usedSegments = usedSegments;
     this.dataSourcesSnapshot = dataSourcesSnapshot;
-    this.loadManagementPeons = loadManagementPeons;
     this.replicationManager = replicationManager;
     this.emitter = emitter;
     this.coordinatorDynamicConfig = coordinatorDynamicConfig;
@@ -139,11 +135,6 @@ public class DruidCoordinatorRuntimeParams
   {
     Preconditions.checkState(usedSegments != null, "usedSegments or dataSourcesSnapshot must be set");
     return usedSegments;
-  }
-
-  public Map<String, LoadQueuePeon> getLoadManagementPeons()
-  {
-    return loadManagementPeons;
   }
 
   public ReplicationThrottler getReplicationManager()
@@ -210,27 +201,6 @@ public class DruidCoordinatorRuntimeParams
         segmentReplicantLookup,
         usedSegments,
         dataSourcesSnapshot,
-        loadManagementPeons,
-        replicationManager,
-        emitter,
-        coordinatorDynamicConfig,
-        coordinatorCompactionConfig,
-        stats,
-        balancerStrategy,
-        broadcastDatasources
-    );
-  }
-
-  public Builder buildFromExistingWithoutSegmentsMetadata()
-  {
-    return new Builder(
-        startTimeNanos,
-        druidCluster,
-        databaseRuleManager,
-        segmentReplicantLookup,
-        null, // usedSegments
-        null, // dataSourcesSnapshot
-        loadManagementPeons,
         replicationManager,
         emitter,
         coordinatorDynamicConfig,
@@ -249,26 +219,16 @@ public class DruidCoordinatorRuntimeParams
     private SegmentReplicantLookup segmentReplicantLookup;
     private @Nullable TreeSet<DataSegment> usedSegments;
     private @Nullable DataSourcesSnapshot dataSourcesSnapshot;
-    private final Map<String, LoadQueuePeon> loadManagementPeons;
     private ReplicationThrottler replicationManager;
     private ServiceEmitter emitter;
     private CoordinatorDynamicConfig coordinatorDynamicConfig;
     private CoordinatorCompactionConfig coordinatorCompactionConfig;
-    private CoordinatorRunStats stats;
+    private final CoordinatorRunStats stats;
     private BalancerStrategy balancerStrategy;
     private Set<String> broadcastDatasources;
 
     private Builder()
     {
-      this.startTimeNanos = null;
-      this.druidCluster = null;
-      this.databaseRuleManager = null;
-      this.segmentReplicantLookup = null;
-      this.usedSegments = null;
-      this.dataSourcesSnapshot = null;
-      this.loadManagementPeons = new HashMap<>();
-      this.replicationManager = null;
-      this.emitter = null;
       this.stats = new CoordinatorRunStats();
       this.coordinatorDynamicConfig = CoordinatorDynamicConfig.builder().build();
       this.coordinatorCompactionConfig = CoordinatorCompactionConfig.empty();
@@ -282,7 +242,6 @@ public class DruidCoordinatorRuntimeParams
         SegmentReplicantLookup segmentReplicantLookup,
         @Nullable TreeSet<DataSegment> usedSegments,
         @Nullable DataSourcesSnapshot dataSourcesSnapshot,
-        Map<String, LoadQueuePeon> loadManagementPeons,
         ReplicationThrottler replicationManager,
         ServiceEmitter emitter,
         CoordinatorDynamicConfig coordinatorDynamicConfig,
@@ -298,7 +257,6 @@ public class DruidCoordinatorRuntimeParams
       this.segmentReplicantLookup = segmentReplicantLookup;
       this.usedSegments = usedSegments;
       this.dataSourcesSnapshot = dataSourcesSnapshot;
-      this.loadManagementPeons = loadManagementPeons;
       this.replicationManager = replicationManager;
       this.emitter = emitter;
       this.coordinatorDynamicConfig = coordinatorDynamicConfig;
@@ -318,7 +276,6 @@ public class DruidCoordinatorRuntimeParams
           segmentReplicantLookup,
           usedSegments,
           dataSourcesSnapshot,
-          loadManagementPeons,
           replicationManager,
           emitter,
           coordinatorDynamicConfig,
@@ -373,26 +330,6 @@ public class DruidCoordinatorRuntimeParams
     {
       this.usedSegments = createUsedSegmentsSet(usedSegments);
       this.dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(usedSegments, ImmutableMap.of());
-      return this;
-    }
-
-    /** This method must be used in test code only. */
-    @VisibleForTesting
-    public Builder withUsedSegmentsTimelinesPerDataSourceInTest(
-        Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource
-    )
-    {
-      this.dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegmentsTimelines(
-          usedSegmentsTimelinesPerDataSource,
-          ImmutableMap.of()
-      );
-      usedSegments = createUsedSegmentsSet(dataSourcesSnapshot.iterateAllUsedSegmentsInSnapshot());
-      return this;
-    }
-
-    public Builder withLoadManagementPeons(Map<String, LoadQueuePeon> loadManagementPeonsCollection)
-    {
-      loadManagementPeons.putAll(loadManagementPeonsCollection);
       return this;
     }
 

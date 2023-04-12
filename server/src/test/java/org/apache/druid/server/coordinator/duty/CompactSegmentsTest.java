@@ -180,7 +180,7 @@ public class CompactSegmentsTest
   private final PartitionsSpec partitionsSpec;
   private final BiFunction<Integer, Integer, ShardSpec> shardSpecFactory;
 
-  private Map<String, SegmentTimeline> dataSources;
+  private DataSourcesSnapshot dataSources;
   Map<String, List<DataSegment>> datasourceToSegments = new HashMap<>();
 
   public CompactSegmentsTest(PartitionsSpec partitionsSpec, BiFunction<Integer, Integer, ShardSpec> shardSpecFactory)
@@ -207,9 +207,7 @@ public class CompactSegmentsTest
         }
       }
     }
-    dataSources = DataSourcesSnapshot
-        .fromUsedSegments(allSegments, ImmutableMap.of())
-        .getUsedSegmentsTimelinesPerDataSource();
+    dataSources = DataSourcesSnapshot.fromUsedSegments(allSegments, ImmutableMap.of());
     Mockito.when(COORDINATOR_CONFIG.getCompactionSkipLockedIntervals()).thenReturn(true);
   }
 
@@ -441,10 +439,7 @@ public class CompactSegmentsTest
       }
     }
 
-    dataSources = DataSourcesSnapshot
-        .fromUsedSegments(segments, ImmutableMap.of())
-        .getUsedSegmentsTimelinesPerDataSource();
-
+    dataSources = DataSourcesSnapshot.fromUsedSegments(segments, ImmutableMap.of());
 
     final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
     leaderClient.start();
@@ -546,7 +541,8 @@ public class CompactSegmentsTest
     }
 
     // Deactivate one datasource (datasource 0 no longer exist in timeline)
-    dataSources.remove(DATA_SOURCE_PREFIX + 0);
+    dataSources.getUsedSegmentsTimelinesPerDataSource()
+               .remove(DATA_SOURCE_PREFIX + 0);
 
     // Test run auto compaction with one datasource deactivated
     // Snapshot should not contain deactivated datasource
@@ -601,10 +597,7 @@ public class CompactSegmentsTest
       }
     }
 
-    dataSources = DataSourcesSnapshot
-        .fromUsedSegments(segments, ImmutableMap.of())
-        .getUsedSegmentsTimelinesPerDataSource();
-
+    dataSources = DataSourcesSnapshot.fromUsedSegments(segments, ImmutableMap.of());
 
     final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
     leaderClient.start();
@@ -1594,10 +1587,7 @@ public class CompactSegmentsTest
             10L
         )
     );
-    dataSources = DataSourcesSnapshot
-        .fromUsedSegments(segments, ImmutableMap.of())
-        .getUsedSegmentsTimelinesPerDataSource();
-
+    dataSources = DataSourcesSnapshot.fromUsedSegments(segments, ImmutableMap.of());
 
     final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
     final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, mockIndexingServiceClient);
@@ -1692,10 +1682,7 @@ public class CompactSegmentsTest
             10L
         )
     );
-    dataSources = DataSourcesSnapshot
-        .fromUsedSegments(segments, ImmutableMap.of())
-        .getUsedSegmentsTimelinesPerDataSource();
-
+    dataSources = DataSourcesSnapshot.fromUsedSegments(segments, ImmutableMap.of());
 
     final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
     final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, mockIndexingServiceClient);
@@ -2020,7 +2007,7 @@ public class CompactSegmentsTest
   {
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
-        .withUsedSegmentsTimelinesPerDataSourceInTest(dataSources)
+        .withSnapshotOfDataSourcesWithAllUsedSegments(dataSources)
         .withCompactionConfig(
             new CoordinatorCompactionConfig(
                 compactionConfigs,
@@ -2068,9 +2055,11 @@ public class CompactSegmentsTest
       }
     }
 
+    final Map<String, SegmentTimeline> dataSourceToTimeline
+        = dataSources.getUsedSegmentsTimelinesPerDataSource();
     for (int i = 0; i < 3; i++) {
       final String dataSource = DATA_SOURCE_PREFIX + i;
-      List<TimelineObjectHolder<String, DataSegment>> holders = dataSources.get(dataSource).lookup(expectedInterval);
+      List<TimelineObjectHolder<String, DataSegment>> holders = dataSourceToTimeline.get(dataSource).lookup(expectedInterval);
       Assert.assertEquals(1, holders.size());
       List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holders.get(0).getObject());
       Assert.assertEquals(2, chunks.size());
@@ -2085,10 +2074,12 @@ public class CompactSegmentsTest
   private void assertLastSegmentNotCompacted(CompactSegments compactSegments)
   {
     // Segments of the latest interval should not be compacted
+    final Map<String, SegmentTimeline> dataSourceToTimeline
+        = dataSources.getUsedSegmentsTimelinesPerDataSource();
     for (int i = 0; i < 3; i++) {
       final String dataSource = DATA_SOURCE_PREFIX + i;
       final Interval interval = Intervals.of(StringUtils.format("2017-01-09T12:00:00/2017-01-10"));
-      List<TimelineObjectHolder<String, DataSegment>> holders = dataSources.get(dataSource).lookup(interval);
+      List<TimelineObjectHolder<String, DataSegment>> holders = dataSourceToTimeline.get(dataSource).lookup(interval);
       Assert.assertEquals(1, holders.size());
       for (TimelineObjectHolder<String, DataSegment> holder : holders) {
         List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holder.getObject());
@@ -2122,15 +2113,17 @@ public class CompactSegmentsTest
 
   private void addMoreData(String dataSource, int day)
   {
+    final SegmentTimeline timeline
+        = dataSources.getUsedSegmentsTimelinesPerDataSource().get(dataSource);
     for (int i = 0; i < 2; i++) {
       DataSegment newSegment = createSegment(dataSource, day, true, i);
-      dataSources.get(dataSource).add(
+      timeline.add(
           newSegment.getInterval(),
           newSegment.getVersion(),
           newSegment.getShardSpec().createChunk(newSegment)
       );
       newSegment = createSegment(dataSource, day, false, i);
-      dataSources.get(dataSource).add(
+      timeline.add(
           newSegment.getInterval(),
           newSegment.getVersion(),
           newSegment.getShardSpec().createChunk(newSegment)
@@ -2279,19 +2272,15 @@ public class CompactSegmentsTest
       submittedCompactionTasks.add(compactionTaskQuery);
 
       final Interval intervalToCompact = compactionTaskQuery.getIoConfig().getInputSpec().getInterval();
-      final VersionedIntervalTimeline<String, DataSegment> timeline = dataSources.get(
-          compactionTaskQuery.getDataSource()
-      );
+      final SegmentTimeline timeline = dataSources.getUsedSegmentsTimelinesPerDataSource()
+                                                  .get(compactionTaskQuery.getDataSource());
       final List<DataSegment> segments = timeline.lookup(intervalToCompact)
                                                  .stream()
                                                  .flatMap(holder -> Streams.sequentialStreamFrom(holder.getObject()))
                                                  .map(PartitionChunk::getObject)
                                                  .collect(Collectors.toList());
-      compactSegments(
-          timeline,
-          segments,
-          compactionTaskQuery
-      );
+
+      compactSegments(timeline, segments, compactionTaskQuery);
       return createStringFullResponseHolder(jsonMapper.writeValueAsString(ImmutableMap.of("task", taskQuery.getId())));
     }
 

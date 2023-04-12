@@ -443,7 +443,7 @@ public class BalanceSegmentsTest
   {
     return CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
-        .withDruidCluster(DruidClusterBuilder.newBuilder().addTier("normal", servers).build())
+        .withDruidCluster(DruidCluster.builder().addTier("normal", servers).build())
         .withUsedSegmentsInTest(allSegments)
         .withBroadcastDatasources(broadcastDatasources)
         .withBalancerStrategy(balancerStrategy)

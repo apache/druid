@@ -26,7 +26,6 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.DruidCluster;
-import org.apache.druid.server.coordinator.DruidClusterBuilder;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
@@ -247,8 +246,8 @@ public class BroadcastDistributionRuleTest
         true
     );
 
-    druidCluster = DruidClusterBuilder
-        .newBuilder()
+    druidCluster = DruidCluster
+.builder()
         .addTier(
             "hot",
             holdersOfLargeSegments.get(0),
@@ -263,8 +262,8 @@ public class BroadcastDistributionRuleTest
         )
         .build();
 
-    secondCluster = DruidClusterBuilder
-        .newBuilder()
+    secondCluster = DruidCluster
+.builder()
         .addTier(
             "tier1",
             activeServer,

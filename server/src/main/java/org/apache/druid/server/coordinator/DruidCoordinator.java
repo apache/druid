@@ -667,7 +667,7 @@ public class DruidCoordinator
         new LogUsedSegments(),
         new UpdateCoordinatorStateAndPrepareCluster(),
         new RunRules(segmentStateManager),
-        new UnloadUnusedSegments(),
+        new UnloadUnusedSegments(segmentStateManager),
         new MarkAsUnusedOvershadowedSegments(DruidCoordinator.this),
         new BalanceSegments(segmentStateManager)
     );
@@ -746,9 +746,7 @@ public class DruidCoordinator
       // causing metrics from the duties to not being emitted.
       if (duties.stream().noneMatch(duty -> duty instanceof EmitClusterStatsAndMetrics)) {
         List<CoordinatorDuty> allDuties = new ArrayList<>(duties);
-        allDuties.add(
-            new EmitClusterStatsAndMetrics(DruidCoordinator.this, alias, emitter)
-        );
+        allDuties.add(new EmitClusterStatsAndMetrics(DruidCoordinator.this, alias, emitter));
         this.duties = allDuties;
       } else {
         this.duties = duties;
@@ -821,7 +819,7 @@ public class DruidCoordinator
               log.info("Finishing coordinator run since duty [%s] requested to stop run.", dutyName);
               return;
             } else {
-              params.getCoordinatorStats().addForDuty(Stats.Run.DUTY_TIME, dutyName, end - start);
+              params.getCoordinatorStats().addToDutyStat(Stats.Run.DUTY_TIME, dutyName, end - start);
             }
           }
         }
@@ -885,7 +883,6 @@ public class DruidCoordinator
 
       return params.buildFromExisting()
                    .withDruidCluster(cluster)
-                   .withLoadManagementPeons(loadManagementPeons)
                    .withBalancerStrategy(balancerStrategy)
                    .withSegmentReplicantLookup(segmentReplicantLookup)
                    .build();
@@ -930,7 +927,7 @@ public class DruidCoordinator
     {
       Set<String> decommissioningServers = params.getCoordinatorDynamicConfig().getDecommissioningNodes();
       final int maxSegmentsInLoadQueue = params.getCoordinatorDynamicConfig().getMaxSegmentsInNodeLoadingQueue();
-      final DruidCluster cluster = new DruidCluster();
+      final DruidCluster.Builder cluster = DruidCluster.builder();
       for (ImmutableDruidServer server : currentServers) {
         cluster.add(
             new ServerHolder(
@@ -941,7 +938,7 @@ public class DruidCoordinator
             )
         );
       }
-      return cluster;
+      return cluster.build();
     }
 
     void stopPeonsForDisappearedServers(List<ImmutableDruidServer> servers)

@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.stats;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.utils.CollectionUtils;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -30,6 +31,7 @@ import java.util.function.BiConsumer;
  * Contains statistics tracked during a single coordinator run or the runtime of
  * a single coordinator duty.
  */
+@NotThreadSafe
 public class CoordinatorRunStats
 {
   private final Map<RowKey, Object2LongOpenHashMap<CoordinatorStat>> allStats = new HashMap<>();
@@ -97,32 +99,27 @@ public class CoordinatorRunStats
     add(value, stat, RowKey.EMPTY);
   }
 
-  public void addForTier(CoordinatorStat stat, String tier, long value)
+  public void addToTieredStat(CoordinatorStat stat, String tier, long value)
   {
     add(value, stat, RowKey.builder().add(Dimension.TIER, tier).build());
   }
 
-  public void addForServer(CoordinatorStat stat, String serverName, long value)
+  public void addToServerStat(CoordinatorStat stat, String serverName, long value)
   {
     add(value, stat, RowKey.builder().add(Dimension.SERVER, serverName).build());
   }
 
-  public void addForDuty(CoordinatorStat stat, String duty, long value)
+  public void addToDutyStat(CoordinatorStat stat, String duty, long value)
   {
     add(value, stat, RowKey.builder().add(Dimension.DUTY, duty).build());
   }
 
-  public void addForDatasource(CoordinatorStat stat, String dataSource, long value)
+  public void addToDatasourceStat(CoordinatorStat stat, String dataSource, long value)
   {
     add(value, stat, RowKey.builder().add(Dimension.DATASOURCE, dataSource).build());
   }
 
-  public void addSegmentStat(
-      CoordinatorStat stat,
-      String tier,
-      String datasource,
-      long value
-  )
+  public void addToSegmentStat(CoordinatorStat stat, String tier, String datasource, long value)
   {
     RowKey rowKey = RowKey.builder()
                           .add(Dimension.TIER, tier)

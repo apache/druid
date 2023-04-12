@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator;
 
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.timeline.DataSegment;
@@ -38,12 +39,14 @@ import java.util.List;
  */
 public class CreateDataSegments
 {
+  private static final DateTime DEFAULT_START = DateTimes.of("2012-10-24");
+
   private final String datasource;
 
-  private DateTime startTime;
-  private Granularity granularity;
-  private int numPartitions;
-  private int numIntervals;
+  private DateTime startTime = DEFAULT_START;
+  private Granularity granularity = Granularities.DAY;
+  private int numPartitions = 1;
+  private int numIntervals = 1;
 
   public static CreateDataSegments ofDatasource(String datasource)
   {

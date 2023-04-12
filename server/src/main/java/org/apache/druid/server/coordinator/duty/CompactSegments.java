@@ -575,7 +575,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     statToValue.addTo(Stats.Compaction.SKIPPED_INTERVALS, autoCompactionSnapshot.getIntervalCountSkipped());
 
     statToValue.forEach(
-        (stat, value) -> stats.addForDatasource(stat, dataSource, value)
+        (stat, value) -> stats.addToDatasourceStat(stat, dataSource, value)
     );
   }
 

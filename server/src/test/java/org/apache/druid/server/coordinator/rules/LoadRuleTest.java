@@ -37,7 +37,6 @@ import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.CostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DruidCluster;
-import org.apache.druid.server.coordinator.DruidClusterBuilder;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadQueuePeon;
 import org.apache.druid.server.coordinator.LoadQueuePeonTester;
@@ -130,8 +129,8 @@ public class LoadRuleTest
     }
     EasyMock.replay(mockPeon, mockBalancerStrategy);
 
-    DruidCluster druidCluster = DruidClusterBuilder
-        .newBuilder()
+    DruidCluster druidCluster = DruidCluster
+        .builder()
         .addTier(Tier.T1, createServerHolder(Tier.T1, mockPeon, false))
         .addTier(Tier.T2, createServerHolder(Tier.T2, mockPeon, false))
         .build();
@@ -227,8 +226,8 @@ public class LoadRuleTest
 
     ImmutableDruidServer server1 = createServer(Tier.T1).toImmutableDruidServer();
     ImmutableDruidServer server2 = createServer(Tier.T1).toImmutableDruidServer();
-    DruidCluster druidCluster = DruidClusterBuilder
-        .newBuilder()
+    DruidCluster druidCluster = DruidCluster
+        .builder()
         .addTier(Tier.T1, new ServerHolder(server1, mockPeon), new ServerHolder(server2, mockPeon))
         .build();
 
@@ -239,8 +238,8 @@ public class LoadRuleTest
     final LoadQueuePeon loadingPeon = createLoadingPeon(segment, false);
     EasyMock.replay(loadingPeon);
 
-    DruidCluster afterLoad = DruidClusterBuilder
-        .newBuilder()
+    DruidCluster afterLoad = DruidCluster
+        .builder()
         .addTier(Tier.T1, new ServerHolder(server1, loadingPeon), new ServerHolder(server2, mockPeon))
         .build();
 
@@ -271,8 +270,8 @@ public class LoadRuleTest
 
     ImmutableDruidServer server1 = createServer(Tier.T1).toImmutableDruidServer();
     ImmutableDruidServer server2 = createServer(Tier.T1).toImmutableDruidServer();
-    DruidCluster druidCluster = DruidClusterBuilder
-        .newBuilder()
+    DruidCluster druidCluster = DruidCluster
+        .builder()
         .addTier(Tier.T1, new ServerHolder(server1, emptyPeon), new ServerHolder(server2, emptyPeon))
         .build();
 
@@ -289,8 +288,8 @@ public class LoadRuleTest
     final LoadQueuePeon slowLoadingPeon = createLoadingPeon(segment, true);
     EasyMock.replay(slowLoadingPeon);
 
-    DruidCluster withLoadTimeout = DruidClusterBuilder
-        .newBuilder()
+    DruidCluster withLoadTimeout = DruidCluster
+        .builder()
         .addTier(Tier.T1, new ServerHolder(server1, slowLoadingPeon), new ServerHolder(server2, emptyPeon))
         .build();
 
@@ -324,8 +323,8 @@ public class LoadRuleTest
 
     ImmutableDruidServer server1 = createServer(Tier.T1).toImmutableDruidServer();
     ImmutableDruidServer server2 = createServer(Tier.T1).toImmutableDruidServer();
-    DruidCluster druidCluster = DruidClusterBuilder
-        .newBuilder()
+    DruidCluster druidCluster = DruidCluster
+        .builder()
         .addTier(Tier.T1, new ServerHolder(server1, emptyPeon), new ServerHolder(server2, emptyPeon))
         .build();
 
@@ -338,8 +337,8 @@ public class LoadRuleTest
     final LoadQueuePeon slowLoadingPeon = createLoadingPeon(segment, true);
     EasyMock.replay(slowLoadingPeon);
 
-    DruidCluster withLoadTimeout = DruidClusterBuilder
-        .newBuilder()
+    DruidCluster withLoadTimeout = DruidCluster
+        .builder()
         .addTier(Tier.T1, new ServerHolder(server1, slowLoadingPeon), new ServerHolder(server2, emptyPeon))
         .build();
 
@@ -373,8 +372,8 @@ public class LoadRuleTest
 
     EasyMock.replay(loadingPeon, mockBalancerStrategy);
 
-    DruidCluster druidCluster = DruidClusterBuilder
-        .newBuilder()
+    DruidCluster druidCluster = DruidCluster
+        .builder()
         .addTier(Tier.T1, createServerHolder(Tier.T1, loadingPeon, false))
         .build();
 
@@ -407,8 +406,8 @@ public class LoadRuleTest
     server2.addDataSegment(segment);
     DruidServer server3 = createServer(Tier.T2);
 
-    DruidCluster druidCluster = DruidClusterBuilder
-        .newBuilder()
+    DruidCluster druidCluster = DruidCluster
+        .builder()
         .addTier(Tier.T1, new ServerHolder(server1.toImmutableDruidServer(), mockPeon))
         .addTier(
             Tier.T2,
@@ -441,8 +440,8 @@ public class LoadRuleTest
 
     EasyMock.replay(mockPeon, mockBalancerStrategy);
 
-    DruidCluster druidCluster = DruidClusterBuilder
-        .newBuilder()
+    DruidCluster druidCluster = DruidCluster
+        .builder()
         .addTier(Tier.T1, createServerHolder(Tier.T1, mockPeon, false))
         .build();
 
@@ -471,8 +470,8 @@ public class LoadRuleTest
     server1.addDataSegment(segment);
     server2.addDataSegment(segment);
 
-    DruidCluster druidCluster = DruidClusterBuilder
-        .newBuilder()
+    DruidCluster druidCluster = DruidCluster
+        .builder()
         .addTier(
             Tier.T1,
             new ServerHolder(server1.toImmutableDruidServer(), mockPeon),
@@ -501,8 +500,8 @@ public class LoadRuleTest
     final LoadQueuePeonTester peon = new LoadQueuePeonTester();
 
     final int maxSegmentsInQueue = 2;
-    DruidCluster druidCluster = DruidClusterBuilder
-        .newBuilder()
+    DruidCluster druidCluster = DruidCluster
+        .builder()
         .addTier(
             Tier.T1,
             new ServerHolder(
@@ -561,8 +560,8 @@ public class LoadRuleTest
 
     EasyMock.replay(mockPeon1, mockPeon2, mockBalancerStrategy);
 
-    DruidCluster druidCluster = DruidClusterBuilder
-        .newBuilder()
+    DruidCluster druidCluster = DruidCluster
+        .builder()
         .addTier(Tier.T1, createServerHolder(Tier.T1, mockPeon1, true))
         .addTier(Tier.T2, createServerHolder(Tier.T2, mockPeon2, false))
         .build();
@@ -603,8 +602,8 @@ public class LoadRuleTest
 
     EasyMock.replay(mockBalancerStrategy);
 
-    DruidCluster druidCluster = DruidClusterBuilder
-        .newBuilder()
+    DruidCluster druidCluster = DruidCluster
+        .builder()
         .addTier(Tier.T1, holder1, holder2)
         .addTier(Tier.T2, holder3, holder4)
         .build();
@@ -641,8 +640,8 @@ public class LoadRuleTest
     DruidServer server2 = createServer(Tier.T1);
     server2.addDataSegment(segment2);
 
-    DruidCluster druidCluster = DruidClusterBuilder
-        .newBuilder()
+    DruidCluster druidCluster = DruidCluster
+        .builder()
         .addTier(
             Tier.T1,
             new ServerHolder(server1.toImmutableDruidServer(), mockPeon, true),
@@ -688,8 +687,8 @@ public class LoadRuleTest
     DruidServer server3 = createServer(Tier.T1);
     server3.addDataSegment(segment1);
 
-    DruidCluster druidCluster = DruidClusterBuilder
-        .newBuilder()
+    DruidCluster druidCluster = DruidCluster
+        .builder()
         .addTier(
             Tier.T1,
             new ServerHolder(server1.toImmutableDruidServer(), mockPeon1, false),

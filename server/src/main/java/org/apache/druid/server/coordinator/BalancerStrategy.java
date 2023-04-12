@@ -63,20 +63,19 @@ public interface BalancerStrategy
   );
 
   /**
-   * Picks the best segments to move from one of the supplied set of servers
-   * according to the balancing strategy.
+   * Picks segments from the given set of servers based on the balancing strategy.
+   * Default behaviour is to pick segments using reservoir sampling.
    *
-   * @param serverHolders set of historicals to consider for moving segments
-   * @param broadcastDatasources Datasources that contain segments which were loaded via broadcast rules.
-   *                             Balancing strategies should avoid rebalancing segments for such datasources, since
-   *                             they should be loaded on all servers anyway.
-   *                             NOTE: this should really be handled on a per-segment basis, to properly support
-   *                                   the interval or period-based broadcast rules. For simplicity of the initial
-   *                                   implementation, only forever broadcast rules are supported.
-   * @param reservoirSize the reservoir size maintained by the Reservoir Sampling algorithm.
-   * @param pickLoadingSegments
-   * @return Iterator for set of {@link BalancerSegmentHolder} containing segment to move and server they currently
-   * reside on, or empty if there are no segments to pick from (i.e. all provided serverHolders are empty).
+   * @param serverHolders        Set of historicals to consider for picking segments
+   * @param broadcastDatasources Segments belonging to these datasources will not
+   *                             be picked for balancing, since they should be
+   *                             loaded on all servers anyway.
+   * @param reservoirSize        Reservoir size maintained by the sampling algorithm
+   * @param pickLoadingSegments  If true, picks only segments currently being
+   *                             loaded on a server. If false, picks segments
+   *                             already loaded on a server.
+   * @return Iterator over {@link BalancerSegmentHolder}s, each of which contains
+   * a segment picked for moving and the server currently serving/loading it.
    */
   default Iterator<BalancerSegmentHolder> pickSegmentsToMove(
       List<ServerHolder> serverHolders,

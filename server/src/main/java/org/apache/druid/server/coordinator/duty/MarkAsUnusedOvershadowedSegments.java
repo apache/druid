@@ -93,7 +93,7 @@ public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
     }
     datasourceToUnusedSegments.forEach(
         (datasource, unusedSegments) -> {
-          stats.addForDatasource(Stats.Segments.OVERSHADOWED, datasource, unusedSegments.size());
+          stats.addToDatasourceStat(Stats.Segments.OVERSHADOWED, datasource, unusedSegments.size());
           coordinator.markSegmentsAsUnused(datasource, unusedSegments);
         }
     );

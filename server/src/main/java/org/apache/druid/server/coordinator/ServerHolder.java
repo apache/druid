@@ -20,11 +20,13 @@
 package org.apache.druid.server.coordinator;
 
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -37,6 +39,12 @@ import java.util.Set;
  */
 public class ServerHolder implements Comparable<ServerHolder>
 {
+  static final Comparator<ServerHolder> FULL_SERVER_FIRST =
+      Comparator.comparing(ServerHolder::getAvailableSize)
+                .thenComparing(holder -> holder.getServer().getHost())
+                .thenComparing(holder -> holder.getServer().getTier())
+                .thenComparing(holder -> holder.getServer().getType());
+
   private final ImmutableDruidServer server;
   private final LoadQueuePeon peon;
   private final boolean isDecommissioning;
@@ -261,6 +269,12 @@ public class ServerHolder implements Comparable<ServerHolder>
     return server.getSegment(segmentId) != null;
   }
 
+  public boolean isRealtimeServer()
+  {
+    return server.getType() == ServerType.REALTIME
+           || server.getType() == ServerType.INDEXER_EXECUTOR;
+  }
+
   private SegmentAction simplify(SegmentAction action)
   {
     return action == SegmentAction.REPLICATE ? SegmentAction.LOAD : action;
@@ -286,22 +300,7 @@ public class ServerHolder implements Comparable<ServerHolder>
   @Override
   public int compareTo(ServerHolder serverHolder)
   {
-    int result = Long.compare(getAvailableSize(), serverHolder.getAvailableSize());
-    if (result != 0) {
-      return result;
-    }
-
-    result = server.getHost().compareTo(serverHolder.server.getHost());
-    if (result != 0) {
-      return result;
-    }
-
-    result = server.getTier().compareTo(serverHolder.server.getTier());
-    if (result != 0) {
-      return result;
-    }
-
-    return server.getType().compareTo(serverHolder.server.getType());
+    return FULL_SERVER_FIRST.compare(this, serverHolder);
   }
 
   @Override
@@ -315,16 +314,9 @@ public class ServerHolder implements Comparable<ServerHolder>
     }
 
     ServerHolder that = (ServerHolder) o;
-
-    if (!this.server.getHost().equals(that.server.getHost())) {
-      return false;
-    }
-
-    if (!this.server.getTier().equals(that.getServer().getTier())) {
-      return false;
-    }
-
-    return this.server.getType().equals(that.getServer().getType());
+    return Objects.equals(server.getHost(), that.server.getHost())
+           && Objects.equals(server.getTier(), that.server.getTier())
+           && Objects.equals(server.getType(), that.server.getType());
   }
 
   @Override

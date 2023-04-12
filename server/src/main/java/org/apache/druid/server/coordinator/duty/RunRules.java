@@ -69,7 +69,7 @@ public class RunRules implements CoordinatorDuty
   {
     final DruidCluster cluster = params.getDruidCluster();
     if (cluster.isEmpty()) {
-      log.warn("Uh... I have no servers. Not assigning anything...");
+      log.warn("Cluster has no servers. Not running any rules.");
       return params;
     }
 

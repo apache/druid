@@ -301,9 +301,9 @@ public class CostBalancerStrategy implements BalancerStrategy
     final double normalization = calculateNormalization(serverHolderList);
     final double normalizedInitialCost = initialTotalCost / normalization;
 
-    stats.addForTier(Stats.Balancer.RAW_COST, tier, (long) initialTotalCost);
-    stats.addForTier(Stats.Balancer.NORMALIZATION_COST, tier, (long) normalization);
-    stats.addForTier(Stats.Balancer.NORMALIZED_COST_X_1000, tier, (long) (normalizedInitialCost * 1000));
+    stats.addToTieredStat(Stats.Balancer.RAW_COST, tier, (long) initialTotalCost);
+    stats.addToTieredStat(Stats.Balancer.NORMALIZATION_COST, tier, (long) normalization);
+    stats.addToTieredStat(Stats.Balancer.NORMALIZED_COST_X_1000, tier, (long) (normalizedInitialCost * 1000));
 
     log.info(
         "[%s]: Initial Total Cost: [%f], Normalization: [%f], Initial Normalized Cost: [%f]",

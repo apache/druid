@@ -117,7 +117,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     if (replicationThrottler != null) {
       replicationThrottler.getTierToNumThrottled().forEach(
           (tier, numThrottled) ->
-              stats.addForTier(Stats.Segments.THROTTLED_REPLICAS, tier, numThrottled)
+              stats.addToTieredStat(Stats.Segments.THROTTLED_REPLICAS, tier, numThrottled)
       );
     }
 
@@ -150,21 +150,21 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
 
     cluster.getHistoricals().forEach((tier, historicals) -> {
       long totalCapacity = historicals.stream().map(ServerHolder::getMaxSize).reduce(0L, Long::sum);
-      stats.addForTier(Stats.Tier.TOTAL_CAPACITY, tier, totalCapacity);
-      stats.addForTier(Stats.Tier.HISTORICAL_COUNT, tier, historicals.size());
+      stats.addToTieredStat(Stats.Tier.TOTAL_CAPACITY, tier, totalCapacity);
+      stats.addToTieredStat(Stats.Tier.HISTORICAL_COUNT, tier, historicals.size());
     });
 
     // Collect load queue stats
-    params.getLoadManagementPeons().forEach((serverName, queuePeon) -> {
-      stats.addForServer(Stats.Segments.BYTES_TO_LOAD, serverName, queuePeon.getSizeOfSegmentsToLoad());
-      stats.addForServer(Stats.Segments.NUM_TO_LOAD, serverName, queuePeon.getSegmentsToLoad().size());
-      stats.addForServer(Stats.Segments.NUM_TO_DROP, serverName, queuePeon.getSegmentsToDrop().size());
-      stats.addForServer(Stats.Segments.FAILED_LOADS, serverName, queuePeon.getAndResetFailedAssignCount());
+    coordinator.getLoadManagementPeons().forEach((serverName, queuePeon) -> {
+      stats.addToServerStat(Stats.Segments.BYTES_TO_LOAD, serverName, queuePeon.getSizeOfSegmentsToLoad());
+      stats.addToServerStat(Stats.Segments.NUM_TO_LOAD, serverName, queuePeon.getSegmentsToLoad().size());
+      stats.addToServerStat(Stats.Segments.NUM_TO_DROP, serverName, queuePeon.getSegmentsToDrop().size());
+      stats.addToServerStat(Stats.Segments.FAILED_LOADS, serverName, queuePeon.getAndResetFailedAssignCount());
     });
 
     coordinator.computeNumsUnavailableUsedSegmentsPerDataSource().forEach(
         (dataSource, numUnavailable) ->
-            stats.addForDatasource(Stats.Segments.UNAVAILABLE, dataSource, numUnavailable)
+            stats.addToDatasourceStat(Stats.Segments.UNAVAILABLE, dataSource, numUnavailable)
     );
 
     coordinator.computeUnderReplicationCountsPerDataSourcePerTier().forEach(
@@ -183,8 +183,8 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     params.getUsedSegmentsTimelinesPerDataSource().forEach(
         (dataSource, timeline) -> {
           long totalSizeOfUsedSegments = timeline.iterateAllObjects().stream().mapToLong(DataSegment::getSize).sum();
-          stats.addForDatasource(Stats.Segments.SIZE, dataSource, totalSizeOfUsedSegments);
-          stats.addForDatasource(Stats.Segments.COUNT, dataSource, timeline.getNumObjects());
+          stats.addToDatasourceStat(Stats.Segments.SIZE, dataSource, totalSizeOfUsedSegments);
+          stats.addToDatasourceStat(Stats.Segments.COUNT, dataSource, timeline.getNumObjects());
         }
     );
   }
