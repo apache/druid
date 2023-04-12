@@ -870,12 +870,12 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         )
         .build();
 
-    final String expectedLegacyExplanation =
+    final String legacyExplanation =
         "DruidQueryRel(query=["
         + queryJsonMapper.writeValueAsString(expectedQuery)
         + "], signature=[{x:STRING, y:STRING, z:LONG}], statementKind=[INSERT], targetDataSource=[dst])\n";
 
-    final String expectedNativeExplanation =
+    final String explanation =
         "["
         + "{\"query\":{\"queryType\":\"scan\","
         + "\"dataSource\":{\"type\":\"external\",\"inputSource\":{\"type\":\"inline\",\"data\":\"a,b,1\\nc,d,2\\n\"},"
@@ -892,7 +892,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
 
     // Use testQuery for EXPLAIN (not testIngestionQuery).
     testQuery(
-        PlannerConfig.builder().useNativeQueryExplain(false).build(),
+        PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,
         ImmutableMap.of("sqlQueryId", "dummy"),
         Collections.emptyList(),
         StringUtils.format(
@@ -904,7 +904,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         new DefaultResultsVerifier(
             ImmutableList.of(
                 new Object[]{
-                    expectedLegacyExplanation,
+                    legacyExplanation,
                     "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]"
                 }
             ),
@@ -915,7 +915,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
 
 
     testQuery(
-        PlannerConfig.builder().useNativeQueryExplain(true).build(),
+        PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
         ImmutableMap.of("sqlQueryId", "dummy"),
         Collections.emptyList(),
         StringUtils.format(
@@ -927,7 +927,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         new DefaultResultsVerifier(
             ImmutableList.of(
                 new Object[]{
-                    expectedNativeExplanation,
+                    explanation,
                     "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]"
                 }
             ),

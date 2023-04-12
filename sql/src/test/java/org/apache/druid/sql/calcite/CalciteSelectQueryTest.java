@@ -548,7 +548,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     final String resources = "[]";
 
     testQuery(
-        PlannerConfig.builder().useNativeQueryExplain(false).build(),
+        PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,
         query,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
@@ -1293,7 +1293,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     final String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
 
     testQuery(
-        PlannerConfig.builder().useNativeQueryExplain(false).build(),
+        PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,
         query,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),

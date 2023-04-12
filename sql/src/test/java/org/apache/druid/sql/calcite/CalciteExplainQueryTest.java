@@ -55,7 +55,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
     final String resources = "[{\"name\":\"aview\",\"type\":\"VIEW\"}]";
 
     testQuery(
-        PlannerConfig.builder().useNativeQueryExplain(false).build(),
+        PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,
         query,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
@@ -137,7 +137,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
     );
 
     testQuery(
-        PlannerConfig.builder().useNativeQueryExplain(false).build(),
+        PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,
         query,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
@@ -257,7 +257,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
     final String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
 
     testQuery(
-        PlannerConfig.builder().useNativeQueryExplain(false).build(),
+        PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,
         query,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
