@@ -72,7 +72,7 @@ public class CollectionUtilsTest
   {
     final IllegalStateException e = Assert.assertThrows(
         IllegalStateException.class,
-        () -> CollectionUtils.getOnlyElement(Collections.emptyList(), () -> new ISE("oops"))
+        () -> CollectionUtils.getOnlyElement(Collections.emptyList(), xs -> new ISE("oops"))
     );
     MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("oops")));
   }
@@ -82,7 +82,7 @@ public class CollectionUtilsTest
   {
     Assert.assertEquals(
         "a",
-        CollectionUtils.getOnlyElement(Collections.singletonList("a"), () -> new ISE("oops"))
+        CollectionUtils.getOnlyElement(Collections.singletonList("a"), xs -> new ISE("oops"))
     );
   }
 
@@ -91,7 +91,7 @@ public class CollectionUtilsTest
   {
     final IllegalStateException e = Assert.assertThrows(
         IllegalStateException.class,
-        () -> CollectionUtils.getOnlyElement(ImmutableList.of("a", "b"), () -> new ISE("oops"))
+        () -> CollectionUtils.getOnlyElement(ImmutableList.of("a", "b"), xs -> new ISE("oops"))
     );
     MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("oops")));
   }
