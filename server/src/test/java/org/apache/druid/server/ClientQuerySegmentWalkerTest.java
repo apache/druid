@@ -809,8 +809,6 @@ public class ClientQuerySegmentWalkerTest
   @Test
   public void testTimeseriesOnGroupByOnTableErrorTooLarge()
   {
-    initWalker(ImmutableMap.of("maxSubqueryMemory", "1"));
-
     final GroupByQuery subquery =
         GroupByQuery.builder()
                     .setDataSource(FOO)
@@ -825,6 +823,7 @@ public class ClientQuerySegmentWalkerTest
                                 .granularity(Granularities.ALL)
                                 .intervals(Intervals.ONLY_ETERNITY)
                                 .aggregators(new CountAggregatorFactory("cnt"))
+                                .context(ImmutableMap.of(QueryContexts.MAX_SUBQUERY_MEMORY_BYTES_KEY, "1"))
                                 .build()
                                 .withId(DUMMY_QUERY_ID);
 
