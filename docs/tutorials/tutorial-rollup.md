@@ -1,7 +1,7 @@
 ---
 id: tutorial-rollup
-title: Rollup
-sidebar_label: Rollup
+title: Aggregate data with rollup
+sidebar_label: Aggregate data with rollup
 ---
 
 <!--
