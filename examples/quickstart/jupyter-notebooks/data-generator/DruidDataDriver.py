@@ -17,11 +17,9 @@
 #
 
 import argparse
-from confluent_kafka import Producer
 import dateutil.parser
 from datetime import datetime, timedelta
 import json
-from kafka import KafkaProducer
 import numpy as np
 import random
 import re
@@ -198,6 +196,8 @@ class PrintKafka:
     producer = None
     topic = None
     def __init__(self, endpoint, topic, security_protocol, compression_type):
+        from kafka import KafkaProducer
+
         #print('PrintKafka('+str(endpoint)+', '+str(topic)+', '+str(security_protocol)+', '+str(compression_type)+')')
         self.endpoint = endpoint
         self.producer = KafkaProducer(bootstrap_servers=endpoint, security_protocol=security_protocol, compression_type=compression_type, value_serializer=lambda v: json.dumps(v).encode('utf-8'))
@@ -213,6 +213,8 @@ class PrintConfluent:
     username = None
     password = None
     def __init__(self, servers, topic, username, password):
+        from confluent_kafka import Producer
+
         #print('PrintKafka('+str(endpoint)+', '+str(topic)+', '+str(security_protocol)+', '+str(compression_type)+')')
         self.servers = servers
         self.producer = Producer({
