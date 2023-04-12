@@ -34,7 +34,6 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
-import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -65,13 +64,12 @@ public class WorkerTaskMonitor extends WorkerTaskManager
       ObjectMapper jsonMapper,
       TaskRunner taskRunner,
       TaskConfig taskConfig,
-      WorkerConfig workerConfig,
       CuratorFramework cf,
       WorkerCuratorCoordinator workerCuratorCoordinator,
       @IndexingService DruidLeaderClient overlordClient
   )
   {
-    super(jsonMapper, taskRunner, taskConfig, workerConfig, overlordClient);
+    super(jsonMapper, taskRunner, taskConfig, overlordClient);
 
     this.jsonMapper = jsonMapper;
     this.pathChildrenCache = new PathChildrenCache(

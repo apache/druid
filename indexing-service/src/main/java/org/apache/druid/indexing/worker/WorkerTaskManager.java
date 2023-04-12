@@ -39,7 +39,6 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
-import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -111,7 +110,6 @@ public class WorkerTaskManager
       ObjectMapper jsonMapper,
       TaskRunner taskRunner,
       TaskConfig taskConfig,
-      WorkerConfig workerConfig,
       @IndexingService DruidLeaderClient overlordClient
   )
   {
@@ -121,12 +119,7 @@ public class WorkerTaskManager
     this.completedTasksCleanupExecutor = Execs.scheduledSingleThreaded("WorkerTaskManager-CompletedTasksCleaner");
     this.overlordClient = overlordClient;
 
-    final List<String> workerConfigDirs = workerConfig.getBaseTaskDirs();
-    if (workerConfigDirs == null || workerConfigDirs.isEmpty()) {
-      storageDir = taskConfig.getBaseTaskDir();
-    } else {
-      storageDir = new File(workerConfigDirs.get(0));
-    }
+    storageDir = taskConfig.getBaseTaskDir();
   }
 
   @LifecycleStart

@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.worker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.indexing.NoopOverlordClient;
@@ -43,7 +42,6 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.TestTaskRunner;
-import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
@@ -64,9 +62,7 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  *
@@ -82,11 +78,9 @@ public class WorkerTaskManagerTest
 
   private final boolean restoreTasksOnRestart;
 
-  private final boolean useMultipleBaseTaskDirPaths;
-
   private WorkerTaskManager workerTaskManager;
 
-  public WorkerTaskManagerTest(boolean restoreTasksOnRestart, boolean useMultipleBaseTaskDirPaths)
+  public WorkerTaskManagerTest(boolean restoreTasksOnRestart)
   {
     testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
@@ -94,18 +88,12 @@ public class WorkerTaskManagerTest
     indexMergerV9Factory = testUtils.getIndexMergerV9Factory();
     indexIO = testUtils.getTestIndexIO();
     this.restoreTasksOnRestart = restoreTasksOnRestart;
-    this.useMultipleBaseTaskDirPaths = useMultipleBaseTaskDirPaths;
   }
 
   @Parameterized.Parameters(name = "restoreTasksOnRestart = {0}, useMultipleBaseTaskDirPaths = {1}")
   public static Collection<Object[]> getParameters()
   {
-    Object[][] parameters = new Object[][]{
-        {false, false},
-        {true, false},
-        {false, true},
-        {true, true}
-    };
+    Object[][] parameters = new Object[][]{{false}, {true}};
 
     return Arrays.asList(parameters);
   }
@@ -118,22 +106,6 @@ public class WorkerTaskManagerTest
         .setRestoreTasksOnRestart(restoreTasksOnRestart)
         .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
-
-    WorkerConfig workerConfig;
-    if (useMultipleBaseTaskDirPaths) {
-      workerConfig = new WorkerConfig()
-      {
-        List<File> baseTaskDirPaths = ImmutableList.of(FileUtils.createTempDir(), FileUtils.createTempDir());
-
-        @Override
-        public List<String> getBaseTaskDirs()
-        {
-          return baseTaskDirPaths.stream().map(File::toString).collect(Collectors.toList());
-        }
-      };
-    } else {
-      workerConfig = new WorkerConfig();
-    }
 
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
     TaskActionClient taskActionClient = EasyMock.createNiceMock(TaskActionClient.class);
@@ -188,7 +160,6 @@ public class WorkerTaskManagerTest
             location
         ),
         taskConfig,
-        workerConfig,
         EasyMock.createNiceMock(DruidLeaderClient.class)
     )
     {

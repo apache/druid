@@ -214,7 +214,6 @@ public class WorkerTaskMonitorTest
             new ServerConfig()
         ),
         taskConfig,
-        new WorkerConfig(),
         cf,
         workerCuratorCoordinator,
         EasyMock.createNiceMock(DruidLeaderClient.class)
