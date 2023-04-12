@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 
@@ -60,13 +61,18 @@ public class TaskStorageDirTracker
   public void ensureDirectories()
   {
     for (File baseTaskDir : baseTaskDirs) {
-      if (baseTaskDir.exists() || baseTaskDir.mkdirs()) {
-        continue;
+      if (!baseTaskDir.exists()) {
+        try {
+          FileUtils.mkdirp(baseTaskDir);
+        }
+        catch (IOException e) {
+          throw new ISE(
+              e,
+              "base task directory [%s] likely does not exist, please ensure it exists and the user has permissions.",
+              baseTaskDir
+          );
+        }
       }
-      throw new ISE(
-          "base task directory [%s] likely does not exist, please ensure it exists and the user has permissions.",
-          baseTaskDir
-      );
     }
   }
 
