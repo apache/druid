@@ -140,6 +140,7 @@ jobs:
   web-checks:
     strategy:
       fail-fast: false
+    runs-on: ubuntu-latest
     steps:
       - name: checkout branch
         uses: actions/checkout@v3
