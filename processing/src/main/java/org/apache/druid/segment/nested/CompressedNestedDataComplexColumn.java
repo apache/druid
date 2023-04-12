@@ -134,7 +134,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       Supplier<TStringDictionary> stringDictionary,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
-      Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
+      @Nullable Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
       SmooshedFileMapper fileMapper,
       BitmapSerdeFactory bitmapSerdeFactory,
       ByteOrder byteOrder,
@@ -220,6 +220,9 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   @Override
   public Indexed<Object[]> getArrayDictionary()
   {
+    if (arrayDictionarySupplier == null) {
+      return Indexed.empty();
+    }
     Iterable<Object[]> arrays = () -> {
       final TStringDictionary stringDictionary = stringDictionarySupplier.get();
       final FixedIndexed<Long> longDictionary = longDictionarySupplier.get();
