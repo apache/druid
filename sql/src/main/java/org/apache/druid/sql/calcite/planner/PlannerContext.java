@@ -515,8 +515,7 @@ public class PlannerContext
 
   public void setStatementKind(String sqlKind)
   {
-    if (this.statementKind != null)
-    {
+    if (this.statementKind != null) {
       throw new ISE("StatementKind has already been set");
     }
     this.statementKind = sqlKind;
@@ -529,8 +528,7 @@ public class PlannerContext
 
   public void setTargetDataSource(SqlNode targetDataSource)
   {
-    if (this.targetDataSource != null)
-    {
+    if (this.targetDataSource != null) {
       throw new ISE("TargetDataSource has already been set");
     }
     this.targetDataSource = targetDataSource;
