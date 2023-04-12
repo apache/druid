@@ -175,8 +175,9 @@ Kafka indexing service supports both [`inputFormat`](../../ingestion/data-format
 Use the `inputFormat` to specify the data format for Kafka indexing service unless you need a format only supported by the legacy `parser`.
 
 Supported `inputFormat`s include:
+
 - `csv`
-- `delimited`
+- `tsv`
 - `json`
 - `kafka`
 - `avro_stream`
