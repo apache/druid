@@ -50,7 +50,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
                                + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}},"
                                + "\"signature\":[{\"name\":\"a0\",\"type\":\"LONG\"}]},"
                                + "{\"statementKind\":\"SELECT\"},"
-                               + "{\"targetDataSource\":null}"
+                               + "{\"targetDataSource\":\"null\"}"
                                + "]";
     final String resources = "[{\"name\":\"aview\",\"type\":\"VIEW\"}]";
 
@@ -126,7 +126,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
                                + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}},"
                                + "\"signature\":[{\"name\":\"a0\",\"type\":\"LONG\"}]},"
                                + "{\"statementKind\":\"SELECT\"},"
-                               + "{\"targetDataSource\":null}"
+                               + "{\"targetDataSource\":\"null\"}"
                                + "]";
     final String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
 
@@ -171,7 +171,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
                          + "\"granularity\":{\"type\":\"all\"}},"
                          + "\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"dim1\",\"type\":\"STRING\"},{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"dim3\",\"type\":\"STRING\"},{\"name\":\"cnt\",\"type\":\"LONG\"},{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"},{\"name\":\"unique_dim1\",\"type\":\"COMPLEX<hyperUnique>\"}]},"
                          + "{\"statementKind\":\"SELECT\"},"
-                         + "{\"targetDataSource\":null}"
+                         + "{\"targetDataSource\":\"null\"}"
                          + "]";
 
     String explanationWithContext = "[{"
@@ -185,7 +185,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
                                     + "\"granularity\":{\"type\":\"all\"}},"
                                     + "\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"dim1\",\"type\":\"STRING\"},{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"dim3\",\"type\":\"STRING\"},{\"name\":\"cnt\",\"type\":\"LONG\"},{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"},{\"name\":\"unique_dim1\",\"type\":\"COMPLEX<hyperUnique>\"}]},"
                                     + "{\"statementKind\":\"SELECT\"},"
-                                    + "{\"targetDataSource\":null}"
+                                    + "{\"targetDataSource\":\"null\"}"
                                     + "]";
     String sql = "EXPLAIN PLAN FOR SELECT * FROM druid.foo";
     String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
@@ -252,7 +252,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
                                + "\"statementKind\":\"SELECT\""
                                + "},"
                                + "{"
-                               + "\"targetDataSource\":null"
+                               + "\"targetDataSource\":\"null\""
                                + "}]";
     final String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
 
@@ -307,7 +307,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
                                                       + "\"granularity\":{\"type\":\"all\"}},"
                                                       + "\"signature\":[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"v1\",\"type\":\"STRING\"}]},"
                                                       + "{\"statementKind\":\"SELECT\"},"
-                                                      + "{\"targetDataSource\":null}"
+                                                      + "{\"targetDataSource\":\"null\"}"
                                                       + "]";
     final String expectedResources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
 
@@ -334,7 +334,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
                                               + "\"granularity\":{\"type\":\"all\"}},"
                                               + "\"signature\":[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"v1\",\"type\":\"STRING\"}]},"
                                               + "{\"statementKind\":\"SELECT\"},"
-                                              + "{\"targetDataSource\":null}"
+                                              + "{\"targetDataSource\":\"null\"}"
                                               + "]";
     final Map<String, Object> mvFilteredContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     mvFilteredContext.put(PlannerConfig.CTX_KEY_USE_NATIVE_QUERY_EXPLAIN, true);
@@ -374,7 +374,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
                                 + "\"granularity\":{\"type\":\"all\"}},"
                                 + "\"signature\":[{\"name\":\"v0\",\"type\":\"LONG\"}]},"
                                 + "{\"statementKind\":\"SELECT\"},"
-                                + "{\"targetDataSource\":null}"
+                                + "{\"targetDataSource\":\"null\"}"
                                 + "]";
     final String expectedResources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
 
