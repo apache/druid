@@ -156,7 +156,8 @@ public class ThreadingTaskRunner
                         public TaskStatus call()
                         {
                           final String attemptUUID = UUID.randomUUID().toString();
-                          final File taskDir = dirTracker.getTaskDir(task.getId());
+                          final File baseDirForTask = dirTracker.getBaseTaskDir(task.getId());
+                          final File taskDir = new File(baseDirForTask, task.getId());
                           final File attemptDir = new File(taskDir, attemptUUID);
 
                           final TaskLocation taskLocation = TaskLocation.create(
@@ -199,7 +200,7 @@ public class ThreadingTaskRunner
                                   .setName(StringUtils.format("[%s]-%s", task.getId(), priorThreadName));
 
                             TaskStatus taskStatus;
-                            final TaskToolbox toolbox = toolboxFactory.build(taskDir, task);
+                            final TaskToolbox toolbox = toolboxFactory.build(baseDirForTask, task);
                             TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
                             TaskRunnerUtils.notifyStatusChanged(
                                 listeners,

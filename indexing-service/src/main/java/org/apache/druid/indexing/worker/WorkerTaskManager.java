@@ -78,7 +78,6 @@ import java.util.stream.Collectors;
  */
 public class WorkerTaskManager
 {
-
   private static final String TEMP_WORKER = "workerTaskManagerTmp";
   private static final String ASSIGNED = "assignedTasks";
   private static final String COMPLETED = "completedTasks";
