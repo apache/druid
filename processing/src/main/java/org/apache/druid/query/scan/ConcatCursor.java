@@ -29,7 +29,7 @@ public class ConcatCursor implements Cursor
 {
 
   private final List<Cursor> cursors;
-  private int currentCursor = 0;
+  private int currentCursor;
 
   public ConcatCursor(
       List<Cursor> cursors

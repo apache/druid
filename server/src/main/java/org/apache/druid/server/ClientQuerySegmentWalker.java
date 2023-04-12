@@ -634,7 +634,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       );
     }
 
-    DataSource dataSource = null;
+    DataSource dataSource;
     // Try to serialize the results into a frame only if the memory limit is set on the server or the query
     if (memoryLimitSet) {
       try {
