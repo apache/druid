@@ -25,6 +25,9 @@ import org.joda.time.DateTime;
 
 import java.util.List;
 
+/**
+ * Combines multiple cursors and iterates over them. It skips over the empty cursors
+ */
 public class ConcatCursor implements Cursor
 {
 
