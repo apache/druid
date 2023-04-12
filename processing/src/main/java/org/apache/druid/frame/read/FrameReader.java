@@ -36,7 +36,6 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -98,7 +97,7 @@ public class FrameReader
                 signature.getColumnName(columnNumber)
             );
       } else {
-        columnType = signature.getColumnType(columnNumber).orElse(NestedDataComplexTypeSerde.TYPE);
+        columnType = signature.getColumnType(columnNumber).orElse(ColumnType.NESTED_DATA);
       }
 
       columnReaders.add(FrameColumnReaders.create(columnNumber, columnType));
