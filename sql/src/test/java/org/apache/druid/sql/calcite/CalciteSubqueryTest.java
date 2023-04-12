@@ -62,6 +62,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -195,7 +196,12 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                                     ),
                                                     "j0.",
                                                     equalsCondition(
-                                                        makeExpression("substring(\"dim2\", 0, 1)"),
+                                                        DruidExpression.ofExpression(
+                                                            ColumnType.STRING,
+                                                            null,
+                                                            args -> "substring(\"dim2\", 0, 1)",
+                                                            Collections.emptyList()
+                                                        ),
                                                         DruidExpression.ofColumn(ColumnType.STRING, "j0.d0")
                                                     ),
                                                     JoinType.INNER
@@ -425,7 +431,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                         .build()
                         ),
                         "j0.",
-                        equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.d0")),
+                        equalsCondition(DruidExpression.ofColumn(ColumnType.STRING, "dim2"), DruidExpression.ofColumn(ColumnType.STRING, "j0.d0")),
                         JoinType.INNER
                     )
                 )
@@ -490,8 +496,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         "j0.",
                         StringUtils.format(
                             "(%s && %s)",
-                            equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.d0")),
-                            equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.p0"))
+                            equalsCondition(DruidExpression.ofColumn(ColumnType.STRING, "dim1"), DruidExpression.ofColumn(ColumnType.STRING, "j0.d0")),
+                            equalsCondition(DruidExpression.ofColumn(ColumnType.STRING, "dim2"), DruidExpression.ofColumn(ColumnType.STRING, "j0.p0"))
                         ),
                         JoinType.INNER
                     )
