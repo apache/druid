@@ -137,14 +137,19 @@ jobs:
           --levels ERROR \
           --scope JavaInspectionsScope
 
+  web-checks:
+    strategy:
+      fail-fast: false
+    steps:
+      - name: checkout branch
+        uses: actions/checkout@v3
+
       - name: setup node
-        if: ${{ matrix.java == 'jdk8' }}
         uses: actions/setup-node@v3
         with:
           node-version: 16.17.0
 
       - name: docs
-        if: ${{ matrix.java == 'jdk8' }}
         run: |
           (cd website && npm install)
           cd website
@@ -152,14 +157,12 @@ jobs:
           npm run spellcheck
 
       - name: web console
-        if: ${{ matrix.java == 'jdk8' }}
         run: |
           ${MVN} test -pl 'web-console'
           cd web-console
           { for i in 1 2 3; do npm run codecov && break || sleep 15; done }
 
       - name: web console end-to-end test
-        if: ${{ matrix.java == 'jdk8' }}
         run: |
           ./.github/scripts/setup_generate_license.sh
           web-console/script/druid build
