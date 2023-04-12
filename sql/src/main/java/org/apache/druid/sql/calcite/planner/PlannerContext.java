@@ -512,6 +512,7 @@ public class PlannerContext
   {
     return this.statementKind;
   }
+
   public void setStatementKind(String sqlKind)
   {
     if (this.statementKind != null)
