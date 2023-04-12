@@ -36,6 +36,8 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.IterableRowsCursorHelper;
@@ -44,7 +46,7 @@ import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
-import org.apache.druid.segment.RowBasedCursor;
+import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
@@ -202,8 +204,10 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   }
 
   /**
-   * This returns as many frames as the number of {@link ScanResultValue} that are passed. This can be batched and
-   * should be optimized depending on the performance.
+   * This batches the fetched {@link ScanResultValue}s which have similar signatures and are consecutives. In best case
+   * it would return a single frame, and in the worst case, it would return as many frames as the number of results
+   * passed. Note: Batching requires all the frames to be materialized before they are propogated further and this might
+   * be improved
    */
   @Override
   public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
@@ -213,41 +217,77 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   )
   {
     final AtomicLong memoryLimitAccumulator = memoryLimitBytes != null ? new AtomicLong(memoryLimitBytes) : null;
-    return
-        Optional.of(
-            resultSequence.map(
-                result -> {
-                  final List rows = (List) result.getEvents();
-                  final Function<?, Object[]> mapper = getResultFormatMapper(query);
-                  final Iterable<Object[]> formattedRows = Iterables.transform(rows, (Function) mapper);
+    Yielder<ScanResultValue> yielder = Yielders.each(resultSequence);
+    RowSignature prevSignature = null;
+    List<Cursor> unwrittenCursors = null;
+    List<FrameSignaturePair> frameSignaturePairs = new ArrayList<>();
+    while (!yielder.isDone()) {
+      ScanResultValue scanResultValue = yielder.get();
 
-                  RowBasedCursor cursor = IterableRowsCursorHelper.getCursorFromIterable(
-                      formattedRows,
-                      result.getRowSignature()
-                  );
+      final List rows = (List) scanResultValue.getEvents();
+      final Function<?, Object[]> mapper = getResultFormatMapper(query);
+      final Iterable<Object[]> formattedRows = Iterables.transform(rows, (Function) mapper);
 
-                  FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
-                      FrameType.ROW_BASED,
-                      new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
-                      result.getRowSignature(),
-                      new ArrayList<>(),
-                      true
-                  );
+      if (prevSignature == null || !prevSignature.equals(scanResultValue.getRowSignature())) {
 
-                  Frame frame = FrameCursorUtils.cursorToFrame(
-                      cursor,
-                      frameWriterFactory,
-                      memoryLimitAccumulator != null ? memoryLimitAccumulator.get() : null
-                  );
+        if (unwrittenCursors != null && prevSignature != null) {
+          FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
+              FrameType.ROW_BASED,
+              new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+              prevSignature,
+              new ArrayList<>(),
+              true
+          );
+          Cursor concatCursor = new ConcatCursor(unwrittenCursors);
+          Frame frame = FrameCursorUtils.cursorToFrame(
+              concatCursor,
+              frameWriterFactory,
+              memoryLimitAccumulator != null ? memoryLimitAccumulator.get() : null
+          );
+          if (memoryLimitAccumulator != null) {
+            memoryLimitAccumulator.getAndAdd(-frame.numBytes());
+          }
+          frameSignaturePairs.add(new FrameSignaturePair(frame, prevSignature));
+        }
 
-                  if (memoryLimitAccumulator != null) {
-                    memoryLimitAccumulator.getAndAdd(-frame.numBytes());
-                  }
+        unwrittenCursors = new ArrayList<>();
+        unwrittenCursors.add(IterableRowsCursorHelper.getCursorFromIterable(
+            formattedRows,
+            scanResultValue.getRowSignature()
+        ));
 
-                  return new FrameSignaturePair(frame, result.getRowSignature());
-                }
-            )
-        );
+      } else {
+        unwrittenCursors.add(IterableRowsCursorHelper.getCursorFromIterable(
+            formattedRows,
+            scanResultValue.getRowSignature()
+        ));
+      }
+
+      prevSignature = scanResultValue.getRowSignature();
+      yielder = yielder.next(null);
+    }
+
+    if (unwrittenCursors != null && !unwrittenCursors.isEmpty()) {
+      FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
+          FrameType.ROW_BASED,
+          new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+          prevSignature,
+          new ArrayList<>(),
+          true
+      );
+      Cursor concatCursor = new ConcatCursor(unwrittenCursors);
+      Frame frame = FrameCursorUtils.cursorToFrame(
+          concatCursor,
+          frameWriterFactory,
+          memoryLimitAccumulator != null ? memoryLimitAccumulator.get() : null
+      );
+      if (memoryLimitAccumulator != null) {
+        memoryLimitAccumulator.getAndAdd(-frame.numBytes());
+      }
+      frameSignaturePairs.add(new FrameSignaturePair(frame, prevSignature));
+    }
+
+    return Optional.of(Sequences.simple(frameSignaturePairs));
   }
 
   @Override
