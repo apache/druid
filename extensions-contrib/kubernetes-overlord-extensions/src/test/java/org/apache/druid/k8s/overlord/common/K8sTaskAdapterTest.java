@@ -29,6 +29,7 @@ import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
+import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -98,7 +99,22 @@ class K8sTaskAdapterTest
   @Test
   void testAddingLabelsAndAnnotations() throws IOException
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    final PodSpec podSpec = K8sTestUtils.getDummyPodSpec();
+    TestKubernetesClient testClient = new TestKubernetesClient(client){
+      @SuppressWarnings("unchecked")
+      @Override
+      public <T> T executeRequest(KubernetesExecutor<T> executor) throws KubernetesResourceNotFoundException
+      {
+        return (T) new Pod(){
+          @Override
+          public PodSpec getSpec()
+          {
+            return podSpec;
+          }
+        };
+      }
+    };
+
     KubernetesTaskRunnerConfig config = new KubernetesTaskRunnerConfig();
     config.namespace = "test";
     config.annotations.put("annotation_key", "annotation_value");
@@ -112,11 +128,8 @@ class K8sTaskAdapterTest
         jsonMapper
     );
     Task task = K8sTestUtils.getTask();
-    Job jobFromSpec = adapter.createJobFromPodSpec(
-        K8sTestUtils.getDummyPodSpec(),
-        task,
-        new PeonCommandContext(new ArrayList<>(), new ArrayList<>(), new File("/tmp/"))
-    );
+    Job jobFromSpec = adapter.fromTask(task);
+
     assertTrue(jobFromSpec.getMetadata().getAnnotations().containsKey("annotation_key"));
     assertTrue(jobFromSpec.getMetadata().getAnnotations().containsKey(DruidK8sConstants.TASK_ID));
     assertFalse(jobFromSpec.getMetadata().getAnnotations().containsKey("label_key"));
