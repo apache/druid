@@ -57,10 +57,10 @@ If you already have Druid running locally, you can run only the Jupyter containe
 In the same directory as `docker-compose.yaml`, start the application:
 
 ```bash
-docker-compose --profile jupyter up -d
+docker compose --profile jupyter up -d
 ```
 
-The port assigned to Jupyter is `8889` by default.
+The Docker Compose file assigns `8889` for the Jupyter port.
 You can override the port number by setting the `JUPYTER_PORT` environment variable before starting the Docker application.
 
 ### Start Jupyter and Druid
@@ -72,7 +72,7 @@ Running Druid in Docker requires the `environment` file as well as the `DRUID_VE
 In the same directory as `docker-compose.yaml` and `environment`, start the application:
 
 ```bash
-DRUID_VERSION=25.0.0 docker-compose --profile druid-jupyter up -d
+DRUID_VERSION={{DRUIDVERSION}} docker compose --profile druid-jupyter up -d
 ```
 
 ### Start Jupyter, Druid, and Kafka
@@ -82,7 +82,15 @@ Running Druid in Docker requires the `environment` file as well as the `DRUID_VE
 In the same directory as `docker-compose.yaml` and `environment`, start the application:
 
 ```bash
-DRUID_VERSION=25.0.0 docker-compose --profile all-services up -d
+DRUID_VERSION={{DRUIDVERSION}} docker compose --profile all-services up -d
+```
+
+### Update image from Docker Hub
+
+If you already have a local cache of the Jupyter image, you can update the image before running the application using the following command:
+
+```bash
+docker compose pull jupyter
 ```
 
 ### Use locally built image
@@ -91,10 +99,10 @@ The default Docker Compose file pulls the custom Jupyter Notebook image from Imp
 If you prefer to build the image locally, do the following:
 1. Clone the Apache Druid repository.
 2. Navigate to `examples/quickstart/jupyter-notebooks/docker-jupyter`.
-3. Start the services using `-f docker-compose-local.yaml` in the `docker-compose` command. For example:
+3. Start the services using `-f docker-compose-local.yaml` in the `docker compose` command. For example:
 
 ```bash
-DRUID_VERSION=25.0.0 docker-compose --profile all-services -f docker-compose-local.yaml up -d
+DRUID_VERSION={{DRUIDVERSION}} docker compose --profile all-services -f docker-compose-local.yaml up -d
 ```
 
 ## Access Jupyter-based tutorials
@@ -122,7 +130,7 @@ Use the web console to view datasources and ingestion tasks that you create in t
 Shut down the Docker application using the following command:
 
 ```bash
-docker-compose down -v
+docker compose down -v
 ```
 
 ## Tutorial setup without using Docker

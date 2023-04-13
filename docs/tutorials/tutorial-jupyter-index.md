@@ -32,7 +32,10 @@ the Druid API to complete the tutorial.
 
 ## Prerequisites
 
-The Jupyter-based tutorials require the following:
+The simplest way to get started is to use Docker. In this case, you only need to set up Docker Desktop.
+For more information, see [Docker for Jupyter Notebook tutorials](tutorial-jupyter-docker.md).
+
+Otherwise, you can install the prerequisites on your own. Here's what you need:
 
 - An available Druid instance.
 - Python 3.7 or later
@@ -42,19 +45,17 @@ By default, Druid and Jupyter both try to use port `8888`, so start Jupyter on a
 
 Individual tutorials may require additional Python packages, such as for visualization or streaming ingestion.
 
-You can use the custom Jupyter Notebook Docker image to run the tutorials
-with minimal setup, or install the prerequisites on your own.
-For more information, see [Docker for Jupyter Notebook tutorials](tutorial-jupyter-docker.md).
-
 ## Python API for Druid
 
 One of the notebooks shows how to use the Druid REST API. The others focus on other
 topics and use a simple set of Python wrappers around the underlying REST API. The
 wrappers reside in the `druidapi` package within the notebooks directory. While the package
 can be used in any Python program, the key purpose, at present, is to support these
-notebooks. See the
+notebooks. See
 [Introduction to the Druid Python API](https://github.com/apache/druid/tree/master/examples/quickstart/jupyter-notebooks/python-api-tutorial.ipynb)
 for an overview of the Python API.
+
+The `druidapi` package is pre-installed in the custom Jupyter Docker container for Druid tutorials.
 
 ## Tutorials
 

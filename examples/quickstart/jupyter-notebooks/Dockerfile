@@ -49,8 +49,8 @@ WORKDIR /home/jovyan
 
 # Import data generator and configuration file
 # Change permissions to allow import (requires sudo privileges)
-# WIP -- import data generator from apache
-ADD https://raw.githubusercontent.com/implydata/druid-datagenerator/main/DruidDataDriver.py .
+# WIP -- change to apache repo
+ADD https://raw.githubusercontent.com/shallada/druid/data-generator/examples/quickstart/jupyter-notebooks/data-generator/DruidDataDriver.py .
 ADD docker-jupyter/kafka_docker_config.json .
 RUN chmod 664 DruidDataDriver.py
 RUN chmod 664 kafka_docker_config.json
