@@ -10,21 +10,21 @@ exports[`ExecutionErrorPane matches snapshot 1`] = `
   >
     <React.Fragment>
       <Memo(ExternalLink)
-        href="https://druid.apache.org/docs/latest/multi-stage-query/reference.html#error_TooManyWarnings"
+        href="https://druid.apache.org/docs/26.0.0/multi-stage-query/reference.html#error_TooManyWarnings"
       >
         TooManyWarnings
       </Memo(ExternalLink)>
-      : 
+      :
     </React.Fragment>
     Too many warnings of type CannotParseExternalData generated (max = 2)
   </p>
   <div>
-    Failed task ID: 
+    Failed task ID:
     <Memo(ClickToCopy)
       text="query-614dc100-a4b9-40a3-95ce-1227fa7ea765-worker0_0"
     />
     <React.Fragment>
-       (on host: 
+       (on host:
       <Memo(ClickToCopy)
         text="localhost"
       />
@@ -32,7 +32,7 @@ exports[`ExecutionErrorPane matches snapshot 1`] = `
     </React.Fragment>
   </div>
   <div>
-    Debug: 
+    Debug:
     <a
       onClick={[Function]}
     >
