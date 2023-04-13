@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.loadqueue;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,6 +36,12 @@ import org.apache.druid.server.coordination.DataSegmentChangeCallback;
 import org.apache.druid.server.coordination.DataSegmentChangeHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler;
+import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
+import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -60,7 +66,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -81,7 +86,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   private static final EmittingLogger log = new EmittingLogger(HttpLoadQueuePeon.class);
 
   private final AtomicLong queuedSize = new AtomicLong(0);
-  private final AtomicInteger failedAssignCount = new AtomicInteger(0);
+  private final CoordinatorRunStats stats = new CoordinatorRunStats();
 
   private final ConcurrentMap<DataSegment, SegmentHolder> segmentsToLoad = new ConcurrentHashMap<>();
   private final ConcurrentMap<DataSegment, SegmentHolder> segmentsToDrop = new ConcurrentHashMap<>();
@@ -324,7 +329,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
             if (status.getState() == SegmentLoadDropHandler.Status.STATE.FAILED) {
               onRequestFailed(holder, status.getFailureCause());
             } else {
-              onRequestSucceeded(holder);
+              onRequestCompleted(holder, QueueStatus.SUCCESS);
             }
           }
         }, null
@@ -368,7 +373,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       stopped = true;
 
       // Cancel all queued requests
-      queuedSegments.forEach(this::onRequestCancelled);
+      queuedSegments.forEach(holder -> onRequestCompleted(holder, QueueStatus.CANCELLED));
       log.info("Cancelled [%d] requests queued on server [%s].", queuedSegments.size(), serverId);
 
       segmentsToDrop.clear();
@@ -376,7 +381,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       queuedSegments.clear();
       activeRequestSegments.clear();
       queuedSize.set(0L);
-      failedAssignCount.set(0);
+      stats.clear();
     }
   }
 
@@ -407,6 +412,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
         segmentsToLoad.put(segment, holder);
         queuedSegments.add(holder);
         processingExecutor.execute(this::doSegmentManagement);
+        incrementStat(action, QueueStatus.ASSIGNED);
       } else {
         holder.addCallback(callback);
       }
@@ -434,6 +440,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
         segmentsToDrop.put(segment, holder);
         queuedSegments.add(holder);
         processingExecutor.execute(this::doSegmentManagement);
+        incrementStat(SegmentAction.DROP, QueueStatus.ASSIGNED);
       } else {
         holder.addCallback(callback);
       }
@@ -475,9 +482,15 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   }
 
   @Override
-  public int getAndResetFailedAssignCount()
+  public CoordinatorRunStats getAndResetStats()
   {
-    return failedAssignCount.getAndSet(0);
+    // There might be a race condition where we miss some stats added between
+    // accumulate and clear, but synchronizing here might be costly and we
+    // can afford to lose some metrics.
+    final CoordinatorRunStats collectedStats = new CoordinatorRunStats();
+    collectedStats.accumulate(stats);
+    stats.clear();
+    return collectedStats;
   }
 
   @Override
@@ -517,44 +530,37 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
               > config.getLoadTimeoutDelay().getMillis();
   }
 
-  private void onRequestSucceeded(SegmentHolder holder)
-  {
-    log.trace(
-        "Server[%s] Successfully processed segment[%s] request[%s].",
-        serverId,
-        holder.getSegment().getId(),
-        holder.getAction()
-    );
-
-    if (holder.isLoad()) {
-      queuedSize.addAndGet(-holder.getSegment().getSize());
-    }
-    executeCallbacks(holder, true);
-  }
-
   private void onRequestFailed(SegmentHolder holder, String failureCause)
   {
     log.error(
         "Server[%s] Failed segment[%s] request[%s] with cause [%s].",
-        serverId,
-        holder.getSegment().getId(),
-        holder.getAction(),
-        failureCause
+        serverId, holder.getSegment().getId(), holder.getAction(), failureCause
     );
-
-    failedAssignCount.getAndIncrement();
-    if (holder.isLoad()) {
-      queuedSize.addAndGet(-holder.getSegment().getSize());
-    }
-    executeCallbacks(holder, false);
+    stats.add(Stats.SegmentQueue.FAILED_LOADS, 1);
+    onRequestCompleted(holder, QueueStatus.FAILED);
   }
 
-  private void onRequestCancelled(SegmentHolder holder)
+  private void onRequestCompleted(SegmentHolder holder, QueueStatus status)
   {
+    final SegmentAction action = holder.getAction();
+    log.trace(
+        "Server[%s] completed request[%s] on segment[%s] with status[%s].",
+        serverId, action, holder.getSegment().getId(), status
+    );
+
     if (holder.isLoad()) {
       queuedSize.addAndGet(-holder.getSegment().getSize());
     }
-    executeCallbacks(holder, false);
+    incrementStat(action, status);
+    executeCallbacks(holder, status == QueueStatus.SUCCESS);
+  }
+
+  private void incrementStat(SegmentAction action, QueueStatus status)
+  {
+    RowKey rowKey = RowKey.builder()
+                          .add(Dimension.STATUS, StringUtils.toLowerCase(status.name()))
+                          .build();
+    stats.add(action.getStatusStat(), rowKey, 1);
   }
 
   private void executeCallbacks(SegmentHolder holder, boolean success)
@@ -587,9 +593,14 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       }
 
       queuedSegments.remove(holder);
-      onRequestCancelled(holder);
+      onRequestCompleted(holder, QueueStatus.CANCELLED);
       return true;
     }
+  }
+
+  private enum QueueStatus
+  {
+    ASSIGNED, SUCCESS, FAILED, CANCELLED
   }
 
 }

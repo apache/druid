@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
+import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

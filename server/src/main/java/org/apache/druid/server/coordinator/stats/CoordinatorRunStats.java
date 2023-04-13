@@ -22,19 +22,20 @@ package org.apache.druid.server.coordinator.stats;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.utils.CollectionUtils;
 
-import javax.annotation.concurrent.NotThreadSafe;
-import java.util.HashMap;
+import javax.annotation.concurrent.ThreadSafe;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 
 /**
  * Contains statistics tracked during a single coordinator run or the runtime of
  * a single coordinator duty.
  */
-@NotThreadSafe
+@ThreadSafe
 public class CoordinatorRunStats
 {
-  private final Map<RowKey, Object2LongOpenHashMap<CoordinatorStat>> allStats = new HashMap<>();
+  private final ConcurrentHashMap<RowKey, Object2LongOpenHashMap<CoordinatorStat>> allStats
+      = new ConcurrentHashMap<>();
 
   public long getTieredStat(CoordinatorStat stat, String tier)
   {
@@ -65,16 +66,17 @@ public class CoordinatorRunStats
   {
     allStats.forEach(
         (rowKey, stats) -> stats.object2LongEntrySet().fastForEach(
-            stat -> handler.handle(
-                stat.getKey(),
-                CollectionUtils.mapKeys(rowKey.getValues(), Dimension::dimensionName),
-                stat.getLongValue()
-            )
+            stat -> handler.handle(rowKey.getValues(), stat.getKey(), stat.getLongValue())
         )
     );
   }
 
-  public void forEachRowKey(BiConsumer<Map<String, String>, Map<CoordinatorStat, Long>> consumer)
+  /**
+   * Applies the given consumer to each row of the stats table. A single row is
+   * identified by a unique combination of dimension values and may have multiple
+   * stats (aka metrics) in it.
+   */
+  public void forEachRow(BiConsumer<Map<String, String>, Map<CoordinatorStat, Long>> consumer)
   {
     allStats.forEach(
         (rowKey, stats) -> consumer.accept(
@@ -94,9 +96,24 @@ public class CoordinatorRunStats
     return false;
   }
 
+  public int rowCount()
+  {
+    return allStats.size();
+  }
+
+  public void clear()
+  {
+    allStats.clear();
+  }
+
   public void add(CoordinatorStat stat, long value)
   {
     add(value, stat, RowKey.EMPTY);
+  }
+
+  public void add(CoordinatorStat stat, RowKey rowKey, long value)
+  {
+    add(value, stat, rowKey);
   }
 
   public void addToTieredStat(CoordinatorStat stat, String tier, long value)
@@ -134,9 +151,9 @@ public class CoordinatorRunStats
             .mergeLong(stat, value, Math::max);
   }
 
-  public void accumulate(final CoordinatorRunStats stats)
+  public void accumulate(final CoordinatorRunStats other)
   {
-    stats.allStats.forEach(
+    other.allStats.forEach(
         (rowKey, otherStatValues) -> {
           Object2LongOpenHashMap<CoordinatorStat> statValues =
               this.allStats.computeIfAbsent(rowKey, d -> new Object2LongOpenHashMap<>());
@@ -162,7 +179,7 @@ public class CoordinatorRunStats
 
   public interface StatHandler
   {
-    void handle(CoordinatorStat stat, Map<String, String> dimensionValues, long value);
+    void handle(Map<Dimension, String> dimensionValues, CoordinatorStat stat, long statValue);
   }
 
 }

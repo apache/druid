@@ -21,20 +21,30 @@ package org.apache.druid.server.coordinator.rules;
 
 import org.apache.druid.timeline.DataSegment;
 
-/**
- * DropRules indicate when segments should be completely removed from the cluster.
- */
-public abstract class DropRule implements Rule
-{
-  @Override
-  public void run(DataSegment segment, SegmentActionHandler handler)
-  {
-    handler.deleteSegment(segment);
-  }
+import java.util.Map;
 
-  @Override
-  public boolean canLoadSegments()
-  {
-    return false;
-  }
+/**
+ * Performs various actions on a given segment. Used by {@link Rule}s to load,
+ * drop, broadcast or delete segments.
+ */
+public interface SegmentActionHandler
+{
+
+  /**
+   * Queues load or drop of replicas of the given segment to achieve the
+   * target replication level on all the tiers.
+   */
+  void updateSegmentReplicasInTiers(DataSegment segment, Map<String, Integer> tierToReplicaCount);
+
+  /**
+   * Marks the given segment as unused. Unused segments are eventually unloaded
+   * from all servers and deleted from metadata as well as deep storage.
+   */
+  void deleteSegment(DataSegment segment);
+
+  /**
+   * Broadcasts the given segment to all servers that are broadcast targets.
+   */
+  void broadcastSegment(DataSegment segment);
+
 }

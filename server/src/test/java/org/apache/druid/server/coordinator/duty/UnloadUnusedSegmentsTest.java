@@ -33,9 +33,9 @@ import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.LoadQueuePeonTester;
-import org.apache.druid.server.coordinator.SegmentStateManager;
+import org.apache.druid.server.coordinator.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -74,7 +74,7 @@ public class UnloadUnusedSegmentsTest
   private List<ImmutableDruidDataSource> dataSourcesForRealtime;
   private final String broadcastDatasource = "broadcastDatasource";
   private MetadataRuleManager databaseRuleManager;
-  private SegmentStateManager segmentStateManager;
+  private SegmentLoadQueueManager loadQueueManager;
 
   @Before
   public void setUp()
@@ -85,7 +85,7 @@ public class UnloadUnusedSegmentsTest
     brokerServer = EasyMock.createMock(ImmutableDruidServer.class);
     indexerServer = EasyMock.createMock(ImmutableDruidServer.class);
     databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
-    segmentStateManager = new SegmentStateManager(null, null, null);
+    loadQueueManager = new SegmentLoadQueueManager(null, null, null);
 
     DateTime start1 = DateTimes.of("2012-01-01");
     DateTime start2 = DateTimes.of("2012-02-01");
@@ -265,7 +265,7 @@ public class UnloadUnusedSegmentsTest
         .withDatabaseRuleManager(databaseRuleManager)
         .build();
 
-    params = new UnloadUnusedSegments(segmentStateManager).run(params);
+    params = new UnloadUnusedSegments(loadQueueManager).run(params);
     CoordinatorRunStats stats = params.getCoordinatorStats();
 
     // We drop segment1 and broadcast1 from all servers, realtimeSegment is not dropped by the indexer

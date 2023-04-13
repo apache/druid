@@ -17,8 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.loadqueue;
 
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Map;
@@ -55,9 +56,9 @@ public interface LoadQueuePeon
 
   long getSizeOfSegmentsToLoad();
 
-  int getAndResetFailedAssignCount();
-
   int getNumberOfSegmentsToLoad();
+
+  CoordinatorRunStats getAndResetStats();
 
   /**
    * Tries to cancel the current operation queued for the given segment on this

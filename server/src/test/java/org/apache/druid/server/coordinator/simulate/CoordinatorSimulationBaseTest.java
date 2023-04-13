@@ -221,7 +221,6 @@ public abstract class CoordinatorSimulationBaseTest implements
   {
     static final String T1 = "tier_t1";
     static final String T2 = "tier_t2";
-    static final String T3 = "tier_t3";
   }
 
   static class Metric
@@ -230,12 +229,11 @@ public abstract class CoordinatorSimulationBaseTest implements
     static final String MOVED_COUNT = "segment/moved/count";
     static final String UNMOVED_COUNT = "segment/unmoved/count";
     static final String DROPPED_COUNT = "segment/dropped/count";
-    static final String THROTTLED_COUNT = "segment/replicas/throttled";
     static final String LOAD_QUEUE_COUNT = "segment/loadQueue/count";
 
     static final String BROADCAST_LOADS = "segment/assigned/broadcast";
     static final String BROADCAST_DROPS = "segment/dropped/broadcast";
-    static final String CANCELLED_LOADS = "segment/loadQueue/cancelled";
+    static final String LOAD_QUEUE_STATUS = "segment/loadQueue/status";
   }
 
   static class Segments

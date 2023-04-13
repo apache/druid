@@ -29,7 +29,8 @@ public enum Dimension
   TIER(DruidMetrics.TIER),
   DATASOURCE(DruidMetrics.DATASOURCE),
   DUTY(DruidMetrics.DUTY),
-  SERVER(DruidMetrics.SERVER);
+  SERVER(DruidMetrics.SERVER),
+  STATUS(DruidMetrics.STATUS);
 
   private final String dimName;
 

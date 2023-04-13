@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator.rules;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.server.coordinator.DruidCluster;
-import org.apache.druid.server.coordinator.SegmentLoader;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.timeline.DataSegment;
 
@@ -32,9 +31,9 @@ public abstract class BroadcastDistributionRule implements Rule
 {
 
   @Override
-  public void run(DataSegment segment, SegmentLoader loader)
+  public void run(DataSegment segment, SegmentActionHandler handler)
   {
-    loader.broadcastSegment(segment);
+    handler.broadcastSegment(segment);
   }
 
   @Override

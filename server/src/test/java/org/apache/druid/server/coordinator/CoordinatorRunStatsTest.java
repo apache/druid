@@ -20,9 +20,9 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
+import org.apache.druid.server.coordinator.stats.Dimension;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -92,9 +92,9 @@ public class CoordinatorRunStatsTest
 
     final Map<String, Long> actual = new HashMap<>();
     stats.forEachStat(
-        (stat, dimensionValues, value) -> {
+        (dimensionValues, stat, value) -> {
           if (stat.equals(STAT_1)) {
-            actual.put(dimensionValues.get(DruidMetrics.TIER), value);
+            actual.put(dimensionValues.get(Dimension.TIER), value);
           }
         }
     );
@@ -191,9 +191,9 @@ public class CoordinatorRunStatsTest
 
     final Map<String, Long> actual = new HashMap<>();
     stats.forEachStat(
-        (stat, dimensionValues, value) -> {
+        (dimensionValues, stat, value) -> {
           if (stat.equals(STAT_1)) {
-            actual.put(dimensionValues.get(DruidMetrics.DUTY), value);
+            actual.put(dimensionValues.get(Dimension.DUTY), value);
           }
         }
     );

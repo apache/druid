@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.druid.server.coordinator.DruidCluster;
-import org.apache.druid.server.coordinator.SegmentLoader;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -33,6 +32,7 @@ import org.joda.time.Interval;
 import java.util.Map;
 
 /**
+ * Retention rule that governs retention and distribution of segments in a cluster.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
@@ -92,5 +92,5 @@ public interface Rule
     Preconditions.checkArgument(!canLoadSegments());
   }
 
-  void run(DataSegment segment, SegmentLoader loader);
+  void run(DataSegment segment, SegmentActionHandler segmentHandler);
 }

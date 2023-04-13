@@ -54,10 +54,12 @@ import org.apache.druid.server.coordinator.duty.CoordinatorCustomDuty;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
-import org.apache.druid.server.coordinator.duty.EmitClusterStatsAndMetrics;
 import org.apache.druid.server.coordinator.duty.KillSupervisorsCustomDuty;
-import org.apache.druid.server.coordinator.duty.LogUsedSegments;
 import org.apache.druid.server.coordinator.duty.NewestSegmentFirstPolicy;
+import org.apache.druid.server.coordinator.loadqueue.CuratorLoadQueuePeon;
+import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
+import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.loadqueue.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
@@ -179,7 +181,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         scheduledExecutorFactory,
         null,
         loadQueueTaskMaster,
-        new SegmentStateManager(serverInventoryView, segmentsMetadataManager, loadQueueTaskMaster),
+        new SegmentLoadQueueManager(serverInventoryView, segmentsMetadataManager, loadQueueTaskMaster),
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
         loadManagementPeons,
@@ -876,42 +878,12 @@ public class DruidCoordinatorTest extends CuratorTestBase
     latch2.await();
   }
 
-  @Test
-  public void testEmitClusterStatsAndMetricsAddedWhenNotInDutyList()
-  {
-    DruidCoordinator.DutiesRunnable dutyRunnable = coordinator.new DutiesRunnable(ImmutableList.of(new LogUsedSegments()), 0, "TEST");
-    List<? extends CoordinatorDuty> duties = dutyRunnable.getDuties();
-    int emitDutyFound = 0;
-    for (CoordinatorDuty duty : duties) {
-      if (duty instanceof EmitClusterStatsAndMetrics) {
-        emitDutyFound++;
-      }
-    }
-    Assert.assertEquals(1, emitDutyFound);
-  }
-
-  @Test
-  public void testEmitClusterStatsAndMetricsNotAddedAgainWhenInDutyList()
-  {
-    DruidCoordinator.DutiesRunnable dutyRunnable = coordinator.new DutiesRunnable(
-        ImmutableList.of(new LogUsedSegments(), new EmitClusterStatsAndMetrics(coordinator, "TEST", null)),
-        0,
-        "TEST"
-    );
-    List<? extends CoordinatorDuty> duties = dutyRunnable.getDuties();
-    int emitDutyFound = 0;
-    for (CoordinatorDuty duty : duties) {
-      if (duty instanceof EmitClusterStatsAndMetrics) {
-        emitDutyFound++;
-      }
-    }
-    Assert.assertEquals(1, emitDutyFound);
-  }
-
-  private CountDownLatch createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(int latchCount,
-                                                                                      PathChildrenCache pathChildrenCache,
-                                                                                      Map<String, DataSegment> segments,
-                                                                                      DruidServer server)
+  private CountDownLatch createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(
+      int latchCount,
+      PathChildrenCache pathChildrenCache,
+      Map<String, DataSegment> segments,
+      DruidServer server
+  )
   {
     final CountDownLatch countDownLatch = new CountDownLatch(latchCount);
     pathChildrenCache.getListenable().addListener(

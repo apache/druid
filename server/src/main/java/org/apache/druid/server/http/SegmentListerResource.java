@@ -35,7 +35,7 @@ import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler;
-import org.apache.druid.server.coordinator.HttpLoadQueuePeon;
+import org.apache.druid.server.coordinator.loadqueue.HttpLoadQueuePeon;
 import org.apache.druid.server.http.security.StateResourceFilter;
 
 import javax.annotation.Nullable;

@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.duty.BalanceSegments;
+import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -48,7 +49,7 @@ import java.util.Set;
 
 public class BalanceSegmentsTest
 {
-  private SegmentStateManager stateManager;
+  private SegmentLoadQueueManager loadQueueManager;
 
   private DataSegment segment1;
   private DataSegment segment2;
@@ -70,7 +71,7 @@ public class BalanceSegmentsTest
   @Before
   public void setUp()
   {
-    stateManager = new SegmentStateManager(null, null, null);
+    loadQueueManager = new SegmentLoadQueueManager(null, null, null);
 
     // Create test segments for multiple datasources
     final DateTime start1 = DateTimes.of("2012-01-01");
@@ -114,7 +115,8 @@ public class BalanceSegmentsTest
             .build();
 
     CoordinatorRunStats stats = runBalancer(params);
-    Assert.assertEquals(3, stats.getTieredStat(Stats.Segments.MOVED, "normal"));
+    Assert.assertEquals(2, stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1"));
+    Assert.assertEquals(1, stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource2"));
   }
 
   /**
@@ -166,7 +168,8 @@ public class BalanceSegmentsTest
     CoordinatorRunStats stats = runBalancer(params);
 
     EasyMock.verify(strategy);
-    Assert.assertEquals(3L, stats.getTieredStat(Stats.Segments.MOVED, "normal"));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1"));
+    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource2"));
     Assert.assertEquals(
         ImmutableSet.of(segment1, segment3, segment4),
         serverHolder3.getPeon().getSegmentsToLoad()
@@ -189,7 +192,7 @@ public class BalanceSegmentsTest
     CoordinatorRunStats stats = runBalancer(params);
 
     // Verify that either segment1 or segment2 is chosen for move
-    Assert.assertEquals(1L, stats.getTieredStat(Stats.Segments.MOVED, "normal"));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.MOVED, "normal", segment1.getDataSource()));
     DataSegment movingSegment = holder3.getPeon().getSegmentsToLoad().iterator().next();
     Assert.assertEquals(segment1.getDataSource(), movingSegment.getDataSource());
   }
@@ -211,7 +214,7 @@ public class BalanceSegmentsTest
     CoordinatorRunStats stats = runBalancer(params);
 
     // Verify that either segment3 or segment4 is chosen for move
-    Assert.assertEquals(1L, stats.getTieredStat(Stats.Segments.MOVED, "normal"));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.MOVED, "normal", segment3.getDataSource()));
     DataSegment movingSegment = holder3.getPeon().getSegmentsToLoad().iterator().next();
     Assert.assertEquals(segment3.getDataSource(), movingSegment.getDataSource());
   }
@@ -252,7 +255,8 @@ public class BalanceSegmentsTest
 
     CoordinatorRunStats stats = runBalancer(params);
     EasyMock.verify(strategy);
-    Assert.assertEquals(3L, stats.getTieredStat(Stats.Segments.MOVED, "normal"));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1"));
+    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource2"));
     Assert.assertEquals(
         ImmutableSet.of(segment2, segment3, segment4),
         serverHolder3.getPeon().getSegmentsToLoad()
@@ -301,8 +305,7 @@ public class BalanceSegmentsTest
     expectPickLoadingSegmentsAndReturnEmpty(strategy).once();
     expectPickLoadedSegmentsAndReturn(strategy, new BalancerSegmentHolder(holder1, segment1)).once();
     EasyMock.expect(strategy.findNewSegmentHomeBalancer(EasyMock.anyObject(), EasyMock.anyObject()))
-            .andReturn(holder2)
-            .once();
+            .andReturn(holder2).once();
     EasyMock.replay(strategy);
 
     DruidCoordinatorRuntimeParams params = defaultRuntimeParamsBuilder(holder1, holder2)
@@ -313,7 +316,7 @@ public class BalanceSegmentsTest
 
     CoordinatorRunStats stats = runBalancer(params);
     EasyMock.verify(strategy);
-    Assert.assertEquals(1, stats.getTieredStat(Stats.Segments.MOVED, "normal"));
+    Assert.assertEquals(1, stats.getSegmentStat(Stats.Segments.MOVED, "normal", segment1.getDataSource()));
     Assert.assertEquals(0, holder1.getPeon().getNumberOfSegmentsToLoad());
     Assert.assertEquals(1, holder2.getPeon().getNumberOfSegmentsToLoad());
   }
@@ -337,7 +340,7 @@ public class BalanceSegmentsTest
     CoordinatorRunStats stats = runBalancer(params);
 
     // max to move is 5, all segments on server 1, but only expect to move 1 to server 2 since max node load queue is 1
-    Assert.assertEquals(maxSegmentsInQueue, stats.getTieredStat(Stats.Segments.MOVED, "normal"));
+    Assert.assertEquals(maxSegmentsInQueue, stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1"));
   }
 
   @Test
@@ -350,7 +353,7 @@ public class BalanceSegmentsTest
     ).build();
 
     CoordinatorRunStats stats = runBalancer(params);
-    Assert.assertTrue(stats.getTieredStat(Stats.Segments.MOVED, "normal") > 0);
+    Assert.assertTrue(stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1") > 0);
   }
 
   @Test
@@ -365,7 +368,7 @@ public class BalanceSegmentsTest
     ).build();
 
     CoordinatorRunStats stats = runBalancer(params);
-    Assert.assertTrue(stats.getTieredStat(Stats.Segments.MOVED, "normal") > 0);
+    Assert.assertTrue(stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1") > 0);
   }
 
   @Test
@@ -400,7 +403,7 @@ public class BalanceSegmentsTest
 
     CoordinatorRunStats stats = runBalancer(params);
     EasyMock.verify(strategy);
-    Assert.assertEquals(1L, stats.getTieredStat(Stats.Segments.MOVED, "normal"));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource2"));
     Assert.assertEquals(ImmutableSet.of(segment3), holder3.getPeon().getSegmentsToLoad());
   }
 
@@ -423,12 +426,14 @@ public class BalanceSegmentsTest
         .build();
 
     CoordinatorRunStats stats = runBalancer(params);
-    Assert.assertEquals(2L, stats.getTieredStat(Stats.Segments.MOVED, "normal"));
+    long totalMoved = stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1")
+                      + stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource2");
+    Assert.assertEquals(2L, totalMoved);
   }
 
   private CoordinatorRunStats runBalancer(DruidCoordinatorRuntimeParams params)
   {
-    params = new BalanceSegments(stateManager).run(params);
+    params = new BalanceSegments(loadQueueManager).run(params);
     if (params == null) {
       Assert.fail("BalanceSegments duty returned null params");
       return new CoordinatorRunStats();

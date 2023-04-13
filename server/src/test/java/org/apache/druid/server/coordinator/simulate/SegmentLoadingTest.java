@@ -304,7 +304,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     // Run 3: No segments are assigned, extra loads are cancelled
     runCoordinatorCycle();
     verifyValue(Metric.ASSIGNED_COUNT, 0L);
-    verifyValue(Metric.CANCELLED_LOADS, 2L);
+    verifyValue(Metric.LOAD_QUEUE_STATUS, 2L);
 
     // Run 4: Some segments are assigned as load queue is still partially full
     runCoordinatorCycle();
@@ -416,7 +416,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
 
     // Verify that the loading of the extra replicas is cancelled
-    verifyValue(Metric.CANCELLED_LOADS, 10L);
+    verifyValue(Metric.LOAD_QUEUE_STATUS, filter(DruidMetrics.STATUS, "cancelled"), 10L);
     verifyValue(
         Metric.LOAD_QUEUE_COUNT,
         filter(DruidMetrics.SERVER, historicalT12.getName()),

@@ -29,8 +29,8 @@ import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
+import org.apache.druid.server.coordinator.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.SegmentLoader;
-import org.apache.druid.server.coordinator.SegmentStateManager;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -57,11 +57,11 @@ public class RunRules implements CoordinatorDuty
   private static final EmittingLogger log = new EmittingLogger(RunRules.class);
   private static final int MAX_MISSING_RULES = 10;
 
-  private final SegmentStateManager stateManager;
+  private final SegmentLoadQueueManager loadQueueManager;
 
-  public RunRules(SegmentStateManager stateManager)
+  public RunRules(SegmentLoadQueueManager loadQueueManager)
   {
-    this.stateManager = stateManager;
+    this.loadQueueManager = loadQueueManager;
   }
 
   @Override
@@ -107,7 +107,7 @@ public class RunRules implements CoordinatorDuty
         dynamicConfig
     );
     final SegmentLoader segmentLoader = new SegmentLoader(
-        stateManager,
+        loadQueueManager,
         cluster,
         params.getSegmentReplicantLookup(),
         replicationThrottler,
@@ -147,9 +147,9 @@ public class RunRules implements CoordinatorDuty
     segmentLoader.makeAlerts();
 
     final CoordinatorRunStats stats = segmentLoader.getStats();
-    stats.forEachRowKey(
-        (dimensionValues, statValues) ->
-            log.info("Stats for dimensions [%s]: [%s]", dimensionValues, statValues)
+    stats.forEachRow(
+        (dimValues, statValues) ->
+            log.info("Stats for dims[%s] are [%s]", dimValues, statValues)
     );
 
     return params.buildFromExisting()
@@ -167,7 +167,7 @@ public class RunRules implements CoordinatorDuty
   private Set<String> reduceLifetimesAndGetBusyTiers(CoordinatorDynamicConfig dynamicConfig)
   {
     final Set<String> busyTiers = new HashSet<>();
-    stateManager.reduceLifetimesOfReplicatingSegments().forEach((tier, replicatingState) -> {
+    loadQueueManager.reduceLifetimesOfReplicatingSegments().forEach((tier, replicatingState) -> {
       int numReplicatingSegments = replicatingState.getNumProcessingSegments();
       if (numReplicatingSegments <= 0) {
         return;

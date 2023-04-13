@@ -17,9 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.loadqueue;
 
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;

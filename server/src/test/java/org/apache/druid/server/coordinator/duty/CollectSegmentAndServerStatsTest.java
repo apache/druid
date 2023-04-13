@@ -20,16 +20,16 @@
 package org.apache.druid.server.coordinator.duty;
 
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
+import it.unimi.dsi.fastutil.objects.Object2LongMaps;
 import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Stats;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -37,39 +37,31 @@ import org.mockito.junit.MockitoJUnitRunner;
 import java.util.Collections;
 
 @RunWith(MockitoJUnitRunner.class)
-public class EmitClusterStatsAndMetricsTest
+public class CollectSegmentAndServerStatsTest
 {
   @Mock
-  private ServiceEmitter mockServiceEmitter;
-  @Mock
   private DruidCoordinator mockDruidCoordinator;
-  @Mock
-  DruidCluster mockDruidCluster;
 
   @Test
-  public void testRunOnlyEmitStatsForHistoricalDuties()
+  public void testCollectedSegmentStats()
   {
     final DruidCoordinatorRuntimeParams runtimeParams =
         CoordinatorRuntimeParamsTestHelpers.newBuilder()
-                                           .withDruidCluster(mockDruidCluster)
+                                           .withDruidCluster(DruidCluster.EMPTY)
                                            .withUsedSegmentsInTest()
-                                           .withCoordinatorStats(new CoordinatorRunStats())
                                            .build();
 
     Mockito.when(mockDruidCoordinator.computeNumsUnavailableUsedSegmentsPerDataSource())
-           .thenReturn(Object2IntMaps.emptyMap());
+           .thenReturn(Object2IntMaps.singleton("ds", 10));
     Mockito.when(mockDruidCoordinator.computeUnderReplicationCountsPerDataSourcePerTier())
-           .thenReturn(Collections.emptyMap());
+           .thenReturn(Collections.singletonMap("ds", Object2LongMaps.singleton("tier1", 100)));
 
-    CoordinatorDuty duty = new EmitClusterStatsAndMetrics(
-        mockDruidCoordinator,
-        DruidCoordinator.HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP,
-        mockServiceEmitter
-    );
-    duty.run(runtimeParams);
+    CoordinatorDuty duty = new CollectSegmentAndServerStats(mockDruidCoordinator);
+    DruidCoordinatorRuntimeParams params = duty.run(runtimeParams);
 
-    ArgumentCaptor<ServiceEventBuilder> argumentCaptor = ArgumentCaptor.forClass(ServiceEventBuilder.class);
-    Mockito.verify(mockServiceEmitter, Mockito.atLeastOnce()).emit(argumentCaptor.capture());
+    CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assert.assertTrue(stats.hasStat(Stats.Segments.UNAVAILABLE));
+    Assert.assertTrue(stats.hasStat(Stats.Segments.UNDER_REPLICATED));
   }
 
 }

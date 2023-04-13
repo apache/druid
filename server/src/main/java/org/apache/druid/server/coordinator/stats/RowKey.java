@@ -73,15 +73,21 @@ public class RowKey
   {
     private final Map<Dimension, String> values = new EnumMap<>(Dimension.class);
 
-    Builder add(Dimension dimension, String value)
+    public Builder add(Dimension dimension, String value)
     {
       values.put(dimension, value);
       return this;
     }
 
-    RowKey build()
+    public RowKey build()
     {
       return new RowKey(values);
     }
+  }
+
+  @Override
+  public String toString()
+  {
+    return values == null ? "{}" : values.toString();
   }
 }

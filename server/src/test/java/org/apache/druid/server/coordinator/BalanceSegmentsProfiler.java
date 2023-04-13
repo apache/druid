@@ -30,6 +30,8 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.server.coordinator.duty.RunRules;
+import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
+import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.rules.PeriodLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
@@ -50,7 +52,7 @@ import java.util.List;
 public class BalanceSegmentsProfiler
 {
   private static final int MAX_SEGMENTS_TO_MOVE = 5;
-  private SegmentStateManager stateManager;
+  private SegmentLoadQueueManager loadQueueManager;
   private ImmutableDruidServer druidServer1;
   private ImmutableDruidServer druidServer2;
   List<DataSegment> segments = new ArrayList<>();
@@ -62,7 +64,7 @@ public class BalanceSegmentsProfiler
   @Before
   public void setUp()
   {
-    stateManager = new SegmentStateManager(null, null, null);
+    loadQueueManager = new SegmentLoadQueueManager(null, null, null);
     druidServer1 = EasyMock.createMock(ImmutableDruidServer.class);
     druidServer2 = EasyMock.createMock(ImmutableDruidServer.class);
     emitter = EasyMock.createMock(ServiceEmitter.class);
@@ -139,8 +141,8 @@ public class BalanceSegmentsProfiler
         .withDatabaseRuleManager(manager)
         .build();
 
-    BalanceSegments tester = new BalanceSegments(stateManager);
-    RunRules runner = new RunRules(stateManager);
+    BalanceSegments tester = new BalanceSegments(loadQueueManager);
+    RunRules runner = new RunRules(loadQueueManager);
     watch.start();
     DruidCoordinatorRuntimeParams balanceParams = tester.run(params);
     DruidCoordinatorRuntimeParams assignParams = runner.run(params);
@@ -184,7 +186,7 @@ public class BalanceSegmentsProfiler
         .withUsedSegmentsInTest(segments)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build())
         .build();
-    BalanceSegments tester = new BalanceSegments(stateManager);
+    BalanceSegments tester = new BalanceSegments(loadQueueManager);
     watch.start();
     DruidCoordinatorRuntimeParams balanceParams = tester.run(params);
     System.out.println(watch.stop());

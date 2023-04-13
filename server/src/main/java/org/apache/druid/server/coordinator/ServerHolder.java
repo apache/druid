@@ -21,6 +21,8 @@ package org.apache.druid.server.coordinator;
 
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
+import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 

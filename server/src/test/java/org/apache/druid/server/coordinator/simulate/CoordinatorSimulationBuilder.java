@@ -44,13 +44,13 @@ import org.apache.druid.server.coordinator.CostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.DiskNormalizedCostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
-import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.RandomBalancerStrategyFactory;
-import org.apache.druid.server.coordinator.SegmentStateManager;
+import org.apache.druid.server.coordinator.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.duty.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.NewestSegmentFirstPolicy;
+import org.apache.druid.server.coordinator.loadqueue.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
@@ -206,7 +206,7 @@ public class CoordinatorSimulationBuilder
         env.executorFactory,
         null,
         env.loadQueueTaskMaster,
-        env.segmentStateManager,
+        env.loadQueueManager,
         new ServiceAnnouncer.Noop(),
         null,
         Collections.emptySet(),
@@ -421,7 +421,7 @@ public class CoordinatorSimulationBuilder
     private final TestMetadataRuleManager ruleManager = new TestMetadataRuleManager();
 
     private final LoadQueueTaskMaster loadQueueTaskMaster;
-    private final SegmentStateManager segmentStateManager;
+    private final SegmentLoadQueueManager loadQueueManager;
 
     /**
      * Represents the current inventory of all servers (typically historicals)
@@ -482,8 +482,8 @@ public class CoordinatorSimulationBuilder
           httpClient,
           null
       );
-      this.segmentStateManager =
-          new SegmentStateManager(coordinatorInventoryView, segmentManager, loadQueueTaskMaster);
+      this.loadQueueManager =
+          new SegmentLoadQueueManager(coordinatorInventoryView, segmentManager, loadQueueTaskMaster);
 
       this.jacksonConfigManager = mockConfigManager();
       setDynamicConfig(dynamicConfig);

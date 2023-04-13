@@ -17,13 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.loadqueue;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
+import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -60,7 +61,7 @@ public class SegmentHolder implements Comparable<SegmentHolder>
   private final List<LoadPeonCallback> callbacks = new ArrayList<>();
   private final AtomicLong firstRequestMillis = new AtomicLong(0);
 
-  SegmentHolder(
+  public SegmentHolder(
       DataSegment segment,
       SegmentAction action,
       @Nullable LoadPeonCallback callback

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.loadqueue;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,6 +27,10 @@ import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.SegmentChangeRequestNoop;
+import org.apache.druid.server.coordinator.DruidCoordinator;
+import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -43,7 +47,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -73,7 +76,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
   private final DruidCoordinatorConfig config;
 
   private final AtomicLong queuedSize = new AtomicLong(0);
-  private final AtomicInteger failedAssignCount = new AtomicInteger(0);
+  private final CoordinatorRunStats stats = new CoordinatorRunStats();
 
   /**
    * Needs to be thread safe since it can be concurrently accessed via
@@ -81,38 +84,34 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
    * {@link #actionCompleted(SegmentHolder)}, {@link #getSegmentsToLoad()} and
    * {@link #stop()}.
    */
-  private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToLoad = new ConcurrentSkipListMap<>(
-      DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
-  );
+  private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToLoad
+      = new ConcurrentSkipListMap<>(DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST);
 
   /**
    * Needs to be thread safe since it can be concurrently accessed via
    * {@link #dropSegment(DataSegment, LoadPeonCallback)}, {@link #actionCompleted(SegmentHolder)},
    * {@link #getSegmentsToDrop()} and {@link #stop()}
    */
-  private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToDrop = new ConcurrentSkipListMap<>(
-      DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
-  );
+  private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToDrop
+      = new ConcurrentSkipListMap<>(DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST);
 
   /**
    * Needs to be thread safe since it can be concurrently accessed via
    * {@link #markSegmentToDrop(DataSegment)}}, {@link #unmarkSegmentToDrop(DataSegment)}}
    * and {@link #getSegmentsToDrop()}
    */
-  private final ConcurrentSkipListSet<DataSegment> segmentsMarkedToDrop = new ConcurrentSkipListSet<>(
-      DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
-  );
+  private final ConcurrentSkipListSet<DataSegment> segmentsMarkedToDrop
+      = new ConcurrentSkipListSet<>(DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST);
 
   /**
    * Needs to be thread safe since it can be concurrently accessed via
    * {@link #failAssign(SegmentHolder, boolean, Exception)}, {@link #actionCompleted(SegmentHolder)},
    * {@link #getTimedOutSegments()} and {@link #stop()}
    */
-  private final ConcurrentSkipListSet<DataSegment> timedOutSegments = new ConcurrentSkipListSet<>(
-      DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
-  );
+  private final ConcurrentSkipListSet<DataSegment> timedOutSegments =
+      new ConcurrentSkipListSet<>(DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST);
 
-  CuratorLoadQueuePeon(
+  public CuratorLoadQueuePeon(
       CuratorFramework curator,
       String basePath,
       ObjectMapper jsonMapper,
@@ -172,9 +171,12 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
   }
 
   @Override
-  public int getAndResetFailedAssignCount()
+  public CoordinatorRunStats getAndResetStats()
   {
-    return failedAssignCount.getAndSet(0);
+    final CoordinatorRunStats collectedStats = new CoordinatorRunStats();
+    collectedStats.accumulate(stats);
+    stats.clear();
+    return collectedStats;
   }
 
   @Override
@@ -368,7 +370,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
 
     timedOutSegments.clear();
     queuedSize.set(0L);
-    failedAssignCount.set(0);
+    stats.clear();
   }
 
   private void onZkNodeDeleted(SegmentHolder segmentHolder, String path)
@@ -396,7 +398,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
     if (e != null) {
       log.error(e, "Server[%s], throwable caught when submitting [%s].", basePath, segmentHolder);
     }
-    failedAssignCount.getAndIncrement();
+    stats.add(Stats.SegmentQueue.FAILED_LOADS, 1);
 
     if (handleTimeout) {
       // Avoid removing the segment entry from the load/drop list in case config.getLoadTimeoutDelay() expires.

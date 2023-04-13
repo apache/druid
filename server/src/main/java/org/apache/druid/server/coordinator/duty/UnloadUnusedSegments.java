@@ -23,7 +23,7 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.SegmentStateManager;
+import org.apache.druid.server.coordinator.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.Rule;
@@ -43,11 +43,11 @@ public class UnloadUnusedSegments implements CoordinatorDuty
 {
   private static final Logger log = new Logger(UnloadUnusedSegments.class);
 
-  private final SegmentStateManager segmentStateManager;
+  private final SegmentLoadQueueManager loadQueueManager;
 
-  public UnloadUnusedSegments(SegmentStateManager segmentStateManager)
+  public UnloadUnusedSegments(SegmentLoadQueueManager loadQueueManager)
   {
-    this.segmentStateManager = segmentStateManager;
+    this.loadQueueManager = loadQueueManager;
   }
 
   @Override
@@ -101,7 +101,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
       final Set<DataSegment> usedSegments = params.getUsedSegments();
       for (DataSegment segment : dataSource.getSegments()) {
         if (!usedSegments.contains(segment)
-            && segmentStateManager.dropSegment(segment, serverHolder)) {
+            && loadQueueManager.dropSegment(segment, serverHolder)) {
           totalUnneededCount++;
           log.info(
               "Dropping uneeded segment [%s] from server [%s] in tier [%s]",

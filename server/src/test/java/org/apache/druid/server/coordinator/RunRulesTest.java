@@ -38,6 +38,7 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.duty.RunRules;
+import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
@@ -87,7 +88,7 @@ public class RunRulesTest
     EmittingLogger.registerEmitter(emitter);
     databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
     segmentsMetadataManager = EasyMock.createNiceMock(SegmentsMetadataManager.class);
-    ruleRunner = new RunRules(new SegmentStateManager(null, segmentsMetadataManager, null));
+    ruleRunner = new RunRules(new SegmentLoadQueueManager(null, segmentsMetadataManager, null));
   }
 
   @After

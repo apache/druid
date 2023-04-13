@@ -47,6 +47,9 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.loadqueue.CuratorLoadQueuePeon;
+import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
+import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeonTester;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.DeadlockDetectingTimeout;
@@ -327,12 +330,12 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     EasyMock.replay(dataSourcesSnapshot);
 
     // Move the segment from source to dest
-    SegmentStateManager stateManager = new SegmentStateManager(
+    SegmentLoadQueueManager loadQueueManager = new SegmentLoadQueueManager(
         baseView,
         segmentsMetadataManager,
         LoadQueuePeonTester.mockCuratorTaskMaster()
     );
-    SegmentLoader segmentLoader = createSegmentLoader(stateManager, coordinatorRuntimeParams);
+    SegmentLoader segmentLoader = createSegmentLoader(loadQueueManager, coordinatorRuntimeParams);
     segmentLoader.moveSegment(
         segmentToMove,
         new ServerHolder(source.toImmutableDruidServer(), sourceLoadQueuePeon),
@@ -465,7 +468,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   }
 
   private SegmentLoader createSegmentLoader(
-      SegmentStateManager stateManager,
+      SegmentLoadQueueManager loadQueueManager,
       DruidCoordinatorRuntimeParams params,
       String... tiersEligibleForReplication
   )
@@ -478,7 +481,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
     );
     return new SegmentLoader(
-        stateManager,
+        loadQueueManager,
         params.getDruidCluster(),
         params.getSegmentReplicantLookup(),
         throttler,

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.loadqueue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Provider;
@@ -25,6 +25,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 
 import java.util.concurrent.ExecutorService;

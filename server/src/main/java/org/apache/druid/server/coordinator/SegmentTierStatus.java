@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator;
 
+import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.ArrayList;

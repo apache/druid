@@ -76,7 +76,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
     loadQueuedSegments();
     verifyValue(Metric.ASSIGNED_COUNT, 1000L);
-    verifyValue(Metric.MOVED_COUNT, 0L);
+    verifyNotEmitted(Metric.MOVED_COUNT);
     verifyValue(Metric.UNMOVED_COUNT, 1000L);
 
     for (DruidServer historical : historicals) {
@@ -87,7 +87,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
     loadQueuedSegments();
     verifyNotEmitted(Metric.ASSIGNED_COUNT);
-    verifyValue(Metric.MOVED_COUNT, 0L);
+    verifyNotEmitted(Metric.MOVED_COUNT);
     verifyValue(Metric.UNMOVED_COUNT, 1000L);
   }
 
@@ -113,7 +113,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
     loadQueuedSegments();
     verifyValue(Metric.ASSIGNED_COUNT, 1000L);
-    verifyValue(Metric.MOVED_COUNT, 0L);
+    verifyNotEmitted(Metric.MOVED_COUNT);
     verifyValue(Metric.UNMOVED_COUNT, 1000L);
 
     // Verify that each server is equally loaded
@@ -161,7 +161,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
     loadQueuedSegments();
     verifyValue(Metric.ASSIGNED_COUNT, 1000L);
-    verifyValue(Metric.MOVED_COUNT, 0L);
+    verifyNotEmitted(Metric.MOVED_COUNT);
     verifyValue(Metric.UNMOVED_COUNT, 1000L);
 
     // Verify that each server is equally loaded

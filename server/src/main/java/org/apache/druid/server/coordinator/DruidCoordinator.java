@@ -46,7 +46,6 @@ import org.apache.druid.guice.annotations.CoordinatorIndexingServiceDuty;
 import org.apache.druid.guice.annotations.CoordinatorMetadataStoreManagementDuty;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
@@ -61,18 +60,23 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.duty.BalanceSegments;
+import org.apache.druid.server.coordinator.duty.CollectSegmentAndServerStats;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.duty.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
-import org.apache.druid.server.coordinator.duty.EmitClusterStatsAndMetrics;
 import org.apache.druid.server.coordinator.duty.LogUsedSegments;
 import org.apache.druid.server.coordinator.duty.MarkAsUnusedOvershadowedSegments;
 import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.duty.UnloadUnusedSegments;
+import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
+import org.apache.druid.server.coordinator.loadqueue.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.CoordinatorStat;
+import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.server.initialization.jetty.ServiceUnavailableException;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
@@ -85,11 +89,11 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
@@ -119,7 +123,7 @@ public class DruidCoordinator
    * cluster has availability problems and struggling to make all segments available immediately, at least we try to
    * make more "important" (more recent) segments available as soon as possible.
    */
-  static final Ordering<DataSegment> SEGMENT_COMPARATOR_RECENT_FIRST = Ordering
+  public static final Ordering<DataSegment> SEGMENT_COMPARATOR_RECENT_FIRST = Ordering
       .from(Comparators.intervalsByEndThenStart())
       .onResultOf(DataSegment::getInterval)
       .compound(Ordering.<DataSegment>natural())
@@ -139,7 +143,7 @@ public class DruidCoordinator
   private final ScheduledExecutorService exec;
   private final LoadQueueTaskMaster taskMaster;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
-  private final SegmentStateManager segmentStateManager;
+  private final SegmentLoadQueueManager loadQueueManager;
   private final ServiceAnnouncer serviceAnnouncer;
   private final DruidNode self;
   private final Set<CoordinatorDuty> indexingServiceDuties;
@@ -173,7 +177,7 @@ public class DruidCoordinator
       ScheduledExecutorFactory scheduledExecutorFactory,
       IndexingServiceClient indexingServiceClient,
       LoadQueueTaskMaster taskMaster,
-      SegmentStateManager segmentStateManager,
+      SegmentLoadQueueManager loadQueueManager,
       ServiceAnnouncer serviceAnnouncer,
       @Self DruidNode self,
       @CoordinatorMetadataStoreManagementDuty Set<CoordinatorDuty> metadataStoreManagementDuties,
@@ -195,7 +199,7 @@ public class DruidCoordinator
         scheduledExecutorFactory,
         indexingServiceClient,
         taskMaster,
-        segmentStateManager,
+        loadQueueManager,
         serviceAnnouncer,
         self,
         new ConcurrentHashMap<>(),
@@ -219,7 +223,7 @@ public class DruidCoordinator
       ScheduledExecutorFactory scheduledExecutorFactory,
       IndexingServiceClient indexingServiceClient,
       LoadQueueTaskMaster taskMaster,
-      SegmentStateManager segmentStateManager,
+      SegmentLoadQueueManager loadQueueManager,
       ServiceAnnouncer serviceAnnouncer,
       DruidNode self,
       ConcurrentMap<String, LoadQueuePeon> loadQueuePeonMap,
@@ -254,7 +258,7 @@ public class DruidCoordinator
     this.lookupCoordinatorManager = lookupCoordinatorManager;
     this.coordLeaderSelector = coordLeaderSelector;
     this.compactSegments = initializeCompactSegmentsDuty(compactionSegmentSearchPolicy);
-    this.segmentStateManager = segmentStateManager;
+    this.loadQueueManager = loadQueueManager;
   }
 
   public boolean isLeader()
@@ -469,7 +473,12 @@ public class DruidCoordinator
   public void runCompactSegmentsDuty()
   {
     final int startingLeaderCounter = coordLeaderSelector.localTerm();
-    DutiesRunnable compactSegmentsDuty = new DutiesRunnable(makeCompactSegmentsDuty(), startingLeaderCounter, COMPACT_SEGMENTS_DUTIES_DUTY_GROUP);
+    DutiesRunnable compactSegmentsDuty = new DutiesRunnable(
+        makeCompactSegmentsDuty(),
+        startingLeaderCounter,
+        COMPACT_SEGMENTS_DUTIES_DUTY_GROUP,
+        null
+    );
     compactSegmentsDuty.run();
   }
 
@@ -543,43 +552,52 @@ public class DruidCoordinator
       serviceAnnouncer.announce(self);
       final int startingLeaderCounter = coordLeaderSelector.localTerm();
 
-      final List<Pair<? extends DutiesRunnable, Duration>> dutiesRunnables = new ArrayList<>();
+      final List<DutiesRunnable> dutiesRunnables = new ArrayList<>();
       dutiesRunnables.add(
-          Pair.of(
-              new DutiesRunnable(makeHistoricalManagementDuties(), startingLeaderCounter, HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP),
+          new DutiesRunnable(
+              makeHistoricalManagementDuties(),
+              startingLeaderCounter,
+              HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP,
               config.getCoordinatorPeriod()
           )
       );
       if (indexingServiceClient != null) {
         dutiesRunnables.add(
-            Pair.of(
-                new DutiesRunnable(makeIndexingServiceDuties(), startingLeaderCounter, INDEXING_SERVICE_DUTIES_DUTY_GROUP),
+            new DutiesRunnable(
+                makeIndexingServiceDuties(),
+                startingLeaderCounter,
+                INDEXING_SERVICE_DUTIES_DUTY_GROUP,
                 config.getCoordinatorIndexingPeriod()
             )
         );
       }
       dutiesRunnables.add(
-          Pair.of(
-              new DutiesRunnable(makeMetadataStoreManagementDuties(), startingLeaderCounter, METADATA_STORE_MANAGEMENT_DUTIES_DUTY_GROUP),
+          new DutiesRunnable(
+              makeMetadataStoreManagementDuties(),
+              startingLeaderCounter,
+              METADATA_STORE_MANAGEMENT_DUTIES_DUTY_GROUP,
               config.getCoordinatorMetadataStoreManagementPeriod()
           )
       );
 
       for (CoordinatorCustomDutyGroup customDutyGroup : customDutyGroups.getCoordinatorCustomDutyGroups()) {
         dutiesRunnables.add(
-            Pair.of(
-                new DutiesRunnable(customDutyGroup.getCustomDutyList(), startingLeaderCounter, customDutyGroup.getName()),
+            new DutiesRunnable(
+                customDutyGroup.getCustomDutyList(),
+                startingLeaderCounter,
+                customDutyGroup.getName(),
                 customDutyGroup.getPeriod()
             )
         );
         log.info(
             "Done making custom coordinator duties %s for group %s",
-            customDutyGroup.getCustomDutyList().stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList()),
+            customDutyGroup.getCustomDutyList().stream()
+                           .map(duty -> duty.getClass().getName()).collect(Collectors.toList()),
             customDutyGroup.getName()
         );
       }
 
-      for (final Pair<? extends DutiesRunnable, Duration> dutiesRunnable : dutiesRunnables) {
+      for (final DutiesRunnable dutiesRunnable : dutiesRunnables) {
         // CompactSegmentsDuty can takes a non trival amount of time to complete.
         // Hence, we schedule at fixed rate to make sure the other tasks still run at approximately every
         // config.getCoordinatorIndexingPeriod() period. Note that cautious should be taken
@@ -587,23 +605,19 @@ public class DruidCoordinator
         ScheduledExecutors.scheduleAtFixedRate(
             exec,
             config.getCoordinatorStartDelay(),
-            dutiesRunnable.rhs,
-            new Callable<ScheduledExecutors.Signal>()
-            {
-              private final DutiesRunnable theRunnable = dutiesRunnable.lhs;
+            dutiesRunnable.getPeriod(),
+            () -> {
+              if (coordLeaderSelector.isLeader()
+                  && startingLeaderCounter == coordLeaderSelector.localTerm()) {
+                dutiesRunnable.run();
+              }
 
-              @Override
-              public ScheduledExecutors.Signal call()
-              {
-                if (coordLeaderSelector.isLeader() && startingLeaderCounter == coordLeaderSelector.localTerm()) {
-                  theRunnable.run();
-                }
-                if (coordLeaderSelector.isLeader()
-                    && startingLeaderCounter == coordLeaderSelector.localTerm()) { // (We might no longer be leader)
-                  return ScheduledExecutors.Signal.REPEAT;
-                } else {
-                  return ScheduledExecutors.Signal.STOP;
-                }
+              // Check if we are still leader before re-scheduling
+              if (coordLeaderSelector.isLeader()
+                  && startingLeaderCounter == coordLeaderSelector.localTerm()) {
+                return ScheduledExecutors.Signal.REPEAT;
+              } else {
+                return ScheduledExecutors.Signal.STOP;
               }
             }
         );
@@ -666,10 +680,11 @@ public class DruidCoordinator
     return ImmutableList.of(
         new LogUsedSegments(),
         new UpdateCoordinatorStateAndPrepareCluster(),
-        new RunRules(segmentStateManager),
-        new UnloadUnusedSegments(segmentStateManager),
+        new RunRules(loadQueueManager),
+        new UnloadUnusedSegments(loadQueueManager),
         new MarkAsUnusedOvershadowedSegments(DruidCoordinator.this),
-        new BalanceSegments(segmentStateManager)
+        new BalanceSegments(loadQueueManager),
+        new CollectSegmentAndServerStats(DruidCoordinator.this)
     );
   }
 
@@ -731,35 +746,32 @@ public class DruidCoordinator
     return ImmutableList.of(compactSegments);
   }
 
-  @VisibleForTesting
-  protected class DutiesRunnable implements Runnable
+  private class DutiesRunnable implements Runnable
   {
     private final long startTimeNanos = System.nanoTime();
     private final List<? extends CoordinatorDuty> duties;
     private final int startingLeaderCounter;
-    private final String dutiesRunnableAlias;
+    private final String dutyGroupName;
+    private final Duration period;
 
-    protected DutiesRunnable(List<? extends CoordinatorDuty> duties, final int startingLeaderCounter, String alias)
+    DutiesRunnable(
+        List<? extends CoordinatorDuty> duties,
+        final int startingLeaderCounter,
+        String alias,
+        Duration period
+    )
     {
-      // Automatically add EmitClusterStatsAndMetrics duty to the group if it does not already exists
-      // This is to avoid human coding error (forgetting to add the EmitClusterStatsAndMetrics duty to the group)
-      // causing metrics from the duties to not being emitted.
-      if (duties.stream().noneMatch(duty -> duty instanceof EmitClusterStatsAndMetrics)) {
-        List<CoordinatorDuty> allDuties = new ArrayList<>(duties);
-        allDuties.add(new EmitClusterStatsAndMetrics(DruidCoordinator.this, alias, emitter));
-        this.duties = allDuties;
-      } else {
-        this.duties = duties;
-      }
+      this.duties = duties;
       this.startingLeaderCounter = startingLeaderCounter;
-      this.dutiesRunnableAlias = alias;
+      this.dutyGroupName = alias;
+      this.period = period;
     }
 
     @Override
     public void run()
     {
       try {
-        log.info("Starting coordinator run for group [%s]", dutiesRunnableAlias);
+        log.info("Starting coordinator run for group [%s]", dutyGroupName);
         final long globalStart = System.currentTimeMillis();
 
         synchronized (lock) {
@@ -819,36 +831,55 @@ public class DruidCoordinator
               log.info("Finishing coordinator run since duty [%s] requested to stop run.", dutyName);
               return;
             } else {
-              params.getCoordinatorStats().addToDutyStat(Stats.Run.DUTY_TIME, dutyName, end - start);
+              params.getCoordinatorStats()
+                    .addToDutyStat(Stats.Run.DUTY_TIME, dutyName, end - start);
             }
           }
         }
+
+        // Emit stats collected from all duties
+        CoordinatorRunStats allStats = params.getCoordinatorStats();
+        if (allStats.rowCount() > 0) {
+          log.info("Emitting [%d] rows of stats for group [%s].", allStats.rowCount(), dutyGroupName);
+          allStats.forEachStat((dimensionValues, stat, value) -> emitStat(stat, dimensionValues, value));
+        }
+
         // Emit the runtime of the full DutiesRunnable
         final long runMillis = System.currentTimeMillis() - globalStart;
-        params.getEmitter().emit(
-            new ServiceMetricEvent.Builder()
-                .setDimension(DruidMetrics.DUTY_GROUP, dutiesRunnableAlias)
-                .build("coordinator/global/time", runMillis)
-        );
-        log.info("Finished coordinator run for group [%s] in [%d] ms", dutiesRunnableAlias, runMillis);
+        emitStat(Stats.Run.TOTAL_TIME, Collections.emptyMap(), runMillis);
+        log.info("Finished coordinator run for group [%s] in [%d] ms", dutyGroupName, runMillis);
       }
       catch (Exception e) {
         log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();
       }
     }
 
-    @VisibleForTesting
-    public List<? extends CoordinatorDuty> getDuties()
+    private void emitStat(CoordinatorStat stat, Map<Dimension, String> dimensionValues, long value)
     {
-      return duties;
+      if (stat.equals(Stats.Balancer.NORMALIZED_COST_X_1000)) {
+        value = value / 1000;
+      }
+
+      if (stat.shouldEmit()) {
+        ServiceMetricEvent.Builder eventBuilder = new ServiceMetricEvent.Builder()
+            .setDimension(DruidMetrics.DUTY_GROUP, dutyGroupName);
+
+        dimensionValues.forEach(
+            (dim, dimValue) -> eventBuilder.setDimension(dim.dimensionName(), dimValue)
+        );
+        emitter.emit(eventBuilder.build(stat.getMetricName(), value));
+      }
+    }
+
+    Duration getPeriod()
+    {
+      return period;
     }
 
     @Override
     public String toString()
     {
-      return "DutiesRunnable{" +
-             "dutiesRunnableAlias='" + dutiesRunnableAlias + '\'' +
-             '}';
+      return "DutiesRunnable{group='" + dutyGroupName + '\'' + '}';
     }
   }
 

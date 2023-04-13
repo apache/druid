@@ -22,6 +22,10 @@ package org.apache.druid.server.coordinator;
 import com.google.inject.Inject;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.server.coordinator.loadqueue.LoadPeonCallback;
+import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
+import org.apache.druid.server.coordinator.loadqueue.LoadQueueTaskMaster;
+import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Collections;
@@ -31,9 +35,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Manages state of segments being loaded.
+ * Manager for addition/removal of segments to server load queues and the
+ * corresponding success/failure callbacks. Also maintains list of segments
+ * currently being moved or replicated in a tier.
  */
-public class SegmentStateManager
+public class SegmentLoadQueueManager
 {
   private final LoadQueueTaskMaster taskMaster;
   private final ServerInventoryView serverInventoryView;
@@ -45,7 +51,7 @@ public class SegmentStateManager
       = new ConcurrentHashMap<>();
 
   @Inject
-  public SegmentStateManager(
+  public SegmentLoadQueueManager(
       ServerInventoryView serverInventoryView,
       SegmentsMetadataManager segmentsMetadataManager,
       LoadQueueTaskMaster taskMaster

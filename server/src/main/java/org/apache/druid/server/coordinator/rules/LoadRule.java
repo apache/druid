@@ -24,7 +24,6 @@ import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.DruidCluster;
-import org.apache.druid.server.coordinator.SegmentLoader;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.timeline.DataSegment;
 
@@ -38,9 +37,9 @@ public abstract class LoadRule implements Rule
   private static final EmittingLogger log = new EmittingLogger(LoadRule.class);
 
   @Override
-  public void run(DataSegment segment, SegmentLoader loader)
+  public void run(DataSegment segment, SegmentActionHandler handler)
   {
-    loader.updateReplicas(segment, getTieredReplicants());
+    handler.updateSegmentReplicasInTiers(segment, getTieredReplicants());
   }
 
   @Override

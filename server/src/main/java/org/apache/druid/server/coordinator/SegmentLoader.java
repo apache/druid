@@ -21,6 +21,8 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
+import org.apache.druid.server.coordinator.rules.SegmentActionHandler;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -39,11 +41,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  * An instance of this class is freshly created for each coordinator run.
  */
-public class SegmentLoader
+public class SegmentLoader implements SegmentActionHandler
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentLoader.class);
 
-  private final SegmentStateManager stateManager;
+  private final SegmentLoadQueueManager loadQueueManager;
   private final DruidCluster cluster;
   private final CoordinatorRunStats stats = new CoordinatorRunStats();
   private final SegmentReplicantLookup replicantLookup;
@@ -56,7 +58,7 @@ public class SegmentLoader
   private final Set<String> emptyTiers = new HashSet<>();
 
   public SegmentLoader(
-      SegmentStateManager stateManager,
+      SegmentLoadQueueManager loadQueueManager,
       DruidCluster cluster,
       SegmentReplicantLookup replicantLookup,
       ReplicationThrottler replicationThrottler,
@@ -66,7 +68,7 @@ public class SegmentLoader
   {
     this.cluster = cluster;
     this.strategy = strategy;
-    this.stateManager = stateManager;
+    this.loadQueueManager = loadQueueManager;
     this.replicantLookup = replicantLookup;
     this.replicationThrottler = replicationThrottler;
     this.useRoundRobinAssignment = useRoundRobinAssignment;
@@ -99,25 +101,21 @@ public class SegmentLoader
     if (serverA.isLoadingSegment(segment)) {
       // Cancel the load on serverA and load on serverB instead
       if (serverA.cancelOperation(SegmentAction.LOAD, segment)) {
-        stats.addToTieredStat(Stats.Segments.CANCELLED_LOADS, tier, 1);
         int loadedCountOnTier = replicantLookup.getServedReplicas(segment.getId(), tier);
-        return stateManager.loadSegment(segment, serverB, loadedCountOnTier < 1, replicationThrottler);
+        return loadQueueManager.loadSegment(segment, serverB, loadedCountOnTier < 1, replicationThrottler);
       }
 
       // Could not cancel load, let the segment load on serverA and count it as unmoved
       return false;
     } else if (serverA.isServingSegment(segment)) {
-      return stateManager.moveSegment(segment, serverA, serverB, replicationThrottler.getMaxLifetime());
+      return loadQueueManager.moveSegment(segment, serverA, serverB, replicationThrottler.getMaxLifetime());
     } else {
       return false;
     }
   }
 
-  /**
-   * Queues load or drop of replicas of the given segment to achieve the
-   * target replication level on all the tiers.
-   */
-  public void updateReplicas(DataSegment segment, Map<String, Integer> tierToReplicaCount)
+  @Override
+  public void updateSegmentReplicasInTiers(DataSegment segment, Map<String, Integer> tierToReplicaCount)
   {
     // Identify empty tiers and determine total required replicas
     final AtomicInteger requiredTotalReplicas = new AtomicInteger(0);
@@ -177,9 +175,7 @@ public class SegmentLoader
 
     // Cancel all moves in this tier if it does not need to have replicas
     if (shouldCancelMoves) {
-      int cancelledMoves =
-          cancelOperations(SegmentAction.MOVE_TO, movingReplicas, segment, segmentStatus);
-      stats.addToTieredStat(Stats.Segments.CANCELLED_MOVES, tier, cancelledMoves);
+      cancelOperations(SegmentAction.MOVE_TO, movingReplicas, segment, segmentStatus);
     }
 
     // Cancel drops and queue loads if the projected count is below the requirement
@@ -187,7 +183,6 @@ public class SegmentLoader
       int replicaDeficit = requiredReplicas - projectedReplicas;
       int cancelledDrops =
           cancelOperations(SegmentAction.DROP, replicaDeficit, segment, segmentStatus);
-      stats.addToTieredStat(Stats.Segments.CANCELLED_DROPS, tier, cancelledDrops);
 
       // Cancelled drops can be counted as loaded replicas, thus reducing deficit
       int numReplicasToLoad = replicaDeficit - cancelledDrops;
@@ -205,7 +200,6 @@ public class SegmentLoader
       int replicaSurplus = projectedReplicas - requiredReplicas;
       int cancelledLoads =
           cancelOperations(SegmentAction.LOAD, replicaSurplus, segment, segmentStatus);
-      stats.addToSegmentStat(Stats.Segments.CANCELLED_LOADS, tier, datasource, cancelledLoads);
 
       int numReplicasToDrop = Math.min(replicaSurplus - cancelledLoads, maxReplicasToDrop);
       if (numReplicasToDrop > 0) {
@@ -232,42 +226,31 @@ public class SegmentLoader
     );
   }
 
-  /**
-   * Broadcasts the given segment to all servers that are broadcast targets and
-   * queues a drop of the segment from decommissioning servers.
-   */
+  @Override
   public void broadcastSegment(DataSegment segment)
   {
-    int assignedCount = 0;
-    int droppedCount = 0;
+    final String datasource = segment.getDataSource();
     for (ServerHolder server : cluster.getAllServers()) {
       // Ignore servers which are not broadcast targets
       if (!server.getServer().getType().isSegmentBroadcastTarget()) {
         continue;
       }
 
-      if (server.isDecommissioning()) {
-        droppedCount += dropBroadcastSegment(segment, server) ? 1 : 0;
-      } else {
-        assignedCount += loadBroadcastSegment(segment, server) ? 1 : 0;
+      // Drop from decommissioning servers and load on active servers
+      final String tier = server.getServer().getTier();
+      if (server.isDecommissioning() && dropBroadcastSegment(segment, server)) {
+        stats.addToSegmentStat(Stats.Segments.DROPPED_BROADCAST, tier, datasource, 1);
       }
-    }
-
-    final String datasource = segment.getDataSource();
-    if (assignedCount > 0) {
-      stats.addToDatasourceStat(Stats.Segments.ASSIGNED_BROADCAST, datasource, assignedCount);
-    }
-    if (droppedCount > 0) {
-      stats.addToDatasourceStat(Stats.Segments.DROPPED_BROADCAST, datasource, droppedCount);
+      if (!server.isDecommissioning() && loadBroadcastSegment(segment, server)) {
+        stats.addToSegmentStat(Stats.Segments.ASSIGNED_BROADCAST, tier, datasource, 1);
+      }
     }
   }
 
-  /**
-   * Marks the given segment as unused.
-   */
+  @Override
   public void deleteSegment(DataSegment segment)
   {
-    stateManager.deleteSegment(segment);
+    loadQueueManager.deleteSegment(segment);
     stats.addToDatasourceStat(Stats.Segments.DELETED, segment.getDataSource(), 1);
   }
 
@@ -284,7 +267,7 @@ public class SegmentLoader
     }
 
     if (server.canLoadSegment(segment)
-        && stateManager.loadSegment(segment, server, true, replicationThrottler)) {
+        && loadQueueManager.loadSegment(segment, server, true, replicationThrottler)) {
       return true;
     } else {
       log.makeAlert("Failed to assign broadcast segment for datasource [%s]", segment.getDataSource())
@@ -306,7 +289,7 @@ public class SegmentLoader
     if (server.isLoadingSegment(segment)) {
       return server.cancelOperation(SegmentAction.LOAD, segment);
     } else if (server.isServingSegment(segment)) {
-      return stateManager.dropSegment(segment, server);
+      return loadQueueManager.dropSegment(segment, server);
     } else {
       return false;
     }
@@ -384,7 +367,7 @@ public class SegmentLoader
     int numDropsQueued = 0;
     while (numToDrop > numDropsQueued && serverIterator.hasNext()) {
       ServerHolder holder = serverIterator.next();
-      numDropsQueued += stateManager.dropSegment(segment, holder) ? 1 : 0;
+      numDropsQueued += loadQueueManager.dropSegment(segment, holder) ? 1 : 0;
     }
 
     return numDropsQueued;
@@ -420,7 +403,7 @@ public class SegmentLoader
     int numLoadsQueued = 0;
     while (numLoadsQueued < numToLoad && serverIterator.hasNext()) {
       boolean queueSuccess =
-          stateManager.loadSegment(segment, serverIterator.next(), isFirstLoadOnTier, replicationThrottler);
+          loadQueueManager.loadSegment(segment, serverIterator.next(), isFirstLoadOnTier, replicationThrottler);
       numLoadsQueued += queueSuccess ? 1 : 0;
     }
 

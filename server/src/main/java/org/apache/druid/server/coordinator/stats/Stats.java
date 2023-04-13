@@ -37,8 +37,7 @@ public class Stats
 
     public static final CoordinatorStat ASSIGN_SKIPPED = new CoordinatorStat("assignSkip");
     public static final CoordinatorStat DROP_SKIPPED = new CoordinatorStat("dropSkip");
-    public static final CoordinatorStat THROTTLED_REPLICAS
-        = new CoordinatorStat("throttled", "segment/replica/throttled");
+    public static final CoordinatorStat THROTTLED_REPLICAS = new CoordinatorStat("throttled");
 
     public static final CoordinatorStat ASSIGNED_BROADCAST
         = new CoordinatorStat("assignBroad", "segment/assigned/broadcast");
@@ -57,26 +56,26 @@ public class Stats
         = new CoordinatorStat("unneeded", "segment/unneeded/count");
     public static final CoordinatorStat OVERSHADOWED
         = new CoordinatorStat("overshadowed", "segment/overshadowed/count");
+  }
 
-
-    // Load/drop queue stats
+  public static class SegmentQueue
+  {
     public static final CoordinatorStat NUM_TO_LOAD
         = new CoordinatorStat("numToLoad", "segment/loadQueue/count");
     public static final CoordinatorStat BYTES_TO_LOAD
         = new CoordinatorStat("bytesToLoad", "segment/loadQueue/size");
-    public static final CoordinatorStat FAILED_LOADS
-        = new CoordinatorStat("failedLoad", "segment/loadQueue/failed");
-    public static final CoordinatorStat CANCELLED_LOADS
-        = new CoordinatorStat("cancelLoad", "segment/loadQueue/cancelled");
-    public static final CoordinatorStat CANCELLED_DROPS
-        = new CoordinatorStat("cancelDrop");
-    public static final CoordinatorStat CANCELLED_MOVES
-        = new CoordinatorStat("cancelMove");
-    public static final CoordinatorStat FAILED_MOVES
-        = new CoordinatorStat("failedMove", "segment/move/failed");
     public static final CoordinatorStat NUM_TO_DROP
         = new CoordinatorStat("numToDrop", "segment/dropQueue/count");
 
+    public static final CoordinatorStat FAILED_LOADS
+        = new CoordinatorStat("failedLoad", "segment/loadQueue/failed");
+
+    public static final CoordinatorStat LOAD_STATUS
+        = new CoordinatorStat("loadStatus", "segment/loadQueue/status");
+    public static final CoordinatorStat DROP_STATUS
+        = new CoordinatorStat("dropStatus", "segment/dropQueue/status");
+    public static final CoordinatorStat MOVE_STATUS
+        = new CoordinatorStat("assignMove", "segment/moveQueue/status");
   }
 
   public static class Tier

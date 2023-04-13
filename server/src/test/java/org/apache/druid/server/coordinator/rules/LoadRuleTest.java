@@ -38,15 +38,15 @@ import org.apache.druid.server.coordinator.CostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.LoadQueuePeon;
-import org.apache.druid.server.coordinator.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
-import org.apache.druid.server.coordinator.SegmentAction;
+import org.apache.druid.server.coordinator.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.SegmentLoader;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
-import org.apache.druid.server.coordinator.SegmentStateManager;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.cost.ClusterCostCache;
+import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
+import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -81,7 +81,7 @@ public class LoadRuleTest
 
   private CachingCostBalancerStrategy cachingCostBalancerStrategy;
 
-  private SegmentStateManager stateManager;
+  private SegmentLoadQueueManager stateManager;
   private final boolean useRoundRobinAssignment;
   private BalancerStrategy mockBalancerStrategy;
 
@@ -106,7 +106,7 @@ public class LoadRuleTest
     cachingCostBalancerStrategy = new CachingCostBalancerStrategy(ClusterCostCache.builder().build(), exec);
 
     mockBalancerStrategy = EasyMock.createMock(BalancerStrategy.class);
-    stateManager = new SegmentStateManager(null, null, null);
+    stateManager = new SegmentLoadQueueManager(null, null, null);
   }
 
   @After
