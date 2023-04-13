@@ -8839,7 +8839,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByOrderByBoolean()
   {
-    msqCompatible();
+    // Not msqCompatible until https://github.com/apache/druid/pull/14046 is merged.
     testQuery(
         "SELECT dim1 = 'abc', COUNT(*) FROM druid.foo GROUP BY 1 ORDER BY 1, 2 LIMIT 2",
         ImmutableList.of(
