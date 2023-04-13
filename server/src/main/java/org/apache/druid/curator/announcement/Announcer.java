@@ -29,6 +29,7 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.curator.cache.PathChildrenCacheFactory;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -313,7 +314,7 @@ public class Announcer
         if (oldBytes == null) {
           created = true;
         } else if (!Arrays.equals(oldBytes, bytes)) {
-          log.error("Ignoring attempt to announce different values under same path");
+          throw new IAE("Cannot reannounce different values under the same path");
         }
       }
     }

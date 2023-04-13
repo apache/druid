@@ -267,13 +267,13 @@ public class CliOverlord extends ServerRunnable
 
             if (standalone) {
               LifecycleModule.register(binder, Server.class);
-            }
 
-            bindAnnouncer(
-                binder,
-                IndexingService.class,
-                DiscoverySideEffectsProvider.create()
-            );
+              bindAnnouncer(
+                  binder,
+                  IndexingService.class,
+                  DiscoverySideEffectsProvider.create()
+              );
+            }
 
             Jerseys.addResource(binder, SelfDiscoveryResource.class);
             LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
