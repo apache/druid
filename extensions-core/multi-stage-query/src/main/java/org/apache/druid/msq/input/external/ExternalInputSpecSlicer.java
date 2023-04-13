@@ -161,7 +161,7 @@ public class ExternalInputSpecSlicer implements InputSpecSlicer
         ((SplittableInputSource<?>) splittableInputSource.withSplit((InputSplit) split))
             .createSplits(spec.getInputFormat(), FilePerSplitHintSpec.INSTANCE)
             .map(subSplit -> splittableInputSource.withSplit((InputSplit) subSplit))
-            .forEach(subSources::add);
+            .forEach(s -> ((List) subSources).add(s));
       }
 
       if (subSources.isEmpty()) {

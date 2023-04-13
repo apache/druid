@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * Fault to throw when the error comes from the druid native query runtime while running in the MSQ engine .
+ * Fault to throw when the error comes from the druid native query runtime while running in the MSQ engine.
  */
 @JsonTypeName(QueryRuntimeFault.CODE)
 public class QueryRuntimeFault extends BaseMSQFault

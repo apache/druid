@@ -201,7 +201,6 @@ public class TaskLockbox
               task.getId(),
               task.getGroupId()
           );
-          continue;
         }
       }
 
@@ -237,6 +236,7 @@ public class TaskLockbox
    * groupId, dataSource, and priority.
    */
   @VisibleForTesting
+  @Nullable
   protected TaskLockPosse verifyAndCreateOrFindLockPosse(Task task, TaskLock taskLock)
   {
     giant.lock();
@@ -296,6 +296,12 @@ public class TaskLockbox
       }
 
       return createOrFindLockPosse(request);
+    }
+    catch (Exception e) {
+      log.error(e,
+                "Could not reacquire lock for task: %s from metadata store", task.getId()
+      );
+      return null;
     }
     finally {
       giant.unlock();

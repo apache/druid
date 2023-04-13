@@ -52,6 +52,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -102,7 +103,7 @@ public class MSQTaskReportTest
             ),
             new CounterSnapshotsTree(),
             new MSQResultsReport(
-                RowSignature.builder().add("s", ColumnType.STRING).build(),
+                Collections.singletonList(new MSQResultsReport.ColumnAndType("s", ColumnType.STRING)),
                 ImmutableList.of(SqlTypeName.VARCHAR),
                 Yielders.each(Sequences.simple(results))
             )

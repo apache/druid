@@ -24,7 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -52,6 +51,7 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.JobResponse;
+import org.apache.druid.k8s.overlord.common.JobStatus;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.KubernetesResourceNotFoundException;
@@ -80,6 +80,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Runs tasks as k8s jobs using the "internal peon" verb.
@@ -339,7 +340,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public Collection<? extends TaskRunnerWorkItem> getKnownTasks()
   {
     List<TaskRunnerWorkItem> result = new ArrayList<>();
-    for (Pod existingTask : client.listPeonPods()) {
+    for (Job existingTask : client.listAllPeonJobs()) {
       try {
         Task task = adapter.toTask(existingTask);
         ListenableFuture<TaskStatus> future = run(task);
@@ -426,7 +427,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public Collection<TaskRunnerWorkItem> getRunningTasks()
   {
     List<TaskRunnerWorkItem> result = new ArrayList<>();
-    for (Pod existingTask : client.listPeonPods(Sets.newHashSet(PeonPhase.RUNNING))) {
+    for (Job existingTask : client.listAllPeonJobs().stream().filter(JobStatus::isActive).collect(Collectors.toSet())) {
       try {
         Task task = adapter.toTask(existingTask);
         ListenableFuture<TaskStatus> future = run(task);
