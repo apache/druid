@@ -190,7 +190,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -770,12 +769,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
     );
   }
 
-  public static Optional<Pair<RowSignature, List<Object[]>>> getSignatureWithRows(MSQResultsReport resultsReport)
+  @Nullable
+  public static List<Object[]> getRows(@Nullable MSQResultsReport resultsReport)
   {
     if (resultsReport == null) {
-      return Optional.empty();
+      return null;
     } else {
-      RowSignature rowSignature = resultsReport.getSignature();
       Yielder<Object[]> yielder = resultsReport.getResultYielder();
       List<Object[]> rows = new ArrayList<>();
       while (!yielder.isDone()) {
@@ -789,7 +788,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         throw new ISE("Unable to get results from the report");
       }
 
-      return Optional.of(new Pair<RowSignature, List<Object[]>>(rowSignature, rows));
+      return rows;
     }
   }
 
@@ -797,7 +796,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   {
     protected String sql = null;
     protected Map<String, Object> queryContext = DEFAULT_MSQ_CONTEXT;
-    protected RowSignature expectedRowSignature = null;
+    protected List<MSQResultsReport.ColumnAndType> expectedRowSignature = null;
     protected MSQSpec expectedMSQSpec = null;
     protected MSQTuningConfig expectedTuningConfig = null;
     protected Set<SegmentId> expectedSegments = null;
@@ -824,10 +823,17 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return asBuilder();
     }
 
+    public Builder setExpectedRowSignature(List<MSQResultsReport.ColumnAndType> expectedRowSignature)
+    {
+      Preconditions.checkArgument(!expectedRowSignature.isEmpty(), "Row signature cannot be empty");
+      this.expectedRowSignature = expectedRowSignature;
+      return asBuilder();
+    }
+
     public Builder setExpectedRowSignature(RowSignature expectedRowSignature)
     {
       Preconditions.checkArgument(!expectedRowSignature.equals(RowSignature.empty()), "Row signature cannot be empty");
-      this.expectedRowSignature = expectedRowSignature;
+      this.expectedRowSignature = resultSignatureFromRowSignature(expectedRowSignature);
       return asBuilder();
     }
 
@@ -1095,7 +1101,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           final StorageAdapter storageAdapter = new QueryableIndexStorageAdapter(queryableIndex);
 
           // assert rowSignature
-          Assert.assertEquals(expectedRowSignature, storageAdapter.getRowSignature());
+          Assert.assertEquals(expectedRowSignature, resultSignatureFromRowSignature(storageAdapter.getRowSignature()));
 
           // assert rollup
           Assert.assertEquals(expectedRollUp, queryableIndex.getMetadata().isRollup());
@@ -1167,7 +1173,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
             Assert.assertTrue(segmentIdVsOutputRowsMap.get(diskSegment).contains(Arrays.asList(row)));
           }
         }
-        
+
         // Assert on the tombstone intervals
         // Tombstone segments are only published, but since they donot have any data, they are not pushed by the
         // SegmentGeneratorFrameProcessorFactory. We can get the tombstone segment ids published by taking a set
@@ -1240,7 +1246,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     // Made the visibility public to aid adding ut's easily with minimum parameters to set.
     @Nullable
-    public Pair<MSQSpec, Pair<RowSignature, List<Object[]>>> runQueryWithResult()
+    public Pair<MSQSpec, Pair<List<MSQResultsReport.ColumnAndType>, List<Object[]>>> runQueryWithResult()
     {
       readyToRun();
       Preconditions.checkArgument(sql != null, "sql cannot be null");
@@ -1275,18 +1281,16 @@ public class MSQTestBase extends BaseCalciteQueryTest
         if (payload.getStatus().getErrorReport() != null) {
           throw new ISE("Query %s failed due to %s", sql, payload.getStatus().getErrorReport().toString());
         } else {
-          Optional<Pair<RowSignature, List<Object[]>>> rowSignatureListPair = getSignatureWithRows(payload.getResults());
-          if (!rowSignatureListPair.isPresent()) {
+          final List<Object[]> rows = getRows(payload.getResults());
+          if (rows == null) {
             throw new ISE("Query successful but no results found");
           }
-          log.info("found row signature %s", rowSignatureListPair.get().lhs);
-          log.info(rowSignatureListPair.get().rhs.stream()
-                                                 .map(row -> Arrays.toString(row))
-                                                 .collect(Collectors.joining("\n")));
+          log.info("found row signature %s", payload.getResults().getSignature());
+          log.info(rows.stream().map(Arrays::toString).collect(Collectors.joining("\n")));
 
-          MSQSpec spec = indexingServiceClient.getQuerySpecForTask(controllerId);
+          final MSQSpec spec = indexingServiceClient.getQuerySpecForTask(controllerId);
           log.info("Found spec: %s", objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(spec));
-          return new Pair<>(spec, rowSignatureListPair.get());
+          return new Pair<>(spec, Pair.of(payload.getResults().getSignature(), rows));
         }
       }
       catch (Exception e) {
@@ -1303,7 +1307,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       Preconditions.checkArgument(expectedResultRows != null, "Result rows cannot be null");
       Preconditions.checkArgument(expectedRowSignature != null, "Row signature cannot be null");
       Preconditions.checkArgument(expectedMSQSpec != null, "MultiStageQuery Query spec not ");
-      Pair<MSQSpec, Pair<RowSignature, List<Object[]>>> specAndResults = runQueryWithResult();
+      Pair<MSQSpec, Pair<List<MSQResultsReport.ColumnAndType>, List<Object[]>>> specAndResults = runQueryWithResult();
 
       if (specAndResults == null) { // A fault was expected and the assertion has been done in the runQueryWithResult
         return;
@@ -1321,5 +1325,19 @@ public class MSQTestBase extends BaseCalciteQueryTest
         throw new ISE("Query %s did not throw an exception", sql);
       }
     }
+  }
+
+  private static List<MSQResultsReport.ColumnAndType> resultSignatureFromRowSignature(final RowSignature signature)
+  {
+    final List<MSQResultsReport.ColumnAndType> retVal = new ArrayList<>(signature.size());
+    for (int i = 0; i < signature.size(); i++) {
+      retVal.add(
+          new MSQResultsReport.ColumnAndType(
+              signature.getColumnName(i),
+              signature.getColumnType(i).orElse(null)
+          )
+      );
+    }
+    return retVal;
   }
 }

@@ -29,6 +29,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
@@ -192,25 +193,8 @@ public class ForkingTaskRunnerTest
   @Test
   public void testTaskStatusWhenTaskProcessFails() throws ExecutionException, InterruptedException
   {
-    TaskConfig taskConfig = new TaskConfig(
-        null,
-        null,
-        null,
-        null,
-        ImmutableList.of(),
-        false,
-        new Period("PT0S"),
-        new Period("PT10S"),
-        ImmutableList.of(),
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
-        null,
-        null
-    );
-    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
+    TaskConfig taskConfig = makeDefaultTaskConfigBuilder()
+        .build();
     ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
         new ForkingTaskRunnerConfig(),
         taskConfig,
@@ -220,7 +204,7 @@ public class ForkingTaskRunnerTest
         new DefaultObjectMapper(),
         new DruidNode("middleManager", "host", false, 8091, null, true, false),
         new StartupLoggingConfig(),
-        dirTracker
+        TaskStorageDirTracker.fromConfigs(null, taskConfig)
     )
     {
       @Override
@@ -263,25 +247,9 @@ public class ForkingTaskRunnerTest
     ObjectMapper mapper = new DefaultObjectMapper();
     Task task = NoopTask.create();
     File file = temporaryFolder.newFolder();
-    TaskConfig taskConfig = new TaskConfig(
-        null,
-        file.toString(),
-        null,
-        null,
-        ImmutableList.of(),
-        false,
-        new Period("PT0S"),
-        new Period("PT10S"),
-        ImmutableList.of(),
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
-        null,
-        null
-    );
-    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
+    TaskConfig taskConfig = makeDefaultTaskConfigBuilder()
+        .setBaseTaskDir(file.toString())
+        .build();
     ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
         new ForkingTaskRunnerConfig(),
         taskConfig,
@@ -291,7 +259,7 @@ public class ForkingTaskRunnerTest
         mapper,
         new DruidNode("middleManager", "host", false, 8091, null, true, false),
         new StartupLoggingConfig(),
-        dirTracker
+        TaskStorageDirTracker.fromConfigs(null, taskConfig)
     )
     {
       @Override
@@ -303,7 +271,7 @@ public class ForkingTaskRunnerTest
 
         for (String param : command) {
           if (param.endsWith(task.getId())) {
-            File resultFile = Paths.get(dirTracker.getTaskDir(task.getId()).getAbsolutePath(), "attempt", "1", "status.json").toFile();
+            File resultFile = Paths.get(getTracker().findExistingTaskDir(task.getId()).getAbsolutePath(), "attempt", "1", "status.json").toFile();
             mapper.writeValue(resultFile, TaskStatus.success(task.getId()));
             break;
           }
@@ -339,25 +307,10 @@ public class ForkingTaskRunnerTest
     ObjectMapper mapper = new DefaultObjectMapper();
     Task task = NoopTask.create();
     File file = temporaryFolder.newFolder();
-    TaskConfig taskConfig = new TaskConfig(
-        null,
-        file.toString(),
-        null,
-        null,
-        ImmutableList.of(),
-        false,
-        new Period("PT0S"),
-        new Period("PT10S"),
-        ImmutableList.of(),
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
-        null,
-        null
-    );
-    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
+    TaskConfig taskConfig = makeDefaultTaskConfigBuilder()
+        .setBaseTaskDir(file.toString())
+        .build();
+    TaskStorageDirTracker dirTracker = TaskStorageDirTracker.fromConfigs(null, taskConfig);
     ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
         new ForkingTaskRunnerConfig(),
         taskConfig,
@@ -379,7 +332,7 @@ public class ForkingTaskRunnerTest
 
         for (String param : command) {
           if (param.endsWith(task.getId())) {
-            File resultFile = Paths.get(dirTracker.getTaskDir(task.getId()).getAbsolutePath(), "attempt", "1", "status.json").toFile();
+            File resultFile = Paths.get(dirTracker.findExistingTaskDir(task.getId()).getAbsolutePath(), "attempt", "1", "status.json").toFile();
             mapper.writeValue(resultFile, TaskStatus.failure(task.getId(), "task failure test"));
             break;
           }
@@ -405,29 +358,14 @@ public class ForkingTaskRunnerTest
   public void testGettingTheNextAttemptDir() throws IOException
   {
     File file = temporaryFolder.newFolder();
-    TaskConfig taskConfig = new TaskConfig(
-        null,
-        file.toString(),
-        null,
-        null,
-        ImmutableList.of(),
-        false,
-        new Period("PT0S"),
-        new Period("PT10S"),
-        ImmutableList.of(),
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
-        null,
-        null
-    );
-    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
+    TaskConfig taskConfig = makeDefaultTaskConfigBuilder()
+        .setBaseTaskDir(file.toString())
+        .build();
+    TaskStorageDirTracker dirTracker = TaskStorageDirTracker.fromConfigs(null, taskConfig);
     String taskId = "foo";
-    assertEquals(1, ForkingTaskRunner.getNextAttemptID(dirTracker, taskId));
-    assertEquals(2, ForkingTaskRunner.getNextAttemptID(dirTracker, taskId));
-    assertEquals(3, ForkingTaskRunner.getNextAttemptID(dirTracker, taskId));
+    assertEquals(1, ForkingTaskRunner.getNextAttemptID(new File(dirTracker.pickBaseDir(taskId), taskId)));
+    assertEquals(2, ForkingTaskRunner.getNextAttemptID(new File(dirTracker.pickBaseDir(taskId), taskId)));
+    assertEquals(3, ForkingTaskRunner.getNextAttemptID(new File(dirTracker.pickBaseDir(taskId), taskId)));
   }
 
   @Test
@@ -452,25 +390,8 @@ public class ForkingTaskRunnerTest
     final Task task = OBJECT_MAPPER.readValue(taskContent, NoopTask.class);
     final AtomicInteger xmxJavaOptsIndex = new AtomicInteger(-1);
     final AtomicInteger xmxJavaOptsArrayIndex = new AtomicInteger(-1);
-    TaskConfig taskConfig = new TaskConfig(
-        null,
-        null,
-        null,
-        null,
-        ImmutableList.of(),
-        false,
-        new Period("PT0S"),
-        new Period("PT10S"),
-        ImmutableList.of(),
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
-        null,
-        null
-    );
-    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
+    TaskConfig taskConfig = makeDefaultTaskConfigBuilder()
+        .build();
     ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
         new ForkingTaskRunnerConfig(),
         taskConfig,
@@ -480,7 +401,7 @@ public class ForkingTaskRunnerTest
         mapper,
         new DruidNode("middleManager", "host", false, 8091, null, true, false),
         new StartupLoggingConfig(),
-        dirTracker
+        TaskStorageDirTracker.fromConfigs(null, taskConfig)
     )
     {
       @Override
@@ -524,25 +445,8 @@ public class ForkingTaskRunnerTest
                                + "  }\n"
                                + "}";
     final Task task = OBJECT_MAPPER.readValue(taskContent, NoopTask.class);
-    TaskConfig taskConfig = new TaskConfig(
-        null,
-        null,
-        null,
-        null,
-        ImmutableList.of(),
-        false,
-        new Period("PT0S"),
-        new Period("PT10S"),
-        ImmutableList.of(),
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
-        null,
-        null
-    );
-    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
+    TaskConfig taskConfig = makeDefaultTaskConfigBuilder()
+        .build();
     ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
         new ForkingTaskRunnerConfig(),
         taskConfig,
@@ -552,7 +456,7 @@ public class ForkingTaskRunnerTest
         mapper,
         new DruidNode("middleManager", "host", false, 8091, null, true, false),
         new StartupLoggingConfig(),
-        dirTracker
+        TaskStorageDirTracker.fromConfigs(null, taskConfig)
     )
     {
       @Override
@@ -586,28 +490,15 @@ public class ForkingTaskRunnerTest
   @Test
   public void testCannotRestoreTasks() throws Exception
   {
-    TaskConfig taskConfig = new TaskConfig(
-        null,
-        null,
-        null,
-        null,
-        ImmutableList.of(),
-        false,
-        new Period("PT0S"),
-        new Period("PT10S"),
-        ImmutableList.of(),
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
+    TaskConfig taskConfig = makeDefaultTaskConfigBuilder()
+        .build();
+
+    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(
         ImmutableList.of(
-            temporaryFolder.newFolder().getAbsolutePath(),
-            temporaryFolder.newFolder().getAbsolutePath()
-        ),
-        null
+            temporaryFolder.newFolder().getAbsoluteFile(),
+            temporaryFolder.newFolder().getAbsoluteFile()
+        )
     );
-    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
     ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
         new ForkingTaskRunnerConfig(),
         taskConfig,
@@ -635,5 +526,15 @@ public class ForkingTaskRunnerTest
     Task task = NoopTask.create();
     forkingTaskRunner.run(task);
     Assert.assertTrue(forkingTaskRunner.restore().isEmpty());
+  }
+
+  public static TaskConfigBuilder makeDefaultTaskConfigBuilder()
+  {
+    return new TaskConfigBuilder()
+        .setDefaultHadoopCoordinates(ImmutableList.of())
+        .setGracefulShutdownTimeout(new Period("PT0S"))
+        .setDirectoryLockTimeout(new Period("PT10S"))
+        .setShuffleDataLocations(ImmutableList.of())
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name());
   }
 }

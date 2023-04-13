@@ -36,6 +36,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
+import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.StringTuple;
@@ -186,6 +187,7 @@ import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -1425,7 +1427,7 @@ public class ControllerImpl implements Controller
 
                 final List<Object[]> retVal = new ArrayList<>();
                 while (!cursor.isDone()) {
-                  final Object[] row = new Object[columnMappings.getMappings().size()];
+                  final Object[] row = new Object[columnMappings.size()];
                   for (int i = 0; i < row.length; i++) {
                     row[i] = selectors.get(i).getObject();
                   }
@@ -1489,6 +1491,8 @@ public class ControllerImpl implements Controller
   )
   {
     final MSQTuningConfig tuningConfig = querySpec.getTuningConfig();
+    final ColumnMappings columnMappings = querySpec.getColumnMappings();
+    final Query<?> queryToPlan;
     final ShuffleSpecFactory shuffleSpecFactory;
 
     if (MSQControllerTask.isIngestion(querySpec)) {
@@ -1498,23 +1502,31 @@ public class ControllerImpl implements Controller
               tuningConfig.getRowsPerSegment(),
               aggregate
           );
+
+      if (!columnMappings.hasUniqueOutputColumnNames()) {
+        // We do not expect to hit this case in production, because the SQL validator checks that column names
+        // are unique for INSERT and REPLACE statements (i.e. anything where MSQControllerTask.isIngestion would
+        // be true). This check is here as defensive programming.
+        throw new ISE("Column names are not unique: [%s]", columnMappings.getOutputColumnNames());
+      }
+
+      if (columnMappings.hasOutputColumn(ColumnHolder.TIME_COLUMN_NAME)) {
+        // We know there's a single time column, because we've checked columnMappings.hasUniqueOutputColumnNames().
+        final int timeColumn = columnMappings.getOutputColumnsByName(ColumnHolder.TIME_COLUMN_NAME).getInt(0);
+        queryToPlan = querySpec.getQuery().withOverriddenContext(
+            ImmutableMap.of(
+                QueryKitUtils.CTX_TIME_COLUMN_NAME,
+                columnMappings.getQueryColumnName(timeColumn)
+            )
+        );
+      } else {
+        queryToPlan = querySpec.getQuery();
+      }
     } else if (querySpec.getDestination() instanceof TaskReportMSQDestination) {
       shuffleSpecFactory = ShuffleSpecFactories.singlePartition();
+      queryToPlan = querySpec.getQuery();
     } else {
       throw new ISE("Unsupported destination [%s]", querySpec.getDestination());
-    }
-
-    final Query<?> queryToPlan;
-
-    if (querySpec.getColumnMappings().hasOutputColumn(ColumnHolder.TIME_COLUMN_NAME)) {
-      queryToPlan = querySpec.getQuery().withOverriddenContext(
-          ImmutableMap.of(
-              QueryKitUtils.CTX_TIME_COLUMN_NAME,
-              querySpec.getColumnMappings().getQueryColumnForOutputColumn(ColumnHolder.TIME_COLUMN_NAME)
-          )
-      );
-    } else {
-      queryToPlan = querySpec.getQuery();
     }
 
     final QueryDefinition queryDef;
@@ -1540,7 +1552,6 @@ public class ControllerImpl implements Controller
     if (MSQControllerTask.isIngestion(querySpec)) {
       final RowSignature querySignature = queryDef.getFinalStageDefinition().getSignature();
       final ClusterBy queryClusterBy = queryDef.getFinalStageDefinition().getClusterBy();
-      final ColumnMappings columnMappings = querySpec.getColumnMappings();
 
       // Find the stage that provides shuffled input to the final segment-generation stage.
       StageDefinition finalShuffleStageDef = queryDef.getFinalStageDefinition();
@@ -1669,8 +1680,10 @@ public class ControllerImpl implements Controller
    */
   private static boolean timeIsGroupByDimension(GroupByQuery groupByQuery, ColumnMappings columnMappings)
   {
-    if (columnMappings.hasOutputColumn(ColumnHolder.TIME_COLUMN_NAME)) {
-      final String queryTimeColumn = columnMappings.getQueryColumnForOutputColumn(ColumnHolder.TIME_COLUMN_NAME);
+    final IntList positions = columnMappings.getOutputColumnsByName(ColumnHolder.TIME_COLUMN_NAME);
+
+    if (positions.size() == 1) {
+      final String queryTimeColumn = columnMappings.getQueryColumnName(positions.getInt(0));
       return queryTimeColumn.equals(groupByQuery.context().getString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD));
     } else {
       return false;
@@ -1730,7 +1743,7 @@ public class ControllerImpl implements Controller
 
     for (int i = clusterBy.getBucketByCount(); i < clusterBy.getBucketByCount() + numShardColumns; i++) {
       final KeyColumn column = clusterByColumns.get(i);
-      final List<String> outputColumns = columnMappings.getOutputColumnsForQueryColumn(column.columnName());
+      final IntList outputColumns = columnMappings.getOutputColumnsForQueryColumn(column.columnName());
 
       // DimensionRangeShardSpec only handles ascending order.
       if (column.order() != KeyOrder.ASCENDING) {
@@ -1749,7 +1762,7 @@ public class ControllerImpl implements Controller
         return Collections.emptyList();
       }
 
-      shardColumns.add(outputColumns.get(0));
+      shardColumns.add(columnMappings.getOutputColumnName(outputColumns.getInt(0)));
     }
 
     return shardColumns;
@@ -1820,7 +1833,10 @@ public class ControllerImpl implements Controller
         throw new MSQException(new InsertCannotOrderByDescendingFault(clusterByColumn.columnName()));
       }
 
-      outputColumnsInOrder.addAll(columnMappings.getOutputColumnsForQueryColumn(clusterByColumn.columnName()));
+      final IntList outputColumns = columnMappings.getOutputColumnsForQueryColumn(clusterByColumn.columnName());
+      for (final int outputColumn : outputColumns) {
+        outputColumnsInOrder.add(columnMappings.getOutputColumnName(outputColumn));
+      }
     }
 
     // Then all other columns.
@@ -1831,13 +1847,17 @@ public class ControllerImpl implements Controller
     if (isRollupQuery) {
       // Populate aggregators from the native query when doing an ingest in rollup mode.
       for (AggregatorFactory aggregatorFactory : ((GroupByQuery) query).getAggregatorSpecs()) {
-        String outputColumn = Iterables.getOnlyElement(columnMappings.getOutputColumnsForQueryColumn(aggregatorFactory.getName()));
-        if (outputColumnAggregatorFactories.containsKey(outputColumn)) {
-          throw new ISE("There can only be one aggregator factory for column [%s].", outputColumn);
+        final int outputColumn = CollectionUtils.getOnlyElement(
+            columnMappings.getOutputColumnsForQueryColumn(aggregatorFactory.getName()),
+            xs -> new ISE("Expected single output for query column[%s] but got[%s]", aggregatorFactory.getName(), xs)
+        );
+        final String outputColumnName = columnMappings.getOutputColumnName(outputColumn);
+        if (outputColumnAggregatorFactories.containsKey(outputColumnName)) {
+          throw new ISE("There can only be one aggregation for column [%s].", outputColumn);
         } else {
           outputColumnAggregatorFactories.put(
-              outputColumn,
-              aggregatorFactory.withName(outputColumn).getCombiningFactory()
+              outputColumnName,
+              aggregatorFactory.withName(outputColumnName).getCombiningFactory()
           );
         }
       }
@@ -1846,13 +1866,19 @@ public class ControllerImpl implements Controller
     // Each column can be of either time, dimension, aggregator. For this method. we can ignore the time column.
     // For non-complex columns, If the aggregator factory of the column is not available, we treat the column as
     // a dimension. For complex columns, certains hacks are in place.
-    for (final String outputColumn : outputColumnsInOrder) {
-      final String queryColumn = columnMappings.getQueryColumnForOutputColumn(outputColumn);
+    for (final String outputColumnName : outputColumnsInOrder) {
+      // CollectionUtils.getOnlyElement because this method is only called during ingestion, where we require
+      // that output names be unique.
+      final int outputColumn = CollectionUtils.getOnlyElement(
+          columnMappings.getOutputColumnsByName(outputColumnName),
+          xs -> new ISE("Expected single output column for name [%s], but got [%s]", outputColumnName, xs)
+      );
+      final String queryColumn = columnMappings.getQueryColumnName(outputColumn);
       final ColumnType type =
           querySignature.getColumnType(queryColumn)
-                        .orElseThrow(() -> new ISE("No type for column [%s]", outputColumn));
+                        .orElseThrow(() -> new ISE("No type for column [%s]", outputColumnName));
 
-      if (!outputColumn.equals(ColumnHolder.TIME_COLUMN_NAME)) {
+      if (!outputColumnName.equals(ColumnHolder.TIME_COLUMN_NAME)) {
 
         if (!type.is(ValueType.COMPLEX)) {
           // non complex columns
@@ -1860,21 +1886,21 @@ public class ControllerImpl implements Controller
               dimensions,
               aggregators,
               outputColumnAggregatorFactories,
-              outputColumn,
+              outputColumnName,
               type
           );
         } else {
           // complex columns only
           if (DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.containsKey(type.getComplexTypeName())) {
-            dimensions.add(DimensionSchemaUtils.createDimensionSchema(outputColumn, type));
+            dimensions.add(DimensionSchemaUtils.createDimensionSchema(outputColumnName, type));
           } else if (!isRollupQuery) {
-            aggregators.add(new PassthroughAggregatorFactory(outputColumn, type.getComplexTypeName()));
+            aggregators.add(new PassthroughAggregatorFactory(outputColumnName, type.getComplexTypeName()));
           } else {
             populateDimensionsAndAggregators(
                 dimensions,
                 aggregators,
                 outputColumnAggregatorFactories,
-                outputColumn,
+                outputColumnName,
                 type
             );
           }
@@ -1962,12 +1988,14 @@ public class ControllerImpl implements Controller
   )
   {
     final RowSignature querySignature = queryDef.getFinalStageDefinition().getSignature();
-    final RowSignature.Builder mappedSignature = RowSignature.builder();
+    final ImmutableList.Builder<MSQResultsReport.ColumnAndType> mappedSignature = ImmutableList.builder();
 
     for (final ColumnMapping mapping : columnMappings.getMappings()) {
       mappedSignature.add(
-          mapping.getOutputColumn(),
-          querySignature.getColumnType(mapping.getQueryColumn()).orElse(null)
+          new MSQResultsReport.ColumnAndType(
+              mapping.getOutputColumn(),
+              querySignature.getColumnType(mapping.getQueryColumn()).orElse(null)
+          )
       );
     }
 

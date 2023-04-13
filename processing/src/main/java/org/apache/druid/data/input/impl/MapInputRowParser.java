@@ -88,7 +88,7 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
   {
     final String timestampColumn = timestampSpec.getTimestampColumn();
     final Set<String> exclusions = dimensionsSpec.getDimensionExclusions();
-    if (dimensionsSpec.isIncludeAllDimensions()) {
+    if (dimensionsSpec.isIncludeAllDimensions() || dimensionsSpec.useSchemaDiscovery()) {
       LinkedHashSet<String> dimensions = new LinkedHashSet<>(dimensionsSpec.getDimensionNames());
       for (String field : rawInputRow.keySet()) {
         if (timestampColumn.equals(field) || exclusions.contains(field)) {

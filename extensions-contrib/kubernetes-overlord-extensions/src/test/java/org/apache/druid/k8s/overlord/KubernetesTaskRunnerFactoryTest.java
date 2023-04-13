@@ -20,9 +20,9 @@
 package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.k8s.overlord.common.MultiContainerTaskAdapter;
@@ -72,24 +72,7 @@ public class KubernetesTaskRunnerFactoryTest
         true,
         false
     );
-    taskConfig = new TaskConfig(
-        "/tmp",
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        null,
-        null,
-        false,
-        ImmutableList.of("/tmp"),
-        null
-    );
+    taskConfig = new TaskConfigBuilder().setBaseDir("/tmp").build();
     properties = new Properties();
   }
 

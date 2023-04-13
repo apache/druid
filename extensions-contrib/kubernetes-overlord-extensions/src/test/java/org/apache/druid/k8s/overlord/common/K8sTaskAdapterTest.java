@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.api.client.util.Joiner;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.fabric8.kubernetes.api.model.Container;
@@ -31,16 +30,17 @@ import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import io.fabric8.kubernetes.api.model.batch.v1.JobList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
@@ -93,30 +93,30 @@ class K8sTaskAdapterTest
         false
     );
     startupLoggingConfig = new StartupLoggingConfig();
-    taskConfig = new TaskConfig(
-        "src/test/resources",
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        null,
-        null,
-        false,
-        ImmutableList.of("src/test/resources"),
-        null
-    );
+    taskConfig = new TaskConfigBuilder().setBaseDir("src/test/resources").build();
   }
 
   @Test
   void testAddingLabelsAndAnnotations() throws IOException
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    final PodSpec podSpec = K8sTestUtils.getDummyPodSpec();
+    TestKubernetesClient testClient = new TestKubernetesClient(client)
+    {
+      @SuppressWarnings("unchecked")
+      @Override
+      public <T> T executeRequest(KubernetesExecutor<T> executor) throws KubernetesResourceNotFoundException
+      {
+        return (T) new Pod()
+        {
+          @Override
+          public PodSpec getSpec()
+          {
+            return podSpec;
+          }
+        };
+      }
+    };
+
     KubernetesTaskRunnerConfig config = new KubernetesTaskRunnerConfig();
     config.namespace = "test";
     config.annotations.put("annotation_key", "annotation_value");
@@ -130,11 +130,8 @@ class K8sTaskAdapterTest
         jsonMapper
     );
     Task task = K8sTestUtils.getTask();
-    Job jobFromSpec = adapter.createJobFromPodSpec(
-        K8sTestUtils.getDummyPodSpec(),
-        task,
-        new PeonCommandContext(new ArrayList<>(), new ArrayList<>(), new File("/tmp/"))
-    );
+    Job jobFromSpec = adapter.fromTask(task);
+
     assertTrue(jobFromSpec.getMetadata().getAnnotations().containsKey("annotation_key"));
     assertTrue(jobFromSpec.getMetadata().getAnnotations().containsKey(DruidK8sConstants.TASK_ID));
     assertFalse(jobFromSpec.getMetadata().getAnnotations().containsKey("label_key"));
@@ -164,22 +161,19 @@ class K8sTaskAdapterTest
         task,
         new PeonCommandContext(new ArrayList<>(), new ArrayList<>(), new File("/tmp/"))
     );
-
-    // cant launch jobs with test server, we have to hack around this.
-    Pod pod = K8sTestUtils.createPodFromJob(jobFromSpec);
-    client.pods().inNamespace("test").create(pod);
-    PodList podList = client.pods().inNamespace("test").list();
-    assertEquals(1, podList.getItems().size());
+    client.batch().v1().jobs().inNamespace("test").create(jobFromSpec);
+    JobList jobList = client.batch().v1().jobs().inNamespace("test").list();
+    assertEquals(1, jobList.getItems().size());
 
     // assert that the size of the pod is 1g
-    Pod myPod = Iterables.getOnlyElement(podList.getItems());
-    Quantity containerMemory = myPod.getSpec().getContainers().get(0).getResources().getLimits().get("memory");
+    Job myJob = Iterables.getOnlyElement(jobList.getItems());
+    Quantity containerMemory = myJob.getSpec().getTemplate().getSpec().getContainers().get(0).getResources().getLimits().get("memory");
     String amount = containerMemory.getAmount();
     assertEquals(2400000000L, Long.valueOf(amount));
     assertTrue(StringUtils.isBlank(containerMemory.getFormat())); // no units specified we talk in bytes
 
-    Task taskFromPod = adapter.toTask(Iterables.getOnlyElement(podList.getItems()));
-    assertEquals(task, taskFromPod);
+    Task taskFromJob = adapter.toTask(Iterables.getOnlyElement(jobList.getItems()));
+    assertEquals(task, taskFromJob);
   }
 
   @Test

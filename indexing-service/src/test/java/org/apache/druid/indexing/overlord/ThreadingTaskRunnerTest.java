@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.overlord;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.MultipleFileTaskReportFileWriter;
@@ -34,7 +33,6 @@ import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.NoopTaskLogs;
-import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentMatchers;
@@ -49,24 +47,7 @@ public class ThreadingTaskRunnerTest
   @Test
   public void testTaskStatusWhenTaskThrowsExceptionWhileRunning() throws ExecutionException, InterruptedException
   {
-    final TaskConfig taskConfig = new TaskConfig(
-        null,
-        null,
-        null,
-        null,
-        ImmutableList.of(),
-        false,
-        new Period("PT0S"),
-        new Period("PT10S"),
-        ImmutableList.of(),
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
-        null,
-        null
-    );
+    final TaskConfig taskConfig = ForkingTaskRunnerTest.makeDefaultTaskConfigBuilder().build();
     ThreadingTaskRunner runner = new ThreadingTaskRunner(
         mockTaskToolboxFactory(),
         taskConfig,
@@ -76,7 +57,7 @@ public class ThreadingTaskRunnerTest
         new TestAppenderatorsManager(),
         new MultipleFileTaskReportFileWriter(),
         new DruidNode("middleManager", "host", false, 8091, null, true, false),
-        new TaskStorageDirTracker(taskConfig)
+        TaskStorageDirTracker.fromConfigs(null, taskConfig)
     );
 
     Future<TaskStatus> statusFuture = runner.run(new AbstractTask("id", "datasource", null)

@@ -155,4 +155,36 @@ public class MapInputRowParserTest
     Assert.assertEquals(ImmutableList.of("val2"), inputRow.getDimension("dim2"));
     Assert.assertEquals(10, inputRow.getMetric("met"));
   }
+
+  @Test
+  public void testSchemaDiscovery()
+  {
+    final InputRow inputRow = MapInputRowParser.parse(
+        timestampSpec,
+        DimensionsSpec
+            .builder()
+            .setDefaultSchemaDimensions(ImmutableList.of("string"))
+            .setDimensionExclusions(ImmutableList.of("time", "long"))
+            .useSchemaDiscovery(true)
+            .build(),
+        ImmutableMap.<String, Object>builder()
+                    .put("time", "2020-01-01")
+                    .put("array_double", ImmutableList.of(1.1, 2.2, 3.3))
+                    .put("array_long", ImmutableList.of(1, 2, 3))
+                    .put("array_string", ImmutableList.of("a", "b", "c"))
+                    .put("bool", true)
+                    .put("double", 1.0)
+                    .put("float", 1.0f)
+                    .put("long", 1L)
+                    .put("nested", ImmutableMap.of("x", 1, "y", ImmutableList.of("a", "b")))
+                    .put("string", "a")
+                    .build()
+    );
+    // string should appear first as it's explicitly defined in dimensionsSpec.
+    // Discovered dimensions, should be in the parsed row since useSchemaDiscovery is set.
+    Assert.assertEquals(
+        ImmutableList.of("string", "array_double", "array_long", "array_string", "bool", "double", "float", "nested"),
+        inputRow.getDimensions()
+    );
+  }
 }
