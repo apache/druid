@@ -402,8 +402,8 @@ public class DataSourcesSnapshot
 
     segmentToBeAdded.forEach(segment -> {
       SegmentWithOvershadowedStatus oldSegment = oldSegmentsMap.get(segment.getDataSegment().getId());
-      boolean handedOffStatusChanged = Objects.equals(null != oldSegment && oldSegment.isHandedOff(), segment.isHandedOff());
-      boolean overshadowedStatusChanged = Objects.equals(null != oldSegment && oldSegment.isOvershadowed(), segment.isOvershadowed());
+      boolean handedOffStatusChanged = !Objects.equals(null != oldSegment && oldSegment.isHandedOff(), segment.isHandedOff());
+      boolean overshadowedStatusChanged = !Objects.equals(null != oldSegment && oldSegment.isOvershadowed(), segment.isOvershadowed());
       DataSegmentChange.ChangeReason changeReason;
 
       if (null == oldSegment) {

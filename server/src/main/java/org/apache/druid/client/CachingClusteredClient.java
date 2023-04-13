@@ -467,6 +467,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
           ServerSelector server = chunk.getObject();
           if (brokerSegmentWatcherConfig.isDetectUnavailableSegments() && !server.isQueryable()) {
+            log.info("ServerSelector is not queryable [%s]", server);
             continue;
           }
           final SegmentDescriptor segment = new SegmentDescriptor(

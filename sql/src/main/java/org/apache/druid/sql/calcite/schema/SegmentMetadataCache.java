@@ -258,6 +258,7 @@ public class SegmentMetadataCache
           @Override
           public ServerView.CallbackAction segmentAdded(final DruidServerMetadata server, final DataSegment segment)
           {
+            log.info("Segment metadata cache|Segment added [%s]", segment.getId());
             addSegment(server, segment);
             return ServerView.CallbackAction.CONTINUE;
           }
@@ -265,6 +266,7 @@ public class SegmentMetadataCache
           @Override
           public ServerView.CallbackAction segmentRemoved(final DataSegment segment)
           {
+            log.info("Segment metadata cache|Segment removed [%s]", segment.getId());
             removeSegment(segment);
             return ServerView.CallbackAction.CONTINUE;
           }
@@ -275,6 +277,7 @@ public class SegmentMetadataCache
               final DataSegment segment
           )
           {
+            log.info("Segment metadata cache|Server segment removed [%s]", segment.getId());
             removeServerSegment(server, segment);
             return ServerView.CallbackAction.CONTINUE;
           }

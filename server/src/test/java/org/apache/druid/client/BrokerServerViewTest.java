@@ -54,7 +54,6 @@ import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
 import org.easymock.EasyMock;
@@ -139,13 +138,11 @@ public class BrokerServerViewTest extends CuratorTestBase
     unannounceSegmentForServer(druidServer, segment, zkPathsConfig);
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
 
-    List<TimelineObjectHolder<String, ServerSelector>> unavailableSegments = timeline.lookup(intervals);
-    Assert.assertEquals(1, unavailableSegments.size());
-    ServerSelector serverSelector = unavailableSegments.get(0).getObject().iterator().next().getObject();
-    Assert.assertTrue(serverSelector.isEmpty());
-
-    PartitionChunk<ServerSelector> partitionChunks = timeline.findChunk(intervals, "v1", partition);
-    Assert.assertTrue(partitionChunks.getObject().isEmpty());
+    Assert.assertEquals(
+        0,
+        timeline.lookup(intervals).size()
+    );
+    Assert.assertNull(timeline.findChunk(intervals, "v1", partition));
   }
 
   @Test
@@ -209,7 +206,8 @@ public class BrokerServerViewTest extends CuratorTestBase
     assertValues(
         Arrays.asList(
             createExpected("2011-04-01/2011-04-02", "v3", druidServers.get(4), segments.get(4)),
-            createExpected("2011-04-02/2011-04-06", "v2", null, segments.get(2)),
+            createExpected("2011-04-02/2011-04-03", "v1", druidServers.get(0), segments.get(0)),
+            createExpected("2011-04-03/2011-04-06", "v1", druidServers.get(1), segments.get(1)),
             createExpected("2011-04-06/2011-04-09", "v3", druidServers.get(3), segments.get(3))
         ),
         (List<TimelineObjectHolder>) timeline.lookup(
@@ -228,18 +226,9 @@ public class BrokerServerViewTest extends CuratorTestBase
     }
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
 
-    assertValues(
-        Arrays.asList(
-            createExpected("2011-04-01/2011-04-02", "v3", null, segments.get(4)),
-            createExpected("2011-04-02/2011-04-06", "v2", null, segments.get(2)),
-            createExpected("2011-04-06/2011-04-09", "v3", null, segments.get(3))
-        ),
-        (List<TimelineObjectHolder>) timeline.lookup(
-            Intervals.of(
-                "2011-04-01/2011-04-09"
-            )
-        )
-    );
+    Assert.assertEquals(
+        0,
+        ((List<TimelineObjectHolder>) timeline.lookup(Intervals.of("2011-04-01/2011-04-09"))).size());
   }
 
   @Test

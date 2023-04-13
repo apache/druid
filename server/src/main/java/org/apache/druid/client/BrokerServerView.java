@@ -353,35 +353,6 @@ public class BrokerServerView implements TimelineServerView
     }
   }
 
-  private void addSegmentsToTimeline(List<SegmentWithOvershadowedStatus> segments)
-  {
-    Map<String, List<VersionedIntervalTimeline.PartitionChunkEntry<String, ServerSelector>>> partitionChunkEntryMap = new HashMap<>();
-
-    for (SegmentWithOvershadowedStatus segmentWithOvershadowedStatus : segments) {
-      DataSegment segment = segmentWithOvershadowedStatus.getDataSegment();
-      SegmentId segmentId = segment.getId();
-      ServerSelector selector = selectors.get(segmentId);
-      if (selector == null) {
-        selector = new ServerSelector(segment, tierSelectorStrategy, true);
-
-        VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
-        if (timeline == null) {
-          // broker needs to skip tombstones
-          timeline = new VersionedIntervalTimeline<>(Ordering.natural(), true);
-          timelines.put(segment.getDataSource(), timeline);
-        }
-
-        partitionChunkEntryMap
-            .computeIfAbsent(segment.getDataSource(), entries -> new ArrayList<>())
-            .add(new VersionedIntervalTimeline.PartitionChunkEntry<>(
-                segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector)));
-        selectors.put(segmentId, selector);
-      }
-    }
-
-    partitionChunkEntryMap.forEach((dataSource, entries) -> timelines.get(dataSource).addAll(entries.iterator()));
-  }
-
   private void serverRemovedSegment(DruidServerMetadata server, DataSegment segment)
   {
     final SegmentId segmentId = segment.getId();
@@ -548,6 +519,35 @@ public class BrokerServerView implements TimelineServerView
       segmentsToRemove.forEach(this::removeSegmentFromTimeline);
       addSegmentsToTimeline(segmentsToAdd);
     }
+  }
+
+  private void addSegmentsToTimeline(List<SegmentWithOvershadowedStatus> segments)
+  {
+    Map<String, List<VersionedIntervalTimeline.PartitionChunkEntry<String, ServerSelector>>> partitionChunkEntryMap = new HashMap<>();
+
+    for (SegmentWithOvershadowedStatus segmentWithOvershadowedStatus : segments) {
+      DataSegment segment = segmentWithOvershadowedStatus.getDataSegment();
+      SegmentId segmentId = segment.getId();
+      ServerSelector selector = selectors.get(segmentId);
+      if (selector == null) {
+        selector = new ServerSelector(segment, tierSelectorStrategy, true);
+
+        VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
+        if (timeline == null) {
+          // broker needs to skip tombstones
+          timeline = new VersionedIntervalTimeline<>(Ordering.natural(), true);
+          timelines.put(segment.getDataSource(), timeline);
+        }
+
+        partitionChunkEntryMap
+            .computeIfAbsent(segment.getDataSource(), entries -> new ArrayList<>())
+            .add(new VersionedIntervalTimeline.PartitionChunkEntry<>(
+                segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector)));
+        selectors.put(segmentId, selector);
+      }
+    }
+
+    partitionChunkEntryMap.forEach((dataSource, entries) -> timelines.get(dataSource).addAll(entries.iterator()));
   }
 
   private void removeSegmentFromTimeline(DataSegment segment)

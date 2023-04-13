@@ -183,6 +183,7 @@ public class MetadataSegmentView
       log.error("ChangedRequestsSnapshot object polled from coordinator is null");
       return;
     }
+
     if (null == changedRequestsSnapshot.getRequests()) {
       log.error("change requests list in ChangedRequestsSnapshot is null");
       return;
@@ -205,6 +206,8 @@ public class MetadataSegmentView
 
     log.info("counter [%d], hash [%d], segments changed [%d], full sync: [%s]",
               counter.getCounter(), counter.getHash(), dataSegmentChanges.size(), changedRequestsSnapshot.isResetCounter());
+
+    log.info("Changes [%s]", dataSegmentChanges);
 
     if (changedRequestsSnapshot.isResetCounter()) {
       runSegmentCallbacks(

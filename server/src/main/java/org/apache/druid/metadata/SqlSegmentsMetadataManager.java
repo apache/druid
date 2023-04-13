@@ -913,7 +913,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           public List<DataSegment> inTransaction(Handle handle, TransactionStatus status)
           {
             return handle
-                .createQuery(StringUtils.format("SELECT handed_off, handed_off_time, payload FROM %s WHERE used=true", getSegmentsTable()))
+                .createQuery(StringUtils.format("SELECT handed_off, payload FROM %s WHERE used=true", getSegmentsTable()))
                 .setFetchSize(connector.getStreamingFetchSize())
                 .map(
                     new ResultSetMapper<DataSegment>()

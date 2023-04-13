@@ -33,6 +33,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
 public class DataSourcesSnapshotTest
@@ -105,7 +106,7 @@ public class DataSourcesSnapshotTest
     DataSourcesSnapshot dataSourcesSnapshotV5 = DataSourcesSnapshot.fromUsedSegments(
         Lists.newArrayList(dataSegment3, dataSegment5),
         ImmutableMap.of(),
-        ImmutableMap.of(),
+        ImmutableMap.of(dataSegment3.getDataSource(), new HashSet<>(Collections.singleton(dataSegment3.getId()))),
         DataSourcesSnapshot.getSegmentsWithOvershadowedStatus(
             dataSourcesSnapshotV4.getDataSourcesWithAllUsedSegments(),
             dataSourcesSnapshotV4.getOvershadowedSegments(),
@@ -116,30 +117,30 @@ public class DataSourcesSnapshotTest
     CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> changesV5 = dataSourcesSnapshotV5.getChanges();
     ChangeRequestHistory.Counter counterV5 = DataSourcesSnapshot.getLastCounter(changesV5);
     Assert.assertEquals(3, changesV5.size());
-    Assert.assertEquals(2, changesV5.get(2).getChangeRequest().size());
+    Assert.assertEquals(3, changesV5.get(2).getChangeRequest().size());
     Assert.assertEquals(3, counterV5.getCounter());
 
     ChangeRequestHistory.Counter lastCounter = new ChangeRequestHistory.Counter(-1);
-    ChangeRequestsSnapshot<DataSegmentChange> changeRequestsSnapshot = dataSourcesSnapshotV4.getChangesSince(lastCounter);
+    ChangeRequestsSnapshot<DataSegmentChange> changeRequestsSnapshot = dataSourcesSnapshotV5.getChangesSince(lastCounter);
     Assert.assertTrue(changeRequestsSnapshot.isResetCounter());
 
-    changeRequestsSnapshot = dataSourcesSnapshotV4.getChangesSince(ChangeRequestHistory.Counter.ZERO);
+    changeRequestsSnapshot = dataSourcesSnapshotV5.getChangesSince(ChangeRequestHistory.Counter.ZERO);
     Assert.assertFalse(changeRequestsSnapshot.isResetCounter());
-    Assert.assertEquals(7, changeRequestsSnapshot.getRequests().size());
+    Assert.assertEquals(8, changeRequestsSnapshot.getRequests().size());
 
-    changeRequestsSnapshot = dataSourcesSnapshotV4.getChangesSince(counterV3);
+    changeRequestsSnapshot = dataSourcesSnapshotV5.getChangesSince(counterV3);
     Assert.assertFalse(changeRequestsSnapshot.isResetCounter());
-    Assert.assertEquals(4, changeRequestsSnapshot.getRequests().size());
+    Assert.assertEquals(5, changeRequestsSnapshot.getRequests().size());
 
-    changeRequestsSnapshot = dataSourcesSnapshotV4.getChangesSince(counterV4);
+    changeRequestsSnapshot = dataSourcesSnapshotV5.getChangesSince(counterV4);
     Assert.assertFalse(changeRequestsSnapshot.isResetCounter());
-    Assert.assertEquals(2, changeRequestsSnapshot.getRequests().size());
+    Assert.assertEquals(3, changeRequestsSnapshot.getRequests().size());
 
-    changeRequestsSnapshot = dataSourcesSnapshotV4.getChangesSince(counterV5);
+    changeRequestsSnapshot = dataSourcesSnapshotV5.getChangesSince(counterV5);
     Assert.assertFalse(changeRequestsSnapshot.isResetCounter());
     Assert.assertEquals(0, changeRequestsSnapshot.getRequests().size());
 
-    changeRequestsSnapshot = dataSourcesSnapshotV4.getChangesSince(DataSourcesSnapshot.getLastCounter(dataSourcesSnapshotV4.getChanges()));
+    changeRequestsSnapshot = dataSourcesSnapshotV5.getChangesSince(DataSourcesSnapshot.getLastCounter(dataSourcesSnapshotV5.getChanges()));
     Assert.assertFalse(changeRequestsSnapshot.isResetCounter());
     Assert.assertEquals(0, changeRequestsSnapshot.getRequests().size());
   }
