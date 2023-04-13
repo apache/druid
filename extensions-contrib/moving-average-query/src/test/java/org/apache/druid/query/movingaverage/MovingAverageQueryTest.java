@@ -378,7 +378,8 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         new NoopServiceEmitter(),
         new BrokerSegmentWatcherConfig() {
           @Override
-          public boolean isDetectUnavailableSegments() {
+          public boolean isDetectUnavailableSegments()
+          {
             return false;
           }
         }

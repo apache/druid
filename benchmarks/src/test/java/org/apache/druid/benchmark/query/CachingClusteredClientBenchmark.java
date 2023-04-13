@@ -347,7 +347,8 @@ public class CachingClusteredClientBenchmark
         new NoopServiceEmitter(),
         new BrokerSegmentWatcherConfig() {
           @Override
-          public boolean isDetectUnavailableSegments() {
+          public boolean isDetectUnavailableSegments()
+          {
             return false;
           }
         }
