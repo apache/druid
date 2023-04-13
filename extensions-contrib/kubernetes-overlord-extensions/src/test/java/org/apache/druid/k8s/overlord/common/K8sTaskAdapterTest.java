@@ -30,11 +30,10 @@ import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import io.fabric8.kubernetes.api.model.batch.v1.JobList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import org.apache.commons.lang.StringUtils;
@@ -163,22 +162,19 @@ class K8sTaskAdapterTest
         task,
         new PeonCommandContext(new ArrayList<>(), new ArrayList<>(), new File("/tmp/"))
     );
-
-    // cant launch jobs with test server, we have to hack around this.
-    Pod pod = K8sTestUtils.createPodFromJob(jobFromSpec);
-    client.pods().inNamespace("test").create(pod);
-    PodList podList = client.pods().inNamespace("test").list();
-    assertEquals(1, podList.getItems().size());
+    client.batch().v1().jobs().inNamespace("test").create(jobFromSpec);
+    JobList jobList = client.batch().v1().jobs().inNamespace("test").list();
+    assertEquals(1, jobList.getItems().size());
 
     // assert that the size of the pod is 1g
-    Pod myPod = Iterables.getOnlyElement(podList.getItems());
-    Quantity containerMemory = myPod.getSpec().getContainers().get(0).getResources().getLimits().get("memory");
+    Job myJob = Iterables.getOnlyElement(jobList.getItems());
+    Quantity containerMemory = myJob.getSpec().getTemplate().getSpec().getContainers().get(0).getResources().getLimits().get("memory");
     String amount = containerMemory.getAmount();
     assertEquals(2400000000L, Long.valueOf(amount));
     assertTrue(StringUtils.isBlank(containerMemory.getFormat())); // no units specified we talk in bytes
 
-    Task taskFromPod = adapter.toTask(Iterables.getOnlyElement(podList.getItems()));
-    assertEquals(task, taskFromPod);
+    Task taskFromJob = adapter.toTask(Iterables.getOnlyElement(jobList.getItems()));
+    assertEquals(task, taskFromJob);
   }
 
   @Test

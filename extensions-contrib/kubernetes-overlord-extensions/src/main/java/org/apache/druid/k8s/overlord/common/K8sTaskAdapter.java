@@ -118,10 +118,9 @@ public abstract class K8sTaskAdapter implements TaskAdapter
   }
 
   @Override
-  public Task toTask(Pod from) throws IOException
+  public Task toTask(Job from) throws IOException
   {
-    // all i have to do here is grab the main container...done
-    PodSpec podSpec = from.getSpec();
+    PodSpec podSpec = from.getSpec().getTemplate().getSpec();
     massageSpec(podSpec, "main");
     List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
     Optional<EnvVar> taskJson = envVars.stream().filter(x -> "TASK_JSON".equals(x.getName())).findFirst();
