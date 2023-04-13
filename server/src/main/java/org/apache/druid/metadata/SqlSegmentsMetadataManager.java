@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Futures;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
@@ -168,6 +169,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    * #useLatestIfWithinDelayOrPerformNewDatabasePoll()} via one of the public methods of SqlSegmentsMetadataManager.
    */
   private volatile @MonotonicNonNull DataSourcesSnapshot dataSourcesSnapshot = null;
+
+  private final Set<SegmentId> segmentHandedOffStatus = Sets.newConcurrentHashSet();
 
   /**
    * The latest {@link DatabasePoll} represent {@link #poll()} calls which update {@link #dataSourcesSnapshot}, either
@@ -780,11 +783,15 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public int markSegmentAsHandedOff(SegmentId segmentId)
   {
-    return connector.getDBI().withHandle(
-        handle ->
-            SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                    .markSegmentAsHandedOff(segmentId)
-    );
+    if (!segmentHandedOffStatus.contains(segmentId)) {
+      segmentHandedOffStatus.add(segmentId);
+      return connector.getDBI().withHandle(
+          handle ->
+              SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
+                                      .markSegmentAsHandedOff(segmentId)
+      );
+    }
+    return 0;
   }
 
   @Override
@@ -898,7 +905,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     //
     // setting connection to read-only will allow some database such as MySQL
     // to automatically use read-only transaction mode, further optimizing the query
-    final Map<String, Map<SegmentId, DateTime>> handedOffState = new HashMap<>();
+    final Map<String, Set<SegmentId>> handedOffStatePerDataSource = new HashMap<>();
     final List<DataSegment> segments = connector.inReadOnlyTransaction(
         new TransactionCallback<List<DataSegment>>()
         {
@@ -916,9 +923,9 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                       {
                         try {
                           DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
-                          if (null != (r.getString("handed_off_time"))) {
-                            DateTime handedOffTime = DateTimes.of(r.getString("handed_off_time"));
-                            handedOffState.computeIfAbsent(segment.getDataSource(), v -> new HashMap<>()).put(segment.getId(), handedOffTime);
+                          boolean handedOff = r.getBoolean("handed_off");
+                          if (handedOff) {
+                            handedOffStatePerDataSource.computeIfAbsent(segment.getDataSource(), value -> new HashSet<>()).add(segment.getId());
                           }
                           return replaceWithExistingSegmentIfPresent(segment);
                         }
@@ -957,6 +964,9 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       log.info("Polled and found %,d segments in the database", segments.size());
     }
 
+    segmentHandedOffStatus.clear();
+    segmentHandedOffStatus.addAll(handedOffStatePerDataSource.values().stream().flatMap(Collection::stream).collect(Collectors.toSet()));
+
     if (null != dataSourcesSnapshot) {
       Set<SegmentWithOvershadowedStatus> oldSegments = DataSourcesSnapshot.getSegmentsWithOvershadowedStatus(
           dataSourcesSnapshot.getDataSourcesWithAllUsedSegments(),
@@ -968,7 +978,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
           Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
           dataSourceProperties,
-          handedOffState,
+          handedOffStatePerDataSource,
           oldSegments,
           oldChanges
       );
@@ -976,7 +986,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
           Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
           dataSourceProperties,
-          handedOffState
+          handedOffStatePerDataSource
       );
     }
   }

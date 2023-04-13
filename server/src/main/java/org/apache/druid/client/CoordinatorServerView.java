@@ -35,7 +35,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.joda.time.DateTime;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -170,15 +169,7 @@ public class CoordinatorServerView implements InventoryView
       }
       segmentLoadInfo.addServer(server);
 
-      DateTime handedOffTime = sqlSegmentsMetadataManager
-          .getSnapshotOfDataSourcesWithAllUsedSegments()
-          .getHandedOffStatePerDataSource()
-          .getOrDefault(segment.getDataSource(), new HashMap<>())
-          .get(segmentId);
-
-      if (null == handedOffTime) {
-        sqlSegmentsMetadataManager.markSegmentAsHandedOff(segmentId);
-      }
+      sqlSegmentsMetadataManager.markSegmentAsHandedOff(segmentId);
     }
   }
 

@@ -24,24 +24,22 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import org.apache.druid.java.util.common.StringUtils;
 
-import java.util.List;
-
 public class DataSegmentChange
 {
   private final SegmentWithOvershadowedStatus segmentWithOvershadowedStatus;
   private final boolean load;
-  private final List<ChangeReason> changeReasons;
+  private final ChangeReason changeReason;
 
   @JsonCreator
   public DataSegmentChange(
       @JsonProperty("segmentWithOvershadowedStatus") SegmentWithOvershadowedStatus segmentWithOvershadowedStatus,
       @JsonProperty("load") boolean load,
-      @JsonProperty("changeReasons") List<ChangeReason> changeReasons
+      @JsonProperty("changeReason") ChangeReason changeReason
   )
   {
     this.segmentWithOvershadowedStatus = segmentWithOvershadowedStatus;
     this.load = load;
-    this.changeReasons = changeReasons;
+    this.changeReason = changeReason;
   }
 
   @JsonProperty
@@ -57,9 +55,9 @@ public class DataSegmentChange
   }
 
   @JsonProperty
-  public List<ChangeReason> getChangeReasons()
+  public ChangeReason getChangeReason()
   {
-    return changeReasons;
+    return changeReason;
   }
 
   @Override
@@ -67,16 +65,18 @@ public class DataSegmentChange
   {
     return "DataSegmentChangeRequest{" +
            "load=" + load +
-           ", changeReason=" + changeReasons +
+           ", changeReason=" + changeReason +
            ", segmentWithOvershadowedStatus=" + segmentWithOvershadowedStatus +
            '}';
   }
 
   public enum ChangeReason
   {
-    SEGMENT_ID,
-    OVERSHADOWED_STATUS,
-    HANDED_OFF_STATUS;
+    SEGMENT_ADDED,
+    SEGMENT_REMOVED,
+    SEGMENT_OVERSHADOWED,
+    SEGMENT_HANDED_OFF,
+    SEGMENT_OVERSHADOWED_AND_HANDED_OFF;
 
     @JsonValue
     @Override

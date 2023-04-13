@@ -27,7 +27,6 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Overshadowable;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -50,28 +49,24 @@ public class ServerSelector implements Overshadowable<ServerSelector>
 
   private final AtomicReference<DataSegment> segment;
 
-  private DateTime handedOffTime;
+  private boolean isQueryable;
 
-  private DateTime latestHistoricalLoadTime;
-
-  public ServerSelector(
-      DataSegment segment,
-      TierSelectorStrategy strategy)
+  public ServerSelector(DataSegment segment, TierSelectorStrategy strategy)
   {
-    this(segment, strategy, null);
+    this(segment, strategy, false);
   }
 
   public ServerSelector(
       DataSegment segment,
       TierSelectorStrategy strategy,
-      DateTime handedOffTime
+      boolean isQueryable
   )
   {
     this.segment = new AtomicReference<>(DataSegmentInterner.intern(segment));
     this.strategy = strategy;
     this.historicalServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
     this.realtimeServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
-    this.handedOffTime = handedOffTime;
+    this.isQueryable = isQueryable;
   }
 
   public DataSegment getSegment()
@@ -230,23 +225,13 @@ public class ServerSelector implements Overshadowable<ServerSelector>
     return segment.get().hasData();
   }
 
-  public void setHandedOffTime(DateTime handedOffTime)
+  public boolean isQueryable()
   {
-    this.handedOffTime = handedOffTime;
+    return isQueryable;
   }
 
-  public DateTime getHandedOffTime()
+  public void setQueryable(boolean queryable)
   {
-    return handedOffTime;
-  }
-
-  public DateTime getLatestHistoricalLoadTime()
-  {
-    return latestHistoricalLoadTime;
-  }
-
-  public void setLatestHistoricalLoadTime(DateTime latestHistoricalLoadTime)
-  {
-    this.latestHistoricalLoadTime = latestHistoricalLoadTime;
+    isQueryable = queryable;
   }
 }

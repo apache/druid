@@ -40,12 +40,13 @@ import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegmentChange;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -116,7 +117,7 @@ public class MetadataSegmentView
     this.isCacheEnabled = config.isMetadataSegmentCacheEnable();
     this.pollPeriodInMS = config.getMetadataSegmentPollPeriod();
     this.scheduledExec = Execs.scheduledSingleThreaded("MetadataSegmentView-Cache--%d");
-    this.isDetectUnavailableSegmentsEnabled = config.isDetectUnavailableSegments();
+    this.isDetectUnavailableSegmentsEnabled = segmentWatcherConfig.isDetectUnavailableSegments();
   }
 
   @LifecycleStart
@@ -187,7 +188,7 @@ public class MetadataSegmentView
       return;
     }
 
-    Set<SegmentWithOvershadowedStatus> publishedSegmentsSet = new HashSet<>();
+    Map<SegmentId, SegmentWithOvershadowedStatus> publishedSegmentsCopy = new HashMap<>();
 
     final List<DataSegmentChange> dataSegmentChanges =
         changedRequestsSnapshot
@@ -197,13 +198,12 @@ public class MetadataSegmentView
                      new DataSegmentChange(
                          convert(dataSegmentChange.getSegmentWithOvershadowedStatus()),
                          dataSegmentChange.isLoad(),
-                         dataSegmentChange.getChangeReasons()))
+                         dataSegmentChange.getChangeReason()))
             .collect(Collectors.toList());
 
     counter = changedRequestsSnapshot.getCounter();
 
-
-    log.debug("counter [%d], hash [%d], segments changed [%d], full sync: [%s]",
+    log.info("counter [%d], hash [%d], segments changed [%d], full sync: [%s]",
               counter.getCounter(), counter.getHash(), dataSegmentChanges.size(), changedRequestsSnapshot.isResetCounter());
 
     if (changedRequestsSnapshot.isResetCounter()) {
@@ -213,7 +213,9 @@ public class MetadataSegmentView
 
       if (isCacheEnabled) {
         dataSegmentChanges.forEach(
-            dataSegmentChange -> publishedSegmentsSet.add(dataSegmentChange.getSegmentWithOvershadowedStatus()));
+            dataSegmentChange -> publishedSegmentsCopy.put(
+                dataSegmentChange.getSegmentWithOvershadowedStatus().getDataSegment().getId(),
+                dataSegmentChange.getSegmentWithOvershadowedStatus()));
       }
     } else {
       runSegmentCallbacks(
@@ -221,12 +223,15 @@ public class MetadataSegmentView
       );
 
       if (isCacheEnabled) {
-        publishedSegments.stream().iterator().forEachRemaining(publishedSegmentsSet::add);
+        publishedSegments.stream().iterator().forEachRemaining(
+            segment -> publishedSegmentsCopy.put(segment.getDataSegment().getId(), segment));
         dataSegmentChanges.forEach(dataSegmentChange -> {
           if (dataSegmentChange.isLoad()) {
-            publishedSegmentsSet.add(dataSegmentChange.getSegmentWithOvershadowedStatus());
+            publishedSegmentsCopy.put(
+                dataSegmentChange.getSegmentWithOvershadowedStatus().getDataSegment().getId(),
+                dataSegmentChange.getSegmentWithOvershadowedStatus());
           } else {
-            publishedSegmentsSet.remove(dataSegmentChange.getSegmentWithOvershadowedStatus());
+            publishedSegmentsCopy.remove(dataSegmentChange.getSegmentWithOvershadowedStatus().getDataSegment().getId());
           }
         });
       }
@@ -240,7 +245,7 @@ public class MetadataSegmentView
 
     if (isCacheEnabled) {
       ImmutableSortedSet.Builder<SegmentWithOvershadowedStatus> builder = ImmutableSortedSet.naturalOrder();
-      builder.addAll(publishedSegmentsSet);
+      builder.addAll(publishedSegmentsCopy.values());
       publishedSegments = builder.build();
       cachePopulated.countDown();
     }
@@ -252,7 +257,7 @@ public class MetadataSegmentView
     return new SegmentWithOvershadowedStatus(
         interned,
         segment.isOvershadowed(),
-        segment.getHandedOffTime()
+        segment.isHandedOff()
     );
   }
 

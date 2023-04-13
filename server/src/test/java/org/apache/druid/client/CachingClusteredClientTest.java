@@ -562,7 +562,7 @@ public class CachingClusteredClientTest
             .andReturn(ImmutableMap.of())
             .once();
     EasyMock.replay(cache);
-    client = makeClient(new ForegroundCachePopulator(JSON_MAPPER, new CachePopulatorStats(), -1), cache, limit);
+    client = makeClient(new ForegroundCachePopulator(JSON_MAPPER, new CachePopulatorStats(), -1), cache, limit, false);
     final DruidServer lastServer = servers[random.nextInt(servers.length)];
     final DataSegment dataSegment = EasyMock.createNiceMock(DataSegment.class);
     EasyMock.expect(dataSegment.getId()).andReturn(SegmentId.dummy(DATA_SOURCE)).anyTimes();
@@ -587,7 +587,7 @@ public class CachingClusteredClientTest
             .andReturn(ImmutableMap.of())
             .once();
     EasyMock.replay(cache);
-    client = makeClient(new ForegroundCachePopulator(JSON_MAPPER, new CachePopulatorStats(), -1), cache, 0);
+    client = makeClient(new ForegroundCachePopulator(JSON_MAPPER, new CachePopulatorStats(), -1), cache, 0, false);
     getDefaultQueryRunner().run(QueryPlus.wrap(query), context);
     EasyMock.verify(cache);
     EasyMock.verify(dataSegment);
@@ -1894,6 +1894,18 @@ public class CachingClusteredClientTest
       int partitionNum
   )
   {
+    return makeMockSingleDimensionSelector(server, dimension, start, end, partitionNum, false);
+  }
+
+  private ServerSelector makeMockSingleDimensionSelector(
+      DruidServer server,
+      String dimension,
+      String start,
+      String end,
+      int partitionNum,
+      boolean isQueryable
+  )
+  {
     final DataSegment segment = new DataSegment(
         SegmentId.dummy(DATA_SOURCE),
         null,
@@ -1913,7 +1925,8 @@ public class CachingClusteredClientTest
 
     ServerSelector selector = new ServerSelector(
         segment,
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        isQueryable
     );
     if (null != server) {
       selector.addServerAndUpdateSegment(new QueryableDruidServer(server, null), segment);
@@ -2747,13 +2760,14 @@ public class CachingClusteredClientTest
 
   protected CachingClusteredClient makeClient(final CachePopulator cachePopulator)
   {
-    return makeClient(cachePopulator, cache, 10);
+    return makeClient(cachePopulator, cache, 10, false);
   }
 
   protected CachingClusteredClient makeClient(
       final CachePopulator cachePopulator,
       final Cache cache,
-      final int mergeLimit
+      final int mergeLimit,
+      final boolean detectUnavailableSegment
   )
   {
     return new CachingClusteredClient(
@@ -2855,7 +2869,15 @@ public class CachingClusteredClientTest
             new ServerConfig()
         ),
         JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        new BrokerSegmentWatcherConfig()
+        {
+          @Override
+          public boolean isDetectUnavailableSegments()
+          {
+            return detectUnavailableSegment;
+          }
+        }
     );
   }
 
@@ -3369,16 +3391,16 @@ public class CachingClusteredClientTest
     final Interval interval1 = Intervals.of("2011-01-06/2011-01-07");
     final Interval interval2 = Intervals.of("2011-01-07/2011-01-08");
     final Interval interval3 = Intervals.of("2011-01-08/2011-01-09");
-
+    client = makeClient(new ForegroundCachePopulator(JSON_MAPPER, new CachePopulatorStats(), -1), cache, 10, true);
     QueryRunner runner = new FinalizeResultsQueryRunner(getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest());
 
     final DruidServer lastServer = servers[random.nextInt(servers.length)];
-    ServerSelector selector1 = makeMockSingleDimensionSelector(lastServer, "dim1", null, "b", 0);
-    ServerSelector selector2 = makeMockSingleDimensionSelector(null, "dim1", "e", "f", 1);
-    ServerSelector selector3 = makeMockSingleDimensionSelector(lastServer, "dim1", "hi", "zzz", 2);
-    ServerSelector selector4 = makeMockSingleDimensionSelector(lastServer, "dim2", "a", "e", 0);
-    ServerSelector selector5 = makeMockSingleDimensionSelector(lastServer, "dim2", null, null, 1);
-    ServerSelector selector6 = makeMockSingleDimensionSelector(lastServer, "other", "b", null, 0);
+    ServerSelector selector1 = makeMockSingleDimensionSelector(lastServer, "dim1", null, "b", 0, true);
+    ServerSelector selector2 = makeMockSingleDimensionSelector(null, "dim1", "e", "f", 1, true);
+    ServerSelector selector3 = makeMockSingleDimensionSelector(lastServer, "dim1", "hi", "zzz", 2, true);
+    ServerSelector selector4 = makeMockSingleDimensionSelector(lastServer, "dim2", "a", "e", 0, true);
+    ServerSelector selector5 = makeMockSingleDimensionSelector(lastServer, "dim2", null, null, 1, true);
+    ServerSelector selector6 = makeMockSingleDimensionSelector(lastServer, "other", "b", null, 0, true);
 
     timeline.add(interval1, "v", new NumberedPartitionChunk<>(0, 3, selector1));
     timeline.add(interval1, "v", new NumberedPartitionChunk<>(1, 3, selector2));

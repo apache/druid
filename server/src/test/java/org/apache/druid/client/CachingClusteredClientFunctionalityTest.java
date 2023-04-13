@@ -336,7 +336,14 @@ public class CachingClusteredClientFunctionalityTest
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
         JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        new BrokerSegmentWatcherConfig() {
+          @Override
+          public boolean isDetectUnavailableSegments()
+          {
+            return false;
+          }
+        }
     );
   }
 

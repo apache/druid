@@ -305,9 +305,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             public Void withHandle(Handle handle)
             {
               final Batch batch = handle.createBatch();
-              if (!tableContainsColumn(handle, tableName, "handed_off_time")) {
-                log.info("Adding column: handed_off_time to table[%s]", tableName);
-                batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN handed_off_time VARCHAR(255)", tableName));
+              if (!tableContainsColumn(handle, tableName, "handed_off")) {
+                log.info("Adding column: handed_off to table[%s]", tableName);
+                batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN handed_off BOOLEAN NOT NULL DEFAULT FALSE", tableName));
               }
               batch.execute();
               return null;

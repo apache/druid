@@ -140,7 +140,14 @@ public class CachingClusteredClientPerfTest
         ForkJoinPool.commonPool(),
         queryScheduler,
         JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        new BrokerSegmentWatcherConfig() {
+          @Override
+          public boolean isDetectUnavailableSegments()
+          {
+            return false;
+          }
+        }
     );
 
     Query<SegmentDescriptor> fakeQuery = makeFakeQuery(interval);

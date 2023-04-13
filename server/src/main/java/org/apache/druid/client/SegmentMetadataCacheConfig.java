@@ -36,7 +36,7 @@ public class SegmentMetadataCacheConfig
   private boolean metadataSegmentCacheEnable = false;
 
   @JsonProperty
-  private long metadataSegmentPollPeriod = 60000;
+  private long metadataSegmentPollPeriod = 10000;
 
   @JsonProperty
   private Period metadataRefreshPeriod = new Period("PT1M");
@@ -44,8 +44,6 @@ public class SegmentMetadataCacheConfig
   @JsonProperty
   private boolean awaitInitializationOnStart = true;
 
-  @JsonProperty
-  private boolean detectUnavailableSegments = false;
 
   public static SegmentMetadataCacheConfig create()
   {
@@ -81,11 +79,6 @@ public class SegmentMetadataCacheConfig
     return metadataSegmentPollPeriod;
   }
 
-  public boolean isDetectUnavailableSegments()
-  {
-    return detectUnavailableSegments;
-  }
-
   @Override
   public boolean equals(final Object o)
   {
@@ -99,8 +92,7 @@ public class SegmentMetadataCacheConfig
     return awaitInitializationOnStart == that.awaitInitializationOnStart &&
            metadataSegmentCacheEnable == that.metadataSegmentCacheEnable &&
            metadataSegmentPollPeriod == that.metadataSegmentPollPeriod &&
-           Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod) &&
-           detectUnavailableSegments == that.detectUnavailableSegments;
+           Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod);
   }
 
   @Override
@@ -110,8 +102,7 @@ public class SegmentMetadataCacheConfig
         metadataRefreshPeriod,
         awaitInitializationOnStart,
         metadataSegmentCacheEnable,
-        (metadataSegmentPollPeriod),
-        detectUnavailableSegments
+        (metadataSegmentPollPeriod)
     );
   }
 
@@ -123,7 +114,6 @@ public class SegmentMetadataCacheConfig
            ", metadataSegmentCacheEnable=" + metadataSegmentCacheEnable +
            ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
            ", awaitInitializationOnStart=" + awaitInitializationOnStart +
-           ", detectUnavailableSegments=" + detectUnavailableSegments +
            '}';
   }
 }

@@ -44,7 +44,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegmentChange;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -61,7 +60,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -186,7 +184,7 @@ public class MetadataResource
   {
     Set<String> requiredDataSources = (null == dataSources) ? new HashSet<>() : dataSources;
 
-    log.debug("Changed segments requested. counter [%d], hash [%d], dataSources [%s]", counter, hash, requiredDataSources);
+    log.info("Changed segments requested. counter [%d], hash [%d], dataSources [%s]", counter, hash, requiredDataSources);
 
     DataSourcesSnapshot dataSourcesSnapshot = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments();
 
@@ -212,11 +210,11 @@ public class MetadataResource
                                getHandedOffStateForSegment(dataSourcesSnapshot, segment.getDataSource(), segment.getId())
                            ),
                            true,
-                           Collections.singletonList(DataSegmentChange.ChangeReason.SEGMENT_ID)))
+                           DataSegmentChange.ChangeReason.SEGMENT_ADDED))
               .collect(Collectors.toList());
       lastCounter = DataSourcesSnapshot.getLastCounter(dataSourcesSnapshot.getChanges());
       resetCause = changeRequestsSnapshot.getResetCause();
-      log.debug("Returning full snapshot. segment count [%d], counter [%d], hash [%d]",
+      log.info("Returning full snapshot. segment count [%d], counter [%d], hash [%d]",
                dataSegmentChanges.size(), lastCounter.getCounter(), lastCounter.getHash());
     } else {
       dataSegmentChanges = changeRequestsSnapshot.getRequests();
@@ -225,7 +223,7 @@ public class MetadataResource
           .filter(segment -> requiredDataSources.size() == 0 || requiredDataSources.contains(segment.getSegmentWithOvershadowedStatus().getDataSegment().getDataSource()))
           .collect(Collectors.toList());
       lastCounter = changeRequestsSnapshot.getCounter();
-      log.debug("Returning delta snapshot. segment count [%d], counter [%d], hash [%d]",
+      log.info("Returning delta snapshot. segment count [%d], counter [%d], hash [%d]",
                dataSegmentChanges.size(), lastCounter.getCounter(), lastCounter.getHash());
     }
 
@@ -289,14 +287,14 @@ public class MetadataResource
     return builder.entity(authorizedSegments).build();
   }
 
-  private DateTime getHandedOffStateForSegment(
+  private boolean getHandedOffStateForSegment(
       DataSourcesSnapshot dataSourcesSnapshot,
       String dataSource, SegmentId segmentId
   )
   {
     return dataSourcesSnapshot.getHandedOffStatePerDataSource()
-                       .getOrDefault(dataSource, new HashMap<>())
-                       .get(segmentId);
+                       .getOrDefault(dataSource, new HashSet<>())
+                       .contains(segmentId);
   }
 
   /**

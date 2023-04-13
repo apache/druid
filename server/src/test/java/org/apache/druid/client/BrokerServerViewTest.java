@@ -34,7 +34,6 @@ import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -558,10 +557,10 @@ public class BrokerServerViewTest extends CuratorTestBase
             new SegmentWithOvershadowedStatus(
                 dataSegmentWithIntervalAndVersion(input.lhs, input.rhs),
                 false,
-                DateTimes.nowUtc()
+                true
             ),
             true,
-            Collections.singletonList(DataSegmentChange.ChangeReason.SEGMENT_ID))
+            DataSegmentChange.ChangeReason.SEGMENT_ADDED)
     );
 
     ChangeRequestsSnapshot<DataSegmentChange> changeRequestsSnapshot = new ChangeRequestsSnapshot<>(true, "", ChangeRequestHistory.Counter.ZERO, dataSegmentChanges);
@@ -573,11 +572,13 @@ public class BrokerServerViewTest extends CuratorTestBase
     EasyMock.expect(druidLeaderClient.getThingsFromLeaderNode(EasyMock.anyString()))
         .andReturn(expectedObject);
 
-    BrokerSegmentWatcherConfig brokerSegmentWatcherConfig = getBrokerSegmentWatcherConfig(null, null, false);
+    BrokerSegmentWatcherConfig brokerSegmentWatcherConfig = getBrokerSegmentWatcherConfig(
+        null,
+        null,
+        false,
+        true);
     SegmentMetadataCacheConfig segmentMetadataCacheConfig = EasyMock.mock(SegmentMetadataCacheConfig.class);
     EasyMock.expect(segmentMetadataCacheConfig.isMetadataSegmentCacheEnable()).andReturn(false);
-    EasyMock.expect(segmentMetadataCacheConfig.isDetectUnavailableSegments()).andReturn(true).times(1);
-    EasyMock.expect(segmentMetadataCacheConfig.isDetectUnavailableSegments()).andReturn(false).times(1);
     EasyMock.expect(segmentMetadataCacheConfig.getMetadataSegmentPollPeriod()).andReturn(60000L);
     EasyMock.replay(druidLeaderClient);
     EasyMock.replay(segmentMetadataCacheConfig);
@@ -603,7 +604,6 @@ public class BrokerServerViewTest extends CuratorTestBase
     );
 
     baseView.start();
-    brokerServerView.start();
 
     final List<DruidServer> druidServers = Lists.transform(
         ImmutableList.of("locahost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
@@ -627,6 +627,8 @@ public class BrokerServerViewTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
     metadataSegmentView.pollChangedSegments();
+
+    brokerServerView.start();
 
     TimelineLookup timeline = brokerServerView.getTimeline(
         (new TableDataSource("test_broker_server_view")).getAnalysis()
@@ -656,24 +658,24 @@ public class BrokerServerViewTest extends CuratorTestBase
     final List<DataSegmentChange> dataSegmentChanges = Lists.transform(
         ImmutableList.of(
             ImmutableList.of("2011-04-01/2011-04-03", "v1", Boolean.FALSE.toString(),
-                             DataSegmentChange.ChangeReason.SEGMENT_ID.toString()),
+                             DataSegmentChange.ChangeReason.SEGMENT_REMOVED.toString()),
             ImmutableList.of("2011-04-06/2011-04-09", "v3", Boolean.FALSE.toString(),
-                             DataSegmentChange.ChangeReason.SEGMENT_ID.toString()),
+                             DataSegmentChange.ChangeReason.SEGMENT_REMOVED.toString()),
             ImmutableList.of("2011-04-01/2011-04-02", "v3", Boolean.FALSE.toString(),
-                             DataSegmentChange.ChangeReason.HANDED_OFF_STATUS.toString()),
+                             DataSegmentChange.ChangeReason.SEGMENT_HANDED_OFF.toString()),
             ImmutableList.of("2011-04-01/2011-04-02", "v3", Boolean.FALSE.toString(),
-                             DataSegmentChange.ChangeReason.OVERSHADOWED_STATUS.toString()),
+                             DataSegmentChange.ChangeReason.SEGMENT_OVERSHADOWED.toString()),
             ImmutableList.of("2011-04-11/2011-04-13", "v3", Boolean.TRUE.toString(),
-                             DataSegmentChange.ChangeReason.SEGMENT_ID.toString())
+                             DataSegmentChange.ChangeReason.SEGMENT_ADDED.toString())
         ),
         input -> new DataSegmentChange(
             new SegmentWithOvershadowedStatus(
                 dataSegmentWithIntervalAndVersion(input.get(0), input.get(1)),
                 false,
-                DateTimes.nowUtc()
+                true
             ),
             Boolean.parseBoolean(input.get(2)),
-            Collections.singletonList(DataSegmentChange.ChangeReason.fromString(input.get(3))))
+            DataSegmentChange.ChangeReason.fromString(input.get(3)))
     );
 
     ChangeRequestsSnapshot<DataSegmentChange> changeRequestsSnapshot = new ChangeRequestsSnapshot<>(
@@ -690,11 +692,13 @@ public class BrokerServerViewTest extends CuratorTestBase
     EasyMock.expect(druidLeaderClient.getThingsFromLeaderNode(EasyMock.anyString()))
             .andReturn(expectedObject);
 
-    BrokerSegmentWatcherConfig brokerSegmentWatcherConfig = getBrokerSegmentWatcherConfig(null, null, false);
+    BrokerSegmentWatcherConfig brokerSegmentWatcherConfig = getBrokerSegmentWatcherConfig(
+        null,
+        null,
+        false,
+        true);
     SegmentMetadataCacheConfig segmentMetadataCacheConfig = EasyMock.mock(SegmentMetadataCacheConfig.class);
     EasyMock.expect(segmentMetadataCacheConfig.isMetadataSegmentCacheEnable()).andReturn(false);
-    EasyMock.expect(segmentMetadataCacheConfig.isDetectUnavailableSegments()).andReturn(true).times(1);
-    EasyMock.expect(segmentMetadataCacheConfig.isDetectUnavailableSegments()).andReturn(false).times(1);
     EasyMock.expect(segmentMetadataCacheConfig.getMetadataSegmentPollPeriod()).andReturn(60000L);
     EasyMock.replay(druidLeaderClient);
     EasyMock.replay(segmentMetadataCacheConfig);
@@ -720,7 +724,6 @@ public class BrokerServerViewTest extends CuratorTestBase
     );
 
     baseView.start();
-    brokerServerView.start();
 
     final List<DruidServer> druidServers = Lists.transform(
         ImmutableList.of("locahost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
@@ -744,6 +747,8 @@ public class BrokerServerViewTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
     metadataSegmentView.pollChangedSegments();
+
+    brokerServerView.start();
 
     TimelineLookup timeline = brokerServerView.getTimeline(
         (new TableDataSource("test_broker_server_view")).getAnalysis()
@@ -843,7 +848,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     brokerServerView = getBrokerServerView(
         ignoredTiers,
         baseView,
-        getBrokerSegmentWatcherConfig(watchedTiers, ignoredTiers, watchRealtimeTasks),
+        getBrokerSegmentWatcherConfig(watchedTiers, ignoredTiers, watchRealtimeTasks, false),
         EasyMock.mock(MetadataSegmentView.class),
         EasyMock.mock(SegmentMetadataCacheConfig.class)
     );
@@ -852,7 +857,11 @@ public class BrokerServerViewTest extends CuratorTestBase
     brokerServerView.start();
   }
 
-  private BrokerSegmentWatcherConfig getBrokerSegmentWatcherConfig(Set<String> watchedTiers, Set<String> ignoredTiers, boolean watchRealtimeTasks)
+  private BrokerSegmentWatcherConfig getBrokerSegmentWatcherConfig(
+      Set<String> watchedTiers,
+      Set<String> ignoredTiers,
+      boolean watchRealtimeTasks,
+      boolean detectUnavailableSegments)
   {
     return new BrokerSegmentWatcherConfig()
     {
@@ -872,6 +881,12 @@ public class BrokerServerViewTest extends CuratorTestBase
       public Set<String> getIgnoredTiers()
       {
         return ignoredTiers;
+      }
+
+      @Override
+      public boolean isDetectUnavailableSegments()
+      {
+        return detectUnavailableSegments;
       }
     };
   }
