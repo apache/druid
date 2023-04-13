@@ -55,7 +55,7 @@ notebooks. See
 [Introduction to the Druid Python API](https://github.com/apache/druid/tree/master/examples/quickstart/jupyter-notebooks/python-api-tutorial.ipynb)
 for an overview of the Python API.
 
-The `druidapi` package is pre-installed in the custom Jupyter Docker container for Druid tutorials.
+The `druidapi` package is already installed in the custom Jupyter Docker container for Druid tutorials.
 
 ## Tutorials
 
