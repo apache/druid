@@ -78,7 +78,7 @@ public class TaskStorageDirTracker
     }
   }
 
-  public File pickBaseDir(String taskId) throws IOException
+  public File pickBaseDir(String taskId)
   {
     if (baseTaskDirs.length == 1) {
       return baseTaskDirs[0];
