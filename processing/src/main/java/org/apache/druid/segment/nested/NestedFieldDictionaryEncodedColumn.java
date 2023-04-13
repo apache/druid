@@ -74,7 +74,7 @@ import java.util.BitSet;
 public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexed<ByteBuffer>>
     implements DictionaryEncodedColumn<String>
 {
-  private final NestedFieldTypeInfo.TypeSet types;
+  private final FieldTypeInfo.TypeSet types;
   @Nullable
   private final ColumnType singleType;
   private final ColumnarLongs longsColumn;
@@ -95,7 +95,7 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
 
 
   public NestedFieldDictionaryEncodedColumn(
-      NestedFieldTypeInfo.TypeSet types,
+      FieldTypeInfo.TypeSet types,
       ColumnarLongs longsColumn,
       ColumnarDoubles doublesColumn,
       ColumnarInts column,

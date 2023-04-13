@@ -111,12 +111,12 @@ public class ExternalOperatorConversion extends DruidExternTableMacroConversion
         }
 
         String inputSrcStr = CatalogUtils.getString(args, INPUT_SOURCE_PARAM);
-        String inputSrcType = jsonMapper.readTree(inputSrcStr).get("type").asText();
+        InputSource inputSource = jsonMapper.readValue(inputSrcStr, InputSource.class);
         return new ExternalTableSpec(
-            jsonMapper.readValue(inputSrcStr, InputSource.class),
+            inputSource,
             jsonMapper.readValue(CatalogUtils.getString(args, INPUT_FORMAT_PARAM), InputFormat.class),
             rowSignature,
-            inputSrcType
+            inputSource::getTypes
         );
       }
       catch (JsonProcessingException e) {

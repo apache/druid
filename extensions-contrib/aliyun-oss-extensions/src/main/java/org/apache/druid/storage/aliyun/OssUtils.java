@@ -22,15 +22,13 @@ package org.apache.druid.storage.aliyun;
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSException;
 import com.aliyun.oss.model.DeleteObjectsRequest;
-import com.aliyun.oss.model.ListObjectsRequest;
 import com.aliyun.oss.model.OSSObjectSummary;
-import com.aliyun.oss.model.ObjectListing;
+import com.aliyun.oss.model.ObjectMetadata;
 import com.aliyun.oss.model.PutObjectRequest;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.RetryUtils.Task;
 import org.apache.druid.java.util.common.StringUtils;
@@ -161,34 +159,20 @@ public class OssUtils
   }
 
   /**
-   * Gets a single {@link OSSObjectSummary} from aliyun OSS. Since this method might return a wrong object if there are multiple
-   * objects that match the given key, this method should be used only when it's guaranteed that the given key is unique
-   * in the given bucket.
+   * Gets a single {@link ObjectMetadata} from Aliyun OSS.
    *
    * @param client aliyun OSS client
    * @param bucket aliyun OSS bucket
    * @param key    unique key for the object to be retrieved
    */
-  public static OSSObjectSummary getSingleObjectSummary(OSS client, String bucket, String key)
+  public static ObjectMetadata getSingleObjectMetadata(OSS client, String bucket, String key)
   {
-    final ListObjectsRequest request = new ListObjectsRequest();
-    request.setBucketName(bucket);
-    request.setPrefix(key);
-    request.setMaxKeys(1);
-    final ObjectListing result = client.listObjects(request);
-
-    // Using getObjectSummaries().size() instead of getKeyCount as, in some cases
-    // it is observed that even though the getObjectSummaries returns some data
-    // keyCount is still zero.
-    if (result.getObjectSummaries().size() == 0) {
-      throw new ISE("Cannot find object for bucket[%s] and key[%s]", bucket, key);
+    try {
+      return retry(() -> client.getObjectMetadata(bucket, key));
     }
-    final OSSObjectSummary objectSummary = result.getObjectSummaries().get(0);
-    if (!objectSummary.getBucketName().equals(bucket) || !objectSummary.getKey().equals(key)) {
-      throw new ISE("Wrong object[%s] for bucket[%s] and key[%s]", objectSummary, bucket, key);
+    catch (Exception e) {
+      throw new RuntimeException(e);
     }
-
-    return objectSummary;
   }
 
   /**

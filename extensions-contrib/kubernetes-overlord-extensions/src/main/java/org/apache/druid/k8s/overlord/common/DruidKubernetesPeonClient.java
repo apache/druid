@@ -25,20 +25,16 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import org.apache.commons.io.input.ReaderInputStream;
+import io.fabric8.kubernetes.client.dsl.LogWatch;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import java.io.InputStream;
-import java.io.Reader;
-import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 public class DruidKubernetesPeonClient implements KubernetesPeonClient
 {
@@ -78,7 +74,7 @@ public class DruidKubernetesPeonClient implements KubernetesPeonClient
     long start = System.currentTimeMillis();
     // launch job
     return clientApi.executeRequest(client -> {
-      client.batch().v1().jobs().inNamespace(namespace).create(job);
+      client.batch().v1().jobs().inNamespace(namespace).resource(job).create();
       K8sTaskId taskId = new K8sTaskId(job.getMetadata().getName());
       log.info("Successfully submitted job: %s ... waiting for job to launch", taskId);
       // wait until the pod is running or complete or failed, any of those is fine
@@ -106,16 +102,19 @@ public class DruidKubernetesPeonClient implements KubernetesPeonClient
                       .inNamespace(namespace)
                       .withName(taskId.getK8sTaskId())
                       .waitUntilCondition(
-                          x -> (x == null) || (x.getStatus() != null && x.getStatus().getActive() == null),
+                          x -> (x == null) || (x.getStatus() != null && x.getStatus().getActive() == null
+                          && (x.getStatus().getFailed() != null || x.getStatus().getSucceeded() != null)),
                           howLong,
                           unit
                       );
       if (job == null) {
-        return new JobResponse(job, PeonPhase.FAILED);
+        log.info("K8s job for the task [%s] was not found. It can happen if the task was canceled", taskId);
+        return new JobResponse(null, PeonPhase.FAILED);
       }
       if (job.getStatus().getSucceeded() != null) {
         return new JobResponse(job, PeonPhase.SUCCEEDED);
       }
+      log.warn("Task %s failed with status %s", taskId, job.getStatus());
       return new JobResponse(job, PeonPhase.FAILED);
     });
   }
@@ -124,16 +123,16 @@ public class DruidKubernetesPeonClient implements KubernetesPeonClient
   public boolean cleanUpJob(K8sTaskId taskId)
   {
     if (!debugJobs) {
-      Boolean result = clientApi.executeRequest(client -> client.batch()
-                                                                .v1()
-                                                                .jobs()
-                                                                .inNamespace(namespace)
-                                                                .withName(taskId.getK8sTaskId())
-                                                                .delete());
+      Boolean result = clientApi.executeRequest(client -> !client.batch()
+                                                                 .v1()
+                                                                 .jobs()
+                                                                 .inNamespace(namespace)
+                                                                 .withName(taskId.getK8sTaskId())
+                                                                 .delete().isEmpty());
       if (result) {
         log.info("Cleaned up k8s task: %s", taskId);
       } else {
-        log.info("Failed to cleanup task: %s", taskId);
+        log.info("K8s task does not exist: %s", taskId);
       }
       return result;
     } else {
@@ -146,23 +145,24 @@ public class DruidKubernetesPeonClient implements KubernetesPeonClient
   @Override
   public Optional<InputStream> getPeonLogs(K8sTaskId taskId)
   {
+    KubernetesClient k8sClient = clientApi.getClient();
     try {
-      return clientApi.executeRequest(client -> {
-        Reader reader = client.batch()
-                              .v1()
-                              .jobs()
-                              .inNamespace(namespace)
-                              .withName(taskId.getK8sTaskId())
-                              .inContainer("main")
-                              .getLogReader();
-        if (reader == null) {
-          return Optional.absent();
-        }
-        return Optional.of(new ReaderInputStream(reader, StandardCharsets.UTF_8));
-      });
+      LogWatch logWatch = k8sClient.batch()
+                                   .v1()
+                                   .jobs()
+                                   .inNamespace(namespace)
+                                   .withName(taskId.getK8sTaskId())
+                                   .inContainer("main")
+                                   .watchLog();
+      if (logWatch == null) {
+        k8sClient.close();
+        return Optional.absent();
+      }
+      return Optional.of(new LogWatchInputStream(k8sClient, logWatch));
     }
     catch (Exception e) {
       log.error(e, "Error streaming logs from task: %s", taskId);
+      k8sClient.close();
       return Optional.absent();
     }
   }
@@ -180,30 +180,18 @@ public class DruidKubernetesPeonClient implements KubernetesPeonClient
   }
 
   @Override
-  public List<Pod> listPeonPods(Set<PeonPhase> phases)
-  {
-    return listPeonPods().stream()
-                  .filter(x -> phases.contains(PeonPhase.getPhaseFor(x)))
-                  .collect(Collectors.toList());
-  }
-
-  @Override
-  public List<Pod> listPeonPods()
-  {
-    PodList podList = clientApi.executeRequest(client -> client.pods().inNamespace(namespace))
-                               .withLabel(DruidK8sConstants.LABEL_KEY)
-                               .list();
-    return podList.getItems();
-  }
-
-  @Override
   public int cleanCompletedJobsOlderThan(long howFarBack, TimeUnit timeUnit)
   {
     AtomicInteger numDeleted = new AtomicInteger();
     return clientApi.executeRequest(client -> {
       List<Job> jobs = getJobsToCleanup(listAllPeonJobs(), howFarBack, timeUnit);
       jobs.forEach(x -> {
-        if (client.batch().v1().jobs().inNamespace(namespace).withName(x.getMetadata().getName()).delete()) {
+        if (!client.batch()
+                   .v1()
+                   .jobs()
+                   .inNamespace(namespace)
+                   .withName(x.getMetadata().getName())
+                   .delete().isEmpty()) {
           numDeleted.incrementAndGet();
         }
       });
@@ -257,5 +245,4 @@ public class DruidKubernetesPeonClient implements KubernetesPeonClient
       throw new KubernetesResourceNotFoundException("K8s pod with label: job-name=" + k8sTaskId + " not found");
     }
   }
-
 }

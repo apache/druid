@@ -30,7 +30,6 @@ import org.apache.druid.data.input.impl.DelimitedInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
-import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.StringUtils;
@@ -41,12 +40,15 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.NestedDataDimensionSchema;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -91,27 +93,36 @@ public class NestedDataTestUtils
                     .useSchemaDiscovery(true)
                     .build();
 
+  public static final DimensionsSpec TSV_V4_SCHEMA =
+      DimensionsSpec.builder()
+                    .setDimensions(
+                        Arrays.asList(
+                            new NestedDataDimensionSchema("dim"),
+                            new NestedDataDimensionSchema("nest_json"),
+                            new NestedDataDimensionSchema("nester_json"),
+                            new NestedDataDimensionSchema("variant_json"),
+                            new NestedDataDimensionSchema("list_json"),
+                            new NestedDataDimensionSchema("nonexistent")
+                        )
+                    )
+                    .build();
+
   public static final DimensionsSpec TSV_SCHEMA =
       DimensionsSpec.builder()
                     .setDimensions(
                         Arrays.asList(
-                            new StringDimensionSchema("dim"),
-                            new NestedDataDimensionSchema("nest_json"),
-                            new NestedDataDimensionSchema("nester_json"),
-                            new NestedDataDimensionSchema("variant_json"),
-                            new NestedDataDimensionSchema("list_json")
+                            new AutoTypeColumnSchema("dim"),
+                            new AutoTypeColumnSchema("nest_json"),
+                            new AutoTypeColumnSchema("nester_json"),
+                            new AutoTypeColumnSchema("variant_json"),
+                            new AutoTypeColumnSchema("list_json"),
+                            new AutoTypeColumnSchema("nonexistent")
                         )
                     )
                     .build();
   public static final InputRowSchema AUTO_SCHEMA = new InputRowSchema(
       TIMESTAMP_SPEC,
       AUTO_DISCOVERY,
-      null
-  );
-
-  public static final InputRowSchema SIMPLE_DATA_TSV_SCHEMA = new InputRowSchema(
-      TIMESTAMP_SPEC,
-      TSV_SCHEMA,
       null
   );
 
@@ -160,6 +171,22 @@ public class NestedDataTestUtils
         tempFolder,
         closer,
         Granularities.NONE,
+        TSV_SCHEMA,
+        true
+    );
+  }
+
+  public static List<Segment> createSimpleSegmentsTsvV4(
+      TemporaryFolder tempFolder,
+      Closer closer
+  )
+      throws Exception
+  {
+    return createSimpleNestedTestDataTsvSegments(
+        tempFolder,
+        closer,
+        Granularities.NONE,
+        TSV_V4_SCHEMA,
         true
     );
   }
@@ -168,6 +195,7 @@ public class NestedDataTestUtils
       TemporaryFolder tempFolder,
       Closer closer,
       Granularity granularity,
+      DimensionsSpec dimensionsSpec,
       boolean rollup
   ) throws Exception
   {
@@ -177,11 +205,12 @@ public class NestedDataTestUtils
         SIMPLE_DATA_TSV_FILE,
         SIMPLE_DATA_TSV_INPUT_FORMAT,
         TIMESTAMP_SPEC,
-        SIMPLE_DATA_TSV_SCHEMA.getDimensionsSpec(),
+        dimensionsSpec,
         SIMPLE_DATA_TSV_TRANSFORM,
         COUNT,
         granularity,
-        rollup
+        rollup,
+        new IndexSpec()
     );
   }
 
@@ -206,7 +235,8 @@ public class NestedDataTestUtils
         closer,
         SIMPLE_DATA_FILE,
         Granularities.NONE,
-        true
+        true,
+        new IndexSpec()
     );
   }
 
@@ -247,7 +277,8 @@ public class NestedDataTestUtils
       Closer closer,
       String inputFile,
       Granularity granularity,
-      boolean rollup
+      boolean rollup,
+      IndexSpec indexSpec
   ) throws Exception
   {
     return createSegments(
@@ -260,7 +291,8 @@ public class NestedDataTestUtils
         TransformSpec.NONE,
         COUNT,
         granularity,
-        rollup
+        rollup,
+        indexSpec
     );
   }
 
@@ -289,14 +321,16 @@ public class NestedDataTestUtils
         TransformSpec.NONE,
         COUNT,
         granularity,
-        rollup
+        rollup,
+        new IndexSpec()
     );
   }
 
   public static List<Segment> createSegmentsForJsonInput(
       TemporaryFolder tempFolder,
       Closer closer,
-      String inputFile
+      String inputFile,
+      IndexSpec indexSpec
   )
       throws Exception
   {
@@ -305,7 +339,8 @@ public class NestedDataTestUtils
         closer,
         inputFile,
         Granularities.NONE,
-        true
+        true,
+        indexSpec
     );
   }
 
@@ -356,7 +391,8 @@ public class NestedDataTestUtils
       TransformSpec transformSpec,
       AggregatorFactory[] aggregators,
       Granularity queryGranularity,
-      boolean rollup
+      boolean rollup,
+      IndexSpec indexSpec
   ) throws Exception
   {
     return createSegments(
@@ -369,7 +405,8 @@ public class NestedDataTestUtils
         transformSpec,
         aggregators,
         queryGranularity,
-        rollup
+        rollup,
+        indexSpec
     );
   }
 
@@ -383,7 +420,8 @@ public class NestedDataTestUtils
       TransformSpec transformSpec,
       AggregatorFactory[] aggregators,
       Granularity queryGranularity,
-      boolean rollup
+      boolean rollup,
+      IndexSpec indexSpec
   ) throws Exception
   {
     final List<Segment> segments = Lists.newArrayListWithCapacity(inputs.size());
@@ -401,6 +439,7 @@ public class NestedDataTestUtils
                                                                .withMinTimestamp(0)
                                                                .build()
                                      )
+                                     .indexSpec(indexSpec)
                                      .inputSource(inputSource)
                                      .inputFormat(inputFormat)
                                      .transform(transformSpec)
@@ -465,7 +504,8 @@ public class NestedDataTestUtils
                                   NestedDataTestUtils.createSegmentsForJsonInput(
                                       tempFolder,
                                       closer,
-                                      jsonInputFile
+                                      jsonInputFile,
+                                      new IndexSpec()
                                   )
                               )
                               .add(NestedDataTestUtils.createIncrementalIndexForJsonInput(tempFolder, jsonInputFile))
@@ -515,14 +555,17 @@ public class NestedDataTestUtils
                                   NestedDataTestUtils.createSegmentsForJsonInput(
                                       tempFolder,
                                       closer,
-                                      jsonInputFile
+                                      jsonInputFile,
+                                      new IndexSpec()
                                   )
                               )
-                              .addAll(NestedDataTestUtils.createSegmentsForJsonInput(
-                                  tempFolder,
-                                          closer,
-                                          jsonInputFile
-                                      )
+                              .addAll(
+                                  NestedDataTestUtils.createSegmentsForJsonInput(
+                                      tempFolder,
+                                      closer,
+                                      jsonInputFile,
+                                      new IndexSpec()
+                                  )
                               )
                               .build();
         }
@@ -535,6 +578,58 @@ public class NestedDataTestUtils
       public String toString()
       {
         return "segments";
+      }
+    });
+    segmentsGenerators.add(new BiFunction<TemporaryFolder, Closer, List<Segment>>()
+    {
+      @Override
+      public List<Segment> apply(TemporaryFolder tempFolder, Closer closer)
+      {
+        try {
+          return ImmutableList.<Segment>builder()
+                              .addAll(
+                                  NestedDataTestUtils.createSegmentsForJsonInput(
+                                      tempFolder,
+                                      closer,
+                                      jsonInputFile,
+                                      new IndexSpec(
+                                          null,
+                                          null,
+                                          new StringEncodingStrategy.FrontCoded(4, (byte) 0x01),
+                                          null,
+                                          null,
+                                          null,
+                                          null
+                                      )
+                                  )
+                              )
+                              .addAll(
+                                  NestedDataTestUtils.createSegmentsForJsonInput(
+                                      tempFolder,
+                                      closer,
+                                      jsonInputFile,
+                                      new IndexSpec(
+                                          null,
+                                          null,
+                                          new StringEncodingStrategy.FrontCoded(4, (byte) 0x00),
+                                          null,
+                                          null,
+                                          null,
+                                          null
+                                      )
+                                  )
+                              )
+                              .build();
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }
+
+      @Override
+      public String toString()
+      {
+        return "segments-frontcoded";
       }
     });
     return segmentsGenerators;

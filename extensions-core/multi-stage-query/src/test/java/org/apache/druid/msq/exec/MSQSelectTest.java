@@ -25,7 +25,9 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.frame.util.DurableStorageUtils;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.ColumnMapping;
@@ -33,6 +35,7 @@ import org.apache.druid.msq.indexing.ColumnMappings;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
+import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
@@ -41,6 +44,7 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
+import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
@@ -239,6 +243,111 @@ public class MSQSelectTest extends MSQTestBase
                 .with().rows(3).frames(1),
             0, 0, "shuffle"
         )
+        .verifyResults();
+  }
+
+  @Test
+  public void testSelectOnFooDuplicateColumnNames()
+  {
+    // Duplicate column names are OK in SELECT statements.
+
+    final RowSignature expectedScanSignature =
+        RowSignature.builder()
+                    .add("cnt", ColumnType.LONG)
+                    .add("dim1", ColumnType.STRING)
+                    .build();
+
+    final ColumnMappings expectedColumnMappings = new ColumnMappings(
+        ImmutableList.of(
+            new ColumnMapping("cnt", "x"),
+            new ColumnMapping("dim1", "x")
+        )
+    );
+
+    final List<MSQResultsReport.ColumnAndType> expectedOutputSignature =
+        ImmutableList.of(
+            new MSQResultsReport.ColumnAndType("x", ColumnType.LONG),
+            new MSQResultsReport.ColumnAndType("x", ColumnType.STRING)
+        );
+
+    testSelectQuery()
+        .setSql("select cnt AS x, dim1 AS x from foo")
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(
+                       newScanQueryBuilder()
+                           .dataSource(CalciteTests.DATASOURCE1)
+                           .intervals(querySegmentSpec(Filtration.eternity()))
+                           .columns("cnt", "dim1")
+                           .context(defaultScanQueryContext(context, expectedScanSignature))
+                           .build()
+                   )
+                   .columnMappings(expectedColumnMappings)
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .build()
+        )
+        .setQueryContext(context)
+        .setExpectedRowSignature(expectedOutputSignature)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "shuffle"
+        )
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1L, !useDefault ? "" : null},
+            new Object[]{1L, "10.1"},
+            new Object[]{1L, "2"},
+            new Object[]{1L, "1"},
+            new Object[]{1L, "def"},
+            new Object[]{1L, "abc"}
+        )).verifyResults();
+  }
+
+  @Test
+  public void testSelectOnFooWhereMatchesNoSegments()
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("cnt", ColumnType.LONG)
+                                               .add("dim1", ColumnType.STRING)
+                                               .build();
+
+    // Filter [__time >= timestamp '3000-01-01 00:00:00'] matches no segments at all.
+    testSelectQuery()
+        .setSql("select cnt,dim1 from foo where __time >= timestamp '3000-01-01 00:00:00'")
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(
+                       newScanQueryBuilder()
+                           .dataSource(CalciteTests.DATASOURCE1)
+                           .intervals(
+                               querySegmentSpec(
+                                   Intervals.utc(
+                                       DateTimes.of("3000").getMillis(),
+                                       Intervals.ETERNITY.getEndMillis()
+                                   )
+                               )
+                           )
+                           .columns("cnt", "dim1")
+                           .context(defaultScanQueryContext(context, resultSignature))
+                           .build()
+                   )
+                   .columnMappings(ColumnMappings.identity(resultSignature))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .build()
+        )
+        .setQueryContext(context)
+        .setExpectedRowSignature(resultSignature)
+        .setExpectedResultRows(ImmutableList.of())
         .verifyResults();
   }
 
@@ -1150,6 +1259,73 @@ public class MSQSelectTest extends MSQTestBase
   }
 
   @Test
+  public void testHavingOnApproximateCountDistinct()
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("dim2", ColumnType.STRING)
+                                               .add("col", ColumnType.LONG)
+                                               .build();
+
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource(CalciteTests.DATASOURCE1)
+                                     .setInterval(querySegmentSpec(Filtration.eternity()))
+                                     .setGranularity(Granularities.ALL)
+                                     .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                                     .setAggregatorSpecs(
+                                         aggregators(
+                                             new CardinalityAggregatorFactory(
+                                                 "a0",
+                                                 null,
+                                                 ImmutableList.of(
+                                                     new DefaultDimensionSpec(
+                                                         "m1",
+                                                         "m1",
+                                                         ColumnType.FLOAT
+                                                     )
+                                                 ),
+                                                 false,
+                                                 true
+                                             )
+                                         )
+                                     )
+                                     .setHavingSpec(
+                                         having(
+                                             bound(
+                                                 "a0",
+                                                 "1",
+                                                 null,
+                                                 true,
+                                                 false,
+                                                 null,
+                                                 StringComparators.NUMERIC
+                                             )
+                                         )
+                                     )
+                                     .setContext(context)
+                                     .build();
+
+    testSelectQuery()
+        .setSql("SELECT dim2, COUNT(DISTINCT m1) as col FROM foo GROUP BY dim2 HAVING COUNT(DISTINCT m1) > 1")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(query)
+                                   .columnMappings(new ColumnMappings(ImmutableList.of(
+                                       new ColumnMapping("d0", "dim2"),
+                                       new ColumnMapping("a0", "col")
+                                   )))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .build())
+        .setQueryContext(context)
+        .setExpectedRowSignature(resultSignature)
+        .setExpectedResultRows(
+            NullHandling.replaceWithDefault()
+            ? ImmutableList.of(new Object[]{null, 3L}, new Object[]{"a", 2L})
+            : ImmutableList.of(new Object[]{null, 2L}, new Object[]{"a", 2L})
+
+        )
+        .verifyResults();
+  }
+
+  @Test
   public void testGroupByWithMultiValue()
   {
     Map<String, Object> localContext = enableMultiValueUnnesting(context, true);
@@ -1207,12 +1383,8 @@ public class MSQSelectTest extends MSQTestBase
         .setQueryContext(localContext)
         .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
             CoreMatchers.instanceOf(ISE.class),
-            ThrowableMessageMatcher.hasMessage(
-                !FAULT_TOLERANCE.equals(contextName)
-                ? CoreMatchers.containsString(
-                    "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false.")
-                :
-                CoreMatchers.containsString("exceeded max relaunch count")
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further.")
             )
         ))
         .verifyExecutionError();
@@ -1365,7 +1537,8 @@ public class MSQSelectTest extends MSQTestBase
                 + "FROM kttm_data "
                 + "GROUP BY 1")
         .setExpectedValidationErrorMatcher(
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("LATEST() aggregator depends on __time column"))
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                "LATEST() aggregator depends on __time column"))
         )
         .setExpectedRowSignature(rowSignature)
         .verifyPlanningErrors();
@@ -1382,11 +1555,8 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
             CoreMatchers.instanceOf(ISE.class),
             ThrowableMessageMatcher.hasMessage(
-                !FAULT_TOLERANCE.equals(contextName)
-                ? CoreMatchers.containsString(
+                CoreMatchers.containsString(
                     "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false.")
-                :
-                CoreMatchers.containsString("exceeded max relaunch count")
             )
         ))
         .verifyExecutionError();
@@ -1513,7 +1683,11 @@ public class MSQSelectTest extends MSQTestBase
   @Test
   public void testMultiValueStringWithIncorrectType() throws IOException
   {
-    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/unparseable-mv-string-array.json");
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(
+        temporaryFolder,
+        this,
+        "/unparseable-mv-string-array.json"
+    );
     final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()

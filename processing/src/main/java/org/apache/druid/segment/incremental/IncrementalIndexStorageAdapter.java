@@ -40,10 +40,10 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -213,7 +213,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     // nested column indexer is a liar, and behaves like any type if it only processes unnested literals of a single type
     // so keep it in the family so to speak
     if (desc != null && desc.getIndexer() instanceof NestedDataColumnIndexer) {
-      return ColumnCapabilitiesImpl.createDefault().setType(NestedDataComplexTypeSerde.TYPE);
+      return ColumnCapabilitiesImpl.createDefault().setType(ColumnType.NESTED_DATA);
     }
     // Different from index.getColumnCapabilities because, in a way, IncrementalIndex's string-typed dimensions
     // are always potentially multi-valued at query time. (Missing / null values for a row can potentially be

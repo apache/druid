@@ -57,14 +57,13 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.NestedDataDimensionSchema;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -144,11 +143,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       new TimestampSpec("t", "iso", null),
       DimensionsSpec.builder().setDimensions(
           ImmutableList.<DimensionSchema>builder()
-                       .add(new NestedDataDimensionSchema("string"))
-                       .add(new NestedDataDimensionSchema("nest"))
-                       .add(new NestedDataDimensionSchema("nester"))
-                       .add(new NestedDataDimensionSchema("long"))
-                       .add(new NestedDataDimensionSchema("string_sparse"))
+                       .add(new AutoTypeColumnSchema("string"))
+                       .add(new AutoTypeColumnSchema("nest"))
+                       .add(new AutoTypeColumnSchema("nester"))
+                       .add(new AutoTypeColumnSchema("long"))
+                       .add(new AutoTypeColumnSchema("string_sparse"))
                        .build()
       ).build(),
       null
@@ -159,8 +158,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       DimensionsSpec.builder().setDimensions(
           ImmutableList.<DimensionSchema>builder()
                        .add(new StringDimensionSchema("string"))
-                       .add(new NestedDataDimensionSchema("nest"))
-                       .add(new NestedDataDimensionSchema("nester"))
+                       .add(new AutoTypeColumnSchema("nest"))
+                       .add(new AutoTypeColumnSchema("nester"))
                        .add(new LongDimensionSchema("long"))
                        .add(new StringDimensionSchema("string_sparse"))
                        .build()
@@ -921,7 +920,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestRootSingleTypeArrayLongNulls()
   {
-    cannotVectorize();
     testBuilder()
         .sql("SELECT longs FROM druid.arrays, UNNEST(arrayLongNulls) as u(longs)")
         .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
@@ -1303,6 +1301,59 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .add("arrayLongNulls", ColumnType.LONG_ARRAY)
                         .add("EXPR$1", ColumnType.LONG)
                         .add("EXPR$2", ColumnType.LONG)
+                        .build()
+        )
+        .run();
+  }
+
+
+  @Test
+  public void testGroupByRootSingleTypeArrayLongNullsFilteredMore()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "arrayLongNulls, "
+            + "SUM(cnt) "
+            + "FROM druid.arrays WHERE ARRAY_CONTAINS(arrayLongNulls, 1) OR ARRAY_OVERLAP(arrayLongNulls, ARRAY[2, 3]) GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("arrayLongNulls", "d0", ColumnType.LONG_ARRAY)
+                                )
+                            )
+                            .setDimFilter(
+                                or(
+                                    expressionFilter("array_contains(\"arrayLongNulls\",1)"),
+                                    expressionFilter("array_overlap(\"arrayLongNulls\",array(2,3))")
+                                )
+                            )
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{Arrays.asList(null, 2L, 9L), 2L},
+                new Object[]{Collections.singletonList(1L), 1L},
+                new Object[]{Arrays.asList(1L, null, 3L), 2L},
+                new Object[]{Arrays.asList(1L, 2L, 3L), 2L},
+                new Object[]{Arrays.asList(2L, 3L), 2L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("arrayLongNulls", ColumnType.LONG_ARRAY)
+                        .add("EXPR$1", ColumnType.LONG)
                         .build()
         )
         .run();
@@ -1865,7 +1916,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByRootSingleTypeArrayStringElement()
   {
-    cannotVectorize();
     testBuilder()
         .sql(
             "SELECT "
@@ -1911,7 +1961,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByRootSingleTypeArrayStringElementFiltered()
   {
-    cannotVectorize();
     testBuilder()
         .sql(
             "SELECT "
@@ -1959,7 +2008,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByRootSingleTypeArrayDoubleElement()
   {
-    cannotVectorize();
     testBuilder()
         .sql(
             "SELECT "
@@ -2005,7 +2053,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByRootSingleTypeArrayDoubleElementFiltered()
   {
-    cannotVectorize();
     testBuilder()
         .sql(
             "SELECT "
@@ -2203,7 +2250,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         RowSignature.builder()
                     .add("string", ColumnType.STRING)
-                    .add("EXPR$1", ColumnType.ofArray(NestedDataComplexTypeSerde.TYPE))
+                    .add("EXPR$1", ColumnType.ofArray(ColumnType.NESTED_DATA))
                     .add("EXPR$2", ColumnType.LONG)
                     .build()
     );
@@ -2614,6 +2661,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"100", 2L}
         ),
         RowSignature.builder()
@@ -2875,6 +2923,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"2.02", 2L}
         ),
         RowSignature.builder()
@@ -4065,7 +4114,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       new NestedFieldVirtualColumn(
                           "nester",
                           "v0",
-                          NestedDataComplexTypeSerde.TYPE,
+                          ColumnType.NESTED_DATA,
                           null,
                           true,
                           "$.n",
@@ -4074,7 +4123,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       new NestedFieldVirtualColumn(
                           "nester",
                           "v1",
-                          NestedDataComplexTypeSerde.TYPE,
+                          ColumnType.NESTED_DATA,
                           null,
                           true,
                           "$.",
@@ -4096,8 +4145,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             new Object[]{null, "2"}
         ),
         RowSignature.builder()
-                    .add("EXPR$0", NestedDataComplexTypeSerde.TYPE)
-                    .add("EXPR$1", NestedDataComplexTypeSerde.TYPE)
+                    .add("EXPR$0", ColumnType.NESTED_DATA)
+                    .add("EXPR$1", ColumnType.NESTED_DATA)
                     .build()
 
     );
@@ -4117,13 +4166,13 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       new ExpressionVirtualColumn(
                           "v0",
                           "json_object('n',\"v1\",'x',\"v2\")",
-                          NestedDataComplexTypeSerde.TYPE,
+                          ColumnType.NESTED_DATA,
                           queryFramework().macroTable()
                       ),
                       new NestedFieldVirtualColumn(
                           "nester",
                           "v1",
-                          NestedDataComplexTypeSerde.TYPE,
+                          ColumnType.NESTED_DATA,
                           null,
                           true,
                           "$.n",
@@ -4146,7 +4195,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             new Object[]{"{\"x\":null,\"n\":null}"}
         ),
         RowSignature.builder()
-                    .add("EXPR$0", NestedDataComplexTypeSerde.TYPE)
+                    .add("EXPR$0", ColumnType.NESTED_DATA)
                     .build()
     );
   }
@@ -4214,19 +4263,19 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       new ExpressionVirtualColumn(
                           "v0",
                           "try_parse_json(to_json_string(\"string\"))",
-                          NestedDataComplexTypeSerde.TYPE,
+                          ColumnType.NESTED_DATA,
                           macroTable
                       ),
                       new ExpressionVirtualColumn(
                           "v1",
                           "parse_json('{\\u0022foo\\u0022:1}')",
-                          NestedDataComplexTypeSerde.TYPE,
+                          ColumnType.NESTED_DATA,
                           macroTable
                       ),
                       new ExpressionVirtualColumn(
                           "v2",
                           "parse_json(to_json_string(\"nester\"))",
-                          NestedDataComplexTypeSerde.TYPE,
+                          ColumnType.NESTED_DATA,
                           macroTable
                       )
                   )
@@ -4251,9 +4300,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         RowSignature.builder()
                     .add("string", ColumnType.STRING)
-                    .add("EXPR$1", NestedDataComplexTypeSerde.TYPE)
-                    .add("EXPR$2", NestedDataComplexTypeSerde.TYPE)
-                    .add("EXPR$3", NestedDataComplexTypeSerde.TYPE)
+                    .add("EXPR$1", ColumnType.NESTED_DATA)
+                    .add("EXPR$2", ColumnType.NESTED_DATA)
+                    .add("EXPR$3", ColumnType.NESTED_DATA)
                     .build()
     );
   }
@@ -4318,7 +4367,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       new NestedFieldVirtualColumn(
                           "nester",
                           "v1",
-                          NestedDataComplexTypeSerde.TYPE,
+                          ColumnType.NESTED_DATA,
                           null,
                           true,
                           "$.array[-1]",
@@ -4342,7 +4391,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.STRING)
-                    .add("EXPR$1", NestedDataComplexTypeSerde.TYPE)
+                    .add("EXPR$1", ColumnType.NESTED_DATA)
                     .add("EXPR$2", ColumnType.STRING_ARRAY)
                     .build()
 

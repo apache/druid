@@ -170,6 +170,7 @@ Montréal
 MSQ
 Murmur3
 MVCC
+MV_TO_ARRAY
 NFS
 OCF
 OIDC
@@ -378,6 +379,7 @@ namespaced
 namespaces
 natively
 netflow
+nondescriptive
 nonfinalized
 non-null
 non-nullable

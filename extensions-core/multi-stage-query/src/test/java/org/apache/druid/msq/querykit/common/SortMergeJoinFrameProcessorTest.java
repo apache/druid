@@ -202,35 +202,35 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
     );
 
     final List<List<Object>> expectedRows = Arrays.asList(
-        Arrays.asList("Agama mossambica", null, null, null, null),
-        Arrays.asList("Apamea abruzzorum", null, null, null, null),
-        Arrays.asList("Atractus flammigerus", null, null, null, null),
-        Arrays.asList("Rallicula", null, null, null, null),
-        Arrays.asList("Talk:Oswald Tilghman", null, null, null, null),
-        Arrays.asList("Peremptory norm", "AU", null, null, null),
-        Arrays.asList("Didier Leclair", "CA", null, null, null),
-        Arrays.asList("Les Argonautes", "CA", null, null, null),
-        Arrays.asList("Sarah Michelle Gellar", "CA", null, null, null),
-        Arrays.asList("Golpe de Estado en Chile de 1973", "CL", null, null, null),
-        Arrays.asList("Diskussion:Sebastian Schulz", "DE", null, null, null),
-        Arrays.asList("Gabinete Ministerial de Rafael Correa", "EC", null, null, null),
-        Arrays.asList("Saison 9 de Secret Story", "FR", null, null, null),
-        Arrays.asList("Glasgow", "GB", null, null, null),
-        Arrays.asList("Giusy Ferreri discography", "IT", null, null, null),
-        Arrays.asList("Roma-Bangkok", "IT", null, null, null),
-        Arrays.asList("青野武", "JP", null, null, null),
-        Arrays.asList("유희왕 GX", "KR", null, null, null),
-        Arrays.asList("History of Fourems", "MMMM", null, null, null),
-        Arrays.asList("Mathis Bolly", "MX", null, null, null),
-        Arrays.asList("Orange Soda", "MatchNothing", null, null, null),
-        Arrays.asList("Алиса в Зазеркалье", "NO", null, null, null),
-        Arrays.asList("Cream Soda", "SU", null, null, null),
-        Arrays.asList("Wendigo", "SV", null, null, null),
-        Arrays.asList("Carlo Curti", "US", null, null, null),
-        Arrays.asList("DirecTV", "US", null, null, null),
-        Arrays.asList("Old Anatolian Turkish", "US", null, null, null),
-        Arrays.asList("Otjiwarongo Airport", "US", null, null, null),
-        Arrays.asList("President of India", "US", null, null, null)
+        Arrays.asList("Agama mossambica", null, null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Apamea abruzzorum", null, null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Atractus flammigerus", null, null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Rallicula", null, null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Talk:Oswald Tilghman", null, null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Peremptory norm", "AU", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Didier Leclair", "CA", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Les Argonautes", "CA", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Sarah Michelle Gellar", "CA", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Golpe de Estado en Chile de 1973", "CL", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Diskussion:Sebastian Schulz", "DE", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Gabinete Ministerial de Rafael Correa", "EC", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Saison 9 de Secret Story", "FR", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Glasgow", "GB", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Giusy Ferreri discography", "IT", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Roma-Bangkok", "IT", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("青野武", "JP", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("유희왕 GX", "KR", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("History of Fourems", "MMMM", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Mathis Bolly", "MX", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Orange Soda", "MatchNothing", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Алиса в Зазеркалье", "NO", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Cream Soda", "SU", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Wendigo", "SV", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Carlo Curti", "US", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("DirecTV", "US", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Old Anatolian Turkish", "US", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Otjiwarongo Airport", "US", null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("President of India", "US", null, null, NullHandling.defaultLongValue())
     );
 
     assertResult(processor, outputChannel.readable(), joinSignature, expectedRows);
@@ -317,11 +317,11 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
     );
 
     final List<List<Object>> expectedRows = Arrays.asList(
-        Arrays.asList("Agama mossambica", null, null, null, null),
-        Arrays.asList("Apamea abruzzorum", null, null, null, null),
-        Arrays.asList("Atractus flammigerus", null, null, null, null),
-        Arrays.asList("Rallicula", null, null, null, null),
-        Arrays.asList("Talk:Oswald Tilghman", null, null, null, null),
+        Arrays.asList("Agama mossambica", null, null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Apamea abruzzorum", null, null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Atractus flammigerus", null, null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Rallicula", null, null, null, NullHandling.defaultLongValue()),
+        Arrays.asList("Talk:Oswald Tilghman", null, null, null, NullHandling.defaultLongValue()),
         Arrays.asList("Peremptory norm", "AU", "AU", "Australia", 0L),
         Arrays.asList("Didier Leclair", "CA", "CA", "Canada", 1L),
         Arrays.asList("Les Argonautes", "CA", "CA", "Canada", 1L),
@@ -337,7 +337,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
         Arrays.asList("유희왕 GX", "KR", "KR", "Republic of Korea", 9L),
         Arrays.asList("History of Fourems", "MMMM", "MMMM", "Fourems", 205L),
         Arrays.asList("Mathis Bolly", "MX", "MX", "Mexico", 10L),
-        Arrays.asList("Orange Soda", "MatchNothing", null, null, null),
+        Arrays.asList("Orange Soda", "MatchNothing", null, null, NullHandling.defaultLongValue()),
         Arrays.asList("Алиса в Зазеркалье", "NO", "NO", "Norway", 11L),
         Arrays.asList("Cream Soda", "SU", "SU", "States United", 15L),
         Arrays.asList("Wendigo", "SV", "SV", "El Salvador", 12L),
@@ -778,7 +778,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
         Arrays.asList("Otjiwarongo Airport", "US", "US", "United States", 13L),
         Arrays.asList("President of India", "US", "US", "United States", 13L),
         Arrays.asList("Cream Soda", "SU", "SU", "States United", 15L),
-        Arrays.asList("Orange Soda", "MatchNothing", null, null, null),
+        Arrays.asList("Orange Soda", "MatchNothing", null, null, NullHandling.defaultLongValue()),
         Arrays.asList("History of Fourems", "MMMM", "MMMM", "Fourems", 205L)
     );
 
@@ -871,7 +871,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
         Arrays.asList("Otjiwarongo Airport", "US", "US", "United States", 13L),
         Arrays.asList("President of India", "US", "US", "United States", 13L),
         Arrays.asList("Cream Soda", "SU", "SU", "States United", 15L),
-        Arrays.asList("Orange Soda", "MatchNothing", null, null, null),
+        Arrays.asList("Orange Soda", "MatchNothing", null, null, NullHandling.defaultLongValue()),
         Arrays.asList("History of Fourems", "MMMM", "MMMM", "Fourems", 205L)
     );
 

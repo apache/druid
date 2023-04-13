@@ -57,7 +57,6 @@ import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -819,8 +818,8 @@ public class SegmentMetadataCache
                 return existingType;
               }
               // if any are json, are all json
-              if (NestedDataComplexTypeSerde.TYPE.equals(columnType) || NestedDataComplexTypeSerde.TYPE.equals(existingType)) {
-                return NestedDataComplexTypeSerde.TYPE;
+              if (ColumnType.NESTED_DATA.equals(columnType) || ColumnType.NESTED_DATA.equals(existingType)) {
+                return ColumnType.NESTED_DATA;
               }
               // "existing type" is the 'newest' type, since we iterate the segments list by newest start time
               return existingType;
