@@ -48,7 +48,6 @@ import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskReport;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
@@ -102,7 +101,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   private static final String HADOOP_JOB_ID_FILENAME = "mapReduceJobId.json";
   private static final String TYPE = "index_hadoop";
   private TaskConfig taskConfig = null;
-  private TaskStorageDirTracker dirTracker = null;
 
   private static String getTheDataSource(HadoopIngestionSpec spec)
   {
@@ -295,7 +293,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
   private File getHadoopJobIdFile()
   {
-    return new File(dirTracker.getTaskDir(getId()), HADOOP_JOB_ID_FILENAME);
+    return new File(taskConfig.getTaskDir(getId()), HADOOP_JOB_ID_FILENAME);
   }
 
   @Override
@@ -303,7 +301,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   {
     try {
       taskConfig = toolbox.getConfig();
-      dirTracker = toolbox.getDirTracker();
       if (chatHandlerProvider.isPresent()) {
         log.info("Found chat handler of class[%s]", chatHandlerProvider.get().getClass().getName());
         chatHandlerProvider.get().register(getId(), this, false);
