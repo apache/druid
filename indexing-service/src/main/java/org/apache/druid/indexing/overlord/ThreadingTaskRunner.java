@@ -61,7 +61,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -160,7 +159,7 @@ public class ThreadingTaskRunner
                           try {
                             baseDirForTask = getTracker().pickBaseDir(task.getId());
                           }
-                          catch (IOException e) {
+                          catch (RuntimeException e) {
                             LOG.error(e, "Failed to get directory for task [%s], cannot schedule.", task.getId());
                             return TaskStatus.failure(
                                 task.getId(),

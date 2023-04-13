@@ -159,7 +159,7 @@ public class ForkingTaskRunner
                   try {
                     baseDirForTask = getTracker().pickBaseDir(task.getId());
                   }
-                  catch (IOException e) {
+                  catch (RuntimeException e) {
                     LOG.error(e, "Failed to get directory for task [%s], cannot schedule.", task.getId());
                     return TaskStatus.failure(
                         task.getId(),
