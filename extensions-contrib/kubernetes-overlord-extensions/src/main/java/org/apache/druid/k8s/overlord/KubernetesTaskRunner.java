@@ -32,6 +32,7 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.netty.util.SuppressForbidden;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -68,6 +69,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -238,25 +240,24 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
 
   private TaskStatus getTaskStatus(K8sTaskId task, JobResponse jobResponse) throws IOException
   {
-    if (PeonPhase.SUCCEEDED.equals(jobResponse.getPhase())) {
-      Optional<InputStream> maybeTaskStatusStream = taskLogs.streamTaskStatus(task.getOriginalTaskId());
-      if (maybeTaskStatusStream.isPresent()) {
-        return mapper.readValue(maybeTaskStatusStream.get(), TaskStatus.class);
-      }
-      return TaskStatus.failure(
-          task.getOriginalTaskId(),
-          StringUtils.format("Task [%s] failed: status file not found", task.getOriginalTaskId())
-      );
+    Optional<InputStream> maybeTaskStatusStream = taskLogs.streamTaskStatus(task.getOriginalTaskId());
+    if (maybeTaskStatusStream.isPresent()) {
+      String taskStatus = IOUtils.toString(maybeTaskStatusStream.get(), StandardCharsets.UTF_8);
+      return mapper.readValue(taskStatus, TaskStatus.class);
+    } else if (PeonPhase.SUCCEEDED.equals(jobResponse.getPhase())) {
+      // fallback to behavior before the introduction of task status streaming for backwards compatibility
+      return TaskStatus.success(task.getOriginalTaskId());
     } else if (Objects.isNull(jobResponse.getJob())) {
       return TaskStatus.failure(
           task.getOriginalTaskId(),
           StringUtils.format("Task [%s] failed kubernetes job disappeared before completion", task.getOriginalTaskId())
       );
+    } else {
+      return TaskStatus.failure(
+          task.getOriginalTaskId(),
+          StringUtils.format("Task [%s] failed", task.getOriginalTaskId())
+      );
     }
-    return TaskStatus.failure(
-        task.getOriginalTaskId(),
-        StringUtils.format("Task [%s] failed", task.getOriginalTaskId())
-    );
   }
 
   @Override
@@ -523,8 +524,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         }
         boolean tlsEnabled = Boolean.parseBoolean(
             mainPod.getMetadata()
-                   .getAnnotations()
-                   .getOrDefault(DruidK8sConstants.TLS_ENABLED, "false"));
+                .getAnnotations()
+                .getOrDefault(DruidK8sConstants.TLS_ENABLED, "false"));
         return TaskLocation.create(
             mainPod.getStatus().getPodIP(),
             DruidK8sConstants.PORT,

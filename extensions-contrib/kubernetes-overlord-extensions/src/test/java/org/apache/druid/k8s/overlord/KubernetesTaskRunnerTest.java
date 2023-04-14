@@ -248,7 +248,7 @@ public class KubernetesTaskRunnerTest
   }
 
   @Test
-  public void test_run_withoutStatusFile_returnsFailedTask() throws Exception
+  public void test_run_withSuccessfulJobAndWithoutStatusFile_returnsSucessfulTask() throws Exception
   {
     Task task = makeTask();
     K8sTaskId k8sTaskId = new K8sTaskId(task.getId());
@@ -300,11 +300,7 @@ public class KubernetesTaskRunnerTest
 
     ListenableFuture<TaskStatus> future = spyRunner.run(task);
     TaskStatus actualTaskStatus = future.get();
-    Assert.assertTrue(actualTaskStatus.isFailure());
-    Assert.assertEquals(
-        StringUtils.format("Task [%s] failed: status file not found", task.getId()),
-        actualTaskStatus.getErrorMsg()
-    );
+    Assert.assertTrue(actualTaskStatus.isSuccess());
 
     // we should never launch the job here, one exists
     verify(peonClient, times(1)).launchJobAndWaitForStart(isA(Job.class), anyLong(), isA(TimeUnit.class));
@@ -346,6 +342,8 @@ public class KubernetesTaskRunnerTest
         job,
         PeonPhase.FAILED
     ));
+
+    when(taskLogs.streamTaskStatus(eq(task.getId()))).thenReturn(Optional.absent());
 
     when(peonClient.getPeonLogs(eq(k8sTaskId))).thenReturn(Optional.absent());
     when(peonClient.cleanUpJob(eq(k8sTaskId))).thenReturn(true);
@@ -892,6 +890,8 @@ public class KubernetesTaskRunnerTest
 
     DruidKubernetesPeonClient peonClient = mock(DruidKubernetesPeonClient.class);
 
+    when(taskLogs.streamTaskStatus(eq(task.getId()))).thenReturn(Optional.absent());
+
     when(peonClient.jobExists(eq(k8sTaskId))).thenReturn(Optional.of(job));
     when(peonClient.getMainJobPod(eq(k8sTaskId))).thenReturn(peonPod);
 
@@ -931,9 +931,9 @@ public class KubernetesTaskRunnerTest
         null,
         null,
         ImmutableMap.of("druid.indexer.runner.javaOpts", "abc",
-                        "druid.indexer.fork.property.druid.processing.buffer.sizeBytes", "2048",
-                        "druid.peon.pod.cpu", "1",
-                        "druid.peon.pod.memory", "2G"
+            "druid.indexer.fork.property.druid.processing.buffer.sizeBytes", "2048",
+            "druid.peon.pod.cpu", "1",
+            "druid.peon.pod.memory", "2G"
         )
     );
   }
