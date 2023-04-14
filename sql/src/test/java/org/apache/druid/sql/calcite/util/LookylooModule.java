@@ -34,7 +34,11 @@ import org.apache.druid.timeline.DataSegment;
 
 import java.util.List;
 
-class BasicTestModule implements DruidModule
+/**
+ * Provides a lookup called {@link LookupEnabledTestExprMacroTable#LOOKYLOO}, provides the SQL {@code LOOKUP}
+ * function, and provides the native expression function {@code lookup}.
+ */
+public class LookylooModule implements DruidModule
 {
   @Override
   public void configure(Binder binder)
@@ -50,8 +54,6 @@ class BasicTestModule implements DruidModule
         );
 
     binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
-
-    // This Module is just to get a LookupExtractorFactoryContainerProvider with a usable "lookyloo" lookup.
     binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider);
     SqlBindings.addOperatorConversion(binder, QueryLookupOperatorConversion.class);
     ExpressionModule.addExprMacro(binder, LookupExprMacro.class);

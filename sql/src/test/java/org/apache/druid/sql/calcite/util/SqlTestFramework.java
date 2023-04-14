@@ -28,6 +28,7 @@ import com.google.inject.Provides;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
@@ -554,7 +555,8 @@ public class SqlTestFramework
         // test pulls in a module, then pull in that module, even though we are
         // not the Druid node to which the module is scoped.
         .ignoreLoadScopes()
-        .addModule(new BasicTestModule())
+        .addModule(new LookylooModule())
+        .addModule(new SegmentWranglerModule())
         .addModule(new SqlAggregationModule())
         .addModule(new ExpressionModule())
         .addModule(new TestSetupModule(builder));
