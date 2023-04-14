@@ -145,7 +145,7 @@ public abstract class AbstractTask implements Task
   public String setup(TaskToolbox toolbox) throws Exception
   {
     if (toolbox.getConfig().isEncapsulatedTask()) {
-      File taskDir = toolbox.getDirTracker().getTaskDir(getId());
+      File taskDir = toolbox.getConfig().getTaskDir(getId());
       FileUtils.mkdirp(taskDir);
       File attemptDir = Paths.get(taskDir.getAbsolutePath(), "attempt", toolbox.getAttemptId()).toFile();
       FileUtils.mkdirp(attemptDir);

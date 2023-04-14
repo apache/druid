@@ -67,7 +67,6 @@ import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskReportFileWriter;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.RemoteTaskActionClientFactory;
@@ -144,10 +143,10 @@ public class CliPeon extends GuiceRunnable
 {
   @SuppressWarnings("WeakerAccess")
   @Required
-  @Arguments(description = "baseTaskDirPath taskId attemptId")
+  @Arguments(description = "taskDirPath attemptId")
   public List<String> taskAndStatusFile;
 
-  // path to the base task Directory
+  // path to the task Directory
   private String taskDirPath;
 
   // the attemptId
@@ -200,8 +199,8 @@ public class CliPeon extends GuiceRunnable
           @Override
           public void configure(Binder binder)
           {
-            taskDirPath = Paths.get(taskAndStatusFile.get(0), taskAndStatusFile.get(1)).toAbsolutePath().toString();
-            attemptId = taskAndStatusFile.get(2);
+            taskDirPath = taskAndStatusFile.get(0);
+            attemptId = taskAndStatusFile.get(1);
 
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/peon");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
@@ -221,11 +220,7 @@ public class CliPeon extends GuiceRunnable
             LifecycleModule.register(binder, ExecutorLifecycle.class);
             ExecutorLifecycleConfig executorLifecycleConfig = new ExecutorLifecycleConfig()
                 .setTaskFile(Paths.get(taskDirPath, "task.json").toFile())
-                .setStatusFile(Paths.get(taskDirPath, "attempt", attemptId, "status.json").toFile())
-                .setLockFile(Paths.get(taskDirPath, "lock").toFile());
-
-            TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(ImmutableList.of(taskAndStatusFile.get(0)));
-            binder.bind(TaskStorageDirTracker.class).toInstance(dirTracker);
+                .setStatusFile(Paths.get(taskDirPath, "attempt", attemptId, "status.json").toFile());
 
             if ("k8s".equals(properties.getProperty("druid.indexer.runner.type", null))) {
               log.info("Running peon in k8s mode");

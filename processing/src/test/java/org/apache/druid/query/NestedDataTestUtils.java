@@ -44,6 +44,7 @@ import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.NestedDataDimensionSchema;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
@@ -92,6 +93,20 @@ public class NestedDataTestUtils
                     .useSchemaDiscovery(true)
                     .build();
 
+  public static final DimensionsSpec TSV_V4_SCHEMA =
+      DimensionsSpec.builder()
+                    .setDimensions(
+                        Arrays.asList(
+                            new NestedDataDimensionSchema("dim"),
+                            new NestedDataDimensionSchema("nest_json"),
+                            new NestedDataDimensionSchema("nester_json"),
+                            new NestedDataDimensionSchema("variant_json"),
+                            new NestedDataDimensionSchema("list_json"),
+                            new NestedDataDimensionSchema("nonexistent")
+                        )
+                    )
+                    .build();
+
   public static final DimensionsSpec TSV_SCHEMA =
       DimensionsSpec.builder()
                     .setDimensions(
@@ -100,19 +115,14 @@ public class NestedDataTestUtils
                             new AutoTypeColumnSchema("nest_json"),
                             new AutoTypeColumnSchema("nester_json"),
                             new AutoTypeColumnSchema("variant_json"),
-                            new AutoTypeColumnSchema("list_json")
+                            new AutoTypeColumnSchema("list_json"),
+                            new AutoTypeColumnSchema("nonexistent")
                         )
                     )
                     .build();
   public static final InputRowSchema AUTO_SCHEMA = new InputRowSchema(
       TIMESTAMP_SPEC,
       AUTO_DISCOVERY,
-      null
-  );
-
-  public static final InputRowSchema SIMPLE_DATA_TSV_SCHEMA = new InputRowSchema(
-      TIMESTAMP_SPEC,
-      TSV_SCHEMA,
       null
   );
 
@@ -161,6 +171,22 @@ public class NestedDataTestUtils
         tempFolder,
         closer,
         Granularities.NONE,
+        TSV_SCHEMA,
+        true
+    );
+  }
+
+  public static List<Segment> createSimpleSegmentsTsvV4(
+      TemporaryFolder tempFolder,
+      Closer closer
+  )
+      throws Exception
+  {
+    return createSimpleNestedTestDataTsvSegments(
+        tempFolder,
+        closer,
+        Granularities.NONE,
+        TSV_V4_SCHEMA,
         true
     );
   }
@@ -169,6 +195,7 @@ public class NestedDataTestUtils
       TemporaryFolder tempFolder,
       Closer closer,
       Granularity granularity,
+      DimensionsSpec dimensionsSpec,
       boolean rollup
   ) throws Exception
   {
@@ -178,7 +205,7 @@ public class NestedDataTestUtils
         SIMPLE_DATA_TSV_FILE,
         SIMPLE_DATA_TSV_INPUT_FORMAT,
         TIMESTAMP_SPEC,
-        SIMPLE_DATA_TSV_SCHEMA.getDimensionsSpec(),
+        dimensionsSpec,
         SIMPLE_DATA_TSV_TRANSFORM,
         COUNT,
         granularity,
