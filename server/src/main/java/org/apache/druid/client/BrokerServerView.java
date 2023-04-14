@@ -310,12 +310,13 @@ public class BrokerServerView implements TimelineServerView
       // in theory we could probably just filter this to ensure we don't put ourselves in here, to make broker tree
       // query topologies, but for now just skip all brokers, so we don't create some sort of wild infinite query
       // loop...
+      boolean runCallBack = false;
       if (!server.getType().equals(ServerType.BROKER)) {
         log.debug("Adding segment[%s] for server[%s]", segment, server);
 
         ServerSelector selector = selectors.get(segmentId);
         if (selector == null) {
-          // if unavailableSegmentDetection is enabled, segment is not queryable unless added on coordinator sync
+          // if unavailableSegmentDetection is enabled, segment is not queryable unless added by coordinator
           selector = new ServerSelector(segment, tierSelectorStrategy, false);
 
           VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
@@ -328,8 +329,8 @@ public class BrokerServerView implements TimelineServerView
           timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector));
           selectors.put(segmentId, selector);
         } else {
-          // if the segment was already added on coordinator sync, make it queryable
-          selector.setQueryable(true);
+          // implies that segment was already present, if it is queryable run callback
+          runCallBack = selector.isQueryable();
         }
 
         QueryableDruidServer queryableDruidServer = clients.get(server.getName());
@@ -348,8 +349,11 @@ public class BrokerServerView implements TimelineServerView
         }
         selector.addServerAndUpdateSegment(queryableDruidServer, segment);
       }
-      // run the callbacks, even if the segment came from a broker, lets downstream watchers decide what to do with it
-      runTimelineCallbacks(callback -> callback.segmentAdded(server, segment));
+
+      if (!segmentWatcherConfig.isDetectUnavailableSegments() || runCallBack) {
+        // run the callbacks, even if the segment came from a broker, lets downstream watchers decide what to do with it
+        runTimelineCallbacks(callback -> callback.segmentAdded(server, segment));
+      }
     }
   }
 
@@ -394,6 +398,7 @@ public class BrokerServerView implements TimelineServerView
       if (selector.isEmpty()) {
         selectors.remove(segmentId);
 
+        // if unavailableSegmentDetection is enabled, the segment is removed on coordinator sync
         if (!segmentWatcherConfig.isDetectUnavailableSegments()) {
           VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
           final PartitionChunk<ServerSelector> removedPartition = timeline.remove(
@@ -432,7 +437,7 @@ public class BrokerServerView implements TimelineServerView
     }
 
     emitter.emit(ServiceMetricEvent.builder().build(
-        "query/changedSegments/added",
+        "query/changedSegments/add",
         segmentsAdded
     ));
 
@@ -465,16 +470,15 @@ public class BrokerServerView implements TimelineServerView
 
         Set<SegmentId> segmentIdsToRemoveFromTimeline = Sets.difference(segmentIdPartitionChunkEntryMap.keySet(), segments.keySet());
 
-        segmentIdsToRemoveFromTimeline.forEach(segmentId -> removeSegmentFromTimeline(segmentIdPartitionChunkEntryMap.get(segmentId).getChunk().getObject()
-                                                                                                                     .getSegment()));
-        List<SegmentWithOvershadowedStatus> segmentsToAdd = new ArrayList<>();
-        for (Map.Entry<SegmentId, SegmentWithOvershadowedStatus> segmentWithOvershadowedStatusEntry : entry.getValue().entrySet()) {
-          if (!segmentIdPartitionChunkEntryMap.containsKey(segmentWithOvershadowedStatusEntry.getKey())) {
-            segmentsToAdd.add(segmentWithOvershadowedStatusEntry.getValue());
-            // not invoking timeline callback since this segment doesn't reside on a server
-          }
-        }
-        addSegmentsToTimeline(segmentsToAdd);
+        segmentIdsToRemoveFromTimeline.forEach(
+            segmentId -> removeSegmentFromTimeline(
+                segmentIdPartitionChunkEntryMap
+                    .get(segmentId)
+                    .getChunk()
+                    .getObject()
+                    .getSegment()));
+
+        addSegmentsToTimeline(new ArrayList<>(entry.getValue().values()));
       }
     }
   }
@@ -501,7 +505,7 @@ public class BrokerServerView implements TimelineServerView
     }
 
     emitter.emit(ServiceMetricEvent.builder().build(
-        "query/changedSegments/added",
+        "query/changedSegments/add",
         segmentsAdded
     ));
 
@@ -511,7 +515,7 @@ public class BrokerServerView implements TimelineServerView
     ));
 
     emitter.emit(ServiceMetricEvent.builder().build(
-        "query/changedSegments/removed",
+        "query/changedSegments/remove",
         segmentsRemoved
     ));
 
@@ -530,6 +534,7 @@ public class BrokerServerView implements TimelineServerView
       SegmentId segmentId = segment.getId();
       ServerSelector selector = selectors.get(segmentId);
       if (selector == null) {
+        log.info("selector is null for segment [%s]", segmentId);
         selector = new ServerSelector(segment, tierSelectorStrategy, true);
 
         VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
@@ -544,6 +549,13 @@ public class BrokerServerView implements TimelineServerView
             .add(new VersionedIntervalTimeline.PartitionChunkEntry<>(
                 segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector)));
         selectors.put(segmentId, selector);
+      } else {
+        // if segment was already added by historical, set it queryable
+        selector.setQueryable(true);
+        // run call back for all server this segment is present on
+        for (DruidServerMetadata druidServer : selector.getAllServers()) {
+          runTimelineCallbacks(callback -> callback.segmentAdded(druidServer, segment));
+        }
       }
     }
 

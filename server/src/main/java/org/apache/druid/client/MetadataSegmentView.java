@@ -153,7 +153,7 @@ public class MetadataSegmentView
 
   private void poll()
   {
-    log.info("polling published segments from coordinator");
+    log.debug("polling published segments from coordinator");
     final JsonParserIterator<SegmentWithOvershadowedStatus> metadataSegments = getMetadataSegments(
         coordinatorDruidLeaderClient,
         jsonMapper,
@@ -172,7 +172,7 @@ public class MetadataSegmentView
 
   protected void pollChangedSegments()
   {
-    log.info("polling changed segments from coordinator");
+    log.debug("polling changed segments from coordinator");
     final ChangeRequestsSnapshot<DataSegmentChange> changedRequestsSnapshot = getChangedSegments(
         coordinatorDruidLeaderClient,
         jsonMapper,
@@ -204,10 +204,10 @@ public class MetadataSegmentView
 
     counter = changedRequestsSnapshot.getCounter();
 
-    log.info("counter [%d], hash [%d], segments changed [%d], full sync: [%s]",
+    log.debug("counter [%d], hash [%d], segments changed [%d], full sync: [%s]",
               counter.getCounter(), counter.getHash(), dataSegmentChanges.size(), changedRequestsSnapshot.isResetCounter());
 
-    log.info("Changes [%s]", dataSegmentChanges);
+    log.debug("Changes [%s]", dataSegmentChanges);
 
     if (changedRequestsSnapshot.isResetCounter()) {
       runSegmentCallbacks(

@@ -32,6 +32,8 @@ import com.google.common.collect.Sets;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.BrokerInternalQueryConfig;
+import org.apache.druid.client.BrokerSegmentWatcherConfig;
+import org.apache.druid.client.MetadataSegmentView;
 import org.apache.druid.client.SegmentMetadataCacheConfig;
 import org.apache.druid.client.ServerView;
 import org.apache.druid.client.TimelineServerView;
@@ -65,6 +67,7 @@ import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegmentChange;
 import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
@@ -73,6 +76,7 @@ import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -126,20 +130,20 @@ public class SegmentMetadataCache
   /**
    * DataSource -> Segment -> AvailableSegmentMetadata(contains RowSignature) for that segment.
    * Use SortedMap for segments so they are merged in deterministic order, from older to newer.
-   *
+   * <p>
    * This map is updated by these two threads.
-   *
+   * <p>
    * - {@link #callbackExec} can update it in {@link #addSegment}, {@link #removeServerSegment},
-   *   and {@link #removeSegment}.
+   * and {@link #removeSegment}.
    * - {@link #cacheExec} can update it in {@link #refreshSegmentsForDataSource}.
-   *
+   * <p>
    * While it is being updated, this map is read by these two types of thread.
-   *
+   * <p>
    * - {@link #cacheExec} can iterate all {@link AvailableSegmentMetadata}s per datasource.
-   *   See {@link #buildDruidTable}.
+   * See {@link #buildDruidTable}.
    * - Query threads can create a snapshot of the entire map for processing queries on the system table.
-   *   See {@link #getSegmentMetadataSnapshot()}.
-   *
+   * See {@link #getSegmentMetadataSnapshot()}.
+   * <p>
    * As the access pattern of this map is read-intensive, we should minimize the contention between writers and readers.
    * Since there are two threads that can update this map at the same time, those writers should lock the inner map
    * first and then lock the entry before it updates segment metadata. This can be done using
@@ -164,7 +168,7 @@ public class SegmentMetadataCache
    *     }
    *   );
    * </pre>
-   *
+   * <p>
    * Readers can simply delegate the locking to the concurrent map and iterate map entries.
    */
   private final ConcurrentHashMap<String, ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata>> segmentMetadataInfo
@@ -176,10 +180,10 @@ public class SegmentMetadataCache
   /**
    * This lock coordinates the access from multiple threads to those variables guarded by this lock.
    * Currently, there are 2 threads that can access these variables.
-   *
+   * <p>
    * - {@link #callbackExec} executes the timeline callbacks whenever BrokerServerView changes.
    * - {@link #cacheExec} periodically refreshes segment metadata and {@link DatasourceTable} if necessary
-   *   based on the information collected via timeline callbacks.
+   * based on the information collected via timeline callbacks.
    */
   private final Object lock = new Object();
 
@@ -204,6 +208,9 @@ public class SegmentMetadataCache
   @GuardedBy("lock")
   private boolean isServerViewInitialized = false;
 
+  @GuardedBy("lock")
+  private boolean isMetadataViewInitialized = false;
+
   /**
    * Counts the total number of known segments. This variable is used only for the segments table in the system schema
    * to initialize a map with a more proper size when it creates a snapshot. As a result, it doesn't have to be exact,
@@ -215,6 +222,8 @@ public class SegmentMetadataCache
   public SegmentMetadataCache(
       final QueryLifecycleFactory queryLifecycleFactory,
       final TimelineServerView serverView,
+      final MetadataSegmentView metadataSegmentView,
+      final BrokerSegmentWatcherConfig brokerSegmentWatcherConfig,
       final SegmentManager segmentManager,
       final JoinableFactory joinableFactory,
       final SegmentMetadataCacheConfig config,
@@ -234,7 +243,76 @@ public class SegmentMetadataCache
     this.brokerInternalQueryConfig = brokerInternalQueryConfig;
     this.emitter = emitter;
 
+    if (!brokerSegmentWatcherConfig.isDetectUnavailableSegments()) {
+      isMetadataViewInitialized = true;
+    } else {
+      initMetadataSegmentViewCallback(metadataSegmentView);
+    }
     initServerViewTimelineCallback(serverView);
+  }
+
+  public SegmentMetadataCache(
+      final QueryLifecycleFactory queryLifecycleFactory,
+      final TimelineServerView serverView,
+      final SegmentManager segmentManager,
+      final JoinableFactory joinableFactory,
+      final SegmentMetadataCacheConfig config,
+      final Escalator escalator,
+      final BrokerInternalQueryConfig brokerInternalQueryConfig,
+      final ServiceEmitter emitter
+  )
+  {
+    this(
+        queryLifecycleFactory,
+        serverView,
+        null,
+        new BrokerSegmentWatcherConfig()
+        {
+          @Override
+          public boolean isDetectUnavailableSegments()
+          {
+            return false;
+          }
+        },
+        segmentManager,
+        joinableFactory,
+        config,
+        escalator,
+        brokerInternalQueryConfig,
+        emitter
+    );
+  }
+
+  private void initMetadataSegmentViewCallback(final MetadataSegmentView metadataSegmentView)
+  {
+    metadataSegmentView.registerSegmentCallback(
+        callbackExec,
+        new ServerView.HandedOffSegmentCallback()
+        {
+          @Override
+          public void fullSync(List<DataSegmentChange> segments)
+          {
+            // This is a no op!
+          }
+
+          @Override
+          public void deltaSync(List<DataSegmentChange> segments)
+          {
+            // This is a no op!
+          }
+
+          @Override
+          public void segmentViewInitialized()
+          {
+            synchronized (lock) {
+              isMetadataViewInitialized = true;
+              log.info("Segment view is intialized");
+              lock.notifyAll();
+            }
+
+          }
+        }
+    );
   }
 
   private void initServerViewTimelineCallback(final TimelineServerView serverView)
@@ -248,6 +326,7 @@ public class SegmentMetadataCache
           {
             synchronized (lock) {
               isServerViewInitialized = true;
+              log.info("TimelineServerView is initialized");
               lock.notifyAll();
             }
 
@@ -257,7 +336,6 @@ public class SegmentMetadataCache
           @Override
           public ServerView.CallbackAction segmentAdded(final DruidServerMetadata server, final DataSegment segment)
           {
-            log.info("Segment metadata cache|Segment added [%s]", segment.getId());
             addSegment(server, segment);
             return ServerView.CallbackAction.CONTINUE;
           }
@@ -265,7 +343,6 @@ public class SegmentMetadataCache
           @Override
           public ServerView.CallbackAction segmentRemoved(final DataSegment segment)
           {
-            log.info("Segment metadata cache|Segment removed [%s]", segment.getId());
             removeSegment(segment);
             return ServerView.CallbackAction.CONTINUE;
           }
@@ -276,7 +353,6 @@ public class SegmentMetadataCache
               final DataSegment segment
           )
           {
-            log.info("Segment metadata cache|Server segment removed [%s]", segment.getId());
             removeServerSegment(server, segment);
             return ServerView.CallbackAction.CONTINUE;
           }
@@ -312,7 +388,7 @@ public class SegmentMetadataCache
                                                               .plus(config.getMetadataRefreshPeriod())
                                                               .isAfterNow();
 
-                    if (isServerViewInitialized &&
+                    if (isServerViewInitialized && isMetadataViewInitialized &&
                         !wasRecentFailure &&
                         (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty()) &&
                         (refreshImmediately || nextRefresh < System.currentTimeMillis())) {
@@ -322,7 +398,7 @@ public class SegmentMetadataCache
 
                     // lastFailure != 0L means exceptions happened before and there're some refresh work was not completed.
                     // so that even if ServerView is initialized, we can't let broker complete initialization.
-                    if (isServerViewInitialized && lastFailure == 0L) {
+                    if (isServerViewInitialized && isMetadataViewInitialized && lastFailure == 0L) {
                       // Server view is initialized, but we don't need to do a refresh. Could happen if there are
                       // no segments in the system yet. Just mark us as initialized, then.
                       initialized.countDown();
@@ -480,7 +556,13 @@ public class SegmentMetadataCache
                       // segmentReplicatable is used to determine if segments are served by historical or realtime servers
                       long isRealtime = server.isSegmentReplicationTarget() ? 0 : 1;
                       segmentMetadata = AvailableSegmentMetadata
-                          .builder(segment, isRealtime, ImmutableSet.of(server), null, DEFAULT_NUM_ROWS) // Added without needing a refresh
+                          .builder(
+                              segment,
+                              isRealtime,
+                              ImmutableSet.of(server),
+                              null,
+                              DEFAULT_NUM_ROWS
+                          ) // Added without needing a refresh
                           .build();
                       markSegmentAsNeedRefresh(segment.getId());
                       if (!server.isSegmentReplicationTarget()) {
