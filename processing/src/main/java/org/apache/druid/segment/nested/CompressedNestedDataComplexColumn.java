@@ -95,6 +95,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     extends NestedDataComplexColumn implements NestedCommonFormatColumn
 {
   public static final IntTypeStrategy INT_TYPE_STRATEGY = new IntTypeStrategy();
+  private final ColumnConfig columnConfig;
   private final Closer closer;
   private final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
   private CompressedVariableSizedBlobColumn compressedRawColumn;
@@ -133,7 +134,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       Supplier<TStringDictionary> stringDictionary,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
-      Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
+      @Nullable Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
       SmooshedFileMapper fileMapper,
       BitmapSerdeFactory bitmapSerdeFactory,
       ByteOrder byteOrder,
@@ -155,6 +156,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     this.bitmapSerdeFactory = bitmapSerdeFactory;
     this.byteOrder = byteOrder;
     this.rootFieldPath = rootFieldPath;
+    this.columnConfig = columnConfig;
   }
 
   public abstract List<NestedPathPart> parsePath(String path);
@@ -218,6 +220,9 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   @Override
   public Indexed<Object[]> getArrayDictionary()
   {
+    if (arrayDictionarySupplier == null) {
+      return Indexed.empty();
+    }
     Iterable<Object[]> arrays = () -> {
       final TStringDictionary stringDictionary = stringDictionarySupplier.get();
       final FixedIndexed<Long> longDictionary = longDictionarySupplier.get();
@@ -974,17 +979,24 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       columnBuilder.setHasMultipleValues(false)
                    .setHasNulls(hasNull)
                    .setDictionaryEncodedColumnSupplier(columnSupplier);
+
+      final int size;
+      try (ColumnarInts throwAway = ints.get()) {
+        size = throwAway.size();
+      }
       columnBuilder.setIndexSupplier(
           new NestedFieldColumnIndexSupplier(
               types,
               bitmapSerdeFactory.getBitmapFactory(),
+              columnConfig,
               rBitmaps,
               localDictionarySupplier,
               stringDictionarySupplier,
               longDictionarySupplier,
               doubleDictionarySupplier,
               arrayElementDictionarySupplier,
-              arrayElementBitmaps
+              arrayElementBitmaps,
+              size
           ),
           true,
           false

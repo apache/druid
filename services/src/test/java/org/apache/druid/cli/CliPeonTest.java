@@ -43,11 +43,9 @@ public class CliPeonTest
   @Test
   public void testCliPeonK8sMode() throws IOException
   {
-    String taskId = "id0";
-    File baseTaskFile = temporaryFolder.newFolder(taskId);
-    File taskFile = new File(baseTaskFile, "task.json");
-    FileUtils.write(taskFile, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
-    GuiceRunnable runnable = new FakeCliPeon(baseTaskFile.getParent(), taskId, true);
+    File file = temporaryFolder.newFile("task.json");
+    FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
+    GuiceRunnable runnable = new FakeCliPeon(file.getParent(), true);
     final Injector injector = GuiceInjectors.makeStartupInjector();
     injector.injectMembers(runnable);
     Assert.assertNotNull(runnable.makeInjector());
@@ -56,11 +54,9 @@ public class CliPeonTest
   @Test
   public void testCliPeonNonK8sMode() throws IOException
   {
-    String taskId = "id0";
-    File baseTaskFile = temporaryFolder.newFolder(taskId);
-    File taskFile = new File(baseTaskFile, "task.json");
-    FileUtils.write(taskFile, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
-    GuiceRunnable runnable = new FakeCliPeon(baseTaskFile.getParent(), taskId, false);
+    File file = temporaryFolder.newFile("task.json");
+    FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
+    GuiceRunnable runnable = new FakeCliPeon(file.getParent(), false);
     final Injector injector = GuiceInjectors.makeStartupInjector();
     injector.injectMembers(runnable);
     Assert.assertNotNull(runnable.makeInjector());
@@ -70,11 +66,10 @@ public class CliPeonTest
   {
     List<String> taskAndStatusFile = new ArrayList<>();
 
-    FakeCliPeon(String baseTaskDirectory, String taskId, boolean runningOnK8s)
+    FakeCliPeon(String taskDirectory, boolean runningOnK8s)
     {
       try {
-        taskAndStatusFile.add(baseTaskDirectory);
-        taskAndStatusFile.add(taskId);
+        taskAndStatusFile.add(taskDirectory);
         taskAndStatusFile.add("1");
 
         Field privateField = CliPeon.class

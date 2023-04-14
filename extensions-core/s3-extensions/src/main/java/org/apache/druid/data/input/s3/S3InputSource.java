@@ -30,6 +30,7 @@ import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
@@ -56,13 +57,16 @@ import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.URI;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 public class S3InputSource extends CloudObjectInputSource
 {
+  public static final String TYPE_KEY = S3StorageDruidModule.SCHEME;
   // We lazily initialize ServerSideEncryptingAmazonS3 to avoid costly s3 operation when we only need S3InputSource
   // for stored information (such as for task logs) and not for ingestion.
   // (This cost only applies for new ServerSideEncryptingAmazonS3 created with s3InputSourceConfig given).
@@ -234,6 +238,14 @@ public class S3InputSource extends CloudObjectInputSource
         awsClientConfig
     );
     this.maxRetries = maxRetries;
+  }
+
+  @JsonIgnore
+  @Nonnull
+  @Override
+  public Set<String> getTypes()
+  {
+    return Collections.singleton(TYPE_KEY);
   }
 
   private void applyAssumeRole(

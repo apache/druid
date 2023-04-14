@@ -23,8 +23,6 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.PodListBuilder;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -102,24 +100,6 @@ public class DruidKubernetesPeonClientTest
     client.batch().v1().jobs().inNamespace("test").create(job);
     currentJobs = peonClient.listAllPeonJobs();
     Assertions.assertEquals(1, currentJobs.size());
-  }
-
-  @Test
-  void testListPeonPods()
-  {
-    Pod pod = new PodBuilder()
-        .withNewMetadata()
-        .withName("foo")
-        .addToLabels(DruidK8sConstants.LABEL_KEY, "true")
-        .endMetadata()
-        .withSpec(K8sTestUtils.getDummyPodSpec())
-        .build();
-    client.pods().inNamespace("test").create(pod);
-    DruidKubernetesPeonClient peonClient = new DruidKubernetesPeonClient(new TestKubernetesClient(this.client), "test",
-                                                                         false
-    );
-    List<Pod> pods = peonClient.listPeonPods();
-    Assertions.assertEquals(1, pods.size());
   }
 
   @Test

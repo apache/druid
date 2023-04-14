@@ -38,6 +38,7 @@ import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.IntListUtils;
 import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnBuilder;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
@@ -71,7 +72,8 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
       ByteBuffer bb,
-      ColumnBuilder columnBuilder
+      ColumnBuilder columnBuilder,
+      ColumnConfig columnConfig
   )
   {
     final byte version = bb.get();
@@ -115,11 +117,17 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
             bitmapSerdeFactory.getObjectStrategy(),
             columnBuilder.getFileMapper()
         );
+        final int size;
+        try (ColumnarDoubles throwAway = doubles.get()) {
+          size = throwAway.size();
+        }
         return new ScalarDoubleColumnAndIndexSupplier(
             doubleDictionarySupplier,
             doubles,
             rBitmaps,
-            bitmapSerdeFactory.getBitmapFactory()
+            bitmapSerdeFactory.getBitmapFactory(),
+            columnConfig,
+            size
         );
       }
       catch (IOException ex) {
@@ -130,6 +138,8 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     }
   }
 
+
+
   private final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
 
   private final Supplier<ColumnarDoubles> valueColumnSupplier;
@@ -138,12 +148,16 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
 
   private final BitmapFactory bitmapFactory;
   private final ImmutableBitmap nullValueBitmap;
+  private final ColumnConfig columnConfig;
+  private final int numRows;
 
   private ScalarDoubleColumnAndIndexSupplier(
       Supplier<FixedIndexed<Double>> longDictionary,
       Supplier<ColumnarDoubles> valueColumnSupplier,
       GenericIndexed<ImmutableBitmap> valueIndexes,
-      BitmapFactory bitmapFactory
+      BitmapFactory bitmapFactory,
+      ColumnConfig columnConfig,
+      int numRows
   )
   {
     this.doubleDictionarySupplier = longDictionary;
@@ -151,6 +165,8 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     this.valueIndexes = valueIndexes;
     this.bitmapFactory = bitmapFactory;
     this.nullValueBitmap = valueIndexes.get(0) == null ? bitmapFactory.makeEmptyImmutableBitmap() : valueIndexes.get(0);
+    this.columnConfig = columnConfig;
+    this.numRows = numRows;
   }
 
   @Override
@@ -314,6 +330,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
 
   private class DoubleNumericRangeIndex implements NumericRangeIndex
   {
+    @Nullable
     @Override
     public BitmapColumnIndex forRange(
         @Nullable Number startValue,
@@ -332,6 +349,9 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
 
       final int startIndex = range.leftInt();
       final int endIndex = range.rightInt();
+      if (ColumnIndexSupplier.skipComputingRangeIndexes(columnConfig, numRows, endIndex - startIndex)) {
+        return null;
+      }
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
@@ -360,9 +380,14 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
 
   private class DoublePredicateIndex implements DruidPredicateIndex
   {
+    @Nullable
     @Override
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
+      final FixedIndexed<Double> dictionary = doubleDictionarySupplier.get();
+      if (ColumnIndexSupplier.skipComputingPredicateIndexes(columnConfig, numRows, dictionary.size())) {
+        return null;
+      }
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
@@ -442,6 +467,12 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     {
       final Double value = dictionary.get(index);
       return value == null ? null : String.valueOf(value);
+    }
+
+    @Override
+    public BitmapFactory getBitmapFactory()
+    {
+      return bitmapFactory;
     }
   }
 }

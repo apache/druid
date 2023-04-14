@@ -1315,7 +1315,7 @@ public class IndexMergerV9 implements IndexMerger
       this.explicitDimensions = dimensionsSpec == null
                                 ? ImmutableSet.of()
                                 : new HashSet<>(dimensionsSpec.getDimensionNames());
-      this.includeAllDimensions = dimensionsSpec != null && dimensionsSpec.isIncludeAllDimensions();
+      this.includeAllDimensions = dimensionsSpec != null && (dimensionsSpec.isIncludeAllDimensions() || dimensionsSpec.useSchemaDiscovery());
     }
 
     /**

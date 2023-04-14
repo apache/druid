@@ -40,7 +40,6 @@ import org.apache.druid.query.filter.SelectorPredicateFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.AutoTypeColumnMerger;
-import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexSpec;
@@ -49,6 +48,7 @@ import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnBuilder;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DruidPredicateIndex;
@@ -93,6 +93,27 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 
   private static final String NO_MATCH = "no";
+
+  private static final ColumnConfig ALWAYS_USE_INDEXES = new ColumnConfig()
+  {
+    @Override
+    public int columnCacheSizeBytes()
+    {
+      return 0;
+    }
+
+    @Override
+    public double skipValueRangeIndexScale()
+    {
+      return 1.0;
+    }
+
+    @Override
+    public double skipValuePredicateIndexScale()
+    {
+      return 1.0;
+    }
+  };
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
@@ -172,7 +193,6 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
           fileNameBase,
           new IndexSpec(),
           writeOutMediumFactory.makeSegmentWriteOutMedium(tempFolder.newFolder()),
-          new BaseProgressIndicator(),
           closer
       );
 
@@ -230,7 +250,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
         false,
         baseBuffer,
         bob,
-        () -> 0,
+        ALWAYS_USE_INDEXES,
         bitmapSerdeFactory,
         ByteOrder.nativeOrder()
     );
@@ -267,7 +287,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
         false,
         baseBuffer,
         bob,
-        () -> 0,
+        ALWAYS_USE_INDEXES,
         bitmapSerdeFactory,
         ByteOrder.nativeOrder()
     );

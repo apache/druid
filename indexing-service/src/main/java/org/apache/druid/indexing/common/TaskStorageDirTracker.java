@@ -19,81 +19,96 @@
 
 package org.apache.druid.indexing.common;
 
-import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 
-import javax.inject.Inject;
+import javax.annotation.Nullable;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.io.IOException;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class TaskStorageDirTracker
 {
-  private int taskDirIndex = 0;
-
-  private final List<File> baseTaskDirs = new ArrayList<>();
-
-  private final Map<String, File> taskToTempDirMap = new HashMap<>();
-
-  @Inject
-  public TaskStorageDirTracker(final TaskConfig taskConfig)
+  public static TaskStorageDirTracker fromConfigs(WorkerConfig workerConfig, TaskConfig taskConfig)
   {
-    this(taskConfig.getBaseTaskDirPaths());
-  }
-
-  @VisibleForTesting
-  public TaskStorageDirTracker(final List<String> baseTaskDirPaths)
-  {
-    for (String baseTaskDirPath : baseTaskDirPaths) {
-      baseTaskDirs.add(new File(baseTaskDirPath));
+    if (workerConfig == null) {
+      return new TaskStorageDirTracker(ImmutableList.of(taskConfig.getBaseTaskDir()));
+    } else {
+      final List<String> basePaths = workerConfig.getBaseTaskDirs();
+      if (basePaths == null) {
+        return new TaskStorageDirTracker(ImmutableList.of(taskConfig.getBaseTaskDir()));
+      }
+      return new TaskStorageDirTracker(
+          basePaths.stream().map(File::new).collect(Collectors.toList())
+      );
     }
   }
 
-  public File getTaskDir(String taskId)
+  private final File[] baseTaskDirs;
+  // Initialize to a negative number because it ensures that we can handle the overflow-rollover case
+  private final AtomicInteger iterationCounter = new AtomicInteger(Integer.MIN_VALUE);
+
+  public TaskStorageDirTracker(List<File> baseTaskDirs)
   {
-    return new File(getBaseTaskDir(taskId), taskId);
+    this.baseTaskDirs = baseTaskDirs.toArray(new File[0]);
   }
 
-  public File getTaskWorkDir(String taskId)
+  @LifecycleStart
+  public void ensureDirectories()
   {
-    return new File(getTaskDir(taskId), "work");
+    for (File baseTaskDir : baseTaskDirs) {
+      if (!baseTaskDir.exists()) {
+        try {
+          FileUtils.mkdirp(baseTaskDir);
+        }
+        catch (IOException e) {
+          throw new ISE(
+              e,
+              "base task directory [%s] likely does not exist, please ensure it exists and the user has permissions.",
+              baseTaskDir
+          );
+        }
+      }
+    }
   }
 
-  public File getTaskTempDir(String taskId)
+  public File pickBaseDir(String taskId)
   {
-    return new File(getTaskDir(taskId), "temp");
-  }
-
-  public List<File> getBaseTaskDirs()
-  {
-    return baseTaskDirs;
-  }
-
-  public synchronized File getBaseTaskDir(final String taskId)
-  {
-    if (!taskToTempDirMap.containsKey(taskId)) {
-      addTask(taskId, baseTaskDirs.get(taskDirIndex));
-      taskDirIndex = (taskDirIndex + 1) % baseTaskDirs.size();
+    if (baseTaskDirs.length == 1) {
+      return baseTaskDirs[0];
     }
 
-    return taskToTempDirMap.get(taskId);
-  }
-
-  public synchronized void addTask(final String taskId, final File taskDir)
-  {
-    final File existingTaskDir = taskToTempDirMap.get(taskId);
-    if (existingTaskDir != null && !existingTaskDir.equals(taskDir)) {
-      throw new ISE("Task [%s] is already assigned to worker path[%s]", taskId, existingTaskDir.getPath());
+    // if the task directory already exists, we want to give it precedence, so check.
+    for (File baseTaskDir : baseTaskDirs) {
+      if (new File(baseTaskDir, taskId).exists()) {
+        return baseTaskDir;
+      }
     }
 
-    taskToTempDirMap.put(taskId, taskDir);
+    // if it doesn't exist, pick one round-robin and return.  This can be negative, so abs() it
+    final int currIncrement = Math.abs(iterationCounter.getAndIncrement() % baseTaskDirs.length);
+    return baseTaskDirs[currIncrement % baseTaskDirs.length];
   }
 
-  public synchronized void removeTask(final String taskId)
+  @Nullable
+  public File findExistingTaskDir(String taskId)
   {
-    taskToTempDirMap.remove(taskId);
+    if (baseTaskDirs.length == 1) {
+      return new File(baseTaskDirs[0], taskId);
+    }
+
+    for (File baseTaskDir : baseTaskDirs) {
+      final File candidateLocation = new File(baseTaskDir, taskId);
+      if (candidateLocation.exists()) {
+        return candidateLocation;
+      }
+    }
+    return null;
   }
 }

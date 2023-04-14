@@ -992,7 +992,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
    * factory is specific to one test and one planner config. This method can be
    * overridden to control the objects passed to the factory.
    */
-  private SqlStatementFactory getSqlStatementFactory(
+  SqlStatementFactory getSqlStatementFactory(
       PlannerConfig plannerConfig,
       AuthConfig authConfig
   )

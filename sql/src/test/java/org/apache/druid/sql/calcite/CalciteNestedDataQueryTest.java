@@ -2661,6 +2661,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"100", 2L}
         ),
         RowSignature.builder()
@@ -2922,6 +2923,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"2.02", 2L}
         ),
         RowSignature.builder()
