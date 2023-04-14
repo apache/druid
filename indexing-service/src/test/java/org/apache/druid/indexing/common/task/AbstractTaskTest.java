@@ -19,17 +19,20 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.UpdateStatusAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -50,9 +53,16 @@ import static org.mockito.Mockito.when;
 
 public class AbstractTaskTest
 {
+  private ObjectMapper objectMapper;
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Before
+  public void setup()
+  {
+    objectMapper = new TestUtils().getTestObjectMapper();
+  }
 
   @Test
   public void testSetupAndCleanupIsCalledWtihParameter() throws Exception
@@ -85,6 +95,7 @@ public class AbstractTaskTest
     );
 
     when(toolbox.getConfig()).thenReturn(config);
+    when(toolbox.getJsonMapper()).thenReturn(objectMapper);
     TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(
         ImmutableList.of(temporaryFolder.newFolder().getAbsolutePath())
     );
@@ -138,6 +149,7 @@ public class AbstractTaskTest
     when(config.isEncapsulatedTask()).thenReturn(false);
     File folder = temporaryFolder.newFolder();
     when(toolbox.getConfig()).thenReturn(config);
+    when(toolbox.getJsonMapper()).thenReturn(objectMapper);
     TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(ImmutableList.of(folder.getAbsolutePath()));
     when(toolbox.getDirTracker()).thenReturn(dirTracker);
 
@@ -184,6 +196,7 @@ public class AbstractTaskTest
     File folder = temporaryFolder.newFolder();
     TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(ImmutableList.of(folder.getAbsolutePath()));
     when(toolbox.getConfig()).thenReturn(config);
+    when(toolbox.getJsonMapper()).thenReturn(objectMapper);
     when(toolbox.getDirTracker()).thenReturn(dirTracker);
 
     TaskActionClient taskActionClient = mock(TaskActionClient.class);
@@ -193,7 +206,7 @@ public class AbstractTaskTest
     AbstractTask task = new NoopTask("myID", null, null, 1, 0, null, null, null)
     {
       @Override
-      public TaskStatus runTask(TaskToolbox toolbox) 
+      public TaskStatus runTask(TaskToolbox toolbox)
       {
         return TaskStatus.failure("myId", "failed");
       }
