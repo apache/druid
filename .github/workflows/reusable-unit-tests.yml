@@ -100,5 +100,4 @@ jobs:
         env:
           MAVEN_PROJECTS: ${{ inputs.maven_projects }}
         run: |
-          echo "Java version: $JAVA_HOME"
           ./.github/scripts/unit_tests_script.sh

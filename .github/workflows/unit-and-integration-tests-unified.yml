@@ -89,7 +89,6 @@ jobs:
       - name: Maven build
         id: maven_build
         run: |
-          echo "Java version: $JAVA_HOME"
           ./it.sh ci
 
       - name: Container build
