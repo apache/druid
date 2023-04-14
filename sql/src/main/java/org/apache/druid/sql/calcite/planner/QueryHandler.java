@@ -179,7 +179,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
             Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR),
             Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR)
         ),
-        ImmutableList.of("PLAN", "RESOURCES", "STATEMENT_RESOURCES")
+        ImmutableList.of("PLAN", "RESOURCES", "STATEMENT_ATTRIBUTES")
     );
   }
 
