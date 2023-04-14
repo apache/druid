@@ -54,7 +54,7 @@ jobs:
 
       - name: setup ${{ matrix.java }}
         run: |
-          echo "JAVA_HOME=$JAVA_HOME_${java_version}_X64" >> $GITHUB_ENV
+          echo "JAVA_HOME=$JAVA_HOME_${{ env.java_version }}_X64" >> $GITHUB_ENV
 
       - name: packaging check
         run: |
