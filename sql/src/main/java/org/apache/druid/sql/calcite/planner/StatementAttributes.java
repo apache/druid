@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.calcite.sql.SqlNode;
 
 import javax.annotation.Nullable;
-import java.util.Objects;
 
 /**
  * StatementAttributes holds the attributes of a SQL statement. It's used in EXPLAIN PLAN result.
@@ -61,27 +60,6 @@ public final class StatementAttributes
   public String getTargetDataSource()
   {
     return targetDataSource == null ? null : targetDataSource.toString();
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    StatementAttributes that = (StatementAttributes) o;
-    return Objects.equals(statementKind, that.statementKind) &&
-           Objects.equals(targetDataSource, that.targetDataSource
-    );
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(statementKind, targetDataSource);
   }
 
   @Override
