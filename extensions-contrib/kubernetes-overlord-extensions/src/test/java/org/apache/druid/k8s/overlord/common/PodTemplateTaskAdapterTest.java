@@ -20,13 +20,12 @@
 package org.apache.druid.k8s.overlord.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.IAE;
@@ -59,23 +58,7 @@ public class PodTemplateTaskAdapterTest
   public void setup()
   {
     taskRunnerConfig = new KubernetesTaskRunnerConfig();
-    taskConfig = new TaskConfig(
-        "/tmp",
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        null,
-        null,
-        false,
-        ImmutableList.of("/tmp")
-    );
+    taskConfig = new TaskConfigBuilder().setBaseDir("/tmp").build();
     node = new DruidNode(
         "test",
         "",
@@ -271,9 +254,10 @@ public class PodTemplateTaskAdapterTest
         props
     );
 
-    Pod pod = K8sTestUtils.fileToResource("basePodWithoutAnnotations.yaml", Pod.class);
+    Job job = K8sTestUtils.fileToResource("baseJobWithoutAnnotations.yaml", Job.class);
 
-    Assert.assertThrows(IOE.class, () -> adapter.toTask(pod));
+
+    Assert.assertThrows(IOE.class, () -> adapter.toTask(job));
   }
 
   @Test
@@ -293,15 +277,18 @@ public class PodTemplateTaskAdapterTest
         props
     );
 
-    Pod basePod = K8sTestUtils.fileToResource("basePodWithoutAnnotations.yaml", Pod.class);
+    Job baseJob = K8sTestUtils.fileToResource("baseJobWithoutAnnotations.yaml", Job.class);
 
-    Pod pod = new PodBuilder(basePod)
+    Job job = new JobBuilder(baseJob)
+        .editSpec()
+        .editTemplate()
         .editMetadata()
         .addToAnnotations(Collections.emptyMap())
         .endMetadata()
+        .endTemplate()
+        .endSpec()
         .build();
-
-    Assert.assertThrows(IOE.class, () -> adapter.toTask(pod));
+    Assert.assertThrows(IOE.class, () -> adapter.toTask(job));
   }
 
   @Test
@@ -321,9 +308,8 @@ public class PodTemplateTaskAdapterTest
         props
     );
 
-    Pod pod = K8sTestUtils.fileToResource("basePod.yaml", Pod.class);
-
-    Task actual = adapter.toTask(pod);
+    Job job = K8sTestUtils.fileToResource("baseJob.yaml", Job.class);
+    Task actual = adapter.toTask(job);
     Task expected = NoopTask.create("id", 1);
 
     Assertions.assertEquals(expected, actual);

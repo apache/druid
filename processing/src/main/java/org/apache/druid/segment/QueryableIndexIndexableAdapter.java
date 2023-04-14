@@ -35,6 +35,7 @@ import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.ImmutableBitmapValues;
 import org.apache.druid.segment.data.IndexedIterable;
 import org.apache.druid.segment.nested.NestedCommonFormatColumn;
+import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.SortedValueDictionary;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableLongColumnValueSelector;
@@ -174,7 +175,9 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     if (columnHolder == null) {
       return null;
     }
-    if (!(columnHolder.getColumnFormat() instanceof NestedCommonFormatColumn.Format)) {
+    final ColumnFormat format = columnHolder.getColumnFormat();
+    if (!(format instanceof NestedCommonFormatColumn.Format
+          || format instanceof NestedDataComplexTypeSerde.NestedColumnFormatV4)) {
       return null;
     }
 
