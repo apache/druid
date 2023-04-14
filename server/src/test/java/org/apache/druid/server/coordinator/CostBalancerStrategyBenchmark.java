@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategy;
+import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyTest;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.AfterClass;
