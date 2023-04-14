@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -85,10 +84,6 @@ public class AbstractTaskTest
     when(config.getTaskDir(eq("myID"))).thenReturn(folder);
     when(toolbox.getConfig()).thenReturn(config);
     when(toolbox.getJsonMapper()).thenReturn(objectMapper);
-    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(
-        ImmutableList.of(temporaryFolder.newFolder().getAbsolutePath())
-    );
-    when(toolbox.getDirTracker()).thenReturn(dirTracker);
 
     TaskActionClient taskActionClient = mock(TaskActionClient.class);
     when(taskActionClient.submit(any())).thenReturn(TaskConfig.class);
@@ -137,8 +132,6 @@ public class AbstractTaskTest
     when(config.getTaskDir(eq("myID"))).thenReturn(folder);
     when(toolbox.getConfig()).thenReturn(config);
     when(toolbox.getJsonMapper()).thenReturn(objectMapper);
-    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(ImmutableList.of(folder.getAbsolutePath()));
-    when(toolbox.getDirTracker()).thenReturn(dirTracker);
 
     TaskActionClient taskActionClient = mock(TaskActionClient.class);
     when(taskActionClient.submit(any())).thenReturn(TaskConfig.class);
@@ -184,7 +177,6 @@ public class AbstractTaskTest
     when(config.getTaskDir(eq("myID"))).thenReturn(folder);
     when(toolbox.getConfig()).thenReturn(config);
     when(toolbox.getJsonMapper()).thenReturn(objectMapper);
-    when(toolbox.getDirTracker()).thenReturn(dirTracker);
 
     TaskActionClient taskActionClient = mock(TaskActionClient.class);
     when(taskActionClient.submit(any())).thenReturn(TaskConfig.class);
