@@ -330,7 +330,7 @@ CLUSTERED BY user
 
 ## Durable Storage
 
-This section enumerates the advantages and performance implications of enabling durable storage while executing MSQ tasks.
+Using durable storage with your SQL-based ingestions can improve their reliability by writing intermediate files to a storage location temporarily. 
 
 To prevent durable storage from getting filled up with temporary files in case the tasks fail to clean them up, a periodic
 cleaner can be scheduled to clean the directories corresponding to which there isn't a controller task running. It utilizes
@@ -342,13 +342,48 @@ by the super sorter. The limit set by `druid.indexer.task.tmpStorageBytesPerTask
 storage to be used per task will be respected by MSQ tasks. If the configured limit is too low, `NotEnoughTemporaryStorageFault`
 may be thrown.
 
-Following table lists the properties that can be set to control the behavior of the durable storage of the cluster.
+### Enable durable storage
+
+To enable durable storage, you need to set the following common service properties:
+
+```
+druid.msq.intermediate.storage.enable=true
+druid.msq.intermediate.storage.type=s3
+druid.msq.intermediate.storage.bucket=YOUR_BUCKET
+druid.msq.intermediate.storage.prefix=YOUR_PREFIX
+druid.msq.intermediate.storage.tempDir=/path/to/your/temp/dir
+```
+
+For detailed information about the settings related to durable storage, see [Durable storage configurations](#durable-storage-configurations).
+
+
+### Use durable storage for queries
+
+When you run a query,  include the context parameter `durableShuffleStorage` and set it to `true`. 
+
+For queries where you want to use fault tolerance for workers,  set `faultTolerance` to `true`, which automatically sets `durableShuffleStorage` to `true`.
+
+## Durable storage configurations
+
+The following common service properties control how durable storage behaves:
 
 |Parameter          |Default                                 | Description          |
 |-------------------|----------------------------------------|----------------------|
-|`druid.msq.intermediate.storage.enable` | true | Whether to enable durable storage for the cluster |
-|`druid.msq.intermediate.storage.cleaner.enabled`| false | Whether durable storage cleaner should be enabled for the cluster. This should be set on the overlord|
-|`druid.msq.intermediate.storage.cleaner.delaySeconds`| 86400 | The delay (in seconds) after the last run post which the durable storage cleaner would clean the outputs. This should be set on the overlord |
+|`druid.msq.intermediate.storage.bucket` | n/a | The bucket in S3 where you want to store intermediate files.  |
+| `druid.msq.intermediate.storage.chunkSize` | n/a | Optional. Defines the size of each chunk to temporarily store in `druid.msq.intermediate.storage.tempDir`. The chunk size must be between 5 MiB and 5 GiB. Druid computes the chunk size automatically if no value is provided.| 
+|`druid.msq.intermediate.storage.enable` | true | Required. Whether to enable durable storage for the cluster.|
+| `druid.msq.intermediate.storage.maxTriesOnTransientErrors` | 10 | Optional. Defines the max number times to attempt S3 API calls to avoid failures due to transient errors. | 
+|`druid.msq.intermediate.storage.type` | `s3` if your deep storage is S3 | Required. The type of storage to use. You can either set this to `local` or `s3`.  |
+|`druid.msq.intermediate.storage.prefix` | n/a | S3 prefix to store intermediate stage results. Provide a unique value for the prefix. Don't share the same prefix between clusters. If the location  includes other files or directories, then they will get cleaned up as well.  |
+| `druid.msq.intermediate.storage.tempDir`|  | Required. Directory path on the local disk to temporarily store intermediate stage results.  |
+
+In addition to the common service properties, there are certain properties that you configure on the Overlord specifically to clean up intermediate files:
+
+|Parameter          |Default                                 | Description          |
+|-------------------|----------------------------------------|----------------------|
+|`druid.msq.intermediate.storage.cleaner.enabled`| false | Optional. Whether durable storage cleaner should be enabled for the cluster.  |
+|`druid.msq.intermediate.storage.cleaner.delaySeconds`| 86400 | Optional. The delay (in seconds) after the last run post which the durable storage cleaner would clean the outputs.  |
+
 
 ## Limits
 
