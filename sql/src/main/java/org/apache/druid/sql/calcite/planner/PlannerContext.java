@@ -112,10 +112,8 @@ public class PlannerContext
   private String planningError;
   private QueryMaker queryMaker;
   private VirtualColumnRegistry joinExpressionVirtualColumnRegistry;
-  private String statementKind;
-  // Only valid for INSERT/REPLACE queries
-  @Nullable
-  private SqlNode targetDataSource;
+  // set of attributes for a SQL statement used in the EXPLAIN PLAN output
+  private StatementAttributes statementAttributes;
 
   private PlannerContext(
       final PlannerToolbox plannerToolbox,
@@ -508,30 +506,17 @@ public class PlannerContext
     this.joinExpressionVirtualColumnRegistry = joinExpressionVirtualColumnRegistry;
   }
 
-  public String getStatementKind()
+  public StatementAttributes getStatementAttributes()
   {
-    return this.statementKind;
+    return this.statementAttributes;
   }
 
-  public void setStatementKind(String statementKind)
+  public void setStatementAttributes(StatementAttributes statementAttributes)
   {
-    if (this.statementKind != null) {
-      throw new ISE("StatementKind has already been set");
+    if (this.statementAttributes != null) {
+      throw new ISE("StatementAttributes has already been set");
     }
-    this.statementKind = statementKind;
+    this.statementAttributes = statementAttributes;
   }
 
-  @Nullable
-  public SqlNode getTargetDataSource()
-  {
-    return this.targetDataSource;
-  }
-
-  public void setTargetDataSource(SqlNode targetDataSource)
-  {
-    if (this.targetDataSource != null) {
-      throw new ISE("TargetDataSource has already been set");
-    }
-    this.targetDataSource = targetDataSource;
-  }
 }

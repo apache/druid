@@ -627,10 +627,10 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 + "\"resultFormat\":\"compactedList\",\"columns\":[\"x\",\"y\",\"z\"],\"legacy\":false,"
                 + "\"context\":{\"sqlInsertSegmentGranularity\":\"{\\\"type\\\":\\\"all\\\"}\",\"sqlQueryId\":\"dummy\","
                                        + "\"sqlReplaceTimeChunks\":\"all\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"granularity\":{\"type\":\"all\"}},"
-                + "\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]},"
-                + "{\"statementKind\":\"REPLACE\"},"
-                + "{\"targetDataSource\":\"dst\"}"
-                + "]";
+                + "\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]}]";
+
+    final String resources = "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]";
+    final String statementAttributes = "{\"statementKind\":\"REPLACE\",\"targetDataSource\":\"dst\"}";
 
     // Use testQuery for EXPLAIN (not testIngestionQuery).
     testQuery(
@@ -647,7 +647,8 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
             ImmutableList.of(
                 new Object[]{
                     legacyExplanation,
-                    "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]"
+                    resources,
+                    statementAttributes
                 }
             ),
             null
@@ -669,7 +670,8 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
             ImmutableList.of(
                 new Object[]{
                     explanation,
-                    "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]"
+                    resources,
+                    statementAttributes
                 }
             ),
             null

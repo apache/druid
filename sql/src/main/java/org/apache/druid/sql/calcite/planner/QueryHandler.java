@@ -49,6 +49,7 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.sql.SqlExplain;
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
@@ -64,6 +65,7 @@ import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
@@ -228,21 +230,14 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       throw new UnsupportedSQLQueryException(errorMessage);
     }
   }
-  @Override
-  public String statementKind()
-  {
-    return "SELECT";
-  }
 
-  /**
-   * No target datasource for SELECT/non-DML statements.
-   */
-  @Nullable
   @Override
-  public SqlNode targetDataSource()
+  public StatementAttributes statementAttributes()
   {
-    // nothing for SELECT queries.
-    return null;
+    return new StatementAttributes(
+        "SELECT",
+        null
+    );
   }
 
   private static Set<RelOptTable> getBindableTables(final RelNode relNode)
@@ -390,9 +385,19 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       log.error(jpe, "Encountered exception while serializing resources for explain output");
       resourcesString = null;
     }
+
+    String statementAttributesString;
+    try {
+      statementAttributesString = plannerContext.getJsonMapper().writeValueAsString(plannerContext.getStatementAttributes());
+    }
+    catch (JsonProcessingException jpe) {
+      log.error(jpe,"Encountered exception while serializing statement attributes for explain output");
+      statementAttributesString = null;
+    }
+
     final Supplier<QueryResponse<Object[]>> resultsSupplier = Suppliers.ofInstance(
         QueryResponse.withEmptyContext(
-            Sequences.simple(ImmutableList.of(new Object[]{explanation, resourcesString}))
+            Sequences.simple(ImmutableList.of(new Object[]{explanation, resourcesString, statementAttributesString}))
         )
     );
     return new PlannerResult(resultsSupplier, getExplainStructType(rel.getCluster().getTypeFactory()));
@@ -430,10 +435,6 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       nativeQueriesArrayNode.add(objectNode);
     }
 
-    nativeQueriesArrayNode.add(jsonMapper.createObjectNode().put(
-        "statementKind", jsonMapper.convertValue(rel.getPlannerContext().getStatementKind(), String.class)));
-    nativeQueriesArrayNode.add(jsonMapper.createObjectNode().put(
-        "targetDataSource", StringUtils.format("%s", rel.getPlannerContext().getTargetDataSource())));
     return jsonMapper.writeValueAsString(nativeQueriesArrayNode);
   }
 

@@ -883,10 +883,11 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},"
         + "\"resultFormat\":\"compactedList\",\"columns\":[\"x\",\"y\",\"z\"],\"legacy\":false,"
         + "\"context\":{\"sqlInsertSegmentGranularity\":\"{\\\"type\\\":\\\"all\\\"}\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
-        + "\"granularity\":{\"type\":\"all\"}},\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]},"
-        + "{\"statementKind\":\"INSERT\"},"
-        + "{\"targetDataSource\":\"dst\"}"
-        + "]";
+        + "\"granularity\":{\"type\":\"all\"}},\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]"
+        + "}]";
+
+    final String resources = "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]";
+    final String statementAttributes = "{\"statementKind\":\"INSERT\",\"targetDataSource\":\"dst\"}";
 
 
     // Use testQuery for EXPLAIN (not testIngestionQuery).
@@ -904,7 +905,8 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
             ImmutableList.of(
                 new Object[]{
                     legacyExplanation,
-                    "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]"
+                    resources,
+                    statementAttributes
                 }
             ),
             null
@@ -927,7 +929,8 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
             ImmutableList.of(
                 new Object[]{
                     explanation,
-                    "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]"
+                    resources,
+                    statementAttributes
                 }
             ),
             null
