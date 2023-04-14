@@ -50,7 +50,68 @@ public class CsvInputFormatTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testDeserializeWithoutProperties()
+  public void testDeserializeWithoutColumnsWithHasHeaderRow() throws IOException
+  {
+    final ObjectMapper mapper = new ObjectMapper();
+    final CsvInputFormat inputFormat = (CsvInputFormat) mapper.readValue(
+        "{\"type\":\"csv\",\"hasHeaderRow\":true}",
+        InputFormat.class
+    );
+    Assert.assertTrue(inputFormat.isFindColumnsFromHeader());
+  }
+
+  @Test
+  public void testDeserializeWithoutColumnsWithFindColumnsFromHeaderTrue() throws IOException
+  {
+    final ObjectMapper mapper = new ObjectMapper();
+    final CsvInputFormat inputFormat = (CsvInputFormat) mapper.readValue(
+        "{\"type\":\"csv\",\"findColumnsFromHeader\":true}",
+        InputFormat.class
+    );
+    Assert.assertTrue(inputFormat.isFindColumnsFromHeader());
+  }
+
+  @Test
+  public void testDeserializeWithoutColumnsWithFindColumnsFromHeaderFalse() throws IOException
+  {
+    final ObjectMapper mapper = new ObjectMapper();
+    final JsonProcessingException e = Assert.assertThrows(
+        JsonProcessingException.class,
+        () -> mapper.readValue(
+            "{\"type\":\"csv\",\"findColumnsFromHeader\":false}",
+            InputFormat.class
+        )
+    );
+    MatcherAssert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
+            "Cannot construct instance of `org.apache.druid.data.input.impl.CsvInputFormat`, problem: "
+            + "If [columns] is not set, the first row of your data must have your header and "
+            + "[findColumnsFromHeader] must be set to true."))
+    );
+  }
+
+  @Test
+  public void testDeserializeWithoutColumnsWithBothHeaderProperties()
+  {
+    final ObjectMapper mapper = new ObjectMapper();
+    final JsonProcessingException e = Assert.assertThrows(
+        JsonProcessingException.class,
+        () -> mapper.readValue(
+            "{\"type\":\"csv\",\"findColumnsFromHeader\":true,\"hasHeaderRow\":true}",
+            InputFormat.class
+        )
+    );
+    MatcherAssert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
+            "Cannot construct instance of `org.apache.druid.data.input.impl.CsvInputFormat`, problem: "
+            + "Cannot accept both [findColumnsFromHeader] and [hasHeaderRow]"))
+    );
+  }
+
+  @Test
+  public void testDeserializeWithoutAnyProperties()
   {
     final ObjectMapper mapper = new ObjectMapper();
     final JsonProcessingException e = Assert.assertThrows(
@@ -61,7 +122,7 @@ public class CsvInputFormatTest extends InitializedNullHandlingTest
         e,
         ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
             "Cannot construct instance of `org.apache.druid.data.input.impl.CsvInputFormat`, problem: "
-            + "At least one of [hasHeaderRow, findColumnsFromHeader] must be present when [columns] is not set"))
+            + "Either [columns] or [findColumnsFromHeader] must be set"))
     );
   }
 
@@ -99,7 +160,7 @@ public class CsvInputFormatTest extends InitializedNullHandlingTest
   public void testMissingFindColumnsFromHeaderWithMissingColumnsThrowingError()
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("At least one of [Property{name='hasHeaderRow', value=null}");
+    expectedException.expectMessage("Either [columns] or [findColumnsFromHeader] must be set");
     new CsvInputFormat(null, null, null, null, 0);
   }
 
@@ -114,7 +175,7 @@ public class CsvInputFormatTest extends InitializedNullHandlingTest
   public void testHasHeaderRowWithMissingFindColumnsThrowingError()
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("At most one of [Property{name='hasHeaderRow', value=true}");
+    expectedException.expectMessage("Cannot accept both [findColumnsFromHeader] and [hasHeaderRow]");
     new CsvInputFormat(null, null, true, false, 0);
   }
 

@@ -22,10 +22,7 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.indexer.Checks;
-import org.apache.druid.indexer.Property;
 import org.apache.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;
@@ -53,22 +50,17 @@ public abstract class FlatTextInputFormat implements InputFormat
     this.columns = columns == null ? Collections.emptyList() : columns;
     this.listDelimiter = listDelimiter;
     this.delimiter = Preconditions.checkNotNull(delimiter, "delimiter");
-    //noinspection ConstantConditions
     if (columns == null || columns.isEmpty()) {
-      final Property<Boolean> property;
-
-      try {
-        property = Checks.checkOneNotNullOrEmpty(
-            ImmutableList.of(
-                new Property<>("hasHeaderRow", hasHeaderRow),
-                new Property<>("findColumnsFromHeader", findColumnsFromHeader)
-            )
-        );
-      } catch (IllegalArgumentException e) {
-        throw new IAE("%s when [columns] is not set", e.getMessage());
+      if (hasHeaderRow != null && findColumnsFromHeader != null) {
+        // User provided both hasHeaderRow and findColumnsFromHeader.
+        throw new IAE("Cannot accept both [findColumnsFromHeader] and [hasHeaderRow]");
+      } else if (hasHeaderRow == null && findColumnsFromHeader == null) {
+        // User provided neither columns, nor one of the header-related parameters.
+        throw new IAE("Either [columns] or [findColumnsFromHeader] must be set");
+      } else {
+        // User provided one of hasHeaderRow or findColumnsFromHeader. Take the one they provided.
+        this.findColumnsFromHeader = hasHeaderRow != null ? hasHeaderRow : findColumnsFromHeader;
       }
-
-      this.findColumnsFromHeader = property.getValue();
     } else {
       this.findColumnsFromHeader = findColumnsFromHeader == null ? false : findColumnsFromHeader;
     }
@@ -89,8 +81,8 @@ public abstract class FlatTextInputFormat implements InputFormat
     } else {
       Preconditions.checkArgument(
           this.findColumnsFromHeader,
-          "If columns field is not set, the first row of your data must have your header"
-          + " and hasHeaderRow must be set to true."
+          "If [columns] is not set, the first row of your data must have your header"
+          + " and [findColumnsFromHeader] must be set to true."
       );
     }
   }
