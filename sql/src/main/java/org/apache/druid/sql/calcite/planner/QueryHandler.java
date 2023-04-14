@@ -49,7 +49,6 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.sql.SqlExplain;
-import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
@@ -65,7 +64,6 @@ import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
@@ -392,7 +390,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       statementAttributesString = plannerContext.getJsonMapper().writeValueAsString(plannerContext.getStatementAttributes());
     }
     catch (JsonProcessingException jpe) {
-      log.error(jpe,"Encountered exception while serializing statement attributes for explain output");
+      log.error(jpe, "Encountered exception while serializing statement attributes for explain output");
       statementAttributesString = null;
     }
 

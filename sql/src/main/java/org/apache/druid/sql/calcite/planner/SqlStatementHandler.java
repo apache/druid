@@ -21,14 +21,12 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.joda.time.DateTimeZone;
 
-import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Set;
 
