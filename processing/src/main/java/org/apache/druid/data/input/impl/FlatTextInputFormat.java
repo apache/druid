@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.Property;
+import org.apache.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -54,12 +55,20 @@ public abstract class FlatTextInputFormat implements InputFormat
     this.delimiter = Preconditions.checkNotNull(delimiter, "delimiter");
     //noinspection ConstantConditions
     if (columns == null || columns.isEmpty()) {
-      this.findColumnsFromHeader = Checks.checkOneNotNullOrEmpty(
-          ImmutableList.of(
-              new Property<>("hasHeaderRow", hasHeaderRow),
-              new Property<>("findColumnsFromHeader", findColumnsFromHeader)
-          )
-      ).getValue();
+      final Property<Boolean> property;
+
+      try {
+        property = Checks.checkOneNotNullOrEmpty(
+            ImmutableList.of(
+                new Property<>("hasHeaderRow", hasHeaderRow),
+                new Property<>("findColumnsFromHeader", findColumnsFromHeader)
+            )
+        );
+      } catch (IllegalArgumentException e) {
+        throw new IAE("%s when [columns] is not set", e.getMessage());
+      }
+
+      this.findColumnsFromHeader = property.getValue();
     } else {
       this.findColumnsFromHeader = findColumnsFromHeader == null ? false : findColumnsFromHeader;
     }

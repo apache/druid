@@ -19,12 +19,16 @@
 
 package org.apache.druid.data.input.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
@@ -43,6 +47,22 @@ public class CsvInputFormatTest extends InitializedNullHandlingTest
     final byte[] bytes = mapper.writeValueAsBytes(format);
     final CsvInputFormat fromJson = (CsvInputFormat) mapper.readValue(bytes, InputFormat.class);
     Assert.assertEquals(format, fromJson);
+  }
+
+  @Test
+  public void testDeserializeWithoutProperties()
+  {
+    final ObjectMapper mapper = new ObjectMapper();
+    final JsonProcessingException e = Assert.assertThrows(
+        JsonProcessingException.class,
+        () -> mapper.readValue("{\"type\":\"csv\"}", InputFormat.class)
+    );
+    MatcherAssert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
+            "Cannot construct instance of `org.apache.druid.data.input.impl.CsvInputFormat`, problem: "
+            + "At least one of [hasHeaderRow, findColumnsFromHeader] must be present when [columns] is not set"))
+    );
   }
 
   @Test
