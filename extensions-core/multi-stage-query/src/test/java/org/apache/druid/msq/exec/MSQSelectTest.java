@@ -304,7 +304,7 @@ public class MSQSelectTest extends MSQTestBase
             0, 0, "shuffle"
         )
         .setExpectedResultRows(ImmutableList.of(
-            new Object[]{1L, !useDefault ? "" : null},
+            new Object[]{1L, ""},
             new Object[]{1L, "10.1"},
             new Object[]{1L, "2"},
             new Object[]{1L, "1"},
