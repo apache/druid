@@ -95,7 +95,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   {
     final List<Object[]> constructors = new ArrayList<>();
     constructors.add(
-        new Object[]{"without memory limit", QUERY_CONTEXT_WITH_SUBQUERY_MEMORY_LIMIT}
+        new Object[]{"without memory limit", QUERY_CONTEXT_DEFAULT}
     );
     constructors.add(
         new Object[]{"with memory limit", QUERY_CONTEXT_WITH_SUBQUERY_MEMORY_LIMIT}
