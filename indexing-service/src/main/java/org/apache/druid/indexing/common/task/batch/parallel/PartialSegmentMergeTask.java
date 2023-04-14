@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
@@ -80,6 +81,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
   private final int numAttempts;
   private final String supervisorTaskId;
   private final String subtaskSpecId;
+  private final ObjectMapper jsonMapper;
 
   PartialSegmentMergeTask(
       // id shouldn't be null except when this task is created by ParallelIndexSupervisorTask
@@ -92,7 +94,8 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
       PartialSegmentMergeIOConfig ioConfig,
       ParallelIndexTuningConfig tuningConfig,
       final int numAttempts, // zero-based counting
-      final Map<String, Object> context
+      final Map<String, Object> context,
+      final ObjectMapper jsonMapper
   )
   {
     super(
@@ -112,6 +115,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     this.ioConfig = ioConfig;
     this.numAttempts = numAttempts;
     this.supervisorTaskId = supervisorTaskId;
+    this.jsonMapper = jsonMapper;
   }
 
   @JsonProperty
@@ -254,6 +258,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     for (Entry<Interval, Int2ObjectMap<List<File>>> entryPerInterval : intervalToUnzippedFiles.entrySet()) {
       final Interval interval = entryPerInterval.getKey();
       for (Int2ObjectMap.Entry<List<File>> entryPerBucketId : entryPerInterval.getValue().int2ObjectEntrySet()) {
+        long startTime = System.nanoTime();
         final int bucketId = entryPerBucketId.getIntKey();
         final List<File> segmentFilesToMerge = entryPerBucketId.getValue();
         final Pair<File, List<String>> mergedFileAndDimensionNames = mergeSegmentsInSamePartition(
@@ -266,6 +271,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
             persistDir,
             0
         );
+        long mergeFinishTime = System.nanoTime();
         final List<String> metricNames = Arrays.stream(dataSchema.getAggregators())
                                                .map(AggregatorFactory::getName)
                                                .collect(Collectors.toList());
@@ -294,7 +300,20 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
             exception -> !(exception instanceof NullPointerException) && exception instanceof Exception,
             5
         );
+        long pushFinishTime = System.nanoTime();
         pushedSegments.add(segment);
+        LOG.info(
+            "Segment[%s] of %,d bytes "
+            + "built from %d partial segment(s) in %,dms; "
+            + "pushed to deep storage in %,dms. "
+            + "Load spec is: %s",
+            segment.getId(),
+            segment.getSize(),
+            segmentFilesToMerge.size(),
+            (mergeFinishTime - startTime) / 1000000,
+            (pushFinishTime - mergeFinishTime) / 1000000,
+            jsonMapper.writeValueAsString(segment.getLoadSpec())
+        );
       }
     }
     return pushedSegments;

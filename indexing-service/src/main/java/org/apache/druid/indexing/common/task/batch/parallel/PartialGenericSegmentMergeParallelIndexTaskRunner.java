@@ -102,7 +102,8 @@ class PartialGenericSegmentMergeParallelIndexTaskRunner
             subtaskSpecId,
             numAttempts,
             ingestionSpec,
-            getContext()
+            getContext(),
+            getToolbox().getJsonMapper()
         );
       }
     };
