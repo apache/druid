@@ -43,7 +43,6 @@ public interface SqlStatementHandler
   void prepare();
   PrepareResult prepareResult();
   PlannerResult plan() throws ValidationException;
-
   StatementAttributes statementAttributes();
 
   /**

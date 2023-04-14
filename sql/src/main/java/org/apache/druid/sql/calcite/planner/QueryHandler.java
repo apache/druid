@@ -176,9 +176,10 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     return typeFactory.createStructType(
         ImmutableList.of(
             Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR),
+            Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR),
             Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR)
         ),
-        ImmutableList.of("PLAN", "RESOURCES")
+        ImmutableList.of("PLAN", "RESOURCES", "STATEMENT_RESOURCES")
     );
   }
 
