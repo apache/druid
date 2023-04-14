@@ -23,13 +23,13 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.api.client.util.Joiner;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
+import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -40,6 +40,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
@@ -92,29 +93,30 @@ class K8sTaskAdapterTest
         false
     );
     startupLoggingConfig = new StartupLoggingConfig();
-    taskConfig = new TaskConfig(
-        "src/test/resources",
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        null,
-        null,
-        false,
-        ImmutableList.of("src/test/resources")
-    );
+    taskConfig = new TaskConfigBuilder().setBaseDir("src/test/resources").build();
   }
 
   @Test
   void testAddingLabelsAndAnnotations() throws IOException
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    final PodSpec podSpec = K8sTestUtils.getDummyPodSpec();
+    TestKubernetesClient testClient = new TestKubernetesClient(client)
+    {
+      @SuppressWarnings("unchecked")
+      @Override
+      public <T> T executeRequest(KubernetesExecutor<T> executor) throws KubernetesResourceNotFoundException
+      {
+        return (T) new Pod()
+        {
+          @Override
+          public PodSpec getSpec()
+          {
+            return podSpec;
+          }
+        };
+      }
+    };
+
     KubernetesTaskRunnerConfig config = new KubernetesTaskRunnerConfig();
     config.namespace = "test";
     config.annotations.put("annotation_key", "annotation_value");
@@ -128,11 +130,8 @@ class K8sTaskAdapterTest
         jsonMapper
     );
     Task task = K8sTestUtils.getTask();
-    Job jobFromSpec = adapter.createJobFromPodSpec(
-        K8sTestUtils.getDummyPodSpec(),
-        task,
-        new PeonCommandContext(new ArrayList<>(), new ArrayList<>(), new File("/tmp/"))
-    );
+    Job jobFromSpec = adapter.fromTask(task);
+
     assertTrue(jobFromSpec.getMetadata().getAnnotations().containsKey("annotation_key"));
     assertTrue(jobFromSpec.getMetadata().getAnnotations().containsKey(DruidK8sConstants.TASK_ID));
     assertFalse(jobFromSpec.getMetadata().getAnnotations().containsKey("label_key"));

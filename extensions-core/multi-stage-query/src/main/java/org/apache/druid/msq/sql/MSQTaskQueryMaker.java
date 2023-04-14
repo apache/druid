@@ -183,9 +183,6 @@ public class MSQTaskQueryMaker implements QueryMaker
     final List<ColumnMapping> columnMappings = new ArrayList<>();
 
     for (final Pair<Integer, String> entry : fieldMapping) {
-      // Note: SQL generally allows output columns to be duplicates, but MSQTaskSqlEngine.validateNoDuplicateAliases
-      // will prevent duplicate output columns from appearing here. So no need to worry about it.
-
       final String queryColumn = druidQuery.getOutputRowSignature().getColumnName(entry.getKey());
       final String outputColumns = entry.getValue();
 
