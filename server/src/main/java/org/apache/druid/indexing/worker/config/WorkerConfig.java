@@ -26,6 +26,7 @@ import org.joda.time.Period;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import java.util.List;
 
 /**
  */
@@ -42,6 +43,9 @@ public class WorkerConfig
   @JsonProperty
   @Min(1)
   private int capacity = Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() - 1);
+
+  @JsonProperty
+  private List<String> baseTaskDirs = null;
 
   @JsonProperty
   @NotNull
@@ -74,6 +78,11 @@ public class WorkerConfig
   public int getCapacity()
   {
     return capacity;
+  }
+
+  public List<String> getBaseTaskDirs()
+  {
+    return baseTaskDirs;
   }
 
   public String getCategory()
