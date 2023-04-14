@@ -120,6 +120,7 @@ jobs:
 
       - name: Load docker image
         run: |
+          echo "Java version: $JAVA_HOME"
           docker load --input druid-container-jdk${{ inputs.build_jdk }}.tar.gz
           docker images
 

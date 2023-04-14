@@ -99,4 +99,6 @@ jobs:
       - name: test & coverage
         env:
           MAVEN_PROJECTS: ${{ inputs.maven_projects }}
-        run: ./.github/scripts/unit_tests_script.sh
+        run: |
+          echo "Java version: $JAVA_HOME"
+          ./.github/scripts/unit_tests_script.sh

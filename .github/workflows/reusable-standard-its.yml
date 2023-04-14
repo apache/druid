@@ -83,6 +83,7 @@ jobs:
         env:
           MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }}
         run: |
+          echo "Java version: $JAVA_HOME"
           # Debug echo
           echo "Mysql driver: ${MYSQL_DRIVER_CLASSNAME}"
           echo "${MVN} verify -pl integration-tests -P integration-tests ${{ inputs.testing_groups }} -Djvm.runtime=${{ inputs.runtime_jdk }} -Dit.indexer=${{ inputs.use_indexer }} ${MAVEN_SKIP} -Doverride.config.path=${{ inputs.override_config_path }}"

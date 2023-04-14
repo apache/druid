@@ -58,6 +58,7 @@ jobs:
 
       - name: packaging check
         run: |
+          echo "Java version: $JAVA_HOME"
           ./.github/scripts/setup_generate_license.sh
           ${MVN} clean install -Prat --fail-at-end \
           -pl '!benchmarks, !distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C
