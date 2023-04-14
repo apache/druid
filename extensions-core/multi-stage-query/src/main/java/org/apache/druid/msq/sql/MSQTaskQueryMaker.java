@@ -78,11 +78,6 @@ public class MSQTaskQueryMaker implements QueryMaker
   private static final String DESTINATION_REPORT = "taskReport";
 
   private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.ALL;
-  private static final int DEFAULT_ROWS_PER_SEGMENT = 3000000;
-
-  // Lower than the default to minimize the impact of per-row overheads that are not accounted for by
-  // OnheapIncrementalIndex. For example: overheads related to creating bitmaps during persist.
-  private static final int DEFAULT_ROWS_IN_MEMORY = 100000;
 
   private final String targetDataSource;
   private final OverlordClient overlordClient;
@@ -117,14 +112,12 @@ public class MSQTaskQueryMaker implements QueryMaker
     // which *does* influence task execution.
     final QueryContext sqlQueryContext = plannerContext.queryContext();
 
-    // Query context overrides: things that we add to the native query context prior to creating a controller task.
-    // These influence task execution.
-    final Map<String, Object> queryContextOverrides = new HashMap<>();
+    // Native query context: sqlQueryContext plus things that we add prior to creating a controller task.
+    final Map<String, Object> nativeQueryContext = new HashMap<>(sqlQueryContext.asMap());
 
     final String msqMode = MultiStageQueryContext.getMSQMode(sqlQueryContext);
     if (msqMode != null) {
-      MSQMode.populateDefaultQueryContext(msqMode, queryContextOverrides);
-      queryContextOverrides.entrySet().removeIf(entry -> sqlQueryContext.containsKey(entry.getKey()));
+      MSQMode.populateDefaultQueryContext(msqMode, nativeQueryContext);
     }
 
     final String ctxDestination =
@@ -150,8 +143,8 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     // This parameter is used internally for the number of worker tasks only, so we subtract 1
     final int maxNumWorkers = maxNumTasks - 1;
-    final int rowsPerSegment = MultiStageQueryContext.getRowsPerSegment(sqlQueryContext, DEFAULT_ROWS_PER_SEGMENT);
-    final int maxRowsInMemory = MultiStageQueryContext.getRowsInMemory(sqlQueryContext, DEFAULT_ROWS_IN_MEMORY);
+    final int rowsPerSegment = MultiStageQueryContext.getRowsPerSegment(sqlQueryContext);
+    final int maxRowsInMemory = MultiStageQueryContext.getRowsInMemory(sqlQueryContext);
     final IndexSpec indexSpec = MultiStageQueryContext.getIndexSpec(sqlQueryContext, jsonMapper);
     final boolean finalizeAggregations = MultiStageQueryContext.isFinalizeAggregations(sqlQueryContext);
 
@@ -251,7 +244,7 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     final MSQControllerTask controllerTask = new MSQControllerTask(
         taskId,
-        querySpec.withOverriddenContext(queryContextOverrides),
+        querySpec.withOverriddenContext(nativeQueryContext),
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(plannerContext.getSql()),
         plannerContext.queryContextMap(),
         SqlResults.Context.fromPlannerContext(plannerContext),

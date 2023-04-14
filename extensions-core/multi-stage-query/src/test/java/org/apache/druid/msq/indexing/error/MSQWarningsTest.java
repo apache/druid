@@ -259,6 +259,37 @@ public class MSQWarningsTest extends MSQTestBase
   }
 
   @Test
+  public void testSuccessWhenParseExceptionsOnLimitOverridesMode()
+  {
+    final Map<String, Object> userContext =
+        ImmutableMap.of(
+            MultiStageQueryContext.CTX_MSQ_MODE, "strict",
+            MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 10 // Takes precedence over "strict" mode
+        );
+
+    testSelectQuery().setSql("SELECT\n"
+                             + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
+                             + "  count(*) as cnt\n"
+                             + "FROM TABLE(\n"
+                             + "  EXTERN(\n"
+                             + "    '{ \"files\": [\"" + toRead.getAbsolutePath() + "\"],\"type\":\"local\"}',\n"
+                             + "    '{\"type\": \"json\"}',\n"
+                             + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
+                             + "  )\n"
+                             + ") group by 1")
+                     .setQueryContext(QueryContexts.override(DEFAULT_MSQ_CONTEXT, userContext))
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedResultRows(ImmutableList.of(new Object[]{1566172800000L, 10L}))
+                     .setExpectedMSQSpec(
+                         MSQSpec.builder()
+                                .query(defaultQuery.withOverriddenContext(userContext))
+                                .columnMappings(defaultColumnMappings)
+                                .tuningConfig(MSQTuningConfig.defaultConfig())
+                                .build())
+                     .verifyResults();
+  }
+
+  @Test
   public void testSuccessInNonStrictMode()
   {
     final Map<String, Object> userContext =
