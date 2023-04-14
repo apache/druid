@@ -72,6 +72,7 @@ import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.duty.UnloadUnusedSegments;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueueTaskMaster;
+import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -95,8 +96,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -142,7 +143,8 @@ public class DruidCoordinator
   private final IndexingServiceClient indexingServiceClient;
   private final ScheduledExecutorService exec;
   private final LoadQueueTaskMaster taskMaster;
-  private final Map<String, LoadQueuePeon> loadManagementPeons;
+  private final ConcurrentHashMap<String, LoadQueuePeon> loadManagementPeons
+      = new ConcurrentHashMap<>();
   private final SegmentLoadQueueManager loadQueueManager;
   private final ServiceAnnouncer serviceAnnouncer;
   private final DruidNode self;
@@ -189,53 +191,6 @@ public class DruidCoordinator
       CompactionSegmentSearchPolicy compactionSegmentSearchPolicy
   )
   {
-    this(
-        config,
-        configManager,
-        segmentsMetadataManager,
-        serverInventoryView,
-        metadataRuleManager,
-        emitter,
-        scheduledExecutorFactory,
-        indexingServiceClient,
-        taskMaster,
-        loadQueueManager,
-        serviceAnnouncer,
-        self,
-        new ConcurrentHashMap<>(),
-        indexingServiceDuties,
-        metadataStoreManagementDuties,
-        customDutyGroups,
-        factory,
-        lookupCoordinatorManager,
-        coordLeaderSelector,
-        compactionSegmentSearchPolicy
-    );
-  }
-
-  DruidCoordinator(
-      DruidCoordinatorConfig config,
-      JacksonConfigManager configManager,
-      SegmentsMetadataManager segmentsMetadataManager,
-      ServerInventoryView serverInventoryView,
-      MetadataRuleManager metadataRuleManager,
-      ServiceEmitter emitter,
-      ScheduledExecutorFactory scheduledExecutorFactory,
-      IndexingServiceClient indexingServiceClient,
-      LoadQueueTaskMaster taskMaster,
-      SegmentLoadQueueManager loadQueueManager,
-      ServiceAnnouncer serviceAnnouncer,
-      DruidNode self,
-      ConcurrentMap<String, LoadQueuePeon> loadQueuePeonMap,
-      Set<CoordinatorDuty> indexingServiceDuties,
-      Set<CoordinatorDuty> metadataStoreManagementDuties,
-      CoordinatorCustomDutyGroups customDutyGroups,
-      BalancerStrategyFactory factory,
-      LookupCoordinatorManager lookupCoordinatorManager,
-      DruidLeaderSelector coordLeaderSelector,
-      CompactionSegmentSearchPolicy compactionSegmentSearchPolicy
-  )
-  {
     this.config = config;
     this.configManager = configManager;
 
@@ -253,7 +208,6 @@ public class DruidCoordinator
 
     this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
 
-    this.loadManagementPeons = loadQueuePeonMap;
     this.factory = factory;
     this.lookupCoordinatorManager = lookupCoordinatorManager;
     this.coordLeaderSelector = coordLeaderSelector;
@@ -898,11 +852,13 @@ public class DruidCoordinator
       List<ImmutableDruidServer> currentServers = prepareCurrentServers();
 
       startPeonsForNewServers(currentServers);
+      stopPeonsForDisappearedServers(currentServers);
 
       cluster = prepareCluster(params, currentServers);
-      segmentReplicantLookup = SegmentReplicantLookup.make(cluster, getDynamicConfigs().getReplicateAfterLoadTimeout());
+      cancelLoadsOnDecommissioningServers(cluster);
 
-      stopPeonsForDisappearedServers(currentServers);
+      segmentReplicantLookup =
+          SegmentReplicantLookup.make(cluster, getDynamicConfigs().getReplicateAfterLoadTimeout());
 
       initBalancerExecutor();
       BalancerStrategy balancerStrategy = factory.createBalancerStrategy(balancerExec);
@@ -917,6 +873,29 @@ public class DruidCoordinator
                    .withBalancerStrategy(balancerStrategy)
                    .withSegmentReplicantLookup(segmentReplicantLookup)
                    .build();
+    }
+
+    /**
+     * Cancels all load/move operations on decommissioning servers. This is done
+     * before initializing the SegmentReplicantLookup so that under-replicated
+     * segments can be assigned in the current run itself.
+     */
+    private void cancelLoadsOnDecommissioningServers(DruidCluster cluster)
+    {
+      final AtomicInteger cancelledCount = new AtomicInteger(0);
+      cluster.getAllServers().stream().filter(ServerHolder::isDecommissioning).forEach(
+          server -> server.getQueuedSegments().forEach(
+              (segment, action) -> {
+                if (action != SegmentAction.DROP
+                    && server.getPeon().cancelOperation(segment)) {
+                  cancelledCount.incrementAndGet();
+                }
+              }
+          )
+      );
+      if (cancelledCount.get() > 0) {
+        log.info("Cancelled [%d] load/move operations on decommissioning servers.", cancelledCount.get());
+      }
     }
 
     List<ImmutableDruidServer> prepareCurrentServers()

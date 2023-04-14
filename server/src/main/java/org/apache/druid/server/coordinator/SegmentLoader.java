@@ -55,7 +55,7 @@ public class SegmentLoader implements SegmentActionHandler
 
   private final boolean useRoundRobinAssignment;
 
-  private final Set<String> emptyTiers = new HashSet<>();
+  private final Set<String> tiersWithNoServer = new HashSet<>();
 
   public SegmentLoader(
       SegmentLoadQueueManager loadQueueManager,
@@ -82,8 +82,8 @@ public class SegmentLoader implements SegmentActionHandler
 
   public void makeAlerts()
   {
-    if (!emptyTiers.isEmpty()) {
-      log.makeAlert("Tiers [%s] have no servers! Check your cluster configuration.", emptyTiers).emit();
+    if (!tiersWithNoServer.isEmpty()) {
+      log.makeAlert("Tiers [%s] have no servers! Check your cluster configuration.", tiersWithNoServer).emit();
     }
   }
 
@@ -125,7 +125,7 @@ public class SegmentLoader implements SegmentActionHandler
       if (allTiers.contains(tier)) {
         requiredTotalReplicas.addAndGet(requiredReplicas);
       } else {
-        emptyTiers.add(tier);
+        tiersWithNoServer.add(tier);
       }
     });
 
@@ -303,7 +303,7 @@ public class SegmentLoader implements SegmentActionHandler
    * Returns the number of successfully queued drop operations.
    */
   private int dropReplicas(
-      int numToDrop,
+      final int numToDrop,
       DataSegment segment,
       String tier,
       SegmentTierStatus segmentStatus

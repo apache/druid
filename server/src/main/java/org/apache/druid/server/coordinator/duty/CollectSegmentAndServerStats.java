@@ -111,8 +111,8 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
     params.getUsedSegmentsTimelinesPerDataSource().forEach(
         (dataSource, timeline) -> {
           long totalSizeOfUsedSegments = timeline.iterateAllObjects().stream().mapToLong(DataSegment::getSize).sum();
-          stats.addToDatasourceStat(Stats.Segments.SIZE, dataSource, totalSizeOfUsedSegments);
-          stats.addToDatasourceStat(Stats.Segments.COUNT, dataSource, timeline.getNumObjects());
+          stats.addToDatasourceStat(Stats.Segments.USED_BYTES, dataSource, totalSizeOfUsedSegments);
+          stats.addToDatasourceStat(Stats.Segments.USED, dataSource, timeline.getNumObjects());
         }
     );
 
@@ -135,14 +135,10 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
       LoadQueuePeon queuePeon = serverHolder.getPeon();
       log.info(
           "Server[%s, %s, %s] has [%,d] left to drop, [%,d (%,d MBs)] left to load, [%,d (%,d MBs)] served.",
-          server.getName(),
-          server.getType().toString(),
-          server.getTier(),
-          queuePeon.getSegmentsToDrop().size(),
-          queuePeon.getSegmentsToLoad().size(),
+          server.getName(), server.getType().toString(), server.getTier(),
+          queuePeon.getSegmentsToDrop().size(), queuePeon.getSegmentsToLoad().size(),
           queuePeon.getSizeOfSegmentsToLoad() >> 20,
-          server.getNumSegments(),
-          server.getCurrSize() >> 20
+          server.getNumSegments(), server.getCurrSize() >> 20
       );
       if (log.isDebugEnabled()) {
         log.debug(

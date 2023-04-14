@@ -233,7 +233,7 @@ public abstract class CoordinatorSimulationBaseTest implements
 
     static final String BROADCAST_LOADS = "segment/assigned/broadcast";
     static final String BROADCAST_DROPS = "segment/dropped/broadcast";
-    static final String LOAD_QUEUE_STATUS = "segment/loadQueue/status";
+    static final String CANCELLED_ACTIONS = "segment/loadQueue/cancelled";
   }
 
   static class Segments

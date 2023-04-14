@@ -44,10 +44,11 @@ public class Stats
     public static final CoordinatorStat DROPPED_BROADCAST
         = new CoordinatorStat("dropBroad", "segment/dropped/broadcast");
 
-    // Current cluster state
-    public static final CoordinatorStat COUNT = new CoordinatorStat("segCount", "segment/count");
-    public static final CoordinatorStat SIZE = new CoordinatorStat("segSize", "segment/size");
-
+    // Current state of segments of a datasource
+    public static final CoordinatorStat USED
+        = new CoordinatorStat("usedSegments", "segment/count");
+    public static final CoordinatorStat USED_BYTES
+        = new CoordinatorStat("usedSegmentBytes", "segment/size");
     public static final CoordinatorStat UNDER_REPLICATED
         = new CoordinatorStat("underreplicated", "segment/underReplicated/count");
     public static final CoordinatorStat UNAVAILABLE
@@ -67,15 +68,12 @@ public class Stats
     public static final CoordinatorStat NUM_TO_DROP
         = new CoordinatorStat("numToDrop", "segment/dropQueue/count");
 
-    public static final CoordinatorStat FAILED_LOADS
-        = new CoordinatorStat("failedLoad", "segment/loadQueue/failed");
-
-    public static final CoordinatorStat LOAD_STATUS
-        = new CoordinatorStat("loadStatus", "segment/loadQueue/status");
-    public static final CoordinatorStat DROP_STATUS
-        = new CoordinatorStat("dropStatus", "segment/dropQueue/status");
-    public static final CoordinatorStat MOVE_STATUS
-        = new CoordinatorStat("assignMove", "segment/moveQueue/status");
+    public static final CoordinatorStat COMPLETED_ACTIONS
+        = new CoordinatorStat("successActions", "segment/loadQueue/success");
+    public static final CoordinatorStat FAILED_ACTIONS
+        = new CoordinatorStat("failedActions", "segment/loadQueue/failed");
+    public static final CoordinatorStat CANCELLED_ACTIONS
+        = new CoordinatorStat("cancelActions", "segment/loadQueue/cancelled");
   }
 
   public static class Tier

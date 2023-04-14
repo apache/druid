@@ -304,7 +304,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     // Run 3: No segments are assigned, extra loads are cancelled
     runCoordinatorCycle();
     verifyValue(Metric.ASSIGNED_COUNT, 0L);
-    verifyValue(Metric.LOAD_QUEUE_STATUS, 2L);
+    verifyValue(Metric.CANCELLED_ACTIONS, 2L);
 
     // Run 4: Some segments are assigned as load queue is still partially full
     runCoordinatorCycle();
@@ -416,7 +416,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
 
     // Verify that the loading of the extra replicas is cancelled
-    verifyValue(Metric.LOAD_QUEUE_STATUS, filter(DruidMetrics.STATUS, "cancelled"), 10L);
+    verifyValue(Metric.CANCELLED_ACTIONS, 10L);
     verifyValue(
         Metric.LOAD_QUEUE_COUNT,
         filter(DruidMetrics.SERVER, historicalT12.getName()),
@@ -482,6 +482,43 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
 
     Assert.assertEquals(10, historicalT11.getTotalSegments());
     Assert.assertEquals(5, historicalT12.getTotalSegments());
+  }
+
+  @Test
+  public void testAllLoadsOnDecommissioningServerAreCancelled()
+  {
+    // disable balancing, unlimited load queue, replicationThrottleLimit = 1
+    final CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(0, 0, 100);
+
+    final CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(segments)
+                             .withServers(historicalT11, historicalT12)
+                             .withDynamicConfig(dynamicConfig)
+                             .withRules(datasource, Load.on(Tier.T1, 2).forever())
+                             .build();
+
+    startSimulation(sim);
+
+    // All segments are loaded on histT11
+    segments.forEach(historicalT11::addDataSegment);
+
+    // Run 1: Some replicas are assigned to histT12
+    runCoordinatorCycle();
+    verifyValue(Metric.ASSIGNED_COUNT, 10L);
+
+    // Run 2: histT12 is marked as decommissioning, all loads on it are cancelled
+    setDynamicConfig(
+        CoordinatorDynamicConfig.builder()
+                                .withDecommissioningNodes(Collections.singleton(historicalT12.getName()))
+                                .build(dynamicConfig)
+    );
+    runCoordinatorCycle();
+    verifyValue(Metric.CANCELLED_ACTIONS, 10L);
+
+    loadQueuedSegments();
+    Assert.assertEquals(10, historicalT11.getTotalSegments());
+    Assert.assertEquals(0, historicalT12.getTotalSegments());
   }
 
   private int getNumLoadedSegments(DruidServer... servers)

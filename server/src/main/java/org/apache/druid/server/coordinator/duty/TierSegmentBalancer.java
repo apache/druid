@@ -202,7 +202,6 @@ public class TierSegmentBalancer
     // Check if the picked segment still needs to be balanced
     final DataSegment segmentToMove = getLoadableSegment(segmentToMoveHolder.getSegment());
     if (segmentToMove == null) {
-      // TODO: totalUnmovedCount++;
       return false;
     }
 
@@ -244,20 +243,21 @@ public class TierSegmentBalancer
   private DataSegment getLoadableSegment(DataSegment segmentToMove)
   {
     final SegmentId segmentId = segmentToMove.getId();
+
     if (!params.getUsedSegments().contains(segmentToMove)) {
-      log.warn("Not moving segment [%s] because it is an unused segment.", segmentId);
+      markUnmoved(segmentToMove, "segment is unused");
       return null;
     }
 
     ImmutableDruidDataSource datasource = params.getDataSourcesSnapshot().getDataSource(segmentToMove.getDataSource());
     if (datasource == null) {
-      log.warn("Not moving segment [%s] because datasource snapshot does not exist.", segmentId);
+      markUnmoved(segmentToMove, "datasource not found");
       return null;
     }
 
     DataSegment loadableSegment = datasource.getSegment(segmentId);
     if (loadableSegment == null) {
-      log.warn("Not moving segment [%s] as its metadata could not be found.", segmentId);
+      markUnmoved(segmentToMove, "metadata not found");
       return null;
     }
 

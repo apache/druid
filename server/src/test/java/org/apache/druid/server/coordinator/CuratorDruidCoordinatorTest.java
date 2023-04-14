@@ -38,7 +38,6 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.curator.CuratorUtils;
-import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -49,7 +48,7 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.loadqueue.CuratorLoadQueuePeon;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
-import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.loadqueue.LoadQueueTaskMaster;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.DeadlockDetectingTimeout;
@@ -89,8 +88,6 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   private LoadQueuePeon destinationLoadQueuePeon;
   private PathChildrenCache sourceLoadQueueChildrenCache;
   private PathChildrenCache destinationLoadQueueChildrenCache;
-  private DruidCoordinatorConfig druidCoordinatorConfig;
-  private JacksonConfigManager configManager;
 
   private static final String SEGPATH = "/druid/segments";
   private static final String SOURCE_LOAD_PATH = "/druid/loadQueue/localhost:1";
@@ -127,7 +124,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     dataSourcesSnapshot = EasyMock.createNiceMock(DataSourcesSnapshot.class);
     coordinatorRuntimeParams = EasyMock.createNiceMock(DruidCoordinatorRuntimeParams.class);
 
-    configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
+    JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
     EasyMock.expect(
         configManager.watch(
             EasyMock.eq(CoordinatorDynamicConfig.CONFIG_KEY),
@@ -152,7 +149,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     curator.create().creatingParentsIfNeeded().forPath(DESTINATION_LOAD_PATH);
 
     final ObjectMapper objectMapper = new DefaultObjectMapper();
-    druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
+    DruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
         .withCoordinatorStartDelay(new Duration(COORDINATOR_START_DELAY))
         .withCoordinatorPeriod(new Duration(COORDINATOR_PERIOD))
         .withCoordinatorKillPeriod(new Duration(COORDINATOR_PERIOD))
@@ -329,12 +326,13 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     EasyMock.expect(dataSourcesSnapshot.getDataSource(EasyMock.anyString())).andReturn(druidDataSource).anyTimes();
     EasyMock.replay(dataSourcesSnapshot);
 
+    LoadQueueTaskMaster taskMaster = EasyMock.createMock(LoadQueueTaskMaster.class);
+    EasyMock.expect(taskMaster.isHttpLoading()).andReturn(false).anyTimes();
+    EasyMock.replay(taskMaster);
+
     // Move the segment from source to dest
-    SegmentLoadQueueManager loadQueueManager = new SegmentLoadQueueManager(
-        baseView,
-        segmentsMetadataManager,
-        LoadQueuePeonTester.mockCuratorTaskMaster()
-    );
+    SegmentLoadQueueManager loadQueueManager =
+        new SegmentLoadQueueManager(baseView, segmentsMetadataManager, taskMaster);
     SegmentLoader segmentLoader = createSegmentLoader(loadQueueManager, coordinatorRuntimeParams);
     segmentLoader.moveSegment(
         segmentToMove,
@@ -358,45 +356,6 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
 
     Assert.assertEquals(2, servers.get(0).getTotalSegments());
     Assert.assertEquals(2, servers.get(1).getTotalSegments());
-  }
-
-  private static class TestDruidLeaderSelector implements DruidLeaderSelector
-  {
-    private volatile Listener listener;
-    private volatile String leader;
-
-    @Override
-    public String getCurrentLeader()
-    {
-      return leader;
-    }
-
-    @Override
-    public boolean isLeader()
-    {
-      return leader != null;
-    }
-
-    @Override
-    public int localTerm()
-    {
-      return 0;
-    }
-
-    @Override
-    public void registerListener(Listener listener)
-    {
-      this.listener = listener;
-      leader = "what:1234";
-      listener.becomeLeader();
-    }
-
-    @Override
-    public void unregisterListener()
-    {
-      leader = null;
-      listener.stopBeingLeader();
-    }
   }
 
   private void setupView() throws Exception

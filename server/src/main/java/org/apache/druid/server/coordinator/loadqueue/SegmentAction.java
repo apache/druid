@@ -19,9 +19,6 @@
 
 package org.apache.druid.server.coordinator.loadqueue;
 
-import org.apache.druid.server.coordinator.stats.CoordinatorStat;
-import org.apache.druid.server.coordinator.stats.Stats;
-
 /**
  * Represents actions that can be performed on a server for a single segment.
  * <p>
@@ -32,14 +29,14 @@ public enum SegmentAction
   /**
    * Drop a segment from a server.
    */
-  DROP(Stats.SegmentQueue.DROP_STATUS),
+  DROP,
 
   /**
    * Load a segment on a server. This should be used when trying to load a segment
    * on a tier where it is currently unavailable (i.e. no replicas loaded).
    * This action cannot be throttled by the {@code replicationThrottleLimit}.
    */
-  LOAD(Stats.SegmentQueue.LOAD_STATUS),
+  LOAD,
 
   /**
    * Load a replica of a segment on a server. This should be used when trying to
@@ -53,25 +50,11 @@ public enum SegmentAction
    * </ul>
    * For all other purposes, REPLICATE is treated the same as LOAD.
    */
-  REPLICATE(Stats.SegmentQueue.LOAD_STATUS),
+  REPLICATE,
 
   /**
    * Move a segment to this server. This does not have a corresponding MOVE_FROM
    * action as that just gets queued as a DROP once the MOVE_TO action is complete.
    */
-  MOVE_TO(Stats.SegmentQueue.MOVE_STATUS);
-
-  private final CoordinatorStat statusStat;
-
-  SegmentAction(
-      CoordinatorStat statusStat
-  )
-  {
-    this.statusStat = statusStat;
-  }
-
-  public CoordinatorStat getStatusStat()
-  {
-    return statusStat;
-  }
+  MOVE_TO,
 }

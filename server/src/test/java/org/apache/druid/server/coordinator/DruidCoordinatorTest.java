@@ -34,6 +34,7 @@ import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.curator.CuratorUtils;
@@ -58,7 +59,6 @@ import org.apache.druid.server.coordinator.duty.KillSupervisorsCustomDuty;
 import org.apache.druid.server.coordinator.duty.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.loadqueue.CuratorLoadQueuePeon;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
-import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
@@ -78,8 +78,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
@@ -99,7 +97,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
   private BatchServerInventoryView serverInventoryView;
   private ScheduledExecutorFactory scheduledExecutorFactory;
   private DruidServer druidServer;
-  private ConcurrentMap<String, LoadQueuePeon> loadManagementPeons;
   private LoadQueuePeon loadQueuePeon;
   private LoadQueueTaskMaster loadQueueTaskMaster;
   private MetadataRuleManager metadataRuleManager;
@@ -120,7 +117,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     segmentsMetadataManager = EasyMock.createNiceMock(SegmentsMetadataManager.class);
     dataSourcesSnapshot = EasyMock.createNiceMock(DataSourcesSnapshot.class);
     metadataRuleManager = EasyMock.createNiceMock(MetadataRuleManager.class);
-    loadQueueTaskMaster = LoadQueuePeonTester.mockCuratorTaskMaster();
+    loadQueueTaskMaster = EasyMock.createMock(LoadQueueTaskMaster.class);
 
     JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
     EasyMock.expect(
@@ -167,7 +164,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
     );
     loadQueuePeon.start();
     druidNode = new DruidNode("hey", "what", false, 1234, null, true, false);
-    loadManagementPeons = new ConcurrentHashMap<>();
     scheduledExecutorFactory = (corePoolSize, nameFormat) -> Executors.newSingleThreadScheduledExecutor();
     leaderAnnouncerLatch = new CountDownLatch(1);
     leaderUnannouncerLatch = new CountDownLatch(1);
@@ -184,9 +180,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new SegmentLoadQueueManager(serverInventoryView, segmentsMetadataManager, loadQueueTaskMaster),
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
-        loadManagementPeons,
-        null,
         new HashSet<>(),
+        null,
         new CoordinatorCustomDutyGroups(ImmutableSet.of()),
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
@@ -244,12 +239,12 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
     // Setup ServerInventoryView
     druidServer = new DruidServer("server1", "localhost", null, 5L, ServerType.HISTORICAL, tier, 0);
-    loadManagementPeons.put("server1", loadQueuePeon);
+    setupPeons(Collections.singletonMap("server1", loadQueuePeon));
     EasyMock.expect(serverInventoryView.getInventory()).andReturn(
         ImmutableList.of(druidServer)
     ).atLeastOnce();
     EasyMock.expect(serverInventoryView.isStarted()).andReturn(true).anyTimes();
-    EasyMock.replay(serverInventoryView);
+    EasyMock.replay(serverInventoryView, loadQueueTaskMaster);
 
     coordinator.start();
     // Wait for this coordinator to become leader
@@ -355,7 +350,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         true,
         Execs.singleThreaded("coordinator_test_path_children_cache_cold-%d")
     );
-    loadManagementPeons.putAll(ImmutableMap.of("hot", loadQueuePeon, "cold", loadQueuePeonCold));
+    setupPeons(ImmutableMap.of("hot", loadQueuePeon, "cold", loadQueuePeonCold));
 
     loadQueuePeonCold.start();
     pathChildrenCache.start();
@@ -374,7 +369,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
             .atLeastOnce();
     EasyMock.expect(serverInventoryView.isStarted()).andReturn(true).anyTimes();
 
-    EasyMock.replay(metadataRuleManager, serverInventoryView);
+    EasyMock.replay(metadataRuleManager, serverInventoryView, loadQueueTaskMaster);
 
     coordinator.start();
     leaderAnnouncerLatch.await(); // Wait for this coordinator to become leader
@@ -501,11 +496,13 @@ public class DruidCoordinatorTest extends CuratorTestBase
         Execs.singleThreaded("coordinator_test_path_children_cache_peon-%d")
     );
 
-    loadManagementPeons.putAll(ImmutableMap.of("hot", loadQueuePeon,
-                                               "cold", loadQueuePeonCold,
-                                               "broker1", loadQueuePeonBroker1,
-                                               "broker2", loadQueuePeonBroker2,
-                                               "peon", loadQueuePeonPoenServer));
+    setupPeons(ImmutableMap.of(
+        "hot", loadQueuePeon,
+        "cold", loadQueuePeonCold,
+        "broker1", loadQueuePeonBroker1,
+        "broker2", loadQueuePeonBroker2,
+        "peon", loadQueuePeonPoenServer
+    ));
 
     loadQueuePeonCold.start();
     loadQueuePeonBroker1.start();
@@ -531,7 +528,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
             .atLeastOnce();
     EasyMock.expect(serverInventoryView.isStarted()).andReturn(true).anyTimes();
 
-    EasyMock.replay(metadataRuleManager, serverInventoryView);
+    EasyMock.replay(metadataRuleManager, serverInventoryView, loadQueueTaskMaster);
 
     coordinator.start();
     leaderAnnouncerLatch.await(); // Wait for this coordinator to become leader
@@ -661,9 +658,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
-        loadManagementPeons,
-        ImmutableSet.of(),
         new HashSet<>(),
+        ImmutableSet.of(),
         emptyCustomDutyGroups,
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
@@ -702,9 +698,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
-        loadManagementPeons,
-        ImmutableSet.of(),
         new HashSet<>(),
+        ImmutableSet.of(),
         customDutyGroups,
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
@@ -751,9 +746,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
-        loadManagementPeons,
-        ImmutableSet.of(),
         new HashSet<>(),
+        ImmutableSet.of(),
         customDutyGroups,
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
@@ -861,9 +855,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
-        loadManagementPeons,
-        null,
         new HashSet<>(),
+        null,
         groups,
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
@@ -952,6 +945,13 @@ public class DruidCoordinatorTest extends CuratorTestBase
         .map(Map.Entry::getValue)
         .findFirst()
         .orElse(null);
+  }
+
+  private void setupPeons(Map<String, LoadQueuePeon> peonMap)
+  {
+    EasyMock.expect(loadQueueTaskMaster.giveMePeon(EasyMock.anyObject())).andAnswer(
+        () -> peonMap.get(((ImmutableDruidServer) EasyMock.getCurrentArgument(0)).getName())
+    ).anyTimes();
   }
 
   private static class TestDruidLeaderSelector implements DruidLeaderSelector

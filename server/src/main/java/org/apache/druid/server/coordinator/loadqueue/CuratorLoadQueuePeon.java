@@ -398,7 +398,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
     if (e != null) {
       log.error(e, "Server[%s], throwable caught when submitting [%s].", basePath, segmentHolder);
     }
-    stats.add(Stats.SegmentQueue.FAILED_LOADS, 1);
+    stats.add(Stats.SegmentQueue.FAILED_ACTIONS, 1);
 
     if (handleTimeout) {
       // Avoid removing the segment entry from the load/drop list in case config.getLoadTimeoutDelay() expires.

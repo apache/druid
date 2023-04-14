@@ -194,7 +194,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     addServer(historicalT12);
     runCoordinatorCycle();
     verifyNotEmitted(Metric.ASSIGNED_COUNT);
-    verifyValue(Metric.LOAD_QUEUE_STATUS, filter(DruidMetrics.STATUS, "cancelled"), 5L);
+    verifyValue(Metric.CANCELLED_ACTIONS, 5L);
     verifyValue(Metric.MOVED_COUNT, 5L);
 
     verifyValue(Metric.LOAD_QUEUE_COUNT, filter(DruidMetrics.SERVER, historicalT11.getName()), 5L);
