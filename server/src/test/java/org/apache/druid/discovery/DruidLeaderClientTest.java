@@ -239,12 +239,12 @@ public class DruidLeaderClientTest extends BaseJettyTest
     ), Charset.defaultCharset()));
     EasyMock.replay(druidNodeDiscovery, druidNodeDiscoveryProvider, task);
 
-    HttpClient httpClient = Mockito.spy(this.httpClient);
+    HttpClient spyHttpClient = Mockito.spy(this.httpClient);
     // Override behavior for the first call only
-    Mockito.doReturn(task).doCallRealMethod().when(httpClient).go(Mockito.any(), Mockito.any());
+    Mockito.doReturn(task).doCallRealMethod().when(spyHttpClient).go(Mockito.any(), Mockito.any());
 
     DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
-        httpClient,
+        spyHttpClient,
         druidNodeDiscoveryProvider,
         NodeRole.PEON,
         "/simple/leader"
@@ -274,11 +274,11 @@ public class DruidLeaderClientTest extends BaseJettyTest
     ), Charset.defaultCharset()));
     EasyMock.replay(druidNodeDiscovery, druidNodeDiscoveryProvider, task);
 
-    HttpClient httpClient = Mockito.spy(this.httpClient);
-    Mockito.doReturn(task).doCallRealMethod().when(httpClient).go(Mockito.any(), Mockito.any());
+    HttpClient spyHttpClient = Mockito.spy(this.httpClient);
+    Mockito.doReturn(task).doCallRealMethod().when(spyHttpClient).go(Mockito.any(), Mockito.any());
 
     DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
-        httpClient,
+        spyHttpClient,
         druidNodeDiscoveryProvider,
         NodeRole.PEON,
         "/simple/leader"
