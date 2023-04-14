@@ -1152,7 +1152,9 @@ public class SystemSchemaTest extends CalciteTestBase
     HttpResponse httpResp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
     InputStreamFullResponseHolder responseHolder = new InputStreamFullResponseHolder(httpResp);
 
-    EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject(InputStreamFullResponseHandler.class))).andReturn(responseHolder).once();
+    EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject(InputStreamFullResponseHandler.class)))
+            .andReturn(responseHolder)
+            .once();
     EasyMock.expect(request.getUrl()).andReturn(new URL("http://test-host:1234/druid/indexer/v1/tasks")).anyTimes();
 
     String json = "[{\n"
@@ -1277,7 +1279,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
     HttpResponse httpResp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 
-    EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject()))
+    EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject(HttpResponseHandler.class)))
             .andReturn(createFullResponseHolder(httpResp, json))
             .andReturn(createFullResponseHolder(httpResp, json))
             .andReturn(createFullResponseHolder(httpResp, json));
@@ -1326,7 +1328,9 @@ public class SystemSchemaTest extends CalciteTestBase
     HttpResponse httpResp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
     InputStreamFullResponseHolder responseHolder = new InputStreamFullResponseHolder(httpResp);
 
-    EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject(InputStreamFullResponseHandler.class))).andReturn(responseHolder).once();
+    EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject(InputStreamFullResponseHandler.class)))
+            .andReturn(responseHolder)
+            .once();
 
     EasyMock.expect(responseHandler.getStatus()).andReturn(httpResp.getStatus().getCode()).anyTimes();
     EasyMock.expect(request.getUrl())
@@ -1393,7 +1397,7 @@ public class SystemSchemaTest extends CalciteTestBase
                   + "}]";
 
     HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-    EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject()))
+    EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject(HttpResponseHandler.class)))
             .andReturn(createFullResponseHolder(httpResponse, json))
             .andReturn(createFullResponseHolder(httpResponse, json))
             .andReturn(createFullResponseHolder(httpResponse, json));

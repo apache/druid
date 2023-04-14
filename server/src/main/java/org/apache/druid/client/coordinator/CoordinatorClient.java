@@ -21,6 +21,7 @@ package org.apache.druid.client.coordinator;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.discovery.DruidLeaderClient;
@@ -37,6 +38,7 @@ import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 public class CoordinatorClient
 {
@@ -71,7 +73,8 @@ public class CoordinatorClient
                   descriptor.getPartitionNumber(),
                   descriptor.getVersion()
               )
-          )
+          ),
+          Optional.of(Sets.newHashSet(HttpResponseStatus.NOT_FOUND))
       );
 
       if (response.getStatus().equals(HttpResponseStatus.NOT_FOUND)) {

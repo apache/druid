@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -52,6 +53,7 @@ import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.ws.rs.core.MediaType;
 import java.io.File;
@@ -61,6 +63,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
@@ -509,7 +512,8 @@ public class WorkerTaskManager
                   overlordClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/taskStatus")
                                 .setContent(jsonMapper.writeValueAsBytes(taskIds))
                                 .addHeader(HttpHeaders.Names.ACCEPT, MediaType.APPLICATION_JSON)
-                                .addHeader(HttpHeaders.Names.CONTENT_TYPE, MediaType.APPLICATION_JSON)
+                                .addHeader(HttpHeaders.Names.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+                  Optional.of(Sets.newHashSet(HttpResponseStatus.NOT_FOUND))
 
               );
               if (fullResponseHolder.getStatus().getCode() == 200) {
