@@ -29,8 +29,8 @@ import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
-import org.apache.druid.server.coordinator.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.SegmentLoader;
+import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -148,8 +148,7 @@ public class RunRules implements CoordinatorDuty
 
     final CoordinatorRunStats stats = segmentLoader.getStats();
     stats.forEachRow(
-        (dimValues, statValues) ->
-            log.info("Stats for dims[%s] are [%s]", dimValues, statValues)
+        (row, statValues) -> log.info("Stats for row[%s] are [%s]", row, statValues)
     );
 
     return params.buildFromExisting()

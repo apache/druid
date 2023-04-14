@@ -17,9 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.balancer;
 
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.ArrayList;

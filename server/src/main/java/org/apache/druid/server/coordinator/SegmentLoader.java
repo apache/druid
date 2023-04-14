@@ -21,7 +21,9 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
+import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.SegmentActionHandler;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;

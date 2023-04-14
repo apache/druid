@@ -17,15 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.loadqueue;
 
 import com.google.inject.Inject;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.server.coordinator.loadqueue.LoadPeonCallback;
-import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
-import org.apache.druid.server.coordinator.loadqueue.LoadQueueTaskMaster;
-import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
+import org.apache.druid.server.coordinator.ReplicationThrottler;
+import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Collections;

@@ -19,6 +19,9 @@
 
 package org.apache.druid.server.coordinator.stats;
 
+/**
+ * List of Coordinator stats.
+ */
 public class Stats
 {
   public static class Segments

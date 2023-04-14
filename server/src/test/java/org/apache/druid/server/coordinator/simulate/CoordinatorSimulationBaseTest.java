@@ -28,11 +28,13 @@ import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -185,18 +187,9 @@ public abstract class CoordinatorSimulationBaseTest implements
   /**
    * Creates a map containing dimension key-values to filter out metric events.
    */
-  static Map<String, Object> filter(String... dimensionValues)
+  static Map<String, Object> filter(Dimension dimension, String value)
   {
-    if (dimensionValues.length < 2 || dimensionValues.length % 2 == 1) {
-      throw new IllegalArgumentException("Dimension key-values must be specified in pairs.");
-    }
-
-    final Map<String, Object> filters = new HashMap<>();
-    for (int i = 0; i < dimensionValues.length; ) {
-      filters.put(dimensionValues[i], dimensionValues[i + 1]);
-      i += 2;
-    }
-    return filters;
+    return Collections.singletonMap(dimension.reportedName(), value);
   }
 
   /**

@@ -32,6 +32,7 @@ import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.PeriodLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;

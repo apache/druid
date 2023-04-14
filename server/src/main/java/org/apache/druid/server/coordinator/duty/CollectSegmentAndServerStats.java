@@ -57,8 +57,7 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
 
     final CoordinatorRunStats stats = collectSegmentStats(params);
     stats.forEachRow(
-        (dimValues, statValues) ->
-            log.info("Stats for dims[%s] are [%s]", dimValues, statValues)
+        (row, statValues) -> log.info("Stats for row[%s] are [%s]", row, statValues)
     );
 
     return params.buildFromExisting().withCoordinatorStats(stats).build();

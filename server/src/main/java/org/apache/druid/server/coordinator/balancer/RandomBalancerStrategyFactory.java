@@ -17,7 +17,15 @@
  * under the License.
  */
 
-@ParametersAreNonnullByDefault
-package org.apache.druid.server.coordinator.cost;
+package org.apache.druid.server.coordinator.balancer;
 
-import javax.annotation.ParametersAreNonnullByDefault;
+import com.google.common.util.concurrent.ListeningExecutorService;
+
+public class RandomBalancerStrategyFactory implements BalancerStrategyFactory
+{
+  @Override
+  public BalancerStrategy createBalancerStrategy(ListeningExecutorService exec)
+  {
+    return new RandomBalancerStrategy();
+  }
+}

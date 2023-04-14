@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator.stats;
 
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
-import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.Map;
@@ -76,14 +75,9 @@ public class CoordinatorRunStats
    * identified by a unique combination of dimension values and may have multiple
    * stats (aka metrics) in it.
    */
-  public void forEachRow(BiConsumer<Map<String, String>, Map<CoordinatorStat, Long>> consumer)
+  public void forEachRow(BiConsumer<RowKey, Map<CoordinatorStat, Long>> consumer)
   {
-    allStats.forEach(
-        (rowKey, stats) -> consumer.accept(
-            CollectionUtils.mapKeys(rowKey.getValues(), Dimension::dimensionName),
-            stats
-        )
-    );
+    allStats.forEach(consumer);
   }
 
   public boolean hasStat(CoordinatorStat stat)

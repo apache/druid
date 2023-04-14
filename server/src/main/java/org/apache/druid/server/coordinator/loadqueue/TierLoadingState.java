@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.loadqueue;
 
 import org.apache.druid.timeline.SegmentId;
 import org.eclipse.jetty.util.ConcurrentHashSet;

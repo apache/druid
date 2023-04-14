@@ -19,28 +19,33 @@
 
 package org.apache.druid.server.coordinator.stats;
 
-import org.apache.druid.query.DruidMetrics;
-
 /**
  * Dimensions used while reporting coordinator run stats.
  */
 public enum Dimension
 {
-  TIER(DruidMetrics.TIER),
-  DATASOURCE(DruidMetrics.DATASOURCE),
-  DUTY(DruidMetrics.DUTY),
-  SERVER(DruidMetrics.SERVER),
-  STATUS(DruidMetrics.STATUS);
+  TIER("tier"),
+  DATASOURCE("dataSource"),
+  DUTY("duty"),
+  DUTY_GROUP("dutyGroup"),
+  SERVER("server"),
+  STATUS("status");
 
-  private final String dimName;
+  private final String reportedName;
 
   Dimension(String name)
   {
-    this.dimName = name;
+    this.reportedName = name;
   }
 
-  public String dimensionName()
+  public String reportedName()
   {
-    return dimName;
+    return reportedName;
+  }
+
+  @Override
+  public String toString()
+  {
+    return reportedName;
   }
 }

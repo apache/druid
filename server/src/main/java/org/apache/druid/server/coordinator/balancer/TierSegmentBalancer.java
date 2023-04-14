@@ -17,13 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.duty;
+package org.apache.druid.server.coordinator.balancer;
 
 import com.google.common.collect.Lists;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.server.coordinator.BalancerSegmentHolder;
-import org.apache.druid.server.coordinator.BalancerStrategy;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.SegmentLoader;
@@ -91,7 +89,7 @@ public class TierSegmentBalancer
     this.allServers = servers;
   }
 
-  void run()
+  public void run()
   {
     if (activeServers.isEmpty() || (activeServers.size() <= 1 && decommissioningServers.isEmpty())) {
       log.warn(

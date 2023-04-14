@@ -42,12 +42,6 @@ public class DruidMetrics
   public static final String TASK_TYPE = "taskType";
   public static final String TASK_STATUS = "taskStatus";
 
-  public static final String SERVER = "server";
-  public static final String TIER = "tier";
-
-  public static final String DUTY = "duty";
-  public static final String DUTY_GROUP = "dutyGroup";
-
   public static final String STREAM = "stream";
 
   public static final String PARTITION = "partition";

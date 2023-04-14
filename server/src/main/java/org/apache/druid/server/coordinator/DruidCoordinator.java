@@ -57,8 +57,9 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
+import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.server.coordinator.duty.CollectSegmentAndServerStats;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
@@ -73,6 +74,7 @@ import org.apache.druid.server.coordinator.duty.UnloadUnusedSegments;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
+import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -816,10 +818,10 @@ public class DruidCoordinator
 
       if (stat.shouldEmit()) {
         ServiceMetricEvent.Builder eventBuilder = new ServiceMetricEvent.Builder()
-            .setDimension(DruidMetrics.DUTY_GROUP, dutyGroupName);
+            .setDimension(Dimension.DUTY_GROUP.reportedName(), dutyGroupName);
 
         dimensionValues.forEach(
-            (dim, dimValue) -> eventBuilder.setDimension(dim.dimensionName(), dimValue)
+            (dim, dimValue) -> eventBuilder.setDimension(dim.reportedName(), dimValue)
         );
         emitter.emit(eventBuilder.build(stat.getMetricName(), value));
       }

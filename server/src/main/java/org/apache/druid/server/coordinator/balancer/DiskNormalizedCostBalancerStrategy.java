@@ -17,9 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.balancer;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 
 public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy

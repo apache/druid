@@ -49,6 +49,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.loadqueue.CuratorLoadQueuePeon;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueueTaskMaster;
+import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.DeadlockDetectingTimeout;

@@ -17,32 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.balancer;
 
-import org.apache.druid.timeline.DataSegment;
+import com.google.common.util.concurrent.ListeningExecutorService;
 
-/**
- * Represents a segment picked for moving by a balancer strategy.
- */
-public class BalancerSegmentHolder
+public class CostBalancerStrategyFactory implements BalancerStrategyFactory
 {
-  private final ServerHolder server;
-  private final DataSegment segment;
-
-  public BalancerSegmentHolder(ServerHolder server, DataSegment segment)
+  @Override
+  public CostBalancerStrategy createBalancerStrategy(ListeningExecutorService exec)
   {
-    this.server = server;
-    this.segment = segment;
+    return new CostBalancerStrategy(exec);
   }
-
-  public ServerHolder getServer()
-  {
-    return server;
-  }
-
-  public DataSegment getSegment()
-  {
-    return segment;
-  }
-
 }

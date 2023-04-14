@@ -17,15 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+@ParametersAreNonnullByDefault
+package org.apache.druid.server.coordinator.balancer;
 
-import com.google.common.util.concurrent.ListeningExecutorService;
-
-public class DiskNormalizedCostBalancerStrategyFactory implements BalancerStrategyFactory
-{
-  @Override
-  public BalancerStrategy createBalancerStrategy(ListeningExecutorService exec)
-  {
-    return new DiskNormalizedCostBalancerStrategy(exec);
-  }
-}
+import javax.annotation.ParametersAreNonnullByDefault;

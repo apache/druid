@@ -17,15 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.balancer;
 
-import com.google.common.util.concurrent.ListeningExecutorService;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class CostBalancerStrategyFactory implements BalancerStrategyFactory
+public class CachingCostBalancerStrategyConfig
 {
-  @Override
-  public CostBalancerStrategy createBalancerStrategy(ListeningExecutorService exec)
+  @JsonProperty
+  private boolean awaitInitialization = false;
+
+  public boolean isAwaitInitialization()
   {
-    return new CostBalancerStrategy(exec);
+    return awaitInitialization;
   }
 }

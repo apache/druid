@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.balancer;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -30,7 +30,6 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.DruidServerMetadata;
-import org.apache.druid.server.coordinator.cost.ClusterCostCache;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.concurrent.CancellationException;

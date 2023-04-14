@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.cost;
+package org.apache.druid.server.coordinator.balancer;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -25,8 +25,6 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordinator.CachingCostBalancerStrategy;
-import org.apache.druid.server.coordinator.CostBalancerStrategy;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeonTester;
 import org.apache.druid.timeline.DataSegment;

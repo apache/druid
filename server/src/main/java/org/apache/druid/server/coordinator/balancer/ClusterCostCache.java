@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.cost;
+package org.apache.druid.server.coordinator.balancer;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.timeline.DataSegment;

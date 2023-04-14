@@ -17,11 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.balancer;
 
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.CreateDataSegments;
+import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
 import org.apache.druid.timeline.DataSegment;
