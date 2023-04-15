@@ -38,6 +38,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -181,6 +182,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
+import org.apache.druid.sql.calcite.run.SqlResults;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
@@ -581,14 +583,10 @@ public class ControllerImpl implements Controller
     QueryValidator.validateQueryDef(queryDef);
     queryDefRef.set(queryDef);
 
-    long maxParseExceptions = -1;
-
-    if (task.getSqlQueryContext() != null) {
-      maxParseExceptions = Optional.ofNullable(
-                                       task.getSqlQueryContext().get(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED))
-                                   .map(DimensionHandlerUtils::convertObjectToLong)
-                                   .orElse(MSQWarnings.DEFAULT_MAX_PARSE_EXCEPTIONS_ALLOWED);
-    }
+    final long maxParseExceptions = task.getQuerySpec().getQuery().context().getLong(
+        MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED,
+        MSQWarnings.DEFAULT_MAX_PARSE_EXCEPTIONS_ALLOWED
+    );
 
     ImmutableMap.Builder<String, Object> taskContextOverridesBuilder = ImmutableMap.builder();
     taskContextOverridesBuilder
@@ -1431,15 +1429,26 @@ public class ControllerImpl implements Controller
                                   .stream()
                                   .map(
                                       mapping ->
-                                          columnSelectorFactory.makeColumnValueSelector(
-                                              mapping.getQueryColumn())
+                                          columnSelectorFactory.makeColumnValueSelector(mapping.getQueryColumn())
                                   ).collect(Collectors.toList());
 
+                final List<SqlTypeName> sqlTypeNames = task.getSqlTypeNames();
                 final List<Object[]> retVal = new ArrayList<>();
                 while (!cursor.isDone()) {
                   final Object[] row = new Object[columnMappings.size()];
                   for (int i = 0; i < row.length; i++) {
-                    row[i] = selectors.get(i).getObject();
+                    final Object value = selectors.get(i).getObject();
+                    if (sqlTypeNames == null || task.getSqlResultsContext() == null) {
+                      // SQL type unknown, or no SQL results context: pass-through as is.
+                      row[i] = value;
+                    } else {
+                      row[i] = SqlResults.coerce(
+                          context.jsonMapper(),
+                          task.getSqlResultsContext(),
+                          value,
+                          sqlTypeNames.get(i)
+                      );
+                    }
                   }
                   retVal.add(row);
                   cursor.advance();
@@ -1994,7 +2003,7 @@ public class ControllerImpl implements Controller
       final QueryDefinition queryDef,
       final Yielder<Object[]> resultsYielder,
       final ColumnMappings columnMappings,
-      @Nullable final List<String> sqlTypeNames
+      @Nullable final List<SqlTypeName> sqlTypeNames
   )
   {
     final RowSignature querySignature = queryDef.getFinalStageDefinition().getSignature();
