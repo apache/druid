@@ -176,6 +176,7 @@ public class WorkerImpl implements Worker
   private final ConcurrentHashMap<StageId, WorkerStageKernel> stageKernelMap = new ConcurrentHashMap<>();
   private final ByteTracker intermediateSuperSorterLocalStorageTracker;
   private final boolean durableStageStorageEnabled;
+  private final WorkerStorageParameters workerStorageParameters;
 
   /**
    * Set once in {@link #runTask} and never reassigned.
@@ -215,6 +216,7 @@ public class WorkerImpl implements Worker
     this.durableStageStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(
         QueryContext.of(task.getContext())
     );
+    this.workerStorageParameters = workerStorageParameters;
 
     this.intermediateSuperSorterLocalStorageTracker = new ByteTracker(workerStorageParameters.getIntermediateSuperSorterStorageMaxLocalBytes());
   }
@@ -740,8 +742,7 @@ public class WorkerImpl implements Worker
     final FileOutputChannelFactory fileOutputChannelFactory =
         new FileOutputChannelFactory(fileChannelDirectory, frameSize, intermediateSuperSorterLocalStorageTracker);
 
-    // If durable storage is enabled, we should use the composed super sorter automatically.
-    if (durableStageStorageEnabled) {
+    if (durableStageStorageEnabled && workerStorageParameters.isIntermediateStorageLimitConfigured()) {
       return new ComposingOutputChannelFactory(
           ImmutableList.of(
               fileOutputChannelFactory,

@@ -41,7 +41,8 @@ public class NotEnoughTemporaryStorageFault extends BaseMSQFault
   {
     super(
         CODE,
-        "Not enough temporary storage space. Requires at least %,d bytes. (configured = %,d bytes)",
+        "Not enough temporary storage space for intermediate files. Requires at least %,d bytes. (configured = %,d bytes). Increase the limit by increasing tmpStorageBytesPerTask or "
+        + "disable durable storage to not use disk for temporary intermediate files.",
         suggestedMinimumStorage,
         configuredTemporaryStorage
     );

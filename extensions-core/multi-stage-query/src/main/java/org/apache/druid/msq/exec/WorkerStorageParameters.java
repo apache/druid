@@ -58,11 +58,13 @@ public class WorkerStorageParameters
    */
   private static final long MINIMUM_SUPER_SORTER_TMP_STORAGE_BYTES = 1_000_000_000L;
 
+  private final boolean isIntermediateStorageLimitConfigured;
   private final long intermediateSuperSorterStorageMaxLocalBytes;
 
-  private WorkerStorageParameters(final long intermediateSuperSorterStorageMaxLocalBytes)
+  private WorkerStorageParameters(final long intermediateSuperSorterStorageMaxLocalBytes, final boolean isIntermediateStorageLimitConfigured)
   {
     this.intermediateSuperSorterStorageMaxLocalBytes = intermediateSuperSorterStorageMaxLocalBytes;
+    this.isIntermediateStorageLimitConfigured = isIntermediateStorageLimitConfigured;
   }
 
   public static WorkerStorageParameters createProductionInstance(
@@ -75,9 +77,9 @@ public class WorkerStorageParameters
   }
 
   @VisibleForTesting
-  public static WorkerStorageParameters createInstanceForTests(final long tmpStorageBytesPerTask)
+  public static WorkerStorageParameters createInstanceForTests(final long tmpStorageBytesPerTask, final boolean isIntermediateStorageLimitConfigured)
   {
-    return new WorkerStorageParameters(tmpStorageBytesPerTask);
+    return new WorkerStorageParameters(tmpStorageBytesPerTask, isIntermediateStorageLimitConfigured);
   }
 
   /**
@@ -90,24 +92,24 @@ public class WorkerStorageParameters
       final boolean isIntermediateSuperSorterStorageEnabled
   )
   {
-    Preconditions.checkArgument(tmpStorageBytesPerTask > 0, "Temporary storage bytes passed: [%s] should be > 0", tmpStorageBytesPerTask);
+    boolean isIntermediateStorageLimitConfigured = tmpStorageBytesPerTask != -1;
 
-    if (isIntermediateSuperSorterStorageEnabled) {
-
-      long intermediateSuperSorterStorageMaxLocalBytes = computeUsableStorage(tmpStorageBytesPerTask);
-
-      if (intermediateSuperSorterStorageMaxLocalBytes < MINIMUM_SUPER_SORTER_TMP_STORAGE_BYTES) {
-        throw new MSQException(
-            new NotEnoughTemporaryStorageFault(
-                calculateSuggestedMinTemporaryStorage(),
-                tmpStorageBytesPerTask
-            )
-        );
-      }
-      return new WorkerStorageParameters(intermediateSuperSorterStorageMaxLocalBytes);
-    } else {
-      return new WorkerStorageParameters(Long.MAX_VALUE);
+    if (!isIntermediateSuperSorterStorageEnabled || !isIntermediateStorageLimitConfigured) {
+      return new WorkerStorageParameters(Long.MAX_VALUE, false);
     }
+
+    Preconditions.checkArgument(tmpStorageBytesPerTask > 0, "Temporary storage bytes passed: [%s] should be > 0", tmpStorageBytesPerTask);
+    long intermediateSuperSorterStorageMaxLocalBytes = computeUsableStorage(tmpStorageBytesPerTask);
+
+    if (intermediateSuperSorterStorageMaxLocalBytes < MINIMUM_SUPER_SORTER_TMP_STORAGE_BYTES) {
+      throw new MSQException(
+          new NotEnoughTemporaryStorageFault(
+              calculateSuggestedMinTemporaryStorage(),
+              tmpStorageBytesPerTask
+          )
+      );
+    }
+    return new WorkerStorageParameters(intermediateSuperSorterStorageMaxLocalBytes, true);
   }
 
   private static long computeUsableStorage(long tmpStorageBytesPerTask)
@@ -125,6 +127,11 @@ public class WorkerStorageParameters
     return intermediateSuperSorterStorageMaxLocalBytes;
   }
 
+  public boolean isIntermediateStorageLimitConfigured()
+  {
+    return isIntermediateStorageLimitConfigured;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -135,20 +142,22 @@ public class WorkerStorageParameters
       return false;
     }
     WorkerStorageParameters that = (WorkerStorageParameters) o;
-    return intermediateSuperSorterStorageMaxLocalBytes == that.intermediateSuperSorterStorageMaxLocalBytes;
+    return isIntermediateStorageLimitConfigured == that.isIntermediateStorageLimitConfigured
+           && intermediateSuperSorterStorageMaxLocalBytes == that.intermediateSuperSorterStorageMaxLocalBytes;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(intermediateSuperSorterStorageMaxLocalBytes);
+    return Objects.hash(isIntermediateStorageLimitConfigured, intermediateSuperSorterStorageMaxLocalBytes);
   }
 
   @Override
   public String toString()
   {
     return "WorkerStorageParameters{" +
-           "intermediateSuperSorterStorageMaxLocalBytes=" + intermediateSuperSorterStorageMaxLocalBytes +
+           "isIntermediateStorageLimitConfigured=" + isIntermediateStorageLimitConfigured +
+           ", intermediateSuperSorterStorageMaxLocalBytes=" + intermediateSuperSorterStorageMaxLocalBytes +
            '}';
   }
 }

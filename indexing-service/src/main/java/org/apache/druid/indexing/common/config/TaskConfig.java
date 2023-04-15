@@ -78,7 +78,7 @@ public class TaskConfig
   private static final Period DEFAULT_DIRECTORY_LOCK_TIMEOUT = new Period("PT10M");
   private static final Period DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = new Period("PT5M");
   private static final boolean DEFAULT_STORE_EMPTY_COLUMNS = true;
-  private static final long DEFAULT_TMP_STORAGE_BYTES_PER_TASK = Long.MAX_VALUE;
+  private static final long DEFAULT_TMP_STORAGE_BYTES_PER_TASK = -1;
 
   @JsonProperty
   private final String baseDir;
