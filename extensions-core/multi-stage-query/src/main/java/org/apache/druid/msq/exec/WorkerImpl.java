@@ -98,6 +98,10 @@ import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.msq.input.NilInputSliceReader;
 import org.apache.druid.msq.input.external.ExternalInputSlice;
 import org.apache.druid.msq.input.external.ExternalInputSliceReader;
+import org.apache.druid.msq.input.inline.InlineInputSlice;
+import org.apache.druid.msq.input.inline.InlineInputSliceReader;
+import org.apache.druid.msq.input.lookup.LookupInputSlice;
+import org.apache.druid.msq.input.lookup.LookupInputSliceReader;
 import org.apache.druid.msq.input.stage.InputChannels;
 import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.input.stage.StageInputSlice;
@@ -1046,6 +1050,8 @@ public class WorkerImpl implements Worker
                       .put(NilInputSlice.class, NilInputSliceReader.INSTANCE)
                       .put(StageInputSlice.class, new StageInputSliceReader(queryId, inputChannels))
                       .put(ExternalInputSlice.class, new ExternalInputSliceReader(frameContext.tempDir()))
+                      .put(InlineInputSlice.class, new InlineInputSliceReader(frameContext.segmentWrangler()))
+                      .put(LookupInputSlice.class, new LookupInputSliceReader(frameContext.segmentWrangler()))
                       .put(SegmentsInputSlice.class, new SegmentsInputSliceReader(frameContext.dataSegmentProvider()))
                       .build()
       );
