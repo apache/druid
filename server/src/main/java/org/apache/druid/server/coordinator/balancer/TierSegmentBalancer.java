@@ -107,7 +107,8 @@ public class TierSegmentBalancer
     // Move segments from decommissioning to active servers
     int maxDecommPercentToMove = dynamicConfig.getDecommissioningMaxPercentOfMaxSegmentsToMove();
     int maxDecommSegmentsToMove = (int) Math.ceil(totalMaxSegmentsToMove * (maxDecommPercentToMove / 100.0));
-    int movedDecommSegments = moveSegmentsFromTo(decommissioningServers, activeServers, maxDecommSegmentsToMove);
+    int movedDecommSegments =
+        moveSegmentsFromTo(decommissioningServers, activeServers, maxDecommSegmentsToMove, false);
     log.info(
         "Moved [%d] segments out of max [%d (%d%%)] from decommissioning to active servers.",
         movedDecommSegments, maxDecommSegmentsToMove, maxDecommPercentToMove
@@ -115,7 +116,8 @@ public class TierSegmentBalancer
 
     // Move segments across active servers
     int maxGeneralSegmentsToMove = totalMaxSegmentsToMove - movedDecommSegments;
-    int movedGeneralSegments = moveSegmentsFromTo(activeServers, activeServers, maxGeneralSegmentsToMove);
+    int movedGeneralSegments =
+        moveSegmentsFromTo(activeServers, activeServers, maxGeneralSegmentsToMove, true);
     log.info(
         "Moved [%d] segments out of max [%d] between active servers.",
         movedGeneralSegments, maxGeneralSegmentsToMove
@@ -129,7 +131,8 @@ public class TierSegmentBalancer
   private int moveSegmentsFromTo(
       List<ServerHolder> sourceServers,
       List<ServerHolder> destServers,
-      int maxSegmentsToMove
+      int maxSegmentsToMove,
+      boolean skipIfOptimallyPlaced
   )
   {
     if (maxSegmentsToMove <= 0 || sourceServers.isEmpty() || destServers.isEmpty()) {
@@ -138,11 +141,11 @@ public class TierSegmentBalancer
 
     Iterator<BalancerSegmentHolder> pickedSegments
         = pickSegmentsFrom(sourceServers, maxSegmentsToMove, true);
-    int movedCount = moveSegmentsTo(destServers, pickedSegments, maxSegmentsToMove);
+    int movedCount = moveSegmentsTo(destServers, pickedSegments, maxSegmentsToMove, skipIfOptimallyPlaced);
 
     maxSegmentsToMove -= movedCount;
     pickedSegments = pickSegmentsFrom(sourceServers, maxSegmentsToMove, false);
-    movedCount += moveSegmentsTo(destServers, pickedSegments, maxSegmentsToMove);
+    movedCount += moveSegmentsTo(destServers, pickedSegments, maxSegmentsToMove, skipIfOptimallyPlaced);
 
     return movedCount;
   }
@@ -178,59 +181,23 @@ public class TierSegmentBalancer
   private int moveSegmentsTo(
       List<ServerHolder> destinationServers,
       Iterator<BalancerSegmentHolder> segmentsToMove,
-      int maxSegmentsToMove
+      int maxSegmentsToMove,
+      boolean skipIfOptimallyPlaced
   )
   {
     int processed = 0;
     int movedCount = 0;
     while (segmentsToMove.hasNext() && processed < maxSegmentsToMove) {
       ++processed;
-      if (moveSegment(segmentsToMove.next(), destinationServers)) {
+
+      final BalancerSegmentHolder segmentHolder = segmentsToMove.next();
+      DataSegment segmentToMove = getLoadableSegment(segmentHolder.getSegment());
+      if (segmentToMove != null
+          && loader.moveSegment(segmentToMove, segmentHolder.getServer(), destinationServers, skipIfOptimallyPlaced)) {
         ++movedCount;
       }
     }
     return movedCount;
-  }
-
-  private boolean moveSegment(
-      BalancerSegmentHolder segmentToMoveHolder,
-      List<ServerHolder> destinationServers
-  )
-  {
-    // Check if the picked segment still needs to be balanced
-    final DataSegment segmentToMove = getLoadableSegment(segmentToMoveHolder.getSegment());
-    if (segmentToMove == null) {
-      return false;
-    }
-
-    // Keep the source server in the eligible list but filter out
-    // servers already serving a replica or having a full load queue
-    final ServerHolder source = segmentToMoveHolder.getServer();
-    final List<ServerHolder> eligibleDestinationServers =
-        destinationServers.stream().filter(
-            s -> s.getServer().equals(source.getServer())
-                 || s.canLoadSegment(segmentToMove)
-        ).collect(Collectors.toList());
-
-    if (eligibleDestinationServers.isEmpty()) {
-      log.debug("No valid movement destinations for segment [%s].", segmentToMove.getId());
-      markUnmoved(segmentToMove, "no valid destination");
-    } else {
-      final ServerHolder destination =
-          strategy.findNewSegmentHomeBalancer(segmentToMove, eligibleDestinationServers);
-
-      if (destination == null || destination.getServer().equals(source.getServer())) {
-        log.debug("Segment [%s] is already 'optimally' placed.", segmentToMove.getId());
-        markUnmoved(segmentToMove, "optimally placed");
-      } else if (moveSegment(segmentToMove, source, destination)) {
-        markMoved(segmentToMove);
-        return true;
-      } else {
-        markUnmoved(segmentToMove, "move failed");
-      }
-    }
-
-    return false;
   }
 
   /**
@@ -260,22 +227,6 @@ public class TierSegmentBalancer
     }
 
     return loadableSegment;
-  }
-
-  private boolean moveSegment(DataSegment segment, ServerHolder fromServer, ServerHolder toServer)
-  {
-    try {
-      return loader.moveSegment(segment, fromServer, toServer);
-    }
-    catch (Exception e) {
-      log.makeAlert(e, "Exception while moving segment [%s]", segment.getId()).emit();
-      return false;
-    }
-  }
-
-  private void markMoved(DataSegment segment)
-  {
-    runStats.addToSegmentStat(Stats.Segments.MOVED, tier, segment.getDataSource(), 1);
   }
 
   private void markUnmoved(DataSegment segment, String reason)

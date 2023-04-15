@@ -26,6 +26,8 @@ import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
 import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.SegmentActionHandler;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 
@@ -36,6 +38,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * Used by the coordinator in each run for segment loading, dropping, balancing
@@ -90,16 +93,69 @@ public class SegmentLoader implements SegmentActionHandler
   }
 
   /**
-   * Moves the given segment from serverA to serverB in the same tier.
+   * Moves the given segment from the source server to an eligible destination
+   * server.
+   * <p>
+   * An eligible destination server must:
+   * <ul>
+   *   <li>be present in the given list of destination servers</li>
+   *   <li>belong to the same tier as the source server</li>
+   *   <li>not already be serving or loading a replica of the segment</li>
+   *   <li>have enough space to load the segment</li>
+   * </ul>
+   * <p>
+   * The segment is not moved if:
+   * <ul>
+   *   <li>there is no eligible destination server, or</li>
+   *   <li>skipIfOptimallyPlaced is true and segment is already optimally placed, or</li>
+   *   <li>some other error occurs</li>
+   * </ul>
    */
-  public boolean moveSegment(DataSegment segment, ServerHolder serverA, ServerHolder serverB)
+  public boolean moveSegment(
+      DataSegment segment,
+      ServerHolder sourceServer,
+      List<ServerHolder> destinationServers,
+      boolean skipIfOptimallyPlaced
+  )
   {
-    final String tier = serverA.getServer().getTier();
-    if (!serverB.getServer().getTier().equals(tier)
-        || !serverB.canLoadSegment(segment)) {
+    final String tier = sourceServer.getServer().getTier();
+    final List<ServerHolder> eligibleDestinationServers =
+        destinationServers.stream()
+                          .filter(s -> s.getServer().getTier().equals(tier))
+                          .filter(s -> s.canLoadSegment(segment))
+                          .collect(Collectors.toList());
+
+    if (eligibleDestinationServers.isEmpty()) {
+      markSegmentUnmoved(segment, tier, "no eligible destination");
       return false;
     }
 
+    // Add the source server as an eligible server if skipping is allowed
+    if (skipIfOptimallyPlaced) {
+      eligibleDestinationServers.add(sourceServer);
+    }
+
+    final ServerHolder destination =
+        strategy.findNewSegmentHomeBalancer(segment, eligibleDestinationServers);
+
+    if (destination == null || destination.getServer().equals(sourceServer.getServer())) {
+      markSegmentUnmoved(segment, tier, "optimally placed");
+      return false;
+    } else if (moveSegment(segment, sourceServer, destination)) {
+      markSegmentMoved(segment, tier);
+      return true;
+    } else {
+      markSegmentUnmoved(segment, tier, "move failed");
+      return false;
+    }
+  }
+
+  /**
+   * Moves the given segment from serverA to serverB.
+   */
+  private boolean moveSegment(DataSegment segment, ServerHolder serverA, ServerHolder serverB)
+  {
+    final String tier = serverA.getServer().getTier();
     if (serverA.isLoadingSegment(segment)) {
       // Cancel the load on serverA and load on serverB instead
       if (serverA.cancelOperation(SegmentAction.LOAD, segment)) {
@@ -446,6 +502,21 @@ public class SegmentLoader implements SegmentActionHandler
       numCancelled += servers.get(i).cancelOperation(action, segment) ? 1 : 0;
     }
     return numCancelled;
+  }
+
+  private void markSegmentMoved(DataSegment segment, String tier)
+  {
+    stats.addToSegmentStat(Stats.Segments.MOVED, tier, segment.getDataSource(), 1);
+  }
+
+  private void markSegmentUnmoved(DataSegment segment, String tier, String reason)
+  {
+    RowKey rowKey = RowKey.builder()
+                          .add(Dimension.DATASOURCE, segment.getDataSource())
+                          .add(Dimension.TIER, tier)
+                          .add(Dimension.STATUS, reason)
+                          .build();
+    stats.add(Stats.Segments.UNMOVED, rowKey, 1);
   }
 
 }

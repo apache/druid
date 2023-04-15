@@ -105,9 +105,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
           totalUnneededCount++;
           log.info(
               "Dropping uneeded segment [%s] from server [%s] in tier [%s]",
-              segment.getId(),
-              server.getName(),
-              server.getTier()
+              segment.getId(), server.getName(), server.getTier()
           );
         }
       }

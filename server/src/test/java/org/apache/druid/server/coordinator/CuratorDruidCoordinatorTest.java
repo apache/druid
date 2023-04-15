@@ -46,6 +46,7 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.loadqueue.CuratorLoadQueuePeon;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueueTaskMaster;
@@ -67,6 +68,7 @@ import org.junit.rules.TestRule;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -322,9 +324,19 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     EasyMock.expect(coordinatorRuntimeParams.getDataSourcesSnapshot()).andReturn(dataSourcesSnapshot).anyTimes();
     EasyMock.expect(coordinatorRuntimeParams.getCoordinatorDynamicConfig())
             .andReturn(CoordinatorDynamicConfig.builder().build()).anyTimes();
-    EasyMock.replay(segmentsMetadataManager, coordinatorRuntimeParams);
 
-    EasyMock.expect(dataSourcesSnapshot.getDataSource(EasyMock.anyString())).andReturn(druidDataSource).anyTimes();
+    final ServerHolder sourceServer = new ServerHolder(source.toImmutableDruidServer(), sourceLoadQueuePeon);
+    final ServerHolder destinationServer = new ServerHolder(dest.toImmutableDruidServer(), destinationLoadQueuePeon);
+
+    final BalancerStrategy balancerStrategy = EasyMock.mock(BalancerStrategy.class);
+    EasyMock.expect(balancerStrategy.findNewSegmentHomeBalancer(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(destinationServer).atLeastOnce();
+    EasyMock.expect(coordinatorRuntimeParams.getBalancerStrategy())
+            .andReturn(balancerStrategy).anyTimes();
+    EasyMock.replay(segmentsMetadataManager, coordinatorRuntimeParams, balancerStrategy);
+
+    EasyMock.expect(dataSourcesSnapshot.getDataSource(EasyMock.anyString()))
+            .andReturn(druidDataSource).anyTimes();
     EasyMock.replay(dataSourcesSnapshot);
 
     LoadQueueTaskMaster taskMaster = EasyMock.createMock(LoadQueueTaskMaster.class);
@@ -337,8 +349,9 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     SegmentLoader segmentLoader = createSegmentLoader(loadQueueManager, coordinatorRuntimeParams);
     segmentLoader.moveSegment(
         segmentToMove,
-        new ServerHolder(source.toImmutableDruidServer(), sourceLoadQueuePeon),
-        new ServerHolder(dest.toImmutableDruidServer(), destinationLoadQueuePeon)
+        sourceServer,
+        Collections.singletonList(destinationServer),
+        false
     );
 
     // wait for destination server to load segment

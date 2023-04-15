@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.loadqueue;
 
 import com.google.inject.Inject;
 import org.apache.druid.client.ServerInventoryView;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.ServerHolder;
@@ -39,6 +40,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class SegmentLoadQueueManager
 {
+  private static final Logger log = new Logger(SegmentLoadQueueManager.class);
+
   private final LoadQueueTaskMaster taskMaster;
   private final ServerInventoryView serverInventoryView;
   private final SegmentsMetadataManager segmentsMetadataManager;
@@ -82,6 +85,7 @@ public class SegmentLoadQueueManager
       return false;
     }
 
+    final String serverName = server.getServer().getName();
     try {
       if (!server.startOperation(action, segment)) {
         return false;
@@ -95,7 +99,7 @@ public class SegmentLoadQueueManager
 
         final TierLoadingState replicatingInTier = currentlyReplicatingSegments
             .computeIfAbsent(tier, t -> new TierLoadingState());
-        replicatingInTier.markStarted(segment.getId(), server.getServer().getHost(), throttler.getMaxLifetime());
+        replicatingInTier.markStarted(segment.getId(), serverName, throttler.getMaxLifetime());
         callback = success -> replicatingInTier.markCompleted(segment.getId());
       }
 
@@ -104,6 +108,7 @@ public class SegmentLoadQueueManager
     }
     catch (Exception e) {
       server.cancelOperation(action, segment);
+      log.error(e, "Error while loading segment[%s] on server[%s]", segment.getId(), serverName);
       return false;
     }
   }
@@ -120,6 +125,8 @@ public class SegmentLoadQueueManager
     }
     catch (Exception e) {
       server.cancelOperation(SegmentAction.DROP, segment);
+      final String serverName = server.getServer().getName();
+      log.error(e, "Error while dropping segment[%s] from server[%s]", segment.getId(), serverName);
       return false;
     }
   }
@@ -147,7 +154,7 @@ public class SegmentLoadQueueManager
     peonA.markSegmentToDrop(segment);
     segmentsMovingInTier.markStarted(
         segment.getId(),
-        serverA.getServer().getHost(),
+        serverA.getServer().getName(),
         maxLifetimeInBalancingQueue
     );
 
@@ -180,7 +187,8 @@ public class SegmentLoadQueueManager
     catch (Exception e) {
       serverB.cancelOperation(SegmentAction.MOVE_TO, segment);
       moveFinishCallback.execute(false);
-      throw new RuntimeException(e);
+      log.error(e, "Error while moving segment[%s] to server[%s]", segment.getId(), serverNameB);
+      return false;
     }
 
     return true;
