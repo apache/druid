@@ -117,14 +117,15 @@ public class ConsoleLoggingEnforcementConfigurationFactory extends Configuration
     }
 
     /**
-     * remove all appenders from a logger and append a console appender to it
+     * Ensure there is a console logger defined. Without a console logger peon logs wont be able to be stored in deep storage
      */
     private void applyConsoleAppender(LoggerConfig logger, Appender consoleAppender)
     {
-      if (logger.getAppenderRefs().size() == 1
-          && logger.getAppenderRefs().get(0).getRef().equals(consoleAppender.getName())) {
-        // this logger has only one appender and its the console appender
-        return;
+      for (AppenderRef appenderRef : logger.getAppenderRefs()) {
+        if (consoleAppender.getName().equals(appenderRef.getRef())) {
+          // we need a console logger no matter what, but we want to be able to define a different appender if necessary
+          return;
+        }
       }
 
       Level level = Level.INFO;
