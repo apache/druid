@@ -35,12 +35,6 @@ public class Stats
         = new CoordinatorStat("deleted", "segment/deleted/count");
     public static final CoordinatorStat MOVED
         = new CoordinatorStat("moved", "segment/moved/count");
-    public static final CoordinatorStat UNMOVED
-        = new CoordinatorStat("unmoved", "segment/unmoved/count");
-
-    public static final CoordinatorStat ASSIGN_SKIPPED = new CoordinatorStat("assignSkip");
-    public static final CoordinatorStat DROP_SKIPPED = new CoordinatorStat("dropSkip");
-    public static final CoordinatorStat THROTTLED_REPLICAS = new CoordinatorStat("throttled");
 
     public static final CoordinatorStat ASSIGNED_BROADCAST
         = new CoordinatorStat("assignBroad", "segment/assigned/broadcast");
@@ -71,6 +65,8 @@ public class Stats
     public static final CoordinatorStat NUM_TO_DROP
         = new CoordinatorStat("numToDrop", "segment/dropQueue/count");
 
+    public static final CoordinatorStat ASSIGNED_ACTIONS
+        = new CoordinatorStat("assignedActions", "segment/loadQueue/assigned");
     public static final CoordinatorStat COMPLETED_ACTIONS
         = new CoordinatorStat("successActions", "segment/loadQueue/success");
     public static final CoordinatorStat FAILED_ACTIONS

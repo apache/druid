@@ -24,7 +24,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -67,14 +66,6 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
   {
     final CoordinatorRunStats stats = new CoordinatorRunStats();
 
-    final ReplicationThrottler replicationThrottler = params.getReplicationManager();
-    if (replicationThrottler != null) {
-      replicationThrottler.getTierToNumThrottled().forEach(
-          (tier, numThrottled) ->
-              stats.addToTieredStat(Stats.Segments.THROTTLED_REPLICAS, tier, numThrottled)
-      );
-    }
-
     final DruidCluster cluster = params.getDruidCluster();
     cluster.getHistoricals().forEach((tier, historicals) -> {
       long totalCapacity = historicals.stream().map(ServerHolder::getMaxSize).reduce(0L, Long::sum);
@@ -90,7 +81,7 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
 
       queuePeon.getAndResetStats().forEachStat(
           (dimValues, stat, statValue) ->
-            stats.add(stat, createRowKeyForServer(serverName, dimValues), statValue)
+              stats.add(stat, createRowKeyForServer(serverName, dimValues), statValue)
       );
     });
 

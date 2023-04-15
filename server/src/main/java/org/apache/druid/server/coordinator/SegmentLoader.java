@@ -26,6 +26,7 @@ import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
 import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.SegmentActionHandler;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
@@ -126,7 +127,7 @@ public class SegmentLoader implements SegmentActionHandler
                           .collect(Collectors.toList());
 
     if (eligibleDestinationServers.isEmpty()) {
-      markSegmentUnmoved(segment, tier, "no eligible destination");
+      addStat(Error.NO_ELIGIBLE_SERVER_FOR_MOVE, segment, tier);
       return false;
     }
 
@@ -139,13 +140,13 @@ public class SegmentLoader implements SegmentActionHandler
         strategy.findNewSegmentHomeBalancer(segment, eligibleDestinationServers);
 
     if (destination == null || destination.getServer().equals(sourceServer.getServer())) {
-      markSegmentUnmoved(segment, tier, "optimally placed");
+      addStat(Error.MOVE_FAILED_OPTIMALLY_PLACED, segment, tier);
       return false;
     } else if (moveSegment(segment, sourceServer, destination)) {
-      markSegmentMoved(segment, tier);
+      stats.addToSegmentStat(Stats.Segments.MOVED, tier, segment.getDataSource(), 1);
       return true;
     } else {
-      markSegmentUnmoved(segment, tier, "move failed");
+      addStat(Error.MOVE_FAILED, segment, tier);
       return false;
     }
   }
@@ -367,11 +368,17 @@ public class SegmentLoader implements SegmentActionHandler
       SegmentTierStatus segmentStatus
   )
   {
-    final List<ServerHolder> eligibleServers = segmentStatus.getServersEligibleToDrop();
-    if (eligibleServers.isEmpty() || numToDrop <= 0) {
+    if (numToDrop <= 0) {
       return 0;
     }
 
+    final List<ServerHolder> eligibleServers = segmentStatus.getServersEligibleToDrop();
+    if (eligibleServers.isEmpty()) {
+      addStat(Error.NO_ELIGIBLE_SERVER_FOR_DROP, segment, tier);
+      return 0;
+    }
+
+    // Keep eligible servers sorted by most full first
     final TreeSet<ServerHolder> eligibleLiveServers = new TreeSet<>();
     final TreeSet<ServerHolder> eligibleDyingServers = new TreeSet<>();
     for (ServerHolder server : eligibleServers) {
@@ -384,33 +391,17 @@ public class SegmentLoader implements SegmentActionHandler
 
     // Drop as many replicas as possible from decommissioning servers
     int remainingNumToDrop = numToDrop;
-    int numDropsQueued = dropReplicasFromServers(remainingNumToDrop, segment, eligibleDyingServers.iterator());
+    int numDropsQueued =
+        dropReplicasFromServers(remainingNumToDrop, segment, eligibleDyingServers.iterator(), tier);
 
-    // Drop more replicas if required from active servers
+    // Drop replicas from active servers if required
     if (numToDrop > numDropsQueued) {
       remainingNumToDrop = numToDrop - numDropsQueued;
       Iterator<ServerHolder> serverIterator =
-          eligibleLiveServers.size() >= remainingNumToDrop
+          (useRoundRobinAssignment || eligibleLiveServers.size() >= remainingNumToDrop)
           ? eligibleLiveServers.iterator()
           : strategy.pickServersToDrop(segment, eligibleLiveServers);
-      numDropsQueued += dropReplicasFromServers(remainingNumToDrop, segment, serverIterator);
-    }
-
-    if (numToDrop > numDropsQueued) {
-      stats.addToSegmentStat(
-          Stats.Segments.DROP_SKIPPED,
-          tier,
-          segment.getDataSource(),
-          numToDrop - numDropsQueued
-      );
-      // TODO: clean up the the log here and put it in the soft alerts category
-      log.debug(
-          "Queued only [%d] of [%d] drops of segment [%s] on tier [%s] due to failures.",
-          numDropsQueued,
-          numToDrop,
-          segment.getId(),
-          tier
-      );
+      numDropsQueued += dropReplicasFromServers(remainingNumToDrop, segment, serverIterator, tier);
     }
 
     return numDropsQueued;
@@ -420,12 +411,23 @@ public class SegmentLoader implements SegmentActionHandler
    * Queues drop of {@code numToDrop} replicas of the segment from the servers.
    * Returns the number of successfully queued drop operations.
    */
-  private int dropReplicasFromServers(int numToDrop, DataSegment segment, Iterator<ServerHolder> serverIterator)
+  private int dropReplicasFromServers(
+      int numToDrop,
+      DataSegment segment,
+      Iterator<ServerHolder> serverIterator,
+      String tier
+  )
   {
     int numDropsQueued = 0;
     while (numToDrop > numDropsQueued && serverIterator.hasNext()) {
       ServerHolder holder = serverIterator.next();
-      numDropsQueued += loadQueueManager.dropSegment(segment, holder) ? 1 : 0;
+      boolean dropped = loadQueueManager.dropSegment(segment, holder);
+
+      if (dropped) {
+        ++numDropsQueued;
+      } else {
+        addStat(Error.DROP_FAILED, segment, tier);
+      }
     }
 
     return numDropsQueued;
@@ -444,7 +446,7 @@ public class SegmentLoader implements SegmentActionHandler
   {
     final List<ServerHolder> eligibleServers = segmentStatus.getServersEligibleToLoad();
     if (eligibleServers.isEmpty()) {
-      log.warn("No eligible server to load replica of segment [%s]", segment.getId());
+      addStat(Error.NO_ELIGIBLE_SERVER_FOR_LOAD, segment, tier);
       return 0;
     }
 
@@ -453,7 +455,7 @@ public class SegmentLoader implements SegmentActionHandler
         ? serverSelector.getServersInTierToLoadSegment(tier, segment)
         : strategy.findNewSegmentHomeReplicator(segment, eligibleServers);
     if (!serverIterator.hasNext()) {
-      log.warn("No candidate server to load replica of segment [%s]", segment.getId());
+      addStat(Error.NO_STRATEGIC_SERVER_FOR_LOAD, segment, tier);
       return 0;
     }
 
@@ -462,24 +464,14 @@ public class SegmentLoader implements SegmentActionHandler
     while (numLoadsQueued < numToLoad && serverIterator.hasNext()) {
       boolean queueSuccess =
           loadQueueManager.loadSegment(segment, serverIterator.next(), isFirstLoadOnTier, replicationThrottler);
-      numLoadsQueued += queueSuccess ? 1 : 0;
-    }
 
-    if (numToLoad > numLoadsQueued) {
-      stats.addToSegmentStat(
-          Stats.Segments.ASSIGN_SKIPPED,
-          tier,
-          segment.getDataSource(),
-          numToLoad - numLoadsQueued
-      );
-      // TODO: clean up the log here, put it in the soft alerts category
-      log.debug(
-          "Queued only [%d] of [%d] loads of segment [%s] on tier [%s] due to throttling or failures.",
-          numLoadsQueued,
-          numToLoad,
-          segment.getId(),
-          tier
-      );
+      if (queueSuccess) {
+        ++numLoadsQueued;
+      } else if (isFirstLoadOnTier) {
+        addStat(Error.LOAD_FAILED, segment, tier);
+      } else {
+        addStat(Error.REPLICA_THROTTLED, segment, tier);
+      }
     }
 
     return numLoadsQueued;
@@ -504,19 +496,32 @@ public class SegmentLoader implements SegmentActionHandler
     return numCancelled;
   }
 
-  private void markSegmentMoved(DataSegment segment, String tier)
-  {
-    stats.addToSegmentStat(Stats.Segments.MOVED, tier, segment.getDataSource(), 1);
-  }
-
-  private void markSegmentUnmoved(DataSegment segment, String tier, String reason)
+  private void addStat(CoordinatorStat stat, DataSegment segment, String tier)
   {
     RowKey rowKey = RowKey.builder()
                           .add(Dimension.DATASOURCE, segment.getDataSource())
                           .add(Dimension.TIER, tier)
-                          .add(Dimension.STATUS, reason)
                           .build();
-    stats.add(Stats.Segments.UNMOVED, rowKey, 1);
+    stats.add(stat, rowKey, 1);
+  }
+
+  /**
+   * These errors are tracked for debugging purposes only. They can be logged by
+   * the respective duties.
+   */
+  private static class Error
+  {
+    static final CoordinatorStat MOVE_FAILED = new CoordinatorStat("move failed");
+    static final CoordinatorStat NO_ELIGIBLE_SERVER_FOR_MOVE = new CoordinatorStat("no eligible server for move");
+    static final CoordinatorStat MOVE_FAILED_OPTIMALLY_PLACED = new CoordinatorStat("move failed (optimally placed)");
+
+    static final CoordinatorStat DROP_FAILED = new CoordinatorStat("drop failed");
+    static final CoordinatorStat NO_ELIGIBLE_SERVER_FOR_DROP = new CoordinatorStat("no eligble server for drop");
+
+    static final CoordinatorStat LOAD_FAILED = new CoordinatorStat("load failed");
+    static final CoordinatorStat REPLICA_THROTTLED = new CoordinatorStat("replica throttled");
+    static final CoordinatorStat NO_ELIGIBLE_SERVER_FOR_LOAD = new CoordinatorStat("no eligible server for load");
+    static final CoordinatorStat NO_STRATEGIC_SERVER_FOR_LOAD = new CoordinatorStat("no strategic server for load");
   }
 
 }

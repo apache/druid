@@ -27,9 +27,7 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.SegmentLoader;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.Dimension;
-import org.apache.druid.server.coordinator.stats.RowKey;
-import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
@@ -210,33 +208,35 @@ public class TierSegmentBalancer
     final SegmentId segmentId = segmentToMove.getId();
 
     if (!params.getUsedSegments().contains(segmentToMove)) {
-      markUnmoved(segmentToMove, "segment is unused");
+      markUnmoved(Error.SEGMENT_IS_UNUSED, segmentToMove);
       return null;
     }
 
     ImmutableDruidDataSource datasource = params.getDataSourcesSnapshot().getDataSource(segmentToMove.getDataSource());
     if (datasource == null) {
-      markUnmoved(segmentToMove, "datasource not found");
+      markUnmoved(Error.DATASOURCE_NOT_FOUND, segmentToMove);
       return null;
     }
 
     DataSegment loadableSegment = datasource.getSegment(segmentId);
     if (loadableSegment == null) {
-      markUnmoved(segmentToMove, "metadata not found");
+      markUnmoved(Error.METADATA_NOT_FOUND, segmentToMove);
       return null;
     }
 
     return loadableSegment;
   }
 
-  private void markUnmoved(DataSegment segment, String reason)
+  private void markUnmoved(CoordinatorStat stat, DataSegment segment)
   {
-    RowKey rowKey = RowKey.builder()
-                          .add(Dimension.DATASOURCE, segment.getDataSource())
-                          .add(Dimension.TIER, tier)
-                          .add(Dimension.STATUS, reason)
-                          .build();
-    runStats.add(Stats.Segments.UNMOVED, rowKey, 1);
+    runStats.addToSegmentStat(stat, tier, segment.getDataSource(), 1);
+  }
+
+  private static class Error
+  {
+    static final CoordinatorStat SEGMENT_IS_UNUSED = new CoordinatorStat("move failed (segment is unused)");
+    static final CoordinatorStat DATASOURCE_NOT_FOUND = new CoordinatorStat("move failed (datasource not found)");
+    static final CoordinatorStat METADATA_NOT_FOUND = new CoordinatorStat("move failed (metadata not found)");
   }
 
 }

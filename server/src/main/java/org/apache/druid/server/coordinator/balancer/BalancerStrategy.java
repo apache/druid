@@ -185,7 +185,7 @@ public interface BalancerStrategy
   default Iterator<ServerHolder> pickServersToDrop(DataSegment toDropSegment, NavigableSet<ServerHolder> serverHolders)
   {
     // By default, use the reverse order to get the holders with least available size first.
-    return serverHolders.descendingIterator();
+    return serverHolders.iterator();
   }
 
   /**

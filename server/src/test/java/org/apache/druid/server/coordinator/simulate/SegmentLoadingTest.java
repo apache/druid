@@ -521,6 +521,38 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     Assert.assertEquals(0, historicalT12.getTotalSegments());
   }
 
+  @Test
+  public void testSegmentsAreDroppedFromFullServersFirst()
+  {
+    final CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withServers(historicalT11, historicalT12)
+                             .withDynamicConfig(createDynamicConfig(0, 0, 100))
+                             .withRules(datasource, Load.on(Tier.T1, 1).forever())
+                             .withRules(DS.KOALA, Load.on(Tier.T1, 1).forever())
+                             .build();
+
+    startSimulation(sim);
+
+    // All wiki segments are loaded on both historicals
+    addSegments(segments);
+    segments.forEach(historicalT11::addDataSegment);
+    segments.forEach(historicalT12::addDataSegment);
+
+    // Add extra koala segments to histT11
+    final List<DataSegment> koalaSegments = Segments.KOALA_100X100D.subList(0, 2);
+    addSegments(koalaSegments);
+    koalaSegments.forEach(historicalT11::addDataSegment);
+
+    // More segments are dropped from histT11 as it was more full before the run
+    runCoordinatorCycle();
+    verifyValue(Metric.DROP_QUEUE_COUNT, filter(Dimension.SERVER, historicalT11.getName()), 6L);
+    verifyValue(Metric.DROP_QUEUE_COUNT, filter(Dimension.SERVER, historicalT12.getName()), 4L);
+
+    loadQueuedSegments();
+    Assert.assertEquals(historicalT11.getCurrSize(), historicalT12.getCurrSize());
+  }
+
   private int getNumLoadedSegments(DruidServer... servers)
   {
     int numLoaded = 0;

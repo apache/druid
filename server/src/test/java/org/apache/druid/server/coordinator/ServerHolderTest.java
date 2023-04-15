@@ -32,9 +32,12 @@ import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 public class ServerHolderTest
 {
@@ -113,6 +116,13 @@ public class ServerHolderTest
             1
         ),
         new LoadQueuePeonTester()
+    );
+
+    TreeSet<ServerHolder> holderSet = new TreeSet<>(Arrays.asList(h1, h2, h3, h4));
+    System.out.println(
+        holderSet.stream()
+                 .map(s -> s.getServer().getName() + ":" + s.getAvailableSize())
+                 .collect(Collectors.toList())
     );
 
     Assert.assertEquals(0, h1.compareTo(h2));

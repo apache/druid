@@ -41,7 +41,7 @@ import java.util.Set;
  */
 public class ServerHolder implements Comparable<ServerHolder>
 {
-  static final Comparator<ServerHolder> FULL_SERVER_FIRST =
+  private static final Comparator<ServerHolder> FULL_SERVER_FIRST =
       Comparator.comparing(ServerHolder::getAvailableSize)
                 .thenComparing(holder -> holder.getServer().getHost())
                 .thenComparing(holder -> holder.getServer().getTier())
@@ -54,6 +54,7 @@ public class ServerHolder implements Comparable<ServerHolder>
 
   private int totalAssignmentsInRun;
   private long sizeOfLoadingSegments;
+  private long sizeOfDroppingSegments;
 
   /**
    * Remove entries from this map only if the operation is cancelled.
@@ -101,6 +102,8 @@ public class ServerHolder implements Comparable<ServerHolder>
           queuedSegments.put(segment, simplify(action));
           if (isLoadAction(action)) {
             sizeOfLoadingSegments += segment.getSize();
+          } else {
+            sizeOfDroppingSegments += segment.getSize();
           }
         }
     );
@@ -123,7 +126,7 @@ public class ServerHolder implements Comparable<ServerHolder>
 
   public long getSizeUsed()
   {
-    return server.getCurrSize() + sizeOfLoadingSegments;
+    return server.getCurrSize() + sizeOfLoadingSegments - sizeOfDroppingSegments;
   }
 
   public double getPercentUsed()
@@ -254,7 +257,10 @@ public class ServerHolder implements Comparable<ServerHolder>
     if (isLoadAction(action)) {
       ++totalAssignmentsInRun;
       sizeOfLoadingSegments += segment.getSize();
+    } else {
+      sizeOfDroppingSegments += segment.getSize();
     }
+
     queuedSegments.put(segment, simplify(action));
     return true;
   }
@@ -294,6 +300,8 @@ public class ServerHolder implements Comparable<ServerHolder>
     final SegmentAction action = queuedSegments.remove(segment);
     if (isLoadAction(action)) {
       sizeOfLoadingSegments -= segment.getSize();
+    } else {
+      sizeOfDroppingSegments -= segment.getSize();
     }
 
     return true;

@@ -599,7 +599,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
   private enum QueueStatus
   {
-    ASSIGNED,
+    ASSIGNED(Stats.SegmentQueue.ASSIGNED_ACTIONS),
     SUCCESS(Stats.SegmentQueue.COMPLETED_ACTIONS),
     FAILED(Stats.SegmentQueue.FAILED_ACTIONS),
     CANCELLED(Stats.SegmentQueue.CANCELLED_ACTIONS);
