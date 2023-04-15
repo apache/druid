@@ -210,7 +210,7 @@ public class CostBalancerStrategy implements BalancerStrategy
     return servers.hasNext() ? servers.next() : null;
   }
 
-  static double computeJointSegmentsCost(final DataSegment segment, final Iterable<DataSegment> segmentSet)
+  public static double computeJointSegmentsCost(final DataSegment segment, final Iterable<DataSegment> segmentSet)
   {
     double totalCost = 0;
     for (DataSegment s : segmentSet) {
