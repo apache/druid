@@ -238,7 +238,8 @@ public class ConsoleLoggingEnforcementTest
     return context;
   }
 
-  private void assertHasConsoleAppenderAndHttpAppender(Logger logger, Level level) {
+  private void assertHasConsoleAppenderAndHttpAppender(Logger logger, Level level)
+  {
     // there's two appenders
     Assert.assertEquals(2, logger.getAppenders().size());
 
