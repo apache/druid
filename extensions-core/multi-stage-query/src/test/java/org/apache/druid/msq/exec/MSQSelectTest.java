@@ -655,7 +655,7 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(
             ImmutableList.of(
-                new Object[]{null, 3L},
+                new Object[]{NullHandling.sqlCompatible() ? null : "", 3L},
                 new Object[]{"xabc", 1L}
             )
         )
