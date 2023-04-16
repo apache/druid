@@ -23,7 +23,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.SegmentLoader;
+import org.apache.druid.server.coordinator.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.balancer.TierSegmentBalancer;
 import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -64,7 +64,7 @@ public class BalanceSegments implements CoordinatorDuty
       );
     }
 
-    final SegmentLoader loader = new SegmentLoader(
+    final StrategicSegmentAssigner segmentAssigner = new StrategicSegmentAssigner(
         loadQueueManager,
         params.getDruidCluster(),
         params.getSegmentReplicantLookup(),
@@ -75,11 +75,11 @@ public class BalanceSegments implements CoordinatorDuty
 
     cluster.getHistoricals().forEach(
         (tier, servers) ->
-            new TierSegmentBalancer(tier, servers, loader, params).run()
+            new TierSegmentBalancer(tier, servers, segmentAssigner, params).run()
     );
 
-    loader.makeAlerts();
-    final CoordinatorRunStats stats = loader.getStats();
+    segmentAssigner.makeAlerts();
+    final CoordinatorRunStats stats = segmentAssigner.getStats();
     stats.forEachRow(
         (row, statValues) -> log.info("Stats for row[%s] are [%s]", row, statValues)
     );

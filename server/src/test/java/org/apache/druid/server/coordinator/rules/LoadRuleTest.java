@@ -36,9 +36,9 @@ import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
-import org.apache.druid.server.coordinator.SegmentLoader;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.ClusterCostCache;
@@ -167,7 +167,7 @@ public class LoadRuleTest
         dynamicConfig.getReplicantLifetime(),
         dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
     );
-    SegmentLoader loader = new SegmentLoader(
+    StrategicSegmentAssigner segmentAssigner = new StrategicSegmentAssigner(
         stateManager,
         params.getDruidCluster(),
         params.getSegmentReplicantLookup(),
@@ -175,8 +175,8 @@ public class LoadRuleTest
         params.getBalancerStrategy(),
         useRoundRobinAssignment
     );
-    rule.run(segment, loader);
-    return loader.getStats();
+    rule.run(segment, segmentAssigner);
+    return segmentAssigner.getStats();
   }
 
   private DruidCoordinatorRuntimeParams makeCoordinatorRuntimeParams(

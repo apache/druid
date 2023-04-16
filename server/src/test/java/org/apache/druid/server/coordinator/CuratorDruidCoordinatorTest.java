@@ -346,8 +346,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     // Move the segment from source to dest
     SegmentLoadQueueManager loadQueueManager =
         new SegmentLoadQueueManager(baseView, segmentsMetadataManager, taskMaster);
-    SegmentLoader segmentLoader = createSegmentLoader(loadQueueManager, coordinatorRuntimeParams);
-    segmentLoader.moveSegment(
+    StrategicSegmentAssigner segmentAssigner = createSegmentAssigner(loadQueueManager, coordinatorRuntimeParams);
+    segmentAssigner.moveSegment(
         segmentToMove,
         sourceServer,
         Collections.singletonList(destinationServer),
@@ -440,7 +440,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
                       .build();
   }
 
-  private SegmentLoader createSegmentLoader(
+  private StrategicSegmentAssigner createSegmentAssigner(
       SegmentLoadQueueManager loadQueueManager,
       DruidCoordinatorRuntimeParams params,
       String... tiersEligibleForReplication
@@ -453,7 +453,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         dynamicConfig.getReplicantLifetime(),
         dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
     );
-    return new SegmentLoader(
+    return new StrategicSegmentAssigner(
         loadQueueManager,
         params.getDruidCluster(),
         params.getSegmentReplicantLookup(),

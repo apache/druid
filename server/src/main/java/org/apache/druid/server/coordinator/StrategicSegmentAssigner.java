@@ -47,9 +47,9 @@ import java.util.stream.Collectors;
  * <p>
  * An instance of this class is freshly created for each coordinator run.
  */
-public class SegmentLoader implements SegmentActionHandler
+public class StrategicSegmentAssigner implements SegmentActionHandler
 {
-  private static final EmittingLogger log = new EmittingLogger(SegmentLoader.class);
+  private static final EmittingLogger log = new EmittingLogger(StrategicSegmentAssigner.class);
 
   private final SegmentLoadQueueManager loadQueueManager;
   private final DruidCluster cluster;
@@ -61,9 +61,10 @@ public class SegmentLoader implements SegmentActionHandler
 
   private final boolean useRoundRobinAssignment;
 
+  private boolean hasErrors;
   private final Set<String> tiersWithNoServer = new HashSet<>();
 
-  public SegmentLoader(
+  public StrategicSegmentAssigner(
       SegmentLoadQueueManager loadQueueManager,
       DruidCluster cluster,
       SegmentReplicantLookup replicantLookup,
@@ -90,6 +91,9 @@ public class SegmentLoader implements SegmentActionHandler
   {
     if (!tiersWithNoServer.isEmpty()) {
       log.makeAlert("Tiers [%s] have no servers! Check your cluster configuration.", tiersWithNoServer).emit();
+    }
+    if (hasErrors) {
+      log.warn("There were some assignment errors. Please check logged stats for more details.");
     }
   }
 
@@ -127,7 +131,7 @@ public class SegmentLoader implements SegmentActionHandler
                           .collect(Collectors.toList());
 
     if (eligibleDestinationServers.isEmpty()) {
-      addStat(Error.NO_ELIGIBLE_SERVER_FOR_MOVE, segment, tier);
+      addError(Error.NO_ELIGIBLE_SERVER_FOR_MOVE, segment, tier);
       return false;
     }
 
@@ -140,13 +144,13 @@ public class SegmentLoader implements SegmentActionHandler
         strategy.findNewSegmentHomeBalancer(segment, eligibleDestinationServers);
 
     if (destination == null || destination.getServer().equals(sourceServer.getServer())) {
-      addStat(Error.MOVE_FAILED_OPTIMALLY_PLACED, segment, tier);
+      addError(Error.MOVE_FAILED_OPTIMALLY_PLACED, segment, tier);
       return false;
     } else if (moveSegment(segment, sourceServer, destination)) {
       stats.addToSegmentStat(Stats.Segments.MOVED, tier, segment.getDataSource(), 1);
       return true;
     } else {
-      addStat(Error.MOVE_FAILED, segment, tier);
+      addError(Error.MOVE_FAILED, segment, tier);
       return false;
     }
   }
@@ -374,7 +378,7 @@ public class SegmentLoader implements SegmentActionHandler
 
     final List<ServerHolder> eligibleServers = segmentStatus.getServersEligibleToDrop();
     if (eligibleServers.isEmpty()) {
-      addStat(Error.NO_ELIGIBLE_SERVER_FOR_DROP, segment, tier);
+      addError(Error.NO_ELIGIBLE_SERVER_FOR_DROP, segment, tier);
       return 0;
     }
 
@@ -426,7 +430,7 @@ public class SegmentLoader implements SegmentActionHandler
       if (dropped) {
         ++numDropsQueued;
       } else {
-        addStat(Error.DROP_FAILED, segment, tier);
+        addError(Error.DROP_FAILED, segment, tier);
       }
     }
 
@@ -446,7 +450,7 @@ public class SegmentLoader implements SegmentActionHandler
   {
     final List<ServerHolder> eligibleServers = segmentStatus.getServersEligibleToLoad();
     if (eligibleServers.isEmpty()) {
-      addStat(Error.NO_ELIGIBLE_SERVER_FOR_LOAD, segment, tier);
+      addError(Error.NO_ELIGIBLE_SERVER_FOR_LOAD, segment, tier);
       return 0;
     }
 
@@ -455,7 +459,7 @@ public class SegmentLoader implements SegmentActionHandler
         ? serverSelector.getServersInTierToLoadSegment(tier, segment)
         : strategy.findNewSegmentHomeReplicator(segment, eligibleServers);
     if (!serverIterator.hasNext()) {
-      addStat(Error.NO_STRATEGIC_SERVER_FOR_LOAD, segment, tier);
+      addError(Error.NO_STRATEGIC_SERVER_FOR_LOAD, segment, tier);
       return 0;
     }
 
@@ -468,9 +472,9 @@ public class SegmentLoader implements SegmentActionHandler
       if (queueSuccess) {
         ++numLoadsQueued;
       } else if (isFirstLoadOnTier) {
-        addStat(Error.LOAD_FAILED, segment, tier);
+        addError(Error.LOAD_FAILED, segment, tier);
       } else {
-        addStat(Error.REPLICA_THROTTLED, segment, tier);
+        addError(Error.REPLICA_THROTTLED, segment, tier);
       }
     }
 
@@ -496,8 +500,9 @@ public class SegmentLoader implements SegmentActionHandler
     return numCancelled;
   }
 
-  private void addStat(CoordinatorStat stat, DataSegment segment, String tier)
+  private void addError(CoordinatorStat stat, DataSegment segment, String tier)
   {
+    hasErrors = true;
     RowKey rowKey = RowKey.builder()
                           .add(Dimension.DATASOURCE, segment.getDataSource())
                           .add(Dimension.TIER, tier)
@@ -516,7 +521,7 @@ public class SegmentLoader implements SegmentActionHandler
     static final CoordinatorStat MOVE_FAILED_OPTIMALLY_PLACED = new CoordinatorStat("move failed (optimally placed)");
 
     static final CoordinatorStat DROP_FAILED = new CoordinatorStat("drop failed");
-    static final CoordinatorStat NO_ELIGIBLE_SERVER_FOR_DROP = new CoordinatorStat("no eligble server for drop");
+    static final CoordinatorStat NO_ELIGIBLE_SERVER_FOR_DROP = new CoordinatorStat("no eligible server for drop");
 
     static final CoordinatorStat LOAD_FAILED = new CoordinatorStat("load failed");
     static final CoordinatorStat REPLICA_THROTTLED = new CoordinatorStat("replica throttled");

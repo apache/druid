@@ -29,7 +29,7 @@ import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
-import org.apache.druid.server.coordinator.SegmentLoader;
+import org.apache.druid.server.coordinator.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.Rule;
@@ -106,7 +106,7 @@ public class RunRules implements CoordinatorDuty
         cluster,
         dynamicConfig
     );
-    final SegmentLoader segmentLoader = new SegmentLoader(
+    final StrategicSegmentAssigner segmentAssigner = new StrategicSegmentAssigner(
         loadQueueManager,
         cluster,
         params.getSegmentReplicantLookup(),
@@ -123,7 +123,7 @@ public class RunRules implements CoordinatorDuty
       boolean foundMatchingRule = false;
       for (Rule rule : rules) {
         if (rule.appliesTo(segment, now)) {
-          rule.run(segment, segmentLoader);
+          rule.run(segment, segmentAssigner);
           foundMatchingRule = true;
           break;
         }
@@ -144,9 +144,9 @@ public class RunRules implements CoordinatorDuty
          .emit();
     }
 
-    segmentLoader.makeAlerts();
+    segmentAssigner.makeAlerts();
 
-    final CoordinatorRunStats stats = segmentLoader.getStats();
+    final CoordinatorRunStats stats = segmentAssigner.getStats();
     stats.forEachRow(
         (row, statValues) -> log.info("Stats for row[%s] are [%s]", row, statValues)
     );

@@ -28,9 +28,9 @@ import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
-import org.apache.druid.server.coordinator.SegmentLoader;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -437,7 +437,7 @@ public class BroadcastDistributionRuleTest
         dynamicConfig.getReplicantLifetime(),
         dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
     );
-    SegmentLoader loader = new SegmentLoader(
+    StrategicSegmentAssigner segmentAssigner = new StrategicSegmentAssigner(
         stateManager,
         params.getDruidCluster(),
         params.getSegmentReplicantLookup(),
@@ -445,7 +445,7 @@ public class BroadcastDistributionRuleTest
         params.getBalancerStrategy(),
         dynamicConfig.isUseRoundRobinSegmentAssignment()
     );
-    rule.run(segment, loader);
-    return loader.getStats();
+    rule.run(segment, segmentAssigner);
+    return segmentAssigner.getStats();
   }
 }

@@ -24,8 +24,8 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.SegmentLoader;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.timeline.DataSegment;
@@ -53,7 +53,7 @@ public class TierSegmentBalancer
 
   private final String tier;
   private final DruidCoordinatorRuntimeParams params;
-  private final SegmentLoader loader;
+  private final StrategicSegmentAssigner segmentAssigner;
 
   private final BalancerStrategy strategy;
   private final CoordinatorDynamicConfig dynamicConfig;
@@ -67,18 +67,18 @@ public class TierSegmentBalancer
   public TierSegmentBalancer(
       String tier,
       Set<ServerHolder> servers,
-      SegmentLoader loader,
+      StrategicSegmentAssigner segmentAssigner,
       DruidCoordinatorRuntimeParams params
   )
   {
     this.tier = tier;
     this.params = params;
-    this.loader = loader;
+    this.segmentAssigner = segmentAssigner;
 
     this.strategy = params.getBalancerStrategy();
     this.dynamicConfig = params.getCoordinatorDynamicConfig();
     this.totalMaxSegmentsToMove = dynamicConfig.getMaxSegmentsToMove();
-    this.runStats = loader.getStats();
+    this.runStats = segmentAssigner.getStats();
 
     Map<Boolean, List<ServerHolder>> partitions =
         servers.stream().collect(Collectors.partitioningBy(ServerHolder::isDecommissioning));
@@ -122,7 +122,7 @@ public class TierSegmentBalancer
     );
 
     if (dynamicConfig.emitBalancingStats()) {
-      strategy.emitStats(tier, loader.getStats(), Lists.newArrayList(allServers));
+      strategy.emitStats(tier, segmentAssigner.getStats(), Lists.newArrayList(allServers));
     }
   }
 
@@ -190,8 +190,8 @@ public class TierSegmentBalancer
 
       final BalancerSegmentHolder segmentHolder = segmentsToMove.next();
       DataSegment segmentToMove = getLoadableSegment(segmentHolder.getSegment());
-      if (segmentToMove != null
-          && loader.moveSegment(segmentToMove, segmentHolder.getServer(), destinationServers, skipIfOptimallyPlaced)) {
+      if (segmentToMove != null && segmentAssigner
+          .moveSegment(segmentToMove, segmentHolder.getServer(), destinationServers, skipIfOptimallyPlaced)) {
         ++movedCount;
       }
     }
