@@ -41,7 +41,6 @@ import org.apache.druid.query.Query;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -65,7 +64,6 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
       final Query<?> query,
       final ReadableInput baseInput,
       final Int2ObjectMap<ReadableInput> sideChannels,
-      final JoinableFactoryWrapper joinableFactory,
       final ResourceHolder<WritableFrameChannel> outputChannelHolder,
       final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       final long memoryReservedForBroadcastJoin
@@ -81,7 +79,6 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
             query.getDataSource(),
             baseInput,
             sideChannels,
-            joinableFactory,
             memoryReservedForBroadcastJoin
         );
 
@@ -96,7 +93,6 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
       final DataSource dataSource,
       final ReadableInput baseInput,
       final Int2ObjectMap<ReadableInput> sideChannels,
-      final JoinableFactoryWrapper joinableFactory,
       final long memoryReservedForBroadcastJoin
   )
   {
@@ -131,7 +127,6 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
           inputNumberToProcessorChannelMap,
           inputChannels,
           channelReaders,
-          joinableFactory,
           memoryReservedForBroadcastJoin
       );
     } else {

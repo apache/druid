@@ -172,7 +172,6 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
   @Override
   public void testArrayAggQueryOnComplexDatatypes()
   {
-    msqCompatible();
     try {
       testQuery("SELECT ARRAY_AGG(unique_dim1) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
       Assert.fail("query execution should fail");

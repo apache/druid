@@ -32,7 +32,6 @@ import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessorFactory;
 import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicLong;
@@ -80,7 +79,6 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
         query,
         baseInput,
         sideChannels,
-        new JoinableFactoryWrapper(frameContext.joinableFactory()),
         outputChannelHolder,
         frameWriterFactoryHolder,
         runningCountForLimit,

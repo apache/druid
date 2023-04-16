@@ -50,6 +50,7 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.MSQ;
@@ -90,6 +91,7 @@ import org.apache.druid.msq.indexing.error.InsertLockPreemptedFaultTest;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.MSQFaultUtils;
+import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.TooManyAttemptsForWorker;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
@@ -108,13 +110,10 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
-import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
-import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
-import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
@@ -152,6 +151,7 @@ import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.LookylooModule;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
@@ -223,6 +223,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
       ImmutableMap.<String, Object>builder()
                   .put(QueryContexts.CTX_SQL_QUERY_ID, "test-query")
                   .put(QueryContexts.FINALIZE_KEY, true)
+                  .put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
+                  .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0)
                   .build();
 
   public static final Map<String, Object> DURABLE_STORAGE_MSQ_CONTEXT =
@@ -433,22 +435,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
           binder.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
           binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
         },
-        binder -> {
-          // Requirements of WorkerMemoryParameters.createProductionInstanceForWorker(injector)
-          final LookupReferencesManager lookupReferencesManager =
-              EasyMock.createStrictMock(LookupReferencesManager.class);
-          EasyMock.expect(lookupReferencesManager.getAllLookupNames()).andReturn(Collections.emptySet());
-          EasyMock.replay(lookupReferencesManager);
-          binder.bind(LookupReferencesManager.class).toInstance(lookupReferencesManager);
-          binder.bind(AppenderatorsManager.class).toProvider(() -> null);
-        },
-        binder -> {
-          // Requirements of JoinableFactoryModule
-          binder.bind(SegmentManager.class).toInstance(EasyMock.createMock(SegmentManager.class));
-          binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(
-              LookupEnabledTestExprMacroTable.createTestLookupProvider(Collections.emptyMap())
-          );
-        },
+        // Requirement of WorkerMemoryParameters.createProductionInstanceForWorker(injector)
+        binder -> binder.bind(AppenderatorsManager.class).toProvider(() -> null),
+        // Requirement of JoinableFactoryModule
+        binder -> binder.bind(SegmentManager.class).toInstance(EasyMock.createMock(SegmentManager.class)),
         new JoinableFactoryModule(),
         new IndexingServiceTuningConfigModule(),
         new MSQIndexingModule(),
@@ -463,7 +453,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
               binder.bind(MSQTaskSqlEngine.class).toProvider(Providers.of(null));
             }
         ),
-        new MSQExternalDataSourceModule()
+        new MSQExternalDataSourceModule(),
+        new LookylooModule(),
+        new SegmentWranglerModule()
     );
     // adding node role injection to the modules, since CliPeon would also do that through run method
     Injector injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build(), ImmutableSet.of(NodeRole.PEON))
