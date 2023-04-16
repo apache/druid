@@ -39,7 +39,7 @@ import org.apache.druid.query.FluentQueryRunnerBuilder;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.FramesBackedInlineDataSource;
 import org.apache.druid.query.GlobalTableDataSource;
-import org.apache.druid.query.IterableBackedInlineDataSource;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.PostProcessingOperator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
@@ -596,7 +596,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   }
 
   /**
-   * Convert the results of a particular query into a materialized (List-based) IterableBackedInlineDataSource.
+   * Convert the results of a particular query into a materialized (List-based) InlineDataSource.
    *
    * @param query            the query
    * @param results          query results
@@ -698,7 +698,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             return acc;
           }
       );
-      dataSource = IterableBackedInlineDataSource.fromIterable(resultList, signature);
+      dataSource = InlineDataSource.fromIterable(resultList, signature);
     }
     return dataSource;
   }

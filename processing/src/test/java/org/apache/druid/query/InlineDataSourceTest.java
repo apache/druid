@@ -40,7 +40,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class IterableBackedInlineDataSourceTest
+public class InlineDataSourceTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -78,11 +78,11 @@ public class IterableBackedInlineDataSourceTest
 
   private final RowSignature expectedRowSignature;
 
-  private final IterableBackedInlineDataSource listDataSource;
+  private final InlineDataSource listDataSource;
 
-  private final IterableBackedInlineDataSource iterableDataSource;
+  private final InlineDataSource iterableDataSource;
 
-  public IterableBackedInlineDataSourceTest()
+  public InlineDataSourceTest()
   {
     final RowSignature.Builder builder = RowSignature.builder();
 
@@ -91,8 +91,8 @@ public class IterableBackedInlineDataSourceTest
     }
 
     expectedRowSignature = builder.build();
-    listDataSource = IterableBackedInlineDataSource.fromIterable(rows, expectedRowSignature);
-    iterableDataSource = IterableBackedInlineDataSource.fromIterable(rowsIterable, expectedRowSignature);
+    listDataSource = InlineDataSource.fromIterable(rows, expectedRowSignature);
+    iterableDataSource = InlineDataSource.fromIterable(rowsIterable, expectedRowSignature);
   }
 
   @Test
@@ -235,7 +235,7 @@ public class IterableBackedInlineDataSourceTest
   @Test
   public void test_equals()
   {
-    EqualsVerifier.forClass(IterableBackedInlineDataSource.class)
+    EqualsVerifier.forClass(InlineDataSource.class)
                   .usingGetClass()
                   .withNonnullFields("rows", "signature")
                   .verify();
@@ -253,7 +253,7 @@ public class IterableBackedInlineDataSourceTest
   public void test_serde_list() throws Exception
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-    final IterableBackedInlineDataSource deserialized = (IterableBackedInlineDataSource) jsonMapper.readValue(
+    final InlineDataSource deserialized = (InlineDataSource) jsonMapper.readValue(
         jsonMapper.writeValueAsString(listDataSource),
         DataSource.class
     );
@@ -268,7 +268,7 @@ public class IterableBackedInlineDataSourceTest
   public void test_serde_iterable() throws Exception
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-    final IterableBackedInlineDataSource deserialized = (IterableBackedInlineDataSource) jsonMapper.readValue(
+    final InlineDataSource deserialized = (InlineDataSource) jsonMapper.readValue(
         jsonMapper.writeValueAsString(iterableDataSource),
         DataSource.class
     );
@@ -293,10 +293,10 @@ public class IterableBackedInlineDataSourceTest
     }
 
     final RowSignature untypedSignature = builder.build();
-    final IterableBackedInlineDataSource untypedDataSource = IterableBackedInlineDataSource.fromIterable(rows, untypedSignature);
+    final InlineDataSource untypedDataSource = InlineDataSource.fromIterable(rows, untypedSignature);
 
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-    final IterableBackedInlineDataSource deserialized = (IterableBackedInlineDataSource) jsonMapper.readValue(
+    final InlineDataSource deserialized = (InlineDataSource) jsonMapper.readValue(
         jsonMapper.writeValueAsString(untypedDataSource),
         DataSource.class
     );

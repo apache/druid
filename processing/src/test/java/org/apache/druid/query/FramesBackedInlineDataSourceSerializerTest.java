@@ -55,7 +55,7 @@ public class FramesBackedInlineDataSourceSerializerTest
                                                                        .add("n", ColumnType.LONG)
                                                                        .build();
 
-  private static final IterableBackedInlineDataSource FOO_INLINE = IterableBackedInlineDataSource.fromIterable(
+  private static final InlineDataSource FOO_INLINE = InlineDataSource.fromIterable(
       ImmutableList.<Object[]>builder()
                    .add(new Object[]{INTERVAL.getStartMillis(), "x", 1})
                    .add(new Object[]{INTERVAL.getStartMillis(), "x", 2})
@@ -72,7 +72,7 @@ public class FramesBackedInlineDataSourceSerializerTest
                                                                        .build();
 
 
-  private static final IterableBackedInlineDataSource BAR_INLINE = IterableBackedInlineDataSource.fromIterable(
+  private static final InlineDataSource BAR_INLINE = InlineDataSource.fromIterable(
       ImmutableList.<Object[]>builder()
                    .add(new Object[]{INTERVAL.getStartMillis(), "a", 1})
                    .add(new Object[]{INTERVAL.getStartMillis(), "a", 2})
@@ -88,7 +88,7 @@ public class FramesBackedInlineDataSourceSerializerTest
                                                                                .add("n", ColumnType.LONG)
                                                                                .build();
 
-  private static final IterableBackedInlineDataSource MULTI_VALUE_INLINE = IterableBackedInlineDataSource.fromIterable(
+  private static final InlineDataSource MULTI_VALUE_INLINE = InlineDataSource.fromIterable(
       ImmutableList.<Object[]>builder()
                    .add(new Object[]{INTERVAL.getStartMillis(), ImmutableList.of("a", "b"), 1})
                    .add(new Object[]{INTERVAL.getStartMillis(), ImmutableList.of("a", "c"), 2})
@@ -118,12 +118,12 @@ public class FramesBackedInlineDataSourceSerializerTest
   }
 
   private FramesBackedInlineDataSource convertToFramesBackedDataSource(
-      IterableBackedInlineDataSource iterableBackedInlineDataSource,
+      InlineDataSource inlineDataSource,
       RowSignature rowSignature
   )
   {
     Cursor cursor = IterableRowsCursorHelper.getCursorFromIterable(
-        iterableBackedInlineDataSource.getRows(),
+        inlineDataSource.getRows(),
         rowSignature
     );
     Frame frame = FrameCursorUtils.cursorToFrame(
@@ -145,11 +145,11 @@ public class FramesBackedInlineDataSourceSerializerTest
 
   private void assertConversionBetweenFramesBackedAndIterableBackedInlineDataSource(
       FramesBackedInlineDataSource framesBackedInlineDataSource,
-      IterableBackedInlineDataSource iterableBackedInlineDataSource
+      InlineDataSource inlineDataSource
   ) throws JsonProcessingException
   {
     String s = objectMapper.writeValueAsString(framesBackedInlineDataSource);
     DataSource back = objectMapper.readValue(s, DataSource.class);
-    Assert.assertEquals(iterableBackedInlineDataSource, back);
+    Assert.assertEquals(inlineDataSource, back);
   }
 }

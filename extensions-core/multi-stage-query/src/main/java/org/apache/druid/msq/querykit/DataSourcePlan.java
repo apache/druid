@@ -47,7 +47,7 @@ import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.IterableBackedInlineDataSource;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
@@ -130,9 +130,9 @@ public class DataSourcePlan
     } else if (dataSource instanceof ExternalDataSource) {
       checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
       return forExternal((ExternalDataSource) dataSource, broadcast);
-    } else if (dataSource instanceof IterableBackedInlineDataSource) {
+    } else if (dataSource instanceof InlineDataSource) {
       checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
-      return forInline((IterableBackedInlineDataSource) dataSource, broadcast);
+      return forInline((InlineDataSource) dataSource, broadcast);
     } else if (dataSource instanceof QueryDataSource) {
       checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
       return forQuery(
@@ -241,7 +241,7 @@ public class DataSourcePlan
   }
 
   private static DataSourcePlan forInline(
-      final IterableBackedInlineDataSource dataSource,
+      final InlineDataSource dataSource,
       final boolean broadcast
   )
   {

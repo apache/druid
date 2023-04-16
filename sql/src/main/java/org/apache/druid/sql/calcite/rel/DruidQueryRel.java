@@ -32,7 +32,7 @@ import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.druid.query.IterableBackedInlineDataSource;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.sql.calcite.external.ExternalTableScan;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.DruidTable;
@@ -109,7 +109,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
    */
   public static DruidQueryRel scanConstantRel(
       final RelNode rel,
-      final IterableBackedInlineDataSource dataSource,
+      final InlineDataSource dataSource,
       final PlannerContext plannerContext
   )
   {

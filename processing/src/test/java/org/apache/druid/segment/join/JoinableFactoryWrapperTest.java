@@ -29,7 +29,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.IterableBackedInlineDataSource;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
@@ -73,7 +73,7 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
       ? TEST_LOOKUP.keySet()
       : Sets.difference(TEST_LOOKUP.keySet(), Collections.singleton(""));
 
-  private static final IterableBackedInlineDataSource INDEXED_TABLE_DS = IterableBackedInlineDataSource.fromIterable(
+  private static final InlineDataSource INDEXED_TABLE_DS = InlineDataSource.fromIterable(
       ImmutableList.of(
           new Object[]{"Mexico"},
           new Object[]{"Norway"},
@@ -84,7 +84,7 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
       RowSignature.builder().add("country", ColumnType.STRING).build()
   );
 
-  private static final IterableBackedInlineDataSource NULL_INDEXED_TABLE_DS = IterableBackedInlineDataSource.fromIterable(
+  private static final InlineDataSource NULL_INDEXED_TABLE_DS = InlineDataSource.fromIterable(
       ImmutableList.of(
           new Object[]{null}
       ),

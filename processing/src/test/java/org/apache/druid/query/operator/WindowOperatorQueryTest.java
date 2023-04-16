@@ -21,7 +21,7 @@ package org.apache.druid.query.operator;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.query.IterableBackedInlineDataSource;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.column.RowSignature;
@@ -49,7 +49,7 @@ public class WindowOperatorQueryTest
   public void setUp()
   {
     query = new WindowOperatorQuery(
-        IterableBackedInlineDataSource.fromIterable(new ArrayList<>(), RowSignature.empty()),
+        InlineDataSource.fromIterable(new ArrayList<>(), RowSignature.empty()),
         ImmutableMap.of("sally", "sue"),
         RowSignature.empty(),
         new ArrayList<>()

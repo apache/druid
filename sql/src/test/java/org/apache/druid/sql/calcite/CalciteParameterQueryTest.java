@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.IterableBackedInlineDataSource;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -63,7 +63,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(
-                      IterableBackedInlineDataSource.fromIterable(
+                      InlineDataSource.fromIterable(
                           ImmutableList.of(new Object[]{2L}),
                           RowSignature.builder().add("EXPR$0", ColumnType.LONG).build()
                       )
@@ -650,7 +650,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
         : ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(
-                      IterableBackedInlineDataSource.fromIterable(
+                      InlineDataSource.fromIterable(
                           ImmutableList.of(),
                           RowSignature.builder().add("f1", ColumnType.FLOAT).add("l1", ColumnType.LONG).build()
                       )

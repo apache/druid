@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.query.IterableBackedInlineDataSource;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -45,7 +45,7 @@ import java.util.Optional;
  * Type signature for a row in a Druid datasource or query result.
  *
  * @see org.apache.druid.query.QueryToolChest#resultArraySignature which returns signatures for query results
- * @see IterableBackedInlineDataSource#getRowSignature which returns signatures for inline datasources
+ * @see InlineDataSource#getRowSignature which returns signatures for inline datasources
  */
 public class RowSignature implements ColumnInspector
 {

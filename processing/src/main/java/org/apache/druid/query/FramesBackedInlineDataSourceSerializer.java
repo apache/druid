@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * Serializes {@link FramesBackedInlineDataSource} to the representation of {@link IterableBackedInlineDataSource}
+ * Serializes {@link FramesBackedInlineDataSource} to the representation of {@link InlineDataSource}
  * so that the servers' on wire transfer data doesn't change. {@link FramesBackedInlineDataSource} is currently limited
  * to the brokers only and therefore this aids in conversion of the object to a representation that the data servers
  * can recognize

@@ -28,7 +28,7 @@ import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
-import org.apache.druid.query.IterableBackedInlineDataSource;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
@@ -104,7 +104,7 @@ public class JoinableFactoryModuleTest
   )
   {
     Assert.assertEquals(LookupDataSource.class, joinableFactoriesMappings.get(LookupJoinableFactory.class));
-    Assert.assertEquals(IterableBackedInlineDataSource.class, joinableFactoriesMappings.get(InlineJoinableFactory.class));
+    Assert.assertEquals(InlineDataSource.class, joinableFactoriesMappings.get(InlineJoinableFactory.class));
     Assert.assertEquals(
         GlobalTableDataSource.class,
         joinableFactoriesMappings.get(BroadcastTableJoinableFactory.class)

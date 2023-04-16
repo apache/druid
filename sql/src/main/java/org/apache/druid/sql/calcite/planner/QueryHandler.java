@@ -514,7 +514,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
             readResourceActions.isEmpty() == druidRel.getDataSourceNames().isEmpty()
             // The resources found in the plannerContext can be less than the datasources in
             // the query plan, because the query planner can eliminate empty tables by replacing
-            // them with IterableBackedInlineDataSource of empty rows.
+            // them with InlineDataSource of empty rows.
             || readResourceActions.size() >= druidRel.getDataSourceNames().size(),
             "Authorization sanity check failed"
         );

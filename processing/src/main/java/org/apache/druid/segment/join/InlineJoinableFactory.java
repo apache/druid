@@ -21,7 +21,7 @@ package org.apache.druid.segment.join;
 
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.IterableBackedInlineDataSource;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.join.table.RowBasedIndexedTable;
@@ -30,7 +30,7 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * A {@link JoinableFactory} for {@link IterableBackedInlineDataSource}.
+ * A {@link JoinableFactory} for {@link InlineDataSource}.
  * It works by building an {@link IndexedTable}.
  *
  * It is not valid to pass any other DataSource type to the "build" method.
@@ -43,13 +43,13 @@ public class InlineJoinableFactory implements JoinableFactory
     // this should always be true if this is access through MapJoinableFactory, but check just in case...
     // further, this should not ever be legitimately called, because this method is used to avoid subquery joins
     // which use the InlineJoinableFactory
-    return dataSource instanceof IterableBackedInlineDataSource;
+    return dataSource instanceof InlineDataSource;
   }
 
   @Override
   public Optional<Joinable> build(final DataSource dataSource, final JoinConditionAnalysis condition)
   {
-    IterableBackedInlineDataSource iterableBackedInlineDataSource = (IterableBackedInlineDataSource) dataSource;
+    InlineDataSource inlineDataSource = (InlineDataSource) dataSource;
 
     if (condition.canHashJoin()) {
       final Set<String> rightKeyColumns = condition.getRightEquiConditionKeys();
@@ -57,9 +57,9 @@ public class InlineJoinableFactory implements JoinableFactory
       return Optional.of(
           new IndexedTableJoinable(
               new RowBasedIndexedTable<>(
-                  iterableBackedInlineDataSource.getRowsAsList(),
-                  iterableBackedInlineDataSource.rowAdapter(),
-                  iterableBackedInlineDataSource.getRowSignature(),
+                  inlineDataSource.getRowsAsList(),
+                  inlineDataSource.rowAdapter(),
+                  inlineDataSource.getRowSignature(),
                   rightKeyColumns,
                   DateTimes.nowUtc().toString()
               )

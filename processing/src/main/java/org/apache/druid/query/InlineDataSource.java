@@ -50,12 +50,12 @@ import java.util.stream.IntStream;
  * The rows are backed by an Iterable, which can be lazy or not. Lazy datasources will only be iterated if someone calls
  * {@link #getRows()} and iterates the result, or until someone calls {@link #getRowsAsList()}.
  */
-public class IterableBackedInlineDataSource implements DataSource
+public class InlineDataSource implements DataSource
 {
   private final Iterable<Object[]> rows;
   private final RowSignature signature;
 
-  private IterableBackedInlineDataSource(
+  private InlineDataSource(
       final Iterable<Object[]> rows,
       final RowSignature signature
   )
@@ -69,7 +69,7 @@ public class IterableBackedInlineDataSource implements DataSource
    * non-Jackson callers should use {@link #fromIterable}.
    */
   @JsonCreator
-  private static IterableBackedInlineDataSource fromJson(
+  private static InlineDataSource fromJson(
       @JsonProperty("columnNames") List<String> columnNames,
       @JsonProperty("columnTypes") List<ColumnType> columnTypes,
       @JsonProperty("rows") ArrayList<Object[]> rows
@@ -89,7 +89,7 @@ public class IterableBackedInlineDataSource implements DataSource
       builder.add(name, type);
     }
 
-    return new IterableBackedInlineDataSource(rows, builder.build());
+    return new InlineDataSource(rows, builder.build());
   }
 
   /**
@@ -99,18 +99,18 @@ public class IterableBackedInlineDataSource implements DataSource
    * @param rows      rows, each of the same length as {@code signature.size()}
    * @param signature row signature
    */
-  public static IterableBackedInlineDataSource fromIterable(
+  public static InlineDataSource fromIterable(
       final Iterable<Object[]> rows,
       final RowSignature signature
   )
   {
-    return new IterableBackedInlineDataSource(rows, signature);
+    return new InlineDataSource(rows, signature);
   }
 
   /**
    * A very zealous equality checker for "rows" that respects deep equality of arrays, but nevertheless refrains
    * from materializing things needlessly. Useful for unit tests that want to compare equality of different
-   * IterableBackedInlineDataSource instances.
+   * InlineDataSource instances.
    */
   private static boolean rowsEqual(final Iterable<Object[]> rowsA, final Iterable<Object[]> rowsB)
   {
@@ -300,7 +300,7 @@ public class IterableBackedInlineDataSource implements DataSource
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    IterableBackedInlineDataSource that = (IterableBackedInlineDataSource) o;
+    InlineDataSource that = (InlineDataSource) o;
     return rowsEqual(rows, that.rows) &&
            Objects.equals(signature, that.signature);
   }
@@ -315,7 +315,7 @@ public class IterableBackedInlineDataSource implements DataSource
   public String toString()
   {
     // Don't include 'rows' in stringification, because it might be long and/or lazy.
-    return "IterableBackedInlineDataSource{" +
+    return "InlineDataSource{" +
            "signature=" + signature +
            '}';
   }

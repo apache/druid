@@ -21,7 +21,7 @@ package org.apache.druid.segment.join;
 
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FramesBackedInlineDataSource;
-import org.apache.druid.query.IterableBackedInlineDataSource;
+import org.apache.druid.query.InlineDataSource;
 
 import java.util.Optional;
 
@@ -40,8 +40,8 @@ public class FramesBackedInlineJoinableFactory implements JoinableFactory
   public Optional<Joinable> build(DataSource dataSource, JoinConditionAnalysis condition)
   {
     FramesBackedInlineDataSource framesBackedInlineDataSource = (FramesBackedInlineDataSource) dataSource;
-    IterableBackedInlineDataSource iterableBackedInlineDataSource = framesBackedInlineDataSource.toIterableBackedInlineDataSource();
+    InlineDataSource inlineDataSource = framesBackedInlineDataSource.toIterableBackedInlineDataSource();
 
-    return INLINE_JOINABLE_FACTORY.build(iterableBackedInlineDataSource, condition);
+    return INLINE_JOINABLE_FACTORY.build(inlineDataSource, condition);
   }
 }

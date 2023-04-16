@@ -211,8 +211,8 @@ public class FramesBackedInlineDataSource implements DataSource
     return new DataSourceAnalysis(this, null, null, Collections.emptyList());
   }
 
-  public IterableBackedInlineDataSource toIterableBackedInlineDataSource()
+  public InlineDataSource toIterableBackedInlineDataSource()
   {
-    return IterableBackedInlineDataSource.fromIterable(getRowsAsList(), rowSignature);
+    return InlineDataSource.fromIterable(getRowsAsList(), rowSignature);
   }
 }

@@ -29,7 +29,7 @@ import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FramesBackedInlineDataSource;
 import org.apache.druid.query.GlobalTableDataSource;
-import org.apache.druid.query.IterableBackedInlineDataSource;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.segment.join.BroadcastTableJoinableFactory;
 import org.apache.druid.segment.join.FramesBackedInlineJoinableFactory;
@@ -51,7 +51,7 @@ public class JoinableFactoryModule implements Module
   @VisibleForTesting
   static final Map<Class<? extends DataSource>, Class<? extends JoinableFactory>> FACTORY_MAPPINGS =
       ImmutableMap.of(
-          IterableBackedInlineDataSource.class, InlineJoinableFactory.class,
+          InlineDataSource.class, InlineJoinableFactory.class,
           FramesBackedInlineDataSource.class, FramesBackedInlineJoinableFactory.class,
           LookupDataSource.class, LookupJoinableFactory.class,
           GlobalTableDataSource.class, BroadcastTableJoinableFactory.class

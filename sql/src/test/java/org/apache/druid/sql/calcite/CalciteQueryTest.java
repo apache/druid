@@ -35,7 +35,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.IterableBackedInlineDataSource;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
@@ -966,7 +966,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT LATEST(dim4, 10),dim2 FROM numfoo WHERE (dim1 = 'something' AND dim1 IN( 'something else') ) GROUP BY dim2",
         ImmutableList.of(
             Druids.newScanQueryBuilder()
-                .dataSource(IterableBackedInlineDataSource.fromIterable(
+                .dataSource(InlineDataSource.fromIterable(
                     ImmutableList.of(),
                     RowSignature.builder()
                         .add("EXPR$0", ColumnType.STRING)
@@ -992,7 +992,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT LATEST_BY(dim4, __time, 10),dim2 FROM numfoo WHERE (dim1 = 'something' AND dim1 IN( 'something else') ) GROUP BY dim2",
         ImmutableList.of(
             Druids.newScanQueryBuilder()
-                .dataSource(IterableBackedInlineDataSource.fromIterable(
+                .dataSource(InlineDataSource.fromIterable(
                     ImmutableList.of(),
                     RowSignature.builder()
                         .add("EXPR$0", ColumnType.STRING)
@@ -3394,7 +3394,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ? ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(
-                      IterableBackedInlineDataSource.fromIterable(
+                      InlineDataSource.fromIterable(
                           ImmutableList.of(new Object[]{0L}),
                           RowSignature.builder().add("EXPR$0", ColumnType.LONG).build()
                       )
@@ -3433,7 +3433,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ? ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(
-                      IterableBackedInlineDataSource.fromIterable(
+                      InlineDataSource.fromIterable(
                           ImmutableList.of(new Object[]{0L}),
                           RowSignature.builder().add("EXPR$0", ColumnType.LONG).build()
                       )
@@ -3472,7 +3472,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ? ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(
-                      IterableBackedInlineDataSource.fromIterable(
+                      InlineDataSource.fromIterable(
                           ImmutableList.of(new Object[]{0L}),
                           RowSignature.builder().add("EXPR$0", ColumnType.LONG).build()
                       )
@@ -3789,7 +3789,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(
-                      IterableBackedInlineDataSource.fromIterable(
+                      InlineDataSource.fromIterable(
                           ImmutableList.of(new Object[]{0L}),
                           RowSignature.builder().add("EXPR$0", ColumnType.LONG).build()
                       )
@@ -3987,7 +3987,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .dataSource(
                       JoinDataSource.create(
                           new TableDataSource(CalciteTests.DATASOURCE1),
-                          IterableBackedInlineDataSource.fromIterable(
+                          InlineDataSource.fromIterable(
                               ImmutableList.of(new Object[]{null}),
                               RowSignature.builder().add("ROW_VALUE", ColumnType.STRING).build()
                           ),
@@ -4017,7 +4017,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(
-                      IterableBackedInlineDataSource.fromIterable(
+                      InlineDataSource.fromIterable(
                           ImmutableList.of(new Object[]{0L, null}),
                           RowSignature.builder().add("EXPR$0", ColumnType.LONG).add("EXPR$1", ColumnType.LONG).build()
                       )
@@ -4091,7 +4091,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(
-                      IterableBackedInlineDataSource.fromIterable(
+                      InlineDataSource.fromIterable(
                           ImmutableList.of(),
                           RowSignature.builder().add("EXPR$0", ColumnType.LONG).add("EXPR$1", ColumnType.LONG).build()
                       )
@@ -5360,7 +5360,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(
-                      IterableBackedInlineDataSource.fromIterable(
+                      InlineDataSource.fromIterable(
                           ImmutableList.of(),
                           RowSignature.builder().add("dim1", ColumnType.STRING).add("dim2", ColumnType.STRING).build()
                       )
@@ -11518,7 +11518,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             newScanQueryBuilder()
-                .dataSource(IterableBackedInlineDataSource.fromIterable(
+                .dataSource(InlineDataSource.fromIterable(
                     ImmutableList.of(new Object[]{4L}),
                     RowSignature.builder().add("a", ColumnType.LONG).build()
                 ))
@@ -13742,7 +13742,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "ORDER BY 1 DESC",
         ImmutableList.of(
             GroupByQuery.builder()
-                        .setDataSource(IterableBackedInlineDataSource.fromIterable(
+                        .setDataSource(InlineDataSource.fromIterable(
                             ImmutableList.of(),
                             RowSignature.builder()
                                         .addTimeColumn()

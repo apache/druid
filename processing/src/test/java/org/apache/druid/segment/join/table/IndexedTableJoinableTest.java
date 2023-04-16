@@ -25,7 +25,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.IterableBackedInlineDataSource;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -85,7 +85,7 @@ public class IndexedTableJoinableTest
     }
   };
 
-  private final IterableBackedInlineDataSource iterableBackedInlineDataSource = IterableBackedInlineDataSource.fromIterable(
+  private final InlineDataSource inlineDataSource = InlineDataSource.fromIterable(
       ImmutableList.of(
           new Object[]{"foo", 1L, 1L},
           new Object[]{"bar", 2L, 1L},
@@ -99,9 +99,9 @@ public class IndexedTableJoinableTest
   );
 
   private final RowBasedIndexedTable<Object[]> indexedTable = new RowBasedIndexedTable<>(
-      iterableBackedInlineDataSource.getRowsAsList(),
-      iterableBackedInlineDataSource.rowAdapter(),
-      iterableBackedInlineDataSource.getRowSignature(),
+      inlineDataSource.getRowsAsList(),
+      inlineDataSource.rowAdapter(),
+      inlineDataSource.getRowSignature(),
       ImmutableSet.of("str"),
       DateTimes.nowUtc().toString()
   );
