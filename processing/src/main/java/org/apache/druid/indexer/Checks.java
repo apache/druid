@@ -38,7 +38,7 @@ public final class Checks
           nonNullProperty = property;
         } else {
           throw new IAE(
-              "At most one of %s must be present",
+              "At most one of properties[%s] must be present",
               properties.stream().map(Property::getName).collect(Collectors.toList())
           );
         }
@@ -46,7 +46,7 @@ public final class Checks
     }
     if (nonNullProperty == null) {
       throw new IAE(
-          "At least one of %s must be present",
+          "At least one of properties[%s] must be present",
           properties.stream().map(Property::getName).collect(Collectors.toList())
       );
     }
