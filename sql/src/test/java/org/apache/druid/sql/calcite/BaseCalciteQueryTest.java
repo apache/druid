@@ -271,7 +271,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public boolean cannotVectorize = false;
   public boolean skipVectorize = false;
-  public boolean msqCompatible = false;
+  public boolean msqCompatible = true;
 
   public QueryLogHook queryLogHook;
 
@@ -1014,9 +1014,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     skipVectorize = true;
   }
 
-  protected void msqCompatible()
+  protected void notMsqCompatible()
   {
-    msqCompatible = true;
+    msqCompatible = false;
   }
 
   protected static boolean isRewriteJoinToFilter(final Map<String, Object> queryContext)

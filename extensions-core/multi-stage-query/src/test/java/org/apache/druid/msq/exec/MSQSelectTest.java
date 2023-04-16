@@ -35,11 +35,14 @@ import org.apache.druid.msq.indexing.ColumnMappings;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
+import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -138,7 +141,7 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedRowSignature(resultSignature)
         .setQueryContext(context)
-        .setExpectedResultRows(ImmutableList.of(new Object[]{2L})).verifyResults();
+        .setExpectedResultRows(ImmutableList.of(new Object[]{2})).verifyResults();
   }
 
   @Test
@@ -183,7 +186,7 @@ public class MSQSelectTest extends MSQTestBase
             0, 0, "shuffle"
         )
         .setExpectedResultRows(ImmutableList.of(
-            new Object[]{1L, !useDefault ? "" : null},
+            new Object[]{1L, ""},
             new Object[]{1L, "10.1"},
             new Object[]{1L, "2"},
             new Object[]{1L, "1"},
@@ -243,6 +246,73 @@ public class MSQSelectTest extends MSQTestBase
             0, 0, "shuffle"
         )
         .verifyResults();
+  }
+
+  @Test
+  public void testSelectOnFooDuplicateColumnNames()
+  {
+    // Duplicate column names are OK in SELECT statements.
+
+    final RowSignature expectedScanSignature =
+        RowSignature.builder()
+                    .add("cnt", ColumnType.LONG)
+                    .add("dim1", ColumnType.STRING)
+                    .build();
+
+    final ColumnMappings expectedColumnMappings = new ColumnMappings(
+        ImmutableList.of(
+            new ColumnMapping("cnt", "x"),
+            new ColumnMapping("dim1", "x")
+        )
+    );
+
+    final List<MSQResultsReport.ColumnAndType> expectedOutputSignature =
+        ImmutableList.of(
+            new MSQResultsReport.ColumnAndType("x", ColumnType.LONG),
+            new MSQResultsReport.ColumnAndType("x", ColumnType.STRING)
+        );
+
+    testSelectQuery()
+        .setSql("select cnt AS x, dim1 AS x from foo")
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(
+                       newScanQueryBuilder()
+                           .dataSource(CalciteTests.DATASOURCE1)
+                           .intervals(querySegmentSpec(Filtration.eternity()))
+                           .columns("cnt", "dim1")
+                           .context(defaultScanQueryContext(context, expectedScanSignature))
+                           .build()
+                   )
+                   .columnMappings(expectedColumnMappings)
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .build()
+        )
+        .setQueryContext(context)
+        .setExpectedRowSignature(expectedOutputSignature)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "shuffle"
+        )
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1L, ""},
+            new Object[]{1L, "10.1"},
+            new Object[]{1L, "2"},
+            new Object[]{1L, "1"},
+            new Object[]{1L, "def"},
+            new Object[]{1L, "abc"}
+        )).verifyResults();
   }
 
   @Test
@@ -455,7 +525,7 @@ public class MSQSelectTest extends MSQTestBase
             0, 0, "shuffle"
         )
         .setExpectedResultRows(ImmutableList.of(
-            new Object[]{1L, !useDefault ? "" : null},
+            new Object[]{1L, ""},
             new Object[]{1L, "10.1"},
             new Object[]{1L, "2"},
             new Object[]{1L, "1"},
@@ -506,6 +576,90 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
         .verifyResults();
 
+  }
+
+  @Test
+  public void testSelectLookup()
+  {
+    final RowSignature rowSignature = RowSignature.builder().add("EXPR$0", ColumnType.LONG).build();
+
+    testSelectQuery()
+        .setSql("select count(*) from lookup.lookyloo")
+        .setQueryContext(context)
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(
+                       GroupByQuery.builder()
+                                   .setDataSource(new LookupDataSource("lookyloo"))
+                                   .setInterval(querySegmentSpec(Filtration.eternity()))
+                                   .setGranularity(Granularities.ALL)
+                                   .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                                   .setContext(context)
+                                   .build())
+                   .columnMappings(new ColumnMappings(ImmutableList.of(new ColumnMapping("a0", "EXPR$0"))))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(new Object[]{4L}))
+        .verifyResults();
+  }
+
+  @Test
+  public void testJoinWithLookup()
+  {
+    final RowSignature rowSignature =
+        RowSignature.builder()
+                    .add("v", ColumnType.STRING)
+                    .add("cnt", ColumnType.LONG)
+                    .build();
+
+    testSelectQuery()
+        .setSql("SELECT lookyloo.v, COUNT(*) AS cnt\n"
+                + "FROM foo LEFT JOIN lookup.lookyloo ON foo.dim2 = lookyloo.k\n"
+                + "WHERE lookyloo.v <> 'xa'\n"
+                + "GROUP BY lookyloo.v")
+        .setQueryContext(context)
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(
+                       GroupByQuery.builder()
+                                   .setDataSource(
+                                       join(
+                                           new TableDataSource(CalciteTests.DATASOURCE1),
+                                           new LookupDataSource("lookyloo"),
+                                           "j0.",
+                                           equalsCondition(
+                                               DruidExpression.ofColumn(ColumnType.STRING, "dim2"),
+                                               DruidExpression.ofColumn(ColumnType.STRING, "j0.k")
+                                           ),
+                                           JoinType.LEFT
+                                       )
+                                   )
+                                   .setInterval(querySegmentSpec(Filtration.eternity()))
+                                   .setDimFilter(not(selector("j0.v", "xa", null)))
+                                   .setGranularity(Granularities.ALL)
+                                   .setDimensions(dimensions(new DefaultDimensionSpec("j0.v", "d0")))
+                                   .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                                   .setContext(context)
+                                   .build())
+                   .columnMappings(
+                       new ColumnMappings(
+                           ImmutableList.of(
+                               new ColumnMapping("d0", "v"),
+                               new ColumnMapping("a0", "cnt")
+                           )
+                       )
+                   )
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(
+            ImmutableList.of(
+                new Object[]{null, 3L},
+                new Object[]{"xabc", 1L}
+            )
+        )
+        .verifyResults();
   }
 
   @Test
@@ -598,7 +752,7 @@ public class MSQSelectTest extends MSQTestBase
       );
     } else {
       expectedResults = ImmutableList.of(
-          new Object[]{null, 3.6666666666666665},
+          new Object[]{"", 3.6666666666666665},
           new Object[]{"a", 2.5},
           new Object[]{"abc", 5.0}
       );
@@ -1162,31 +1316,51 @@ public class MSQSelectTest extends MSQTestBase
   @Test
   public void testScanWithMultiValueSelectQuery()
   {
-    RowSignature resultSignature = RowSignature.builder()
-                                               .add("dim3", ColumnType.STRING)
-                                               .build();
+    RowSignature expectedScanSignature = RowSignature.builder()
+                                                     .add("dim3", ColumnType.STRING)
+                                                     .add("v0", ColumnType.STRING_ARRAY)
+                                                     .build();
+
+    RowSignature expectedResultSignature = RowSignature.builder()
+                                                       .add("dim3", ColumnType.STRING)
+                                                       .add("dim3_array", ColumnType.STRING_ARRAY)
+                                                       .build();
 
     testSelectQuery()
-        .setSql("select dim3 from foo")
+        .setSql("select dim3, MV_TO_ARRAY(dim3) AS dim3_array from foo")
         .setExpectedMSQSpec(MSQSpec.builder()
                                    .query(newScanQueryBuilder()
                                               .dataSource(CalciteTests.DATASOURCE1)
                                               .intervals(querySegmentSpec(Filtration.eternity()))
-                                              .columns("dim3")
-                                              .context(defaultScanQueryContext(context, resultSignature))
+                                              .virtualColumns(
+                                                  expressionVirtualColumn(
+                                                      "v0",
+                                                      "mv_to_array(\"dim3\")",
+                                                      ColumnType.STRING_ARRAY
+                                                  )
+                                              )
+                                              .columns("dim3", "v0")
+                                              .context(defaultScanQueryContext(context, expectedScanSignature))
                                               .build())
-                                   .columnMappings(ColumnMappings.identity(resultSignature))
+                                   .columnMappings(
+                                       new ColumnMappings(
+                                           ImmutableList.of(
+                                               new ColumnMapping("dim3", "dim3"),
+                                               new ColumnMapping("v0", "dim3_array")
+                                           )
+                                       )
+                                   )
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
                                    .build())
-        .setExpectedRowSignature(resultSignature)
+        .setExpectedRowSignature(expectedResultSignature)
         .setQueryContext(context)
         .setExpectedResultRows(ImmutableList.of(
-            new Object[]{ImmutableList.of("a", "b")},
-            new Object[]{ImmutableList.of("b", "c")},
-            new Object[]{"d"},
-            new Object[]{!useDefault ? "" : null},
-            new Object[]{null},
-            new Object[]{null}
+            new Object[]{"[\"a\",\"b\"]", ImmutableList.of("a", "b")},
+            new Object[]{"[\"b\",\"c\"]", ImmutableList.of("b", "c")},
+            new Object[]{"d", ImmutableList.of("d")},
+            new Object[]{"", Collections.singletonList(useDefault ? null : "")},
+            new Object[]{NullHandling.defaultStringValue(), Collections.singletonList(null)},
+            new Object[]{NullHandling.defaultStringValue(), Collections.singletonList(null)}
         )).verifyResults();
   }
 
@@ -1250,7 +1424,7 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedRowSignature(resultSignature)
         .setExpectedResultRows(
             NullHandling.replaceWithDefault()
-            ? ImmutableList.of(new Object[]{null, 3L}, new Object[]{"a", 2L})
+            ? ImmutableList.of(new Object[]{"", 3L}, new Object[]{"a", 2L})
             : ImmutableList.of(new Object[]{null, 2L}, new Object[]{"a", 2L})
 
         )
@@ -1298,9 +1472,7 @@ public class MSQSelectTest extends MSQTestBase
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .build())
         .setExpectedRowSignature(rowSignature)
-        .setExpectedResultRows(
-            expectedMultiValueFooRowsGroup()
-        )
+        .setExpectedResultRows(expectedMultiValueFooRowsGroup())
         .verifyResults();
   }
 
@@ -1679,8 +1851,10 @@ public class MSQSelectTest extends MSQTestBase
   private List<Object[]> expectedMultiValueFooRowsGroup()
   {
     ArrayList<Object[]> expected = new ArrayList<>();
-    expected.add(new Object[]{null, !useDefault ? 2L : 3L});
-    if (!useDefault) {
+    if (useDefault) {
+      expected.add(new Object[]{"", 3L});
+    } else {
+      expected.add(new Object[]{null, 2L});
       expected.add(new Object[]{"", 1L});
     }
     expected.addAll(ImmutableList.of(

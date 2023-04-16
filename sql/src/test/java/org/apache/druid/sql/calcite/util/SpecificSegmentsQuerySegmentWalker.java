@@ -97,7 +97,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
    */
   public SpecificSegmentsQuerySegmentWalker(
       final QueryRunnerFactoryConglomerate conglomerate,
-      final LookupExtractorFactoryContainerProvider lookupProvider,
+      final SegmentWrangler segmentWrangler,
       final JoinableFactoryWrapper joinableFactoryWrapper,
       final QueryScheduler scheduler
   )
@@ -110,13 +110,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
         ),
         QueryStackTests.createLocalQuerySegmentWalker(
             conglomerate,
-            new MapSegmentWrangler(
-                ImmutableMap.<Class<? extends DataSource>, SegmentWrangler>builder()
-                            .put(InlineDataSource.class, new IterableBasedInlineSegmentWrangler())
-                            .put(FramesBackedInlineDataSource.class, new FrameBasedInlineSegmentWrangler())
-                            .put(LookupDataSource.class, new LookupSegmentWrangler(lookupProvider))
-                            .build()
-            ),
+            segmentWrangler,
             joinableFactoryWrapper,
             scheduler
         ),
@@ -134,7 +128,16 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
   {
     this(
         conglomerate,
-        LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER,
+        new MapSegmentWrangler(
+            ImmutableMap.<Class<? extends DataSource>, SegmentWrangler>builder()
+                        .put(InlineDataSource.class, new IterableBasedInlineSegmentWrangler())
+                        .put(FramesBackedInlineDataSource.class, new FrameBasedInlineSegmentWrangler())
+                        .put(
+                            LookupDataSource.class,
+                            new LookupSegmentWrangler(LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER)
+                        )
+                        .build()
+        ),
         new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryForLookup(LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER)),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER
     );
