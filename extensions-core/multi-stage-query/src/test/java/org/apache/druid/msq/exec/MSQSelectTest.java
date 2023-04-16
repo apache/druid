@@ -613,6 +613,21 @@ public class MSQSelectTest extends MSQTestBase
                     .add("cnt", ColumnType.LONG)
                     .build();
 
+    final List<Object[]> expectedResults;
+
+    if (NullHandling.sqlCompatible()) {
+      expectedResults = ImmutableList.of(
+          new Object[]{null, 3L},
+          new Object[]{"xabc", 1L}
+      );
+    } else {
+      expectedResults = ImmutableList.of(
+          new Object[]{"", 3L},
+          new Object[]{"xabc", 1L}
+      );
+    }
+
+
     testSelectQuery()
         .setSql("SELECT lookyloo.v, COUNT(*) AS cnt\n"
                 + "FROM foo LEFT JOIN lookup.lookyloo ON foo.dim2 = lookyloo.k\n"
@@ -653,12 +668,7 @@ public class MSQSelectTest extends MSQTestBase
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .build())
         .setExpectedRowSignature(rowSignature)
-        .setExpectedResultRows(
-            ImmutableList.of(
-                new Object[]{null, 3L},
-                new Object[]{"xabc", 1L}
-            )
-        )
+        .setExpectedResultRows(expectedResults)
         .verifyResults();
   }
 
