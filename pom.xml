@@ -1503,7 +1503,7 @@
                                 <projectName>Apache Druid</projectName>
                             </properties>
                             <resourceBundles>
-                                <resourceBundle>org.apache.apache.resources:apache-jar-resource-bundle:1.5-SNAPSHOT</resourceBundle>
+                                <resourceBundle>org.apache.apache.resources:apache-jar-resource-bundle:1.5</resourceBundle>
                             </resourceBundles>
                         </configuration>
                     </execution>
