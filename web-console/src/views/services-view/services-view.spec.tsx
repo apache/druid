@@ -49,6 +49,7 @@ jest.mock('../../utils', () => {
                 curr_size: 0,
                 max_size: 0,
                 is_leader: 0,
+                start_time: 0,
               },
               {
                 service: 'localhost:8083',
@@ -64,6 +65,7 @@ jest.mock('../../utils', () => {
                 segmentsToDrop: 0,
                 segmentsToLoadSize: 0,
                 segmentsToDropSize: 0,
+                start_time: 0,
               },
             ],
           ],

@@ -27,7 +27,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.List;
 
-public class NativeQueryMakerTest
+public class SqlResultsTest
 {
 
   @Test
@@ -105,12 +105,12 @@ public class NativeQueryMakerTest
   @Test
   public void testMustCoerce()
   {
-    Assert.assertNull(NativeQueryMaker.maybeCoerceArrayToList("hello", true));
+    Assert.assertNull(SqlResults.maybeCoerceArrayToList("hello", true));
   }
 
   private static void assertCoerced(Object expected, Object toCoerce, boolean mustCoerce)
   {
-    Object coerced = NativeQueryMaker.maybeCoerceArrayToList(toCoerce, mustCoerce);
+    Object coerced = SqlResults.maybeCoerceArrayToList(toCoerce, mustCoerce);
     Assert.assertEquals(expected, coerced);
   }
 }

@@ -108,8 +108,12 @@ public class MultiStageQueryContext
   private static final String DEFAULT_DESTINATION = null;
 
   public static final String CTX_ROWS_PER_SEGMENT = "rowsPerSegment";
+  static final int DEFAULT_ROWS_PER_SEGMENT = 3000000;
 
   public static final String CTX_ROWS_IN_MEMORY = "rowsInMemory";
+  // Lower than the default to minimize the impact of per-row overheads that are not accounted for by
+  // OnheapIncrementalIndex. For example: overheads related to creating bitmaps during persist.
+  static final int DEFAULT_ROWS_IN_MEMORY = 100000;
 
   /**
    * Controls sort order within segments. Normally, this is the same as the overall order of the query (from the
@@ -215,20 +219,17 @@ public class MultiStageQueryContext
     );
   }
 
-  public static int getRowsPerSegment(final QueryContext queryContext, int defaultRowsPerSegment)
+  public static int getRowsPerSegment(final QueryContext queryContext)
   {
     return queryContext.getInt(
         CTX_ROWS_PER_SEGMENT,
-        defaultRowsPerSegment
+        DEFAULT_ROWS_PER_SEGMENT
     );
   }
 
-  public static int getRowsInMemory(final QueryContext queryContext, int defaultRowsInMemory)
+  public static int getRowsInMemory(final QueryContext queryContext)
   {
-    return queryContext.getInt(
-        CTX_ROWS_IN_MEMORY,
-        defaultRowsInMemory
-    );
+    return queryContext.getInt(CTX_ROWS_IN_MEMORY, DEFAULT_ROWS_IN_MEMORY);
   }
 
   public static List<String> getSortOrder(final QueryContext queryContext)
