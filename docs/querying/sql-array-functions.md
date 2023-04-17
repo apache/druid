@@ -37,7 +37,7 @@ sidebar_label: "Array functions"
 This page describes the operations you can perform on arrays using [Druid SQL](./sql.md). See [`ARRAY` data type documentation](./sql-data-types.md#arrays) for additional details.
 
 All array references in the array function documentation can refer to multi-value string columns or `ARRAY` literals. These functions are largely
-identical to the [Multi-value string functions](sql-multivalue-string-functions.md), but use `ARRAY` types and behavior.
+identical to the [multi-value string functions](sql-multivalue-string-functions.md), but use `ARRAY` types and behavior.
 
 |Function|Description|
 |--------|-----|
