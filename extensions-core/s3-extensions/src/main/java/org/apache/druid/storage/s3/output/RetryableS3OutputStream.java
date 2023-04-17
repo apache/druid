@@ -197,9 +197,6 @@ public class RetryableS3OutputStream extends OutputStream
     try {
       if (chunk.length() > 0) {
         resultsSize += chunk.length();
-        if (resultsSize > config.getMaxResultsSize()) {
-          throw new IOE("Exceeded max results size [%s]", config.getMaxResultsSize());
-        }
 
         pushStopwatch.start();
         pushResults.add(push(chunk));
