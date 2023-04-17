@@ -5222,7 +5222,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                     .filters(new InDimFilter("m2", new HashSet<>(Arrays.asList(null, "A"))))
                                                     .virtualColumns(expressionVirtualColumn("v0", "notnull(\"m2\")", ColumnType.LONG))
                                                     .dimension(new DefaultDimensionSpec("v0", "d0", ColumnType.LONG))
-                                                    .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC)))
+                                                    .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC)))
                                                     .aggregators(new CountAggregatorFactory("a0"))
                                                     .threshold(1)
                                                     .build()
