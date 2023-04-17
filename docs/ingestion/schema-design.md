@@ -120,8 +120,8 @@ you must be more explicit. Druid columns have types specific upfront.
 
 Tips for modeling log data in Druid:
 
-* If you don't know ahead of time what columns you'll want to ingest, use an empty dimensions list to trigger
-[automatic detection of dimension columns](#schema-auto-discovery-for-dimensions).
+* If you don't know ahead of time what columns you'll want to ingest, set `dimensionsSpec.useSchemaDiscovery` to `true` and use an empty or partially defined dimensions list to use
+[Schema auto-discovery](#schema-auto-discovery-for-dimensions).
 * If you have nested data, you can ingest it using the [nested columns](../querying/nested-columns.md) feature or flatten it using a [`flattenSpec`](./ingestion-spec.md#flattenspec).
 * Consider enabling [rollup](./rollup.md) if you have mainly analytical use cases for your log data. This will
 mean you lose the ability to retrieve individual events from Druid, but you potentially gain substantial compression and
@@ -243,7 +243,9 @@ You should query for the number of ingested rows with:
 
 ### Schema auto-discovery for dimensions
 
-If you set the `dimensions` field to empty and  `tuningappendableIndexSpec.useSchemaDiscovery` to `true`, Druid performs Schema auto-discovery where Druid will discover your dimensions and their type.
+You can have Druid infer the schema for your data partially or fully by setting `dimensionsSpec.useSchemaDiscovery` to `true` and defining some or no dimensions in the dimensions list. For any dimensions that aren't a uniform type, Druid ingests them as JSON.
+
+If you do not set `dimensionsSpec.useSchemaDiscovery` to `true` but do set `includeAllDimensions` to `true` with an empty dimensions list, Druid will ingest all columns as strings.
 
 ### Including the same column as a dimension and a metric
 
