@@ -33,12 +33,17 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -53,6 +58,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -83,13 +89,20 @@ public class SupervisorResource
   private final TaskMaster taskMaster;
   private final AuthorizerMapper authorizerMapper;
   private final ObjectMapper objectMapper;
+  private final AuthConfig authConfig;
 
   @Inject
-  public SupervisorResource(TaskMaster taskMaster, AuthorizerMapper authorizerMapper, ObjectMapper objectMapper)
+  public SupervisorResource(
+      TaskMaster taskMaster,
+      AuthorizerMapper authorizerMapper,
+      ObjectMapper objectMapper,
+      AuthConfig authConfig
+  )
   {
     this.taskMaster = taskMaster;
     this.authorizerMapper = authorizerMapper;
     this.objectMapper = objectMapper;
+    this.authConfig = authConfig;
   }
 
   @POST
@@ -103,10 +116,24 @@ public class SupervisorResource
               spec.getDataSources() != null && spec.getDataSources().size() > 0,
               "No dataSources found to perform authorization checks"
           );
+          final Set<ResourceAction> resourceActions;
+          try {
+            resourceActions = getNeededResourceActionsForTask(spec);
+          }
+          catch (UOE e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                           .entity(
+                               ImmutableMap.of(
+                                   "error",
+                                   e.getMessage()
+                               )
+                           )
+                           .build();
+          }
 
           Access authResult = AuthorizationUtils.authorizeAllResourceActions(
               req,
-              Iterables.transform(spec.getDataSources(), AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR),
+              resourceActions,
               authorizerMapper
           );
 
@@ -118,6 +145,18 @@ public class SupervisorResource
           return Response.ok(ImmutableMap.of("id", spec.getId())).build();
         }
     );
+  }
+
+  private Set<ResourceAction> getNeededResourceActionsForTask(final SupervisorSpec spec)
+  {
+    final Set<ResourceAction> resourceActions = new HashSet<>();
+    resourceActions.addAll(spec.getDataSources().stream()
+            .map(dataSource -> new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.WRITE))
+            .collect(Collectors.toSet()));
+    if (authConfig.isEnableInputSourceSecurity()) {
+      resourceActions.addAll(spec.getInputSourceResources());
+    }
+    return resourceActions;
   }
 
   @GET

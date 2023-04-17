@@ -85,7 +85,7 @@ public interface SupervisorSpec
    */
   @JsonIgnore
   @Nonnull
-  default Set<ResourceAction> getInputSourceTypes() throws UnsupportedOperationException
+  default Set<ResourceAction> getInputSourceResources() throws UnsupportedOperationException
   {
     throw new UOE(StringUtils.format(
         "SuperviserSpec type [%s], does not support input source based security",

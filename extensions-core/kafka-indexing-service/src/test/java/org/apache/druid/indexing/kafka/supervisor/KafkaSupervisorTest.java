@@ -442,7 +442,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             new Resource(ResourceType.EXTERNAL, KafkaSupervisorSpec.TASK_TYPE),
             Action.READ
         )),
-        testableSupervisorSpec.getInputSourceTypes()
+        testableSupervisorSpec.getInputSourceResources()
     );
 
     autoscaler.reset();

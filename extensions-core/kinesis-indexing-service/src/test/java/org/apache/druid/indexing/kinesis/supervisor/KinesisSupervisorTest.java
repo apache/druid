@@ -4133,7 +4133,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
                 new Resource(ResourceType.EXTERNAL, KinesisSupervisorSpec.SUPERVISOR_TYPE),
                 Action.READ
             )),
-        supervisorSpec.getInputSourceTypes()
+        supervisorSpec.getInputSourceResources()
     );
   }
 
