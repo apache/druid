@@ -469,7 +469,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                       DUMMY_SQL_QUERY_ID
                   ),
                   "RESOURCES",
-                  "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]"
+                  "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]",
+                  "ATTRIBUTES",
+                  "{\"statementType\":\"SELECT\",\"targetDataSource\":null}"
               )
           ),
           getRows(resultSet)
