@@ -215,7 +215,7 @@ public class ConsoleLoggingEnforcementTest
     // this logger is not defined in configuration, it derivates ROOT logger configuration
     assertHasOnlyOneConsoleAppender(getLogger(context, "name_not_in_config"), Level.INFO);
 
-    assertHasOnlyOneConsoleAppender(getLogger(context, "org.apache.druid"), Level.DEBUG);
+    assertHasConsoleAppenderAndHttpAppender(getLogger(context, "org.apache.druid"), Level.DEBUG);
     assertHasOnlyOneConsoleAppender(getLogger(context, ROOT), Level.INFO);
 
     // the ConsoleAppender should be exactly the same as it's in the configuration
