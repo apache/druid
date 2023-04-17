@@ -224,6 +224,10 @@ public class Logger
     }
   }
 
+  public String getName() {
+    return this.log.getName();
+  }
+
   /**
    * Logs all the segment ids you could ever want, {@link #SEGMENTS_PER_LOG_MESSAGE} at a time, as a comma separated
    * list.

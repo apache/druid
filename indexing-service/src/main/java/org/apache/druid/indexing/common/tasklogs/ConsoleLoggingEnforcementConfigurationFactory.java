@@ -21,7 +21,6 @@ package org.apache.druid.indexing.common.tasklogs;
 
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.LoggerContext;
@@ -101,6 +100,10 @@ public class ConsoleLoggingEnforcementConfigurationFactory extends Configuration
       loggerConfigList.add(this.getRootLogger());
       loggerConfigList.addAll(this.getLoggers().values());
 
+      // Alter log level for this class to be warning. This needs to happen because the logger is using the default
+      // config, which is level error and appends to console, since the logger is being configured here.
+      Configurator.setLevel(log.getName(), Level.WARN);
+
       //
       // For all logger configuration, check if its appender is ConsoleAppender.
       // If not, replace it's appender to ConsoleAppender.
@@ -127,10 +130,6 @@ public class ConsoleLoggingEnforcementConfigurationFactory extends Configuration
      */
     private void applyConsoleAppender(LoggerConfig logger, Appender consoleAppender)
     {
-      // Alter log level for this class to be warning. This needs to happen because the logger is using the default
-      // config, which is level error and appends to console, since the logger is being configured here.
-      Configurator.setLevel(LogManager.getLogger(ConsoleLoggingEnforcementConfigurationFactory.class).getName(), Level.WARN);
-
       for (AppenderRef appenderRef : logger.getAppenderRefs()) {
         if (consoleAppender.getName().equals(appenderRef.getRef())) {
           // we need a console logger no matter what, but we want to be able to define a different appender if necessary
@@ -153,7 +152,7 @@ public class ConsoleLoggingEnforcementConfigurationFactory extends Configuration
         // use the first appender's definition
         level = appenderRef.getLevel();
         filter = appenderRef.getFilter();
-        log.warn("clearing all configured loggers and adding console logger.");
+        log.warn("Clearing all configured appenders for logger %s. Using ConsoleAppender instead.", logger.getName());
       }
 
       // add ConsoleAppender to this logger
