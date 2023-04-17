@@ -108,7 +108,7 @@ The behavior of Druid [multi-value string dimensions](multi-value-dimensions.md)
 their usage.
 
 When used with standard `VARCHAR` functions which expect a single input value per row, such as `CONCAT`, Druid will map
-the function across all values in the row. If the row is null or empty, the function recieves `NULL` as its input.
+the function across all values in the row. If the row is null or empty, the function receives `NULL` as its input.
 
 When used with the explicit [multi-value string functions](./sql-multivalue-string-functions.md), Druid processes the
 row values as if they were `ARRAY` typed. Any operations which produce null and empty rows are distinguished as

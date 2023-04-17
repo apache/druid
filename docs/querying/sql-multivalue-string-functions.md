@@ -40,7 +40,7 @@ See [SQL multi-value strings](./sql-data-types.md#multi-value-strings) and nativ
 
 All array references in the multi-value string function documentation can refer to multi-value string columns or
 `ARRAY` types. These functions are largely identical to the [array functions](./sql-array-functions.md), but use
-`VARCHAR` types and behavior.Multi-value strings can also be converted to `ARRAY` types using `MV_TO_ARRAY`. For
+`VARCHAR` types and behavior. Multi-value strings can also be converted to `ARRAY` types using `MV_TO_ARRAY`. For
 additional details about `ARRAY` types, see [`ARRAY` data type documentation](./sql-data-types.md#arrays).
 
 |Function|Description|
