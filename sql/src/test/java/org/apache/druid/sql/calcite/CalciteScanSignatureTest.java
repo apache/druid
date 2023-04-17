@@ -108,9 +108,9 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public boolean feature(EngineFeature feature, PlannerContext plannerContext)
+    public boolean featureAvailable(EngineFeature feature, PlannerContext plannerContext)
     {
-      return feature == EngineFeature.SCAN_NEEDS_SIGNATURE || parent.feature(feature, plannerContext);
+      return feature == EngineFeature.SCAN_NEEDS_SIGNATURE || parent.featureAvailable(feature, plannerContext);
     }
 
     @Override

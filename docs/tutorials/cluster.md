@@ -133,7 +133,7 @@ The [basic cluster tuning guide](../operations/basic-cluster-tuning.md) has info
 We recommend running your favorite Linux distribution. You will also need 
 
 * [Java 8 or 11](../operations/java.md).
-* [Python2 or Python3](../operations/python.md)  
+* Python 2 or Python 3
 
 > If needed, you can specify where to find Java using the environment variables
 > `DRUID_JAVA_HOME` or `JAVA_HOME`. For more details run the `bin/verify-java` script.
@@ -361,8 +361,8 @@ New Historical (on 2 Data servers)
 
 ```
 druid.processing.buffer.sizeBytes=500MiB
-druid.processing.numMergeBuffers=8
-druid.processing.numThreads=31
+druid.processing.numMergeBuffers=4
+druid.processing.numThreads=15
 ```
 
 New MiddleManager (on 2 Data servers)

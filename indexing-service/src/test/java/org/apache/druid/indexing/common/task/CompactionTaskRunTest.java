@@ -32,7 +32,6 @@ import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
-import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -42,13 +41,12 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
-import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
@@ -71,7 +69,6 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
@@ -1489,96 +1486,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(TaskState.FAILED, compactionResult.lhs.getStatusCode());
   }
 
-  /**
-   * Run a regular index task that's equivalent to the compaction task in {@link #testRunWithDynamicPartitioning()},
-   * using {@link IngestSegmentFirehoseFactory}.
-   * <p>
-   * This is not entirely CompactionTask related, but it's similar conceptually and it requires
-   * similar setup to what this test suite already has.
-   * <p>
-   * It could be moved to a separate test class if needed.
-   */
-  @Test
-  public void testRunRegularIndexTaskWithIngestSegmentFirehose() throws Exception
-  {
-    runIndexTask();
-
-    IndexTask indexTask = new IndexTask(
-        null,
-        null,
-        new IndexTask.IndexIngestionSpec(
-            new DataSchema(
-                "test",
-                getObjectMapper().convertValue(
-                    new StringInputRowParser(
-                        DEFAULT_PARSE_SPEC,
-                        null
-                    ),
-                    Map.class
-                ),
-                new AggregatorFactory[]{
-                    new LongSumAggregatorFactory("val", "val")
-                },
-                new UniformGranularitySpec(
-                    Granularities.HOUR,
-                    Granularities.MINUTE,
-                    null
-                ),
-                null,
-                getObjectMapper()
-            ),
-            new IndexTask.IndexIOConfig(
-                new IngestSegmentFirehoseFactory(
-                    DATA_SOURCE,
-                    Intervals.of("2014-01-01/2014-01-02"),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    getIndexIO(),
-                    coordinatorClient,
-                    segmentCacheManagerFactory,
-                    RETRY_POLICY_FACTORY
-                ),
-                false,
-                false
-            ),
-            IndexTaskTest.createTuningConfig(5000000, null, null, Long.MAX_VALUE, null, false, true)
-        ),
-        null
-    );
-
-    // This is a regular index so we need to explicitly add this context to store the CompactionState
-    indexTask.addToContext(Tasks.STORE_COMPACTION_STATE_KEY, true);
-
-    final Pair<TaskStatus, List<DataSegment>> resultPair = runTask(indexTask);
-
-    Assert.assertTrue(resultPair.lhs.isSuccess());
-
-    final List<DataSegment> segments = resultPair.rhs;
-    Assert.assertEquals(3, segments.size());
-
-    for (int i = 0; i < 3; i++) {
-      Assert.assertEquals(
-          Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
-          segments.get(i).getInterval()
-      );
-      Assert.assertEquals(
-          getDefaultCompactionState(Granularities.HOUR, Granularities.MINUTE, ImmutableList.of()),
-          segments.get(i).getLastCompactionState()
-      );
-      if (lockGranularity == LockGranularity.SEGMENT) {
-        Assert.assertEquals(
-            new NumberedOverwriteShardSpec(32768, 0, 2, (short) 1, (short) 1),
-            segments.get(i).getShardSpec()
-        );
-      } else {
-        Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(i).getShardSpec());
-      }
-    }
-  }
-
   private Pair<TaskStatus, List<DataSegment>> runIndexTask() throws Exception
   {
     return runIndexTask(null, null, false);
@@ -1682,23 +1589,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
         objectMapper
     );
 
-    final TaskConfig config = new TaskConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
-        null
-    );
+    final TaskConfig config = new TaskConfigBuilder()
+            .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+            .build();
     return new TaskToolbox.Builder()
         .config(config)
         .taskActionClient(createActionClient(task))
@@ -1719,7 +1612,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .coordinatorClient(coordinatorClient)
         .taskLogPusher(null)
         .attemptId("1")
-        .dirTracker(new TaskStorageDirTracker(config))
         .build();
   }
 

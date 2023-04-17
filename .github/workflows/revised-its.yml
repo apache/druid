@@ -13,9 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Github workflow that runs revised/new ITs
+# GitHub workflow that runs revised/new ITs
 on:
-  workflow_call
+  workflow_call:
+  workflow_dispatch:
 
 jobs:
   it:
@@ -34,3 +35,19 @@ jobs:
       use_indexer: ${{ matrix.indexer }}
       script: ./it.sh github ${{ matrix.it }}
       it: ${{ matrix.it }}
+      mysql_driver: com.mysql.jdbc.Driver
+
+  s3-deep-storage-minio:
+    uses: ./.github/workflows/reusable-revised-its.yml
+    with:
+      build_jdk: 8
+      runtime_jdk: 11
+      use_indexer: middleManager
+      script: ./it.sh github S3DeepStorage
+      it: S3DeepStorage
+      mysql_driver: com.mysql.jdbc.Driver
+      DRUID_CLOUD_BUCKET: druid-qa
+      DRUID_CLOUD_PATH: aws-${{ github.run_id }}-${{ github.run_attempt }}
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: miniopassword

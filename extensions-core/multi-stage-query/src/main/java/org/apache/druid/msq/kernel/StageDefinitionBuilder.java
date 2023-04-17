@@ -118,6 +118,11 @@ public class StageDefinitionBuilder
     return stageNumber;
   }
 
+  public RowSignature getSignature()
+  {
+    return signature;
+  }
+
   public StageDefinition build(final String queryId)
   {
     return new StageDefinition(

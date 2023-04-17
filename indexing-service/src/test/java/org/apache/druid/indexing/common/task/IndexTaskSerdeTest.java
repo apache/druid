@@ -69,7 +69,7 @@ public class IndexTaskSerdeTest
         null,
         new DynamicPartitionsSpec(1000, 2000L),
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(false),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -106,7 +106,7 @@ public class IndexTaskSerdeTest
         null,
         new HashedPartitionsSpec(null, 10, ImmutableList.of("dim1", "dim2")),
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(false),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -143,7 +143,7 @@ public class IndexTaskSerdeTest
         null,
         null,
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(false),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -180,7 +180,7 @@ public class IndexTaskSerdeTest
         ImmutableList.of("dim1", "dim2"),
         null,
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(false),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -219,7 +219,7 @@ public class IndexTaskSerdeTest
         null,
         new DynamicPartitionsSpec(1000, 2000L),
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(false),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS
@@ -257,7 +257,7 @@ public class IndexTaskSerdeTest
         null,
         new HashedPartitionsSpec(null, 10, ImmutableList.of("dim1", "dim2")),
         new IndexSpec(
-            new RoaringBitmapSerdeFactory(false),
+            RoaringBitmapSerdeFactory.getInstance(),
             CompressionStrategy.LZ4,
             CompressionStrategy.LZF,
             LongEncodingStrategy.LONGS

@@ -25,7 +25,6 @@ import io.fabric8.kubernetes.api.model.batch.v1.Job;
 
 import java.io.InputStream;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -44,15 +43,9 @@ public interface KubernetesPeonClient
 
   boolean cleanUpJob(K8sTaskId taskId);
 
-  String getJobLogs(K8sTaskId taskId);
-
   Optional<InputStream> getPeonLogs(K8sTaskId taskId);
 
   List<Job> listAllPeonJobs();
-
-  List<Pod> listPeonPods(Set<PeonPhase> phases);
-
-  List<Pod> listPeonPods();
 
   int cleanCompletedJobsOlderThan(long howFarBack, TimeUnit timeUnit);
 

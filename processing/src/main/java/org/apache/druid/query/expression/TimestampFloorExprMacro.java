@@ -124,11 +124,11 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+    public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
     {
       ExprVectorProcessor<?> processor;
       processor = new LongOutLongInFunctionVectorValueProcessor(
-          CastToTypeVectorProcessor.cast(args.get(0).buildVectorized(inspector), ExpressionType.LONG),
+          CastToTypeVectorProcessor.cast(args.get(0).asVectorProcessor(inspector), ExpressionType.LONG),
           inspector.getMaxVectorSize()
       )
       {

@@ -32,7 +32,7 @@ import javax.annotation.Nullable;
  */
 public class ColumnCapabilitiesImpl implements ColumnCapabilities
 {
-  private static final CoercionLogic ALL_FALSE = new CoercionLogic()
+  public static final CoercionLogic ALL_FALSE = new CoercionLogic()
   {
     @Override
     public boolean dictionaryEncoded()

@@ -45,7 +45,6 @@ import {
 import './console-application.scss';
 
 export interface ConsoleApplicationProps {
-  exampleManifestsUrl?: string;
   defaultQueryContext?: Record<string, any>;
   mandatoryQueryContext?: Record<string, any>;
 }
@@ -213,15 +212,12 @@ export class ConsoleApplication extends React.PureComponent<
   };
 
   private readonly wrappedDataLoaderView = () => {
-    const { exampleManifestsUrl } = this.props;
-
     return this.wrapInViewContainer(
       'data-loader',
       <LoadDataView
         mode="all"
         initTaskId={this.taskId}
         initSupervisorId={this.supervisorId}
-        exampleManifestsUrl={exampleManifestsUrl}
         goToIngestion={this.goToIngestionWithTaskGroupId}
       />,
       'narrow-pad',
@@ -241,14 +237,11 @@ export class ConsoleApplication extends React.PureComponent<
   };
 
   private readonly wrappedClassicBatchDataLoaderView = () => {
-    const { exampleManifestsUrl } = this.props;
-
     return this.wrapInViewContainer(
       'classic-batch-data-loader',
       <LoadDataView
         mode="batch"
         initTaskId={this.taskId}
-        exampleManifestsUrl={exampleManifestsUrl}
         goToIngestion={this.goToIngestionWithTaskGroupId}
       />,
       'narrow-pad',
@@ -356,7 +349,7 @@ export class ConsoleApplication extends React.PureComponent<
   };
 
   render(): JSX.Element {
-    const { capabilitiesLoading } = this.state;
+    const { capabilities, capabilitiesLoading } = this.state;
 
     if (capabilitiesLoading) {
       return (
@@ -371,15 +364,24 @@ export class ConsoleApplication extends React.PureComponent<
         <HashRouter hashType="noslash">
           <div className="console-application">
             <Switch>
-              <Route path="/data-loader" component={this.wrappedDataLoaderView} />
-              <Route
-                path="/streaming-data-loader"
-                component={this.wrappedStreamingDataLoaderView}
-              />
-              <Route
-                path="/classic-batch-data-loader"
-                component={this.wrappedClassicBatchDataLoaderView}
-              />
+              {capabilities.hasCoordinatorAccess() && (
+                <Route path="/data-loader" component={this.wrappedDataLoaderView} />
+              )}
+              {capabilities.hasCoordinatorAccess() && (
+                <Route
+                  path="/streaming-data-loader"
+                  component={this.wrappedStreamingDataLoaderView}
+                />
+              )}
+              {capabilities.hasCoordinatorAccess() && (
+                <Route
+                  path="/classic-batch-data-loader"
+                  component={this.wrappedClassicBatchDataLoaderView}
+                />
+              )}
+              {capabilities.hasCoordinatorAccess() && capabilities.hasMultiStageQuery() && (
+                <Route path="/sql-data-loader" component={this.wrappedSqlDataLoaderView} />
+              )}
 
               <Route path="/ingestion" component={this.wrappedIngestionView} />
               <Route path="/datasources" component={this.wrappedDatasourcesView} />
@@ -393,9 +395,10 @@ export class ConsoleApplication extends React.PureComponent<
                 path={['/workbench/:tabId', '/workbench']}
                 component={this.wrappedWorkbenchView}
               />
-              <Route path="/sql-data-loader" component={this.wrappedSqlDataLoaderView} />
 
-              <Route path="/lookups" component={this.wrappedLookupsView} />
+              {capabilities.hasCoordinatorAccess() && (
+                <Route path="/lookups" component={this.wrappedLookupsView} />
+              )}
               <Route component={this.wrappedHomeView} />
             </Switch>
           </div>

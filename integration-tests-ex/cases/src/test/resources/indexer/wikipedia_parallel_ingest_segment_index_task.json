@@ -3,6 +3,15 @@
   "spec": {
     "dataSchema": {
       "dataSource": "%%REINDEX_DATASOURCE%%",
+      "timestampSpec": {
+        "column": "timestamp"
+      },
+      "dimensionsSpec": {
+        "dimensionExclusions": [
+          "robot",
+          "continent"
+        ]
+      },
       "metricsSpec": [
         {
           "type": "count",
@@ -30,29 +39,18 @@
         "intervals": [
           "2013-08-31/2013-09-02"
         ]
-      },
-      "parser": {
-        "parseSpec": {
-          "format": "json",
-          "timestampSpec": {
-            "column": "timestamp"
-          },
-          "dimensionsSpec": {
-            "dimensionExclusions": [
-              "robot",
-              "continent"
-            ]
-          }
-        }
       }
     },
     "ioConfig": {
       "type": "index_parallel",
-      "firehose": {
-        "type": "ingestSegment",
+      "inputSource": {
+        "type": "druid",
         "dataSource": "%%DATASOURCE%%",
         "interval": "2013-08-31/2013-09-02",
         "maxInputSegmentBytesPerTask": 1
+      },
+      "inputFormat": {
+        "type": "json"
       }
     },
     "tuningConfig": {

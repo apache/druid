@@ -44,12 +44,14 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.ChangeRequestHttpSyncer;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
+import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
@@ -174,15 +176,29 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
               private DruidServer toDruidServer(DiscoveryDruidNode node)
               {
-
+                final DruidNode druidNode = node.getDruidNode();
+                final DataNodeService dataNodeService = node.getService(DataNodeService.DISCOVERY_SERVICE_KEY, DataNodeService.class);
+                if (dataNodeService == null) {
+                  // this shouldn't typically happen, but just in case it does, make a dummy server to allow the
+                  // callbacks to continue since serverAdded/serverRemoved only need node.getName()
+                  return new DruidServer(
+                      druidNode.getHostAndPortToUse(),
+                      druidNode.getHostAndPort(),
+                      druidNode.getHostAndTlsPort(),
+                      0L,
+                      ServerType.fromNodeRole(node.getNodeRole()),
+                      DruidServer.DEFAULT_TIER,
+                      DruidServer.DEFAULT_PRIORITY
+                  );
+                }
                 return new DruidServer(
-                    node.getDruidNode().getHostAndPortToUse(),
-                    node.getDruidNode().getHostAndPort(),
-                    node.getDruidNode().getHostAndTlsPort(),
-                    ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getMaxSize(),
-                    ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getServerType(),
-                    ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getTier(),
-                    ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getPriority()
+                    druidNode.getHostAndPortToUse(),
+                    druidNode.getHostAndPort(),
+                    druidNode.getHostAndTlsPort(),
+                    dataNodeService.getMaxSize(),
+                    dataNodeService.getServerType(),
+                    dataNodeService.getTier(),
+                    dataNodeService.getPriority()
                 );
               }
             }

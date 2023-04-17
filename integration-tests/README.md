@@ -80,10 +80,10 @@ Parameters:
 the test group for a given test as an annotation in the respective test class. A list of test groups can be found at
 `integration-tests/src/test/java/org/apache/druid/tests/TestNGGroup.java`. The annotation uses a string
 constant defined in `TestNGGroup.java`, be sure to use the constant value, not name. For example,
-if your test has the the annotation: `@Test(groups = TestNGGroup.BATCH_INDEX)` then use the argument
+if your test has the annotation: `@Test(groups = TestNGGroup.BATCH_INDEX)` then use the argument
 `-Dgroups=batch-index`.
 
-* Test Name: Use the fully-qualified class name. For example, `org.apache.druid.tests.BATCH_INDEX`.
+* Test Name: Use the fully-qualified class name. For example, `org.apache.druid.tests.indexer.ITOverwriteBatchIndexTest`.
 
 * Add `-pl :druid-integration-tests` when running integration tests for the second time or later without changing
 the code of core modules in between to skip up-to-date checks for the whole module dependency tree.
@@ -118,7 +118,7 @@ after which Maven will helpfully start downloading snapshot jars from an upstrea
 This is, unfortunately, a feature of the build scripts. The `-nsu` option above tries to force
 Maven to only look locally for snapshot jars.
 
-## Running tests against mannually brought up Docker containers
+## Running tests against manually brought up Docker containers
 
 1. Build docker images.
 

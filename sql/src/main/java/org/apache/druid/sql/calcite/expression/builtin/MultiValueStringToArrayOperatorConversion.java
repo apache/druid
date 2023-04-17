@@ -34,7 +34,7 @@ import org.apache.druid.sql.calcite.expression.OperatorConversions;
 
 public class MultiValueStringToArrayOperatorConversion extends DirectOperatorConversion
 {
-  private static final SqlFunction SQL_FUNCTION = OperatorConversions
+  public static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("MV_TO_ARRAY")
       .operandTypeChecker(OperandTypes.family(SqlTypeFamily.STRING))
       .functionCategory(SqlFunctionCategory.STRING)

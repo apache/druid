@@ -18,11 +18,13 @@ on:
   push:
     branches:
       - master
-      - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
+      - '[0-9]+.[0-9]+.[0-9]+' # release branches
+      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
   pull_request:
     branches:
       - master
-      - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
+      - '[0-9]+.[0-9]+.[0-9]+' # release branches
+      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
 
 concurrency:
   group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
@@ -51,16 +53,12 @@ jobs:
           echo "java_version=${jdk:3}" >> $GITHUB_ENV
 
       - name: setup ${{ matrix.java }}
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: ${{ env.java_version }}
-          cache: 'maven'
+        run: export JAVA_HOME=$JAVA_HOME_${{ env.java_version }}_X64
 
       - name: packaging check
         run: |
           ./.github/scripts/setup_generate_license.sh
-          ${MVN} clean install -Prat -Pbundle-contrib-exts --fail-at-end \
+          ${MVN} clean install -Prat --fail-at-end \
           -pl '!benchmarks, !distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C
           ${MVN} install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end \
           -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C
@@ -141,14 +139,27 @@ jobs:
           --levels ERROR \
           --scope JavaInspectionsScope
 
+  web-checks:
+    strategy:
+      fail-fast: false
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout branch
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: maven
+
       - name: setup node
-        if: ${{ matrix.java == 'jdk8' }}
         uses: actions/setup-node@v3
         with:
           node-version: 16.17.0
 
       - name: docs
-        if: ${{ matrix.java == 'jdk8' }}
         run: |
           (cd website && npm install)
           cd website
@@ -156,14 +167,12 @@ jobs:
           npm run spellcheck
 
       - name: web console
-        if: ${{ matrix.java == 'jdk8' }}
         run: |
           ${MVN} test -pl 'web-console'
           cd web-console
           { for i in 1 2 3; do npm run codecov && break || sleep 15; done }
 
       - name: web console end-to-end test
-        if: ${{ matrix.java == 'jdk8' }}
         run: |
           ./.github/scripts/setup_generate_license.sh
           web-console/script/druid build

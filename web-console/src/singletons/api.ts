@@ -39,7 +39,7 @@ export class Api {
           return Promise.reject(new Error(message));
         }
 
-        if (error.config.method?.toLowerCase() === 'get' && nonEmptyString(responseData)) {
+        if (error.config?.method?.toLowerCase() === 'get' && nonEmptyString(responseData)) {
           return Promise.reject(new Error(responseData));
         }
 

@@ -364,7 +364,8 @@ FROM source
 PARTITIONED BY DAY
 ```
 <!--Native batch-->
-```{
+```
+{
   "type": "index_parallel",
   "spec": {
     "ioConfig": {
@@ -417,6 +418,10 @@ PARTITIONED BY DAY
         "queryGranularity": "none",
         "rollup": false,
         "segmentGranularity": "day"
+      }
+    }
+  }
+}
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 

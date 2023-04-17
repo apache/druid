@@ -40,11 +40,8 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
@@ -65,61 +62,58 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
   protected final ConcurrentHashMap<String, WorkItemType> tasks = new ConcurrentHashMap<>();
   protected final ObjectMapper jsonMapper;
   protected final TaskConfig taskConfig;
-  protected final TaskStorageDirTracker dirTracker;
+  private final TaskStorageDirTracker tracker;
 
   public BaseRestorableTaskRunner(
       ObjectMapper jsonMapper,
       TaskConfig taskConfig,
-      TaskStorageDirTracker dirTracker
+      TaskStorageDirTracker tracker
   )
   {
     this.jsonMapper = jsonMapper;
     this.taskConfig = taskConfig;
-    this.dirTracker = dirTracker;
+    this.tracker = tracker;
+  }
+
+  protected TaskStorageDirTracker getTracker()
+  {
+    return tracker;
   }
 
   @Override
   public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
   {
-    final Map<File, TaskRestoreInfo> taskRestoreInfos = new HashMap<>();
-    for (File baseDir : dirTracker.getBaseTaskDirs()) {
-      File restoreFile = new File(baseDir, TASK_RESTORE_FILENAME);
-      if (restoreFile.exists()) {
-        try {
-          taskRestoreInfos.put(baseDir, jsonMapper.readValue(restoreFile, TaskRestoreInfo.class));
-        }
-        catch (Exception e) {
-          LOG.error(e, "Failed to read restorable tasks from file[%s]. Skipping restore.", restoreFile);
-        }
+    final File restoreFile = getRestoreFile();
+    final TaskRestoreInfo taskRestoreInfo;
+    if (restoreFile.exists()) {
+      try {
+        taskRestoreInfo = jsonMapper.readValue(restoreFile, TaskRestoreInfo.class);
       }
+      catch (Exception e) {
+        LOG.error(e, "Failed to read restorable tasks from file[%s]. Skipping restore.", restoreFile);
+        return ImmutableList.of();
+      }
+    } else {
+      return ImmutableList.of();
     }
 
     final List<Pair<Task, ListenableFuture<TaskStatus>>> retVal = new ArrayList<>();
-    for (Map.Entry<File, TaskRestoreInfo> entry : taskRestoreInfos.entrySet()) {
-      final File baseDir = entry.getKey();
-      final TaskRestoreInfo taskRestoreInfo = entry.getValue();
-      for (final String taskId : taskRestoreInfo.getRunningTasks()) {
-        try {
-          dirTracker.addTask(taskId, baseDir);
-          final File taskFile = new File(dirTracker.getTaskDir(taskId), "task.json");
-          final Task task = jsonMapper.readValue(taskFile, Task.class);
+    for (final String taskId : taskRestoreInfo.getRunningTasks()) {
+      try {
+        final File taskFile = new File(tracker.findExistingTaskDir(taskId), "task.json");
+        final Task task = jsonMapper.readValue(taskFile, Task.class);
 
-          if (!task.getId().equals(taskId)) {
-            throw new ISE("Task[%s] restore file had wrong id[%s]", taskId, task.getId());
-          }
+        if (!task.getId().equals(taskId)) {
+          throw new ISE("Task[%s] restore file had wrong id[%s]", taskId, task.getId());
+        }
 
-          if (taskConfig.isRestoreTasksOnRestart() && task.canRestore()) {
-            LOG.info("Restoring task[%s] from location[%s].", task.getId(), baseDir);
-            retVal.add(Pair.of(task, run(task)));
-          } else {
-            dirTracker.removeTask(taskId);
-          }
+        if (taskConfig.isRestoreTasksOnRestart() && task.canRestore()) {
+          LOG.info("Restoring task[%s].", task.getId());
+          retVal.add(Pair.of(task, run(task)));
         }
-        catch (Exception e) {
-          LOG.warn(e, "Failed to restore task[%s] from path[%s]. Trying to restore other tasks.",
-                   taskId, baseDir);
-          dirTracker.removeTask(taskId);
-        }
+      }
+      catch (Exception e) {
+        LOG.warn(e, "Failed to restore task[%s]. Trying to restore other tasks.", taskId);
       }
     }
 
@@ -188,54 +182,24 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
   @GuardedBy("tasks")
   protected void saveRunningTasks()
   {
-    final Map<File, List<String>> theTasks = new HashMap<>();
+    final File restoreFile = getRestoreFile();
+    final List<String> theTasks = new ArrayList<>();
     for (TaskRunnerWorkItem forkingTaskRunnerWorkItem : tasks.values()) {
-      final String taskId = forkingTaskRunnerWorkItem.getTaskId();
-      final File restoreFile = getRestoreFile(taskId);
-      theTasks.computeIfAbsent(restoreFile, k -> new ArrayList<>())
-              .add(taskId);
+      theTasks.add(forkingTaskRunnerWorkItem.getTaskId());
     }
 
-    for (Map.Entry<File, List<String>> entry : theTasks.entrySet()) {
-      final File restoreFile = entry.getKey();
-      final TaskRestoreInfo taskRestoreInfo = new TaskRestoreInfo(entry.getValue());
-      try {
-        Files.createParentDirs(restoreFile);
-        jsonMapper.writeValue(restoreFile, taskRestoreInfo);
-        LOG.debug("Save restore file at [%s] for tasks [%s]",
-                 restoreFile.getAbsoluteFile(), Arrays.toString(theTasks.get(restoreFile).toArray()));
-      }
-      catch (Exception e) {
-        LOG.warn(e, "Failed to save tasks to restore file[%s]. Skipping this save.", restoreFile);
-      }
+    try {
+      Files.createParentDirs(restoreFile);
+      jsonMapper.writeValue(restoreFile, new TaskRestoreInfo(theTasks));
+    }
+    catch (Exception e) {
+      LOG.warn(e, "Failed to save tasks to restore file[%s]. Skipping this save.", restoreFile);
     }
   }
 
-  @Override
-  public void stop()
+  protected File getRestoreFile()
   {
-    if (!taskConfig.isRestoreTasksOnRestart()) {
-      return;
-    }
-
-    for (File baseDir : dirTracker.getBaseTaskDirs()) {
-      File restoreFile = new File(baseDir, TASK_RESTORE_FILENAME);
-      if (restoreFile.exists()) {
-        try {
-          TaskRestoreInfo taskRestoreInfo = jsonMapper.readValue(restoreFile, TaskRestoreInfo.class);
-          LOG.info("Path[%s] contains restore data for tasks[%s] on restart",
-                   baseDir, taskRestoreInfo.getRunningTasks());
-        }
-        catch (Exception e) {
-          LOG.error(e, "Failed to read task restore info from file[%s].", restoreFile);
-        }
-      }
-    }
-  }
-
-  private File getRestoreFile(String taskId)
-  {
-    return new File(dirTracker.getBaseTaskDir(taskId), TASK_RESTORE_FILENAME);
+    return new File(taskConfig.getBaseTaskDir(), TASK_RESTORE_FILENAME);
   }
 
   protected static class TaskRestoreInfo

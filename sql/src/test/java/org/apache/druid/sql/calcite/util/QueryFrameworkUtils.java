@@ -122,7 +122,6 @@ public class QueryFrameworkUtils
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
         new NoopRequestLogger(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        authConfig,
         new DefaultQueryConfig(ImmutableMap.of()),
         new SqlLifecycleManager()
     );
@@ -139,7 +138,13 @@ public class QueryFrameworkUtils
       final AuthorizerMapper authorizerMapper
   )
   {
-    DruidSchema druidSchema = createMockSchema(injector, conglomerate, walker, plannerConfig, druidSchemaManager);
+    DruidSchema druidSchema = createMockSchema(
+        injector,
+        conglomerate,
+        walker,
+        plannerConfig,
+        druidSchemaManager
+    );
     SystemSchema systemSchema =
         CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
 
@@ -185,7 +190,15 @@ public class QueryFrameworkUtils
       final AuthorizerMapper authorizerMapper
   )
   {
-    return createMockRootSchema(injector, conglomerate, walker, plannerConfig, null, new NoopDruidSchemaManager(), authorizerMapper);
+    return createMockRootSchema(
+        injector,
+        conglomerate,
+        walker,
+        plannerConfig,
+        null,
+        new NoopDruidSchemaManager(),
+        authorizerMapper
+    );
   }
 
   private static DruidSchema createMockSchema(

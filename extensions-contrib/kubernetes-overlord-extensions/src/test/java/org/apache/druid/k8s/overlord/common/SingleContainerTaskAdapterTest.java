@@ -28,11 +28,16 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexing.common.TestUtils;
+import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.log.StartupLoggingConfig;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -43,12 +48,14 @@ import java.util.Collections;
 @EnableKubernetesMockClient(crud = true)
 class SingleContainerTaskAdapterTest
 {
-
-  KubernetesClient client;
-
+  private KubernetesClient client;
+  private StartupLoggingConfig startupLoggingConfig;
+  private TaskConfig taskConfig;
+  private DruidNode druidNode;
   private ObjectMapper jsonMapper;
 
-  public SingleContainerTaskAdapterTest()
+  @BeforeEach
+  public void setup()
   {
     TestUtils utils = new TestUtils();
     jsonMapper = utils.getTestObjectMapper();
@@ -59,18 +66,34 @@ class SingleContainerTaskAdapterTest
         new NamedType(ParallelIndexTuningConfig.class, "index_parallel"),
         new NamedType(IndexTask.IndexTuningConfig.class, "index")
     );
+    druidNode = new DruidNode(
+        "test",
+        null,
+        false,
+        null,
+        null,
+        true,
+        false
+    );
+    startupLoggingConfig = new StartupLoggingConfig();
+    taskConfig = new TaskConfigBuilder().setBaseDir("src/test/resources").build();
   }
 
   @Test
   public void testSingleContainerSupport() throws IOException
   {
     TestKubernetesClient testClient = new TestKubernetesClient(client);
-    Pod pod = client.pods()
-                    .load(this.getClass().getClassLoader().getResourceAsStream("multiContainerPodSpec.yaml"))
-                    .get();
+    Pod pod = K8sTestUtils.fileToResource("multiContainerPodSpec.yaml", Pod.class);
     KubernetesTaskRunnerConfig config = new KubernetesTaskRunnerConfig();
     config.namespace = "test";
-    SingleContainerTaskAdapter adapter = new SingleContainerTaskAdapter(testClient, config, jsonMapper);
+    SingleContainerTaskAdapter adapter = new SingleContainerTaskAdapter(
+        testClient,
+        config,
+        taskConfig,
+        startupLoggingConfig,
+        druidNode,
+        jsonMapper
+    );
     NoopTask task = NoopTask.create("id", 1);
     Job actual = adapter.createJobFromPodSpec(
         pod.getSpec(),
@@ -81,13 +104,8 @@ class SingleContainerTaskAdapterTest
             new File("/tmp")
         )
     );
-    Job expected = client.batch()
-                         .v1()
-                         .jobs()
-                         .load(this.getClass()
-                                   .getClassLoader()
-                                   .getResourceAsStream("expectedSingleiContainerOutput.yaml"))
-                         .get();
+
+    Job expected = K8sTestUtils.fileToResource("expectedSingleContainerOutput.yaml", Job.class);
     // something is up with jdk 17, where if you compress with jdk < 17 and try and decompress you get different results,
     // this would never happen in real life, but for the jdk 17 tests this is a problem
     // could be related to: https://bugs.openjdk.org/browse/JDK-8081450

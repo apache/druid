@@ -22,6 +22,7 @@ package org.apache.druid.frame.field;
 import com.google.common.base.Predicate;
 import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.Memory;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.read.FrameReaderUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -85,6 +86,16 @@ public class StringFieldReader implements FieldReader
     }
 
     return new Selector(memory, fieldPointer, extractionFn, false);
+  }
+
+  @Override
+  public boolean isNull(Memory memory, long position)
+  {
+    final byte nullByte = memory.getByte(position);
+    assert nullByte == StringFieldWriter.NULL_BYTE || nullByte == StringFieldWriter.NOT_NULL_BYTE;
+    return nullByte == StringFieldWriter.NULL_BYTE
+           && memory.getByte(position + 1) == StringFieldWriter.VALUE_TERMINATOR
+           && memory.getByte(position + 2) == StringFieldWriter.ROW_TERMINATOR;
   }
 
   @Override
@@ -243,7 +254,6 @@ public class StringFieldReader implements FieldReader
 
       while (position < limit && !rowTerminatorSeen) {
         final byte kind = memory.getByte(position);
-        rowTerminatorSeen = false;
         position++;
 
         switch (kind) {
@@ -270,9 +280,17 @@ public class StringFieldReader implements FieldReader
 
               if (b == StringFieldWriter.VALUE_TERMINATOR) {
                 final int len = Ints.checkedCast(i - position);
-                final ByteBuffer buf = FrameReaderUtils.readByteBuffer(memory, position, len);
-                currentUtf8Strings.add(buf);
+
+                if (len == 0 && NullHandling.replaceWithDefault()) {
+                  // Empty strings and nulls are the same in this mode.
+                  currentUtf8Strings.add(null);
+                } else {
+                  final ByteBuffer buf = FrameReaderUtils.readByteBuffer(memory, position, len);
+                  currentUtf8Strings.add(buf);
+                }
+
                 position += len;
+
                 break;
               }
             }

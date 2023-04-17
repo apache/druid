@@ -75,4 +75,12 @@ class JobResponseTest
     Optional<Long> duration = response.getJobDuration();
     Assertions.assertFalse(duration.isPresent());
   }
+
+  @Test
+  void testNullJob()
+  {
+    JobResponse response = new JobResponse(null, PeonPhase.SUCCEEDED);
+    Optional<Long> duration = response.getJobDuration();
+    Assertions.assertFalse(duration.isPresent());
+  }
 }

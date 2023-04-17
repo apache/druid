@@ -70,6 +70,8 @@ public class ServiceClientImplTest
   private static final ServiceLocation SERVER3 = new ServiceLocation("example.com", -1, 1111, "/q");
   private static final ServiceLocation SERVER4 = new ServiceLocation("example.com", -1, 2222, "/q");
   private static final ServiceLocation SERVER5 = new ServiceLocation("example.com", -1, 3333, "/q");
+  private static final ServiceLocation SERVER6 = new ServiceLocation("mixed.com", 201, 111, "/q");
+  private static final ServiceLocation SERVER7 = new ServiceLocation("mixed.com", 203, 222, "/q");
 
   private ScheduledExecutorService exec;
 
@@ -265,6 +267,24 @@ public class ServiceClientImplTest
     expectHttpCall(requestBuilder, SERVER1)
         .thenReturn(redirectResponse(requestBuilder.build(SERVER2).getUrl().toString()));
     expectHttpCall(requestBuilder, SERVER2).thenReturn(valueResponse(expectedResponseObject));
+
+    serviceClient = makeServiceClient(StandardRetryPolicy.noRetries());
+    final Map<String, String> response = doRequest(serviceClient, requestBuilder);
+
+    Assert.assertEquals(expectedResponseObject, response);
+  }
+
+  @Test
+  public void test_request_followRedirect_mixedPorts() throws Exception
+  {
+    final RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.GET, "/foo");
+    final ImmutableMap<String, String> expectedResponseObject = ImmutableMap.of("foo", "bar");
+
+    // Redirect from SERVER6 -> SERVER7.
+    stubLocatorCall(locations(SERVER6, SERVER7));
+    expectHttpCall(requestBuilder, SERVER6)
+        .thenReturn(redirectResponse(requestBuilder.build(SERVER7).getUrl().toString()));
+    expectHttpCall(requestBuilder, SERVER7).thenReturn(valueResponse(expectedResponseObject));
 
     serviceClient = makeServiceClient(StandardRetryPolicy.noRetries());
     final Map<String, String> response = doRequest(serviceClient, requestBuilder);
@@ -643,6 +663,34 @@ public class ServiceClientImplTest
         new ServiceLocation("1.2.3.4", -1, 443, ""),
         ServiceClientImpl.serviceLocationNoPathFromUri("https://1.2.3.4/foo")
     );
+
+    Assert.assertEquals(
+            new ServiceLocation("1:2:3:4:5:6:7:8", 9999, -1, ""),
+            ServiceClientImpl.serviceLocationNoPathFromUri("http://[1:2:3:4:5:6:7:8]:9999/foo")
+    );
+
+    Assert.assertEquals(
+            new ServiceLocation("1:2:3:4:5:6:7:8", 80, -1, ""),
+            ServiceClientImpl.serviceLocationNoPathFromUri("http://[1:2:3:4:5:6:7:8]/foo")
+    );
+
+    Assert.assertEquals(
+            new ServiceLocation("1:2:3:4:5:6:7:8", -1, 9999, ""),
+            ServiceClientImpl.serviceLocationNoPathFromUri("https://[1:2:3:4:5:6:7:8]:9999/foo")
+    );
+
+    Assert.assertEquals(
+            new ServiceLocation("1:2:3:4:5:6:7:8", -1, 443, ""),
+            ServiceClientImpl.serviceLocationNoPathFromUri("https://[1:2:3:4:5:6:7:8]/foo")
+    );
+  }
+
+  @Test
+  public void test_normalizeHost()
+  {
+    Assert.assertEquals("1:2:3:4:5:6:7:8", ServiceClientImpl.sanitizeHost("[1:2:3:4:5:6:7:8]"));
+    Assert.assertEquals("1:2:3:4:5:6:7:8", ServiceClientImpl.sanitizeHost("1:2:3:4:5:6:7:8"));
+    Assert.assertEquals("1.2.3.4", ServiceClientImpl.sanitizeHost("1.2.3.4"));
   }
 
   @Test

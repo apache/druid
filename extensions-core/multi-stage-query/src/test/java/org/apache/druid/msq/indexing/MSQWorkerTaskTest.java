@@ -103,4 +103,11 @@ public class MSQWorkerTaskTest
     Assert.assertEquals(retryCount, msqWorkerTask.getRetryCount());
   }
 
+  @Test
+  public void testGetInputSourceResources()
+  {
+    MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
+    Assert.assertTrue(msqWorkerTask.getInputSourceResources().isEmpty());
+  }
+
 }

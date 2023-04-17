@@ -55,26 +55,26 @@ To set the value for the configuration properties, add them to the common runtim
 
 **`druid.auth.basic.common.pollingPeriod`**
 
-Defines in milliseconds how often processes should poll the Coordinator for the current Druid metadata store authenticator/authorizer state.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+Defines in milliseconds how often processes should poll the Coordinator for the current Druid metadata store authenticator/authorizer state.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: 60000
 
 **`druid.auth.basic.common.maxRandomDelay`**
 
-Defines in milliseconds the amount of random delay to add to the pollingPeriod, to spread polling requests across time.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+Defines in milliseconds the amount of random delay to add to the pollingPeriod, to spread polling requests across time.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: 6000
 
 **`druid.auth.basic.common.maxSyncRetries`**
 
-Determines how many times a service will retry if the authentication/authorization Druid metadata store state sync with the Coordinator fails.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+Determines how many times a service will retry if the authentication/authorization Druid metadata store state sync with the Coordinator fails.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: 10
 
 **`druid.auth.basic.common.cacheDirectory`**
 
-If defined, snapshots of the basic Authenticator and Authorizer Druid metadata store caches will be stored on disk in this directory. If this property is defined, when a service is starting, it will attempt to initialize its caches from these on-disk snapshots, if the service is unable to initialize its state by communicating with the Coordinator.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+If defined, snapshots of the basic Authenticator and Authorizer Druid metadata store caches will be stored on disk in this directory. If this property is defined, when a service is starting, it will attempt to initialize its caches from these on-disk snapshots, if the service is unable to initialize its state by communicating with the Coordinator.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
 
 
@@ -116,50 +116,50 @@ The remaining examples of authenticator configuration use either `MyBasicMetadat
 
 **`druid.auth.authenticator.MyBasicMetadataAuthenticator.initialAdminPassword`**
 
-Initial [Password Provider](../../operations/password-provider.md) for the automatically created default admin user. If no password is specified, the default admin user will not be created. If the default admin user already exists, setting this property will not affect its password.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+Initial [Password Provider](../../operations/password-provider.md) for the automatically created default admin user. If no password is specified, the default admin user will not be created. If the default admin user already exists, setting this property will not affect its password.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
 
 **`druid.auth.authenticator.MyBasicMetadataAuthenticator.initialInternalClientPassword`**
 
-Initial [Password Provider](../../operations/password-provider.md) for the default internal system user, used for internal process communication. If no password is specified, the default internal system user will not be created. If the default internal system user already exists, setting this property will not affect its password.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+Initial [Password Provider](../../operations/password-provider.md) for the default internal system user, used for internal process communication. If no password is specified, the default internal system user will not be created. If the default internal system user already exists, setting this property will not affect its password.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
 
 **`druid.auth.authenticator.MyBasicMetadataAuthenticator.enableCacheNotifications`**
 
-If true, the Coordinator will notify Druid processes whenever a configuration change to this Authenticator occurs, allowing them to immediately update their state without waiting for polling.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+If true, the Coordinator will notify Druid processes whenever a configuration change to this Authenticator occurs, allowing them to immediately update their state without waiting for polling.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: True
 
 **`druid.auth.authenticator.MyBasicMetadataAuthenticator.cacheNotificationTimeout`**
 
-The timeout in milliseconds for the cache notifications.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+The timeout in milliseconds for the cache notifications.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: 5000
 
 **`druid.auth.authenticator.MyBasicMetadataAuthenticator.credentialIterations`**
 
-Number of iterations to use for password hashing. See [Credential iterations and API performance](#credential-iterations-and-api-performance)<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+Number of iterations to use for password hashing. See [Credential iterations and API performance](#credential-iterations-and-api-performance)<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: 10000
 
 **`druid.auth.authenticator.MyBasicMetadataAuthenticator.credentialsValidator.type`**
 
-The type of credentials store (metadata) to validate requests credentials.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+The type of credentials store (metadata) to validate requests credentials.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: metadata
 
 **`druid.auth.authenticator.MyBasicMetadataAuthenticator.skipOnFailure`**
 
-If true and the request credential doesn't exists or isn't fully configured in the credentials store, the request will proceed to next Authenticator in the chain.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+If true and the request credential doesn't exists or isn't fully configured in the credentials store, the request will proceed to next Authenticator in the chain.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: false
 
 **`druid.auth.authenticator.MyBasicMetadataAuthenticator.authorizerName`**
 
-Authorizer that requests should be directed to.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br>
+Authorizer that requests should be directed to.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: N/A
 
 
@@ -179,104 +179,104 @@ If Druid uses the default credentials validator (i.e., `credentialsValidator.typ
 
 **`druid.auth.authenticator.MyBasicLDAPAuthenticator.initialAdminPassword`**
 
-Initial [Password Provider](../../operations/password-provider.md) for the automatically created default admin user. If no password is specified, the default admin user will not be created. If the default admin user already exists, setting this property will not affect its password.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+Initial [Password Provider](../../operations/password-provider.md) for the automatically created default admin user. If no password is specified, the default admin user will not be created. If the default admin user already exists, setting this property will not affect its password.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
 
 **`druid.auth.authenticator.MyBasicLDAPAuthenticator.initialInternalClientPassword`**
 
-Initial [Password Provider](../../operations/password-provider.md) for the default internal system user, used for internal process communication. If no password is specified, the default internal system user will not be created. If the default internal system user already exists, setting this property will not affect its password.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+Initial [Password Provider](../../operations/password-provider.md) for the default internal system user, used for internal process communication. If no password is specified, the default internal system user will not be created. If the default internal system user already exists, setting this property will not affect its password.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
 
 **`druid.auth.authenticator.MyBasicLDAPAuthenticator.enableCacheNotifications`**
 
-If true, the Coordinator will notify Druid processes whenever a configuration change to this Authenticator occurs, allowing them to immediately update their state without waiting for polling.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+If true, the Coordinator will notify Druid processes whenever a configuration change to this Authenticator occurs, allowing them to immediately update their state without waiting for polling.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: true
 
 **`druid.auth.authenticator.MyBasicLDAPAuthenticator.cacheNotificationTimeout`**
 
-The timeout in milliseconds for the cache notifications.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+The timeout in milliseconds for the cache notifications.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: 5000
 
 **`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialIterations`**
 
-Number of iterations to use for password hashing.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+Number of iterations to use for password hashing.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: 10000
 
 **`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.type`**
 
-The type of credentials store (ldap) to validate requests credentials.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+The type of credentials store (ldap) to validate requests credentials.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: metadata
 
 **`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.url`**
 
-URL of the LDAP server.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br>
+URL of the LDAP server.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
 
 **`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.bindUser`**
 
-LDAP bind user username.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br>
+LDAP bind user username.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
 
 **`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.bindPassword`**
 
-[Password Provider](../../operations/password-provider.md) LDAP bind user password.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br>
+[Password Provider](../../operations/password-provider.md) LDAP bind user password.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
 
 **`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.baseDn`**
 
-The point from where the LDAP server will search for users.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br>
+The point from where the LDAP server will search for users.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
 
 **`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.userSearch`**
 
-The filter/expression to use for the search. For example, (&(sAMAccountName=%s)(objectClass=user))<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br>
+The filter/expression to use for the search. For example, (&(sAMAccountName=%s)(objectClass=user))<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
 
 **`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.userAttribute`**
 
-The attribute id identifying the attribute that will be returned as part of the search. For example, sAMAccountName.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br>
+The attribute id identifying the attribute that will be returned as part of the search. For example, sAMAccountName.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
 
 **`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.credentialVerifyDuration`**
 
-The duration in seconds for how long valid credentials are verifiable within the cache when not requested.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+The duration in seconds for how long valid credentials are verifiable within the cache when not requested.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: 600
 
 **`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.credentialMaxDuration`**
 
-The max duration in seconds for valid credentials that can reside in cache regardless of how often they are requested.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+The max duration in seconds for valid credentials that can reside in cache regardless of how often they are requested.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: 3600
 
 **`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.credentialCacheSize`**
 
-The valid credentials cache size. The cache uses a LRU policy.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+The valid credentials cache size. The cache uses a LRU policy.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: 100
 
 **`druid.auth.authenticator.MyBasicLDAPAuthenticator.skipOnFailure`**
 
-If true and the request credential doesn't exists or isn't fully configured in the credentials store, the request will proceed to next Authenticator in the chain.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+If true and the request credential doesn't exists or isn't fully configured in the credentials store, the request will proceed to next Authenticator in the chain.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: false
 
 **`druid.auth.authenticator.MyBasicLDAPAuthenticator.authorizerName`**
 
-Authorizer that requests should be directed to.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br>
+Authorizer that requests should be directed to.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: N/A
 
 ### Escalator
@@ -296,20 +296,20 @@ druid.escalator.authorizerName=MyBasicMetadataAuthorizer
 
 **`druid.escalator.internalClientUsername`**
 
-The escalator will use this username for requests made as the internal system user.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br>
+The escalator will use this username for requests made as the internal system user.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: N/A
 
 **`druid.escalator.internalClientPassword`**
 
-The escalator will use this [Password Provider](../../operations/password-provider.md) for requests made as the internal system user.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br>
+The escalator will use this [Password Provider](../../operations/password-provider.md) for requests made as the internal system user.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: N/A
 
 **`druid.escalator.authorizerName`**
 
-Authorizer that requests should be directed to.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br>
+Authorizer that requests should be directed to.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: N/A
 
 
@@ -336,76 +336,76 @@ The examples in the rest of this article use `MyBasicMetadataAuthorizer` or `MyB
 
 **`druid.auth.authorizer.MyBasicMetadataAuthorizer.enableCacheNotifications`**
 
-If true, the Coordinator will notify Druid processes whenever a configuration change to this Authorizer occurs, allowing them to immediately update their state without waiting for polling.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+If true, the Coordinator will notify Druid processes whenever a configuration change to this Authorizer occurs, allowing them to immediately update their state without waiting for polling.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: true
 
 **`druid.auth.authorizer.MyBasicMetadataAuthorizer.cacheNotificationTimeout`**
 
-The timeout in milliseconds for the cache notifications.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+The timeout in milliseconds for the cache notifications.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: 5000
 
 **`druid.auth.authorizer.MyBasicMetadataAuthorizer.initialAdminUser`**
 
-The initial admin user with role defined in initialAdminRole property if specified, otherwise the default admin role will be assigned.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+The initial admin user with role defined in initialAdminRole property if specified, otherwise the default admin role will be assigned.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: admin
 
 **`druid.auth.authorizer.MyBasicMetadataAuthorizer.initialAdminRole`**
 
-The initial admin role to create if it doesn't already exists.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+The initial admin role to create if it doesn't already exists.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: admin
 
 **`druid.auth.authorizer.MyBasicMetadataAuthorizer.roleProvider.type`**
 
-The type of role provider to authorize requests credentials.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+The type of role provider to authorize requests credentials.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: metadata
 
 #### Properties for LDAP user authorization
 
 **`druid.auth.authorizer.MyBasicLDAPAuthorizer.enableCacheNotifications`**
 
-If true, the Coordinator will notify Druid processes whenever a configuration change to this Authorizer occurs, allowing them to immediately update their state without waiting for polling.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+If true, the Coordinator will notify Druid processes whenever a configuration change to this Authorizer occurs, allowing them to immediately update their state without waiting for polling.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: true
 
 **`druid.auth.authorizer.MyBasicLDAPAuthorizer.cacheNotificationTimeout`**
 
-The timeout in milliseconds for the cache notifications.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+The timeout in milliseconds for the cache notifications.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: 5000
 
 **`druid.auth.authorizer.MyBasicLDAPAuthorizer.initialAdminUser`**
 
-The initial admin user with role defined in initialAdminRole property if specified, otherwise the default admin role will be assigned.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+The initial admin user with role defined in initialAdminRole property if specified, otherwise the default admin role will be assigned.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: admin
 
 **`druid.auth.authorizer.MyBasicLDAPAuthorizer.initialAdminRole`**
 
-The initial admin role to create if it doesn't already exists.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+The initial admin role to create if it doesn't already exists.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: admin
 
 **`druid.auth.authorizer.MyBasicLDAPAuthorizer.initialAdminGroupMapping`**
 
-The initial admin group mapping with role defined in initialAdminRole property if specified, otherwise the default admin role will be assigned. The name of this initial admin group mapping will be set to adminGroupMapping<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+The initial admin group mapping with role defined in initialAdminRole property if specified, otherwise the default admin role will be assigned. The name of this initial admin group mapping will be set to adminGroupMapping<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
 
 **`druid.auth.authorizer.MyBasicLDAPAuthorizer.roleProvider.type`**
 
-The type of role provider (ldap) to authorize requests credentials.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+The type of role provider (ldap) to authorize requests credentials.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: metadata
 
 **`druid.auth.authorizer.MyBasicLDAPAuthorizer.roleProvider.groupFilters`**
 
-Array of LDAP group filters used to filter out the allowed set of groups returned from LDAP search. Filters can be begin with *, or end with ,* to provide configurational flexibility to limit or filter allowed set of groups available to LDAP Authorizer.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+Array of LDAP group filters used to filter out the allowed set of groups returned from LDAP search. Filters can be begin with *, or end with ,* to provide configurational flexibility to limit or filter allowed set of groups available to LDAP Authorizer.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
 
 #### Properties for LDAPS
@@ -414,38 +414,38 @@ Use the following properties to configure Druid authentication with LDAP over TL
 
 **`druid.auth.basic.ssl.protocol`**
 
-SSL protocol to use. The TLS version is 1.2.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br>
+SSL protocol to use. The TLS version is 1.2.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: tls
 
 **`druid.auth.basic.ssl.trustStorePath`**
 
-Path to the trust store file.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br>
+Path to the trust store file.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: N/A
 
 **`druid.auth.basic.ssl.trustStorePassword`**
 
-Password to access the trust store file.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br>
+Password to access the trust store file.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: Yes<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: N/A
 
 **`druid.auth.basic.ssl.trustStoreType`**
 
-Format of the trust store file. For Java the format is jks.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+Format of the trust store file. For Java the format is jks.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: jks
 
 **`druid.auth.basic.ssl.trustStoreAlgorithm`**
 
-Algorithm used by the trust manager to validate certificate chains.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+Algorithm used by the trust manager to validate certificate chains.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: N/A
 
 **`druid.auth.basic.ssl.trustStorePassword`**
 
-Password details that enable access to the truststore.<br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+Password details that enable access to the truststore.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: N/A
 
 Example LDAPS configuration:
@@ -471,19 +471,19 @@ Root path: `/druid-ext/basic-security/authentication`
 Each API endpoint includes {authenticatorName}, specifying which Authenticator instance is being configured.
 
 ##### User/Credential Management
-`GET(/druid-ext/basic-security/authentication/db/{authenticatorName}/users)`<br>
+`GET(/druid-ext/basic-security/authentication/db/{authenticatorName}/users)`<br />
 Return a list of all user names.
 
-`GET(/druid-ext/basic-security/authentication/db/{authenticatorName}/users/{userName})`<br>
+`GET(/druid-ext/basic-security/authentication/db/{authenticatorName}/users/{userName})`<br />
 Return the name and credentials information of the user with name {userName}
 
-`POST(/druid-ext/basic-security/authentication/db/{authenticatorName}/users/{userName})`<br>
+`POST(/druid-ext/basic-security/authentication/db/{authenticatorName}/users/{userName})`<br />
 Create a new user with name {userName}
 
-`DELETE(/druid-ext/basic-security/authentication/db/{authenticatorName}/users/{userName})`<br>
+`DELETE(/druid-ext/basic-security/authentication/db/{authenticatorName}/users/{userName})`<br />
 Delete the user with name {userName}
 
-`POST(/druid-ext/basic-security/authentication/db/{authenticatorName}/users/{userName}/credentials)`<br>
+`POST(/druid-ext/basic-security/authentication/db/{authenticatorName}/users/{userName}/credentials)`<br />
 Assign a password used for HTTP basic authentication for {userName}
 Content: JSON password request object
 
@@ -496,20 +496,20 @@ Example request body:
 ```
 
 ##### Cache Load Status
-`GET(/druid-ext/basic-security/authentication/loadStatus)`<br>
+`GET(/druid-ext/basic-security/authentication/loadStatus)`<br />
 Return the current load status of the local caches of the authentication Druid metadata store.
 
 #### Authorization API
 
-Root path: `/druid-ext/basic-security/authorization`<br>
+Root path: `/druid-ext/basic-security/authorization`<br />
 
 Each API endpoint includes {authorizerName}, specifying which Authorizer instance is being configured.
 
 ##### User Creation/Deletion
-`GET(/druid-ext/basic-security/authorization/db/{authorizerName}/users)`<br>
+`GET(/druid-ext/basic-security/authorization/db/{authorizerName}/users)`<br />
 Return a list of all user names.
 
-`GET(/druid-ext/basic-security/authorization/db/{authorizerName}/users/{userName})`<br>
+`GET(/druid-ext/basic-security/authorization/db/{authorizerName}/users/{userName})`<br />
 Return the name and role information of the user with name {userName}
 
 Example output:
@@ -596,20 +596,20 @@ The `resourceNamePattern` is a compiled version of the resource name regex. It i
 }
 ```
 
-`POST(/druid-ext/basic-security/authorization/db/{authorizerName}/users/{userName})`<br>
+`POST(/druid-ext/basic-security/authorization/db/{authorizerName}/users/{userName})`<br />
 Create a new user with name {userName}
 
-`DELETE(/druid-ext/basic-security/authorization/db/{authorizerName}/users/{userName})`<br>
+`DELETE(/druid-ext/basic-security/authorization/db/{authorizerName}/users/{userName})`<br />
 Delete the user with name {userName}
 
 ##### Group mapping Creation/Deletion
-`GET(/druid-ext/basic-security/authorization/db/{authorizerName}/groupMappings)`<br>
+`GET(/druid-ext/basic-security/authorization/db/{authorizerName}/groupMappings)`<br />
 Return a list of all group mappings.
 
-`GET(/druid-ext/basic-security/authorization/db/{authorizerName}/groupMappings/{groupMappingName})`<br>
+`GET(/druid-ext/basic-security/authorization/db/{authorizerName}/groupMappings/{groupMappingName})`<br />
 Return the group mapping and role information of the group mapping with name {groupMappingName}
 
-`POST(/druid-ext/basic-security/authorization/db/{authorizerName}/groupMappings/{groupMappingName})`<br>
+`POST(/druid-ext/basic-security/authorization/db/{authorizerName}/groupMappings/{groupMappingName})`<br />
 Create a new group mapping with name {groupMappingName}
 Content: JSON group mapping object
 Example request body:
@@ -624,14 +624,14 @@ Example request body:
 }
 ```
 
-`DELETE(/druid-ext/basic-security/authorization/db/{authorizerName}/groupMappings/{groupMappingName})`<br>
+`DELETE(/druid-ext/basic-security/authorization/db/{authorizerName}/groupMappings/{groupMappingName})`<br />
 Delete the group mapping with name {groupMappingName}
 
 #### Role Creation/Deletion
-`GET(/druid-ext/basic-security/authorization/db/{authorizerName}/roles)`<br>
+`GET(/druid-ext/basic-security/authorization/db/{authorizerName}/roles)`<br />
 Return a list of all role names.
 
-`GET(/druid-ext/basic-security/authorization/db/{authorizerName}/roles/{roleName})`<br>
+`GET(/druid-ext/basic-security/authorization/db/{authorizerName}/roles/{roleName})`<br />
 Return name and permissions for the role named {roleName}.
 
 Example output:
@@ -685,30 +685,30 @@ Example output:
 ```
 
 
-`POST(/druid-ext/basic-security/authorization/db/{authorizerName}/roles/{roleName})`<br>
+`POST(/druid-ext/basic-security/authorization/db/{authorizerName}/roles/{roleName})`<br />
 Create a new role with name {roleName}.
 Content: username string
 
-`DELETE(/druid-ext/basic-security/authorization/db/{authorizerName}/roles/{roleName})`<br>
+`DELETE(/druid-ext/basic-security/authorization/db/{authorizerName}/roles/{roleName})`<br />
 Delete the role with name {roleName}.
 
 
 #### Role Assignment
-`POST(/druid-ext/basic-security/authorization/db/{authorizerName}/users/{userName}/roles/{roleName})`<br>
+`POST(/druid-ext/basic-security/authorization/db/{authorizerName}/users/{userName}/roles/{roleName})`<br />
 Assign role {roleName} to user {userName}.
 
-`DELETE(/druid-ext/basic-security/authorization/db/{authorizerName}/users/{userName}/roles/{roleName})`<br>
+`DELETE(/druid-ext/basic-security/authorization/db/{authorizerName}/users/{userName}/roles/{roleName})`<br />
 Unassign role {roleName} from user {userName}
 
-`POST(/druid-ext/basic-security/authorization/db/{authorizerName}/groupMappings/{groupMappingName}/roles/{roleName})`<br>
+`POST(/druid-ext/basic-security/authorization/db/{authorizerName}/groupMappings/{groupMappingName}/roles/{roleName})`<br />
 Assign role {roleName} to group mapping {groupMappingName}.
 
-`DELETE(/druid-ext/basic-security/authorization/db/{authorizerName}/groupMappings/{groupMappingName}/roles/{roleName})`<br>
+`DELETE(/druid-ext/basic-security/authorization/db/{authorizerName}/groupMappings/{groupMappingName}/roles/{roleName})`<br />
 Unassign role {roleName} from group mapping {groupMappingName}
 
 
 #### Permissions
-`POST(/druid-ext/basic-security/authorization/db/{authorizerName}/roles/{roleName}/permissions)`<br>
+`POST(/druid-ext/basic-security/authorization/db/{authorizerName}/roles/{roleName}/permissions)`<br />
 Set the permissions of {roleName}. This replaces the previous set of permissions on the role.
 
 Content: List of JSON Resource-Action objects, e.g.:
@@ -737,5 +737,5 @@ The "name" field for resources in the permission definitions are regexes used to
 Please see [Defining permissions](../../operations/security-user-auth.md#defining-permissions) for more details.
 
 ##### Cache Load Status
-`GET(/druid-ext/basic-security/authorization/loadStatus)`<br>
+`GET(/druid-ext/basic-security/authorization/loadStatus)`<br />
 Return the current load status of the local caches of the authorization Druid metadata store.

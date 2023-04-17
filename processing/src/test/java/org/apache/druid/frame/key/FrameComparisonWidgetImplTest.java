@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.read.FrameReader;
+import org.apache.druid.frame.field.FieldReaders;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.segment.RowBasedSegment;
@@ -37,7 +37,10 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
 {
@@ -69,16 +72,52 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_readKey_someColumns()
+  public void test_isPartiallyNullKey_someColumns()
   {
-    final List<SortColumn> sortColumns = ImmutableList.of(
-        new SortColumn("1", false),
-        new SortColumn("2", false),
-        new SortColumn("3", false)
+    final List<KeyColumn> keyColumns = ImmutableList.of(
+        new KeyColumn("1", KeyOrder.ASCENDING),
+        new KeyColumn("2", KeyOrder.ASCENDING),
+        new KeyColumn("3", KeyOrder.ASCENDING)
     );
 
-    final FrameComparisonWidget widget =
-        FrameComparisonWidgetImpl.create(frame, FrameReader.create(RowKeyComparatorTest.SIGNATURE), sortColumns);
+    final FrameComparisonWidget widget = createComparisonWidget(keyColumns);
+
+    for (int i = 0; i < frame.numRows(); i++) {
+      final boolean isPartiallyNull =
+          Arrays.stream(RowKeyComparatorTest.ALL_KEY_OBJECTS.get(i)).limit(3).anyMatch(Objects::isNull);
+      Assert.assertEquals(isPartiallyNull, widget.isPartiallyNullKey(i));
+    }
+  }
+
+  @Test
+  public void test_isPartiallyNullKey_allColumns()
+  {
+    final List<KeyColumn> keyColumns = ImmutableList.of(
+        new KeyColumn("1", KeyOrder.ASCENDING),
+        new KeyColumn("2", KeyOrder.ASCENDING),
+        new KeyColumn("3", KeyOrder.ASCENDING),
+        new KeyColumn("4", KeyOrder.ASCENDING)
+    );
+
+    final FrameComparisonWidget widget = createComparisonWidget(keyColumns);
+
+    for (int i = 0; i < frame.numRows(); i++) {
+      final boolean isPartiallyNull =
+          Arrays.stream(RowKeyComparatorTest.ALL_KEY_OBJECTS.get(i)).anyMatch(Objects::isNull);
+      Assert.assertEquals(isPartiallyNull, widget.isPartiallyNullKey(i));
+    }
+  }
+
+  @Test
+  public void test_readKey_someColumns()
+  {
+    final List<KeyColumn> keyColumns = ImmutableList.of(
+        new KeyColumn("1", KeyOrder.ASCENDING),
+        new KeyColumn("2", KeyOrder.ASCENDING),
+        new KeyColumn("3", KeyOrder.ASCENDING)
+    );
+
+    final FrameComparisonWidget widget = createComparisonWidget(keyColumns);
 
     final RowSignature signature =
         RowSignature.builder()
@@ -88,8 +127,8 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
                     .build();
 
     for (int i = 0; i < frame.numRows(); i++) {
-      final Object[] expectedKeyArray = new Object[sortColumns.size()];
-      System.arraycopy(RowKeyComparatorTest.ALL_KEY_OBJECTS.get(i), 0, expectedKeyArray, 0, sortColumns.size());
+      final Object[] expectedKeyArray = new Object[keyColumns.size()];
+      System.arraycopy(RowKeyComparatorTest.ALL_KEY_OBJECTS.get(i), 0, expectedKeyArray, 0, keyColumns.size());
       Assert.assertEquals(
           KeyTestUtils.createKey(signature, expectedKeyArray),
           widget.readKey(i)
@@ -100,15 +139,14 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
   @Test
   public void test_readKey_allColumns()
   {
-    final List<SortColumn> sortColumns = ImmutableList.of(
-        new SortColumn("1", false),
-        new SortColumn("2", false),
-        new SortColumn("3", false),
-        new SortColumn("4", false)
+    final List<KeyColumn> keyColumns = ImmutableList.of(
+        new KeyColumn("1", KeyOrder.ASCENDING),
+        new KeyColumn("2", KeyOrder.ASCENDING),
+        new KeyColumn("3", KeyOrder.ASCENDING),
+        new KeyColumn("4", KeyOrder.ASCENDING)
     );
 
-    final FrameComparisonWidget widget =
-        FrameComparisonWidgetImpl.create(frame, FrameReader.create(RowKeyComparatorTest.SIGNATURE), sortColumns);
+    final FrameComparisonWidget widget = createComparisonWidget(keyColumns);
 
     for (int i = 0; i < frame.numRows(); i++) {
       Assert.assertEquals(
@@ -121,15 +159,14 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
   @Test
   public void test_compare_frameToKey()
   {
-    final List<SortColumn> sortColumns = ImmutableList.of(
-        new SortColumn("1", false),
-        new SortColumn("2", false),
-        new SortColumn("3", false),
-        new SortColumn("4", false)
+    final List<KeyColumn> keyColumns = ImmutableList.of(
+        new KeyColumn("1", KeyOrder.ASCENDING),
+        new KeyColumn("2", KeyOrder.ASCENDING),
+        new KeyColumn("3", KeyOrder.ASCENDING),
+        new KeyColumn("4", KeyOrder.ASCENDING)
     );
 
-    final FrameComparisonWidget widget =
-        FrameComparisonWidgetImpl.create(frame, FrameReader.create(RowKeyComparatorTest.SIGNATURE), sortColumns);
+    final FrameComparisonWidget widget = createComparisonWidget(keyColumns);
 
     // Compare self-to-self should be equal.
     for (int i = 0; i < frame.numRows(); i++) {
@@ -158,5 +195,21 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
     MatcherAssert.assertThat(widget.compare(4, firstKey), Matchers.greaterThan(0));
     MatcherAssert.assertThat(widget.compare(5, firstKey), Matchers.greaterThan(0));
     MatcherAssert.assertThat(widget.compare(6, firstKey), Matchers.greaterThan(0));
+  }
+
+  private FrameComparisonWidget createComparisonWidget(final List<KeyColumn> keyColumns)
+  {
+    return FrameComparisonWidgetImpl.create(
+        frame,
+        RowKeyComparatorTest.SIGNATURE,
+        keyColumns,
+        keyColumns.stream().map(
+            keyColumn ->
+                FieldReaders.create(
+                    keyColumn.columnName(),
+                    RowKeyComparatorTest.SIGNATURE.getColumnType(keyColumn.columnName()).get()
+                )
+        ).collect(Collectors.toList())
+    );
   }
 }

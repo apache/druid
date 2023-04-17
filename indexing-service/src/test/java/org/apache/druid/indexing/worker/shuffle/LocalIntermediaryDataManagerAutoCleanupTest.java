@@ -27,8 +27,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -65,23 +65,10 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
   @Before
   public void setup() throws IOException
   {
-    this.taskConfig = new TaskConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), null, null)),
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
-        null
-    );
+    this.taskConfig = new TaskConfigBuilder()
+        .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), null, null)))
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
     this.overlordClient = new NoopOverlordClient()
     {
       @Override
@@ -139,9 +126,8 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
 
     // Setup data manager with expiry timeout 1s and initial delay of 1 second
     WorkerConfig workerConfig = new TestWorkerConfig(1, 1, timeoutPeriod);
-    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
     LocalIntermediaryDataManager intermediaryDataManager =
-        new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient, dirTracker);
+        new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient);
     intermediaryDataManager.addSegment(supervisorTaskId, subTaskId, segment, segmentFile);
 
     intermediaryDataManager
