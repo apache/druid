@@ -467,7 +467,7 @@ is:
     "bitmap": { "type": "roaring" },
     "dimensionCompression": "lz4",
     "metricCompression": "lz4",
-    "longEncoding": "longs",
+    "longEncoding": "longs"
   },
   <other ingestion-method-specific properties>
 }
