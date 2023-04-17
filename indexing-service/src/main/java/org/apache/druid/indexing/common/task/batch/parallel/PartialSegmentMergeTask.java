@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
@@ -81,7 +80,6 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
   private final int numAttempts;
   private final String supervisorTaskId;
   private final String subtaskSpecId;
-  private final ObjectMapper jsonMapper;
 
   PartialSegmentMergeTask(
       // id shouldn't be null except when this task is created by ParallelIndexSupervisorTask
@@ -94,8 +92,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
       PartialSegmentMergeIOConfig ioConfig,
       ParallelIndexTuningConfig tuningConfig,
       final int numAttempts, // zero-based counting
-      final Map<String, Object> context,
-      final ObjectMapper jsonMapper
+      final Map<String, Object> context
   )
   {
     super(
@@ -115,7 +112,6 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     this.ioConfig = ioConfig;
     this.numAttempts = numAttempts;
     this.supervisorTaskId = supervisorTaskId;
-    this.jsonMapper = jsonMapper;
   }
 
   @JsonProperty
@@ -272,6 +268,11 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
             0
         );
         long mergeFinishTime = System.nanoTime();
+        LOG.info("Merging [%d] input segment(s) for interval [%s] took [%,d]ms.",
+                 segmentFilesToMerge.size(),
+                 interval,
+                 (mergeFinishTime - startTime) / 1000000
+        );
         final List<String> metricNames = Arrays.stream(dataSchema.getAggregators())
                                                .map(AggregatorFactory::getName)
                                                .collect(Collectors.toList());
@@ -302,17 +303,15 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         );
         long pushFinishTime = System.nanoTime();
         pushedSegments.add(segment);
-        LOG.info(
-            "Segment[%s] of %,d bytes "
-            + "built from %d partial segment(s) in %,dms; "
-            + "pushed to deep storage in %,dms. "
-            + "Load spec is: %s",
+        LOG.info("Built segment [%s] for interval [%s] (from [%d] input segment(s) in [%,d]ms) of "
+            + " size [%d] bytes and pushed ([%,d]ms) to deep storage [%s]",
             segment.getId(),
-            segment.getSize(),
+            interval,
             segmentFilesToMerge.size(),
             (mergeFinishTime - startTime) / 1000000,
+            segment.getSize(),
             (pushFinishTime - mergeFinishTime) / 1000000,
-            jsonMapper.writeValueAsString(segment.getLoadSpec())
+            segment.getLoadSpec()
         );
       }
     }
