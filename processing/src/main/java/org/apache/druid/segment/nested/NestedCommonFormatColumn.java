@@ -136,9 +136,10 @@ public interface NestedCommonFormatColumn extends BaseColumn
                                      .setDictionaryValuesSorted(true)
                                      .setDictionaryValuesUnique(true)
                                      .setHasBitmapIndexes(true)
+                                     .setFilterable(true)
                                      .setHasNulls(hasNulls);
       }
-      return ColumnCapabilitiesImpl.createDefault().setType(logicalType).setHasNulls(hasNulls);
+      return ColumnCapabilitiesImpl.createDefault().setType(logicalType).setHasNulls(hasNulls).setFilterable(true);
     }
   }
 }
