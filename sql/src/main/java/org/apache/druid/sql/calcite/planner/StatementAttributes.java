@@ -29,16 +29,16 @@ import javax.annotation.Nullable;
  */
 public final class StatementAttributes
 {
-  private final String statementKind;
+  private final String statementType;
 
   @Nullable
   private final SqlNode targetDataSource;
 
   public StatementAttributes(
-      @JsonProperty("statementKind") final String statementKind,
+      @JsonProperty("statementType") final String statementType,
       @JsonProperty("targetDataSource") @Nullable final SqlNode targetDataSource)
   {
-    this.statementKind = statementKind;
+    this.statementType = statementType;
     this.targetDataSource = targetDataSource;
   }
 
@@ -46,9 +46,9 @@ public final class StatementAttributes
    * @return the statement kind of a SQL statement. For example, SELECT, INSERT, or REPLACE.
    */
   @JsonProperty
-  public String getStatementKind()
+  public String getStatementType()
   {
-    return statementKind;
+    return statementType;
   }
 
   /**
@@ -66,7 +66,7 @@ public final class StatementAttributes
   public String toString()
   {
     return "StatementAttributes{" +
-           "statementKind='" + statementKind + '\'' +
+           "statementType='" + statementType + '\'' +
            ", targetDataSource=" + targetDataSource +
            '}';
   }

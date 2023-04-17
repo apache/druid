@@ -317,7 +317,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         "\"granularity\":{\"type\":\"all\"}}," +
         "\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]}]";
     final String resources = "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]";
-    final String statementAttributes = "{\"statementKind\":\"INSERT\",\"targetDataSource\":\"dst\"}";
+    final String statementAttributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"dst\"}";
 
     testQuery(
         PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,

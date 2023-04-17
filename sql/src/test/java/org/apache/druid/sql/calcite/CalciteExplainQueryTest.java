@@ -51,7 +51,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
                                + "\"signature\":[{\"name\":\"a0\",\"type\":\"LONG\"}]"
                                + "}]";
     final String resources = "[{\"name\":\"aview\",\"type\":\"VIEW\"}]";
-    final String statementAttributes = "{\"statementKind\":\"SELECT\",\"targetDataSource\":null}";
+    final String statementAttributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
 
     testQuery(
         PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,
@@ -82,7 +82,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
         + "    BindableTableScan(table=[[INFORMATION_SCHEMA, COLUMNS]])\n";
 
     final String resources = "[]";
-    final String statementAttributes = "{\"statementKind\":\"SELECT\",\"targetDataSource\":null}";
+    final String statementAttributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
 
     testQuery(
         "EXPLAIN PLAN FOR\n"
@@ -127,7 +127,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
                                + "\"signature\":[{\"name\":\"a0\",\"type\":\"LONG\"}]"
                                + "}]";
     final String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
-    final String statementAttributes = "{\"statementKind\":\"SELECT\",\"targetDataSource\":null}";
+    final String statementAttributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
 
     testQuery(
         query,
@@ -184,7 +184,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
                                     + "}]";
     String sql = "EXPLAIN PLAN FOR SELECT * FROM druid.foo";
     String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
-    final String statementAttributes = "{\"statementKind\":\"SELECT\",\"targetDataSource\":null}";
+    final String statementAttributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
 
     // Test when default config and no overrides
     testQuery(sql, ImmutableList.of(), ImmutableList.of(new Object[]{explanation, resources, statementAttributes}));
@@ -245,7 +245,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
                                + "\"signature\":[{\"name\":\"dim1\",\"type\":\"STRING\"}]"
                                + "}]";
     final String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
-    final String statementAttributes = "{\"statementKind\":\"SELECT\",\"targetDataSource\":null}";
+    final String statementAttributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
     testQuery(
         PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,
         query,
@@ -298,7 +298,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
                                                       + "\"signature\":[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"v1\",\"type\":\"STRING\"}]"
                                                       + "}]";
     final String expectedResources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
-    final String expectedStmtAttributes = "{\"statementKind\":\"SELECT\",\"targetDataSource\":null}";
+    final String expectedStmtAttributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
     testQuery(
         explainSql,
         defaultExprContext,
@@ -361,7 +361,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
                                 + "\"signature\":[{\"name\":\"v0\",\"type\":\"LONG\"}]"
                                 + "}]";
     final String expectedResources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
-    final String expectedStmtAttributes = "{\"statementKind\":\"SELECT\",\"targetDataSource\":null}";
+    final String expectedStmtAttributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
     // Verify the query plan
     testQuery(
         explainSql,

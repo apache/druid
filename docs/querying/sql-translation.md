@@ -205,7 +205,7 @@ The EXPLAIN PLAN statement returns the following result with plan, resources, an
     }
   ],
   {
-    "statementKind": "SELECT",
+    "statementType": "SELECT",
     "targetDataSource": null
   }
 ]
