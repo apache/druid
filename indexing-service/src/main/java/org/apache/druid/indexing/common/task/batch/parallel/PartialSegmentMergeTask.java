@@ -304,7 +304,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         long pushFinishTime = System.nanoTime();
         pushedSegments.add(segment);
         LOG.info("Built segment [%s] for interval [%s] (from [%d] input segment(s) in [%,d]ms) of "
-            + " size [%d] bytes and pushed ([%,d]ms) to deep storage [%s]",
+            + "size [%d] bytes and pushed ([%,d]ms) to deep storage [%s].",
             segment.getId(),
             interval,
             segmentFilesToMerge.size(),
