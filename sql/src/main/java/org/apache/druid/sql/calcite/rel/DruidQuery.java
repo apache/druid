@@ -41,7 +41,6 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -64,7 +63,6 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.ordering.StringComparator;
-import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -209,7 +207,6 @@ public class DruidQuery
     // Now the fun begins.
     final DimFilter filter;
     final Projection selectProjection;
-    final Projection unnestProjection;
     final Grouping grouping;
     final Sorting sorting;
     final Windowing windowing;
@@ -438,6 +435,7 @@ public class DruidQuery
    * @param rowSignature          source row signature
    * @param virtualColumnRegistry re-usable virtual column references
    * @param typeFactory           factory for SQL types
+   *
    * @return dimensions
    *
    * @throws CannotBuildQueryException if dimensions cannot be computed
@@ -625,14 +623,7 @@ public class DruidQuery
         throw new ISE("Don't know what to do with direction[%s]", collation.getDirection());
       }
 
-      final SqlTypeName sortExpressionType = sortExpression.getType().getSqlTypeName();
-      if (SqlTypeName.NUMERIC_TYPES.contains(sortExpressionType)
-          || SqlTypeName.TIMESTAMP == sortExpressionType
-          || SqlTypeName.DATE == sortExpressionType) {
-        comparator = StringComparators.NUMERIC;
-      } else {
-        comparator = StringComparators.LEXICOGRAPHIC;
-      }
+      comparator = Calcites.getStringComparatorForRelDataType(sortExpression.getType());
 
       if (sortExpression.isA(SqlKind.INPUT_REF)) {
         final RexInputRef ref = (RexInputRef) sortExpression;

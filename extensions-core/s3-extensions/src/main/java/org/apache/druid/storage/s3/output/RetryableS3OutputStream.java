@@ -126,9 +126,15 @@ public class RetryableS3OutputStream extends OutputStream
     this.s3 = s3;
     this.s3Key = s3Key;
 
-    final InitiateMultipartUploadResult result = s3.initiateMultipartUpload(
-        new InitiateMultipartUploadRequest(config.getBucket(), s3Key)
-    );
+    final InitiateMultipartUploadResult result;
+    try {
+      result = S3Utils.retryS3Operation(() -> s3.initiateMultipartUpload(
+          new InitiateMultipartUploadRequest(config.getBucket(), s3Key)
+      ), config.getMaxRetry());
+    }
+    catch (Exception e) {
+      throw new IOException("Unable to start multipart upload", e);
+    }
     this.uploadId = result.getUploadId();
     this.chunkStorePath = new File(config.getTempDir(), uploadId + UUID.randomUUID());
     FileUtils.mkdirp(this.chunkStorePath);
