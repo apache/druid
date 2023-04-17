@@ -34,9 +34,6 @@ public class S3OutputConfig
 {
   public static final long S3_MULTIPART_UPLOAD_MIN_PART_SIZE_BYTES = 5L * 1024 * 1024;
   public static final long S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES = 5L * 1024 * 1024 * 1024L;
-  private static final int S3_MULTIPART_UPLOAD_MAX_NUM_PARTS = 10_000;
-  public static final long S3_MULTIPART_UPLOAD_MIN_OBJECT_SIZE_BYTES = 5L * 1024 * 1024;
-  public static final long S3_MULTIPART_UPLOAD_MAX_OBJECT_SIZE_BYTES = 5L * 1024 * 1024 * 1024 * 1024;
 
   @JsonProperty
   private String bucket;

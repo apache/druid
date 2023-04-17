@@ -365,12 +365,12 @@ The following common service properties control how durable storage behaves:
 |Parameter          |Default                                 | Description          |
 |-------------------|----------------------------------------|----------------------|
 |`druid.msq.intermediate.storage.bucket` | n/a | The bucket in S3 where you want to store intermediate files.  |
-| `druid.msq.intermediate.storage.chunkSize` | n/a | Optional. Defines the size of each chunk to temporarily store in `druid.msq.intermediate.storage.tempDir`. The chunk size must be between 5 MiB and 5 GiB. Druid computes the chunk size automatically if no value is provided.| 
+|`druid.msq.intermediate.storage.chunkSize` | 10MiB | Optional. Defines the size of each chunk to temporarily store in `druid.msq.intermediate.storage.tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls made to the durable storage, however it requires more disk space to store the temporary chunks. Druid uses a default of 100MiB if the value is not provided.| 
 |`druid.msq.intermediate.storage.enable` | true | Required. Whether to enable durable storage for the cluster.|
-| `druid.msq.intermediate.storage.maxTriesOnTransientErrors` | 10 | Optional. Defines the max number times to attempt S3 API calls to avoid failures due to transient errors. | 
-|`druid.msq.intermediate.storage.type` | `s3` if your deep storage is S3 | Required. The type of storage to use. You can either set this to `local` or `s3`.  |
+|`druid.msq.intermediate.storage.maxRetry` | 10 | Optional. Defines the max number times to attempt S3 API calls to avoid failures due to transient errors. | 
 |`druid.msq.intermediate.storage.prefix` | n/a | S3 prefix to store intermediate stage results. Provide a unique value for the prefix. Don't share the same prefix between clusters. If the location  includes other files or directories, then they will get cleaned up as well.  |
-| `druid.msq.intermediate.storage.tempDir`|  | Required. Directory path on the local disk to temporarily store intermediate stage results.  |
+|`druid.msq.intermediate.storage.tempDir`| n/a | Required. Directory path on the local disk to temporarily store intermediate stage results.  |
+|`druid.msq.intermediate.storage.type` | `s3` if your deep storage is S3 | Required. The type of storage to use. You can either set this to `local` or `s3`.  |
 
 In addition to the common service properties, there are certain properties that you configure on the Overlord specifically to clean up intermediate files:
 
