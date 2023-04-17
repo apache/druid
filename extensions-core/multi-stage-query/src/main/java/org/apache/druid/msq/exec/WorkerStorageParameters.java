@@ -58,13 +58,11 @@ public class WorkerStorageParameters
    */
   private static final long MINIMUM_SUPER_SORTER_TMP_STORAGE_BYTES = 1_000_000_000L;
 
-  private final boolean isIntermediateStorageLimitConfigured;
   private final long intermediateSuperSorterStorageMaxLocalBytes;
 
-  private WorkerStorageParameters(final long intermediateSuperSorterStorageMaxLocalBytes, final boolean isIntermediateStorageLimitConfigured)
+  private WorkerStorageParameters(final long intermediateSuperSorterStorageMaxLocalBytes)
   {
     this.intermediateSuperSorterStorageMaxLocalBytes = intermediateSuperSorterStorageMaxLocalBytes;
-    this.isIntermediateStorageLimitConfigured = isIntermediateStorageLimitConfigured;
   }
 
   public static WorkerStorageParameters createProductionInstance(
@@ -77,9 +75,9 @@ public class WorkerStorageParameters
   }
 
   @VisibleForTesting
-  public static WorkerStorageParameters createInstanceForTests(final long tmpStorageBytesPerTask, final boolean isIntermediateStorageLimitConfigured)
+  public static WorkerStorageParameters createInstanceForTests(final long tmpStorageBytesPerTask)
   {
-    return new WorkerStorageParameters(tmpStorageBytesPerTask, isIntermediateStorageLimitConfigured);
+    return new WorkerStorageParameters(tmpStorageBytesPerTask);
   }
 
   /**
@@ -92,10 +90,8 @@ public class WorkerStorageParameters
       final boolean isIntermediateSuperSorterStorageEnabled
   )
   {
-    boolean isIntermediateStorageLimitConfigured = tmpStorageBytesPerTask != -1;
-
-    if (!isIntermediateSuperSorterStorageEnabled || !isIntermediateStorageLimitConfigured) {
-      return new WorkerStorageParameters(Long.MAX_VALUE, false);
+    if (!isIntermediateSuperSorterStorageEnabled || tmpStorageBytesPerTask == -1) {
+      return new WorkerStorageParameters(-1);
     }
 
     Preconditions.checkArgument(tmpStorageBytesPerTask > 0, "Temporary storage bytes passed: [%s] should be > 0", tmpStorageBytesPerTask);
@@ -109,7 +105,8 @@ public class WorkerStorageParameters
           )
       );
     }
-    return new WorkerStorageParameters(intermediateSuperSorterStorageMaxLocalBytes, true);
+
+    return new WorkerStorageParameters(intermediateSuperSorterStorageMaxLocalBytes);
   }
 
   private static long computeUsableStorage(long tmpStorageBytesPerTask)
@@ -129,7 +126,7 @@ public class WorkerStorageParameters
 
   public boolean isIntermediateStorageLimitConfigured()
   {
-    return isIntermediateStorageLimitConfigured;
+    return intermediateSuperSorterStorageMaxLocalBytes != -1;
   }
 
   @Override
@@ -142,22 +139,20 @@ public class WorkerStorageParameters
       return false;
     }
     WorkerStorageParameters that = (WorkerStorageParameters) o;
-    return isIntermediateStorageLimitConfigured == that.isIntermediateStorageLimitConfigured
-           && intermediateSuperSorterStorageMaxLocalBytes == that.intermediateSuperSorterStorageMaxLocalBytes;
+    return intermediateSuperSorterStorageMaxLocalBytes == that.intermediateSuperSorterStorageMaxLocalBytes;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(isIntermediateStorageLimitConfigured, intermediateSuperSorterStorageMaxLocalBytes);
+    return Objects.hash(intermediateSuperSorterStorageMaxLocalBytes);
   }
 
   @Override
   public String toString()
   {
     return "WorkerStorageParameters{" +
-           "isIntermediateStorageLimitConfigured=" + isIntermediateStorageLimitConfigured +
-           ", intermediateSuperSorterStorageMaxLocalBytes=" + intermediateSuperSorterStorageMaxLocalBytes +
+           "intermediateSuperSorterStorageMaxLocalBytes=" + intermediateSuperSorterStorageMaxLocalBytes +
            '}';
   }
 }

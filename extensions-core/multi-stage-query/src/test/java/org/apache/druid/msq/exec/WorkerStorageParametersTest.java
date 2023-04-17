@@ -29,7 +29,7 @@ public class WorkerStorageParametersTest
   @Test
   public void test_WorkerStorageParameter_createInstance()
   {
-    Assert.assertEquals(WorkerStorageParameters.createInstanceForTests(1000000000, true), WorkerStorageParameters.createInstance(2_250_000_000L, true));
+    Assert.assertEquals(WorkerStorageParameters.createInstanceForTests(1000000000), WorkerStorageParameters.createInstance(2_250_000_000L, true));
   }
 
   @Test

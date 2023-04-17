@@ -218,7 +218,8 @@ public class WorkerImpl implements Worker
     );
     this.workerStorageParameters = workerStorageParameters;
 
-    this.intermediateSuperSorterLocalStorageTracker = new ByteTracker(workerStorageParameters.getIntermediateSuperSorterStorageMaxLocalBytes());
+    long maxBytes = workerStorageParameters.isIntermediateStorageLimitConfigured() ? workerStorageParameters.getIntermediateSuperSorterStorageMaxLocalBytes() : Long.MAX_VALUE;
+    this.intermediateSuperSorterLocalStorageTracker = new ByteTracker(maxBytes);
   }
 
   @Override

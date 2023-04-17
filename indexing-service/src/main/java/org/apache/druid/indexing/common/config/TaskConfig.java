@@ -143,7 +143,7 @@ public class TaskConfig
       @JsonProperty("storeEmptyColumns") @Nullable Boolean storeEmptyColumns,
       @JsonProperty("encapsulatedTask") boolean enableTaskLevelLogPush,
       @JsonProperty("tmpStorageBytesPerTask") Long tmpStorageBytesPerTask
-      )
+  )
   {
     this.baseDir = baseDir == null ? System.getProperty("java.io.tmpdir") : baseDir;
     this.baseTaskDir = new File(defaultDir(baseTaskDir, "persistent/task"));

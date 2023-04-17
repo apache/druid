@@ -123,9 +123,9 @@ public class MSQTestControllerContext implements ControllerContext
       WorkerStorageParameters workerStorageParameters;
       // If we are testing durable storage, set a low limit on storage so that the durable storage will be used.
       if (MultiStageQueryContext.isDurableStorageEnabled(QueryContext.of(task.getContext()))) {
-        workerStorageParameters = WorkerStorageParameters.createInstanceForTests(100, true);
+        workerStorageParameters = WorkerStorageParameters.createInstanceForTests(100);
       } else {
-        workerStorageParameters = WorkerStorageParameters.createInstanceForTests(Long.MAX_VALUE, true);
+        workerStorageParameters = WorkerStorageParameters.createInstanceForTests(Long.MAX_VALUE);
       }
 
       Worker worker = new WorkerImpl(
