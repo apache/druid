@@ -87,7 +87,11 @@ public interface DataSource
 
   /**
    * Returns true if this datasource represents concrete data that can be scanned via a
-   * {@link org.apache.druid.segment.Segment} adapter of some kind. True for e.g. 'table' but not for 'query' or 'join'.
+   * {@link org.apache.druid.segment.Segment} adapter of some kind. The adapter may be provided by a
+   * {@link org.apache.druid.segment.SegmentWrangler}, or (as in the case of 'table') may be built into the query stack
+   * itself.
+   *
+   * True for e.g. 'table' and 'lookup' but not for 'query' or 'join'.
    *
    * @see DataSourceAnalysis#isConcreteBased() which uses this
    * @see DataSourceAnalysis#isConcreteTableBased() which uses this

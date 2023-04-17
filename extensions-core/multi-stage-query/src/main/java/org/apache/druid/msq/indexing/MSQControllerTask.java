@@ -25,9 +25,11 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
@@ -48,6 +50,7 @@ import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.calcite.run.SqlResults;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
@@ -64,17 +67,29 @@ public class MSQControllerTask extends AbstractTask
 
   private final MSQSpec querySpec;
 
-  // Enables users, and the web console, to see the original SQL query (if any). Not used by anything else in Druid.
+  /**
+   * Enables users, and the web console, to see the original SQL query (if any). Not used by anything else in Druid.
+   */
   @Nullable
   private final String sqlQuery;
 
-  // Enables users, and the web console, to see the original SQL context (if any). Not used by any other Druid logic.
+  /**
+   * Enables users, and the web console, to see the original SQL context (if any). Not used by any other Druid logic.
+   */
   @Nullable
   private final Map<String, Object> sqlQueryContext;
 
-  // Enables users, and the web console, to see the original SQL type names (if any). Not used by any other Druid logic.
+  /**
+   * Enables usage of {@link SqlResults#coerce(ObjectMapper, SqlResults.Context, Object, SqlTypeName)}.
+   */
   @Nullable
-  private final List<String> sqlTypeNames;
+  private final SqlResults.Context sqlResultsContext;
+
+  /**
+   * SQL type names for each field in the resultset.
+   */
+  @Nullable
+  private final List<SqlTypeName> sqlTypeNames;
 
   // Using an Injector directly because tasks do not have a way to provide their own Guice modules.
   @JacksonInject
@@ -88,7 +103,8 @@ public class MSQControllerTask extends AbstractTask
       @JsonProperty("spec") MSQSpec querySpec,
       @JsonProperty("sqlQuery") @Nullable String sqlQuery,
       @JsonProperty("sqlQueryContext") @Nullable Map<String, Object> sqlQueryContext,
-      @JsonProperty("sqlTypeNames") @Nullable List<String> sqlTypeNames,
+      @JsonProperty("sqlResultsContext") @Nullable SqlResults.Context sqlResultsContext,
+      @JsonProperty("sqlTypeNames") @Nullable List<SqlTypeName> sqlTypeNames,
       @JsonProperty("context") @Nullable Map<String, Object> context
   )
   {
@@ -103,6 +119,7 @@ public class MSQControllerTask extends AbstractTask
     this.querySpec = querySpec;
     this.sqlQuery = sqlQuery;
     this.sqlQueryContext = sqlQueryContext;
+    this.sqlResultsContext = sqlResultsContext;
     this.sqlTypeNames = sqlTypeNames;
 
     addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
@@ -132,7 +149,15 @@ public class MSQControllerTask extends AbstractTask
   @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public String getSqlQuery()
+  public List<SqlTypeName> getSqlTypeNames()
+  {
+    return sqlTypeNames;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  private String getSqlQuery()
   {
     return sqlQuery;
   }
@@ -140,7 +165,7 @@ public class MSQControllerTask extends AbstractTask
   @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<String, Object> getSqlQueryContext()
+  private Map<String, Object> getSqlQueryContext()
   {
     return sqlQueryContext;
   }
@@ -148,9 +173,9 @@ public class MSQControllerTask extends AbstractTask
   @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public List<String> getSqlTypeNames()
+  public SqlResults.Context getSqlResultsContext()
   {
-    return sqlTypeNames;
+    return sqlResultsContext;
   }
 
   @Override
