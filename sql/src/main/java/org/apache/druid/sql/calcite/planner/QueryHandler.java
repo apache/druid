@@ -177,7 +177,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
             Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR),
             Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR)
         ),
-        ImmutableList.of("PLAN", "RESOURCES", "STATEMENT_ATTRIBUTES")
+        ImmutableList.of("PLAN", "RESOURCES", "ATTRIBUTES")
     );
   }
 
@@ -231,9 +231,9 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
   }
 
   @Override
-  public StatementAttributes statementAttributes()
+  public ExplainAttributes explainAttributes()
   {
-    return new StatementAttributes(
+    return new ExplainAttributes(
         "SELECT",
         null
     );
@@ -385,18 +385,18 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       resourcesString = null;
     }
 
-    String statementAttributesString;
+    String explainAttributesString;
     try {
-      statementAttributesString = plannerContext.getJsonMapper().writeValueAsString(plannerContext.getStatementAttributes());
+      explainAttributesString = plannerContext.getJsonMapper().writeValueAsString(plannerContext.getExplainAttributes());
     }
     catch (JsonProcessingException jpe) {
-      log.error(jpe, "Encountered exception while serializing statement attributes for explain output");
-      statementAttributesString = null;
+      log.error(jpe, "Encountered exception while serializing attributes for explain output");
+      explainAttributesString = null;
     }
 
     final Supplier<QueryResponse<Object[]>> resultsSupplier = Suppliers.ofInstance(
         QueryResponse.withEmptyContext(
-            Sequences.simple(ImmutableList.of(new Object[]{explanation, resourcesString, statementAttributesString}))
+            Sequences.simple(ImmutableList.of(new Object[]{explanation, resourcesString, explainAttributesString}))
         )
     );
     return new PlannerResult(resultsSupplier, getExplainStructType(rel.getCluster().getTypeFactory()));

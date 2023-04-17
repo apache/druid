@@ -51,7 +51,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
                                + "\"signature\":[{\"name\":\"a0\",\"type\":\"LONG\"}]"
                                + "}]";
     final String resources = "[{\"name\":\"aview\",\"type\":\"VIEW\"}]";
-    final String statementAttributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
+    final String attributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
 
     testQuery(
         PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,
@@ -59,7 +59,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
-            new Object[]{legacyExplanation, resources, statementAttributes}
+            new Object[]{legacyExplanation, resources, attributes}
         )
     );
     testQuery(
@@ -68,7 +68,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
-            new Object[]{explanation, resources, statementAttributes}
+            new Object[]{explanation, resources, attributes}
         )
     );
   }
@@ -82,7 +82,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
         + "    BindableTableScan(table=[[INFORMATION_SCHEMA, COLUMNS]])\n";
 
     final String resources = "[]";
-    final String statementAttributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
+    final String attributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
 
     testQuery(
         "EXPLAIN PLAN FOR\n"
@@ -91,7 +91,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
         + "WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'foo'",
         ImmutableList.of(),
         ImmutableList.of(
-            new Object[]{explanation, resources, statementAttributes}
+            new Object[]{explanation, resources, attributes}
         )
     );
   }
@@ -127,12 +127,12 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
                                + "\"signature\":[{\"name\":\"a0\",\"type\":\"LONG\"}]"
                                + "}]";
     final String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
-    final String statementAttributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
+    final String attributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
 
     testQuery(
         query,
         ImmutableList.of(),
-        ImmutableList.of(new Object[]{explanation, resources, statementAttributes})
+        ImmutableList.of(new Object[]{explanation, resources, attributes})
     );
 
     testQuery(
@@ -140,7 +140,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
         query,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
-        ImmutableList.of(new Object[]{legacyExplanation, resources, statementAttributes})
+        ImmutableList.of(new Object[]{legacyExplanation, resources, attributes})
     );
   }
 
@@ -184,17 +184,17 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
                                     + "}]";
     String sql = "EXPLAIN PLAN FOR SELECT * FROM druid.foo";
     String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
-    final String statementAttributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
+    final String attributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
 
     // Test when default config and no overrides
-    testQuery(sql, ImmutableList.of(), ImmutableList.of(new Object[]{explanation, resources, statementAttributes}));
+    testQuery(sql, ImmutableList.of(), ImmutableList.of(new Object[]{explanation, resources, attributes}));
 
     // Test when default config and useNativeQueryExplain is overridden in the context
     testQuery(
         sql,
         legacyExplainContext,
         ImmutableList.of(),
-        ImmutableList.of(new Object[]{legacyExplanationWithContext, resources, statementAttributes})
+        ImmutableList.of(new Object[]{legacyExplanationWithContext, resources, attributes})
     );
 
     // Test when useNativeQueryExplain enabled by default and no overrides
@@ -203,7 +203,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
-        ImmutableList.of(new Object[]{explanation, resources, statementAttributes})
+        ImmutableList.of(new Object[]{explanation, resources, attributes})
     );
 
     // Test when useNativeQueryExplain enabled by default but is overriden in the context
@@ -213,7 +213,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
-        ImmutableList.of(new Object[]{explanationWithContext, resources, statementAttributes})
+        ImmutableList.of(new Object[]{explanationWithContext, resources, attributes})
     );
   }
 
@@ -245,14 +245,14 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
                                + "\"signature\":[{\"name\":\"dim1\",\"type\":\"STRING\"}]"
                                + "}]";
     final String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
-    final String statementAttributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
+    final String attributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
     testQuery(
         PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,
         query,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
-            new Object[]{legacyExplanation, resources, statementAttributes}
+            new Object[]{legacyExplanation, resources, attributes}
         )
     );
     testQuery(
@@ -261,7 +261,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
-            new Object[]{explanation, resources, statementAttributes}
+            new Object[]{explanation, resources, attributes}
         )
     );
   }
@@ -298,12 +298,12 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
                                                       + "\"signature\":[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"v1\",\"type\":\"STRING\"}]"
                                                       + "}]";
     final String expectedResources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
-    final String expectedStmtAttributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
+    final String expectedAttributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
     testQuery(
         explainSql,
         defaultExprContext,
         ImmutableList.of(),
-        ImmutableList.of(new Object[]{expectedPlanWithDefaultExpressions, expectedResources, expectedStmtAttributes})
+        ImmutableList.of(new Object[]{expectedPlanWithDefaultExpressions, expectedResources, expectedAttributes})
     );
 
     // Test plan as mv-filtered virtual columns
@@ -329,7 +329,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
         explainSql,
         mvFilteredContext,
         ImmutableList.of(),
-        ImmutableList.of(new Object[]{expectedPlanWithMvfiltered, expectedResources, expectedStmtAttributes})
+        ImmutableList.of(new Object[]{expectedPlanWithMvfiltered, expectedResources, expectedAttributes})
     );
   }
 
@@ -361,13 +361,13 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
                                 + "\"signature\":[{\"name\":\"v0\",\"type\":\"LONG\"}]"
                                 + "}]";
     final String expectedResources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
-    final String expectedStmtAttributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
+    final String expectedAttributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
     // Verify the query plan
     testQuery(
         explainSql,
         queryContext,
         ImmutableList.of(),
-        ImmutableList.of(new Object[]{expectedPlan, expectedResources, expectedStmtAttributes})
+        ImmutableList.of(new Object[]{expectedPlan, expectedResources, expectedAttributes})
     );
   }
 

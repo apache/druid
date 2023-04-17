@@ -275,9 +275,9 @@ public abstract class IngestHandler extends QueryHandler
     }
 
     @Override
-    public StatementAttributes statementAttributes()
+    public ExplainAttributes explainAttributes()
     {
-      return new StatementAttributes(
+      return new ExplainAttributes(
           DruidSqlInsert.OPERATOR.getName(),
           sqlNode.getTargetTable()
       );
@@ -342,9 +342,9 @@ public abstract class IngestHandler extends QueryHandler
     }
 
     @Override
-    public StatementAttributes statementAttributes()
+    public ExplainAttributes explainAttributes()
     {
-      return new StatementAttributes(
+      return new ExplainAttributes(
           DruidSqlReplace.OPERATOR.getName(),
           sqlNode.getTargetTable()
       );

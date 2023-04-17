@@ -317,7 +317,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         "\"granularity\":{\"type\":\"all\"}}," +
         "\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]}]";
     final String resources = "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]";
-    final String statementAttributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"dst\"}";
+    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"dst\"}";
 
     testQuery(
         PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
@@ -325,7 +325,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         CalciteTests.SUPER_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
-            new Object[]{explanation, resources, statementAttributes}
+            new Object[]{explanation, resources, attributes}
         )
     );
     didTest = true;

@@ -630,7 +630,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 + "\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]}]";
 
     final String resources = "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]";
-    final String statementAttributes = "{\"statementType\":\"REPLACE\",\"targetDataSource\":\"dst\"}";
+    final String attributes = "{\"statementType\":\"REPLACE\",\"targetDataSource\":\"dst\"}";
 
     // Use testQuery for EXPLAIN (not testIngestionQuery).
     testQuery(
@@ -648,7 +648,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 new Object[]{
                     legacyExplanation,
                     resources,
-                    statementAttributes
+                    attributes
                 }
             ),
             null
@@ -671,7 +671,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 new Object[]{
                     explanation,
                     resources,
-                    statementAttributes
+                    attributes
                 }
             ),
             null

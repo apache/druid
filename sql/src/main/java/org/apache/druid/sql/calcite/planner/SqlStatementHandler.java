@@ -41,7 +41,7 @@ public interface SqlStatementHandler
   void prepare();
   PrepareResult prepareResult();
   PlannerResult plan() throws ValidationException;
-  StatementAttributes statementAttributes();
+  ExplainAttributes explainAttributes();
 
   /**
    * Context available to statement handlers.

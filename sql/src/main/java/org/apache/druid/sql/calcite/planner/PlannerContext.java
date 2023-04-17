@@ -112,7 +112,7 @@ public class PlannerContext
   private QueryMaker queryMaker;
   private VirtualColumnRegistry joinExpressionVirtualColumnRegistry;
   // set of attributes for a SQL statement used in the EXPLAIN PLAN output
-  private StatementAttributes statementAttributes;
+  private ExplainAttributes explainAttributes;
 
   private PlannerContext(
       final PlannerToolbox plannerToolbox,
@@ -505,17 +505,17 @@ public class PlannerContext
     this.joinExpressionVirtualColumnRegistry = joinExpressionVirtualColumnRegistry;
   }
 
-  public StatementAttributes getStatementAttributes()
+  public ExplainAttributes getExplainAttributes()
   {
-    return this.statementAttributes;
+    return this.explainAttributes;
   }
 
-  public void setStatementAttributes(StatementAttributes statementAttributes)
+  public void setExplainAttributes(ExplainAttributes explainAttributes)
   {
-    if (this.statementAttributes != null) {
-      throw new ISE("StatementAttributes has already been set");
+    if (this.explainAttributes != null) {
+      throw new ISE("ExplainAttributes has already been set");
     }
-    this.statementAttributes = statementAttributes;
+    this.explainAttributes = explainAttributes;
   }
 
 }

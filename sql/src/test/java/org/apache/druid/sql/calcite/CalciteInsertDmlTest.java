@@ -887,7 +887,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         + "}]";
 
     final String resources = "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]";
-    final String statementAttributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"dst\"}";
+    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"dst\"}";
 
 
     // Use testQuery for EXPLAIN (not testIngestionQuery).
@@ -906,7 +906,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 new Object[]{
                     legacyExplanation,
                     resources,
-                    statementAttributes
+                    attributes
                 }
             ),
             null
@@ -930,7 +930,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 new Object[]{
                     explanation,
                     resources,
-                    statementAttributes
+                    attributes
                 }
             ),
             null

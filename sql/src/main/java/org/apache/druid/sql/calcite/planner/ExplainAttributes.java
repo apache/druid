@@ -25,16 +25,16 @@ import org.apache.calcite.sql.SqlNode;
 import javax.annotation.Nullable;
 
 /**
- * StatementAttributes holds the attributes of a SQL statement. It's used in EXPLAIN PLAN result.
+ * ExplainAttributes holds the attributes of a SQL statement that is used in the EXPLAIN PLAN result.
  */
-public final class StatementAttributes
+public final class ExplainAttributes
 {
   private final String statementType;
 
   @Nullable
   private final SqlNode targetDataSource;
 
-  public StatementAttributes(
+  public ExplainAttributes(
       @JsonProperty("statementType") final String statementType,
       @JsonProperty("targetDataSource") @Nullable final SqlNode targetDataSource)
   {
@@ -65,7 +65,7 @@ public final class StatementAttributes
   @Override
   public String toString()
   {
-    return "StatementAttributes{" +
+    return "ExplainAttributes{" +
            "statementType='" + statementType + '\'' +
            ", targetDataSource=" + targetDataSource +
            '}';
