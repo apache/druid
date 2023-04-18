@@ -149,7 +149,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
            getIngestionSchema().getIOConfig().getInputSource().getTypes()
                                .stream()
-                               .map(i -> new ResourceAction(new Resource(ResourceType.EXTERNAL, i), Action.READ))
+                               .map(i -> new ResourceAction(new Resource(i, ResourceType.EXTERNAL), Action.READ))
                                .collect(Collectors.toSet()) :
            ImmutableSet.of();
   }
