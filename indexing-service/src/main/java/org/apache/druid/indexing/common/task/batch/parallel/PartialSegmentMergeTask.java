@@ -268,7 +268,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
             0
         );
         long mergeFinishTime = System.nanoTime();
-        LOG.info("Merging [%d] input segment(s) for interval [%s] took [%,d]ms.",
+        LOG.info("Merged [%d] input segment(s) for interval [%s] in [%,d]ms.",
                  segmentFilesToMerge.size(),
                  interval,
                  (mergeFinishTime - startTime) / 1000000
