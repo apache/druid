@@ -29,7 +29,7 @@ public class NoopTaskLogsTest
   @Test
   public void test_streamTaskStatus() throws IOException
   {
-    TaskLogs taskLogs =  new NoopTaskLogs();
+    TaskLogs taskLogs = new NoopTaskLogs();
     Assert.assertFalse(taskLogs.streamTaskStatus("id").isPresent());
   }
 }
