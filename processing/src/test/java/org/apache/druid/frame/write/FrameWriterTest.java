@@ -173,9 +173,9 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_readNullAsDefaultValue()
+  public void test_readNullsInDefaultValueMode()
   {
-    // Test that nulls written in SQL-compatible mode are read as default values in defaut-value mode.
+    // Test that nulls written in SQL-compatible mode are read as nulls in default-value mode.
     Assume.assumeTrue(NullHandling.sqlCompatible());
 
     final RowSignature signature =
@@ -195,7 +195,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
     try {
       NullHandling.initializeForTestsWithValues(true, null);
       verifyFrame(
-          Sequences.simple(Collections.singletonList(Arrays.asList(0L, 0f, 0d, null))),
+          Sequences.simple(Collections.singletonList(Arrays.asList(null, null, null, null))),
           writeResult.lhs,
           signature
       );
