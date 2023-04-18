@@ -585,11 +585,9 @@ public class BrokerServerViewTest extends CuratorTestBase
     baseView = getBaseView();
 
     brokerServerView = getBrokerServerView(
-        null,
         baseView,
         brokerSegmentWatcherConfig,
-        metadataSegmentView,
-        segmentMetadataCacheConfig
+        metadataSegmentView
     );
 
     baseView.start();
@@ -705,11 +703,9 @@ public class BrokerServerViewTest extends CuratorTestBase
     baseView = getBaseView();
 
     brokerServerView = getBrokerServerView(
-        null,
         baseView,
         brokerSegmentWatcherConfig,
-        metadataSegmentView,
-        segmentMetadataCacheConfig
+        metadataSegmentView
     );
 
     baseView.start();
@@ -835,11 +831,9 @@ public class BrokerServerViewTest extends CuratorTestBase
     baseView = getBaseView();
 
     brokerServerView = getBrokerServerView(
-        ignoredTiers,
         baseView,
         getBrokerSegmentWatcherConfig(watchedTiers, ignoredTiers, watchRealtimeTasks, false),
-        EasyMock.mock(MetadataSegmentView.class),
-        EasyMock.mock(SegmentMetadataCacheConfig.class)
+        EasyMock.mock(MetadataSegmentView.class)
     );
 
     baseView.start();
@@ -881,11 +875,9 @@ public class BrokerServerViewTest extends CuratorTestBase
   }
 
   private BrokerServerView getBrokerServerView(
-      Set<String> ignoredTiers,
       BatchServerInventoryView baseView,
       BrokerSegmentWatcherConfig brokerSegmentWatcherConfig,
-      MetadataSegmentView metadataSegmentView,
-      SegmentMetadataCacheConfig segmentMetadataCacheConfig)
+      MetadataSegmentView metadataSegmentView)
   {
     return new BrokerServerView(
         EasyMock.createMock(QueryToolChestWarehouse.class),
@@ -896,8 +888,7 @@ public class BrokerServerViewTest extends CuratorTestBase
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
         new NoopServiceEmitter(),
         brokerSegmentWatcherConfig,
-        metadataSegmentView,
-        segmentMetadataCacheConfig
+        metadataSegmentView
     );
   }
 

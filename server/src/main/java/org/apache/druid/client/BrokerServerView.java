@@ -105,8 +105,7 @@ public class BrokerServerView implements TimelineServerView
       final TierSelectorStrategy tierSelectorStrategy,
       final ServiceEmitter emitter,
       final BrokerSegmentWatcherConfig segmentWatcherConfig,
-      final MetadataSegmentView metadataSegmentView,
-      final SegmentMetadataCacheConfig segmentMetadataCacheConfig
+      final MetadataSegmentView metadataSegmentView
   )
   {
     this.warehouse = warehouse;

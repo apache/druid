@@ -373,8 +373,7 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
         new NoopServiceEmitter(),
         new BrokerSegmentWatcherConfig(),
-        EasyMock.createMock(MetadataSegmentView.class),
-        EasyMock.createMock(SegmentMetadataCacheConfig.class)
+        EasyMock.createMock(MetadataSegmentView.class)
     );
   }
 

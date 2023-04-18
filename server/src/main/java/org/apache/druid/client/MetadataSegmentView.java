@@ -357,7 +357,7 @@ public class MetadataSegmentView
           new TypeReference<ChangeRequestsSnapshot<DataSegmentChange>>() {});
     }
     catch (IOException e) {
-      throw new ISE("Unable to parse ChangeRequestSnapshot.", e);
+      throw new ISE(e, "Unable to parse ChangeRequestSnapshot.");
     }
 
     return changeRequestsSnapshot;

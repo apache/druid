@@ -301,8 +301,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
         new NoopServiceEmitter(),
         new BrokerSegmentWatcherConfig(),
-        EasyMock.createMock(MetadataSegmentView.class),
-        EasyMock.createMock(SegmentMetadataCacheConfig.class)
+        EasyMock.createMock(MetadataSegmentView.class)
     );
     baseView.start();
   }
