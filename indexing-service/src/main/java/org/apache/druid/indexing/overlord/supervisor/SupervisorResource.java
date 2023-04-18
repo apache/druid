@@ -58,7 +58,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -149,10 +148,10 @@ public class SupervisorResource
 
   private Set<ResourceAction> getNeededResourceActionsForTask(final SupervisorSpec spec)
   {
-    final Set<ResourceAction> resourceActions = new HashSet<>();
-    resourceActions.addAll(spec.getDataSources().stream()
+    final Set<ResourceAction> resourceActions =
+        spec.getDataSources().stream()
             .map(dataSource -> new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.WRITE))
-            .collect(Collectors.toSet()));
+            .collect(Collectors.toSet());
     if (authConfig.isEnableInputSourceSecurity()) {
       resourceActions.addAll(spec.getInputSourceResources());
     }
