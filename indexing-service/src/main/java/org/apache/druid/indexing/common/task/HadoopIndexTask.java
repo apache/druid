@@ -97,6 +97,7 @@ import java.util.stream.Collectors;
 
 public class HadoopIndexTask extends HadoopTask implements ChatHandler
 {
+  public static final String INPUT_SOURCE_TYPE = "hadoop";
   private static final Logger log = new Logger(HadoopIndexTask.class);
   private static final String HADOOP_JOB_ID_FILENAME = "mapReduceJobId.json";
   private static final String TYPE = "index_hadoop";
@@ -202,7 +203,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @Override
   public Set<ResourceAction> getInputSourceResources()
   {
-    return Collections.singleton(new ResourceAction(new Resource( "hadoop", ResourceType.EXTERNAL), Action.READ));
+    return Collections.singleton(new ResourceAction(new Resource(INPUT_SOURCE_TYPE, ResourceType.EXTERNAL), Action.READ));
   }
 
   @Override

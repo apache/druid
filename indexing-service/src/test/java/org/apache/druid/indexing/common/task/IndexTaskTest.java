@@ -214,7 +214,7 @@ public class IndexTaskTest extends IngestionTestBase
   }
 
   @Test
-  public void testCorrectInputSourceTypes() throws IOException
+  public void testCorrectInputSourceResources() throws IOException
   {
     File tmpDir = temporaryFolder.newFolder();
     IndexTask indexTask = new IndexTask(

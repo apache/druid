@@ -92,7 +92,7 @@ public class PartialHashSegmentGenerateTaskTest
   }
 
   @Test
-  public void hasCorrectInputSourceTypes()
+  public void hasCorrectInputSourceResources()
   {
     Assert.assertEquals(
         Collections.singleton(

@@ -119,7 +119,7 @@ public class PartialDimensionCardinalityTaskTest
     }
 
     @Test
-    public void hasCorrectInputSourceTypes()
+    public void hasCorrectInputSourceResources()
     {
       PartialDimensionCardinalityTask task = new PartialDimensionCardinalityTaskBuilder()
           .build();

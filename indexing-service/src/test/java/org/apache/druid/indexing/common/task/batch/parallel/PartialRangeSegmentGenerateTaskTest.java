@@ -106,7 +106,7 @@ public class PartialRangeSegmentGenerateTaskTest extends AbstractParallelIndexSu
   }
 
   @Test
-  public void hasCorrectInputSourceTypes()
+  public void hasCorrectInputSourceResources()
   {
     PartialRangeSegmentGenerateTask task = new PartialRangeSegmentGenerateTaskBuilder().build();
     Assert.assertEquals(
