@@ -85,7 +85,7 @@ public class CalciteSelectJoinQueryMSQTest
     }
   }
 
-  public static abstract class Base extends CalciteJoinQueryTest
+  public abstract static class Base extends CalciteJoinQueryTest
   {
     private final JoinAlgorithm joinAlgorithm;
 
