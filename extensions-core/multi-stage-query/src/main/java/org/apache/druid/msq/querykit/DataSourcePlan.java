@@ -19,25 +19,21 @@
 
 package org.apache.druid.msq.querykit;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
-import org.apache.druid.data.input.impl.InlineInputSource;
-import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.msq.input.InputSpec;
-import org.apache.druid.msq.input.NilInputSource;
 import org.apache.druid.msq.input.external.ExternalInputSpec;
+import org.apache.druid.msq.input.inline.InlineInputSpec;
+import org.apache.druid.msq.input.lookup.LookupInputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.kernel.HashShuffleSpec;
@@ -49,6 +45,7 @@ import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
+import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -133,6 +130,9 @@ public class DataSourcePlan
     } else if (dataSource instanceof InlineDataSource) {
       checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
       return forInline((InlineDataSource) dataSource, broadcast);
+    } else if (dataSource instanceof LookupDataSource) {
+      checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
+      return forLookup((LookupDataSource) dataSource, broadcast);
     } else if (dataSource instanceof QueryDataSource) {
       checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
       return forQuery(
@@ -214,7 +214,7 @@ public class DataSourcePlan
   )
   {
     return new DataSourcePlan(
-        new InputNumberDataSource(0),
+        (broadcast && dataSource.isGlobal()) ? dataSource : new InputNumberDataSource(0),
         Collections.singletonList(new TableInputSpec(dataSource.getName(), intervals, filter)),
         broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
         null
@@ -227,7 +227,7 @@ public class DataSourcePlan
   )
   {
     return new DataSourcePlan(
-        new InputNumberDataSource(0),
+        dataSource,
         Collections.singletonList(
             new ExternalInputSpec(
                 dataSource.getInputSource(),
@@ -245,34 +245,24 @@ public class DataSourcePlan
       final boolean broadcast
   )
   {
-    final ObjectMapper jsonMapper = new ObjectMapper(new JsonFactory());
-    final RowSignature signature = dataSource.getRowSignature();
-    final StringBuilder stringBuilder = new StringBuilder();
+    return new DataSourcePlan(
+        dataSource,
+        Collections.singletonList(new InlineInputSpec(dataSource)),
+        broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
+        null
+    );
+  }
 
-    for (final Object[] rowArray : dataSource.getRows()) {
-      final Map<String, Object> m = new HashMap<>();
-
-      for (int i = 0; i < signature.size(); i++) {
-        m.put(signature.getColumnName(i), rowArray[i]);
-      }
-
-      try {
-        stringBuilder.append(jsonMapper.writeValueAsString(m)).append('\n');
-      }
-      catch (JsonProcessingException e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    final String dataString = stringBuilder.toString();
-
-    return forExternal(
-        new ExternalDataSource(
-            dataString.isEmpty() ? NilInputSource.instance() : new InlineInputSource(dataString),
-            new JsonInputFormat(null, null, null, null, null),
-            signature
-        ),
-        broadcast
+  private static DataSourcePlan forLookup(
+      final LookupDataSource dataSource,
+      final boolean broadcast
+  )
+  {
+    return new DataSourcePlan(
+        dataSource,
+        Collections.singletonList(new LookupInputSpec(dataSource.getLookupName())),
+        broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
+        null
     );
   }
 
