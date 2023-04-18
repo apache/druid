@@ -102,7 +102,7 @@ public class SegmentMetadataCacheConfig
         metadataRefreshPeriod,
         awaitInitializationOnStart,
         metadataSegmentCacheEnable,
-        (metadataSegmentPollPeriod)
+        metadataSegmentPollPeriod
     );
   }
 

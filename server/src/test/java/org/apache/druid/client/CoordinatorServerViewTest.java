@@ -74,6 +74,8 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     zkPathsConfig = new ZkPathsConfig();
     inventoryPath = zkPathsConfig.getLiveSegmentsPath();
     sqlSegmentsMetadataManager = EasyMock.createNiceMock(SqlSegmentsMetadataManager.class);
+    EasyMock.expect(sqlSegmentsMetadataManager.markSegmentAsHandedOff(EasyMock.anyObject())).andReturn(1).anyTimes();
+    EasyMock.replay(sqlSegmentsMetadataManager);
   }
 
   @Before

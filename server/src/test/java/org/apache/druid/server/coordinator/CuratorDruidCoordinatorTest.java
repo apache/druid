@@ -138,6 +138,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
 
     configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
     sqlSegmentsMetadataManager = EasyMock.createNiceMock(SqlSegmentsMetadataManager.class);
+    EasyMock.expect(sqlSegmentsMetadataManager.markSegmentAsHandedOff(EasyMock.anyObject())).andReturn(1).anyTimes();
+    EasyMock.replay(sqlSegmentsMetadataManager);
 
     EasyMock.expect(
         configManager.watch(
