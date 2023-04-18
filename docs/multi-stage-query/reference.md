@@ -337,6 +337,11 @@ cleaner can be scheduled to clean the directories corresponding to which there i
 the storage connector to work upon the durable storage. The durable storage location should only be utilized to store the output
 for cluster's MSQ tasks. If the location contains other files or directories, then they will get cleaned up as well.
 
+Enabling durable storage also enables the use of local disk to store temporary files, such as the intermediate files produced
+by the super sorter. The limit set by `druid.indexer.task.tmpStorageBytesPerTask` for maximum number of bytes of local
+storage to be used per task will be respected by MSQ tasks. If the configured limit is too low, `NotEnoughTemporaryStorageFault`
+may be thrown.
+
 ### Enable durable storage
 
 To enable durable storage, you need to set the following common service properties:
@@ -434,6 +439,7 @@ The following table describes error codes you may encounter in the `multiStageQu
 | <a name="error_TooManyWarnings">`TooManyWarnings`</a> | Exceeded the maximum allowed number of warnings of a particular type. | `rootErrorCode`: The error code corresponding to the exception that exceeded the required limit. <br /><br />`maxWarnings`: Maximum number of warnings that are allowed for the corresponding `rootErrorCode`. |
 | <a name="error_TooManyWorkers">`TooManyWorkers`</a> | Exceeded the maximum number of simultaneously-running workers. See the [Limits](#limits) table for more details. | `workers`: The number of simultaneously running workers that exceeded a hard or soft limit. This may be larger than the number of workers in any one stage if multiple stages are running simultaneously. <br /><br />`maxWorkers`: The hard or soft limit on workers that was exceeded. If this is lower than the hard limit (1,000 workers), then you can increase the limit by adding more memory to each task. |
 | <a name="error_NotEnoughMemory">`NotEnoughMemory`</a> | Insufficient memory to launch a stage. | `suggestedServerMemory`: Suggested number of bytes of memory to allocate to a given process. <br /><br />`serverMemory`: The number of bytes of memory available to a single process.<br /><br />`usableMemory`: The number of usable bytes of memory for a single process.<br /><br />`serverWorkers`: The number of workers running in a single process.<br /><br />`serverThreads`: The number of threads in a single process. |
+| <a name="error_NotEnoughTemporaryStorage">`NotEnoughTemporaryStorage`</a> | Insufficient temporary storage configured to launch a stage. This limit is set by the property `druid.indexer.task.tmpStorageBytesPerTask`. This property should be increased to the minimum suggested limit to resolve this.| `suggestedMinimumStorage`: Suggested number of bytes of temporary storage space to allocate to a given process. <br /><br />`configuredTemporaryStorage`: The number of bytes of storage currently configured. |
 | <a name="error_WorkerFailed">`WorkerFailed`</a> | A worker task failed unexpectedly. | `errorMsg`<br /><br />`workerTaskId`: The ID of the worker task. |
 | <a name="error_WorkerRpcFailed">`WorkerRpcFailed`</a> | A remote procedure call to a worker task failed and could not recover. | `workerTaskId`: the id of the worker task |
 | <a name="error_UnknownError">`UnknownError`</a> | All other errors. | `message` |

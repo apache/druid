@@ -52,6 +52,7 @@ import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
 import org.apache.druid.msq.indexing.error.InvalidNullByteFault;
 import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.NotEnoughMemoryFault;
+import org.apache.druid.msq.indexing.error.NotEnoughTemporaryStorageFault;
 import org.apache.druid.msq.indexing.error.QueryNotSupportedFault;
 import org.apache.druid.msq.indexing.error.QueryRuntimeFault;
 import org.apache.druid.msq.indexing.error.RowTooLargeFault;
@@ -113,6 +114,7 @@ public class MSQIndexingModule implements DruidModule
       InsertTimeNullFault.class,
       InsertTimeOutOfBoundsFault.class,
       InvalidNullByteFault.class,
+      NotEnoughTemporaryStorageFault.class,
       NotEnoughMemoryFault.class,
       QueryNotSupportedFault.class,
       QueryRuntimeFault.class,

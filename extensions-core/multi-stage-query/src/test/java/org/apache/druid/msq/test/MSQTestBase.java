@@ -233,8 +233,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
       ImmutableMap.<String, Object>builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
                   .put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, true)
-                  .put(MultiStageQueryContext.CTX_COMPOSED_INTERMEDIATE_SUPER_SORTER_STORAGE, true)
-                  .put(MultiStageQueryContext.CTX_INTERMEDIATE_SUPER_SORTER_STORAGE_MAX_LOCAL_BYTES, 100) // added so that practically everything still goes to durable storage channel
                   .build();
 
 
@@ -242,8 +240,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
       ImmutableMap.<String, Object>builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
                   .put(MultiStageQueryContext.CTX_FAULT_TOLERANCE, true)
-                  .put(MultiStageQueryContext.CTX_COMPOSED_INTERMEDIATE_SUPER_SORTER_STORAGE, true)
-                  .put(MultiStageQueryContext.CTX_INTERMEDIATE_SUPER_SORTER_STORAGE_MAX_LOCAL_BYTES, 100) // added so that practically everything still goes to durable storage channel
                   .build();
 
   public static final Map<String, Object> SEQUENTIAL_MERGE_MSQ_CONTEXT =

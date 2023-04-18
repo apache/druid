@@ -78,6 +78,7 @@ public class TaskConfig
   private static final Period DEFAULT_DIRECTORY_LOCK_TIMEOUT = new Period("PT10M");
   private static final Period DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = new Period("PT5M");
   private static final boolean DEFAULT_STORE_EMPTY_COLUMNS = true;
+  private static final long DEFAULT_TMP_STORAGE_BYTES_PER_TASK = -1;
 
   @JsonProperty
   private final String baseDir;
@@ -121,6 +122,9 @@ public class TaskConfig
   @JsonProperty
   private final boolean encapsulatedTask;
 
+  @JsonProperty
+  private final long tmpStorageBytesPerTask;
+
   @JsonCreator
   public TaskConfig(
       @JsonProperty("baseDir") String baseDir,
@@ -137,7 +141,8 @@ public class TaskConfig
       // deprecated, only set to true to fall back to older behavior
       @JsonProperty("batchProcessingMode") String batchProcessingMode,
       @JsonProperty("storeEmptyColumns") @Nullable Boolean storeEmptyColumns,
-      @JsonProperty("encapsulatedTask") boolean enableTaskLevelLogPush
+      @JsonProperty("encapsulatedTask") boolean enableTaskLevelLogPush,
+      @JsonProperty("tmpStorageBytesPerTask") @Nullable Long tmpStorageBytesPerTask
   )
   {
     this.baseDir = baseDir == null ? System.getProperty("java.io.tmpdir") : baseDir;
@@ -183,6 +188,7 @@ public class TaskConfig
     }
     log.debug("Batch processing mode:[%s]", this.batchProcessingMode);
     this.storeEmptyColumns = storeEmptyColumns == null ? DEFAULT_STORE_EMPTY_COLUMNS : storeEmptyColumns;
+    this.tmpStorageBytesPerTask = tmpStorageBytesPerTask == null ? DEFAULT_TMP_STORAGE_BYTES_PER_TASK : tmpStorageBytesPerTask;
   }
 
   private TaskConfig(
@@ -199,7 +205,8 @@ public class TaskConfig
       boolean batchMemoryMappedIndex,
       BatchProcessingMode batchProcessingMode,
       boolean storeEmptyColumns,
-      boolean encapsulatedTask
+      boolean encapsulatedTask,
+      long tmpStorageBytesPerTask
   )
   {
     this.baseDir = baseDir;
@@ -216,6 +223,7 @@ public class TaskConfig
     this.batchProcessingMode = batchProcessingMode;
     this.storeEmptyColumns = storeEmptyColumns;
     this.encapsulatedTask = encapsulatedTask;
+    this.tmpStorageBytesPerTask = tmpStorageBytesPerTask;
   }
 
   @JsonProperty
@@ -326,6 +334,12 @@ public class TaskConfig
     return encapsulatedTask;
   }
 
+  @JsonProperty
+  public long getTmpStorageBytesPerTask()
+  {
+    return tmpStorageBytesPerTask;
+  }
+
   private String defaultDir(@Nullable String configParameter, final String defaultVal)
   {
     if (configParameter == null) {
@@ -351,7 +365,8 @@ public class TaskConfig
         batchMemoryMappedIndex,
         batchProcessingMode,
         storeEmptyColumns,
-        encapsulatedTask
+        encapsulatedTask,
+        tmpStorageBytesPerTask
     );
   }
 }
