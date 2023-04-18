@@ -112,8 +112,8 @@ public class SupervisorResourceTest extends EasyMockSupport
                   } else {
                     return Access.OK;
                   }
-                } else if (resource.getName().equals(ResourceType.EXTERNAL)) {
-                  if (resource.getType().equals("test")) {
+                } else if (resource.getType().equals(ResourceType.EXTERNAL)) {
+                  if (resource.getName().equals("test")) {
                     return new Access(false, "not authorized.");
                   } else {
                     return Access.OK;
@@ -1286,7 +1286,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     @Override
     public Set<ResourceAction> getInputSourceResources() throws UnsupportedOperationException
     {
-      return Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "test"), Action.READ));
+      return Collections.singleton(new ResourceAction(new Resource("test", ResourceType.EXTERNAL), Action.READ));
     }
 
     @Override

@@ -72,8 +72,8 @@ public class HadoopIndexTaskTest
     Assert.assertEquals(
         Collections.singleton(
             new ResourceAction(new Resource(
-                ResourceType.EXTERNAL,
-                "hadoop"
+                "hadoop",
+                ResourceType.EXTERNAL
             ), Action.READ)),
         task.getInputSourceResources()
     );

@@ -66,7 +66,7 @@ public class NoopSupervisorSpecTest
   }
 
   @Test
-  public void testInputSourceTypes()
+  public void testInputSourceResources()
   {
     NoopSupervisorSpec noopSupervisorSpec = new NoopSupervisorSpec(null, Collections.singletonList("datasource1"));
     Assert.assertTrue(noopSupervisorSpec.getInputSourceResources().isEmpty());

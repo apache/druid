@@ -112,8 +112,8 @@ public class PartialRangeSegmentGenerateTaskTest extends AbstractParallelIndexSu
     Assert.assertEquals(
         Collections.singleton(
             new ResourceAction(new Resource(
-                ResourceType.EXTERNAL,
-                InlineInputSource.TYPE_KEY
+                InlineInputSource.TYPE_KEY,
+                ResourceType.EXTERNAL
             ), Action.READ)),
         task.getInputSourceResources()
     );

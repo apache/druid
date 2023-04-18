@@ -202,7 +202,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @Override
   public Set<ResourceAction> getInputSourceResources()
   {
-    return Collections.singleton(new ResourceAction(new Resource(ResourceType.EXTERNAL, "hadoop"), Action.READ));
+    return Collections.singleton(new ResourceAction(new Resource( "hadoop", ResourceType.EXTERNAL), Action.READ));
   }
 
   @Override
