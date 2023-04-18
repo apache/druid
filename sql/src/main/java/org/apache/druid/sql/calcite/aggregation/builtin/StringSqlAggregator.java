@@ -53,6 +53,8 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
+import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
@@ -105,14 +107,19 @@ public class StringSqlAggregator implements SqlAggregator
     final String separator;
 
     if (arguments.size() > 1) {
-      separator = RexLiteral.stringValue(
-          Expressions.fromFieldAccess(
-              rexBuilder.getTypeFactory(),
-              rowSignature,
-              project,
-              aggregateCall.getArgList().get(1)
-          )
-      );
+      try {
+        separator = RexLiteral.stringValue(
+            Expressions.fromFieldAccess(
+                rexBuilder.getTypeFactory(),
+                rowSignature,
+                project,
+                aggregateCall.getArgList().get(1)
+            )
+        );
+      }
+      catch (Error e) {
+        throw new CannotBuildQueryException("Unable to use the separator");
+      }
     } else {
       separator = "";
     }
