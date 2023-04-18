@@ -107,8 +107,9 @@ The following example log4j2.xml is based upon the micro quickstart:
 
 > NOTE:
 > Although Druid shares the log4j configuration file task peon processes,
-> the appenders in this file DO NOT take effect for peon processes. Peons always output logs to standard output.
-> Middle Managers redirect task logs from standard output to [long-term storage](index.md#log-long-term-storage).
+> the appenders in this file WILL NOT take effect for peon processes if there is no console appender defined.
+> Peons always output logs to standard output. Middle Managers redirect task logs from standard output to 
+> [long-term storage](index.md#log-long-term-storage).
 >
 > However, log level settings do take effect for these task peon processes.
 > This means you can configure loggers at different logging level for task logs using `log4j2.xml`.

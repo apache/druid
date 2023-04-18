@@ -53,6 +53,11 @@ public class ConsoleLoggingEnforcementConfigurationFactory extends Configuration
 
   private static final Logger log = new Logger(ConsoleLoggingEnforcementConfigurationFactory.class);
 
+  // Alter log level for this class to be warning. This needs to happen because the logger is using the default
+  // config, which is always level error and appends to console, since the logger is being configured here.
+  static {
+        Configurator.setLevel(log.getName(), Level.WARN);
+  }
   /**
    * Valid file extensions for XML files.
    */
@@ -100,9 +105,6 @@ public class ConsoleLoggingEnforcementConfigurationFactory extends Configuration
       loggerConfigList.add(this.getRootLogger());
       loggerConfigList.addAll(this.getLoggers().values());
 
-      // Alter log level for this class to be warning. This needs to happen because the logger is using the default
-      // config, which is level error and appends to console, since the logger is being configured here.
-      Configurator.setLevel(log.getName(), Level.WARN);
 
       //
       // For all logger configuration, check if its appender is ConsoleAppender.
@@ -152,8 +154,11 @@ public class ConsoleLoggingEnforcementConfigurationFactory extends Configuration
         // use the first appender's definition
         level = appenderRef.getLevel();
         filter = appenderRef.getFilter();
-        log.warn("Clearing all configured appenders for logger %s. Using ConsoleAppender instead.", logger.getName());
+        log.warn("Clearing all configured appenders for logger %s. Using %s instead.",
+                 logger.toString(),
+                 consoleAppender.getName());
       }
+
 
       // add ConsoleAppender to this logger
       logger.addAppender(consoleAppender, level, filter);
