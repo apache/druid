@@ -174,9 +174,10 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     return typeFactory.createStructType(
         ImmutableList.of(
             Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR),
+            Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR),
             Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR)
         ),
-        ImmutableList.of("PLAN", "RESOURCES")
+        ImmutableList.of("PLAN", "RESOURCES", "ATTRIBUTES")
     );
   }
 
@@ -193,7 +194,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       if (!bindableTables.isEmpty()) {
         // Consider BINDABLE convention when necessary. Used for metadata tables.
 
-        if (!handlerContext.plannerContext().engineHasFeature(EngineFeature.ALLOW_BINDABLE_PLAN)) {
+        if (!handlerContext.plannerContext().featureAvailable(EngineFeature.ALLOW_BINDABLE_PLAN)) {
           throw new ValidationException(
               StringUtils.format(
                   "Cannot query table%s %s with SQL engine '%s'.",
@@ -227,6 +228,15 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       logger.warn(e, errorMessage);
       throw new UnsupportedSQLQueryException(errorMessage);
     }
+  }
+
+  @Override
+  public ExplainAttributes explainAttributes()
+  {
+    return new ExplainAttributes(
+        "SELECT",
+        null
+    );
   }
 
   private static Set<RelOptTable> getBindableTables(final RelNode relNode)
@@ -374,9 +384,19 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       log.error(jpe, "Encountered exception while serializing resources for explain output");
       resourcesString = null;
     }
+
+    String explainAttributesString;
+    try {
+      explainAttributesString = plannerContext.getJsonMapper().writeValueAsString(plannerContext.getExplainAttributes());
+    }
+    catch (JsonProcessingException jpe) {
+      log.error(jpe, "Encountered exception while serializing attributes for explain output");
+      explainAttributesString = null;
+    }
+
     final Supplier<QueryResponse<Object[]>> resultsSupplier = Suppliers.ofInstance(
         QueryResponse.withEmptyContext(
-            Sequences.simple(ImmutableList.of(new Object[]{explanation, resourcesString}))
+            Sequences.simple(ImmutableList.of(new Object[]{explanation, resourcesString, explainAttributesString}))
         )
     );
     return new PlannerResult(resultsSupplier, getExplainStructType(rel.getCluster().getTypeFactory()));
@@ -384,7 +404,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
 
   /**
    * This method doesn't utilize the Calcite's internal {@link RelOptUtil#dumpPlan} since that tends to be verbose
-   * and not indicative of the native Druid Queries which will get executed
+   * and not indicative of the native Druid Queries which will get executed.
    * This method assumes that the Planner has converted the RelNodes to DruidRels, and thereby we can implicitly cast it
    *
    * @param rel Instance of the root {@link DruidRel} which is formed by running the planner transformations on it
@@ -611,7 +631,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     @Override
     public void validate() throws ValidationException
     {
-      if (!handlerContext.plannerContext().engineHasFeature(EngineFeature.CAN_SELECT)) {
+      if (!handlerContext.plannerContext().featureAvailable(EngineFeature.CAN_SELECT)) {
         throw new ValidationException(StringUtils.format(
             "Cannot execute SELECT with SQL engine '%s'.",
             handlerContext.engine().name())

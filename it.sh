@@ -148,7 +148,7 @@ function prepare_docker {
 }
 
 function require_env_var {
-	if [ -n "$1" ]; then
+	if [ -z "$1" ]; then
 	  echo "$1 must be set for test category $CATEGORY" 1>&2
 	  exit 1
     fi

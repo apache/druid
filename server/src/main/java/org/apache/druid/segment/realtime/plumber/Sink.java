@@ -29,7 +29,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
@@ -352,15 +352,15 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
           FireHydrant lastHydrant = hydrants.get(numHydrants - 1);
           newCount = lastHydrant.getCount() + 1;
           if (!indexSchema.getDimensionsSpec().hasCustomDimensions()) {
-            Map<String, ColumnCapabilities> oldCapabilities;
+            Map<String, ColumnFormat> oldFormat;
             if (lastHydrant.hasSwapped()) {
-              oldCapabilities = new HashMap<>();
+              oldFormat = new HashMap<>();
               ReferenceCountingSegment segment = lastHydrant.getIncrementedSegment();
               try {
                 QueryableIndex oldIndex = segment.asQueryableIndex();
                 for (String dim : oldIndex.getAvailableDimensions()) {
                   dimOrder.add(dim);
-                  oldCapabilities.put(dim, oldIndex.getColumnHolder(dim).getHandlerCapabilities());
+                  oldFormat.put(dim, oldIndex.getColumnHolder(dim).getColumnFormat());
                 }
               }
               finally {
@@ -369,9 +369,9 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
             } else {
               IncrementalIndex oldIndex = lastHydrant.getIndex();
               dimOrder.addAll(oldIndex.getDimensionOrder());
-              oldCapabilities = oldIndex.getColumnHandlerCapabilities();
+              oldFormat = oldIndex.getColumnFormats();
             }
-            newIndex.loadDimensionIterable(dimOrder, oldCapabilities);
+            newIndex.loadDimensionIterable(dimOrder, oldFormat);
           }
         }
         currHydrant = new FireHydrant(newIndex, newCount, getSegment().getId());

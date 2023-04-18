@@ -36,7 +36,8 @@ public class Pac4jDruidModule implements DruidModule
   {
     return ImmutableList.of(
         new SimpleModule("Pac4jDruidSecurity").registerSubtypes(
-            Pac4jAuthenticator.class
+            Pac4jAuthenticator.class,
+            JwtAuthenticator.class
         )
     );
   }

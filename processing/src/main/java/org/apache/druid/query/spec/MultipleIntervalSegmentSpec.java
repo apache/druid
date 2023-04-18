@@ -29,6 +29,7 @@ import org.joda.time.Interval;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  */
@@ -76,12 +77,7 @@ public class MultipleIntervalSegmentSpec implements QuerySegmentSpec
     }
 
     MultipleIntervalSegmentSpec that = (MultipleIntervalSegmentSpec) o;
-
-    if (intervals != null ? !intervals.equals(that.intervals) : that.intervals != null) {
-      return false;
-    }
-
-    return true;
+    return Objects.equals(intervals, that.intervals);
   }
 
   @Override

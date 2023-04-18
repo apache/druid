@@ -21,6 +21,7 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
@@ -34,12 +35,14 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.PasswordProvider;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 public class HttpInputSource extends AbstractInputSource implements SplittableInputSource<URI>
@@ -67,6 +70,14 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
     this.httpAuthenticationUsername = httpAuthenticationUsername;
     this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;
     this.config = config;
+  }
+
+  @JsonIgnore
+  @Nonnull
+  @Override
+  public Set<String> getTypes()
+  {
+    return Collections.singleton(TYPE_KEY);
   }
 
   public static void throwIfInvalidProtocols(HttpInputSourceConfig config, List<URI> uris)
@@ -168,5 +179,15 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
   public boolean needsFormat()
   {
     return true;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "HttpInputSource{" +
+           "uris=\"" + uris +
+           "\", httpAuthenticationUsername=" + httpAuthenticationUsername +
+           ", httpAuthenticationPasswordProvider=" + httpAuthenticationPasswordProvider +
+           "}";
   }
 }

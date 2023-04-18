@@ -371,9 +371,10 @@ future versions:
 
 ### `unnest`
 
-> The unnest datasource is currently only available as part of a native query.
+> The unnest datasource is [experimental](../development/experimental.md). Its API and behavior are subject
+> to change in future releases. It is not recommended to use this feature in production at this time.
 
-Use the `unnest` datasource to unnest a column with multiple values in an array. 
+Use the `unnest` datasource to unnest a column with multiple values in an array.
 For example, you have a source column that looks like this:
 
 | Nested | 
@@ -396,7 +397,7 @@ When you use the `unnest` datasource, the unnested column looks like this:
 When unnesting data, keep the following in mind:
 
 - The total number of rows will grow to accommodate the new rows that the unnested data occupy.
-- You can unnest the values in more than one column in a single `unnest` datasource. This can lead to a very large number of new rows depending on your dataset. You can see an example of this in the [unnest tutorial](../tutorials/tutorial-unnest-datasource.md#unnest-multiple-columns).
+- You can unnest the values in more than one column in a single `unnest` datasource, but this can lead to a very large number of new rows depending on your dataset.
 
 The `unnest` datasource uses the following syntax:
 
@@ -407,18 +408,18 @@ The `unnest` datasource uses the following syntax:
       "type": "table",
       "name": "nested_data"
     },
-    "column": "nested_source_column",
-    "outputName": "unnested_target_column",
-    "allowList": []
-  },
+    "virtualColumn": {
+      "type": "expression",
+      "name": "output_column",
+      "expression": "\"column_reference\""
+    },
+    "outputName": "unnested_target_column"
+  }
 ```
 
 * `dataSource.type`: Set this to `unnest`.
 * `dataSource.base`: Defines the datasource you want to unnest.
   * `dataSource.base.type`: The type of datasource you want to unnest, such as a table.
-  * `dataSource.base.name`: The name of the datasource you want to unnest.
-* `dataSource.column`: The name of the source column that contains the nested values.
-* `dataSource.outputName`: The name you want to assign to the column that will contain the unnested values. You can replace the source column with the unnested column by specifying the source column's name or a new column by specifying a different name. Outputting it to a new column can help you verify that you get the results that you expect but isn't required.
-* `dataSource.allowList`: Optional. The subset of values you want to unnest.
+* `dataSource.virtualColumn`: [Virtual column](virtual-columns.md) that references the nested values. The output name of this column is reused as the name of the column that contains unnested values. You can replace the source column with the unnested column by specifying the source column's name or a new column by specifying a different name. Outputting it to a new column can help you verify that you get the results that you expect but isn't required.
 
-To learn more about how to use the `unnest` datasource, see the [unnest tutorial](../tutorials/tutorial-unnest-datasource.md).
+To learn more about how to use the `unnest` datasource, see the [unnest tutorial](../tutorials/tutorial-unnest-arrays.md).

@@ -42,13 +42,33 @@ on:
         required: false
         type: string
         default: com.mysql.jdbc.Driver
+      DRUID_CLOUD_BUCKET:
+        required: false
+        type: string
+      DRUID_CLOUD_PATH:
+        required: false
+        type: string
+      AWS_REGION:
+        required: false
+        type: string
+      AWS_ACCESS_KEY_ID:
+        required: false
+        type: string
+      AWS_SECRET_ACCESS_KEY:
+        required: false
+        type: string
 
 env:
   MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }} # Used by tests to connect to metadata store directly.
+  DRUID_CLOUD_BUCKET: ${{ inputs.DRUID_CLOUD_BUCKET }}
+  DRUID_CLOUD_PATH: ${{ inputs.DRUID_CLOUD_PATH }}
+  AWS_REGION: ${{ inputs.AWS_REGION }}
+  AWS_ACCESS_KEY_ID: ${{ inputs.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ inputs.AWS_SECRET_ACCESS_KEY }}
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
 
 jobs:
-  test: # Github job that runs a given revised/new IT against retrieved cached druid docker image
+  test: # GitHub job that runs a given revised/new IT against retrieved cached druid docker image
     name: ${{ inputs.it }} integration test (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }}, Indexer=${{ inputs.use_indexer }})
     runs-on: ubuntu-22.04
     steps:
@@ -93,7 +113,7 @@ jobs:
         run: |
           ./it.sh image
           source ./integration-tests-ex/image/target/env.sh
-          docker tag $DRUID_IT_IMAGE_NAME $DRUID_IT_IMAGE_NAME-jdk${{ matrix.jdk }}
+          docker tag $DRUID_IT_IMAGE_NAME $DRUID_IT_IMAGE_NAME-jdk${{ inputs.build_jdk }}
           echo $DRUID_IT_IMAGE_NAME
           docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ inputs.build_jdk }}.tar.gz
 

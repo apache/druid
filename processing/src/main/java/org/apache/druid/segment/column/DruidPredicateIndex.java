@@ -21,10 +21,19 @@ package org.apache.druid.segment.column;
 
 import org.apache.druid.query.filter.DruidPredicateFactory;
 
+import javax.annotation.Nullable;
+
 /**
  * Uses a {@link DruidPredicateFactory} to construct a {@link BitmapColumnIndex}
  */
 public interface DruidPredicateIndex
 {
+  /**
+   * Get a {@link BitmapColumnIndex} corresponding to all the rows that match the supplied {@link DruidPredicateFactory}
+   * <p>
+   * If this method returns null it indicates that there was no index that matched the respective values and a
+   * {@link org.apache.druid.query.filter.ValueMatcher} must be used instead.
+   */
+  @Nullable
   BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory);
 }

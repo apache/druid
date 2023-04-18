@@ -265,13 +265,22 @@ public abstract class IngestHandler extends QueryHandler
     @Override
     public void validate() throws ValidationException
     {
-      if (!handlerContext.plannerContext().engineHasFeature(EngineFeature.CAN_INSERT)) {
+      if (!handlerContext.plannerContext().featureAvailable(EngineFeature.CAN_INSERT)) {
         throw new ValidationException(StringUtils.format(
             "Cannot execute INSERT with SQL engine '%s'.",
             handlerContext.engine().name())
         );
       }
       super.validate();
+    }
+
+    @Override
+    public ExplainAttributes explainAttributes()
+    {
+      return new ExplainAttributes(
+          DruidSqlInsert.OPERATOR.getName(),
+          sqlNode.getTargetTable()
+      );
     }
   }
 
@@ -307,7 +316,7 @@ public abstract class IngestHandler extends QueryHandler
     @Override
     public void validate() throws ValidationException
     {
-      if (!handlerContext.plannerContext().engineHasFeature(EngineFeature.CAN_REPLACE)) {
+      if (!handlerContext.plannerContext().featureAvailable(EngineFeature.CAN_REPLACE)) {
         throw new ValidationException(StringUtils.format(
             "Cannot execute REPLACE with SQL engine '%s'.",
             handlerContext.engine().name())
@@ -330,6 +339,15 @@ public abstract class IngestHandler extends QueryHandler
             String.join(",", replaceIntervals)
         );
       }
+    }
+
+    @Override
+    public ExplainAttributes explainAttributes()
+    {
+      return new ExplainAttributes(
+          DruidSqlReplace.OPERATOR.getName(),
+          sqlNode.getTargetTable()
+      );
     }
   }
 }

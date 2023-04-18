@@ -190,7 +190,7 @@ SELECT * FROM sys.segments WHERE is_active = 1 AND last_compaction_state IS NOT 
 or if you want to retrieve segment that was compacted only by a particular compaction spec (such as that of the auto compaction):
 
 ```sql
-SELECT * FROM sys.segments WHERE is_active = 1 AND last_compaction_state = 'CompactionState{partitionsSpec=DynamicPartitionsSpec{maxRowsPerSegment=5000000, maxTotalRows=9223372036854775807}, indexSpec={bitmap={type=roaring, compressRunOnSerialization=true}, dimensionCompression=lz4, metricCompression=lz4, longEncoding=longs, segmentLoader=null}}'
+SELECT * FROM sys.segments WHERE is_active = 1 AND last_compaction_state = 'CompactionState{partitionsSpec=DynamicPartitionsSpec{maxRowsPerSegment=5000000, maxTotalRows=9223372036854775807}, indexSpec={bitmap={type=roaring}, dimensionCompression=lz4, metricCompression=lz4, longEncoding=longs, segmentLoader=null}}'
 ```
 
 ### SERVERS table
@@ -208,7 +208,7 @@ Servers table lists all discovered servers in the cluster.
 |current_size|BIGINT|Current size of segments in bytes on this server. Only valid for HISTORICAL type, for other types it's 0|
 |max_size|BIGINT|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](../configuration/index.md#historical-general-configuration). Only valid for HISTORICAL type, for other types it's 0|
 |is_leader|BIGINT|1 if the server is currently the 'leader' (for services which have the concept of leadership), otherwise 0 if the server is not the leader, or the default long value (0 or null depending on `druid.generic.useDefaultValueForNull`) if the server type does not have the concept of leadership|
-
+|start_time|STRING|Timestamp in ISO8601 format when the server was announced in the cluster|
 To retrieve information about all servers, use the query:
 
 ```sql

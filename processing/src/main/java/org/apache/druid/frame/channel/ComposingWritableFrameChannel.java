@@ -22,6 +22,9 @@ package org.apache.druid.frame.channel;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.frame.processor.OutputChannel;
+import org.apache.druid.frame.processor.PartitionedOutputChannel;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.ResourceLimitExceededException;
 
@@ -38,16 +41,29 @@ import java.util.function.Supplier;
  */
 public class ComposingWritableFrameChannel implements WritableFrameChannel
 {
-  private final List<Supplier<WritableFrameChannel>> channels;
+  @Nullable
+  private final List<Supplier<OutputChannel>> outputChannelSuppliers;
+
+  @Nullable
+  private final List<Supplier<PartitionedOutputChannel>> partitionedOutputChannelSuppliers;
+
+  private final List<Supplier<WritableFrameChannel>> writableChannelSuppliers;
   private final Map<Integer, HashSet<Integer>> partitionToChannelMap;
   private int currentIndex;
 
   public ComposingWritableFrameChannel(
-      List<Supplier<WritableFrameChannel>> channels,
+      @Nullable List<Supplier<OutputChannel>> outputChannelSuppliers,
+      @Nullable List<Supplier<PartitionedOutputChannel>> partitionedOutputChannelSuppliers,
+      List<Supplier<WritableFrameChannel>> writableChannelSuppliers,
       Map<Integer, HashSet<Integer>> partitionToChannelMap
   )
   {
-    this.channels = Preconditions.checkNotNull(channels, "channels is null");
+    if (outputChannelSuppliers != null && partitionedOutputChannelSuppliers != null) {
+      throw new IAE("Atmost one of outputChannelSuppliers and partitionedOutputChannelSuppliers can be provided");
+    }
+    this.outputChannelSuppliers = outputChannelSuppliers;
+    this.partitionedOutputChannelSuppliers = partitionedOutputChannelSuppliers;
+    this.writableChannelSuppliers = Preconditions.checkNotNull(writableChannelSuppliers, "writableChannelSuppliers is null");
     this.partitionToChannelMap =
         Preconditions.checkNotNull(partitionToChannelMap, "partitionToChannelMap is null");
     this.currentIndex = 0;
@@ -56,12 +72,12 @@ public class ComposingWritableFrameChannel implements WritableFrameChannel
   @Override
   public void write(FrameWithPartition frameWithPartition) throws IOException
   {
-    if (currentIndex >= channels.size()) {
-      throw new ISE("No more channels available to write. Total available channels : " + channels.size());
+    if (currentIndex >= writableChannelSuppliers.size()) {
+      throw new ISE("No more channels available to write. Total available channels : " + writableChannelSuppliers.size());
     }
 
     try {
-      channels.get(currentIndex).get().write(frameWithPartition);
+      writableChannelSuppliers.get(currentIndex).get().write(frameWithPartition);
       partitionToChannelMap.computeIfAbsent(frameWithPartition.partition(), k -> Sets.newHashSetWithExpectedSize(1))
                            .add(currentIndex);
     }
@@ -70,19 +86,34 @@ public class ComposingWritableFrameChannel implements WritableFrameChannel
       // exception is automatically passed up to the user incase all the channels are exhausted. If in future, more
       // cases come up to dictate control flow, then we can switch to returning a custom object from the channel's write
       // operation.
-      channels.get(currentIndex).get().close();
+      writableChannelSuppliers.get(currentIndex).get().close();
+
+      // We are converting the corresponding channel to read only after exhausting it because that channel won't be used
+      // for writes anymore
+      convertChannelSuppliersToReadOnly(currentIndex);
+
       currentIndex++;
-      if (currentIndex >= channels.size()) {
+      if (currentIndex >= writableChannelSuppliers.size()) {
         throw rlee;
       }
       write(frameWithPartition);
     }
   }
 
+  private void convertChannelSuppliersToReadOnly(int index)
+  {
+    if (outputChannelSuppliers != null) {
+      outputChannelSuppliers.get(index).get().convertToReadOnly();
+    }
+    if (partitionedOutputChannelSuppliers != null) {
+      partitionedOutputChannelSuppliers.get(index).get().convertToReadOnly();
+    }
+  }
+
   @Override
   public void fail(@Nullable Throwable cause) throws IOException
   {
-    for (Supplier<WritableFrameChannel> channel : channels) {
+    for (Supplier<WritableFrameChannel> channel : writableChannelSuppliers) {
       channel.get().fail(cause);
     }
   }
@@ -90,21 +121,22 @@ public class ComposingWritableFrameChannel implements WritableFrameChannel
   @Override
   public void close() throws IOException
   {
-    if (currentIndex < channels.size()) {
-      channels.get(currentIndex).get().close();
-      currentIndex = channels.size();
+    if (currentIndex < writableChannelSuppliers.size()) {
+      writableChannelSuppliers.get(currentIndex).get().close();
+      convertChannelSuppliersToReadOnly(currentIndex);
+      currentIndex = writableChannelSuppliers.size();
     }
   }
 
   @Override
   public boolean isClosed()
   {
-    return currentIndex == channels.size();
+    return currentIndex == writableChannelSuppliers.size();
   }
 
   @Override
   public ListenableFuture<?> writabilityFuture()
   {
-    return channels.get(currentIndex).get().writabilityFuture();
+    return writableChannelSuppliers.get(currentIndex).get().writabilityFuture();
   }
 }

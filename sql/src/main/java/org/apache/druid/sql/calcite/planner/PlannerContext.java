@@ -75,6 +75,16 @@ public class PlannerContext
    */
   public static final String CTX_SQL_OUTER_LIMIT = "sqlOuterLimit";
 
+  /**
+   * Undocumented context key, used to enable window functions.
+   */
+  public static final String CTX_ENABLE_WINDOW_FNS = "windowsAreForClosers";
+
+  /**
+   * Undocumented context key, used to enable {@link org.apache.calcite.sql.fun.SqlStdOperatorTable#UNNEST}.
+   */
+  public static final String CTX_ENABLE_UNNEST = "enableUnnest";
+
   // DataContext keys
   public static final String DATA_CTX_AUTHENTICATION_RESULT = "authenticationResult";
 
@@ -101,6 +111,8 @@ public class PlannerContext
   private String planningError;
   private QueryMaker queryMaker;
   private VirtualColumnRegistry joinExpressionVirtualColumnRegistry;
+  // set of attributes for a SQL statement used in the EXPLAIN PLAN output
+  private ExplainAttributes explainAttributes;
 
   private PlannerContext(
       final PlannerToolbox plannerToolbox,
@@ -454,9 +466,28 @@ public class PlannerContext
     return engine;
   }
 
-  public boolean engineHasFeature(final EngineFeature feature)
+  /**
+   * Checks if the current {@link SqlEngine} supports a particular feature.
+   *
+   * When executing a specific query, use this method instead of
+   * {@link SqlEngine#featureAvailable(EngineFeature, PlannerContext)}, because it also verifies feature flags such as
+   * {@link #CTX_ENABLE_WINDOW_FNS}.
+   */
+  public boolean featureAvailable(final EngineFeature feature)
   {
-    return engine.feature(feature, this);
+    if (feature == EngineFeature.WINDOW_FUNCTIONS &&
+        !QueryContexts.getAsBoolean(CTX_ENABLE_WINDOW_FNS, queryContext.get(CTX_ENABLE_WINDOW_FNS), false)) {
+      // Short-circuit: feature requires context flag.
+      return false;
+    }
+
+    if (feature == EngineFeature.UNNEST &&
+        !QueryContexts.getAsBoolean(CTX_ENABLE_UNNEST, queryContext.get(CTX_ENABLE_UNNEST), false)) {
+      // Short-circuit: feature requires context flag.
+      return false;
+    }
+
+    return engine.featureAvailable(feature, this);
   }
 
   public QueryMaker getQueryMaker()
@@ -473,4 +504,18 @@ public class PlannerContext
   {
     this.joinExpressionVirtualColumnRegistry = joinExpressionVirtualColumnRegistry;
   }
+
+  public ExplainAttributes getExplainAttributes()
+  {
+    return this.explainAttributes;
+  }
+
+  public void setExplainAttributes(ExplainAttributes explainAttributes)
+  {
+    if (this.explainAttributes != null) {
+      throw new ISE("ExplainAttributes has already been set");
+    }
+    this.explainAttributes = explainAttributes;
+  }
+
 }

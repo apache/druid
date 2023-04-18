@@ -54,7 +54,7 @@ import {
   getUseCache,
   summarizeIndexSpec,
 } from '../../../druid-models';
-import { deepGet, pluralIfNeeded, tickIcon } from '../../../utils';
+import { deepGet, deepSet, pluralIfNeeded, tickIcon } from '../../../utils';
 import { MaxTasksButton } from '../max-tasks-button/max-tasks-button';
 
 import './run-panel.scss';
@@ -107,6 +107,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
   const maxParseExceptions = getMaxParseExceptions(queryContext);
   const finalizeAggregations = getFinalizeAggregations(queryContext);
   const groupByEnableMultiValueUnnesting = getGroupByEnableMultiValueUnnesting(queryContext);
+  const sqlJoinAlgorithm = queryContext.sqlJoinAlgorithm ?? 'broadcast';
   const durableShuffleStorage = getDurableShuffleStorage(queryContext);
   const indexSpec: IndexSpec | undefined = deepGet(queryContext, 'indexSpec');
   const useApproximateCountDistinct = getUseApproximateCountDistinct(queryContext);
@@ -302,6 +303,23 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                         changeQueryContext(changeGroupByEnableMultiValueUnnesting(queryContext, v))
                       }
                     />
+                    <MenuItem
+                      icon={IconNames.INNER_JOIN}
+                      text="Join algorithm"
+                      label={sqlJoinAlgorithm}
+                    >
+                      {['broadcast', 'sortMerge'].map(o => (
+                        <MenuItem
+                          key={o}
+                          icon={tickIcon(sqlJoinAlgorithm === o)}
+                          text={o}
+                          shouldDismissPopover={false}
+                          onClick={() =>
+                            changeQueryContext(deepSet(queryContext, 'sqlJoinAlgorithm', o))
+                          }
+                        />
+                      ))}
+                    </MenuItem>
                     <MenuItem
                       icon={IconNames.TH_DERIVED}
                       text="Edit index spec"

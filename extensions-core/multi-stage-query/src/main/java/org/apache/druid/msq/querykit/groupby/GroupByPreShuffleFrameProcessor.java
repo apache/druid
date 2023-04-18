@@ -49,7 +49,6 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.timeline.SegmentId;
 
 import java.io.IOException;
@@ -75,7 +74,6 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
       final ReadableInput baseInput,
       final Int2ObjectMap<ReadableInput> sideChannels,
       final GroupByStrategySelector strategySelector,
-      final JoinableFactoryWrapper joinableFactory,
       final ResourceHolder<WritableFrameChannel> outputChannel,
       final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       final long memoryReservedForBroadcastJoin
@@ -85,7 +83,6 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
         query,
         baseInput,
         sideChannels,
-        joinableFactory,
         outputChannel,
         frameWriterFactoryHolder,
         memoryReservedForBroadcastJoin
