@@ -72,7 +72,7 @@ public class CsvInputFormatTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testDeserializeWithoutColumnsWithFindColumnsFromHeaderFalse() throws IOException
+  public void testDeserializeWithoutColumnsWithFindColumnsFromHeaderFalse()
   {
     final ObjectMapper mapper = new ObjectMapper();
     final JsonProcessingException e = Assert.assertThrows(
