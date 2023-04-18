@@ -38,7 +38,7 @@ public class TaskLogStreamerTest
   {
     TaskLogStreamer taskLogStreamer = new TaskLogStreamer() {
       @Override
-      public Optional<InputStream> streamTaskLog(String taskid, long offset) throws IOException
+      public Optional<InputStream> streamTaskLog(String taskid, long offset)
       {
         return Optional.absent();
       }

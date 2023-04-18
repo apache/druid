@@ -27,7 +27,7 @@ import java.io.IOException;
 public class TaskLogPusherTest
 {
   /**
-   * Test default implemenation of pushTaskStatus in TaskLogPusher interface for code coverage
+   * Test default implementation of pushTaskStatus in TaskLogPusher interface for code coverage
    *
    * @throws IOException
    */
@@ -36,7 +36,7 @@ public class TaskLogPusherTest
   {
     TaskLogPusher taskLogPusher = new TaskLogPusher() {
       @Override
-      public void pushTaskLog(String taskid, File logFile) throws IOException
+      public void pushTaskLog(String taskid, File logFile)
       {
       }
     };
