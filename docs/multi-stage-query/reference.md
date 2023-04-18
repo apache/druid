@@ -86,7 +86,7 @@ The input source and format are as above. The columns are expressed as in a SQL 
 Example: `(timestamp VARCHAR, metricType VARCHAR, value BIGINT)`. The optional `EXTEND` keyword
 can precede the column list: `EXTEND (timestamp VARCHAR...)`.
 
-For more information, see [Read external data with EXTERN](concepts.md#extern).
+For more information, see [Read external data with EXTERN](concepts.md#read-external-data-with-extern).
 
 ### `INSERT`
 
@@ -114,7 +114,7 @@ INSERT consists of the following parts:
 4. A [PARTITIONED BY](#partitioned-by) clause, such as `PARTITIONED BY DAY`.
 5. An optional [CLUSTERED BY](#clustered-by) clause.
 
-For more information, see [Load data with INSERT](concepts.md#insert).
+For more information, see [Load data with INSERT](concepts.md#load-data-with-insert).
 
 ### `REPLACE`
 
@@ -197,7 +197,7 @@ The following ISO 8601 periods are supported for `TIME_FLOOR` and the string con
 - P3M
 - P1Y
 
-For more information about partitioning, see [Partitioning](concepts.md#partitioning).
+For more information about partitioning, see [Partitioning](concepts.md#partitioning-by-time).
 
 ### `CLUSTERED BY`
 
@@ -261,7 +261,7 @@ inputs are all connected as broadcast inputs to the "base" stage.
 Together, all of these non-base leaf inputs must not exceed the [limit on broadcast table footprint](#limits). There
 is no limit on the size of the base (leftmost) input.
 
-Only LEFT JOIN, INNER JOIN, and CROSS JOIN are supported with with `broadcast`.
+Only LEFT JOIN, INNER JOIN, and CROSS JOIN are supported with `broadcast`.
 
 Join conditions, if present, must be equalities. It is not necessary to include a join condition; for example,
 `CROSS JOIN` and comma join do not require join conditions.
@@ -296,13 +296,13 @@ Set `sqlJoinAlgorithm` to `sortMerge`.
 Multi-stage queries can use a sort-merge join algorithm. With this algorithm, each pairwise join is planned into its own
 stage with two inputs. The two inputs are partitioned and sorted using a hash partitioning on the same key. This
 approach is generally less performant, but more scalable, than `broadcast`. There are various scenarios where broadcast
-join would return a [`BroadcastTablesTooLarge`](#errors) error, but a sort-merge join would succeed.
+join would return a [`BroadcastTablesTooLarge`](#error-codes) error, but a sort-merge join would succeed.
 
 There is no limit on the overall size of either input, so sort-merge is a good choice for performing a join of two large
 inputs, or for performing a self-join of a large input with itself.
 
 There is a limit on the amount of data associated with each individual key. If _both_ sides of the join exceed this
-limit, the query returns a [`TooManyRowsWithSameKey`](#errors) error. If only one side exceeds the limit, the query
+limit, the query returns a [`TooManyRowsWithSameKey`](#error-codes) error. If only one side exceeds the limit, the query
 does not return this error.
 
 Join conditions, if present, must be equalities. It is not necessary to include a join condition; for example,
@@ -330,7 +330,7 @@ CLUSTERED BY user
 
 ## Durable Storage
 
-Using durable storage with your SQL-based ingestions can improve their reliability by writing intermediate files to a storage location temporarily. 
+Using durable storage with your SQL-based ingestion can improve their reliability by writing intermediate files to a storage location temporarily. 
 
 To prevent durable storage from getting filled up with temporary files in case the tasks fail to clean them up, a periodic
 cleaner can be scheduled to clean the directories corresponding to which there isn't a controller task running. It utilizes

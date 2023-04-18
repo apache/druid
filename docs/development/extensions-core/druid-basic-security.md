@@ -35,7 +35,7 @@ druid.extensions.loadList=["postgresql-metadata-storage", "druid-hdfs-storage", 
 ```
 
 To enable basic auth, configure the basic Authenticator, Escalator, and Authorizer in `common.runtime.properties`.
-See [Security overview](../../operations/security-overview.html#enable-an-authenticator) for an example configuration for HTTP basic authentication.
+See [Security overview](../../operations/security-overview.md#enable-an-authenticator) for an example configuration for HTTP basic authentication.
 
 Visit [Authentication and Authorization](../../design/auth.md) for more information on the implemented extension interfaces and for an example configuration.
 
