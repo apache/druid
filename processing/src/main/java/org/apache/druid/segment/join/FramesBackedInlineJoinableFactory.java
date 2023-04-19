@@ -25,6 +25,10 @@ import org.apache.druid.query.InlineDataSource;
 
 import java.util.Optional;
 
+/**
+ * Creates a joinable from the {@link FramesBackedInlineDataSource}. This materializes the datasource to an
+ * {@link InlineDataSource}, before creating the joinable on it, which carries the overhead of this conversion.
+ */
 public class FramesBackedInlineJoinableFactory implements JoinableFactory
 {
   private final InlineJoinableFactory INLINE_JOINABLE_FACTORY = new InlineJoinableFactory();
@@ -40,7 +44,7 @@ public class FramesBackedInlineJoinableFactory implements JoinableFactory
   public Optional<Joinable> build(DataSource dataSource, JoinConditionAnalysis condition)
   {
     FramesBackedInlineDataSource framesBackedInlineDataSource = (FramesBackedInlineDataSource) dataSource;
-    InlineDataSource inlineDataSource = framesBackedInlineDataSource.toIterableBackedInlineDataSource();
+    InlineDataSource inlineDataSource = framesBackedInlineDataSource.toInlineDataSource();
 
     return INLINE_JOINABLE_FACTORY.build(inlineDataSource, condition);
   }

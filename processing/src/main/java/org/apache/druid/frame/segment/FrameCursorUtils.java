@@ -20,11 +20,12 @@
 package org.apache.druid.frame.segment;
 
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.processor.FrameRowTooLargeException;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.Filter;
@@ -95,14 +96,23 @@ public class FrameCursorUtils
     try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
       while (!cursor.isDone()) {
         if (!frameWriter.addSelection()) {
-          throw new FrameRowTooLargeException(frameWriterFactory.allocatorCapacity());
+          throw new ISE(
+              "Unable to append row to the frame. Allocator capacity: [%s]",
+              frameWriterFactory.allocatorCapacity()
+          );
         }
 
         if (memoryLimitBytes != null && memoryLimitBytes < frameWriter.getTotalSize()) {
           throw new ResourceLimitExceededException(
               StringUtils.format(
-                  "The row limit exceeded the bytes allocated for the conversion (allocated = [%d] bytes)",
-                  memoryLimitBytes
+                  "Exceeded total bytes allocated for this subquery. "
+                  + "Current size [%d], total row count [%d], allocated size [%d]. "
+                  + "Please limit the amount of data that the results occupy, or increase the limit using the context "
+                  + "parameter [%s]",
+                  frameWriter.getTotalSize(),
+                  frameWriter.getNumRows(),
+                  memoryLimitBytes,
+                  QueryContexts.MAX_SUBQUERY_MEMORY_BYTES_KEY
               )
           );
         }

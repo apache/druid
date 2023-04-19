@@ -60,10 +60,7 @@ public class ConcatCursor implements Cursor
   {
     if (currentCursor < cursors.size()) {
       cursors.get(currentCursor).advance();
-      if (cursors.get(currentCursor).isDone()) {
-        ++currentCursor;
-        skipEmptyCursors();
-      }
+      advanceCursor();
     }
   }
 
@@ -72,10 +69,7 @@ public class ConcatCursor implements Cursor
   {
     if (currentCursor < cursors.size()) {
       cursors.get(currentCursor).advanceUninterruptibly();
-      if (cursors.get(currentCursor).isDone()) {
-        ++currentCursor;
-        skipEmptyCursors();
-      }
+      advanceCursor();
     }
   }
 
@@ -104,11 +98,25 @@ public class ConcatCursor implements Cursor
     skipEmptyCursors();
   }
 
-  // This method should be called whenever the currentCursor gets updated.
+  /**
+   * This method should be called whenever the currentCursor gets updated. It skips over the empty cursors so that the
+   * current pointer is pointing to a valid cursor
+   */
   private void skipEmptyCursors()
   {
     while (currentCursor < cursors.size() && cursors.get(currentCursor).isDone()) {
       ++currentCursor;
+    }
+  }
+
+  /**
+   * This method updates the current cursor. This is used to update the current cursor under question.
+   */
+  private void advanceCursor()
+  {
+    if (cursors.get(currentCursor).isDone()) {
+      ++currentCursor;
+      skipEmptyCursors();
     }
   }
 }

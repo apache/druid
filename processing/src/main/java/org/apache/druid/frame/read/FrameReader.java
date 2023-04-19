@@ -71,6 +71,9 @@ public class FrameReader
   /**
    * Create a reader for frames with a given {@link RowSignature}. The signature must exactly match the frames to be
    * read, or else behavior is undefined.
+   * If the columnType is null, we store the data as {@link ColumnType#NESTED_DATA}. This can be done if we know that
+   * the data that we receive can be serded generically using the nested data. It is currently used in the brokers to
+   * store the data with unknown types into frames.
    * @param signature signature used to generate the reader
    * @param allowNullTypes if ColumnTypes can be null. The column types that are null would be interpreted
    *                       as Complex JSON types

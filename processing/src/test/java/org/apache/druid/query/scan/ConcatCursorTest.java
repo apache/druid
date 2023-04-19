@@ -31,7 +31,7 @@ import java.util.List;
 public class ConcatCursorTest
 {
   @Test
-  public void testCursor()
+  public void testConcatCursor()
   {
     Cursor dummyCursor1 = new ListCursor(new ArrayList<>());
     Cursor cursor1 = new ListCursor(ImmutableList.of("a", "b"));
@@ -72,6 +72,216 @@ public class ConcatCursorTest
       concatCursor.advance();
     }
     Assert.assertEquals(ImmutableList.of("a", "b", "c", "d"), tempList);
+  }
 
+  @Test
+  public void testConcatCursorOfEmptyCursors()
+  {
+    Cursor dummyCursor1 = new ListCursor(new ArrayList<>());
+    Cursor dummyCursor2 = new ListCursor(new ArrayList<>());
+    Cursor concatCursor = new ConcatCursor(ImmutableList.of(
+        dummyCursor1,
+        dummyCursor2
+    ));
+    Assert.assertTrue(concatCursor.isDone());
+  }
+
+  @Test
+  public void testConcatCursorWhenBeginningCursorIsEmpty()
+  {
+    Cursor dummyCursor1 = new ListCursor(new ArrayList<>());
+    Cursor cursor1 = new ListCursor(ImmutableList.of("a", "b"));
+    Cursor concatCursor = new ConcatCursor(ImmutableList.of(
+        dummyCursor1,
+        cursor1
+    ));
+
+    List<Object> tempList = new ArrayList<>();
+
+    while (!concatCursor.isDone()) {
+      tempList.add(concatCursor.getColumnSelectorFactory().makeColumnValueSelector("ignored").getObject());
+      concatCursor.advance();
+    }
+    Assert.assertEquals(ImmutableList.of("a", "b"), tempList);
+
+    // Check if reset() works after exhausting the cursor
+    concatCursor.reset();
+    tempList.clear();
+    for (int i = 0; i < 1; ++i) {
+      tempList.add(concatCursor.getColumnSelectorFactory().makeColumnValueSelector("ignored").getObject());
+      concatCursor.advance();
+    }
+    Assert.assertEquals(ImmutableList.of("a"), tempList);
+
+    // Check if reset() works from the middle
+    concatCursor.reset();
+    tempList.clear();
+    while (!concatCursor.isDone()) {
+      tempList.add(concatCursor.getColumnSelectorFactory().makeColumnValueSelector("ignored").getObject());
+      concatCursor.advance();
+    }
+    Assert.assertEquals(ImmutableList.of("a", "b"), tempList);
+  }
+
+  @Test
+  public void testConcatCursorWhenEndingCursorIsEmpty()
+  {
+    Cursor dummyCursor1 = new ListCursor(new ArrayList<>());
+    Cursor cursor1 = new ListCursor(ImmutableList.of("a", "b"));
+    Cursor concatCursor = new ConcatCursor(ImmutableList.of(
+        cursor1,
+        dummyCursor1
+    ));
+
+    List<Object> tempList = new ArrayList<>();
+
+    while (!concatCursor.isDone()) {
+      tempList.add(concatCursor.getColumnSelectorFactory().makeColumnValueSelector("ignored").getObject());
+      concatCursor.advance();
+    }
+    Assert.assertEquals(ImmutableList.of("a", "b"), tempList);
+
+    // Check if reset() works after exhausting the cursor
+    concatCursor.reset();
+    tempList.clear();
+    for (int i = 0; i < 1; ++i) {
+      tempList.add(concatCursor.getColumnSelectorFactory().makeColumnValueSelector("ignored").getObject());
+      concatCursor.advance();
+    }
+    Assert.assertEquals(ImmutableList.of("a"), tempList);
+
+    // Check if reset() works from the middle
+    concatCursor.reset();
+    tempList.clear();
+    while (!concatCursor.isDone()) {
+      tempList.add(concatCursor.getColumnSelectorFactory().makeColumnValueSelector("ignored").getObject());
+      concatCursor.advance();
+    }
+    Assert.assertEquals(ImmutableList.of("a", "b"), tempList);
+  }
+
+  @Test
+  public void testConcatCursorWhenMultipleEmptyCursorsAtBeginning()
+  {
+    Cursor dummyCursor1 = new ListCursor(new ArrayList<>());
+    Cursor dummyCursor2 = new ListCursor(new ArrayList<>());
+    Cursor dummyCursor3 = new ListCursor(new ArrayList<>());
+    Cursor cursor1 = new ListCursor(ImmutableList.of("a", "b"));
+    Cursor concatCursor = new ConcatCursor(ImmutableList.of(
+        dummyCursor1,
+        dummyCursor2,
+        dummyCursor3,
+        cursor1
+    ));
+
+    List<Object> tempList = new ArrayList<>();
+
+    while (!concatCursor.isDone()) {
+      tempList.add(concatCursor.getColumnSelectorFactory().makeColumnValueSelector("ignored").getObject());
+      concatCursor.advance();
+    }
+    Assert.assertEquals(ImmutableList.of("a", "b"), tempList);
+
+    // Check if reset() works after exhausting the cursor
+    concatCursor.reset();
+    tempList.clear();
+    for (int i = 0; i < 1; ++i) {
+      tempList.add(concatCursor.getColumnSelectorFactory().makeColumnValueSelector("ignored").getObject());
+      concatCursor.advance();
+    }
+    Assert.assertEquals(ImmutableList.of("a"), tempList);
+
+    // Check if reset() works from the middle
+    concatCursor.reset();
+    tempList.clear();
+    while (!concatCursor.isDone()) {
+      tempList.add(concatCursor.getColumnSelectorFactory().makeColumnValueSelector("ignored").getObject());
+      concatCursor.advance();
+    }
+    Assert.assertEquals(ImmutableList.of("a", "b"), tempList);
+  }
+
+  @Test
+  public void testConcatCursorWhenMultipleEmptyCursorsAtEnd()
+  {
+    Cursor dummyCursor1 = new ListCursor(new ArrayList<>());
+    Cursor dummyCursor2 = new ListCursor(new ArrayList<>());
+    Cursor dummyCursor3 = new ListCursor(new ArrayList<>());
+    Cursor cursor1 = new ListCursor(ImmutableList.of("a", "b"));
+    Cursor concatCursor = new ConcatCursor(ImmutableList.of(
+        cursor1,
+        dummyCursor1,
+        dummyCursor2,
+        dummyCursor3
+    ));
+
+    List<Object> tempList = new ArrayList<>();
+
+    while (!concatCursor.isDone()) {
+      tempList.add(concatCursor.getColumnSelectorFactory().makeColumnValueSelector("ignored").getObject());
+      concatCursor.advance();
+    }
+    Assert.assertEquals(ImmutableList.of("a", "b"), tempList);
+
+    // Check if reset() works after exhausting the cursor
+    concatCursor.reset();
+    tempList.clear();
+    for (int i = 0; i < 1; ++i) {
+      tempList.add(concatCursor.getColumnSelectorFactory().makeColumnValueSelector("ignored").getObject());
+      concatCursor.advance();
+    }
+    Assert.assertEquals(ImmutableList.of("a"), tempList);
+
+    // Check if reset() works from the middle
+    concatCursor.reset();
+    tempList.clear();
+    while (!concatCursor.isDone()) {
+      tempList.add(concatCursor.getColumnSelectorFactory().makeColumnValueSelector("ignored").getObject());
+      concatCursor.advance();
+    }
+    Assert.assertEquals(ImmutableList.of("a", "b"), tempList);
+  }
+
+  @Test
+  public void testConcatCursorWhenMultipleEmptyCursorsAtTheMiddle()
+  {
+    Cursor dummyCursor1 = new ListCursor(new ArrayList<>());
+    Cursor dummyCursor2 = new ListCursor(new ArrayList<>());
+    Cursor dummyCursor3 = new ListCursor(new ArrayList<>());
+    Cursor cursor1 = new ListCursor(ImmutableList.of("a"));
+    Cursor cursor2 = new ListCursor(ImmutableList.of("b"));
+    Cursor concatCursor = new ConcatCursor(ImmutableList.of(
+        cursor1,
+        dummyCursor1,
+        dummyCursor2,
+        dummyCursor3,
+        cursor2
+    ));
+
+    List<Object> tempList = new ArrayList<>();
+
+    while (!concatCursor.isDone()) {
+      tempList.add(concatCursor.getColumnSelectorFactory().makeColumnValueSelector("ignored").getObject());
+      concatCursor.advance();
+    }
+    Assert.assertEquals(ImmutableList.of("a", "b"), tempList);
+
+    // Check if reset() works after exhausting the cursor
+    concatCursor.reset();
+    tempList.clear();
+    for (int i = 0; i < 1; ++i) {
+      tempList.add(concatCursor.getColumnSelectorFactory().makeColumnValueSelector("ignored").getObject());
+      concatCursor.advance();
+    }
+    Assert.assertEquals(ImmutableList.of("a"), tempList);
+
+    // Check if reset() works from the middle
+    concatCursor.reset();
+    tempList.clear();
+    while (!concatCursor.isDone()) {
+      tempList.add(concatCursor.getColumnSelectorFactory().makeColumnValueSelector("ignored").getObject());
+      concatCursor.advance();
+    }
+    Assert.assertEquals(ImmutableList.of("a", "b"), tempList);
   }
 }

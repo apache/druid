@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -68,7 +69,12 @@ public class FramesBackedInlineDataSourceSerializer extends StdSerializer<Frames
       catch (IOException e) {
         // Ideally, this shouldn't be reachable.
         // Wrap the IO exception in the runtime exception and propogate it forward
-        throw new RuntimeException(e);
+        throw new RE(
+            e,
+            "Exception encountered while serializing [%s] in [%s]",
+            row,
+            FramesBackedInlineDataSource.class
+        );
       }
     });
 
