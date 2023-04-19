@@ -123,6 +123,13 @@ public class WorkerMemoryParameters
   private static final long PARTITION_STATS_MEMORY_MAX_BYTES = 300_000_000;
 
   /**
+   * Threshold in bytes below which we assume that the worker is "small". While calculating the memory requirements for
+   * a small worker, we try to be as conservatives with the estimates and the extra temporary space required by the
+   * frames, since that can add up quickly and cause OOM.
+   */
+  private static final long SMALL_WORKER_CAPACITY_THRESHOLD_BYTES = 256_000_000;
+
+  /**
    * Fraction of free memory per bundle that can be used by {@link org.apache.druid.msq.querykit.BroadcastJoinHelper}
    * to store broadcast data on-heap. This is used to limit the total size of input frames, which we expect to
    * expand on-heap. Expansion can potentially be somewhat over 2x: for example, strings are UTF-8 in frames, but are
@@ -309,8 +316,12 @@ public class WorkerMemoryParameters
         )
     );
 
-    // Apportion max frames to all processors equally, then subtract one to account for an output frame.
-    final int superSorterMaxChannelsPerProcessor = maxNumFramesForSuperSorter / superSorterMaxActiveProcessors - 1;
+    final int isSmallWorker = usableMemoryInJvm < SMALL_WORKER_CAPACITY_THRESHOLD_BYTES ? 1 : 0;
+    // Apportion max frames to all processors equally, then subtract one to account for an output frame and one to account
+    // for the
+    final int superSorterMaxChannelsPerProcessor = maxNumFramesForSuperSorter / superSorterMaxActiveProcessors
+                                                   - 1
+                                                   - isSmallWorker;
 
     return new WorkerMemoryParameters(
         superSorterMaxActiveProcessors,
