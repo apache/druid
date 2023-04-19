@@ -46,6 +46,7 @@ import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyF
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.DiskNormalizedCostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategyFactory;
+import org.apache.druid.server.coordinator.balancer.UniformIntervalBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.duty.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.NewestSegmentFirstPolicy;
@@ -224,7 +225,7 @@ public class CoordinatorSimulationBuilder
   private BalancerStrategyFactory createBalancerStrategy(Environment env)
   {
     if (balancerStrategy == null) {
-      return new CostBalancerStrategyFactory();
+      return new UniformIntervalBalancerStrategyFactory();
     }
 
     switch (balancerStrategy) {
@@ -236,6 +237,8 @@ public class CoordinatorSimulationBuilder
         return new DiskNormalizedCostBalancerStrategyFactory();
       case "random":
         return new RandomBalancerStrategyFactory();
+      case "uniformInterval":
+        return new UniformIntervalBalancerStrategyFactory();
       default:
         throw new IAE("Unknown balancer stratgy: " + balancerStrategy);
     }

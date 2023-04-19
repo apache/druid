@@ -17,15 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.balancer;
 
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
-import org.apache.druid.server.coordinator.balancer.CostBalancerStrategy;
-import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategy;
+import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeonTester;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;

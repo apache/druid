@@ -77,7 +77,7 @@ public interface BalancerStrategy
    * @param broadcastDatasources Segments belonging to these datasources will not
    *                             be picked for balancing, since they should be
    *                             loaded on all servers anyway.
-   * @param reservoirSize        Reservoir size maintained by the sampling algorithm
+   * @param maxSegmentsToPick    Maximum number of segments to pick
    * @param pickLoadingSegments  If true, picks only segments currently being
    *                             loaded on a server. If false, picks segments
    *                             already loaded on a server.
@@ -87,39 +87,16 @@ public interface BalancerStrategy
   default Iterator<BalancerSegmentHolder> pickSegmentsToMove(
       List<ServerHolder> serverHolders,
       Set<String> broadcastDatasources,
-      int reservoirSize,
+      int maxSegmentsToPick,
       boolean pickLoadingSegments
   )
   {
-    return new Iterator<BalancerSegmentHolder>()
-    {
-      private Iterator<BalancerSegmentHolder> it = sample();
-      private Iterator<BalancerSegmentHolder> sample()
-      {
-        return ReservoirSegmentSampler.getRandomBalancerSegmentHolders(
-            serverHolders,
-            broadcastDatasources,
-            reservoirSize,
-            pickLoadingSegments
-        ).iterator();
-      }
-
-      @Override
-      public boolean hasNext()
-      {
-        if (it.hasNext()) {
-          return true;
-        }
-        it = sample();
-        return it.hasNext();
-      }
-
-      @Override
-      public BalancerSegmentHolder next()
-      {
-        return it.next();
-      }
-    };
+    return ReservoirSegmentSampler.getRandomBalancerSegmentHolders(
+        serverHolders,
+        broadcastDatasources,
+        maxSegmentsToPick,
+        pickLoadingSegments
+    ).iterator();
   }
 
   /**

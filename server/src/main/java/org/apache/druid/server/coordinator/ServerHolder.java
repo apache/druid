@@ -19,12 +19,14 @@
 
 package org.apache.druid.server.coordinator;
 
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -61,6 +63,8 @@ public class ServerHolder implements Comparable<ServerHolder>
    */
   private final Map<DataSegment, SegmentAction> queuedSegments = new HashMap<>();
 
+  private final Map<String, Object2IntOpenHashMap<Interval>> datasourceIntervalToSegmentCount = new HashMap<>();
+
   public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon)
   {
     this(server, peon, false, 0);
@@ -92,23 +96,29 @@ public class ServerHolder implements Comparable<ServerHolder>
     this.peon = peon;
     this.isDecommissioning = isDecommissioning;
 
-    this.maxAssignmentsInRun = maxSegmentsInLoadQueue <= 0
+    this.maxAssignmentsInRun = maxSegmentsInLoadQueue == 0
                                ? Integer.MAX_VALUE
                                : maxSegmentsInLoadQueue - peon.getNumberOfSegmentsToLoad();
+
+    server.iterateAllSegments()
+          .forEach(segment -> updateCountInInterval(segment, true));
 
     peon.getSegmentsInQueue().forEach(
         (segment, action) -> {
           queuedSegments.put(segment, simplify(action));
           if (isLoadAction(action)) {
             sizeOfLoadingSegments += segment.getSize();
+            updateCountInInterval(segment, true);
           } else {
             sizeOfDroppingSegments += segment.getSize();
+            updateCountInInterval(segment, false);
           }
         }
     );
 
     peon.getSegmentsMarkedToDrop().forEach(
         segment -> {
+          updateCountInInterval(segment, false);
           queuedSegments.put(segment, SegmentAction.MOVE_FROM);
         }
     );
@@ -237,6 +247,13 @@ public class ServerHolder implements Comparable<ServerHolder>
     return loadingSegments;
   }
 
+  public int getNumSegmentsInDatasourceInterval(DataSegment segment)
+  {
+    Object2IntOpenHashMap<Interval> intervalToCount =
+        datasourceIntervalToSegmentCount.get(segment.getDataSource());
+    return intervalToCount == null ? 0 : intervalToCount.getInt(segment.getInterval());
+  }
+
   /**
    * Returns true if this server has the segment loaded and is not dropping it.
    */
@@ -264,8 +281,10 @@ public class ServerHolder implements Comparable<ServerHolder>
     if (isLoadAction(action)) {
       ++totalAssignmentsInRun;
       sizeOfLoadingSegments += segment.getSize();
+      updateCountInInterval(segment, true);
     } else {
       sizeOfDroppingSegments += segment.getSize();
+      updateCountInInterval(segment, false);
     }
 
     queuedSegments.put(segment, simplify(action));
@@ -307,11 +326,20 @@ public class ServerHolder implements Comparable<ServerHolder>
     final SegmentAction action = queuedSegments.remove(segment);
     if (isLoadAction(action)) {
       sizeOfLoadingSegments -= segment.getSize();
+      updateCountInInterval(segment, false);
     } else {
       sizeOfDroppingSegments -= segment.getSize();
+      updateCountInInterval(segment, true);
     }
 
     return true;
+  }
+
+  private void updateCountInInterval(DataSegment segment, boolean add)
+  {
+    datasourceIntervalToSegmentCount
+        .computeIfAbsent(segment.getDataSource(), ds -> new Object2IntOpenHashMap<>())
+        .addTo(segment.getInterval(), add ? 1 : -1);
   }
 
   @Override

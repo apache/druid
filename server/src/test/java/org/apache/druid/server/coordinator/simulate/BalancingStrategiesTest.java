@@ -20,8 +20,11 @@
 package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -40,7 +43,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
   @Parameterized.Parameters(name = "{0}")
   public static String[] getTestParameters()
   {
-    return new String[]{"cost", "cachingCost"};
+    return new String[]{"cost", "cachingCost", "uniformInterval"};
   }
 
   public BalancingStrategiesTest(String strategy)
@@ -179,4 +182,52 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
       Assert.assertEquals(250, historical.getTotalSegments());
     }
   }
+
+  @Test
+  public void testClusterGetsBalancedWithOneSegmentPerInterval()
+  {
+    Assume.assumeTrue("uniformInterval".equals(strategy));
+
+    final List<DruidServer> historicals = new ArrayList<>();
+    for (int i = 0; i < 5; i++) {
+      historicals.add(createHistorical(i, Tier.T1, SIZE_1TB));
+    }
+
+    final List<DataSegment> segments =
+        CreateDataSegments.ofDatasource(DS.WIKI)
+                          .forIntervals(100, Granularities.DAY)
+                          .startingAt("2022-01-01")
+                          .withNumPartitions(1)
+                          .eachOfSizeInMb(500);
+
+    CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withDynamicConfig(createDynamicConfig(1000, 0, 100))
+                             .withBalancer(strategy)
+                             .withRules(DS.WIKI, Load.on(Tier.T1, 1).forever())
+                             .withServers(historicals)
+                             .withSegments(segments)
+                             .build();
+    startSimulation(sim);
+
+    // All segments are loaded on histT11
+    final DruidServer historicalT11 = historicals.get(0);
+    segments.forEach(historicalT11::addDataSegment);
+
+    // Run 1: Some segments are moved to historicalT12
+    runCoordinatorCycle();
+    verifyNotEmitted(Metric.ASSIGNED_COUNT);
+    verifyValue(Metric.MOVED_COUNT, 80L);
+
+    loadQueuedSegments();
+    for (DruidServer historical : historicals) {
+      Assert.assertEquals(20, historical.getTotalSegments());
+    }
+
+    // Run 2: nothing is assigned, nothing is moved as servers are already balanced
+    runCoordinatorCycle();
+    verifyNotEmitted(Metric.ASSIGNED_COUNT);
+    verifyNotEmitted(Metric.MOVED_COUNT);
+  }
+
 }
