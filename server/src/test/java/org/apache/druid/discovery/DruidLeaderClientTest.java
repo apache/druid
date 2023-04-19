@@ -60,6 +60,7 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import javax.ws.rs.GET;
@@ -238,7 +239,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
 
     HttpClient spyHttpClient = Mockito.spy(this.httpClient);
     // Override behavior for the first call only
-    Mockito.doReturn(task).doCallRealMethod().when(spyHttpClient).go(Mockito.any(), Mockito.any());
+    Mockito.doReturn(task).doCallRealMethod().when(spyHttpClient).go(ArgumentMatchers.any(), ArgumentMatchers.any());
 
     DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
         spyHttpClient,
@@ -272,7 +273,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
     EasyMock.replay(druidNodeDiscovery, druidNodeDiscoveryProvider, task);
 
     HttpClient spyHttpClient = Mockito.spy(this.httpClient);
-    Mockito.doReturn(task).doCallRealMethod().when(spyHttpClient).go(Mockito.any(), Mockito.any());
+    Mockito.doReturn(task).doCallRealMethod().when(spyHttpClient).go(ArgumentMatchers.any(), ArgumentMatchers.any());
 
     DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
         spyHttpClient,
