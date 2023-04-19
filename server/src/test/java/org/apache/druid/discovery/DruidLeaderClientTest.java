@@ -256,47 +256,6 @@ public class DruidLeaderClientTest extends BaseJettyTest
   }
 
   @Test
-  public void test503ResponseFromServerNoCacheRefresh() throws Exception
-  {
-    DruidNodeDiscovery druidNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
-    // Should be called only once, since we want to handle 503 ourselves and don't want cache refresh
-    EasyMock.expect(druidNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(discoveryDruidNode)).times(1);
-
-    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.PEON)).andReturn(druidNodeDiscovery).anyTimes();
-
-    ListenableFutureTask task = EasyMock.createMock(ListenableFutureTask.class);
-    EasyMock.expect(task.get()).andReturn(new StringFullResponseHolder(new DefaultHttpResponse(
-        HttpVersion.HTTP_1_1,
-        HttpResponseStatus.SERVICE_UNAVAILABLE
-    ), Charset.defaultCharset()));
-    EasyMock.replay(druidNodeDiscovery, druidNodeDiscoveryProvider, task);
-
-    HttpClient spyHttpClient = Mockito.spy(this.httpClient);
-    Mockito.doReturn(task).doCallRealMethod().when(spyHttpClient).go(ArgumentMatchers.any(), ArgumentMatchers.any());
-
-    DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
-        spyHttpClient,
-        druidNodeDiscoveryProvider,
-        NodeRole.PEON,
-        "/simple/leader"
-    );
-    druidLeaderClient.start();
-
-    Request request = druidLeaderClient.makeRequest(HttpMethod.POST, "/simple/direct");
-    request.setContent("hello".getBytes(StandardCharsets.UTF_8));
-    Assert.assertEquals(
-        HttpResponseStatus.SERVICE_UNAVAILABLE,
-        druidLeaderClient.go(
-            request,
-            new StringFullResponseHandler(Charset.defaultCharset()),
-            false
-        ).getResponse().getStatus()
-    );
-    EasyMock.verify(druidNodeDiscovery);
-  }
-
-  @Test
   public void testFindCurrentLeader()
   {
     DruidNodeDiscovery druidNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);

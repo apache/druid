@@ -124,8 +124,7 @@ public class DruidLeaderClient
 
   /**
    * Executes a Request object aimed at the leader. Throws IOException if the leader cannot be located.
-   * Internal retries are attempted if 503/504 response is received. If the caller wants to override this
-   * retry behavior, they should use {@link #go(Request, HttpResponseHandler, boolean)}
+   * Internal retries with cache invalidation are attempted if 503/504 response is received.
    *
    * @param request
    * @throws IOException
@@ -133,33 +132,21 @@ public class DruidLeaderClient
    */
   public StringFullResponseHolder go(Request request) throws IOException, InterruptedException
   {
-    return go(request, new StringFullResponseHandler(StandardCharsets.UTF_8), true);
+    return go(request, new StringFullResponseHandler(StandardCharsets.UTF_8));
   }
 
   /**
    * Executes a Request object aimed at the leader. Throws IOException if the leader cannot be located.
-   * Internal retries are attempted if 503/504 response is received. If the caller wants to override this
-   * retry behavior, they should use {@link #go(Request, HttpResponseHandler, boolean)}
-   */
-  public <T, H extends FullResponseHolder<T>> H go(Request request, HttpResponseHandler<H, H> responseHandler)
-      throws IOException, InterruptedException
-  {
-    return go(request, responseHandler, true);
-  }
-
-  /**
-   * Executes a Request object aimed at the leader. Throws IOException if the leader cannot be located.
+   * Internal retries with cache invalidation are attempted if 503/504 response is received.
    *
    * @param request
    * @param responseHandler
-   * @param shouldRetry If internal retries with cache invalidation should be done for 503 and 504 responses
    * @throws IOException
    * @throws InterruptedException
    */
   public <T, H extends FullResponseHolder<T>> H go(
       Request request,
-      HttpResponseHandler<H, H> responseHandler,
-      boolean shouldRetry
+      HttpResponseHandler<H, H> responseHandler
   )
       throws IOException, InterruptedException
   {
@@ -216,8 +203,8 @@ public class DruidLeaderClient
         ));
 
         request = withUrl(request, redirectUrl);
-      } else if (shouldRetry && (HttpResponseStatus.SERVICE_UNAVAILABLE.equals(responseStatus)
-                 || HttpResponseStatus.GATEWAY_TIMEOUT.equals(responseStatus))) {
+      } else if (HttpResponseStatus.SERVICE_UNAVAILABLE.equals(responseStatus)
+                 || HttpResponseStatus.GATEWAY_TIMEOUT.equals(responseStatus)) {
         request = getNewRequestUrlInvalidatingCache(request);
       } else {
         return fullResponseHolder;
