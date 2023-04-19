@@ -53,15 +53,16 @@ public class ConsoleLoggingEnforcementConfigurationFactory extends Configuration
 
   private static final Logger log = new Logger(ConsoleLoggingEnforcementConfigurationFactory.class);
 
-  // Alter log level for this class to be warning. This needs to happen because the logger is using the default
-  // config, which is always level error and appends to console, since the logger is being configured here.
-  static {
-        Configurator.setLevel(log.getName(), Level.WARN);
-  }
   /**
    * Valid file extensions for XML files.
    */
   public static final String[] SUFFIXES = new String[]{".xml", "*"};
+
+  // Alter log level for this class to be warning. This needs to happen because the logger is using the default
+  // config, which is always level error and appends to console, since the logger is being configured by this class.
+  static {
+    Configurator.setLevel(log.getName(), Level.WARN);
+  }
 
   @Override
   public String[] getSupportedTypes()

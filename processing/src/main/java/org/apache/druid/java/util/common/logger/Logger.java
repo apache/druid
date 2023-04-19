@@ -224,7 +224,8 @@ public class Logger
     }
   }
 
-  public String getName() {
+  public String getName()
+  {
     return this.log.getName();
   }
 
