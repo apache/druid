@@ -21,7 +21,6 @@ package org.apache.druid.discovery;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFutureTask;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -46,7 +45,6 @@ import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.BaseJettyTest;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
-import org.asynchttpclient.ListenableFuture;
 import org.easymock.EasyMock;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
@@ -74,8 +72,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.Optional;
-import java.util.Set;
 
 /**
  */
