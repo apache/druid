@@ -48,6 +48,7 @@ import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnBuilder;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
@@ -55,6 +56,8 @@ import org.apache.druid.segment.column.DruidPredicateIndex;
 import org.apache.druid.segment.column.NullValueIndex;
 import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.column.TypeStrategy;
+import org.apache.druid.segment.serde.ColumnPartSerde;
+import org.apache.druid.segment.serde.ComplexColumnPartSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -214,15 +217,15 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
   {
     ColumnBuilder bob = new ColumnBuilder();
     bob.setFileMapper(fileMapper);
-    NestedDataColumnSupplierV4 supplier = NestedDataColumnSupplierV4.read(
-        baseBuffer,
-        bob,
-        NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES,
-        NestedDataComplexTypeSerde.OBJECT_MAPPER,
-        new OnlyPositionalReadsTypeStrategy<>(ColumnType.LONG.getStrategy()),
-        new OnlyPositionalReadsTypeStrategy<>(ColumnType.DOUBLE.getStrategy())
-    );
-    try (NestedDataComplexColumn column = (NestedDataComplexColumn) supplier.get()) {
+    ComplexColumnPartSerde partSerde = ComplexColumnPartSerde.createDeserializer(NestedDataComplexTypeSerde.TYPE_NAME);
+    ColumnPartSerde.Deserializer deserializer = partSerde.getDeserializer();
+    deserializer.read(baseBuffer, bob, NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES);
+    final ColumnHolder holder = bob.build();
+    final ColumnCapabilities capabilities = holder.getCapabilities();
+    Assert.assertEquals(ColumnType.NESTED_DATA, capabilities.toColumnType());
+    Assert.assertTrue(capabilities.isFilterable());
+    Assert.assertTrue(holder.getColumnFormat() instanceof NestedDataComplexTypeSerde.NestedColumnFormatV4);
+    try (NestedDataComplexColumn column = (NestedDataComplexColumn) holder.getColumn()) {
       smokeTest(column);
     }
   }
