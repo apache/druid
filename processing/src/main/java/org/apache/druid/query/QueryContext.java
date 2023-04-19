@@ -577,11 +577,6 @@ public class QueryContext
     return getString(QueryContexts.BROKER_SERVICE_NAME);
   }
 
-  public QueryContexts.UnavailableSegmentsAction getUnavailableSegmentsAction()
-  {
-    return QueryContexts.UnavailableSegmentsAction.fromString(getString(QueryContexts.UNAVAILABLE_SEGMENTS_ACTION_KEY));
-  }
-
   @Override
   public boolean equals(Object o)
   {

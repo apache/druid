@@ -158,20 +158,6 @@ public class QueryContexts
     }
   }
 
-  public enum UnavailableSegmentsAction
-  {
-    FAIL,
-    ALLOW;
-
-    public static UnavailableSegmentsAction fromString(String str)
-    {
-      if (org.apache.commons.lang.StringUtils.isEmpty(str)) {
-        return UnavailableSegmentsAction.ALLOW;
-      }
-      return UnavailableSegmentsAction.valueOf(StringUtils.toUpperCase(str));
-    }
-  }
-
   private QueryContexts()
   {
   }

@@ -3375,7 +3375,7 @@ public class CachingClusteredClientTest
   public void testFailOnUnavailableSegments()
   {
     Map<String, Object> context = new HashMap<>(CONTEXT);
-    context.put(QueryContexts.UNAVAILABLE_SEGMENTS_ACTION_KEY, QueryContexts.UnavailableSegmentsAction.FAIL.toString());
+    context.put(QueryContexts.UNAVAILABLE_SEGMENTS_ACTION_KEY, CachingClusteredClient.UnavailableSegmentsAction.FAIL.toString());
 
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
                                                         .dataSource(DATA_SOURCE)

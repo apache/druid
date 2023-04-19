@@ -29,6 +29,7 @@ import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -265,7 +266,7 @@ public class DruidLeaderClient
     );
   }
 
-  public InputStream getThingsFromLeaderNode(String query)
+  public Pair<Request, InputStream> getThingsFromLeaderNode(String query)
   {
     Request request;
     InputStreamFullResponseHolder responseHolder;
@@ -293,7 +294,7 @@ public class DruidLeaderClient
       throw new RuntimeException(e);
     }
 
-    return responseHolder.getContent();
+    return Pair.of(request, responseHolder.getContent());
   }
 
   public <T> JsonParserIterator<T> getThingsFromLeaderNode(
@@ -302,36 +303,14 @@ public class DruidLeaderClient
       ObjectMapper jsonMapper
   )
   {
-    Request request;
-    InputStreamFullResponseHolder responseHolder;
-    try {
-      request = makeRequest(
-          HttpMethod.GET,
-          query
-      );
-
-      responseHolder = go(
-          request,
-          new InputStreamFullResponseHandler()
-      );
-
-      if (responseHolder.getStatus().getCode() != HttpServletResponse.SC_OK) {
-        throw new RE(
-            "Failed to talk to leader node at [%s]. Error code [%d], description [%s].",
-            query,
-            responseHolder.getStatus().getCode(),
-            responseHolder.getStatus().getReasonPhrase()
-        );
-      }
-    }
-    catch (IOException | InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-
+    Pair<Request, InputStream> response = getThingsFromLeaderNode(query);
+    Request request = response.lhs;
+    InputStream inputStream = response.rhs;
     final JavaType javaType = jsonMapper.getTypeFactory().constructType(typeRef);
+
     return new JsonParserIterator<>(
         javaType,
-        Futures.immediateFuture(responseHolder.getContent()),
+        Futures.immediateFuture(inputStream),
         request.getUrl().toString(),
         null,
         request.getUrl().getHost(),

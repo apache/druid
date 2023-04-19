@@ -299,19 +299,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     try {
       retryWithHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle)
-            {
-              final Batch batch = handle.createBatch();
-              if (!tableContainsColumn(handle, tableName, "handed_off")) {
-                log.info("Adding column: handed_off to table[%s]", tableName);
-                batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN handed_off BOOLEAN NOT NULL DEFAULT FALSE", tableName));
-              }
-              batch.execute();
-              return null;
+          (HandleCallback<Void>) handle -> {
+            final Batch batch = handle.createBatch();
+            if (!tableContainsColumn(handle, tableName, "handed_off")) {
+              log.info("Adding column [handed_off] to table[%s]", tableName);
+              batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN handed_off BOOLEAN NOT NULL DEFAULT FALSE", tableName));
             }
+            batch.execute();
+            return null;
           }
       );
     }

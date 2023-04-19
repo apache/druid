@@ -89,14 +89,14 @@ public class SqlSegmentsMetadataQuery
    * Retrieves segments for a given datasource that are marked used (i.e. published) in the metadata store, and that
    * *overlap* any interval in a particular collection of intervals. If the collection of intervals is empty, this
    * method will retrieve all used segments.
-   *
+   * <p>
    * You cannot assume that segments returned by this call are actually active. Because there is some delay between
    * new segment publishing and the marking-unused of older segments, it is possible that some segments returned
    * by this call are overshadowed by other segments. To check for this, use
    * {@link org.apache.druid.timeline.SegmentTimeline#forSegments(Iterable)}.
-   *
+   * <p>
    * This call does not return any information about realtime segments.
-   *
+   * <p>
    * Returns a closeable iterator. You should close it when you are done.
    */
   public CloseableIterator<DataSegment> retrieveUsedSegments(
@@ -111,9 +111,9 @@ public class SqlSegmentsMetadataQuery
    * Retrieves segments for a given datasource that are marked unused and that are *fully contained by* any interval
    * in a particular collection of intervals. If the collection of intervals is empty, this method will retrieve all
    * unused segments.
-   *
+   * <p>
    * This call does not return any information about realtime segments.
-   *
+   * <p>
    * Returns a closeable iterator. You should close it when you are done.
    */
   public CloseableIterator<DataSegment> retrieveUnusedSegments(
@@ -126,7 +126,7 @@ public class SqlSegmentsMetadataQuery
 
   /**
    * Marks the provided segments as either used or unused.
-   *
+   * <p>
    * Returns the number of segments actually modified.
    */
   public int markSegments(final Collection<SegmentId> segmentIds, final boolean used)
@@ -165,19 +165,15 @@ public class SqlSegmentsMetadataQuery
   {
     final String dataSource = segmentId.getDataSource();
 
-    final PreparedBatch batch =
-        handle.prepareBatch(
+    return handle
+        .createStatement(
             StringUtils.format(
-                "UPDATE %s SET handed_off = true WHERE datasource = ? AND id = ?",
+                "UPDATE %s SET handed_off = true WHERE dataSource = :dataSource AND id = :id",
                 dbTables.getSegmentsTable()
-            )
-        );
-
-    batch.add(dataSource, segmentId.toString());
-
-    final int[] segmentChanges = batch.execute();
-
-    return segmentChanges.length;
+            ))
+        .bind("dataSource", dataSource)
+        .bind("id", segmentId.toString())
+        .execute();
   }
 
   /**
@@ -255,8 +251,18 @@ public class SqlSegmentsMetadataQuery
         // Add a special check for a segment which have one end at eternity and the other at some finite value. Since
         // we are using string comparison, a segment with this start or end will not be returned otherwise.
         if (matchMode.equals(IntervalMode.OVERLAPS)) {
-          sb.append(StringUtils.format(" OR (start = '%s' AND \"end\" != '%s' AND \"end\" > :start%d)", Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd(), i));
-          sb.append(StringUtils.format(" OR (start != '%s' AND \"end\" = '%s' AND start < :end%d)", Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd(), i));
+          sb.append(StringUtils.format(
+              " OR (start = '%s' AND \"end\" != '%s' AND \"end\" > :start%d)",
+              Intervals.ETERNITY.getStart(),
+              Intervals.ETERNITY.getEnd(),
+              i
+          ));
+          sb.append(StringUtils.format(
+              " OR (start != '%s' AND \"end\" = '%s' AND start < :end%d)",
+              Intervals.ETERNITY.getStart(),
+              Intervals.ETERNITY.getEnd(),
+              i
+          ));
         }
 
         if (i != intervals.size() - 1) {
@@ -268,7 +274,11 @@ public class SqlSegmentsMetadataQuery
       // this start and end will not be returned otherwise.
       // Known Issue: https://github.com/apache/druid/issues/12860
       if (matchMode.equals(IntervalMode.OVERLAPS)) {
-        sb.append(StringUtils.format(" OR (start = '%s' AND \"end\" = '%s')", Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd()));
+        sb.append(StringUtils.format(
+            " OR (start = '%s' AND \"end\" = '%s')",
+            Intervals.ETERNITY.getStart(),
+            Intervals.ETERNITY.getEnd()
+        ));
       }
       sb.append(")");
     }

@@ -271,7 +271,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private final boolean populateCache;
     private final boolean isBySegment;
     private final int uncoveredIntervalsLimit;
-    private final QueryContexts.UnavailableSegmentsAction unavailableSegmentsAction;
+    private final UnavailableSegmentsAction unavailableSegmentsAction;
 
     private final Map<String, Cache.NamedKey> cachePopulatorKeyMap = new HashMap<>();
     private final DataSourceAnalysis dataSourceAnalysis;
@@ -296,7 +296,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       // Note that enabling this leads to putting uncovered intervals information in the response headers
       // and might blow up in some cases https://github.com/apache/druid/issues/2108
       this.uncoveredIntervalsLimit = queryContext.getUncoveredIntervalsLimit();
-      this.unavailableSegmentsAction = queryContext.getUnavailableSegmentsAction();
+      this.unavailableSegmentsAction = queryContext.getEnum(QueryContexts.UNAVAILABLE_SEGMENTS_ACTION_KEY, UnavailableSegmentsAction.class, UnavailableSegmentsAction.ALLOW);
       // For nested queries, we need to look at the intervals of the inner most query.
       this.intervals = dataSourceAnalysis.getBaseQuerySegmentSpec()
                                          .map(QuerySegmentSpec::getIntervals)
@@ -488,7 +488,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
             unavailableSegmentsIds.size(),
             unavailableSegmentsIds
         );
-        if (unavailableSegmentsAction == QueryContexts.UnavailableSegmentsAction.FAIL) {
+        if (unavailableSegmentsAction == UnavailableSegmentsAction.FAIL) {
           throw new QueryException(
               QueryException.UNAVAILABLE_SEGMENTS_ERROR_CODE,
               StringUtils.format(
@@ -928,5 +928,11 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
       return new PartitionChunkEntry<>(spec.getInterval(), spec.getVersion(), chunk);
     }
+  }
+
+  public enum UnavailableSegmentsAction
+  {
+    FAIL,
+    ALLOW;
   }
 }

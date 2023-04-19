@@ -170,7 +170,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    */
   private volatile @MonotonicNonNull DataSourcesSnapshot dataSourcesSnapshot = null;
 
-  private final Set<SegmentId> segmentHandedOffStatus = Sets.newConcurrentHashSet();
+  private final Set<SegmentId> handedOffSegments = Sets.newConcurrentHashSet();
 
   /**
    * The latest {@link DatabasePoll} represent {@link #poll()} calls which update {@link #dataSourcesSnapshot}, either
@@ -783,8 +783,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public int markSegmentAsHandedOff(SegmentId segmentId)
   {
-    if (!segmentHandedOffStatus.contains(segmentId)) {
-      segmentHandedOffStatus.add(segmentId);
+    if (!handedOffSegments.contains(segmentId)) {
+      handedOffSegments.add(segmentId);
       return connector.getDBI().withHandle(
           handle ->
               SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
@@ -905,7 +905,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     //
     // setting connection to read-only will allow some database such as MySQL
     // to automatically use read-only transaction mode, further optimizing the query
-    final Map<String, Set<SegmentId>> handedOffStatePerDataSource = new HashMap<>();
+    final Map<String, Set<SegmentId>> datasourceToHandedOffSegments = new HashMap<>();
     final List<DataSegment> segments = connector.inReadOnlyTransaction(
         new TransactionCallback<List<DataSegment>>()
         {
@@ -925,7 +925,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                           DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
                           boolean handedOff = r.getBoolean("handed_off");
                           if (handedOff) {
-                            handedOffStatePerDataSource.computeIfAbsent(segment.getDataSource(), value -> new HashSet<>()).add(segment.getId());
+                            datasourceToHandedOffSegments.computeIfAbsent(segment.getDataSource(), value -> new HashSet<>()).add(segment.getId());
                           }
                           return replaceWithExistingSegmentIfPresent(segment);
                         }
@@ -964,8 +964,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       log.info("Polled and found %,d segments in the database", segments.size());
     }
 
-    segmentHandedOffStatus.clear();
-    segmentHandedOffStatus.addAll(handedOffStatePerDataSource.values().stream().flatMap(Collection::stream).collect(Collectors.toSet()));
+    handedOffSegments.clear();
+    handedOffSegments.addAll(datasourceToHandedOffSegments.values().stream().flatMap(Collection::stream).collect(Collectors.toSet()));
 
     if (null != dataSourcesSnapshot) {
       Set<SegmentWithOvershadowedStatus> oldSegments = DataSourcesSnapshot.getSegmentsWithOvershadowedStatus(
@@ -978,7 +978,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
           Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
           dataSourceProperties,
-          handedOffStatePerDataSource,
+          datasourceToHandedOffSegments,
           oldSegments,
           oldChanges
       );
@@ -986,7 +986,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
           Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
           dataSourceProperties,
-          handedOffStatePerDataSource
+          datasourceToHandedOffSegments
       );
     }
   }

@@ -353,7 +353,7 @@ public class MetadataSegmentView
 
     try {
       changeRequestsSnapshot = jsonMapper.readValue(
-          coordinatorClient.getThingsFromLeaderNode(queryBuilder.toString()),
+          coordinatorClient.getThingsFromLeaderNode(queryBuilder.toString()).rhs,
           new TypeReference<ChangeRequestsSnapshot<DataSegmentChange>>() {});
     }
     catch (IOException e) {

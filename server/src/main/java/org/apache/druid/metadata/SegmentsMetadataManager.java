@@ -75,6 +75,9 @@ public interface SegmentsMetadataManager
 
   int markSegmentsAsUnused(Set<SegmentId> segmentIds);
 
+  /**
+   * Set handed_off field for the segment
+   */
   int markSegmentAsHandedOff(SegmentId segmentId);
 
   /**

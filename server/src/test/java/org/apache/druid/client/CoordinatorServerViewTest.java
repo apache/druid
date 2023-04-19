@@ -30,6 +30,7 @@ import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.TestHelper;
@@ -66,16 +67,16 @@ public class CoordinatorServerViewTest extends CuratorTestBase
 
   private BatchServerInventoryView baseView;
   private CoordinatorServerView overlordServerView;
-  private SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
+  private SegmentsMetadataManager segmentsMetadataManager;
 
   public CoordinatorServerViewTest()
   {
     jsonMapper = TestHelper.makeJsonMapper();
     zkPathsConfig = new ZkPathsConfig();
     inventoryPath = zkPathsConfig.getLiveSegmentsPath();
-    sqlSegmentsMetadataManager = EasyMock.createNiceMock(SqlSegmentsMetadataManager.class);
-    EasyMock.expect(sqlSegmentsMetadataManager.markSegmentAsHandedOff(EasyMock.anyObject())).andReturn(1).anyTimes();
-    EasyMock.replay(sqlSegmentsMetadataManager);
+    segmentsMetadataManager = EasyMock.createNiceMock(SqlSegmentsMetadataManager.class);
+    EasyMock.expect(segmentsMetadataManager.markSegmentAsHandedOff(EasyMock.anyObject())).andReturn(1).anyTimes();
+    EasyMock.replay(segmentsMetadataManager);
   }
 
   @Before
@@ -342,7 +343,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
         baseView,
         new CoordinatorSegmentWatcherConfig(),
         new NoopServiceEmitter(),
-        sqlSegmentsMetadataManager
+        segmentsMetadataManager
     );
 
     baseView.start();
