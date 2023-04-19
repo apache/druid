@@ -33,7 +33,6 @@ import com.google.common.base.Stopwatch;
 import com.google.common.io.CountingOutputStream;
 import it.unimi.dsi.fastutil.io.FastBufferedOutputStream;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -203,9 +202,6 @@ public class RetryableS3OutputStream extends OutputStream
     try {
       if (chunk.length() > 0) {
         resultsSize += chunk.length();
-        if (resultsSize > config.getMaxResultsSize()) {
-          throw new IOE("Exceeded max results size [%s]", config.getMaxResultsSize());
-        }
 
         pushStopwatch.start();
         pushResults.add(push(chunk));

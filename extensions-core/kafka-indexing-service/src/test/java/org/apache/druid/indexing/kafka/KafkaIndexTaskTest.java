@@ -2707,8 +2707,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(
         Collections.singleton(
             new ResourceAction(new Resource(
-                ResourceType.EXTERNAL,
-                KafkaIndexTask.INPUT_SOURCE_TYPE
+                KafkaIndexTask.INPUT_SOURCE_TYPE,
+                ResourceType.EXTERNAL
             ), Action.READ)),
         task.getInputSourceResources()
     );
