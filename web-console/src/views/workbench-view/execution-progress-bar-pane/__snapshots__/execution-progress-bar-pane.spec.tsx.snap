@@ -7,12 +7,12 @@ exports[`ExecutionProgressBarPane matches snapshot 1`] = `
   <Unknown>
     Query complete, waiting for segments to be loaded...
     <React.Fragment>
-       
+
       <span
         className="cancel"
         onClick={[Function]}
       >
-        (stop waiting)
+        (skip waiting)
       </span>
     </React.Fragment>
   </Unknown>

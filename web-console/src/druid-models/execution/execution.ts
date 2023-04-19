@@ -67,7 +67,7 @@ type ExecutionDestination =
   | {
       type: 'taskReport';
     }
-  | { type: 'dataSource'; dataSource: string; exists?: boolean }
+  | { type: 'dataSource'; dataSource: string; loaded?: boolean }
   | { type: 'download' };
 
 export type ExecutionStatus = 'RUNNING' | 'FAILED' | 'SUCCESS';
@@ -505,7 +505,7 @@ export class Execution {
     });
   }
 
-  public markDestinationDatasourceExists(): Execution {
+  public markDestinationDatasourceLoaded(): Execution {
     const { destination } = this;
     if (destination?.type !== 'dataSource') return this;
 
@@ -513,7 +513,7 @@ export class Execution {
       ...this.valueOf(),
       destination: {
         ...destination,
-        exists: true,
+        loaded: true,
       },
     });
   }
@@ -537,7 +537,7 @@ export class Execution {
 
     const { status, destination } = this;
     if (status === 'SUCCESS' && destination?.type === 'dataSource') {
-      return Boolean(destination.exists);
+      return Boolean(destination.loaded);
     }
 
     return true;
