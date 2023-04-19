@@ -21,7 +21,6 @@ package org.apache.druid.catalog.sync;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Sets;
 import org.apache.druid.catalog.http.CatalogResource;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefnRegistry;
@@ -46,7 +45,6 @@ import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Guice-injected client for the catalog update sync process. Requests
@@ -129,7 +127,7 @@ public class CatalogClient implements CatalogSource
     }
     final StringFullResponseHolder responseHolder;
     try {
-      responseHolder = coordClient.go(request, Optional.of(Sets.newHashSet(HttpResponseStatus.NOT_FOUND)));
+      responseHolder = coordClient.go(request);
     }
     catch (IOException e) {
       throw new ISE(e, "Failed to send catalog sync");

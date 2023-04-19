@@ -45,8 +45,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
-import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -126,9 +124,8 @@ public class DruidLeaderClient
 
   /**
    * Executes a Request object aimed at the leader. Throws IOException if the leader cannot be located.
-   * Internal retries are attempted if non 200 response is received. If the caller expects and wants to handle a response
-   * other than 200, they should use {@link #go(Request, Optional)} , which will avoid internal retries for the desired
-   * response codes
+   * Internal retries are attempted if 503/504 response is received. If the caller wants to override this
+   * retry behavior, they should use {@link #go(Request, HttpResponseHandler, boolean)}
    *
    * @param request
    * @throws IOException
@@ -136,38 +133,18 @@ public class DruidLeaderClient
    */
   public StringFullResponseHolder go(Request request) throws IOException, InterruptedException
   {
-    return go(request, new StringFullResponseHandler(StandardCharsets.UTF_8), Optional.empty());
-  }
-
-  /**
-   * *
-   *
-   * @param request
-   * @param acceptableResponses A set of HttpResponseStatuses, in addition to 200(OK), which the caller will handle.
-   *                            If a request returns any of these codes, the result is passed to the client. If a request
-   *                            returns a response other than the ones in acceptableResponses, attempts are made to relocate
-   *                            the leader and get an acceptable response. Reattempts are best-effort. If these reattempts still
-   *                            result in an unacceptable response, the response is returned to the client
-   *                            If empty, only 200 is considered as acceptable
-   * @throws IOException
-   * @throws InterruptedException
-   */
-  public StringFullResponseHolder go(Request request, Optional<Set<HttpResponseStatus>> acceptableResponses)
-      throws IOException, InterruptedException
-  {
-    return go(request, new StringFullResponseHandler(StandardCharsets.UTF_8), acceptableResponses);
+    return go(request, new StringFullResponseHandler(StandardCharsets.UTF_8), true);
   }
 
   /**
    * Executes a Request object aimed at the leader. Throws IOException if the leader cannot be located.
-   * Internal retries are attempted if non 200 response is received. If the caller expects and wants to handle a response
-   * other than 200, they should use {@link #go(Request, HttpResponseHandler, Optional)} , which will avoid internal retries for the desired
-   * response codes
+   * Internal retries are attempted if 503/504 response is received. If the caller wants to override this
+   * retry behavior, they should use {@link #go(Request, HttpResponseHandler, boolean)}
    */
   public <T, H extends FullResponseHolder<T>> H go(Request request, HttpResponseHandler<H, H> responseHandler)
       throws IOException, InterruptedException
   {
-    return go(request, responseHandler, Optional.empty());
+    return go(request, responseHandler, true);
   }
 
   /**
@@ -175,24 +152,19 @@ public class DruidLeaderClient
    *
    * @param request
    * @param responseHandler
-   * @param acceptableResponses A set of HttpResponseStatuses, in addition to 200(OK), which the caller will handle.
-   *                            If a request returns any of these codes, the result is passed to the client. If a request
-   *                            returns a response other than the ones in acceptableResponses, attempts are made to relocate
-   *                            the leader and get an acceptable response. Reattempts are best-effort. If these reattempts still
-   *                            result in an unacceptable response, the response is returned to the client
-   *                            If empty, only 200 is considered as acceptable
+   * @param shouldRetry If internal retries with cache invalidation should be done for 503 and 504 responses
    * @throws IOException
    * @throws InterruptedException
    */
   public <T, H extends FullResponseHolder<T>> H go(
       Request request,
       HttpResponseHandler<H, H> responseHandler,
-      Optional<Set<HttpResponseStatus>> acceptableResponses
+      boolean shouldRetry
   )
       throws IOException, InterruptedException
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
-    for (int counter = 1; counter <= MAX_RETRIES; counter++) {
+    for (int counter = 0; counter < MAX_RETRIES; counter++) {
 
       final H fullResponseHolder;
 
@@ -213,8 +185,8 @@ public class DruidLeaderClient
         request = getNewRequestUrlInvalidatingCache(request);
         continue;
       }
-
-      if (HttpResponseStatus.TEMPORARY_REDIRECT.equals(fullResponseHolder.getResponse().getStatus())) {
+      HttpResponseStatus responseStatus = fullResponseHolder.getResponse().getStatus();
+      if (HttpResponseStatus.TEMPORARY_REDIRECT.equals(responseStatus)) {
         String redirectUrlStr = fullResponseHolder.getResponse().headers().get("Location");
         if (redirectUrlStr == null) {
           throw new IOE("No redirect location is found in response from url[%s].", request.getUrl());
@@ -244,13 +216,11 @@ public class DruidLeaderClient
         ));
 
         request = withUrl(request, redirectUrl);
-      } else if (isAcceptableResponse(fullResponseHolder.getResponse().getStatus(), acceptableResponses)
-                 || (counter == MAX_RETRIES)) {
-        return fullResponseHolder;
-      } else {
-        // We don't have an acceptable response and still have retries left. Retry by invalidating the cache and relocating
-        // the leader
+      } else if (shouldRetry && (HttpResponseStatus.SERVICE_UNAVAILABLE.equals(responseStatus)
+                 || HttpResponseStatus.GATEWAY_TIMEOUT.equals(responseStatus))) {
         request = getNewRequestUrlInvalidatingCache(request);
+      } else {
+        return fullResponseHolder;
       }
     }
 
@@ -363,17 +333,5 @@ public class DruidLeaderClient
           oldRequest.getUrl().getQuery()
       );
     }
-  }
-
-  private boolean isAcceptableResponse(
-      HttpResponseStatus requestStatus,
-      Optional<Set<HttpResponseStatus>> acceptableResponses
-  )
-  {
-    if (HttpResponseStatus.OK.equals(requestStatus) ||
-        acceptableResponses.isPresent() && acceptableResponses.get().contains(requestStatus)) {
-      return true;
-    }
-    return false;
   }
 }

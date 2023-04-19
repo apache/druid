@@ -21,7 +21,6 @@ package org.apache.druid.security.basic.authorization.db.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.druid.client.coordinator.Coordinator;
@@ -60,7 +59,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
@@ -419,8 +417,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
     );
     BytesFullResponseHolder responseHolder = druidLeaderClient.go(
         req,
-        new BytesFullResponseHandler(),
-        Optional.of(Sets.newHashSet(HttpResponseStatus.NOT_FOUND))
+        new BytesFullResponseHandler()
     );
 
     final HttpResponseStatus status = responseHolder.getStatus();

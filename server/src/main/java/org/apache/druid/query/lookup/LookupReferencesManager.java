@@ -27,7 +27,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.druid.client.coordinator.Coordinator;
@@ -589,8 +588,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
         druidLeaderClient.makeRequest(
             HttpMethod.GET,
             StringUtils.format("/druid/coordinator/v1/lookups/config/%s?detailed=true", tier)
-        ),
-        Optional.of(Sets.newHashSet(HttpResponseStatus.NOT_FOUND))
+        )
     );
   }
 

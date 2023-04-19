@@ -25,7 +25,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
-import org.apache.commons.compress.utils.Sets;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -53,7 +52,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 public class HttpIndexingServiceClient implements IndexingServiceClient
@@ -364,8 +362,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
           druidLeaderClient.makeRequest(
               HttpMethod.GET,
               StringUtils.format("/druid/indexer/v1/task/%s/reports", StringUtils.urlEncode(taskId))
-          ),
-          Optional.of(Sets.newHashSet(HttpResponseStatus.NOT_FOUND))
+          )
       );
 
       if (responseHolder.getContent().length() == 0 || !HttpResponseStatus.OK.equals(responseHolder.getStatus())) {

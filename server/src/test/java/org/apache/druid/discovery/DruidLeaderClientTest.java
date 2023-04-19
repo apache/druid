@@ -41,6 +41,7 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.BaseJettyTest;
@@ -223,7 +224,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
   }
 
   @Test
-  public void testNon200ResponseFromServerAndCacheRefresh() throws Exception
+  public void test503ResponseFromServerAndCacheRefresh() throws Exception
   {
     DruidNodeDiscovery druidNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
     // Should be called twice. Second time is when we refresh the cache since we get 503 in the first request
@@ -258,7 +259,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
   }
 
   @Test
-  public void testNon200ResponseFromServerNoCacheRefresh() throws Exception
+  public void test503ResponseFromServerNoCacheRefresh() throws Exception
   {
     DruidNodeDiscovery druidNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
     // Should be called only once, since we want to handle 503 ourselves and don't want cache refresh
@@ -291,7 +292,8 @@ public class DruidLeaderClientTest extends BaseJettyTest
         HttpResponseStatus.SERVICE_UNAVAILABLE,
         druidLeaderClient.go(
             request,
-            Optional.of(Sets.newHashSet(HttpResponseStatus.SERVICE_UNAVAILABLE))
+            new StringFullResponseHandler(Charset.defaultCharset()),
+            false
         ).getResponse().getStatus()
     );
     EasyMock.verify(druidNodeDiscovery);

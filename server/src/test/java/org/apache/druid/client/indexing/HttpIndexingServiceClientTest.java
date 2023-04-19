@@ -52,7 +52,6 @@ import org.junit.rules.ExpectedException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.Optional;
 
 public class HttpIndexingServiceClientTest
 {
@@ -213,7 +212,7 @@ public class HttpIndexingServiceClientTest
         StandardCharsets.UTF_8
     ).addChunk(jsonMapper.writeValueAsString(dummyResponse));
 
-    EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class), EasyMock.anyObject(Optional.class)))
+    EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class)))
             .andReturn(responseHolder)
             .anyTimes();
 
@@ -250,7 +249,7 @@ public class HttpIndexingServiceClientTest
         StandardCharsets.UTF_8
     ).addChunk("");
 
-    EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class), EasyMock.anyObject(Optional.class)))
+    EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class)))
             .andReturn(responseHolder)
             .anyTimes();
 
@@ -282,7 +281,7 @@ public class HttpIndexingServiceClientTest
         StandardCharsets.UTF_8
     ).addChunk("");
 
-    EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class), EasyMock.anyObject(Optional.class)))
+    EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class)))
             .andReturn(responseHolder)
             .anyTimes();
 
