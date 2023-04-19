@@ -1498,7 +1498,7 @@ public class OverlordResourceTest
     EasyMock.expect(task.getDataSource()).andReturn(dataSource);
     EasyMock.expect(task.getInputSourceResources())
             .andReturn(ImmutableSet.of(new ResourceAction(
-                new Resource(ResourceType.EXTERNAL, inputSourceType),
+                new Resource(inputSourceType, ResourceType.EXTERNAL),
                 Action.READ
             )));
 
@@ -1515,7 +1515,7 @@ public class OverlordResourceTest
 
     Set<ResourceAction> expectedResourceActions = ImmutableSet.of(
         new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.WRITE),
-        new ResourceAction(new Resource(ResourceType.EXTERNAL, inputSourceType), Action.READ)
+        new ResourceAction(new Resource(inputSourceType, ResourceType.EXTERNAL), Action.READ)
     );
     Set<ResourceAction> resourceActions = overlordResource.getNeededResourceActionsForTask(task);
     Assert.assertEquals(expectedResourceActions, resourceActions);
@@ -1566,7 +1566,7 @@ public class OverlordResourceTest
     EasyMock.expect(task.getDataSource()).andReturn(dataSource);
     EasyMock.expect(task.getInputSourceResources())
             .andReturn(ImmutableSet.of(new ResourceAction(
-                new Resource(ResourceType.EXTERNAL, inputSourceType),
+                new Resource(inputSourceType, ResourceType.EXTERNAL),
                 Action.READ
             )));
 

@@ -96,8 +96,8 @@ public class SinglePhaseSubTaskSpecTest
     Assert.assertEquals(
         Collections.singleton(
             new ResourceAction(new Resource(
-                ResourceType.EXTERNAL,
-                LocalInputSource.TYPE_KEY
+                LocalInputSource.TYPE_KEY,
+                ResourceType.EXTERNAL
             ), Action.READ)),
         expected.getInputSourceResources()
     );
