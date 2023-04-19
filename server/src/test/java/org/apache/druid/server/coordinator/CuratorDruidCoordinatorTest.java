@@ -329,8 +329,13 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     final ServerHolder destinationServer = new ServerHolder(dest.toImmutableDruidServer(), destinationLoadQueuePeon);
 
     final BalancerStrategy balancerStrategy = EasyMock.mock(BalancerStrategy.class);
-    EasyMock.expect(balancerStrategy.findNewSegmentHomeBalancer(EasyMock.anyObject(), EasyMock.anyObject()))
-            .andReturn(destinationServer).atLeastOnce();
+    EasyMock.expect(
+        balancerStrategy.findDestinationServerToMoveSegment(
+            EasyMock.anyObject(),
+            EasyMock.anyObject(),
+            EasyMock.anyObject()
+        )
+    ).andReturn(destinationServer).atLeastOnce();
     EasyMock.expect(coordinatorRuntimeParams.getBalancerStrategy())
             .andReturn(balancerStrategy).anyTimes();
     EasyMock.replay(segmentsMetadataManager, coordinatorRuntimeParams, balancerStrategy);

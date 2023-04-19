@@ -53,8 +53,13 @@ public enum SegmentAction
   REPLICATE,
 
   /**
-   * Move a segment to this server. This does not have a corresponding MOVE_FROM
-   * action as that just gets queued as a DROP once the MOVE_TO action is complete.
+   * Move a segment to this server.
    */
   MOVE_TO,
+
+  /**
+   * Move a segment from this server to another. This is essentially a pending
+   * DROP operation, which starts only when the corresponding MOVE_TO has succeded.
+   */
+  MOVE_FROM
 }

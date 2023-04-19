@@ -94,7 +94,7 @@ public class TierLoadingState
 
   void reduceLifetime()
   {
-    minLifetime = 0;
+    minLifetime = Integer.MAX_VALUE;
 
     final Map<Integer, SegmentGroup> lifetimeToGroupCopy = new HashMap<>(lifetimeToGroup);
     lifetimeToGroup.clear();

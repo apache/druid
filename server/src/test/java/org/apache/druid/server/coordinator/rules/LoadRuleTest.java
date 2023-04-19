@@ -123,7 +123,7 @@ public class LoadRuleTest
     EasyMock.expectLastCall().atLeastOnce();
 
     if (!useRoundRobinAssignment) {
-      EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
+      EasyMock.expect(mockBalancerStrategy.findServerToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
               .andDelegateTo(balancerStrategy)
               .times(2);
     }
@@ -218,7 +218,7 @@ public class LoadRuleTest
 
     final DataSegment segment = createDataSegment(DS_WIKI);
 
-    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
+    EasyMock.expect(mockBalancerStrategy.findServerToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
             .andDelegateTo(balancerStrategy)
             .anyTimes();
 
@@ -262,7 +262,7 @@ public class LoadRuleTest
 
     final DataSegment segment = createDataSegment(DS_WIKI);
 
-    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
+    EasyMock.expect(mockBalancerStrategy.findServerToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
             .andDelegateTo(balancerStrategy)
             .anyTimes();
 
@@ -315,7 +315,7 @@ public class LoadRuleTest
 
     final DataSegment segment = createDataSegment(DS_WIKI);
 
-    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
+    EasyMock.expect(mockBalancerStrategy.findServerToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
             .andDelegateTo(balancerStrategy)
             .anyTimes();
 
@@ -366,7 +366,7 @@ public class LoadRuleTest
     loadingPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().once();
 
-    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
+    EasyMock.expect(mockBalancerStrategy.findServerToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
             .andDelegateTo(cachingCostBalancerStrategy)
             .anyTimes();
 
@@ -433,7 +433,7 @@ public class LoadRuleTest
     EasyMock.expectLastCall().atLeastOnce();
 
     if (!useRoundRobinAssignment) {
-      EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
+      EasyMock.expect(mockBalancerStrategy.findServerToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
               .andDelegateTo(balancerStrategy)
               .times(1);
     }
@@ -491,7 +491,7 @@ public class LoadRuleTest
   public void testMaxLoadingQueueSize()
   {
     if (!useRoundRobinAssignment) {
-      EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
+      EasyMock.expect(mockBalancerStrategy.findServerToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
               .andDelegateTo(balancerStrategy)
               .times(2);
     }
@@ -553,7 +553,7 @@ public class LoadRuleTest
     final LoadQueuePeon mockPeon2 = createOneCallPeonMock();
 
     if (!useRoundRobinAssignment) {
-      EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
+      EasyMock.expect(mockBalancerStrategy.findServerToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
               .andDelegateTo(balancerStrategy)
               .times(1);
     }
@@ -594,9 +594,9 @@ public class LoadRuleTest
 
     final DataSegment segment = createDataSegment(DS_WIKI);
     if (!useRoundRobinAssignment) {
-      EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(segment, ImmutableList.of(holder2)))
+      EasyMock.expect(mockBalancerStrategy.findServerToLoadSegment(segment, ImmutableList.of(holder2)))
               .andReturn(Collections.singletonList(holder2).iterator());
-      EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(segment, ImmutableList.of(holder4, holder3)))
+      EasyMock.expect(mockBalancerStrategy.findServerToLoadSegment(segment, ImmutableList.of(holder4, holder3)))
               .andReturn(Arrays.asList(holder3, holder4).iterator());
     }
 
@@ -749,6 +749,7 @@ public class LoadRuleTest
     final LoadQueuePeon mockPeon = EasyMock.createMock(LoadQueuePeon.class);
     EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(segs).anyTimes();
     EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Collections.emptySet()).anyTimes();
+    EasyMock.expect(mockPeon.getSegmentsToDrop()).andReturn(Collections.emptySet()).anyTimes();
     EasyMock.expect(mockPeon.getSegmentsInQueue())
             .andReturn(ImmutableMap.of(segment, SegmentAction.LOAD)).anyTimes();
     EasyMock.expect(mockPeon.getNumberOfSegmentsToLoad()).andReturn(segs.size()).anyTimes();

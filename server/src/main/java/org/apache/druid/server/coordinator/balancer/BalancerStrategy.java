@@ -42,24 +42,29 @@ public interface BalancerStrategy
   /**
    * Finds the best server to move a segment to according to the balancing strategy.
    *
-   * @param proposalSegment segment to move
-   * @param serverHolders   servers to consider as move destinations
+   * @param proposalSegment    segment to move
+   * @param sourceServer       Server the segment is currently placed on.
+   * @param destinationServers servers to consider as move destinations
    * @return The server to move to, or null if no move should be made or no server is suitable
    */
   @Nullable
-  ServerHolder findNewSegmentHomeBalancer(DataSegment proposalSegment, List<ServerHolder> serverHolders);
+  ServerHolder findDestinationServerToMoveSegment(
+      DataSegment proposalSegment,
+      ServerHolder sourceServer,
+      List<ServerHolder> destinationServers
+  );
 
   /**
    * Finds the best servers on which to place the {@code proposalSegment}.
    * This method can be used both for placing the first copy of a segment
-   * in the cluster or a replica of the segment.
+   * in the tier or a replica of the segment.
    *
    * @param proposalSegment segment to place on servers
    * @param serverHolders   servers to consider as segment homes
    * @return Iterator over the best servers (in order) on which the segment
    * can be placed.
    */
-  Iterator<ServerHolder> findNewSegmentHomeReplicator(
+  Iterator<ServerHolder> findServerToLoadSegment(
       DataSegment proposalSegment,
       List<ServerHolder> serverHolders
   );
@@ -184,7 +189,7 @@ public interface BalancerStrategy
    */
   default Iterator<ServerHolder> pickServersToDrop(DataSegment toDropSegment, NavigableSet<ServerHolder> serverHolders)
   {
-    // By default, use the reverse order to get the holders with least available size first.
+    // By default, return holders with least available size first.
     return serverHolders.iterator();
   }
 

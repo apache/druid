@@ -27,7 +27,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -105,6 +104,12 @@ public class ServerHolder implements Comparable<ServerHolder>
           } else {
             sizeOfDroppingSegments += segment.getSize();
           }
+        }
+    );
+
+    peon.getSegmentsMarkedToDrop().forEach(
+        segment -> {
+          queuedSegments.put(segment, SegmentAction.MOVE_FROM);
         }
     );
   }
@@ -189,7 +194,7 @@ public class ServerHolder implements Comparable<ServerHolder>
    */
   public Map<DataSegment, SegmentAction> getQueuedSegments()
   {
-    return Collections.unmodifiableMap(queuedSegments);
+    return new HashMap<>(queuedSegments);
   }
 
   /**
@@ -208,6 +213,8 @@ public class ServerHolder implements Comparable<ServerHolder>
         segments.remove(segment);
       } else if (action == SegmentAction.MOVE_TO && includeMoving) {
         segments.add(segment);
+      } else if (action == SegmentAction.MOVE_FROM && includeMoving) {
+        segments.remove(segment);
       }
     });
 
@@ -268,7 +275,7 @@ public class ServerHolder implements Comparable<ServerHolder>
   public boolean cancelOperation(SegmentAction action, DataSegment segment)
   {
     return queuedSegments.get(segment) == simplify(action)
-           && peon.cancelOperation(segment)
+           && (action == SegmentAction.MOVE_FROM || peon.cancelOperation(segment))
            && cleanupState(segment);
   }
 

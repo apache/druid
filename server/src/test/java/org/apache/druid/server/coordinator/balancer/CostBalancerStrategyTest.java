@@ -142,7 +142,7 @@ public class CostBalancerStrategyTest
     BalancerStrategy strategy = new CostBalancerStrategy(
         MoreExecutors.listeningDecorator(Execs.multiThreaded(4, "CostBalancerStrategyTest-%d"))
     );
-    ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList).next();
+    ServerHolder holder = strategy.findServerToLoadSegment(segment, serverHolderList).next();
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
     Assert.assertEquals("Best Server should be BEST_SERVER", "BEST_SERVER", holder.getServer().getName());
   }
@@ -156,7 +156,7 @@ public class CostBalancerStrategyTest
     BalancerStrategy strategy = new CostBalancerStrategy(
         MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "CostBalancerStrategyTest-%d"))
     );
-    ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList).next();
+    ServerHolder holder = strategy.findServerToLoadSegment(segment, serverHolderList).next();
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
     Assert.assertEquals("Best Server should be BEST_SERVER", "BEST_SERVER", holder.getServer().getName());
   }

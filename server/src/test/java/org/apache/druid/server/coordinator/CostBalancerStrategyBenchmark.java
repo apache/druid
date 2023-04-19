@@ -85,7 +85,7 @@ public class CostBalancerStrategyBenchmark extends AbstractBenchmark
   public void testBenchmark()
   {
     DataSegment segment = CostBalancerStrategyTest.getSegment(1000, "testds", interval1);
-    Iterator<ServerHolder> candidates = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
+    Iterator<ServerHolder> candidates = strategy.findServerToLoadSegment(segment, serverHolderList);
     selected = candidates.hasNext() ? candidates.next() : null;
   }
 

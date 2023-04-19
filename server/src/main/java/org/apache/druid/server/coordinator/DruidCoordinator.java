@@ -889,7 +889,7 @@ public class DruidCoordinator
           server -> server.getQueuedSegments().forEach(
               (segment, action) -> {
                 if (action != SegmentAction.DROP
-                    && server.getPeon().cancelOperation(segment)) {
+                    && server.cancelOperation(action, segment)) {
                   cancelledCount.incrementAndGet();
                 }
               }

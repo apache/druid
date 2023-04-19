@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -26,10 +26,15 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
+import org.apache.druid.server.coordinator.DruidCluster;
+import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.ReplicationThrottler;
+import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.balancer.BalancerSegmentHolder;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
-import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -150,10 +155,7 @@ public class BalanceSegmentsTest
         new BalancerSegmentHolder(serverHolder1, segment1),
         new BalancerSegmentHolder(serverHolder1, segment2)
     ).once();
-
-    EasyMock.expect(strategy.findNewSegmentHomeBalancer(EasyMock.anyObject(), EasyMock.anyObject()))
-            .andReturn(serverHolder3)
-            .anyTimes();
+    expectFindDestinationAndReturn(strategy, serverHolder3);
     EasyMock.replay(strategy);
 
     // ceil(3 * 0.6) = 2 segments from decommissioning servers
@@ -240,10 +242,7 @@ public class BalanceSegmentsTest
         new BalancerSegmentHolder(serverHolder2, segment3),
         new BalancerSegmentHolder(serverHolder2, segment4)
     ).once();
-
-    EasyMock.expect(strategy.findNewSegmentHomeBalancer(EasyMock.anyObject(), EasyMock.anyObject()))
-            .andReturn(serverHolder3)
-            .anyTimes();
+    expectFindDestinationAndReturn(strategy, serverHolder3);
     EasyMock.replay(strategy);
 
     CoordinatorDynamicConfig dynamicConfig =
@@ -282,10 +281,13 @@ public class BalanceSegmentsTest
         strategy,
         new BalancerSegmentHolder(serverHolder1, segment1)
     ).times(2);
-    EasyMock.expect(strategy.findNewSegmentHomeBalancer(EasyMock.anyObject(), EasyMock.anyObject())).andAnswer(() -> {
-      List<ServerHolder> holders = (List<ServerHolder>) EasyMock.getCurrentArguments()[1];
-      return holders.get(0);
-    }).anyTimes();
+    EasyMock.expect(
+        strategy.findDestinationServerToMoveSegment(
+            EasyMock.anyObject(),
+            EasyMock.anyObject(),
+            EasyMock.anyObject()
+        )
+    ).andAnswer(() -> ((List<ServerHolder>) EasyMock.getCurrentArguments()[2]).get(0)).anyTimes();
     EasyMock.replay(strategy);
 
     DruidCoordinatorRuntimeParams params =
@@ -308,8 +310,7 @@ public class BalanceSegmentsTest
     BalancerStrategy strategy = EasyMock.createMock(BalancerStrategy.class);
     expectPickLoadingSegmentsAndReturnEmpty(strategy).once();
     expectPickLoadedSegmentsAndReturn(strategy, new BalancerSegmentHolder(holder1, segment1)).once();
-    EasyMock.expect(strategy.findNewSegmentHomeBalancer(EasyMock.anyObject(), EasyMock.anyObject()))
-            .andReturn(holder2).once();
+    expectFindDestinationAndReturn(strategy, holder2);
     EasyMock.replay(strategy);
 
     DruidCoordinatorRuntimeParams params = defaultRuntimeParamsBuilder(holder1, holder2)
@@ -386,10 +387,7 @@ public class BalanceSegmentsTest
     BalancerStrategy strategy = EasyMock.createMock(BalancerStrategy.class);
     expectPickLoadingSegmentsAndReturnEmpty(strategy).once();
     expectPickLoadedSegmentsAndReturn(strategy, new BalancerSegmentHolder(holder2, segment3)).once();
-
-    EasyMock.expect(strategy.findNewSegmentHomeBalancer(EasyMock.anyObject(), EasyMock.anyObject()))
-            .andReturn(holder3)
-            .anyTimes();
+    expectFindDestinationAndReturn(strategy, holder3);
     EasyMock.replay(strategy);
 
     DruidCoordinatorRuntimeParams params =
@@ -515,6 +513,17 @@ public class BalanceSegmentsTest
             EasyMock.eq(false)
         )
     ).andReturn(Arrays.asList(pickedLoadedSegments).iterator());
+  }
+
+  private void expectFindDestinationAndReturn(BalancerStrategy strategy, ServerHolder chosenServer)
+  {
+    EasyMock.expect(
+        strategy.findDestinationServerToMoveSegment(
+            EasyMock.anyObject(),
+            EasyMock.anyObject(),
+            EasyMock.anyObject()
+        )
+    ).andReturn(chosenServer).anyTimes();
   }
 
   private ReplicationThrottler createReplicationThrottler()

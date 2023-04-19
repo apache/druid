@@ -197,14 +197,18 @@ public class CostBalancerStrategy implements BalancerStrategy
   }
 
   @Override
-  public Iterator<ServerHolder> findNewSegmentHomeReplicator(DataSegment proposalSegment, List<ServerHolder> serverHolders)
+  public Iterator<ServerHolder> findServerToLoadSegment(DataSegment proposalSegment, List<ServerHolder> serverHolders)
   {
     return chooseBestServers(proposalSegment, serverHolders, false);
   }
 
 
   @Override
-  public ServerHolder findNewSegmentHomeBalancer(DataSegment proposalSegment, List<ServerHolder> serverHolders)
+  public ServerHolder findDestinationServerToMoveSegment(
+      DataSegment proposalSegment,
+      ServerHolder sourceServer,
+      List<ServerHolder> serverHolders
+  )
   {
     Iterator<ServerHolder> servers = chooseBestServers(proposalSegment, serverHolders, true);
     return servers.hasNext() ? servers.next() : null;
@@ -337,9 +341,6 @@ public class CostBalancerStrategy implements BalancerStrategy
     if (projectedSegments.contains(proposalSegment)) {
       cost -= computeJointSegmentsCost(proposalSegment, proposalSegment);
     }
-
-    // minus the costs of segments that are marked to be dropped
-    cost -= computeJointSegmentsCost(proposalSegment, server.getPeon().getSegmentsMarkedToDrop());
 
     return cost;
   }

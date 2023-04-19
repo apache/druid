@@ -93,12 +93,15 @@ public class CachingCostBalancerStrategyTest
         executorService
     );
     CostBalancerStrategy costBalancerStrategy = createCostBalancerStrategy(executorService);
+    final ServerHolder firstServer = serverHolderList.get(0);
     int notEqual = segmentQueries
         .stream()
         .mapToInt(
             s -> {
-              ServerHolder s1 = cachingCostBalancerStrategy.findNewSegmentHomeBalancer(s, serverHolderList);
-              ServerHolder s2 = costBalancerStrategy.findNewSegmentHomeBalancer(s, serverHolderList);
+              ServerHolder s1 = cachingCostBalancerStrategy
+                  .findDestinationServerToMoveSegment(s, firstServer, serverHolderList);
+              ServerHolder s2 = costBalancerStrategy
+                  .findDestinationServerToMoveSegment(s, firstServer, serverHolderList);
               return (s1.getServer().getName().equals(s2.getServer().getName())) ? 0 : 1;
             }
         )

@@ -61,6 +61,10 @@ public class CachingCostBalancerStrategy extends CostBalancerStrategy
           .computeCost(serverName, proposalSegment);
     }
 
+    // minus the costs of segments that are being dropped
+    cost -= costCacheForSegments(server, server.getPeon().getSegmentsToDrop())
+        .computeCost(serverName, proposalSegment);
+
     // minus the costs of segments that are marked to be dropped
     cost -= costCacheForSegments(server, server.getPeon().getSegmentsMarkedToDrop())
         .computeCost(serverName, proposalSegment);

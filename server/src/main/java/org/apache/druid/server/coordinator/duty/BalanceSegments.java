@@ -100,11 +100,11 @@ public class BalanceSegments implements CoordinatorDuty
       }
 
       // Create alerts for stuck tiers
-      if (movingState.getMinLifetime() <= 0) {
+      int numExpiredSegments = movingState.getNumExpiredSegments();
+      if (movingState.getMinLifetime() < 0 && numExpiredSegments > 0) {
         log.makeAlert(
             "Balancing queue for tier [%s] has [%d] segments stuck.",
-            tier,
-            movingState.getNumExpiredSegments()
+            tier, numExpiredSegments
         ).addData("segments", movingState.getExpiredSegments()).emit();
       }
     });

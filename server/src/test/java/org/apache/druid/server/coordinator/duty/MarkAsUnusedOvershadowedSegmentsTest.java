@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.DateTimes;
@@ -48,81 +49,54 @@ import java.util.List;
 @RunWith(JUnitParamsRunner.class)
 public class MarkAsUnusedOvershadowedSegmentsTest
 {
-  MarkAsUnusedOvershadowedSegments markAsUnusedOvershadowedSegments;
-  DruidCoordinator coordinator = EasyMock.createStrictMock(DruidCoordinator.class);
-  private List<DataSegment> usedSegments;
-  DateTime start = DateTimes.of("2012-01-01");
-  DruidCluster druidCluster;
-  private LoadQueuePeon mockPeon = EasyMock.createMock(LoadQueuePeon.class);
-  private ImmutableDruidServer druidServer = EasyMock.createMock(ImmutableDruidServer.class);
-  private ImmutableDruidDataSource druidDataSource = EasyMock.createMock(ImmutableDruidDataSource.class);
-  private DataSegment segmentV0 = new DataSegment.Builder().dataSource("test")
-                                                           .interval(new Interval(start, start.plusHours(1)))
-                                                           .version("0")
-                                                           .size(0)
-                                                           .build();
-  private DataSegment segmentV1 = new DataSegment.Builder().dataSource("test")
-                                                           .interval(new Interval(start, start.plusHours(1)))
-                                                           .version("1")
-                                                           .size(0)
-                                                           .build();
-  private DataSegment segmentV2 = new DataSegment.Builder().dataSource("test")
-                                                           .interval(new Interval(start, start.plusHours(1)))
-                                                           .version("2")
-                                                           .size(0)
-                                                           .build();
+  private final DruidCoordinator coordinator = EasyMock.createStrictMock(DruidCoordinator.class);
+
+  private final DateTime start = DateTimes.of("2012-01-01");
+
+  private final LoadQueuePeon mockPeon = EasyMock.createMock(LoadQueuePeon.class);
+  private final ImmutableDruidDataSource druidDataSource = EasyMock.createMock(ImmutableDruidDataSource.class);
+  private final DataSegment segmentV0 = new DataSegment.Builder().dataSource("test")
+                                                                 .interval(new Interval(start, start.plusHours(1)))
+                                                                 .version("0")
+                                                                 .size(0)
+                                                                 .build();
+  private final DataSegment segmentV1 = new DataSegment.Builder().dataSource("test")
+                                                                 .interval(new Interval(start, start.plusHours(1)))
+                                                                 .version("1")
+                                                                 .size(0)
+                                                                 .build();
+  private final DataSegment segmentV2 = new DataSegment.Builder().dataSource("test")
+                                                                 .interval(new Interval(start, start.plusHours(1)))
+                                                                 .version("2")
+                                                                 .size(0)
+                                                                 .build();
 
   @Test
-  @Parameters(
-      {
-          "historical",
-          "broker"
-      }
-  )
+  @Parameters({"historical", "broker"})
   public void testRun(String serverTypeString)
   {
     ServerType serverType = ServerType.fromString(serverTypeString);
 
-    markAsUnusedOvershadowedSegments =
+    MarkAsUnusedOvershadowedSegments markAsUnusedOvershadowedSegments =
         new MarkAsUnusedOvershadowedSegments(coordinator);
-    usedSegments = ImmutableList.of(segmentV1, segmentV0, segmentV2);
+    final List<DataSegment> usedSegments = ImmutableList.of(segmentV1, segmentV0, segmentV2);
 
     // Dummy values for comparisons in TreeSet
     EasyMock.expect(mockPeon.getSegmentsInQueue())
-            .andReturn(Collections.emptyMap())
-            .anyTimes();
-    EasyMock.expect(druidServer.getMaxSize())
-            .andReturn(0L)
-            .anyTimes();
-    EasyMock.expect(druidServer.getCurrSize())
-            .andReturn(0L)
-            .anyTimes();
-    EasyMock.expect(druidServer.getName())
-            .andReturn("")
-            .anyTimes();
-    EasyMock.expect(druidServer.getHost())
-            .andReturn("")
-            .anyTimes();
-    EasyMock.expect(druidServer.getTier())
-            .andReturn("")
-            .anyTimes();
-    EasyMock.expect(druidServer.getType())
-            .andReturn(serverType)
-            .anyTimes();
+            .andReturn(Collections.emptyMap()).anyTimes();
+    EasyMock.expect(mockPeon.getSegmentsMarkedToDrop())
+            .andReturn(Collections.emptySet()).anyTimes();
+    final ImmutableDruidServer druidServer = new DruidServer("", "", "", 0L, serverType, "", 0)
+        .addDataSegment(segmentV1)
+        .addDataSegment(segmentV2)
+        .toImmutableDruidServer();
 
-    EasyMock.expect(druidServer.getDataSources())
-            .andReturn(ImmutableList.of(druidDataSource))
-            .anyTimes();
-    EasyMock.expect(druidDataSource.getSegments())
-            .andReturn(ImmutableSet.of(segmentV1, segmentV2))
-            .anyTimes();
-    EasyMock.expect(druidDataSource.getName()).andReturn("test").anyTimes();
     coordinator.markSegmentsAsUnused("test", ImmutableSet.of(segmentV1.getId(), segmentV0.getId()));
     EasyMock.expectLastCall();
-    EasyMock.replay(mockPeon, coordinator, druidServer, druidDataSource);
+    EasyMock.replay(mockPeon, coordinator, druidDataSource);
 
-    druidCluster = DruidCluster
-.builder()
+    DruidCluster druidCluster = DruidCluster
+        .builder()
         .addTier("normal", new ServerHolder(druidServer, mockPeon))
         .build();
 
@@ -138,6 +112,6 @@ public class MarkAsUnusedOvershadowedSegmentsTest
         )
         .build();
     markAsUnusedOvershadowedSegments.run(params);
-    EasyMock.verify(coordinator, druidDataSource, druidServer);
+    EasyMock.verify(coordinator, druidDataSource);
   }
 }

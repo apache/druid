@@ -131,7 +131,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
                           .collect(Collectors.toList());
 
     if (eligibleDestinationServers.isEmpty()) {
-      addError(Error.NO_ELIGIBLE_SERVER_FOR_MOVE, segment, tier);
+      incrementStat(Error.NO_ELIGIBLE_SERVER_FOR_MOVE, segment, tier);
       return false;
     }
 
@@ -141,16 +141,16 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     }
 
     final ServerHolder destination =
-        strategy.findNewSegmentHomeBalancer(segment, eligibleDestinationServers);
+        strategy.findDestinationServerToMoveSegment(segment, sourceServer, eligibleDestinationServers);
 
     if (destination == null || destination.getServer().equals(sourceServer.getServer())) {
-      addError(Error.MOVE_FAILED_OPTIMALLY_PLACED, segment, tier);
+      incrementStat(Error.MOVE_SKIPPED_OPTIMALLY_PLACED, segment, tier);
       return false;
     } else if (moveSegment(segment, sourceServer, destination)) {
       stats.addToSegmentStat(Stats.Segments.MOVED, tier, segment.getDataSource(), 1);
       return true;
     } else {
-      addError(Error.MOVE_FAILED, segment, tier);
+      incrementStat(Error.MOVE_FAILED, segment, tier);
       return false;
     }
   }
@@ -378,7 +378,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
     final List<ServerHolder> eligibleServers = segmentStatus.getServersEligibleToDrop();
     if (eligibleServers.isEmpty()) {
-      addError(Error.NO_ELIGIBLE_SERVER_FOR_DROP, segment, tier);
+      incrementStat(Error.NO_ELIGIBLE_SERVER_FOR_DROP, segment, tier);
       return 0;
     }
 
@@ -430,7 +430,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       if (dropped) {
         ++numDropsQueued;
       } else {
-        addError(Error.DROP_FAILED, segment, tier);
+        incrementStat(Error.DROP_FAILED, segment, tier);
       }
     }
 
@@ -450,16 +450,16 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   {
     final List<ServerHolder> eligibleServers = segmentStatus.getServersEligibleToLoad();
     if (eligibleServers.isEmpty()) {
-      addError(Error.NO_ELIGIBLE_SERVER_FOR_LOAD, segment, tier);
+      incrementStat(Error.NO_ELIGIBLE_SERVER_FOR_LOAD, segment, tier);
       return 0;
     }
 
     final Iterator<ServerHolder> serverIterator =
         useRoundRobinAssignment
         ? serverSelector.getServersInTierToLoadSegment(tier, segment)
-        : strategy.findNewSegmentHomeReplicator(segment, eligibleServers);
+        : strategy.findServerToLoadSegment(segment, eligibleServers);
     if (!serverIterator.hasNext()) {
-      addError(Error.NO_STRATEGIC_SERVER_FOR_LOAD, segment, tier);
+      incrementStat(Error.NO_STRATEGIC_SERVER_FOR_LOAD, segment, tier);
       return 0;
     }
 
@@ -472,9 +472,9 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       if (queueSuccess) {
         ++numLoadsQueued;
       } else if (isFirstLoadOnTier) {
-        addError(Error.LOAD_FAILED, segment, tier);
+        incrementStat(Error.LOAD_FAILED, segment, tier);
       } else {
-        addError(Error.REPLICA_THROTTLED, segment, tier);
+        incrementStat(Error.REPLICA_THROTTLED, segment, tier);
       }
     }
 
@@ -500,7 +500,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     return numCancelled;
   }
 
-  private void addError(CoordinatorStat stat, DataSegment segment, String tier)
+  private void incrementStat(CoordinatorStat stat, DataSegment segment, String tier)
   {
     hasErrors = true;
     RowKey rowKey = RowKey.builder()
@@ -516,14 +516,14 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
    */
   private static class Error
   {
-    static final CoordinatorStat MOVE_FAILED = new CoordinatorStat("move failed");
+    static final CoordinatorStat MOVE_FAILED = new CoordinatorStat("failed to start move");
     static final CoordinatorStat NO_ELIGIBLE_SERVER_FOR_MOVE = new CoordinatorStat("no eligible server for move");
-    static final CoordinatorStat MOVE_FAILED_OPTIMALLY_PLACED = new CoordinatorStat("move failed (optimally placed)");
+    static final CoordinatorStat MOVE_SKIPPED_OPTIMALLY_PLACED = new CoordinatorStat("move skipped (optimally placed)");
 
-    static final CoordinatorStat DROP_FAILED = new CoordinatorStat("drop failed");
+    static final CoordinatorStat DROP_FAILED = new CoordinatorStat("failed to start drop");
     static final CoordinatorStat NO_ELIGIBLE_SERVER_FOR_DROP = new CoordinatorStat("no eligible server for drop");
 
-    static final CoordinatorStat LOAD_FAILED = new CoordinatorStat("load failed");
+    static final CoordinatorStat LOAD_FAILED = new CoordinatorStat("failed to start load");
     static final CoordinatorStat REPLICA_THROTTLED = new CoordinatorStat("replica throttled");
     static final CoordinatorStat NO_ELIGIBLE_SERVER_FOR_LOAD = new CoordinatorStat("no eligible server for load");
     static final CoordinatorStat NO_STRATEGIC_SERVER_FOR_LOAD = new CoordinatorStat("no strategic server for load");

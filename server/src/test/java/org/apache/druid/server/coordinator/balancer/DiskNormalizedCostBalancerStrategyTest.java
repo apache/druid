@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.balancer;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -28,8 +28,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
-import org.apache.druid.server.coordinator.balancer.DiskNormalizedCostBalancerStrategy;
+import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeonTester;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
@@ -137,7 +136,7 @@ public class DiskNormalizedCostBalancerStrategyTest
     BalancerStrategy strategy = new DiskNormalizedCostBalancerStrategy(
         MoreExecutors.listeningDecorator(Execs.multiThreaded(4, "DiskNormalizedCostBalancerStrategyTest-%d"))
     );
-    ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList).next();
+    ServerHolder holder = strategy.findServerToLoadSegment(segment, serverHolderList).next();
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
     Assert.assertEquals("Best Server should be BEST_SERVER", "BEST_SERVER", holder.getServer().getName());
   }
@@ -151,7 +150,7 @@ public class DiskNormalizedCostBalancerStrategyTest
     BalancerStrategy strategy = new DiskNormalizedCostBalancerStrategy(
         MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d"))
     );
-    ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList).next();
+    ServerHolder holder = strategy.findServerToLoadSegment(segment, serverHolderList).next();
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
     Assert.assertEquals("Best Server should be BEST_SERVER", "BEST_SERVER", holder.getServer().getName());
   }

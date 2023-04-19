@@ -151,6 +151,7 @@ public class SegmentLoadQueueManager
     // mark segment to drop before it is actually loaded on server
     // to be able to account for this information in BalancerStrategy immediately
     serverB.startOperation(SegmentAction.MOVE_TO, segment);
+    serverA.startOperation(SegmentAction.MOVE_FROM, segment);
     peonA.markSegmentToDrop(segment);
     segmentsMovingInTier.markStarted(
         segment.getId(),
@@ -177,6 +178,7 @@ public class SegmentLoadQueueManager
                 && !peonA.getSegmentsToDrop().contains(segment)
                 && (taskMaster.isHttpLoading()
                     || serverInventoryView.isSegmentLoadedByServer(serverNameB, segment))) {
+              peonA.unmarkSegmentToDrop(segment);
               peonA.dropSegment(segment, moveFinishCallback);
             } else {
               moveFinishCallback.execute(success);
@@ -185,6 +187,7 @@ public class SegmentLoadQueueManager
       );
     }
     catch (Exception e) {
+      serverA.cancelOperation(SegmentAction.MOVE_FROM, segment);
       serverB.cancelOperation(SegmentAction.MOVE_TO, segment);
       moveFinishCallback.execute(false);
       log.error(e, "Error while moving segment[%s] to server[%s]", segment.getId(), serverNameB);

@@ -103,14 +103,17 @@ public class TierSegmentBalancer
     );
 
     // Move segments from decommissioning to active servers
-    int maxDecommPercentToMove = dynamicConfig.getDecommissioningMaxPercentOfMaxSegmentsToMove();
-    int maxDecommSegmentsToMove = (int) Math.ceil(totalMaxSegmentsToMove * (maxDecommPercentToMove / 100.0));
-    int movedDecommSegments =
-        moveSegmentsFromTo(decommissioningServers, activeServers, maxDecommSegmentsToMove, false);
-    log.info(
-        "Moved [%d] segments out of max [%d (%d%%)] from decommissioning to active servers.",
-        movedDecommSegments, maxDecommSegmentsToMove, maxDecommPercentToMove
-    );
+    int movedDecommSegments = 0;
+    if (!decommissioningServers.isEmpty()) {
+      int maxDecommPercentToMove = dynamicConfig.getDecommissioningMaxPercentOfMaxSegmentsToMove();
+      int maxDecommSegmentsToMove = (int) Math.ceil(totalMaxSegmentsToMove * (maxDecommPercentToMove / 100.0));
+      movedDecommSegments +=
+          moveSegmentsFromTo(decommissioningServers, activeServers, maxDecommSegmentsToMove, false);
+      log.info(
+          "Moved [%d] segments out of max [%d (%d%%)] from decommissioning to active servers.",
+          movedDecommSegments, maxDecommSegmentsToMove, maxDecommPercentToMove
+      );
+    }
 
     // Move segments across active servers
     int maxGeneralSegmentsToMove = totalMaxSegmentsToMove - movedDecommSegments;
@@ -234,9 +237,9 @@ public class TierSegmentBalancer
 
   private static class Error
   {
-    static final CoordinatorStat SEGMENT_IS_UNUSED = new CoordinatorStat("move failed (segment is unused)");
-    static final CoordinatorStat DATASOURCE_NOT_FOUND = new CoordinatorStat("move failed (datasource not found)");
-    static final CoordinatorStat METADATA_NOT_FOUND = new CoordinatorStat("move failed (metadata not found)");
+    static final CoordinatorStat SEGMENT_IS_UNUSED = new CoordinatorStat("move skipped (unused segment)");
+    static final CoordinatorStat DATASOURCE_NOT_FOUND = new CoordinatorStat("move skipped (invalid datasource)");
+    static final CoordinatorStat METADATA_NOT_FOUND = new CoordinatorStat("move skipped (invalid segment)");
   }
 
 }

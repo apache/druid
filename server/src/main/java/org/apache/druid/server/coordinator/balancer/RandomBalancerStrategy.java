@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
 public class RandomBalancerStrategy implements BalancerStrategy
 {
   @Override
-  public Iterator<ServerHolder> findNewSegmentHomeReplicator(
+  public Iterator<ServerHolder> findServerToLoadSegment(
       DataSegment proposalSegment,
       List<ServerHolder> serverHolders
   )
@@ -55,7 +55,11 @@ public class RandomBalancerStrategy implements BalancerStrategy
   }
 
   @Override
-  public ServerHolder findNewSegmentHomeBalancer(DataSegment proposalSegment, List<ServerHolder> serverHolders)
+  public ServerHolder findDestinationServerToMoveSegment(
+      DataSegment proposalSegment,
+      ServerHolder sourceServer,
+      List<ServerHolder> serverHolders
+  )
   {
     // This strategy does not do any balancing
     return null;
