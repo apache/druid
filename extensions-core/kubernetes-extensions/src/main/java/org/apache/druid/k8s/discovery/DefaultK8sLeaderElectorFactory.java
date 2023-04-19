@@ -82,7 +82,7 @@ public class DefaultK8sLeaderElectorFactory implements K8sLeaderElectorFactory
     return new K8sLeaderElector()
     {
       @Override
-      public String getCurrentLeader()
+      synchronized public String getCurrentLeader()
       {
         try {
           return lock.get().getHolderIdentity();
@@ -93,7 +93,7 @@ public class DefaultK8sLeaderElectorFactory implements K8sLeaderElectorFactory
       }
 
       @Override
-      public void run(Runnable startLeadingHook, Runnable stopLeadingHook)
+      synchronized public void run(Runnable startLeadingHook, Runnable stopLeadingHook)
       {
         leaderElector.run(startLeadingHook, stopLeadingHook);
       }
