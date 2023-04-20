@@ -2718,7 +2718,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         JoinType.LEFT
                     )
                 )
-                .virtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ColumnType.STRING))
+                .virtualColumns(expressionVirtualColumn("_v0", "'10.1'", ColumnType.STRING))
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "_v0")
                 .filters(new SelectorDimFilter("v0", "10.1", null))
@@ -2830,7 +2830,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         JoinType.LEFT
                     )
                 )
-                .virtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ColumnType.STRING))
+                .virtualColumns(expressionVirtualColumn("_v0", "'10.1'", ColumnType.STRING))
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(selector("v0", "10.1", null))
                 .columns("__time", "_v0")
@@ -3025,7 +3025,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 JoinType.INNER
             )
         )
-        .virtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ColumnType.STRING))
+        .virtualColumns(expressionVirtualColumn("_v0", "'10.1'", ColumnType.STRING))
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("__time", "_v0")
         .context(queryContext);
