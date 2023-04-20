@@ -93,7 +93,7 @@ public class DefaultK8sLeaderElectorFactory implements K8sLeaderElectorFactory
       }
 
       @Override
-      synchronized public void run(Runnable startLeadingHook, Runnable stopLeadingHook)
+      public void run(Runnable startLeadingHook, Runnable stopLeadingHook)
       {
         leaderElector.run(startLeadingHook, stopLeadingHook);
       }
