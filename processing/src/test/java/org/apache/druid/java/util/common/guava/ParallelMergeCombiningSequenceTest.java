@@ -520,7 +520,7 @@ public class ParallelMergeCombiningSequenceTest
     // java 11, 17 and maybe others in between 8 and 20 don't correctly clean up the pool, however this behavior is
     // flaky and doesn't always happen so we can't definitively assert that the pool is or isn't
     if (JvmUtils.majorVersion() >= 20 || JvmUtils.majorVersion() < 9) {
-      Assert.assertTrue(pool.awaitQuiescence(10, TimeUnit.SECONDS));
+      Assert.assertTrue(pool.awaitQuiescence(3, TimeUnit.SECONDS));
       // good result, we want the pool to always be idle if an exception occurred during processing
       Assert.assertTrue(pool.isQuiescent());
     }

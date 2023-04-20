@@ -897,7 +897,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               accumulated.add(in);
               count++;
               if (count % batchSize == 0) {
-                yield();
+                this.yield();
               }
               return accumulated;
             }
@@ -928,6 +928,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         return batchYielder;
       }
       catch (InterruptedException e) {
+        batchYielder = Yielders.done(null, null);
         throw new RuntimeException("Failed to load initial batch of results", e);
       }
     }
