@@ -441,7 +441,7 @@ public class ParallelMergeCombiningSequenceTest
 
     Throwable t = Assert.assertThrows(RuntimeException.class, () -> assertException(input));
     Assert.assertEquals("exploded", t.getMessage());
-    pool.awaitQuiescence(1, TimeUnit.SECONDS);
+    Assert.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
     Assert.assertTrue(pool.isQuiescent());
   }
 
@@ -456,7 +456,7 @@ public class ParallelMergeCombiningSequenceTest
 
     Throwable t = Assert.assertThrows(RuntimeException.class, () -> assertException(input));
     Assert.assertEquals("exploded", t.getMessage());
-    pool.awaitQuiescence(1, TimeUnit.SECONDS);
+    Assert.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
     Assert.assertTrue(pool.isQuiescent());
   }
 
@@ -471,7 +471,7 @@ public class ParallelMergeCombiningSequenceTest
 
     Throwable t = Assert.assertThrows(RuntimeException.class, () -> assertException(input));
     Assert.assertEquals("exploded", t.getMessage());
-    pool.awaitQuiescence(1, TimeUnit.SECONDS);
+    Assert.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
     Assert.assertTrue(pool.isQuiescent());
   }
 
@@ -488,7 +488,7 @@ public class ParallelMergeCombiningSequenceTest
 
     Throwable t = Assert.assertThrows(RuntimeException.class, () -> assertException(input));
     Assert.assertEquals("exploded", t.getMessage());
-    pool.awaitQuiescence(1, TimeUnit.SECONDS);
+    Assert.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
     Assert.assertTrue(pool.isQuiescent());
   }
 
@@ -520,7 +520,7 @@ public class ParallelMergeCombiningSequenceTest
     // java 11, 17 and maybe others in between 8 and 20 don't correctly clean up the pool, however this behavior is
     // flaky and doesn't always happen so we can't definitively assert that the pool is or isn't
     if (JvmUtils.majorVersion() >= 20 || JvmUtils.majorVersion() < 9) {
-      pool.awaitQuiescence(3, TimeUnit.SECONDS);
+      Assert.assertTrue(pool.awaitQuiescence(10, TimeUnit.SECONDS));
       // good result, we want the pool to always be idle if an exception occurred during processing
       Assert.assertTrue(pool.isQuiescent());
     }
@@ -539,7 +539,7 @@ public class ParallelMergeCombiningSequenceTest
     Throwable t = Assert.assertThrows(QueryTimeoutException.class, () -> assertException(input, 8, 64, 1000, 1500));
     Assert.assertEquals("Query did not complete within configured timeout period. " +
                         "You can increase query timeout or tune the performance of query.", t.getMessage());
-    pool.awaitQuiescence(1, TimeUnit.SECONDS);
+    Assert.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
     Assert.assertTrue(pool.isQuiescent());
   }
 
@@ -634,7 +634,7 @@ public class ParallelMergeCombiningSequenceTest
 
     Assert.assertTrue(combiningYielder.isDone());
     Assert.assertTrue(parallelMergeCombineYielder.isDone());
-    pool.awaitQuiescence(1, TimeUnit.SECONDS);
+    Assert.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
     Assert.assertTrue(pool.isQuiescent());
     combiningYielder.close();
     parallelMergeCombineYielder.close();
@@ -707,7 +707,7 @@ public class ParallelMergeCombiningSequenceTest
         parallelMergeCombineSequence.getCancellationGizmo().getRuntimeException().getMessage()
     );
 
-    pool.awaitQuiescence(1, TimeUnit.SECONDS);
+    Assert.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
     Assert.assertTrue(pool.isQuiescent());
 
     Assert.assertFalse(combiningYielder.isDone());
