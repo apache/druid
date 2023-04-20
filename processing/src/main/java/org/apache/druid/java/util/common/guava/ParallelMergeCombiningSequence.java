@@ -796,6 +796,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         if (hasTimeout) {
           final long thisTimeoutNanos = timeoutAtNanos - System.nanoTime();
           if (thisTimeoutNanos < 0) {
+            item = null;
             throw new QueryTimeoutException("QueuePusher timed out offering data");
           }
           success = queue.offer(item, thisTimeoutNanos, TimeUnit.NANOSECONDS);
@@ -822,6 +823,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         ForkJoinPool.managedBlock(this);
       }
       catch (InterruptedException e) {
+        this.item = null;
         throw new RuntimeException("Failed to offer result to output queue", e);
       }
     }
@@ -926,6 +928,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         return batchYielder;
       }
       catch (InterruptedException e) {
+        batchYielder = Yielders.done(null, null);
         throw new RuntimeException("Failed to load initial batch of results", e);
       }
     }
@@ -1069,7 +1072,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     @Override
     public boolean isReleasable()
     {
-      return resultBatch != null && !resultBatch.isDrained();
+      return yielder.isDone() || (resultBatch != null && !resultBatch.isDrained());
     }
 
     @Override
@@ -1140,6 +1143,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         if (hasTimeout) {
           final long thisTimeoutNanos = timeoutAtNanos - System.nanoTime();
           if (thisTimeoutNanos < 0) {
+            resultBatch = ResultBatch.TERMINAL;
             throw new QueryTimeoutException("BlockingQueue cursor timed out waiting for data");
           }
           resultBatch = queue.poll(thisTimeoutNanos, TimeUnit.NANOSECONDS);
