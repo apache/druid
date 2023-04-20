@@ -197,6 +197,18 @@ public class DruidProcessingConfigTest
     config.intermediateComputeSizeBytes();
   }
 
+  @Test
+  public void testParallelMergeDefaultConfig()
+  {
+    Injector injector = makeInjector(NUM_PROCESSORS, DIRECT_SIZE, HEAP_SIZE);
+    DruidProcessingConfig config = injector.getInstance(DruidProcessingConfig.class);
+    if (JvmUtils.majorVersion() < 9 || JvmUtils.majorVersion() >= 20) {
+      Assert.assertTrue(config.useParallelMergePool());
+    } else {
+      Assert.assertFalse(config.useParallelMergePool());
+    }
+  }
+
   public static class MockRuntimeInfo extends RuntimeInfo
   {
     private final int availableProcessors;

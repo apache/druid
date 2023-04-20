@@ -27,9 +27,7 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -62,9 +60,6 @@ public class ParallelMergeCombiningSequenceTest
   };
 
   private ForkJoinPool pool;
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Before
   public void setup()
@@ -443,12 +438,10 @@ public class ParallelMergeCombiningSequenceTest
     input.add(explodingSequence(15));
     input.add(nonBlockingSequence(25));
 
-
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage(
-        "exploded"
-    );
-    assertException(input);
+    Throwable t = Assert.assertThrows(RuntimeException.class, () -> assertException(input));
+    Assert.assertEquals("exploded", t.getMessage());
+    pool.awaitQuiescence(1, TimeUnit.SECONDS);
+    Assert.assertTrue(pool.isQuiescent());
   }
 
   @Test
@@ -460,11 +453,10 @@ public class ParallelMergeCombiningSequenceTest
     input.add(explodingSequence(11));
     input.add(nonBlockingSequence(12));
 
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage(
-        "exploded"
-    );
-    assertException(input);
+    Throwable t = Assert.assertThrows(RuntimeException.class, () -> assertException(input));
+    Assert.assertEquals("exploded", t.getMessage());
+    pool.awaitQuiescence(1, TimeUnit.SECONDS);
+    Assert.assertTrue(pool.isQuiescent());
   }
 
   @Test
@@ -476,11 +468,10 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(2));
     input.add(nonBlockingSequence(2));
 
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage(
-        "exploded"
-    );
-    assertException(input);
+    Throwable t = Assert.assertThrows(RuntimeException.class, () -> assertException(input));
+    Assert.assertEquals("exploded", t.getMessage());
+    pool.awaitQuiescence(1, TimeUnit.SECONDS);
+    Assert.assertTrue(pool.isQuiescent());
   }
 
   @Test
@@ -494,12 +485,12 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(2));
     input.add(nonBlockingSequence(2));
 
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage(
-        "exploded"
-    );
-    assertException(input);
+    Throwable t = Assert.assertThrows(RuntimeException.class, () -> assertException(input));
+    Assert.assertEquals("exploded", t.getMessage());
+    pool.awaitQuiescence(1, TimeUnit.SECONDS);
+    Assert.assertTrue(pool.isQuiescent());
   }
+
 
   @Test
   public void testTimeoutExceptionDueToStalledInput() throws Exception
@@ -510,17 +501,21 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(someSize));
     input.add(nonBlockingSequence(someSize));
     input.add(blockingSequence(someSize, 400, 500, 1, 500, true));
-    expectedException.expect(QueryTimeoutException.class);
-    expectedException.expectMessage("Query did not complete within configured timeout period. " +
-        "You can increase query timeout or tune the performance of query");
 
-    assertException(
-        input,
-        ParallelMergeCombiningSequence.DEFAULT_TASK_SMALL_BATCH_NUM_ROWS,
-        ParallelMergeCombiningSequence.DEFAULT_TASK_INITIAL_YIELD_NUM_ROWS,
-        1000L,
-        0
+    Throwable t = Assert.assertThrows(
+        QueryTimeoutException.class,
+        () -> assertException(
+            input,
+            ParallelMergeCombiningSequence.DEFAULT_TASK_SMALL_BATCH_NUM_ROWS,
+            ParallelMergeCombiningSequence.DEFAULT_TASK_INITIAL_YIELD_NUM_ROWS,
+            1000L,
+            0
+        )
     );
+    Assert.assertEquals("Query did not complete within configured timeout period. " +
+                        "You can increase query timeout or tune the performance of query.", t.getMessage());
+    pool.awaitQuiescence(3, TimeUnit.SECONDS);
+    Assert.assertTrue(pool.isQuiescent());
   }
 
   @Test
@@ -533,10 +528,11 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(someSize));
     input.add(nonBlockingSequence(someSize));
 
-    expectedException.expect(QueryTimeoutException.class);
-    expectedException.expectMessage("Query did not complete within configured timeout period. " +
-        "You can increase query timeout or tune the performance of query");
-    assertException(input, 8, 64, 1000, 500);
+    Throwable t = Assert.assertThrows(QueryTimeoutException.class, () -> assertException(input, 8, 64, 1000, 1500));
+    Assert.assertEquals("Query did not complete within configured timeout period. " +
+                        "You can increase query timeout or tune the performance of query.", t.getMessage());
+    pool.awaitQuiescence(1, TimeUnit.SECONDS);
+    Assert.assertTrue(pool.isQuiescent());
   }
 
   @Test
@@ -630,10 +626,8 @@ public class ParallelMergeCombiningSequenceTest
 
     Assert.assertTrue(combiningYielder.isDone());
     Assert.assertTrue(parallelMergeCombineYielder.isDone());
-    while (pool.getRunningThreadCount() > 0) {
-      Thread.sleep(100);
-    }
-    Assert.assertEquals(0, pool.getRunningThreadCount());
+    pool.awaitQuiescence(1, TimeUnit.SECONDS);
+    Assert.assertTrue(pool.isQuiescent());
     combiningYielder.close();
     parallelMergeCombineYielder.close();
     // cancellation trigger should not be set if sequence was fully yielded and close is called
@@ -693,15 +687,10 @@ public class ParallelMergeCombiningSequenceTest
     }
     // trying to next the yielder creates sadness for you
     final String expectedExceptionMsg = "Already closed";
-    try {
-      Assert.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
-      parallelMergeCombineYielder.next(parallelMergeCombineYielder.get());
-      // this should explode so the contradictory next statement should not be reached
-      Assert.assertTrue(false);
-    }
-    catch (RuntimeException rex) {
-      Assert.assertEquals(expectedExceptionMsg, rex.getMessage());
-    }
+    Assert.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
+    final Yielder<IntPair> finalYielder = parallelMergeCombineYielder;
+    Throwable t = Assert.assertThrows(RuntimeException.class, () -> finalYielder.next(finalYielder.get()));
+    Assert.assertEquals(expectedExceptionMsg, t.getMessage());
 
     // cancellation gizmo of sequence should be cancelled, and also should contain our expected message
     Assert.assertTrue(parallelMergeCombineSequence.getCancellationGizmo().isCancelled());
@@ -719,7 +708,7 @@ public class ParallelMergeCombiningSequenceTest
     Assert.assertFalse(parallelMergeCombineYielder.isDone());
   }
 
-  private void assertException(List<Sequence<IntPair>> sequences) throws Exception
+  private void assertException(List<Sequence<IntPair>> sequences) throws Throwable
   {
     assertException(
         sequences,
@@ -737,9 +726,9 @@ public class ParallelMergeCombiningSequenceTest
       long timeout,
       int readDelayMillis
   )
-      throws Exception
+      throws Throwable
   {
-    try {
+    Throwable t = Assert.assertThrows(Exception.class, () -> {
       final ParallelMergeCombiningSequence<IntPair> parallelMergeCombineSequence = new ParallelMergeCombiningSequence<>(
           pool,
           sequences,
@@ -768,17 +757,16 @@ public class ParallelMergeCombiningSequenceTest
         parallelMergeCombineYielder = parallelMergeCombineYielder.next(parallelMergeCombineYielder.get());
       }
       parallelMergeCombineYielder.close();
-    }
-    catch (Exception ex) {
-      sequences.forEach(sequence -> {
-        if (sequence instanceof ExplodingSequence) {
-          ExplodingSequence exploder = (ExplodingSequence) sequence;
-          Assert.assertEquals(1, exploder.getCloseCount());
-        }
-      });
-      LOG.warn(ex, "exception:");
-      throw ex;
-    }
+    });
+
+    sequences.forEach(sequence -> {
+      if (sequence instanceof ExplodingSequence) {
+        ExplodingSequence exploder = (ExplodingSequence) sequence;
+        Assert.assertEquals(1, exploder.getCloseCount());
+      }
+    });
+    LOG.warn(t, "exception:");
+    throw t;
   }
 
   public static class IntPair extends Pair<Integer, Integer>

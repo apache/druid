@@ -183,6 +183,9 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
 
   public boolean useParallelMergePool()
   {
+    if (JvmUtils.majorVersion() < 20 && JvmUtils.majorVersion() >= 9) {
+      return false;
+    }
     final boolean useParallelMergePoolConfigured = useParallelMergePoolConfigured();
     final int parallelism = getMergePoolParallelism();
     // need at least 3 to do 2 layer merge
