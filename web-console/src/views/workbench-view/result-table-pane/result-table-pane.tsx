@@ -39,6 +39,7 @@ import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../../r
 import type { Pagination, QueryAction } from '../../../utils';
 import {
   columnToIcon,
+  columnToTypeSummary,
   columnToWidth,
   convertToGroupByExpression,
   copyAndAlert,
@@ -587,7 +588,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                 return (
                   <Popover2 content={<Deferred content={() => getHeaderMenu(column, i)} />}>
                     <div className="clickable-cell">
-                      <div className="output-name">
+                      <div className="output-name" title={columnToTypeSummary(column)}>
                         {icon && <Icon className="type-icon" icon={icon} size={12} />}
                         {h}
                         {hasFilterOnHeader(h, i) && (

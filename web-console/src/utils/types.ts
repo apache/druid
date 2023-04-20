@@ -20,6 +20,13 @@ import type { IconName } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { Column } from 'druid-query-toolkit';
 
+export function columnToTypeSummary(column: Column): string | undefined {
+  const lines: string[] = [];
+  if (column.sqlType) lines.push(`SQL type: ${column.sqlType}`);
+  if (column.nativeType) lines.push(`Native type: ${column.nativeType}`);
+  return lines.length ? lines.join('\n') : undefined;
+}
+
 function getEffectiveColumnType(column: Column): string | undefined {
   if (column.sqlType === 'TIMESTAMP') return column.sqlType;
   return column.nativeType || column.sqlType;
@@ -59,6 +66,9 @@ export function dataTypeToIcon(dataType: string): IconName {
 
     case 'COMPLEX<JSON>':
       return IconNames.DIAGRAM_TREE;
+
+    case 'COMPLEX<IPADDRESS>':
+      return IconNames.IP_ADDRESS;
 
     case 'NULL':
       return IconNames.CIRCLE;
