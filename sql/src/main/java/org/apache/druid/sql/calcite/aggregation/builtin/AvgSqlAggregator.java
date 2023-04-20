@@ -94,7 +94,7 @@ public class AvgSqlAggregator implements SqlAggregator
 
     final DruidExpression arg = Iterables.getOnlyElement(arguments);
 
-    final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
+    final ExprMacroTable macroTable = plannerContext.getPlannerToolbox().exprMacroTable();
     final ValueType sumType;
     // Use 64-bit sum regardless of the type of the AVG aggregator.
     if (SqlTypeName.INT_TYPES.contains(aggregateCall.getType().getSqlTypeName())) {

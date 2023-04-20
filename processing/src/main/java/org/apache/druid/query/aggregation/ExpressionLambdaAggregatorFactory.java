@@ -31,6 +31,7 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.AnalyzedExpr;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -88,10 +89,12 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   private final ExprMacroTable macroTable;
   private final Supplier<ExprEval<?>> initialValue;
   private final Supplier<ExprEval<?>> initialCombineValue;
-  private final Supplier<Expr> foldExpression;
-  private final Supplier<Expr> combineExpression;
-  private final Supplier<Expr> compareExpression;
-  private final Supplier<Expr> finalizeExpression;
+  private final Supplier<AnalyzedExpr> foldExpression;
+  private final Supplier<AnalyzedExpr> combineExpression;
+  @Nullable
+  private final Supplier<AnalyzedExpr> compareExpression;
+  @Nullable
+  private final Supplier<AnalyzedExpr> finalizeExpression;
   private final HumanReadableBytes maxSizeBytes;
 
   private final ThreadLocal<SettableObjectBinding> compareBindings;
@@ -132,7 +135,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     } else {
       this.shouldCombineAggregateNullInputs = shouldCombineAggregateNullInputs;
     }
-    this.foldExpressionString = foldExpression;
+    this.foldExpressionString = Preconditions.checkNotNull(foldExpression, "fold");
     if (combineExpression != null) {
       this.combineExpressionString = combineExpression;
     } else {
@@ -159,9 +162,10 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
       Preconditions.checkArgument(parsed.isLiteral(), "initial combining value must be constant");
       return parsed.eval(InputBindings.nilBindings());
     });
-    this.foldExpression = Parser.lazyParse(foldExpressionString, macroTable);
-    this.combineExpression = Parser.lazyParse(combineExpressionString, macroTable);
-    this.compareExpression = Parser.lazyParse(compareExpressionString, macroTable);
+    this.foldExpression = Parser.lazyParseAndAnalyze(foldExpressionString, macroTable);
+    this.combineExpression = Parser.lazyParseAndAnalyze(combineExpressionString, macroTable);
+    this.compareExpression =
+        compareExpressionString == null ? null : Parser.lazyParseAndAnalyze(compareExpressionString, macroTable);
     this.finalizeInspector = Suppliers.memoize(
         () -> InputBindings.inspectorFromTypeMap(
             ImmutableMap.of(FINALIZE_IDENTIFIER, this.initialCombineValue.get().type())
@@ -190,7 +194,8 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     this.finalizeBindings = ThreadLocal.withInitial(
         () -> new SettableObjectBinding(1).withInspector(finalizeInspector.get())
     );
-    this.finalizeExpression = Parser.lazyParse(finalizeExpressionString, macroTable);
+    this.finalizeExpression =
+        finalizeExpressionString == null ? null : Parser.lazyParseAndAnalyze(finalizeExpressionString, macroTable);
     this.maxSizeBytes = maxSizeBytes != null ? maxSizeBytes : DEFAULT_MAX_SIZE_BYTES;
     Preconditions.checkArgument(this.maxSizeBytes.getBytesInInt() >= MIN_SIZE_BYTES);
 
@@ -293,10 +298,10 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
         .appendBoolean(isNullUnlessAggregated)
         .appendBoolean(shouldAggregateNullInputs)
         .appendBoolean(shouldCombineAggregateNullInputs)
-        .appendCacheable(foldExpression.get())
-        .appendCacheable(combineExpression.get())
-        .appendCacheable(compareExpression.get())
-        .appendCacheable(finalizeExpression.get())
+        .appendCacheable(foldExpression.get().expr())
+        .appendCacheable(combineExpression.get().expr())
+        .appendCacheable(compareExpression == null ? null : compareExpression.get().expr())
+        .appendCacheable(finalizeExpression == null ? null : finalizeExpression.get().expr())
         .appendInt(maxSizeBytes.getBytesInInt())
         .build();
   }
@@ -324,8 +329,8 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   @Override
   public Comparator getComparator()
   {
-    Expr compareExpr = compareExpression.get();
-    if (compareExpr != null) {
+    if (compareExpression != null) {
+      final Expr compareExpr = compareExpression.get().expr();
       return (o1, o2) ->
           compareExpr.eval(compareBindings.get().withBinding(COMPARE_O1, o1).withBinding(COMPARE_O2, o2)).asInt();
     }
@@ -344,7 +349,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
       }
     }
     // arbitrarily assign lhs and rhs to accumulator and aggregator name inputs to re-use combine function
-    return combineExpression.get().eval(
+    return combineExpression.get().expr().eval(
         combineBindings.get().withBinding(accumulatorId, lhs).withBinding(name, rhs)
     ).valueOrDefault();
   }
@@ -359,12 +364,12 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   @Override
   public Object finalizeComputation(@Nullable Object object)
   {
-    Expr finalizeExpr;
-    finalizeExpr = finalizeExpression.get();
-    if (finalizeExpr != null) {
+    if (finalizeExpression != null) {
+      final Expr finalizeExpr = finalizeExpression.get().expr();
       return finalizeExpr.eval(finalizeBindings.get().withBinding(FINALIZE_IDENTIFIER, object)).valueOrDefault();
+    } else {
+      return object;
     }
-    return object;
   }
 
   @Override
@@ -432,9 +437,9 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   @Override
   public ColumnType getResultType()
   {
-    Expr finalizeExpr = finalizeExpression.get();
     ExprEval<?> initialVal = initialCombineValue.get();
-    if (finalizeExpr != null) {
+    if (finalizeExpression != null) {
+      Expr finalizeExpr = finalizeExpression.get().expr();
       ExpressionType type = finalizeExpr.getOutputType(finalizeInspector.get());
       if (type == null) {
         type = initialVal.type();
@@ -556,12 +561,12 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
       this.inputs = new ArrayList<>();
       if (fields != null) {
         // if fields are set, we are accumulating from raw inputs, use fold expression
-        plan = ExpressionPlanner.plan(inspectorWithAccumulator(metricFactory), foldExpression.get());
+        plan = ExpressionPlanner.plan(inspectorWithAccumulator(metricFactory), foldExpression.get().expr());
         seed = initialValue.get();
         aggregateNullInputs = shouldAggregateNullInputs;
       } else {
         // else we are merging intermediary results, use combine expression
-        plan = ExpressionPlanner.plan(inspectorWithAccumulator(metricFactory), combineExpression.get());
+        plan = ExpressionPlanner.plan(inspectorWithAccumulator(metricFactory), combineExpression.get().expr());
         seed = initialCombineValue.get();
         aggregateNullInputs = shouldCombineAggregateNullInputs;
       }

@@ -47,6 +47,7 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -171,7 +172,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
 
     VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(
         prefixSignaturePair.rhs,
-        getPlannerContext().getExprMacroTable(),
+        getPlannerContext().getExpressionParser(),
         getPlannerContext().getPlannerConfig().isForceExpressionVirtualColumns()
     );
     getPlannerContext().setJoinExpressionVirtualColumnRegistry(virtualColumnRegistry);
@@ -198,10 +199,13 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
             leftDataSource,
             rightDataSource,
             prefixSignaturePair.lhs,
-            condition.getExpression(),
+            JoinConditionAnalysis.forExpression(
+                condition.getExpression(),
+                getPlannerContext().parseAndAnalyze(condition.getExpression()).expr(),
+                prefixSignaturePair.lhs
+            ),
             toDruidJoinType(joinRel.getJoinType()),
             getDimFilter(getPlannerContext(), leftSignature, leftFilter),
-            getPlannerContext().getExprMacroTable(),
             getPlannerContext().getJoinableFactoryWrapper()
         ),
         prefixSignaturePair.rhs,

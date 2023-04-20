@@ -299,7 +299,7 @@ public class OperatorConversions
             postAggregatorVisitor.getOutputNamePrefix() + postAggregatorVisitor.getAndIncrementCounter(),
             druidExpression.getExpression(),
             null,
-            plannerContext.getExprMacroTable()
+            plannerContext.parseAndAnalyze(druidExpression.getExpression())
         );
       }
     }

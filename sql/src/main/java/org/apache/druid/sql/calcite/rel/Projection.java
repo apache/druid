@@ -175,7 +175,7 @@ public class Projection
           postAggregatorVisitor.getOutputNamePrefix() + postAggregatorVisitor.getAndIncrementCounter(),
           postAggregatorExpression.getExpression(),
           null,
-          plannerContext.getExprMacroTable()
+          plannerContext.parseAndAnalyze(postAggregatorExpression.getExpression())
       );
       postAggregatorVisitor.addPostAgg(postAggregator);
       rowOrder.add(postAggregator.getName());

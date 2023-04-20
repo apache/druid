@@ -190,7 +190,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
             expressionToUnnest.toVirtualColumn(
                 correlateRowSignature.getColumnName(correlateRowSignature.size() - 1),
                 Calcites.getColumnTypeForRelDataType(rexNodeToUnnest.getType()),
-                getPlannerContext().getExprMacroTable()
+                getPlannerContext().getExpressionParser()
             ),
             unnestFilterOnDataSource
         ),

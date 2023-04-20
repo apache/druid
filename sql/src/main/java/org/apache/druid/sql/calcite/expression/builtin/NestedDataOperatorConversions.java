@@ -44,7 +44,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.InputBindings;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.nested.NestedPathFinder;
@@ -189,7 +188,7 @@ public class NestedDataOperatorConversions
         return null;
       }
 
-      final Expr pathExpr = Parser.parse(druidExpressions.get(1).getExpression(), plannerContext.getExprMacroTable());
+      final Expr pathExpr = plannerContext.parseAndAnalyze(druidExpressions.get(1).getExpression()).expr();
       if (!pathExpr.isLiteral()) {
         return null;
       }
@@ -380,7 +379,7 @@ public class NestedDataOperatorConversions
         return null;
       }
 
-      final Expr pathExpr = Parser.parse(druidExpressions.get(1).getExpression(), plannerContext.getExprMacroTable());
+      final Expr pathExpr = plannerContext.parseAndAnalyze(druidExpressions.get(1).getExpression()).expr();
       if (!pathExpr.isLiteral()) {
         return null;
       }
@@ -510,7 +509,7 @@ public class NestedDataOperatorConversions
         return null;
       }
 
-      final Expr pathExpr = Parser.parse(druidExpressions.get(1).getExpression(), plannerContext.getExprMacroTable());
+      final Expr pathExpr = plannerContext.parseAndAnalyze(druidExpressions.get(1).getExpression()).expr();
       if (!pathExpr.isLiteral()) {
         return null;
       }
@@ -678,7 +677,7 @@ public class NestedDataOperatorConversions
         return null;
       }
 
-      final Expr pathExpr = Parser.parse(druidExpressions.get(1).getExpression(), plannerContext.getExprMacroTable());
+      final Expr pathExpr = plannerContext.parseAndAnalyze(druidExpressions.get(1).getExpression()).expr();
       if (!pathExpr.isLiteral()) {
         return null;
       }

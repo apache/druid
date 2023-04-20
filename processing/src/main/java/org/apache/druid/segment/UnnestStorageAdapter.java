@@ -416,7 +416,7 @@ public class UnnestStorageAdapter implements StorageAdapter
   public String getUnnestInputIfDirectAccess(VirtualColumn unnestColumn)
   {
     if (unnestColumn instanceof ExpressionVirtualColumn) {
-      return ((ExpressionVirtualColumn) unnestColumn).getParsedExpression().get().getBindingIfIdentifier();
+      return ((ExpressionVirtualColumn) unnestColumn).getParsedExpression().getBindingIfIdentifier();
     } else {
       return null;
     }

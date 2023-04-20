@@ -35,8 +35,6 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
-import org.apache.druid.math.expr.Parser;
-import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.RowAdapters;
@@ -51,6 +49,7 @@ import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
+import org.apache.druid.sql.calcite.planner.ExpressionParserImpl;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerToolbox;
@@ -336,8 +335,9 @@ class ExpressionTestHelper
       Assert.assertEquals("Expression for: " + rexNode, expectedExpression.getExpression(), expression.getExpression());
     }
 
-    ExprEval<?> result = Parser.parse(expression.getExpression(), PLANNER_CONTEXT.getExprMacroTable())
-                               .eval(expressionBindings);
+    ExprEval<?> result = PLANNER_CONTEXT.parseAndAnalyze(expression.getExpression())
+                                        .expr()
+                                        .eval(expressionBindings);
 
     Assert.assertEquals("Result for: " + rexNode, expectedResult, result.value());
   }
@@ -351,7 +351,11 @@ class ExpressionTestHelper
   )
   {
     final RexNode rexNode = rexBuilder.makeCall(op, exprs);
-    final VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(rowSignature, TestExprMacroTable.INSTANCE, false);
+    final VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(
+        rowSignature,
+        new ExpressionParserImpl(PLANNER_TOOLBOX.exprMacroTable()),
+        false
+    );
 
     final DimFilter filter = Expressions.toFilter(PLANNER_CONTEXT, rowSignature, virtualColumnRegistry, rexNode);
     Assert.assertEquals("Filter for: " + rexNode, expectedFilter, filter);

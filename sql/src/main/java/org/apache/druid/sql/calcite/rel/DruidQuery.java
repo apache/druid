@@ -199,7 +199,7 @@ public class DruidQuery
     if (virtualColumnRegistry == null) {
       virtualColumnRegistry = VirtualColumnRegistry.create(
           sourceRowSignature,
-          plannerContext.getExprMacroTable(),
+          plannerContext.getExpressionParser(),
           plannerContext.getPlannerConfig().isForceExpressionVirtualColumns()
       );
     }
@@ -1043,7 +1043,7 @@ public class DruidQuery
       final DimensionExpression dimensionExpression = Iterables.getOnlyElement(grouping.getDimensions());
       queryGranularity = Expressions.toQueryGranularity(
           dimensionExpression.getDruidExpression(),
-          plannerContext.getExprMacroTable()
+          plannerContext.getExpressionParser()
       );
 
       if (queryGranularity == null) {
@@ -1315,7 +1315,7 @@ public class DruidQuery
       for (DimensionExpression dimensionExpression : grouping.getDimensions()) {
         Granularity granularity = Expressions.toQueryGranularity(
             dimensionExpression.getDruidExpression(),
-            plannerContext.getExprMacroTable()
+            plannerContext.getExpressionParser()
         );
         if (granularity == null || !canUseQueryGranularity(dataSource, filtration, granularity)) {
           // Can't, or won't, convert this dimension to a query granularity.

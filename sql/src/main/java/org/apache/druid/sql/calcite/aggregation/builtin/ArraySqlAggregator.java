@@ -99,7 +99,7 @@ public class ArraySqlAggregator implements SqlAggregator
       // can't translate argument
       return null;
     }
-    final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
+    final ExprMacroTable macroTable = plannerContext.getPlannerToolbox().exprMacroTable();
 
     final String fieldName;
     final String initialvalue;

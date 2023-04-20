@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.join;
 
+import org.apache.druid.math.expr.AnalyzedExpr;
 import org.apache.druid.math.expr.Expr;
 
 /**
@@ -30,10 +31,10 @@ import org.apache.druid.math.expr.Expr;
  */
 public class Equality
 {
-  private final Expr leftExpr;
+  private final AnalyzedExpr leftExpr;
   private final String rightColumn;
 
-  public Equality(final Expr leftExpr, final String rightColumn)
+  Equality(final AnalyzedExpr leftExpr, final String rightColumn)
   {
     this.leftExpr = leftExpr;
     this.rightColumn = rightColumn;
@@ -41,7 +42,12 @@ public class Equality
 
   public Expr getLeftExpr()
   {
-    return leftExpr;
+    return leftExpr.expr();
+  }
+
+  public Expr.BindingAnalysis analyzeLeftExprInputs()
+  {
+    return leftExpr.analyzeInputs();
   }
 
   public String getRightColumn()

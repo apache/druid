@@ -21,10 +21,10 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.math.expr.AnalyzedExpr;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -65,10 +65,10 @@ public class ExpressionFilter implements Filter
   private final Supplier<Expr.BindingAnalysis> bindingDetails;
   private final FilterTuning filterTuning;
 
-  public ExpressionFilter(final Supplier<Expr> expr, final FilterTuning filterTuning)
+  public ExpressionFilter(final Supplier<AnalyzedExpr> expr, final FilterTuning filterTuning)
   {
-    this.expr = expr;
-    this.bindingDetails = Suppliers.memoize(() -> expr.get().analyzeInputs());
+    this.expr = () -> expr.get().expr();
+    this.bindingDetails = () -> expr.get().analyzeInputs();
     this.filterTuning = filterTuning;
   }
 

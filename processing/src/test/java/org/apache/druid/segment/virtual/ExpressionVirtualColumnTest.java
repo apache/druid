@@ -840,7 +840,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
   {
     ExpressionVirtualColumn constant = new ExpressionVirtualColumn(
         "constant",
-        Parser.parse("1 + 2", TestExprMacroTable.INSTANCE),
+        Parser.parseAndAnalyze("1 + 2", TestExprMacroTable.INSTANCE),
         ColumnType.LONG
     );
     DimensionSelector constantSelector = constant.makeDimensionSelector(
@@ -853,7 +853,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
 
     ExpressionVirtualColumn multiConstant = new ExpressionVirtualColumn(
         "multi",
-        Parser.parse("string_to_array('a,b,c', ',')", TestExprMacroTable.INSTANCE),
+        Parser.parseAndAnalyze("string_to_array('a,b,c', ',')", TestExprMacroTable.INSTANCE),
         ColumnType.STRING
     );
 

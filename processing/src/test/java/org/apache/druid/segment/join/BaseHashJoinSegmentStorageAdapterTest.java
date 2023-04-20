@@ -233,8 +233,8 @@ public class BaseHashJoinSegmentStorageAdapterTest extends InitializedNullHandli
         actualVirtualColumn.getOutputType()
     );
     Assert.assertEquals(
-        expectedVirtualColumn.getParsedExpression().get().toString(),
-        actualVirtualColumn.getParsedExpression().get().toString()
+        expectedVirtualColumn.getParsedExpression().toString(),
+        actualVirtualColumn.getParsedExpression().toString()
     );
   }
 

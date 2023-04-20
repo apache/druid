@@ -32,7 +32,6 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -69,7 +68,7 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
   public static DruidExpression applyTimestampFloor(
       final DruidExpression input,
       final PeriodGranularity granularity,
-      final ExprMacroTable macroTable
+      final PlannerContext plannerContext
   )
   {
     Preconditions.checkNotNull(input, "input");
@@ -79,7 +78,7 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
     if (granularity.getPeriod().equals(Period.days(1))) {
       final TimestampFloorExprMacro.TimestampFloorExpr floorExpr = Expressions.asTimestampFloorExpr(
           input,
-          macroTable
+          plannerContext.getExpressionParser()
       );
 
       if (floorExpr != null) {

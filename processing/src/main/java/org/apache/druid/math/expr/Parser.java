@@ -21,6 +21,7 @@ package org.apache.druid.math.expr;
 
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
@@ -103,9 +104,12 @@ public class Parser
    * and these objects are all immutable, so this assists in the goal of re-using instead of re-creating whenever
    * possible.
    *
-   * Lazy form of {@link #parse(String, ExprMacroTable)}
+   * Lazy form of {@link #parse(String, ExprMacroTable)}.
    *
-   * @param in expression to parse
+   * Supplies null if the input string is null. This is different from {@link #parse(String, ExprMacroTable)}, which
+   * throws {@link NullPointerException}.
+   *
+   * @param in         expression to parse
    * @param macroTable additional extensions to expression language
    */
   public static Supplier<Expr> lazyParse(@Nullable String in, ExprMacroTable macroTable)
@@ -117,14 +121,13 @@ public class Parser
    * Parse a string into a flattened {@link Expr}. There is some overhead to this, and these objects are all immutable,
    * so re-use instead of re-creating whenever possible.
    *
-   * @param in expression to parse
+   * @param in         expression to parse
    * @param macroTable additional extensions to expression language
    */
   public static Expr parse(String in, ExprMacroTable macroTable)
   {
     return parse(in, macroTable, true);
   }
-
 
   @VisibleForTesting
   public static Expr parse(String in, ExprMacroTable macroTable, boolean withFlatten)
@@ -142,6 +145,33 @@ public class Parser
       throw new RE("Failed to parse expression: %s", in);
     }
     return withFlatten ? flatten(parsed) : parsed;
+  }
+
+  /**
+   * Parse a string into a flattened {@link Expr}, and return an {@link AnalyzedExpr} wrapper than enables caching
+   * of {@link Expr#analyzeInputs()}. Parsing is eager, input analysis is memoized (lazy and cached).
+   *
+   * @param in         expression to parse
+   * @param macroTable additional extensions to expression language
+   */
+  public static AnalyzedExpr parseAndAnalyze(String in, ExprMacroTable macroTable)
+  {
+    Preconditions.checkNotNull(in, "expression");
+    final Expr expr = parse(in, macroTable, true);
+    return AnalyzedExpr.wrap(expr);
+  }
+
+  /**
+   * Fully lazy form of {@link #parseAndAnalyze(String, ExprMacroTable)}. Parsing and input analysis are both
+   * memoized (lazy and cached).
+   *
+   * @param in         expression to parse
+   * @param macroTable additional extensions to expression language
+   */
+  public static Supplier<AnalyzedExpr> lazyParseAndAnalyze(String in, ExprMacroTable macroTable)
+  {
+    Preconditions.checkNotNull(in, "expression");
+    return Suppliers.memoize(() -> parseAndAnalyze(in, macroTable));
   }
 
   /**

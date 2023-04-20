@@ -27,7 +27,6 @@ import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -235,8 +234,8 @@ public class Grouping
 
     for (int i = 0; i < dimensions.size(); i++) {
       final DimensionExpression dimension = dimensions.get(i);
-      if (Parser.parse(dimension.getDruidExpression().getExpression(), plannerContext.getExprMacroTable())
-                .isLiteral() && !aggregateProjectBits.get(i)) {
+      if (plannerContext.parseAndAnalyze(dimension.getDruidExpression().getExpression()).expr().isLiteral()
+          && !aggregateProjectBits.get(i)) {
         droppedDimensions = true;
         newDimIndexes[i] = -1;
       } else {

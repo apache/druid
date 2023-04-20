@@ -23,10 +23,10 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.math.expr.AnalyzedExpr;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.InputBindings;
@@ -42,8 +42,7 @@ public class ExpressionTransform implements Transform
 {
   private final String name;
   private final String expression;
-  private final ExprMacroTable macroTable;
-  private final Supplier<Expr> parsedExpression;
+  private final Supplier<AnalyzedExpr> parsedExpression;
 
   @JsonCreator
   public ExpressionTransform(
@@ -54,10 +53,8 @@ public class ExpressionTransform implements Transform
   {
     this.name = Preconditions.checkNotNull(name, "name");
     this.expression = Preconditions.checkNotNull(expression, "expression");
-    this.macroTable = macroTable;
-    this.parsedExpression = Suppliers.memoize(
-        () -> Parser.parse(expression, Preconditions.checkNotNull(this.macroTable, "macroTable"))
-    )::get;
+    this.parsedExpression =
+        Parser.lazyParseAndAnalyze(expression, Preconditions.checkNotNull(macroTable, "macroTable"))::get;
   }
 
   @JsonProperty
@@ -76,7 +73,7 @@ public class ExpressionTransform implements Transform
   @Override
   public RowFunction getRowFunction()
   {
-    return new ExpressionRowFunction(name, parsedExpression.get());
+    return new ExpressionRowFunction(name, parsedExpression.get().expr());
   }
 
   @Override

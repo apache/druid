@@ -128,7 +128,7 @@ public class StringSqlAggregator implements SqlAggregator
       maxSizeBytes = ((Number) RexLiteral.value(maxBytes)).intValue();
     }
     final DruidExpression arg = arguments.get(0);
-    final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
+    final ExprMacroTable macroTable = plannerContext.getPlannerToolbox().exprMacroTable();
 
     final String initialvalue = "[]";
     final ColumnType elementType = ColumnType.STRING;

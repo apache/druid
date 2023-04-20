@@ -21,6 +21,7 @@ package org.apache.druid.segment.join;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.math.expr.AnalyzedExpr;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Exprs;
@@ -99,7 +100,23 @@ public class JoinConditionAnalysis
       final ExprMacroTable macroTable
   )
   {
-    final Expr conditionExpr = Parser.parse(condition, macroTable);
+    return forExpression(condition, Parser.parse(condition, macroTable), rightPrefix);
+  }
+
+  /**
+   * Analyze a join condition from a pre-parsed expression.
+   *
+   * @param condition     the condition expression
+   * @param conditionExpr the parsed condition expression. Must match "condition".
+   * @param rightPrefix   prefix for the right-hand side of the join; will be used to determine which identifiers in
+   *                      the condition come from the right-hand side and which come from the left-hand side
+   */
+  public static JoinConditionAnalysis forExpression(
+      final String condition,
+      final Expr conditionExpr,
+      final String rightPrefix
+  )
+  {
     final List<Equality> equiConditions = new ArrayList<>();
     final List<Expr> nonEquiConditions = new ArrayList<>();
 
@@ -117,11 +134,17 @@ public class JoinConditionAnalysis
         if (isLeftExprAndRightColumn(lhs, rhs, rightPrefix)) {
           // rhs is a right-hand column; lhs is an expression solely of the left-hand side.
           equiConditions.add(
-              new Equality(lhs, Objects.requireNonNull(rhs.getBindingIfIdentifier()).substring(rightPrefix.length()))
+              new Equality(
+                  AnalyzedExpr.wrap(lhs),
+                  Objects.requireNonNull(rhs.getBindingIfIdentifier()).substring(rightPrefix.length())
+              )
           );
         } else if (isLeftExprAndRightColumn(rhs, lhs, rightPrefix)) {
           equiConditions.add(
-              new Equality(rhs, Objects.requireNonNull(lhs.getBindingIfIdentifier()).substring(rightPrefix.length()))
+              new Equality(
+                  AnalyzedExpr.wrap(rhs),
+                  Objects.requireNonNull(lhs.getBindingIfIdentifier()).substring(rightPrefix.length())
+              )
           );
         } else {
           nonEquiConditions.add(childExpr);
@@ -240,7 +263,7 @@ public class JoinConditionAnalysis
 
     for (Equality equality : equiConditions) {
       requiredColumns.add(rightPrefix + equality.getRightColumn());
-      requiredColumns.addAll(equality.getLeftExpr().analyzeInputs().getRequiredBindings());
+      requiredColumns.addAll(equality.analyzeLeftExprInputs().getRequiredBindings());
     }
 
     for (Expr expr : nonEquiConditions) {

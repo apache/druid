@@ -152,9 +152,15 @@ public class CaseOperatorConversion implements SqlOperatorConversion
         // if either then or else filters produced a native filter (that wasn't just another expression filter)
         // make sure we have filters for both sides by filling in the gaps with expression filter
         if (thenFilter != null && !(thenFilter instanceof ExpressionDimFilter) && elseFilter == null) {
-          elseFilter = new ExpressionDimFilter(elseExpression.getExpression(), plannerContext.getExprMacroTable());
+          elseFilter = new ExpressionDimFilter(
+              elseExpression.getExpression(),
+              plannerContext.parseAndAnalyze(elseExpression.getExpression())
+          );
         } else if (thenFilter == null && elseFilter != null && !(elseFilter instanceof ExpressionDimFilter)) {
-          thenFilter = new ExpressionDimFilter(thenExpression.getExpression(), plannerContext.getExprMacroTable());
+          thenFilter = new ExpressionDimFilter(
+              thenExpression.getExpression(),
+              plannerContext.parseAndAnalyze(thenExpression.getExpression())
+          );
         }
 
         if (thenFilter != null && elseFilter != null) {

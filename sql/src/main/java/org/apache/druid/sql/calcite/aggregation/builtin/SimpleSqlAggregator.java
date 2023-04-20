@@ -76,7 +76,7 @@ public abstract class SimpleSqlAggregator implements SqlAggregator
     }
 
     final DruidExpression arg = Iterables.getOnlyElement(arguments);
-    final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
+    final ExprMacroTable macroTable = plannerContext.getPlannerToolbox().exprMacroTable();
 
     final String fieldName;
 

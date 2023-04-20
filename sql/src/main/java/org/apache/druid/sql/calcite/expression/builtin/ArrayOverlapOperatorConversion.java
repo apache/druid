@@ -29,7 +29,6 @@ import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.InputBindings;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.column.RowSignature;
@@ -112,7 +111,7 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
       return toExpressionFilter(plannerContext, getDruidFunctionName(), druidExpressions);
     }
 
-    Expr expr = Parser.parse(complexExpr.getExpression(), plannerContext.getExprMacroTable());
+    Expr expr = plannerContext.parseAndAnalyze(complexExpr.getExpression()).expr();
     if (expr.isLiteral()) {
       // Evaluate the expression to take out the array elements.
       // We can safely pass null if the expression is literal.

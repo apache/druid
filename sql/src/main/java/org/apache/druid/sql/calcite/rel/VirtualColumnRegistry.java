@@ -21,13 +21,13 @@ package org.apache.druid.sql.calcite.rel;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.ExpressionParser;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
@@ -47,7 +47,7 @@ import java.util.stream.Collectors;
  */
 public class VirtualColumnRegistry
 {
-  private final ExprMacroTable macroTable;
+  private final ExpressionParser expressionParser;
   private final RowSignature baseRowSignature;
   private final Map<ExpressionAndTypeHint, String> virtualColumnsByExpression;
   private final Map<String, ExpressionAndTypeHint> virtualColumnsByName;
@@ -57,14 +57,14 @@ public class VirtualColumnRegistry
 
   private VirtualColumnRegistry(
       RowSignature baseRowSignature,
-      ExprMacroTable macroTable,
+      ExpressionParser expressionParser,
       String virtualColumnPrefix,
       boolean forceExpressionVirtualColumns,
       Map<ExpressionAndTypeHint, String> virtualColumnsByExpression,
       Map<String, ExpressionAndTypeHint> virtualColumnsByName
   )
   {
-    this.macroTable = macroTable;
+    this.expressionParser = expressionParser;
     this.baseRowSignature = baseRowSignature;
     this.virtualColumnPrefix = virtualColumnPrefix;
     this.virtualColumnsByExpression = virtualColumnsByExpression;
@@ -74,13 +74,13 @@ public class VirtualColumnRegistry
 
   public static VirtualColumnRegistry create(
       final RowSignature rowSignature,
-      final ExprMacroTable macroTable,
+      final ExpressionParser expressionParser,
       final boolean forceExpressionVirtualColumns
   )
   {
     return new VirtualColumnRegistry(
         rowSignature,
-        macroTable,
+        expressionParser,
         Calcites.findUnusedPrefixForDigits("v", rowSignature.getColumnNames()),
         forceExpressionVirtualColumns,
         new HashMap<>(),
@@ -158,8 +158,8 @@ public class VirtualColumnRegistry
     DruidExpression expression = registeredColumn.getExpression();
     ColumnType columnType = registeredColumn.getTypeHint();
     return forceExpressionVirtualColumns
-           ? expression.toExpressionVirtualColumn(virtualColumnName, columnType, macroTable)
-           : expression.toVirtualColumn(virtualColumnName, columnType, macroTable);
+           ? expression.toExpressionVirtualColumn(virtualColumnName, columnType, expressionParser)
+           : expression.toVirtualColumn(virtualColumnName, columnType, expressionParser);
   }
 
   @Nullable
@@ -187,7 +187,7 @@ public class VirtualColumnRegistry
       final ColumnCapabilities virtualCapabilities = virtualColumn.getValue().getExpression().toVirtualColumn(
           columnName,
           typeHint,
-          macroTable
+          expressionParser
       ).capabilities(baseSignature, columnName);
 
       // fall back to type hint
@@ -300,7 +300,7 @@ public class VirtualColumnRegistry
    * Wrapper class for a {@link DruidExpression} and the output {@link ColumnType} "hint" that callers can specify when
    * adding a virtual column with {@link #getOrCreateVirtualColumnForExpression(DruidExpression, RelDataType)} or
    * {@link #getOrCreateVirtualColumnForExpression(DruidExpression, ColumnType)}. This "hint"  will be passed into
-   * {@link DruidExpression#toVirtualColumn(String, ColumnType, ExprMacroTable)}.
+   * {@link DruidExpression#toVirtualColumn(String, ColumnType, ExpressionParser)}.
    *
    * The type hint might be different than {@link DruidExpression#getDruidType()} since that value is the captured value
    * of {@link org.apache.calcite.rex.RexNode#getType()} converted to the Druid type system, while callers might still

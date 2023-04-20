@@ -287,7 +287,7 @@ public class JoinDataSource implements DataSource
     return getConditionAnalysis().getEquiConditions()
                                  .stream()
                                  .filter(equality -> equality.getLeftExpr() != null)
-                                 .map(equality -> equality.getLeftExpr().analyzeInputs().getRequiredBindings())
+                                 .map(equality -> equality.analyzeLeftExprInputs().getRequiredBindings())
                                  .flatMap(Set::stream)
                                  .collect(Collectors.toSet());
   }

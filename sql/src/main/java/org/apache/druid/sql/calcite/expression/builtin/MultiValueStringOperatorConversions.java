@@ -32,7 +32,6 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.InputBindings;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
@@ -333,7 +332,7 @@ public class MultiValueStringOperatorConversions
         return null;
       }
 
-      Expr expr = Parser.parse(druidExpressions.get(1).getExpression(), plannerContext.getExprMacroTable());
+      Expr expr = plannerContext.parseAndAnalyze(druidExpressions.get(1).getExpression()).expr();
       // the right expression must be a literal array for this to work, since we need the values of the column
       if (!expr.isLiteral()) {
         return null;
