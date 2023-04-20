@@ -216,11 +216,11 @@ public class CompactionTask extends AbstractBatchIndexTask
     if (ioConfig != null) {
       this.ioConfig = ioConfig;
     } else if (interval != null) {
-      this.ioConfig = new CompactionIOConfig(new CompactionIntervalSpec(interval, null), null);
+      this.ioConfig = new CompactionIOConfig(new CompactionIntervalSpec(interval, null), false, null);
     } else {
       // We already checked segments is not null or empty above.
       //noinspection ConstantConditions
-      this.ioConfig = new CompactionIOConfig(SpecificSegmentsSpec.fromSegments(segments), null);
+      this.ioConfig = new CompactionIOConfig(SpecificSegmentsSpec.fromSegments(segments), false, null);
     }
     this.dimensionsSpec = dimensionsSpec == null ? dimensions : dimensionsSpec;
     this.transformSpec = transformSpec;
@@ -415,6 +415,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
     final List<DataSegment> segments = segmentProvider.findSegments(taskActionClient);
+    final Interval interval = JodaUtils.umbrellaInterval(Iterables.transform(segments, DataSegment::getInterval));
     return determineLockGranularityAndTryLockWithSegments(taskActionClient, segments, segmentProvider::checkSegments);
   }
 
@@ -462,6 +463,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     final List<ParallelIndexIngestionSpec> ingestionSpecs = createIngestionSchema(
         toolbox,
         getTaskLockHelper().getLockGranularityToUse(),
+        ioConfig,
         segmentProvider,
         partitionConfigurationManager,
         dimensionsSpec,
@@ -567,9 +569,10 @@ public class CompactionTask extends AbstractBatchIndexTask
    * @return an empty list if input segments don't exist. Otherwise, a generated ingestionSpec.
    */
   @VisibleForTesting
-  static <ObjectType> List<ParallelIndexIngestionSpec> createIngestionSchema(
+  static List<ParallelIndexIngestionSpec> createIngestionSchema(
       final TaskToolbox toolbox,
       final LockGranularity lockGranularityInUse,
+      final CompactionIOConfig ioConfig,
       final SegmentProvider segmentProvider,
       final PartitionConfigurationManager partitionConfigurationManager,
       @Nullable final DimensionsSpec dimensionsSpec,
@@ -656,7 +659,7 @@ public class CompactionTask extends AbstractBatchIndexTask
                     coordinatorClient,
                     segmentCacheManagerFactory,
                     retryPolicyFactory,
-                    dropExisting
+                    ioConfig
                 ),
                 compactionTuningConfig
             )
@@ -695,7 +698,7 @@ public class CompactionTask extends AbstractBatchIndexTask
                   coordinatorClient,
                   segmentCacheManagerFactory,
                   retryPolicyFactory,
-                  dropExisting
+                  ioConfig
               ),
               compactionTuningConfig
           )
@@ -710,9 +713,26 @@ public class CompactionTask extends AbstractBatchIndexTask
       CoordinatorClient coordinatorClient,
       SegmentCacheManagerFactory segmentCacheManagerFactory,
       RetryPolicyFactory retryPolicyFactory,
-      boolean dropExisting
+      CompactionIOConfig compactionIOConfig
   )
   {
+    if (!compactionIOConfig.isAllowNonAlignedInterval()) {
+      // Validate interval alignment.
+      final Granularity segmentGranularity = dataSchema.getGranularitySpec().getSegmentGranularity();
+      final Interval widenedInterval = Intervals.utc(
+          segmentGranularity.bucketStart(interval.getStart()).getMillis(),
+          segmentGranularity.bucketEnd(interval.getEnd().minus(1)).getMillis()
+      );
+
+      if (!interval.equals(widenedInterval)) {
+        throw new IAE(
+            "Interval[%s] to compact is not aligned with segmentGranularity[%s]",
+            interval,
+            segmentGranularity
+        );
+      }
+    }
+
     return new ParallelIndexIOConfig(
         null,
         new DruidInputSource(
@@ -730,7 +750,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         ),
         null,
         false,
-        dropExisting
+        compactionIOConfig.isDropExisting()
     );
   }
 
@@ -1226,15 +1246,21 @@ public class CompactionTask extends AbstractBatchIndexTask
       return inputSpec(SpecificSegmentsSpec.fromSegments(segments));
     }
 
+    public Builder ioConfig(CompactionIOConfig ioConfig)
+    {
+      this.ioConfig = ioConfig;
+      return this;
+    }
+
     public Builder inputSpec(CompactionInputSpec inputSpec)
     {
-      this.ioConfig = new CompactionIOConfig(inputSpec, null);
+      this.ioConfig = new CompactionIOConfig(inputSpec, false, null);
       return this;
     }
 
     public Builder inputSpec(CompactionInputSpec inputSpec, Boolean dropExisting)
     {
-      this.ioConfig = new CompactionIOConfig(inputSpec, dropExisting);
+      this.ioConfig = new CompactionIOConfig(inputSpec, false, dropExisting);
       return this;
     }
 

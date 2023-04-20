@@ -184,11 +184,11 @@ The compaction `ioConfig` requires specifying `inputSpec` as follows:
 |Field|Description|Default|Required|
 |-----|-----------|-------|--------|
 |`type`|Task type. Set the value to `compact`.|none|Yes|
-|`inputSpec`|Specification of the target [intervals](#interval-inputspec) or [segments](#segments-inputspec).|none|Yes|
+|`inputSpec`|Specification of the target [interval](#interval-inputspec) or [segments](#segments-inputspec).|none|Yes|
 |`dropExisting`|If `true`, the task replaces all existing segments fully contained by either of the following:<br />- the `interval` in the `interval` type `inputSpec`.<br />- the umbrella interval of the `segments` in the `segment` type `inputSpec`.<br />If compaction fails, Druid does not change any of the existing segments.<br />**WARNING**: `dropExisting` in `ioConfig` is a beta feature. |false|No|
+|`allowNonAlignedInterval`|If `true`, the task allows an explicit [`segmentGranularity`](#compaction-granularity-spec) that is not aligned with the provided [interval](#interval-inputspec) or [segments](#segments-inputspec). This parameter is only used if [`segmentGranularity`](#compaction-granularity-spec) is explicitly provided.<br /><br />This parameter is provided for backwards compatibility. In most scenarios it should not be set, as it can lead to data being accidentally overshadowed.|false|No|
 
-
-Druid supports two supported `inputSpec` formats:
+The compaction task has two kinds of `inputSpec`:
 
 #### Interval `inputSpec`
 
