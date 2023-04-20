@@ -129,9 +129,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
     // Kill segments
     toolbox.getTaskActionClient().submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
-    for (DataSegment segment : unusedSegments) {
-      toolbox.getDataSegmentKiller().kill(segment);
-    }
+    toolbox.getDataSegmentKiller().killBatched(unusedSegments);
 
     return TaskStatus.success(getId());
   }

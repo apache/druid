@@ -20,8 +20,12 @@
 package org.apache.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.services.s3.model.DeleteObjectsRequest;
+import com.amazonaws.services.s3.model.DeleteObjectsResult;
+import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MapUtils;
@@ -31,6 +35,7 @@ import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -62,6 +67,52 @@ public class S3DataSegmentKiller implements DataSegmentKiller
     this.s3ClientSupplier = s3Client;
     this.segmentPusherConfig = segmentPusherConfig;
     this.inputDataConfig = inputDataConfig;
+  }
+
+  @Override
+  public void killBatched(List<DataSegment> segments) throws SegmentLoadingException
+  {
+    int size = segments.size();
+    if (size == 0) {
+      return;
+    }
+    if (segments.size() == 1) {
+      kill(segments.get(0));
+      return;
+    }
+    try {
+      // we can assume that all segments are in the same bucket.
+      String s3Bucket = MapUtils.getString(segments.get(0).getLoadSpec(), "bucket");
+      final ServerSideEncryptingAmazonS3 s3Client = this.s3ClientSupplier.get();
+
+      // 1000 objects is the max amount of objects that can be deleted in s3 at a time.
+      List<List<DataSegment>> segmentsChunks = Lists.partition(segments, 1000);
+      for (List<DataSegment> segmentsChunk : segmentsChunks) {
+        DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(s3Bucket);
+        deleteObjectsRequest = deleteObjectsRequest.withKeys(
+            segmentsChunk.stream()
+                         .map(segment -> MapUtils.getString(segment.getLoadSpec(), "key"))
+                         .toArray(String[]::new));
+        DeleteObjectsResult deleteResult = s3Client.deleteObjects(deleteObjectsRequest);
+        log.info("deleted objects %s", deleteResult);
+
+        // delete descriptors which are a files to store segment metadata in deep storage.
+        // This file is deprecated and not stored anymore, but we still delete them if they exist.
+        deleteObjectsRequest = new DeleteObjectsRequest(s3Bucket);
+        deleteObjectsRequest = deleteObjectsRequest.withKeys(
+            segmentsChunk.stream()
+                         .map(segment -> DataSegmentKiller.descriptorPath(MapUtils.getString(
+                             segment.getLoadSpec(),
+                             "key"
+                         )))
+                         .toArray(String[]::new));
+        deleteResult = s3Client.deleteObjects(deleteObjectsRequest);
+        log.info("deleted objects %s", deleteResult);
+      }
+    }
+    catch (MultiObjectDeleteException e) {
+      throw new SegmentLoadingException(e, "Couldn't kill all segment but deleted[%s]: [%s]", e.getDeletedObjects(), e);
+    }
   }
 
   @Override

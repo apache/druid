@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * DataSegmentKiller knows how to kill segments from the Druid system.
@@ -53,6 +54,18 @@ public interface DataSegmentKiller
    * @throws SegmentLoadingException if the segment could not be completely removed
    */
   void kill(DataSegment segment) throws SegmentLoadingException;
+
+  /**
+   * Removes segment files (indexes and metadata) from deep storage.
+   * @param segments The list of segments to kill
+   * @throws SegmentLoadingException If there is an exception during deletion
+   */
+  default void killBatched(List<DataSegment> segments) throws SegmentLoadingException
+  {
+    for (DataSegment segment : segments) {
+      kill(segment);
+    }
+  }
 
   /**
    * A more stoic killer who doesn't throw a tantrum if things get messy. Use when killing segments for best-effort
