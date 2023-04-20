@@ -19,9 +19,12 @@
 
 package org.apache.druid.msq.exec;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
@@ -132,24 +135,51 @@ public class MSQFaultsTest extends MSQTestBase
   @Test
   public void testInsertTimeNullFault()
   {
+    final String expectedDataSource = "foo1";
+
     final RowSignature rowSignature =
         RowSignature.builder()
                     .add("__time", ColumnType.LONG)
-                    .add("dim1", ColumnType.STRING)
+                    .add("cnt", ColumnType.STRING)
                     .build();
 
-    testIngestQuery()
-        .setSql(
-            "INSERT INTO foo1\n"
-            + "SELECT TIME_PARSE(dim1) AS __time, dim1 as cnt\n"
-            + "FROM foo\n"
-            + "PARTITIONED BY DAY\n"
-            + "CLUSTERED BY dim1")
-        .setExpectedDataSource("foo1")
-        .setExpectedRowSignature(rowSignature)
-        .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.of("2000-01-01T/P1M"), "test", 0)))
-        .setExpectedMSQFault(InsertTimeNullFault.instance())
-        .verifyResults();
+    final String sql = "INSERT INTO foo1\n"
+                     + "SELECT TIME_PARSE(dim1) AS __time, dim1 as cnt\n"
+                     + "FROM foo\n"
+                     + "PARTITIONED BY DAY\n"
+                     + "CLUSTERED BY dim1";
+
+    if (NullHandling.sqlCompatible()) {
+      testIngestQuery()
+          .setSql(sql)
+          .setExpectedDataSource(expectedDataSource)
+          .setExpectedRowSignature(rowSignature)
+          .setExpectedMSQFault(InsertTimeNullFault.instance())
+          .verifyResults();
+    } else {
+      testIngestQuery()
+          .setSql(sql)
+          .setExpectedDataSource(expectedDataSource)
+          .setExpectedRowSignature(rowSignature)
+          .setExpectedSegment(
+              ImmutableSet.of(
+                  SegmentId.of(expectedDataSource, Intervals.of("0001-01-01T/P1D"), "test", 0),
+                  SegmentId.of(expectedDataSource, Intervals.of("0002-01-01T/P1D"), "test", 0),
+                  SegmentId.of(expectedDataSource, Intervals.of("1970-01-01T/P1D"), "test", 0)
+              )
+          )
+          .setExpectedResultRows(
+              ImmutableList.of(
+                  new Object[]{DateTimes.of("0001-01-01").getMillis(), "1"},
+                  new Object[]{DateTimes.of("0002-01-01").getMillis(), "2"},
+                  new Object[]{DateTimes.of("1970-01-01").getMillis(), null},
+                  new Object[]{DateTimes.of("1970-01-01").getMillis(), "10.1"},
+                  new Object[]{DateTimes.of("1970-01-01").getMillis(), "abc"},
+                  new Object[]{DateTimes.of("1970-01-01").getMillis(), "def"}
+              )
+          )
+          .verifyResults();
+    }
   }
 
   @Test

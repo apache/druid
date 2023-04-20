@@ -155,15 +155,15 @@ public class PodTemplateTaskAdapter implements TaskAdapter
    * @throws IOException
    */
   @Override
-  public Task toTask(Pod from) throws IOException
+  public Task toTask(Job from) throws IOException
   {
-    Map<String, String> annotations = from.getMetadata().getAnnotations();
+    Map<String, String> annotations = from.getSpec().getTemplate().getMetadata().getAnnotations();
     if (annotations == null) {
-      throw new IOE("No annotations found on pod [%s]", from.getMetadata().getName());
+      throw new IOE("No annotations found on pod spec for job [%s]", from.getMetadata().getName());
     }
     String task = annotations.get(DruidK8sConstants.TASK);
     if (task == null) {
-      throw new IOE("No task annotation found on pod [%s]", from.getMetadata().getName());
+      throw new IOE("No task annotation found on pod spec for job [%s]", from.getMetadata().getName());
     }
     return mapper.readValue(Base64Compression.decompressBase64(task), Task.class);
   }
@@ -209,7 +209,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     return ImmutableList.of(
         new EnvVarBuilder()
             .withName(DruidK8sConstants.TASK_DIR_ENV)
-            .withValue(new File(taskConfig.getBaseTaskDirPaths().get(0)).getAbsolutePath())
+            .withValue(taskConfig.getBaseDir())
             .build(),
         new EnvVarBuilder()
             .withName(DruidK8sConstants.TASK_ID_ENV)

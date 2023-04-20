@@ -22,7 +22,6 @@ package org.apache.druid.k8s.overlord.common;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.google.common.collect.ImmutableList;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -31,6 +30,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
@@ -93,23 +93,7 @@ public class DruidPeonClientIntegrationTest
         false
     );
     startupLoggingConfig = new StartupLoggingConfig();
-    taskConfig = new TaskConfig(
-        "src/test/resources",
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        null,
-        null,
-        false,
-        ImmutableList.of("src/test/resources")
-    );
+    taskConfig = new TaskConfigBuilder().setBaseDir("src/test/resources").build();
   }
 
   @Disabled
@@ -161,7 +145,7 @@ public class DruidPeonClientIntegrationTest
     thread.start();
 
     // assert that the env variable is corret
-    Task taskFromEnvVar = adapter.toTask(peonClient.getMainJobPod(new K8sTaskId(task.getId())));
+    Task taskFromEnvVar = adapter.toTask(job);
     assertEquals(task, taskFromEnvVar);
 
     // now copy the task.json file from the pod and make sure its the same as our task.json we expected

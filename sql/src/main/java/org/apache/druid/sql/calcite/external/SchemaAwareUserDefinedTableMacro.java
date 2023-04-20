@@ -48,6 +48,7 @@ import org.apache.druid.sql.calcite.table.ExternalTable;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Table macro designed for use with the Druid EXTEND operator. Example:
@@ -172,12 +173,14 @@ public abstract class SchemaAwareUserDefinedTableMacro
     {
       Set<ResourceAction> resourceActions = new HashSet<>();
       if (table instanceof ExternalTable && inputSourceTypeSecurityEnabled) {
-        resourceActions.add(new ResourceAction(new Resource(
-            ResourceType.EXTERNAL,
-            ((ExternalTable) table).getInputSourceType()
-        ), Action.READ));
+        resourceActions.addAll(((ExternalTable) table)
+                                   .getInputSourceTypeSupplier().get().stream()
+                                   .map(inputSourceType ->
+                                 new ResourceAction(new Resource(inputSourceType, ResourceType.EXTERNAL), Action.READ))
+                                   .collect(Collectors.toSet()));
+      } else {
+        resourceActions.addAll(base.computeResources(call, inputSourceTypeSecurityEnabled));
       }
-      resourceActions.addAll(base.computeResources(call, inputSourceTypeSecurityEnabled));
       return resourceActions;
     }
   }

@@ -227,7 +227,7 @@ public class FrontCodedIntArrayIndexedWriter implements DictionaryWriter<int[]>
   @Override
   public int getCardinality()
   {
-    return numWritten;
+    return numWritten + (hasNulls ? 1 : 0);
   }
 
   private long getBucketOffset(int index) throws IOException

@@ -21,6 +21,7 @@ package org.apache.druid.data.input.google;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.api.services.storage.model.StorageObject;
 import com.google.common.collect.Iterators;
@@ -36,15 +37,19 @@ import org.apache.druid.storage.google.GoogleStorage;
 import org.apache.druid.storage.google.GoogleStorageDruidModule;
 import org.apache.druid.storage.google.GoogleUtils;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.net.URI;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 public class GoogleCloudStorageInputSource extends CloudObjectInputSource
 {
+  static final String TYPE_KEY = GoogleStorageDruidModule.SCHEME;
   private static final Logger LOG = new Logger(GoogleCloudStorageInputSource.class);
 
   private final GoogleStorage storage;
@@ -63,6 +68,14 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
     super(GoogleStorageDruidModule.SCHEME_GS, uris, prefixes, objects, objectGlob);
     this.storage = storage;
     this.inputDataConfig = inputDataConfig;
+  }
+
+  @JsonIgnore
+  @Nonnull
+  @Override
+  public Set<String> getTypes()
+  {
+    return Collections.singleton(TYPE_KEY);
   }
 
   @Override

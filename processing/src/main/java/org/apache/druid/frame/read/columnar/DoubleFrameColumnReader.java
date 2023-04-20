@@ -239,7 +239,7 @@ public class DoubleFrameColumnReader implements FrameColumnReader
 
     private boolean isNull(final int physicalRow)
     {
-      if (hasNulls) {
+      if (NullHandling.sqlCompatible() && hasNulls) {
         final long rowPosition = memoryPosition + (long) sz * physicalRow;
         return memory.getByte(rowPosition) != 0;
       } else {

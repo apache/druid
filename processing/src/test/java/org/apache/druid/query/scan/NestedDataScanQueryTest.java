@@ -39,6 +39,7 @@ import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -135,7 +136,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
             TransformSpec.NONE,
             NestedDataTestUtils.COUNT,
             Granularities.YEAR,
-            true
+            true,
+            new IndexSpec()
         )
     ).build();
 
@@ -261,6 +263,35 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testIngestAndScanSegmentsTsvV4() throws Exception
+  {
+    Query<ScanResultValue> scanQuery = Druids.newScanQueryBuilder()
+                                             .dataSource("test_datasource")
+                                             .intervals(
+                                                 new MultipleIntervalSegmentSpec(
+                                                     Collections.singletonList(Intervals.ETERNITY)
+                                                 )
+                                             )
+                                             .virtualColumns(
+                                                 new NestedFieldVirtualColumn("nest", "$.x", "x"),
+                                                 new NestedFieldVirtualColumn("nester", "$.x[0]", "x_0"),
+                                                 new NestedFieldVirtualColumn("nester", "$.y.c[1]", "y_c_1")
+                                             )
+                                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                             .limit(100)
+                                             .context(ImmutableMap.of())
+                                             .build();
+    List<Segment> segs = NestedDataTestUtils.createSimpleSegmentsTsvV4(tempFolder, closer);
+
+    final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
+
+    List<ScanResultValue> results = seq.toList();
+    Assert.assertEquals(1, results.size());
+    Assert.assertEquals(8, ((List) results.get(0).getEvents()).size());
+    logResults(results);
+  }
+
+  @Test
   public void testIngestAndScanSegmentsTsv() throws Exception
   {
     Query<ScanResultValue> scanQuery = Druids.newScanQueryBuilder()
@@ -308,7 +339,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         closer,
         NestedDataTestUtils.SIMPLE_DATA_FILE,
         Granularities.HOUR,
-        true
+        true,
+        new IndexSpec()
     );
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
@@ -491,7 +523,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         TransformSpec.NONE,
         NestedDataTestUtils.COUNT,
         Granularities.DAY,
-        true
+        true,
+        new IndexSpec()
     );
 
 
@@ -550,7 +583,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         TransformSpec.NONE,
         aggs,
         Granularities.NONE,
-        true
+        true,
+        new IndexSpec()
     );
 
 

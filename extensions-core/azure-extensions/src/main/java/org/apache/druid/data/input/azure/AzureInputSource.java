@@ -21,6 +21,7 @@ package org.apache.druid.data.input.azure;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
@@ -35,12 +36,15 @@ import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
 import org.apache.druid.storage.azure.AzureInputDataConfig;
 import org.apache.druid.storage.azure.AzureStorage;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Abstracts the Azure storage system where input data is stored. Allows users to retrieve entities in
@@ -75,6 +79,14 @@ public class AzureInputSource extends CloudObjectInputSource
         "AzureCloudBlobIterableFactory"
     );
     this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "AzureInputDataConfig");
+  }
+
+  @JsonIgnore
+  @Nonnull
+  @Override
+  public Set<String> getTypes()
+  {
+    return Collections.singleton(SCHEME);
   }
 
   @Override

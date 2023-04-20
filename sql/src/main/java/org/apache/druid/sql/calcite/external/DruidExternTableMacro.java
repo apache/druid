@@ -20,11 +20,11 @@
 package org.apache.druid.sql.calcite.external;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.util.NlsString;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -34,6 +34,7 @@ import org.apache.druid.sql.calcite.table.DruidTable;
 import javax.validation.constraints.NotNull;
 import java.util.Collections;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Used by {@link ExternalOperatorConversion} to generate a {@link DruidTable}
@@ -55,11 +56,10 @@ public class DruidExternTableMacro extends DruidUserDefinedTableMacro
     String inputSourceStr = getInputSourceArgument(call);
 
     try {
-      JsonNode jsonNode = ((DruidTableMacro) macro).getJsonMapper().readTree(inputSourceStr);
-      return Collections.singleton(new ResourceAction(new Resource(
-          ResourceType.EXTERNAL,
-          jsonNode.get("type").asText()
-      ), Action.READ));
+      InputSource inputSource = ((DruidTableMacro) macro).getJsonMapper().readValue(inputSourceStr, InputSource.class);
+      return inputSource.getTypes().stream()
+          .map(inputSourceType -> new ResourceAction(new Resource(inputSourceType, ResourceType.EXTERNAL), Action.READ))
+          .collect(Collectors.toSet());
     }
     catch (JsonProcessingException e) {
       // this shouldn't happen, the input source paraemeter should have been validated before this

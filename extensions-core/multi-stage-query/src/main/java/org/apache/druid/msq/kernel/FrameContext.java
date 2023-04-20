@@ -25,8 +25,8 @@ import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
-import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 
 import java.io.File;
@@ -36,7 +36,7 @@ import java.io.File;
  */
 public interface FrameContext
 {
-  JoinableFactory joinableFactory();
+  SegmentWrangler segmentWrangler();
 
   GroupByStrategySelector groupByStrategySelector();
 

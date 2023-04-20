@@ -57,13 +57,13 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
 import org.apache.druid.indexing.common.task.CompactionTask.PartitionConfigurationManager;
 import org.apache.druid.indexing.common.task.CompactionTask.SegmentProvider;
@@ -671,6 +671,25 @@ public class CompactionTaskTest
     final byte[] bytes = mapper.writeValueAsBytes(oldTask);
     final CompactionTask fromJson = mapper.readValue(bytes, CompactionTask.class);
     assertEquals(expectedFromJson, fromJson);
+  }
+
+  @Test
+  public void testInputSourceResources()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory,
+        RETRY_POLICY_FACTORY
+    );
+    final CompactionTask task = builder
+        .inputSpec(
+            new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS))
+        )
+        .tuningConfig(createTuningConfig())
+        .context(ImmutableMap.of("testKey", "testContext"))
+        .build();
+
+    Assert.assertTrue(task.getInputSourceResources().isEmpty());
   }
 
   @Test
@@ -1889,23 +1908,9 @@ public class CompactionTaskTest
       }
     };
 
-    final TaskConfig config = new TaskConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
-        null
-    );
+    final TaskConfig config = new TaskConfigBuilder()
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
     return new TaskToolbox.Builder()
         .config(config)
         .taskActionClient(taskActionClient)
@@ -1926,7 +1931,6 @@ public class CompactionTaskTest
         .segmentCacheManager(segmentCacheManager)
         .taskLogPusher(null)
         .attemptId("1")
-        .dirTracker(new TaskStorageDirTracker(config))
         .build();
   }
 

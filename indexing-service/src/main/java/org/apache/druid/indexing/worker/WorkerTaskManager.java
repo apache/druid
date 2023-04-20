@@ -35,7 +35,7 @@ import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
@@ -78,11 +78,6 @@ import java.util.stream.Collectors;
  */
 public class WorkerTaskManager
 {
-
-  private static final String TEMP_WORKER = "workerTaskManagerTmp";
-  private static final String ASSIGNED = "assignedTasks";
-  private static final String COMPLETED = "completedTasks";
-
   private static final EmittingLogger log = new EmittingLogger(WorkerTaskManager.class);
 
   private final ObjectMapper jsonMapper;
@@ -108,15 +103,14 @@ public class WorkerTaskManager
   private final AtomicBoolean disabled = new AtomicBoolean(false);
 
   private final DruidLeaderClient overlordClient;
-
-  private final TaskStorageDirTracker dirTracker;
+  private final File storageDir;
 
   @Inject
   public WorkerTaskManager(
       ObjectMapper jsonMapper,
       TaskRunner taskRunner,
-      @IndexingService DruidLeaderClient overlordClient,
-      TaskStorageDirTracker dirTracker
+      TaskConfig taskConfig,
+      @IndexingService DruidLeaderClient overlordClient
   )
   {
     this.jsonMapper = jsonMapper;
@@ -124,7 +118,8 @@ public class WorkerTaskManager
     this.exec = Execs.singleThreaded("WorkerTaskManager-NoticeHandler");
     this.completedTasksCleanupExecutor = Execs.scheduledSingleThreaded("WorkerTaskManager-CompletedTasksCleaner");
     this.overlordClient = overlordClient;
-    this.dirTracker = dirTracker;
+
+    storageDir = taskConfig.getBaseTaskDir();
   }
 
   @LifecycleStart
@@ -137,7 +132,7 @@ public class WorkerTaskManager
     synchronized (lock) {
       try {
         log.debug("Starting...");
-        cleanupAndMakeTmpTaskDirs();
+        cleanupAndMakeTmpTaskDir();
         registerLocationListener();
         restoreRestorableTasks();
         initAssignedTasks();
@@ -284,8 +279,8 @@ public class WorkerTaskManager
 
       try {
         FileUtils.writeAtomically(
-            getAssignedTaskFile(task.getId()),
-            getTmpTaskDir(task.getId()),
+            new File(getAssignedTaskDir(), task.getId()),
+            getTmpTaskDir(),
             os -> {
               jsonMapper.writeValue(os, task);
               return null;
@@ -312,21 +307,14 @@ public class WorkerTaskManager
     submitNoticeToExec(new RunNotice(task));
   }
 
-  private File getTmpTaskDir(String taskId)
+  private File getTmpTaskDir()
   {
-    return new File(dirTracker.getBaseTaskDir(taskId), TEMP_WORKER);
+    return new File(storageDir, "workerTaskManagerTmp");
   }
 
-  private void cleanupAndMakeTmpTaskDirs() throws IOException
+  private void cleanupAndMakeTmpTaskDir() throws IOException
   {
-    for (File baseTaskDir : dirTracker.getBaseTaskDirs()) {
-      cleanupAndMakeTmpTaskDir(baseTaskDir);
-    }
-  }
-
-  private void cleanupAndMakeTmpTaskDir(File baseTaskDir) throws IOException
-  {
-    File tmpDir = new File(baseTaskDir, TEMP_WORKER);
+    File tmpDir = getTmpTaskDir();
     FileUtils.mkdirp(tmpDir);
     if (!tmpDir.isDirectory()) {
       throw new ISE("Tmp Tasks Dir [%s] does not exist/not-a-directory.", tmpDir);
@@ -341,29 +329,14 @@ public class WorkerTaskManager
     }
   }
 
-  public File getAssignedTaskFile(String taskId)
+  public File getAssignedTaskDir()
   {
-    return new File(new File(dirTracker.getBaseTaskDir(taskId), ASSIGNED), taskId);
-  }
-
-  public List<File> getAssignedTaskDirs()
-  {
-    return dirTracker.getBaseTaskDirs()
-                     .stream()
-                     .map(location -> new File(location.getPath(), ASSIGNED))
-                     .collect(Collectors.toList());
+    return new File(storageDir, "assignedTasks");
   }
 
   private void initAssignedTasks() throws IOException
   {
-    for (File baseTaskDir : dirTracker.getBaseTaskDirs()) {
-      initAssignedTasks(baseTaskDir);
-    }
-  }
-
-  private void initAssignedTasks(File baseTaskDir) throws IOException
-  {
-    File assignedTaskDir = new File(baseTaskDir, ASSIGNED);
+    File assignedTaskDir = getAssignedTaskDir();
 
     log.debug("Looking for any previously assigned tasks on disk[%s].", assignedTaskDir);
 
@@ -401,7 +374,7 @@ public class WorkerTaskManager
   private void cleanupAssignedTask(Task task)
   {
     assignedTasks.remove(task.getId());
-    File taskFile = getAssignedTaskFile(task.getId());
+    File taskFile = new File(getAssignedTaskDir(), task.getId());
     try {
       Files.delete(taskFile.toPath());
     }
@@ -457,17 +430,9 @@ public class WorkerTaskManager
     }
   }
 
-  public List<File> getCompletedTaskDirs()
+  public File getCompletedTaskDir()
   {
-    return dirTracker.getBaseTaskDirs()
-                     .stream()
-                     .map(location -> new File(location.getPath(), COMPLETED))
-                     .collect(Collectors.toList());
-  }
-
-  public File getCompletedTaskFile(String taskId)
-  {
-    return new File(new File(dirTracker.getBaseTaskDir(taskId), COMPLETED), taskId);
+    return new File(storageDir, "completedTasks");
   }
 
   private void moveFromRunningToCompleted(String taskId, TaskAnnouncement taskAnnouncement)
@@ -478,7 +443,7 @@ public class WorkerTaskManager
 
       try {
         FileUtils.writeAtomically(
-            getCompletedTaskFile(taskId), getTmpTaskDir(taskId),
+            new File(getCompletedTaskDir(), taskId), getTmpTaskDir(),
             os -> {
               jsonMapper.writeValue(os, taskAnnouncement);
               return null;
@@ -494,14 +459,7 @@ public class WorkerTaskManager
 
   private void initCompletedTasks() throws IOException
   {
-    for (File baseTaskDir : dirTracker.getBaseTaskDirs()) {
-      initCompletedTasks(baseTaskDir);
-    }
-  }
-
-  private void initCompletedTasks(File baseTaskDir) throws IOException
-  {
-    File completedTaskDir = new File(baseTaskDir, COMPLETED);
+    File completedTaskDir = getCompletedTaskDir();
     log.debug("Looking for any previously completed tasks on disk[%s].", completedTaskDir);
 
     FileUtils.mkdirp(completedTaskDir);
@@ -598,16 +556,13 @@ public class WorkerTaskManager
                 );
 
                 completedTasks.remove(taskId);
-                File taskFile = getCompletedTaskFile(taskId);
+                File taskFile = new File(getCompletedTaskDir(), taskId);
                 try {
                   Files.deleteIfExists(taskFile.toPath());
                   changeHistory.addChangeRequest(new WorkerHistoryItem.TaskRemoval(taskId));
                 }
                 catch (IOException ex) {
                   log.error(ex, "Failed to delete completed task from disk [%s].", taskFile);
-                }
-                finally {
-                  dirTracker.removeTask(taskId);
                 }
 
               }
