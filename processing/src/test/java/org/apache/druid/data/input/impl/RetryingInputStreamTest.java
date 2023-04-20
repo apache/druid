@@ -31,6 +31,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import javax.annotation.Nonnull;
 import java.io.DataInputStream;
@@ -43,6 +45,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.spy;
 
 public class RetryingInputStreamTest
 {
@@ -107,10 +114,10 @@ public class RetryingInputStreamTest
         testFile,
         objectOpenFunction,
         t -> false, // will not retry
-        MAX_RETRY
+        MAX_RETRY,
+        false
     );
 
-    retryingInputStream.setNoWait();
     Assert.assertThrows(
         IOException.class,
         () -> retryHelper(retryingInputStream)
@@ -127,10 +134,10 @@ public class RetryingInputStreamTest
         testFile,
         objectOpenFunction,
         t -> t instanceof CustomException,
-        MAX_RETRY
+        MAX_RETRY,
+        false
     );
 
-    retryingInputStream.setNoWait();
     retryHelper(retryingInputStream);
 
     Assert.assertEquals(0, throwCustomExceptions);
@@ -144,10 +151,10 @@ public class RetryingInputStreamTest
         testFile,
         objectOpenFunction,
         t -> false, // will not retry
-        MAX_RETRY
+        MAX_RETRY,
+        false
     );
 
-    retryingInputStream.setNoWait();
     final IOException e = Assert.assertThrows(
         IOException.class,
         () -> retryHelper(retryingInputStream)
@@ -167,10 +174,10 @@ public class RetryingInputStreamTest
         testFile,
         objectOpenFunction,
         t -> true, // always retry
-        MAX_RETRY
+        MAX_RETRY,
+        false
     );
 
-    retryingInputStream.setNoWait();
     retryHelper(retryingInputStream);
 
     // Tried more than MAX_RETRY times because progress was being made. (MAX_RETRIES applies to each call individually.)
@@ -185,10 +192,10 @@ public class RetryingInputStreamTest
         testFile,
         objectOpenFunction,
         t -> t instanceof IOException,
-        MAX_RETRY
+        MAX_RETRY,
+        false
     );
 
-    retryingInputStream.setNoWait();
     Assert.assertThrows(
         IOException.class,
         () -> retryHelper(retryingInputStream)
@@ -206,14 +213,46 @@ public class RetryingInputStreamTest
         testFile,
         objectOpenFunction,
         t -> t instanceof IOException || t instanceof CustomException,
-        MAX_RETRY
+        MAX_RETRY,
+        false
     );
 
-    retryingInputStream.setNoWait();
     retryHelper(retryingInputStream);
 
     Assert.assertEquals(0, throwCustomExceptions);
     Assert.assertEquals(0, throwIOExceptions);
+  }
+
+  @Test
+  public void testRetryOnExceptionWhenOpeningStream() throws Exception
+  {
+    throwCustomExceptions = 2;
+
+    ObjectOpenFunction<File> spyObjectOpenFunction = spy(objectOpenFunction);
+    doAnswer(new Answer<InputStream>()
+    {
+      int retryCount = 0;
+      @Override
+      public InputStream answer(InvocationOnMock invocation) throws Throwable
+      {
+        if (retryCount < 2) {
+          retryCount += 1;
+          throwCustomExceptions -= 1;
+          throw new CustomException("I am a custom retryable exception", new RuntimeException());
+        } else {
+          return (InputStream) invocation.callRealMethod();
+        }
+      }
+    }).when(spyObjectOpenFunction).open(any(), anyLong());
+
+    final RetryingInputStream<File> retryingInputStream = new RetryingInputStream<>(
+        testFile,
+        spyObjectOpenFunction,
+        t -> t instanceof CustomException,
+        MAX_RETRY,
+        false
+    );
+    Assert.assertEquals(0, throwCustomExceptions);
   }
 
   private void retryHelper(RetryingInputStream<File> retryingInputStream) throws IOException
