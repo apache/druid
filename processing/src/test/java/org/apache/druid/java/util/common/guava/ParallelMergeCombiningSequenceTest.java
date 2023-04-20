@@ -515,11 +515,12 @@ public class ParallelMergeCombiningSequenceTest
     );
     Assert.assertEquals("Query did not complete within configured timeout period. " +
                         "You can increase query timeout or tune the performance of query.", t.getMessage());
-    pool.awaitQuiescence(3, TimeUnit.SECONDS);
-    if (JvmUtils.majorVersion() > 8 && JvmUtils.majorVersion() < 20) {
-      // this is a bug, parallel merge should not be used on these java versions because of this...
-      Assert.assertFalse(pool.isQuiescent());
-    } else {
+
+
+    // java 11, 17 and maybe others in between 8 and 20 don't correctly clean up the pool, however this behavior is
+    // flaky and doesn't always happen so we can't definitively assert that the pool is or isn't
+    if (JvmUtils.majorVersion() >= 20 || JvmUtils.majorVersion() < 9) {
+      pool.awaitQuiescence(3, TimeUnit.SECONDS);
       // good result, we want the pool to always be idle if an exception occurred during processing
       Assert.assertTrue(pool.isQuiescent());
     }

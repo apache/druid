@@ -2843,6 +2843,15 @@ public class CachingClusteredClientTest
             // fixed so same behavior across all test environments
             return 4;
           }
+
+          @Override
+          public boolean useParallelMergePool()
+          {
+            // force it even in java versions that parallel merge is not recommended so that everything uses the same
+            // merge path to ensure the same results across java versions. this test should not run into the issue
+            // that causes those java versions to have parallel merge off by default
+            return true;
+          }
         },
         ForkJoinPool.commonPool(),
         new QueryScheduler(
