@@ -32,7 +32,7 @@ import { ShowValueDialog } from '../../../../dialogs/show-value-dialog/show-valu
 import type { QueryAction } from '../../../../utils';
 import {
   columnToIcon,
-  columnToTypeSummary,
+  columnToSummary,
   columnToWidth,
   filterMap,
   getNumericColumnBraces,
@@ -130,7 +130,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
             Header() {
               return (
                 <div className="header-wrapper" onClick={() => onEditColumn(i)}>
-                  <div className="output-name" title={columnToTypeSummary(column)}>
+                  <div className="output-name" title={columnToSummary(column)}>
                     {icon && <Icon className="type-icon" icon={icon} size={12} />}
                     {h}
                     {hasFilterOnHeader(h, i) && (
