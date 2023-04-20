@@ -49,25 +49,30 @@ export function dataTypeToIcon(dataType: string): IconName {
       return IconNames.FONT;
 
     case 'BIGINT':
+    case 'LONG':
+      return IconNames.NUMERICAL;
+
     case 'DECIMAL':
     case 'REAL':
-    case 'LONG':
     case 'FLOAT':
     case 'DOUBLE':
-      return IconNames.NUMERICAL;
+      return IconNames.FLOATING_POINT;
 
     case 'ARRAY<STRING>':
       return IconNames.ARRAY_STRING;
 
     case 'ARRAY<LONG>':
+      return IconNames.ARRAY_NUMERIC;
+
     case 'ARRAY<FLOAT>':
     case 'ARRAY<DOUBLE>':
-      return IconNames.ARRAY_NUMERIC;
+      return IconNames.ARRAY_FLOATING_POINT;
 
     case 'COMPLEX<JSON>':
       return IconNames.DIAGRAM_TREE;
 
     case 'COMPLEX<IPADDRESS>':
+    case 'COMPLEX<IPPREFIX>':
       return IconNames.IP_ADDRESS;
 
     case 'NULL':
