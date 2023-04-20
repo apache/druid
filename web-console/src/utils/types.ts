@@ -71,6 +71,9 @@ export function dataTypeToIcon(dataType: string): IconName {
     case 'COMPLEX<JSON>':
       return IconNames.DIAGRAM_TREE;
 
+    case 'COMPLEX<VARIANCE>':
+      return IconNames.ALIGNMENT_HORIZONTAL_CENTER;
+
     case 'COMPLEX<IPADDRESS>':
     case 'COMPLEX<IPPREFIX>':
       return IconNames.IP_ADDRESS;
