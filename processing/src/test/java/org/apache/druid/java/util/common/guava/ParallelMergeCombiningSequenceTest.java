@@ -695,15 +695,9 @@ public class ParallelMergeCombiningSequenceTest
     // trying to next the yielder creates sadness for you
     final String expectedExceptionMsg = "Already closed";
     Assert.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
-    try {
-      Assert.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
-      parallelMergeCombineYielder.next(parallelMergeCombineYielder.get());
-      // this should explode so the contradictory next statement should not be reached
-      Assert.assertTrue(false);
-    }
-    catch (RuntimeException rex) {
-      Assert.assertEquals(expectedExceptionMsg, rex.getMessage());
-    }
+    final Yielder<IntPair> finalYielder = parallelMergeCombineYielder;
+    Throwable t = Assert.assertThrows(RuntimeException.class, () -> finalYielder.next(finalYielder.get()));
+    Assert.assertEquals(expectedExceptionMsg, t.getMessage());
 
     // cancellation gizmo of sequence should be cancelled, and also should contain our expected message
     Assert.assertTrue(parallelMergeCombineSequence.getCancellationGizmo().isCancelled());
