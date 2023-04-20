@@ -17,7 +17,7 @@
  */
 
 import type { AxiosResponse, CancelToken } from 'axios';
-import { L } from 'druid-query-toolkit';
+import { L, QueryResult } from 'druid-query-toolkit';
 
 import type { QueryContext } from '../../druid-models';
 import { Execution } from '../../druid-models';
@@ -95,7 +95,17 @@ export async function submitTaskQuery(
     throw new DruidError(druidError, prefixLines);
   }
 
-  let execution = Execution.fromTaskSubmit(sqlTaskResp.data, sqlQuery, context);
+  const sqlTaskPayload = sqlTaskResp.data;
+
+  if (!sqlTaskPayload.taskId) {
+    if (!Array.isArray(sqlTaskPayload)) throw new Error('unexpected task payload');
+    return Execution.fromResult(
+      'sql-msq-task',
+      QueryResult.fromRawResult(sqlTaskPayload, false, true, true, true),
+    );
+  }
+
+  let execution = Execution.fromTaskSubmit(sqlTaskPayload, sqlQuery, context);
 
   if (onSubmitted) {
     onSubmitted(execution.id);
