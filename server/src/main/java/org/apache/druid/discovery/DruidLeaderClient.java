@@ -205,6 +205,13 @@ public class DruidLeaderClient
         request = withUrl(request, redirectUrl);
       } else if (HttpResponseStatus.SERVICE_UNAVAILABLE.equals(responseStatus)
                  || HttpResponseStatus.GATEWAY_TIMEOUT.equals(responseStatus)) {
+        log.warn(
+            "Request[%s] received a %s response. Attempt %s/%s",
+            request.getUrl(),
+            responseStatus,
+            counter + 1,
+            MAX_RETRIES
+        );
         request = getNewRequestUrlInvalidatingCache(request);
       } else {
         return fullResponseHolder;
