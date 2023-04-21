@@ -374,6 +374,8 @@ Calculates the trigonometric cotangent of an angle expressed in radians.
 
 `COUNT(*)`
 
+`COUNT(expr, [expr...])`
+
 **Function type:** [Aggregation](sql-aggregations.md)
 
 Counts the number of rows.

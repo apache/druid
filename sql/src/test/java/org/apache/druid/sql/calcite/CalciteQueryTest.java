@@ -6580,7 +6580,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                     new LongSumAggregatorFactory("_a0", "a0"),
                     new FilteredAggregatorFactory(
                         new CountAggregatorFactory("_a1"),
-                        and(
+                        or(
                             not(selector("d0", null, null)),
                             not(selector("d1", null, null)))
                     )
@@ -6589,7 +6589,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[] {6L, 2L}
+            new Object[] {6L, 6L}
         )
     );
   }

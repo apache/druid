@@ -31,8 +31,8 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
-import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
@@ -109,7 +109,7 @@ public class CountSqlAggregator implements SqlAggregator
     } else {
       return new FilteredAggregatorFactory(
           new CountAggregatorFactory(countName),
-          new AndDimFilter(nonNullFilterList));
+          new OrDimFilter(nonNullFilterList));
     }
   }
 
@@ -161,7 +161,7 @@ public class CountSqlAggregator implements SqlAggregator
       }
     } else {
       // Not COUNT(*), not distinct
-      // COUNT(x) should count all non-null values of x.
+      // COUNT(x, [y...]) should count all rows where at least one argument is not null.
       AggregatorFactory theCount = createCountAggregatorFactory(
             name,
             plannerContext,

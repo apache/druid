@@ -31,6 +31,7 @@ import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -1057,6 +1058,59 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
             .build()),
         ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testSelectCountMultipleColumns()
+  {
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_DEFAULT,
+        "SELECT COUNT(dim2, dim3) FROM druid.foo",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(Druids.newTimeseriesQueryBuilder()
+                               .dataSource(CalciteTests.DATASOURCE1)
+                               .intervals(querySegmentSpec(Filtration.eternity()))
+                               .granularity(Granularities.ALL)
+                               .aggregators(aggregators(
+                                   new FilteredAggregatorFactory(
+                                       new CountAggregatorFactory("a0"),
+                                       or(
+                                           not(selector("dim2", null, null)),
+                                           not(selector("dim3", null, null))
+                                       )
+
+                                   )
+                               ))
+                               .context(QUERY_CONTEXT_DEFAULT)
+                               .build()),
+        ImmutableList.of(
+            new Object[]{5L}
+        )
+    );
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_DEFAULT,
+        "SELECT COUNT(dim2) FROM druid.foo",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(Druids.newTimeseriesQueryBuilder()
+                               .dataSource(CalciteTests.DATASOURCE1)
+                               .intervals(querySegmentSpec(Filtration.eternity()))
+                               .granularity(Granularities.ALL)
+                               .aggregators(aggregators(
+                                   new FilteredAggregatorFactory(
+                                       new CountAggregatorFactory("a0"),
+                                       not(selector("dim2", null, null))
+
+                                   )
+                               ))
+                               .context(QUERY_CONTEXT_DEFAULT)
+                               .build()),
+        ImmutableList.of(
+            new Object[]{3L}
+        )
     );
   }
 
