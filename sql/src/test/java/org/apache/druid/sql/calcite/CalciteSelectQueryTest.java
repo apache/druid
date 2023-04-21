@@ -1111,7 +1111,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                                .context(QUERY_CONTEXT_DEFAULT)
                                .build()),
         ImmutableList.of(
-            new Object[]{3L}
+            new Object[]{NullHandling.sqlCompatible() ? 4L : 3L}
         )
     );
   }
