@@ -30,7 +30,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.VectorAggregator;
-import org.apache.druid.query.aggregation.any.NumericNilVectorAggregator;
+import org.apache.druid.query.aggregation.any.ConstantVectorAggregator;
 import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -139,15 +139,17 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
       VectorColumnSelectorFactory columnSelectorFactory
   )
   {
-    ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
-    VectorValueSelector valueSelector = columnSelectorFactory.makeValueSelector(fieldName);
-    //time is always long
-    BaseLongVectorValueSelector timeSelector = (BaseLongVectorValueSelector) columnSelectorFactory.makeValueSelector(
-        timeColumn);
-    if (capabilities == null || capabilities.isNumeric()) {
-      return new FloatLastVectorAggregator(timeSelector, valueSelector);
+    final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
+
+    if (capabilities == null || !capabilities.isPrimitive()) {
+      return ConstantVectorAggregator.of(new SerializablePair<>(0L, null));
     } else {
-      return NumericNilVectorAggregator.floatNilVectorAggregator();
+      // __time is always long
+      final BaseLongVectorValueSelector timeSelector =
+          (BaseLongVectorValueSelector) columnSelectorFactory.makeValueSelector(timeColumn);
+      final VectorValueSelector valueSelector =
+          AggregatorUtil.makeVectorValueSelector(columnSelectorFactory, fieldName, null, null);
+      return new FloatLastVectorAggregator(timeSelector, valueSelector);
     }
   }
 

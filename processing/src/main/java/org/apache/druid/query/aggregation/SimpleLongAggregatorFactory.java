@@ -234,7 +234,7 @@ public abstract class SimpleLongAggregatorFactory extends NullableNumericAggrega
   @Override
   public boolean canVectorize(ColumnInspector columnInspector)
   {
-    return AggregatorUtil.canVectorize(columnInspector, fieldName, expression, fieldExpression);
+    return AggregatorUtil.canVectorize(columnInspector, expression, fieldExpression);
   }
 
   private boolean shouldUseStringColumnAggregatorWrapper(ColumnSelectorFactory columnSelectorFactory)

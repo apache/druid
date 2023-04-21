@@ -26,26 +26,26 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
- * A vector aggregator that returns the default numeric value.
+ * A vector aggregator that returns a constant value.
  */
-public class NumericNilVectorAggregator implements VectorAggregator
+public class ConstantVectorAggregator implements VectorAggregator
 {
-  private static final NumericNilVectorAggregator DOUBLE_NIL_VECTOR_AGGREGATOR = new NumericNilVectorAggregator(
+  private static final ConstantVectorAggregator DOUBLE_NIL_VECTOR_AGGREGATOR = new ConstantVectorAggregator(
       NullHandling.defaultDoubleValue()
   );
 
-  private static final NumericNilVectorAggregator FLOAT_NIL_VECTOR_AGGREGATOR = new NumericNilVectorAggregator(
+  private static final ConstantVectorAggregator FLOAT_NIL_VECTOR_AGGREGATOR = new ConstantVectorAggregator(
       NullHandling.defaultFloatValue()
   );
 
-  private static final NumericNilVectorAggregator LONG_NIL_VECTOR_AGGREGATOR = new NumericNilVectorAggregator(
+  private static final ConstantVectorAggregator LONG_NIL_VECTOR_AGGREGATOR = new ConstantVectorAggregator(
       NullHandling.defaultLongValue()
   );
 
   /**
    * @return A vectorized aggregator that returns the default double value.
    */
-  public static NumericNilVectorAggregator doubleNilVectorAggregator()
+  public static ConstantVectorAggregator nilDouble()
   {
     return DOUBLE_NIL_VECTOR_AGGREGATOR;
   }
@@ -53,7 +53,7 @@ public class NumericNilVectorAggregator implements VectorAggregator
   /**
    * @return A vectorized aggregator that returns the default float value.
    */
-  public static NumericNilVectorAggregator floatNilVectorAggregator()
+  public static ConstantVectorAggregator nilFloat()
   {
     return FLOAT_NIL_VECTOR_AGGREGATOR;
   }
@@ -61,15 +61,23 @@ public class NumericNilVectorAggregator implements VectorAggregator
   /**
    * @return A vectorized aggregator that returns the default long value.
    */
-  public static NumericNilVectorAggregator longNilVectorAggregator()
+  public static ConstantVectorAggregator nilLong()
   {
     return LONG_NIL_VECTOR_AGGREGATOR;
+  }
+
+  /**
+   * @return A vectorized aggregator that returns the default long value.
+   */
+  public static ConstantVectorAggregator of(final Object value)
+  {
+    return new ConstantVectorAggregator(value);
   }
 
   @Nullable
   private final Object returnValue;
 
-  private NumericNilVectorAggregator(@Nullable Object returnValue)
+  private ConstantVectorAggregator(@Nullable Object returnValue)
   {
     this.returnValue = returnValue;
   }
@@ -87,13 +95,7 @@ public class NumericNilVectorAggregator implements VectorAggregator
   }
 
   @Override
-  public void aggregate(
-      ByteBuffer buf,
-      int numRows,
-      int[] positions,
-      @Nullable int[] rows,
-      int positionOffset
-  )
+  public void aggregate(ByteBuffer buf, int numRows, int[] positions, @Nullable int[] rows, int positionOffset)
   {
     // Do nothing.
   }

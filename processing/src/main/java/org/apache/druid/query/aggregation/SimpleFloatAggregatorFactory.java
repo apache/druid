@@ -230,7 +230,7 @@ public abstract class SimpleFloatAggregatorFactory extends NullableNumericAggreg
   @Override
   public boolean canVectorize(ColumnInspector columnInspector)
   {
-    return AggregatorUtil.canVectorize(columnInspector, fieldName, expression, fieldExpression);
+    return AggregatorUtil.canVectorize(columnInspector, expression, fieldExpression);
   }
 
   private boolean shouldUseStringColumnAggregatorWrapper(ColumnSelectorFactory columnSelectorFactory)

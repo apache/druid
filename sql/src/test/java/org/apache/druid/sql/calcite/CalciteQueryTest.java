@@ -689,7 +689,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     notMsqCompatible();
     testQuery(
         "SELECT "
-        + "LATEST(cnt), LATEST(cnt + 1), LATEST(m1), LATEST(m1+1) "
+        + "LATEST(cnt),\n"
+        + "LATEST(cnt + 1),\n"
+        + "LATEST(m1),\n"
+        + "LATEST(m1+1),\n"
+        + "LATEST(dim1) -- numeric LATEST treats string as zero\n"
         + "FROM druid.numfoo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -705,14 +709,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           new LongLastAggregatorFactory("a0", "cnt", null),
                           new LongLastAggregatorFactory("a1", "v0", null),
                           new FloatLastAggregatorFactory("a2", "m1", null),
-                          new FloatLastAggregatorFactory("a3", "v1", null)
+                          new FloatLastAggregatorFactory("a3", "v1", null),
+                          new DoubleLastAggregatorFactory("a4", "dim1", null)
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{1L, 2L, 6.0f, 7.0f}
+            new Object[]{1L, 2L, 6.0f, 7.0f, 0d}
         )
     );
   }

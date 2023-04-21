@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -29,13 +30,19 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.LongColumnSelector;
+import org.apache.druid.segment.VectorColumnProcessorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.vector.ConstantVectorSelectors;
+import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 import org.apache.druid.segment.virtual.ExpressionVectorSelectors;
@@ -349,19 +356,14 @@ public class AggregatorUtil
 
   public static boolean canVectorize(
       ColumnInspector columnInspector,
-      @Nullable String fieldName,
       @Nullable String expression,
       Supplier<Expr> fieldExpression
   )
   {
-    if (fieldName != null) {
-      final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
-      return capabilities == null || capabilities.isNumeric();
-    }
     if (expression != null) {
       return fieldExpression.get().canVectorize(columnInspector);
     }
-    return false;
+    return true;
   }
 
   /**
@@ -371,7 +373,7 @@ public class AggregatorUtil
       VectorColumnSelectorFactory columnSelectorFactory,
       @Nullable String fieldName,
       @Nullable String expression,
-      Supplier<Expr> fieldExpression
+      @Nullable Supplier<Expr> fieldExpression
   )
   {
     if ((fieldName == null) == (expression == null)) {
@@ -380,7 +382,11 @@ public class AggregatorUtil
     if (expression != null) {
       return ExpressionVectorSelectors.makeVectorValueSelector(columnSelectorFactory, fieldExpression.get());
     }
-    return columnSelectorFactory.makeValueSelector(fieldName);
+    return ColumnProcessors.makeVectorProcessor(
+        fieldName,
+        StringAsZeroVectorValueSelectorFactory.INSTANCE,
+        columnSelectorFactory
+    );
   }
 
   public static Supplier<byte[]> getSimpleAggregatorCacheKeySupplier(
@@ -402,5 +408,64 @@ public class AggregatorUtil
                        .put(expressionBytes)
                        .array();
     });
+  }
+
+  /**
+   * Maps string columns to zeroes in the manner of the primitive getX methods in
+   * {@link org.apache.druid.segment.DimensionSelector}.
+   */
+  private static class StringAsZeroVectorValueSelectorFactory
+      implements VectorColumnProcessorFactory<VectorValueSelector>
+  {
+    private static final StringAsZeroVectorValueSelectorFactory INSTANCE = new StringAsZeroVectorValueSelectorFactory();
+
+    @Override
+    public VectorValueSelector makeSingleValueDimensionProcessor(
+        ColumnCapabilities capabilities,
+        SingleValueDimensionVectorSelector selector
+    )
+    {
+      return ConstantVectorSelectors.vectorValueSelector(selector, 0L);
+    }
+
+    @Override
+    public VectorValueSelector makeMultiValueDimensionProcessor(
+        ColumnCapabilities capabilities,
+        MultiValueDimensionVectorSelector selector
+    )
+    {
+      return ConstantVectorSelectors.vectorValueSelector(selector, 0L);
+    }
+
+    @Override
+    public VectorValueSelector makeFloatProcessor(ColumnCapabilities capabilities, VectorValueSelector selector)
+    {
+      return selector;
+    }
+
+    @Override
+    public VectorValueSelector makeDoubleProcessor(ColumnCapabilities capabilities, VectorValueSelector selector)
+    {
+      return selector;
+    }
+
+    @Override
+    public VectorValueSelector makeLongProcessor(ColumnCapabilities capabilities, VectorValueSelector selector)
+    {
+      return selector;
+    }
+
+    @Override
+    public VectorValueSelector makeObjectProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector)
+    {
+      return ConstantVectorSelectors.vectorValueSelector(selector, NullHandling.defaultLongValue());
+    }
+
+    @Override
+    public boolean useDictionaryEncodedSelector(ColumnCapabilities capabilities)
+    {
+      // We want all string columns to go through makeSingleValueDimensionProcessor, so they get zeroed out.
+      return true;
+    }
   }
 }
