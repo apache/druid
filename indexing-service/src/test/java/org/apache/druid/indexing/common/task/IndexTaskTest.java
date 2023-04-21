@@ -215,7 +215,7 @@ public class IndexTaskTest extends IngestionTestBase
   }
 
   @Test
-  public void testCorrectInputSourceTypes() throws IOException
+  public void testCorrectInputSourceResources() throws IOException
   {
     File tmpDir = temporaryFolder.newFolder();
     IndexTask indexTask = new IndexTask(
@@ -255,8 +255,8 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertEquals(
         Collections.singleton(
             new ResourceAction(new Resource(
-                ResourceType.EXTERNAL,
-                LocalInputSource.TYPE_KEY
+                LocalInputSource.TYPE_KEY,
+                ResourceType.EXTERNAL
             ), Action.READ)),
         indexTask.getInputSourceResources()
     );

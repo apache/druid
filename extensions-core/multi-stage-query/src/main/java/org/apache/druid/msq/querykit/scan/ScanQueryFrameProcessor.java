@@ -58,7 +58,6 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
@@ -89,7 +88,6 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       final ScanQuery query,
       final ReadableInput baseInput,
       final Int2ObjectMap<ReadableInput> sideChannels,
-      final JoinableFactoryWrapper joinableFactory,
       final ResourceHolder<WritableFrameChannel> outputChannel,
       final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       @Nullable final AtomicLong runningCountForLimit,
@@ -101,7 +99,6 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         query,
         baseInput,
         sideChannels,
-        joinableFactory,
         outputChannel,
         frameWriterFactoryHolder,
         memoryReservedForBroadcastJoin

@@ -52,7 +52,6 @@ import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -109,7 +108,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     PeonCommandContext context = new PeonCommandContext(
         generateCommand(task),
         javaOpts(task),
-        new File(taskConfig.getBaseTaskDirPaths().get(0)),
+        taskConfig.getBaseTaskDir(),
         node.isEnableTlsPort()
     );
     PodSpec podSpec = pod.getSpec();
@@ -118,10 +117,9 @@ public abstract class K8sTaskAdapter implements TaskAdapter
   }
 
   @Override
-  public Task toTask(Pod from) throws IOException
+  public Task toTask(Job from) throws IOException
   {
-    // all i have to do here is grab the main container...done
-    PodSpec podSpec = from.getSpec();
+    PodSpec podSpec = from.getSpec().getTemplate().getSpec();
     massageSpec(podSpec, "main");
     List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
     Optional<EnvVar> taskJson = envVars.stream().filter(x -> "TASK_JSON".equals(x.getName())).findFirst();
@@ -372,7 +370,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
   {
     final List<String> command = new ArrayList<>();
     command.add("/peon.sh");
-    command.add(new File(taskConfig.getBaseTaskDirPaths().get(0)).getAbsolutePath());
+    command.add(taskConfig.getBaseTaskDir().getAbsolutePath());
     command.add("1"); // the attemptId is always 1, we never run the task twice on the same pod.
 
     String nodeType = task.getNodeType();

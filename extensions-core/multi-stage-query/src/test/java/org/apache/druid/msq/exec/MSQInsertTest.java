@@ -879,6 +879,30 @@ public class MSQInsertTest extends MSQTestBase
   }
 
   @Test
+  public void testInsertDuplicateColumnNames()
+  {
+    testIngestQuery()
+        .setSql(" insert into foo1 SELECT\n"
+                + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
+                + " namespace,\n"
+                + " \"user\" AS namespace\n"
+                + "FROM TABLE(\n"
+                + "  EXTERN(\n"
+                + "    '{ \"files\": [\"ignored\"],\"type\":\"local\"}',\n"
+                + "    '{\"type\": \"json\"}',\n"
+                + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"namespace\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}, {\"name\": \"__bucket\", \"type\": \"string\"}]'\n"
+                + "  )\n"
+                + ") PARTITIONED by day")
+        .setQueryContext(context)
+        .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
+            CoreMatchers.instanceOf(SqlPlanningException.class),
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                "Duplicate field in SELECT: [namespace]"))
+        ))
+        .verifyPlanningErrors();
+  }
+
+  @Test
   public void testInsertQueryWithInvalidSubtaskCount()
   {
     Map<String, Object> localContext = ImmutableMap.<String, Object>builder()
