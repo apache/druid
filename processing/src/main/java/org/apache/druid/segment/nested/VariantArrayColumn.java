@@ -22,6 +22,7 @@ package org.apache.druid.segment.nested;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -287,7 +288,7 @@ public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>> i
         if (nullMark == offsetMark) {
           return true;
         }
-        return DimensionHandlerUtils.isNumericNull(getObject());
+        return NullHandling.sqlCompatible() && DimensionHandlerUtils.isNumericNull(getObject());
       }
 
       @Override

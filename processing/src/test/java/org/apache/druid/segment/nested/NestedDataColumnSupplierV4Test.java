@@ -507,8 +507,14 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
       Assert.assertTrue(dimSelector.makeValueMatcher(x -> Objects.equals(x, theString)).matches());
       Assert.assertFalse(dimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
     } else {
-      Assert.assertNull(valueSelector.getObject());
-      Assert.assertTrue(path, valueSelector.isNull());
+      if (ColumnType.LONG.equals(singleType)) {
+        Assert.assertEquals(NullHandling.defaultLongValue(), valueSelector.getObject());
+      } else if (ColumnType.DOUBLE.equals(singleType)) {
+        Assert.assertEquals(NullHandling.defaultDoubleValue(), valueSelector.getObject());
+      } else {
+        Assert.assertNull(valueSelector.getObject());
+      }
+      Assert.assertEquals(path, NullHandling.sqlCompatible(), valueSelector.isNull());
 
       Assert.assertEquals(0, dimSelector.getRow().get(0));
       Assert.assertNull(dimSelector.getObject());

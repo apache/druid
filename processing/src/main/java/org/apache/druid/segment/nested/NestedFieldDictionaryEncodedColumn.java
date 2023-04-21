@@ -25,6 +25,7 @@ import com.google.common.base.Predicates;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
@@ -320,6 +321,9 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
       @Override
       public boolean isNull()
       {
+        if (NullHandling.replaceWithDefault()) {
+          return false;
+        }
         if (dictionary.get(getRowValue()) == 0) {
           return true;
         }
@@ -491,6 +495,9 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
           @Override
           public boolean isNull()
           {
+            if (NullHandling.replaceWithDefault()) {
+              return false;
+            }
             final int i = offset.getOffset();
             if (i < offsetMark) {
               // offset was reset, reset iterator state
@@ -530,6 +537,9 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
           @Override
           public boolean isNull()
           {
+            if (NullHandling.replaceWithDefault()) {
+              return false;
+            }
             final int i = offset.getOffset();
             if (i < offsetMark) {
               // offset was reset, reset iterator state
@@ -637,6 +647,9 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
         @Override
         public boolean isNull()
         {
+          if (NullHandling.replaceWithDefault()) {
+            return false;
+          }
           final int i = offset.getOffset();
           if (i < offsetMark) {
             // offset was reset, reset iterator state
@@ -831,6 +844,9 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
           @Override
           public boolean[] getNullVector()
           {
+            if (NullHandling.replaceWithDefault()) {
+              return null;
+            }
             computeVectorsIfNeeded();
             return nullVector;
           }
@@ -884,6 +900,9 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
           @Override
           public boolean[] getNullVector()
           {
+            if (NullHandling.replaceWithDefault()) {
+              return null;
+            }
             computeVectorsIfNeeded();
             return nullVector;
           }

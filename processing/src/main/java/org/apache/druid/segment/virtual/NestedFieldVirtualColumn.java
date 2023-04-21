@@ -30,6 +30,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Numbers;
+import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -45,17 +46,23 @@ import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.BaseColumn;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
+import org.apache.druid.segment.column.NullValueIndex;
+import org.apache.druid.segment.column.NumericColumn;
+import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.column.ValueTypes;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.nested.CompressedNestedDataComplexColumn;
+import org.apache.druid.segment.nested.NestedCommonFormatColumn;
 import org.apache.druid.segment.nested.NestedDataComplexColumn;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.NestedFieldDictionaryEncodedColumn;
@@ -64,6 +71,7 @@ import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.nested.VariantArrayColumn;
+import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 import org.apache.druid.segment.vector.BaseDoubleVectorValueSelector;
 import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.NilVectorSelector;
@@ -78,6 +86,7 @@ import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Optimized virtual column that can make direct selectors into a {@link NestedDataComplexColumn} or any associated
@@ -386,6 +395,9 @@ public class NestedFieldVirtualColumn implements VirtualColumn
         @Override
         public boolean isNull()
         {
+          if (NullHandling.replaceWithDefault()) {
+            return false;
+          }
           Object o = getObject();
           return !(o instanceof Number);
         }
@@ -879,13 +891,41 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     }
     BaseColumn theColumn = holder.getColumn();
     if (theColumn instanceof CompressedNestedDataComplexColumn) {
-      return ((CompressedNestedDataComplexColumn<?>) theColumn).getColumnIndexSupplier(parts);
+      final CompressedNestedDataComplexColumn<?> nestedColumn = (CompressedNestedDataComplexColumn<?>) theColumn;
+      final ColumnIndexSupplier nestedColumnPathIndexSupplier = nestedColumn.getColumnIndexSupplier(parts);
+      if (expectedType != null) {
+        final Set<ColumnType> types = nestedColumn.getColumnTypes(parts);
+        // if the expected output type is numeric but not all of the input types are numeric, we might have additional
+        // null values than what the null value bitmap is tracking, wrap it
+        if (expectedType.isNumeric() && types.stream().anyMatch(t -> !t.isNumeric())) {
+          return new BestEffortCastingIndexSupplier(nestedColumnPathIndexSupplier);
+        }
+      }
+      return nestedColumnPathIndexSupplier;
     }
     if (parts.isEmpty()) {
-      return holder.getIndexSupplier();
+      final ColumnIndexSupplier baseIndexSupplier = holder.getIndexSupplier();
+      if (expectedType != null) {
+        if (theColumn instanceof NumericColumn) {
+          return baseIndexSupplier;
+        }
+        if (theColumn instanceof NestedCommonFormatColumn) {
+          final NestedCommonFormatColumn commonFormat = (NestedCommonFormatColumn) theColumn;
+          if (expectedType.isNumeric() && !commonFormat.getLogicalType().isNumeric()) {
+            return new BestEffortCastingIndexSupplier(baseIndexSupplier);
+          }
+        } else {
+          return expectedType.isNumeric() ? new BestEffortCastingIndexSupplier(baseIndexSupplier) : baseIndexSupplier;
+        }
+      }
+      return baseIndexSupplier;
     }
-    if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && !hasNegativeArrayIndex && theColumn instanceof VariantArrayColumn) {
-      return holder.getIndexSupplier();
+    if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && theColumn instanceof VariantArrayColumn) {
+      // cannot use the array column index supplier directly, in the future array columns should expose a function
+      // with a signature like 'getArrayElementIndexSupplier(int index)' to allow getting indexes for specific elements
+      // if we want to support this stuff. Right now VariantArrayColumn doesn't actually retain enough information about
+      // what positions the values are in to support doing anything cool here, so we just return 'no indexes'
+      return NoIndexesColumnIndexSupplier.getInstance();
     }
     return null;
   }
@@ -1047,6 +1087,9 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     @Override
     public boolean isNull()
     {
+      if (NullHandling.replaceWithDefault()) {
+        return false;
+      }
       Object o = getObject();
       return !(o instanceof Number || (o instanceof String && Doubles.tryParse((String) o) != null));
     }
@@ -1121,6 +1164,9 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     @Override
     public boolean isNull()
     {
+      if (NullHandling.replaceWithDefault()) {
+        return false;
+      }
       StructuredData data = (StructuredData) getObject();
       if (data == null) {
         return true;
@@ -1333,11 +1379,15 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     @Override
     public boolean isNull()
     {
+      if (NullHandling.replaceWithDefault()) {
+        return false;
+      }
       final IndexedInts row = getRow();
       if (row.size() != 1) {
         return true;
       }
-      return Doubles.tryParse(lookupName(row.get(0))) == null;
+      final String s = lookupName(row.get(0));
+      return s == null || Doubles.tryParse(s) == null;
     }
 
     @Override
@@ -1351,6 +1401,66 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     public IdLookup idLookup()
     {
       return baseSelector.idLookup();
+    }
+  }
+
+  /**
+   * {@link ColumnIndexSupplier} with special handling for {@link NullValueIndex}, since additional values might become
+   * null while attempting to cast to the desired type. We return a {@link NullValueIndex} which produces a
+   * {@link PartialNullValueIndex}, whose {@link ColumnIndexCapabilities#isExact()} is set to false to indicate to
+   * the cursor builder that a {@link ValueMatcher} should also be used to filter results when using this index.
+   */
+  private static class BestEffortCastingIndexSupplier implements ColumnIndexSupplier
+  {
+    private final ColumnIndexSupplier delegate;
+
+    private BestEffortCastingIndexSupplier(ColumnIndexSupplier delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Nullable
+    @Override
+    public <T> T as(Class<T> clazz)
+    {
+      if (clazz.equals(NullValueIndex.class)) {
+        if (NullHandling.replaceWithDefault()) {
+          return null;
+        }
+        final NullValueIndex delegateIndex = (NullValueIndex) delegate.as(clazz);
+        return (T) (NullValueIndex) () -> new PartialNullValueIndex(delegateIndex.forNull());
+      }
+
+      return delegate.as(clazz);
+    }
+  }
+
+  private static class PartialNullValueIndex implements BitmapColumnIndex
+  {
+    private static final ColumnIndexCapabilities PARTIAL_NULL_MATCH = new SimpleColumnIndexCapabilities(true, false);
+    private final BitmapColumnIndex nullValueIndex;
+
+    private PartialNullValueIndex(BitmapColumnIndex nullValueIndex)
+    {
+      this.nullValueIndex = nullValueIndex;
+    }
+
+    @Override
+    public ColumnIndexCapabilities getIndexCapabilities()
+    {
+      return PARTIAL_NULL_MATCH;
+    }
+
+    @Override
+    public double estimateSelectivity(int totalRows)
+    {
+      return nullValueIndex.estimateSelectivity(totalRows);
+    }
+
+    @Override
+    public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+    {
+      return nullValueIndex.computeBitmapResult(bitmapResultFactory);
     }
   }
 }

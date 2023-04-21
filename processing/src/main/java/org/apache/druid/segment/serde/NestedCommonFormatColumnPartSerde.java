@@ -118,7 +118,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
         capabilitiesBuilder.setDictionaryValuesSorted(true);
         capabilitiesBuilder.setDictionaryValuesUnique(true);
         builder.setType(logicalType);
-        builder.setStandardTypeColumnSupplier(supplier);
+        builder.setNestedCommonFormatColumnSupplier(supplier);
         builder.setIndexSupplier(supplier, true, false);
         builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
         builder.setFilterable(true);
@@ -138,7 +138,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
         capabilitiesBuilder.setDictionaryValuesSorted(true);
         capabilitiesBuilder.setDictionaryValuesUnique(true);
         builder.setType(logicalType);
-        builder.setStandardTypeColumnSupplier(supplier);
+        builder.setNestedCommonFormatColumnSupplier(supplier);
         builder.setIndexSupplier(supplier, true, false);
         builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
         builder.setFilterable(true);
@@ -158,7 +158,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
         capabilitiesBuilder.setDictionaryValuesSorted(true);
         capabilitiesBuilder.setDictionaryValuesUnique(true);
         builder.setType(logicalType);
-        builder.setStandardTypeColumnSupplier(supplier);
+        builder.setNestedCommonFormatColumnSupplier(supplier);
         builder.setIndexSupplier(supplier, true, false);
         builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
         builder.setFilterable(true);
@@ -179,7 +179,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
         capabilitiesBuilder.setDictionaryValuesSorted(true);
         capabilitiesBuilder.setDictionaryValuesUnique(true);
         builder.setType(logicalType);
-        builder.setStandardTypeColumnSupplier(supplier);
+        builder.setNestedCommonFormatColumnSupplier(supplier);
         builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
         builder.setFilterable(true);
       });
@@ -200,7 +200,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       ColumnType simpleType = supplier.getLogicalType();
       ColumnType logicalType = simpleType == null ? ColumnType.NESTED_DATA : simpleType;
       builder.setType(logicalType);
-      builder.setStandardTypeColumnSupplier(supplier);
+      builder.setNestedCommonFormatColumnSupplier(supplier);
       builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, hasNulls));
       builder.setFilterable(true);
     };
