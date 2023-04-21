@@ -75,13 +75,24 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
   public <T> T as(Class<T> clazz)
   {
     if (bitmaps != null) {
-      final Indexed<String> singleThreadedStrings = dictionary.singleThreaded();
-      final Indexed<ByteBuffer> singleThreadedUtf8 = dictionaryUtf8.singleThreaded();
-      final Indexed<ImmutableBitmap> singleThreadedBitmaps = bitmaps.singleThreaded();
+      Indexed<String> singleThreadedStrings = dictionary.singleThreaded();
+      Indexed<ByteBuffer> singleThreadedUtf8 = dictionaryUtf8.singleThreaded();
+      Indexed<ImmutableBitmap> singleThreadedBitmaps = bitmaps.singleThreaded();
+
+      if (NullHandling.mustCombineNullAndEmpty(singleThreadedUtf8)) {
+        singleThreadedStrings = CombineFirstTwoEntriesIndexed.returnNull(singleThreadedStrings);
+        singleThreadedUtf8 = CombineFirstTwoEntriesIndexed.returnNull(singleThreadedUtf8);
+        singleThreadedBitmaps = CombineFirstTwoEntriesIndexed.unionBitmaps(bitmapFactory, singleThreadedBitmaps);
+      } else if (NullHandling.mustReplaceFirstValueWithNull(singleThreadedUtf8)) {
+        singleThreadedStrings = new ReplaceFirstValueWithNullIndexed<>(singleThreadedStrings);
+        singleThreadedUtf8 = new ReplaceFirstValueWithNullIndexed<>(singleThreadedUtf8);
+      }
+
       if (clazz.equals(NullValueIndex.class)) {
         final BitmapColumnIndex nullIndex;
-        if (NullHandling.isNullOrEquivalent(dictionary.get(0))) {
-          nullIndex = new SimpleImmutableBitmapIndex(bitmaps.get(0));
+        final ByteBuffer firstValue = singleThreadedUtf8.get(0);
+        if (firstValue == null || firstValue.remaining() == 0) {
+          nullIndex = new SimpleImmutableBitmapIndex(singleThreadedBitmaps.get(0));
         } else {
           nullIndex = new SimpleImmutableBitmapIndex(bitmapFactory.makeEmptyImmutableBitmap());
         }
@@ -97,13 +108,14 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
             bitmapFactory,
             singleThreadedUtf8,
             singleThreadedBitmaps,
-            NullHandling.isNullOrEquivalent(dictionary.get(0))
+            NullHandling.isNullOrEquivalent(singleThreadedStrings.get(0))
         );
-      } else if (clazz.equals(DictionaryEncodedStringValueIndex.class) || clazz.equals(DictionaryEncodedValueIndex.class)) {
+      } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)
+                 || clazz.equals(DictionaryEncodedValueIndex.class)) {
         return (T) new IndexedStringDictionaryEncodedStringValueIndex<>(
             bitmapFactory,
             singleThreadedStrings,
-            bitmaps
+            singleThreadedBitmaps
         );
       }
     }

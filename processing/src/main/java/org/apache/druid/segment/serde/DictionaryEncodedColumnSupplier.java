@@ -20,17 +20,20 @@
 package org.apache.druid.segment.serde;
 
 import com.google.common.base.Supplier;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
 import org.apache.druid.segment.data.CachingIndexed;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarMultiInts;
 import org.apache.druid.segment.data.GenericIndexed;
+import org.apache.druid.segment.data.Indexed;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
+ *
  */
 public class DictionaryEncodedColumnSupplier implements Supplier<DictionaryEncodedColumn<?>>
 {
@@ -58,11 +61,39 @@ public class DictionaryEncodedColumnSupplier implements Supplier<DictionaryEncod
   @Override
   public DictionaryEncodedColumn<?> get()
   {
-    return new StringDictionaryEncodedColumn(
-        singleValuedColumn != null ? singleValuedColumn.get() : null,
-        multiValuedColumn != null ? multiValuedColumn.get() : null,
-        new CachingIndexed<>(dictionary, lookupCacheSize),
-        dictionaryUtf8.singleThreaded()
-    );
+    final Indexed<String> cacheWrappedDictionary;
+
+    if (lookupCacheSize > 0) {
+      cacheWrappedDictionary = new CachingIndexed<>(
+          dictionary.singleThreaded(),
+          s -> s == null ? 0 : s.length() * Character.BYTES,
+          lookupCacheSize
+      );
+    } else {
+      cacheWrappedDictionary = dictionary.singleThreaded();
+    }
+
+    if (NullHandling.mustCombineNullAndEmpty(dictionaryUtf8)) {
+      return new StringDictionaryEncodedColumn(
+          singleValuedColumn != null ? new CombineFirstTwoValuesColumnarInts(singleValuedColumn.get()) : null,
+          multiValuedColumn != null ? new CombineFirstTwoValuesColumnarMultiInts(multiValuedColumn.get()) : null,
+          CombineFirstTwoEntriesIndexed.returnNull(cacheWrappedDictionary),
+          CombineFirstTwoEntriesIndexed.returnNull(dictionaryUtf8.singleThreaded())
+      );
+    } else if (NullHandling.mustReplaceFirstValueWithNull(dictionaryUtf8)) {
+      return new StringDictionaryEncodedColumn(
+          singleValuedColumn != null ? singleValuedColumn.get() : null,
+          multiValuedColumn != null ? multiValuedColumn.get() : null,
+          new ReplaceFirstValueWithNullIndexed<>(cacheWrappedDictionary),
+          new ReplaceFirstValueWithNullIndexed<>(dictionaryUtf8.singleThreaded())
+      );
+    } else {
+      return new StringDictionaryEncodedColumn(
+          singleValuedColumn != null ? singleValuedColumn.get() : null,
+          multiValuedColumn != null ? multiValuedColumn.get() : null,
+          cacheWrappedDictionary,
+          dictionaryUtf8.singleThreaded()
+      );
+    }
   }
 }

@@ -20,6 +20,7 @@
 package org.apache.druid.segment.serde;
 
 import com.google.common.base.Supplier;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringFrontCodedDictionaryEncodedColumn;
@@ -53,10 +54,26 @@ public class StringFrontCodedDictionaryEncodedColumnSupplier implements Supplier
   @Override
   public DictionaryEncodedColumn<?> get()
   {
-    return new StringFrontCodedDictionaryEncodedColumn(
-        singleValuedColumn != null ? singleValuedColumn.get() : null,
-        multiValuedColumn != null ? multiValuedColumn.get() : null,
-        utf8Dictionary.get()
-    );
+    final FrontCodedIndexed suppliedUtf8Dictionary = utf8Dictionary.get();
+
+    if (NullHandling.mustCombineNullAndEmpty(suppliedUtf8Dictionary)) {
+      return new StringFrontCodedDictionaryEncodedColumn(
+          singleValuedColumn != null ? new CombineFirstTwoValuesColumnarInts(singleValuedColumn.get()) : null,
+          multiValuedColumn != null ? new CombineFirstTwoValuesColumnarMultiInts(multiValuedColumn.get()) : null,
+          CombineFirstTwoEntriesIndexed.returnNull(suppliedUtf8Dictionary)
+      );
+    } else if (NullHandling.mustReplaceFirstValueWithNull(suppliedUtf8Dictionary)) {
+      return new StringFrontCodedDictionaryEncodedColumn(
+          singleValuedColumn != null ? singleValuedColumn.get() : null,
+          multiValuedColumn != null ? multiValuedColumn.get() : null,
+          new ReplaceFirstValueWithNullIndexed<>(suppliedUtf8Dictionary)
+      );
+    } else {
+      return new StringFrontCodedDictionaryEncodedColumn(
+          singleValuedColumn != null ? singleValuedColumn.get() : null,
+          multiValuedColumn != null ? multiValuedColumn.get() : null,
+          suppliedUtf8Dictionary
+      );
+    }
   }
 }

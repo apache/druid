@@ -115,6 +115,11 @@ public class IndexBuilder
     return new IndexBuilder(jsonMapper, columnConfig);
   }
 
+  public IndexIO getIndexIO()
+  {
+    return indexIO;
+  }
+
   public IndexBuilder schema(IncrementalIndexSchema schema)
   {
     this.schema = schema;
@@ -191,18 +196,6 @@ public class IndexBuilder
     return this;
   }
 
-  public IndexBuilder maxRows(int maxRows)
-  {
-    this.maxRows = maxRows;
-    return this;
-  }
-
-  public IndexBuilder intermediaryPersistSize(int rows)
-  {
-    this.intermediatePersistSize = rows;
-    return this;
-  }
-
   public IncrementalIndex buildIncrementalIndex()
   {
     if (inputSource != null) {
@@ -218,7 +211,7 @@ public class IndexBuilder
     return buildIncrementalIndexWithRows(schema, maxRows, rows);
   }
 
-  public QueryableIndex buildMMappedIndex()
+  public File buildMMappedIndexFile()
   {
     Preconditions.checkNotNull(indexMerger, "indexMerger");
     Preconditions.checkNotNull(tmpDir, "tmpDir");
@@ -242,17 +235,25 @@ public class IndexBuilder
       // queryable index instead of the incremental index, which also mimics the behavior of real ingestion tasks
       // which persist incremental indexes as intermediate segments and then merges all the intermediate segments to
       // publish
-      return indexIO.loadIndex(
-          indexMerger.merge(
-              adapters,
-              schema.isRollup(),
-              schema.getMetrics(),
-              tmpDir,
-              schema.getDimensionsSpec(),
-              indexSpec,
-              Integer.MAX_VALUE
-          )
+      return indexMerger.merge(
+          adapters,
+          schema.isRollup(),
+          schema.getMetrics(),
+          tmpDir,
+          schema.getDimensionsSpec(),
+          indexSpec,
+          Integer.MAX_VALUE
       );
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public QueryableIndex buildMMappedIndex()
+  {
+    try {
+      return indexIO.loadIndex(buildMMappedIndexFile());
     }
     catch (IOException e) {
       throw new RuntimeException(e);

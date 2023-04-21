@@ -140,7 +140,7 @@ public class IndexMergerNullHandlingTest
           // Compute all unique values, the same way that IndexMerger is expected to do it.
           final Set<String> uniqueValues = new HashSet<>();
           for (Map<String, Object> m : subsetList) {
-            final List<String> dValues = normalize(m.get("d"), hasMultipleValues);
+            final List<String> dValues = normalize(m.get("d"));
             uniqueValues.addAll(dValues);
 
             if (nullFlavors.contains(m)) {
@@ -167,7 +167,7 @@ public class IndexMergerNullHandlingTest
                 subsetList.toString(),
                 ImmutableMultiset.copyOf(
                     subsetList.stream()
-                              .map(m -> normalize(m.get("d"), hasMultipleValues))
+                              .map(m -> normalize(m.get("d")))
                               .distinct() // Distinct values only, because we expect rollup.
                               .collect(Collectors.toList())
                 ),
@@ -224,7 +224,7 @@ public class IndexMergerNullHandlingTest
   /**
    * Normalize an input value the same way that IndexMerger is expected to do it.
    */
-  private static List<String> normalize(final Object value, final boolean hasMultipleValues)
+  private static List<String> normalize(final Object value)
   {
     final List<String> retVal = new ArrayList<>();
 
@@ -237,7 +237,7 @@ public class IndexMergerNullHandlingTest
       if (list.isEmpty()) {
         // empty lists become nulls in single valued columns
         // they sometimes also become nulls in multi-valued columns (see comments in getRow())
-        retVal.add(NullHandling.emptyToNullIfNeeded(null));
+        retVal.add(null);
       } else {
         retVal.addAll(list.stream().map(NullHandling::emptyToNullIfNeeded).collect(Collectors.toList()));
       }

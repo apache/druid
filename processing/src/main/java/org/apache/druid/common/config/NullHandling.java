@@ -22,8 +22,10 @@ package org.apache.druid.common.config;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.inject.Inject;
+import org.apache.druid.segment.data.Indexed;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 
 /**
  * Helper class for NullHandling. This class is used to switch between SQL compatible Null Handling behavior
@@ -112,6 +114,16 @@ public class NullHandling
     //CHECKSTYLE.ON: Regexp
   }
 
+  /**
+   * Returns null if passed an empty ByteBuffers ({@link ByteBuffer#remaining()} == 0) in default-value mode.
+   * Otherwise, returns the original ByteBuffer.
+   */
+  @Nullable
+  public static ByteBuffer emptyToNullIfNeeded(@Nullable ByteBuffer buffer)
+  {
+    return replaceWithDefault() && buffer != null && buffer.remaining() == 0 ? null : buffer;
+  }
+
   @Nullable
   public static String defaultStringValue()
   {
@@ -162,5 +174,46 @@ public class NullHandling
   public static boolean isNullOrEquivalent(@Nullable String value)
   {
     return replaceWithDefault() ? Strings.isNullOrEmpty(value) : value == null;
+  }
+
+  public static boolean isNullOrEquivalent(@Nullable ByteBuffer buffer)
+  {
+    return buffer == null || (replaceWithDefault() && buffer.remaining() == 0);
+  }
+
+  /**
+   * Given a UTF-8 dictionary, returns whether the first two entries must be coalesced into a single null entry.
+   * This happens if we are in default-value mode and the first two entries are null and empty string.
+   *
+   * This and {@link #mustReplaceFirstValueWithNull(Indexed)} are never both true.
+   *
+   * Provided to enable compatibility for segments written under {@link #sqlCompatible()} mode but
+   * read under {@link #replaceWithDefault()} mode.
+   */
+  public static boolean mustCombineNullAndEmpty(final Indexed<ByteBuffer> dictionaryUtf8)
+  {
+    return NullHandling.replaceWithDefault()
+           && dictionaryUtf8.size() >= 2
+           && isNullOrEquivalent(dictionaryUtf8.get(0))
+           && isNullOrEquivalent(dictionaryUtf8.get(1));
+  }
+
+  /**
+   * Given a UTF-8 dictionary, returns whether the first entry must be replaced with null. This happens if we
+   * are in default-value mode and the first entry is an empty string. (Default-value mode expects it to be null.)
+   *
+   * This and {@link #mustCombineNullAndEmpty(Indexed)} are never both true.
+   *
+   * Provided to enable compatibility for segments written under {@link #sqlCompatible()} mode but
+   * read under {@link #replaceWithDefault()} mode.
+   */
+  public static boolean mustReplaceFirstValueWithNull(final Indexed<ByteBuffer> dictionaryUtf8)
+  {
+    if (NullHandling.replaceWithDefault() && dictionaryUtf8.size() >= 1) {
+      final ByteBuffer firstValue = dictionaryUtf8.get(0);
+      return firstValue != null && firstValue.remaining() == 0;
+    }
+
+    return false;
   }
 }

@@ -103,6 +103,7 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
@@ -110,6 +111,8 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -322,6 +325,31 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                 input -> {
                   final QueryableIndex index = input.buildMMappedIndex();
                   return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                }
+            )
+            .put(
+                "mmappedWithSqlCompatibleNulls",
+                input -> {
+                  // Build mmapped index in SQL-compatible null handling mode; read it in default-value mode.
+                  Assume.assumeTrue(NullHandling.replaceWithDefault());
+                  final File file;
+                  try {
+                    NullHandling.initializeForTestsWithValues(false, null);
+                    Assert.assertTrue(NullHandling.sqlCompatible());
+                    file = input.buildMMappedIndexFile();
+                  }
+                  finally {
+                    NullHandling.initializeForTests();
+                  }
+
+                  Assert.assertTrue(NullHandling.replaceWithDefault());
+                  try {
+                    final QueryableIndex index = input.getIndexIO().loadIndex(file);
+                    return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                  }
+                  catch (IOException e) {
+                    throw new RuntimeException(e);
+                  }
                 }
             )
             .put(

@@ -22,6 +22,7 @@ package org.apache.druid.segment.serde;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerde;
@@ -150,7 +151,7 @@ public class FloatNumericColumnPartSerdeV2 implements ColumnPartSerde
       buffer.position(initialPos + offset);
       final ImmutableBitmap bitmap;
       final boolean hasNulls;
-      if (buffer.hasRemaining()) {
+      if (buffer.hasRemaining() && NullHandling.sqlCompatible()) {
         bitmap = bitmapSerdeFactory.getObjectStrategy().fromByteBufferWithSize(buffer);
         hasNulls = !bitmap.isEmpty();
       } else {

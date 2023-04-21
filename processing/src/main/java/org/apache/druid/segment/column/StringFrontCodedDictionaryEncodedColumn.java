@@ -65,12 +65,12 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
   private final ColumnarInts column;
   @Nullable
   private final ColumnarMultiInts multiValueColumn;
-  private final FrontCodedIndexed utf8Dictionary;
+  private final Indexed<ByteBuffer> utf8Dictionary;
 
   public StringFrontCodedDictionaryEncodedColumn(
       @Nullable ColumnarInts singleValueColumn,
       @Nullable ColumnarMultiInts multiValueColumn,
-      FrontCodedIndexed utf8Dictionary
+      Indexed<ByteBuffer> utf8Dictionary
   )
   {
     this.column = singleValueColumn;
