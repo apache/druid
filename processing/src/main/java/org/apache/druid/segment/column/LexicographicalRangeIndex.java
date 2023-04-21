@@ -34,7 +34,11 @@ public interface LexicographicalRangeIndex
    * Get a {@link BitmapColumnIndex} corresponding to the values supplied in the specified range. If supplied starting
    * value is null, the range will begin at the first non-null value in the underlying value dictionary. If the end
    * value is null, the range will extend to the last value in the underlying value dictionary.
+   * <p>
+   * If this method returns null it indicates that there is no index available that matches the requested range and a
+   * {@link org.apache.druid.query.filter.ValueMatcher} must be used instead.
    */
+  @Nullable
   BitmapColumnIndex forRange(
       @Nullable String startValue,
       boolean startStrict,
@@ -47,10 +51,14 @@ public interface LexicographicalRangeIndex
    * also match some predicate, such as to match a prefix. If supplied starting value is null, the range will begin at
    * the first non-null value in the underlying value dictionary that matches the predicate. If the end value is null,
    * the range will extend to the last value in the underlying value dictionary that matches the predicate.
-   *
+   * <p>
    * If the provided {@code} matcher is always true, it's better to use the other
    * {@link #forRange(String, boolean, String, boolean)} method.
+   * <p>
+   * If this method returns null it indicates that there is no index available that matches the requested range and a
+   * {@link org.apache.druid.query.filter.ValueMatcher} must be used instead.
    */
+  @Nullable
   BitmapColumnIndex forRange(
       @Nullable String startValue,
       boolean startStrict,

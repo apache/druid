@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.exec;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
@@ -98,6 +99,10 @@ import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.msq.input.NilInputSliceReader;
 import org.apache.druid.msq.input.external.ExternalInputSlice;
 import org.apache.druid.msq.input.external.ExternalInputSliceReader;
+import org.apache.druid.msq.input.inline.InlineInputSlice;
+import org.apache.druid.msq.input.inline.InlineInputSliceReader;
+import org.apache.druid.msq.input.lookup.LookupInputSlice;
+import org.apache.druid.msq.input.lookup.LookupInputSliceReader;
 import org.apache.druid.msq.input.stage.InputChannels;
 import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.input.stage.StageInputSlice;
@@ -175,6 +180,7 @@ public class WorkerImpl implements Worker
   private final ConcurrentHashMap<StageId, WorkerStageKernel> stageKernelMap = new ConcurrentHashMap<>();
   private final ByteTracker intermediateSuperSorterLocalStorageTracker;
   private final boolean durableStageStorageEnabled;
+  private final WorkerStorageParameters workerStorageParameters;
 
   /**
    * Set once in {@link #runTask} and never reassigned.
@@ -194,16 +200,30 @@ public class WorkerImpl implements Worker
 
   public WorkerImpl(MSQWorkerTask task, WorkerContext context)
   {
+    this(
+        task,
+        context,
+        WorkerStorageParameters.createProductionInstance(
+            context.injector(),
+            MultiStageQueryContext.isDurableStorageEnabled(QueryContext.of(task.getContext())) // If Durable Storage is enabled, then super sorter intermediate storage can be enabled.
+        )
+    );
+  }
+
+  @VisibleForTesting
+  public WorkerImpl(MSQWorkerTask task, WorkerContext context, WorkerStorageParameters workerStorageParameters)
+  {
     this.task = task;
     this.context = context;
     this.selfDruidNode = context.selfNode();
     this.processorBouncer = context.processorBouncer();
-    this.intermediateSuperSorterLocalStorageTracker = new ByteTracker(
-        MultiStageQueryContext.getIntermediateSuperSorterStorageMaxLocalBytes(QueryContext.of(task.getContext()))
-    );
     this.durableStageStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(
         QueryContext.of(task.getContext())
     );
+    this.workerStorageParameters = workerStorageParameters;
+
+    long maxBytes = workerStorageParameters.isIntermediateStorageLimitConfigured() ? workerStorageParameters.getIntermediateSuperSorterStorageMaxLocalBytes() : Long.MAX_VALUE;
+    this.intermediateSuperSorterLocalStorageTracker = new ByteTracker(maxBytes);
   }
 
   @Override
@@ -727,8 +747,7 @@ public class WorkerImpl implements Worker
     final FileOutputChannelFactory fileOutputChannelFactory =
         new FileOutputChannelFactory(fileChannelDirectory, frameSize, intermediateSuperSorterLocalStorageTracker);
 
-    if (MultiStageQueryContext.isComposedIntermediateSuperSorterStorageEnabled(QueryContext.of(task.getContext()))
-        && durableStageStorageEnabled) {
+    if (durableStageStorageEnabled && workerStorageParameters.isIntermediateStorageLimitConfigured()) {
       return new ComposingOutputChannelFactory(
           ImmutableList.of(
               fileOutputChannelFactory,
@@ -1046,6 +1065,8 @@ public class WorkerImpl implements Worker
                       .put(NilInputSlice.class, NilInputSliceReader.INSTANCE)
                       .put(StageInputSlice.class, new StageInputSliceReader(queryId, inputChannels))
                       .put(ExternalInputSlice.class, new ExternalInputSliceReader(frameContext.tempDir()))
+                      .put(InlineInputSlice.class, new InlineInputSliceReader(frameContext.segmentWrangler()))
+                      .put(LookupInputSlice.class, new LookupInputSliceReader(frameContext.segmentWrangler()))
                       .put(SegmentsInputSlice.class, new SegmentsInputSliceReader(frameContext.dataSegmentProvider()))
                       .build()
       );

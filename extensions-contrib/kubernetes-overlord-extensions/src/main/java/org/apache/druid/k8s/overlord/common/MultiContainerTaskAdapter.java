@@ -47,7 +47,7 @@ import java.util.Map;
 
 public class MultiContainerTaskAdapter extends K8sTaskAdapter
 {
-  public static String TYPE = "MultiContainer";
+  public static final String TYPE = "overlordMultiContainer";
 
   public MultiContainerTaskAdapter(
       KubernetesClientApi client,

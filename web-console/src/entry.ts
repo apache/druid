@@ -54,9 +54,6 @@ interface ConsoleConfig {
   // A set of custom headers name/value to set on every AJAX request
   customHeaders?: Record<string, string>;
 
-  // The URL for where to load the example manifest, a JSON document that tells the console where to find all the example datasets
-  exampleManifestsUrl?: string;
-
   // The query context to set if the user does not have one saved in local storage, defaults to {}
   defaultQueryContext?: Record<string, any>;
 
@@ -104,7 +101,6 @@ QueryRunner.defaultQueryExecutor = (payload, isSql, cancelToken) => {
 
 ReactDOM.render(
   React.createElement(ConsoleApplication, {
-    exampleManifestsUrl: consoleConfig.exampleManifestsUrl,
     defaultQueryContext: consoleConfig.defaultQueryContext,
     mandatoryQueryContext: consoleConfig.mandatoryQueryContext,
   }),

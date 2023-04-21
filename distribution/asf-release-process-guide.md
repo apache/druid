@@ -59,6 +59,14 @@ npm version 0.17.0
 const DRUID_DOCS_VERSION = '0.17.0';
 ```
 
+After this is done, run:
+
+```
+npm i && npm run jest -- -u
+```
+to ensure that any web console tests that include documentation links are updated correctly to ensure that CI will pass on the release branch.
+
+
 The sample [`docker-compose.yml`](https://github.com/apache/druid/blob/master/distribution/docker/docker-compose.yml) used in the Docker quickstart documentation should match the release version:
 
 ```yaml

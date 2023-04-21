@@ -54,6 +54,7 @@ import org.apache.druid.msq.statistics.CompleteKeyStatisticsInformation;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -558,6 +559,11 @@ class ControllerStageTracker
           workers.remove(workerNumber);
           if (workers.isEmpty()) {
             // generate partition boundaries since all work is finished for the time chunk
+            log.info(
+                "Generating partition boundaries from stage: %d of time chunk: [%s] GMT",
+                stageDef.getStageNumber(),
+                new Date(timeChunk)
+            );
             ClusterByStatisticsCollector collector = timeChunkToCollector.get(tc);
             Either<Long, ClusterByPartitions> countOrPartitions =
                 stageDef.generatePartitionBoundariesForShuffle(collector);

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.segment.data.FrontCodedIndexed;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -84,26 +85,43 @@ public interface StringEncodingStrategy
 
   class FrontCoded implements StringEncodingStrategy
   {
-    public static final int DEFAULT_BUCKET_SIZE = 4;
 
     @JsonProperty
     private final int bucketSize;
 
+    @JsonProperty
+    private final byte formatVersion;
+
     @JsonCreator
     public FrontCoded(
-        @JsonProperty("bucketSize") @Nullable Integer bucketSize
+        @JsonProperty("bucketSize") @Nullable Integer bucketSize,
+        @JsonProperty("formatVersion") @Nullable Byte version
     )
     {
-      this.bucketSize = bucketSize == null ? DEFAULT_BUCKET_SIZE : bucketSize;
+      this.bucketSize = bucketSize == null ? FrontCodedIndexed.DEFAULT_BUCKET_SIZE : bucketSize;
       if (Integer.bitCount(this.bucketSize) != 1) {
         throw new ISE("bucketSize must be a power of two but was[%,d]", bucketSize);
       }
+      this.formatVersion = version == null
+                           ? FrontCodedIndexed.DEFAULT_VERSION
+                           : FrontCodedIndexed.validateVersion(version);
+    }
+
+    public FrontCoded(@Nullable Integer bucketSize)
+    {
+      this(bucketSize, null);
     }
 
     @JsonProperty
     public int getBucketSize()
     {
       return bucketSize;
+    }
+
+    @JsonProperty
+    public byte getFormatVersion()
+    {
+      return formatVersion;
     }
 
     @Override
@@ -128,13 +146,13 @@ public interface StringEncodingStrategy
         return false;
       }
       FrontCoded that = (FrontCoded) o;
-      return bucketSize == that.bucketSize;
+      return bucketSize == that.bucketSize && formatVersion == that.formatVersion;
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(bucketSize);
+      return Objects.hash(bucketSize, formatVersion);
     }
 
     @Override
@@ -142,6 +160,7 @@ public interface StringEncodingStrategy
     {
       return "FrontCoded{" +
              "bucketSize=" + bucketSize +
+             ", formatVersion=" + formatVersion +
              '}';
     }
   }

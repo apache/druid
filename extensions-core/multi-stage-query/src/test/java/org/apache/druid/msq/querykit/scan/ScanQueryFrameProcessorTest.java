@@ -52,8 +52,6 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
-import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
@@ -130,7 +128,6 @@ public class ScanQueryFrameProcessorTest extends InitializedNullHandlingTest
         query,
         ReadableInput.channel(inputChannel.readable(), FrameReader.create(signature), stagePartition),
         Int2ObjectMaps.emptyMap(),
-        new JoinableFactoryWrapper(NoopJoinableFactory.INSTANCE),
         new ResourceHolder<WritableFrameChannel>()
         {
           @Override

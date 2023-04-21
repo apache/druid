@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
@@ -36,7 +37,10 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.CloserRule;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -46,6 +50,8 @@ import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  */
@@ -77,7 +83,14 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
             new StringDimensionSchema("string"),
             new FloatDimensionSchema("float"),
             new LongDimensionSchema("long"),
-            new DoubleDimensionSchema("double")
+            new DoubleDimensionSchema("double"),
+            new StringDimensionSchema("bool_string"),
+            new LongDimensionSchema("bool_long"),
+            new AutoTypeColumnSchema("bool_auto"),
+            new AutoTypeColumnSchema("array_string"),
+            new AutoTypeColumnSchema("array_double"),
+            new AutoTypeColumnSchema("array_long"),
+            new AutoTypeColumnSchema("nested")
         )
     );
     AggregatorFactory[] metrics = {
@@ -319,5 +332,106 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     index.add(row);
 
     Assert.assertEquals(1, index.size());
+  }
+
+  @Test
+  public void testTypeHandling() throws IndexSizeExceededException
+  {
+    IncrementalIndex index = indexCreator.createIndex();
+
+    final List<String> dims = Arrays.asList(
+        "string",
+        "float",
+        "long",
+        "double",
+        "bool_string",
+        "bool_long",
+        "bool_auto",
+        "array_string",
+        "array_long",
+        "array_double",
+        "nested"
+    );
+    IncrementalIndexAddResult result = index.add(
+        new MapBasedInputRow(
+            0,
+            dims,
+            ImmutableMap.<String, Object>builder()
+                        .put("string", "a")
+                        .put("float", 1.0)
+                        .put("long", 1)
+                        .put("double", 1.0)
+                        .put("bool_string", true)
+                        .put("bool_long", true)
+                        .put("bool_auto", true)
+                        .put("array_string", ImmutableList.of("a", "b", "c"))
+                        .put("array_long", ImmutableList.of(1, 2, 3))
+                        .put("array_double", ImmutableList.of(1.1, 2.2, 3.3))
+                        .put("nested", ImmutableMap.of("x", 1, "y", ImmutableList.of("a", "b")))
+                        .build()
+        )
+    );
+    Assert.assertNull(result.getParseException());
+    result = index.add(
+        new MapBasedInputRow(
+            60_000, // next minute so non-rollup still orders iterator correctly
+            dims,
+            ImmutableMap.<String, Object>builder()
+                        .put("string", "b")
+                        .put("float", 2.0)
+                        .put("long", 2)
+                        .put("double", 2.0)
+                        .put("bool_string", false)
+                        .put("bool_long", false)
+                        .put("bool_auto", false)
+                        .put("array_string", ImmutableList.of("d", "e", "f"))
+                        .put("array_long", ImmutableList.of(4, 5, 6))
+                        .put("array_double", ImmutableList.of(4.4, 5.5, 6.6))
+                        .put("nested", ImmutableMap.of("x", 2, "y", ImmutableList.of("c", "d")))
+                        .build()
+        )
+    );
+    Assert.assertNull(result.getParseException());
+
+    Assert.assertEquals(ColumnType.STRING, index.getColumnCapabilities("string").toColumnType());
+    Assert.assertEquals(ColumnType.FLOAT, index.getColumnCapabilities("float").toColumnType());
+    Assert.assertEquals(ColumnType.LONG, index.getColumnCapabilities("long").toColumnType());
+    Assert.assertEquals(ColumnType.DOUBLE, index.getColumnCapabilities("double").toColumnType());
+    Assert.assertEquals(ColumnType.STRING, index.getColumnCapabilities("bool_string").toColumnType());
+    Assert.assertEquals(ColumnType.LONG, index.getColumnCapabilities("bool_long").toColumnType());
+    // depends on value of 'druid.expressions.useStrictBooleans', current default is false which parses as strings
+    Assert.assertEquals(ColumnType.STRING, index.getColumnCapabilities("bool_auto").toColumnType());
+    Assert.assertEquals(ColumnType.STRING_ARRAY, index.getColumnCapabilities("array_string").toColumnType());
+    Assert.assertEquals(ColumnType.LONG_ARRAY, index.getColumnCapabilities("array_long").toColumnType());
+    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, index.getColumnCapabilities("array_double").toColumnType());
+    Assert.assertEquals(ColumnType.NESTED_DATA, index.getColumnCapabilities("nested").toColumnType());
+
+
+    Iterator<Row> rowIterator = index.iterator();
+    Row row = rowIterator.next();
+    Assert.assertEquals("a", row.getRaw("string"));
+    Assert.assertEquals(1.0f, row.getRaw("float"));
+    Assert.assertEquals(1L, row.getRaw("long"));
+    Assert.assertEquals(1.0, row.getRaw("double"));
+    Assert.assertEquals("true", row.getRaw("bool_string"));
+    Assert.assertEquals(1L, row.getRaw("bool_long"));
+    Assert.assertEquals(StructuredData.wrap(true), row.getRaw("bool_auto"));
+    Assert.assertEquals(StructuredData.wrap(ImmutableList.of("a", "b", "c")), row.getRaw("array_string"));
+    Assert.assertEquals(StructuredData.wrap(ImmutableList.of(1, 2, 3)), row.getRaw("array_long"));
+    Assert.assertEquals(StructuredData.wrap(ImmutableList.of(1.1, 2.2, 3.3)), row.getRaw("array_double"));
+    Assert.assertEquals(StructuredData.wrap(ImmutableMap.of("x", 1, "y", ImmutableList.of("a", "b"))), row.getRaw("nested"));
+
+    row = rowIterator.next();
+    Assert.assertEquals("b", row.getRaw("string"));
+    Assert.assertEquals(2.0f, row.getRaw("float"));
+    Assert.assertEquals(2L, row.getRaw("long"));
+    Assert.assertEquals(2.0, row.getRaw("double"));
+    Assert.assertEquals("false", row.getRaw("bool_string"));
+    Assert.assertEquals(0L, row.getRaw("bool_long"));
+    Assert.assertEquals(StructuredData.wrap(false), row.getRaw("bool_auto"));
+    Assert.assertEquals(StructuredData.wrap(ImmutableList.of("d", "e", "f")), row.getRaw("array_string"));
+    Assert.assertEquals(StructuredData.wrap(ImmutableList.of(4, 5, 6)), row.getRaw("array_long"));
+    Assert.assertEquals(StructuredData.wrap(ImmutableList.of(4.4, 5.5, 6.6)), row.getRaw("array_double"));
+    Assert.assertEquals(StructuredData.wrap(ImmutableMap.of("x", 2, "y", ImmutableList.of("c", "d"))), row.getRaw("nested"));
   }
 }

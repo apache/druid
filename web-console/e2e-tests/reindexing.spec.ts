@@ -116,7 +116,7 @@ function validateConnectLocalData(preview: string) {
   expect(lines.length).toBe(500);
   const firstLine = lines[0];
   expect(firstLine).toBe(
-    'Druid row: {' +
+    '[Druid row: {' +
       '"__time":1442018818771' +
       ',"channel":"#en.wikipedia"' +
       ',"comment":"added project"' +
@@ -131,11 +131,11 @@ function validateConnectLocalData(preview: string) {
       ',"added":36' +
       ',"deleted":0' +
       ',"delta":36' +
-      '}',
+      '}]',
   );
   const lastLine = lines[lines.length - 1];
   expect(lastLine).toBe(
-    'Druid row: {' +
+    '[Druid row: {' +
       '"__time":1442020314823' +
       ',"channel":"#en.wikipedia"' +
       ',"comment":"/* History */[[WP:AWB/T|Typo fixing]], [[WP:AWB/T|typo(s) fixed]]: nothern → northern using [[Project:AWB|AWB]]"' +
@@ -150,7 +150,7 @@ function validateConnectLocalData(preview: string) {
       ',"added":1' +
       ',"deleted":0' +
       ',"delta":1' +
-      '}',
+      '}]',
   );
 }
 

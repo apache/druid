@@ -98,7 +98,7 @@ exports[`ColumnTree matches snapshot 1`] = `
                 </Blueprint4.Popover2>,
               },
               Object {
-                "icon": "numerical",
+                "icon": "floating-point",
                 "id": "addedBy10",
                 "label": <Blueprint4.Popover2
                   autoFocus={false}

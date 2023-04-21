@@ -52,7 +52,9 @@ import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
 import org.apache.druid.msq.indexing.error.InvalidNullByteFault;
 import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.NotEnoughMemoryFault;
+import org.apache.druid.msq.indexing.error.NotEnoughTemporaryStorageFault;
 import org.apache.druid.msq.indexing.error.QueryNotSupportedFault;
+import org.apache.druid.msq.indexing.error.QueryRuntimeFault;
 import org.apache.druid.msq.indexing.error.RowTooLargeFault;
 import org.apache.druid.msq.indexing.error.TaskStartTimeoutFault;
 import org.apache.druid.msq.indexing.error.TooManyAttemptsForJob;
@@ -73,6 +75,10 @@ import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.msq.input.NilInputSource;
 import org.apache.druid.msq.input.external.ExternalInputSlice;
 import org.apache.druid.msq.input.external.ExternalInputSpec;
+import org.apache.druid.msq.input.inline.InlineInputSlice;
+import org.apache.druid.msq.input.inline.InlineInputSpec;
+import org.apache.druid.msq.input.lookup.LookupInputSlice;
+import org.apache.druid.msq.input.lookup.LookupInputSpec;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
@@ -112,8 +118,10 @@ public class MSQIndexingModule implements DruidModule
       InsertTimeNullFault.class,
       InsertTimeOutOfBoundsFault.class,
       InvalidNullByteFault.class,
+      NotEnoughTemporaryStorageFault.class,
       NotEnoughMemoryFault.class,
       QueryNotSupportedFault.class,
+      QueryRuntimeFault.class,
       RowTooLargeFault.class,
       TaskStartTimeoutFault.class,
       TooManyBucketsFault.class,
@@ -172,11 +180,15 @@ public class MSQIndexingModule implements DruidModule
 
         // InputSpec classes
         ExternalInputSpec.class,
+        InlineInputSpec.class,
+        LookupInputSpec.class,
         StageInputSpec.class,
         TableInputSpec.class,
 
         // InputSlice classes
         ExternalInputSlice.class,
+        InlineInputSlice.class,
+        LookupInputSlice.class,
         NilInputSlice.class,
         SegmentsInputSlice.class,
         StageInputSlice.class,

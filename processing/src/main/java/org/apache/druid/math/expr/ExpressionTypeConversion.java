@@ -88,10 +88,10 @@ public class ExpressionTypeConversion
       return type;
     }
     if (type.is(ExprType.COMPLEX) || other.is(ExprType.COMPLEX)) {
-      if (type.getElementType() == null) {
+      if (type.getComplexTypeName() == null) {
         return other;
       }
-      if (other.getElementType() == null) {
+      if (other.getComplexTypeName() == null) {
         return type;
       }
       if (!Objects.equals(type, other)) {
