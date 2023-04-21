@@ -91,7 +91,7 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
       if (clazz.equals(NullValueIndex.class)) {
         final BitmapColumnIndex nullIndex;
         final ByteBuffer firstValue = singleThreadedUtf8.get(0);
-        if (firstValue == null || firstValue.remaining() == 0) {
+        if (NullHandling.isNullOrEquivalent(firstValue)) {
           nullIndex = new SimpleImmutableBitmapIndex(singleThreadedBitmaps.get(0));
         } else {
           nullIndex = new SimpleImmutableBitmapIndex(bitmapFactory.makeEmptyImmutableBitmap());

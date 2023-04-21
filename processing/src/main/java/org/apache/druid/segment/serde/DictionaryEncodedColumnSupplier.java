@@ -62,6 +62,7 @@ public class DictionaryEncodedColumnSupplier implements Supplier<DictionaryEncod
   public DictionaryEncodedColumn<?> get()
   {
     final Indexed<String> cacheWrappedDictionary;
+    final Indexed<ByteBuffer> singleThreadedDictionaryUtf8 = dictionaryUtf8.singleThreaded();
 
     if (lookupCacheSize > 0) {
       cacheWrappedDictionary = new CachingIndexed<>(
@@ -73,26 +74,26 @@ public class DictionaryEncodedColumnSupplier implements Supplier<DictionaryEncod
       cacheWrappedDictionary = dictionary.singleThreaded();
     }
 
-    if (NullHandling.mustCombineNullAndEmpty(dictionaryUtf8)) {
+    if (NullHandling.mustCombineNullAndEmpty(singleThreadedDictionaryUtf8)) {
       return new StringDictionaryEncodedColumn(
           singleValuedColumn != null ? new CombineFirstTwoValuesColumnarInts(singleValuedColumn.get()) : null,
           multiValuedColumn != null ? new CombineFirstTwoValuesColumnarMultiInts(multiValuedColumn.get()) : null,
           CombineFirstTwoEntriesIndexed.returnNull(cacheWrappedDictionary),
-          CombineFirstTwoEntriesIndexed.returnNull(dictionaryUtf8.singleThreaded())
+          CombineFirstTwoEntriesIndexed.returnNull(singleThreadedDictionaryUtf8)
       );
-    } else if (NullHandling.mustReplaceFirstValueWithNull(dictionaryUtf8)) {
+    } else if (NullHandling.mustReplaceFirstValueWithNull(singleThreadedDictionaryUtf8)) {
       return new StringDictionaryEncodedColumn(
           singleValuedColumn != null ? singleValuedColumn.get() : null,
           multiValuedColumn != null ? multiValuedColumn.get() : null,
           new ReplaceFirstValueWithNullIndexed<>(cacheWrappedDictionary),
-          new ReplaceFirstValueWithNullIndexed<>(dictionaryUtf8.singleThreaded())
+          new ReplaceFirstValueWithNullIndexed<>(singleThreadedDictionaryUtf8)
       );
     } else {
       return new StringDictionaryEncodedColumn(
           singleValuedColumn != null ? singleValuedColumn.get() : null,
           multiValuedColumn != null ? multiValuedColumn.get() : null,
           cacheWrappedDictionary,
-          dictionaryUtf8.singleThreaded()
+          singleThreadedDictionaryUtf8
       );
     }
   }
