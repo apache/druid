@@ -184,6 +184,21 @@ public abstract class CoordinatorSimulationBaseTest implements
                                    .build();
   }
 
+  static Map<String, Object> filterByServer(DruidServer server)
+  {
+    return filter(Dimension.SERVER, server.getName());
+  }
+
+  static Map<String, Object> filterByTier(String tier)
+  {
+    return filter(Dimension.TIER, tier);
+  }
+
+  static Map<String, Object> filterByDatasource(String datasource)
+  {
+    return filter(Dimension.DATASOURCE, datasource);
+  }
+
   /**
    * Creates a map containing dimension key-values to filter out metric events.
    */

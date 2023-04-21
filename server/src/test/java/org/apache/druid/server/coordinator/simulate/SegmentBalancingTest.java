@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
-import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Test;
@@ -151,7 +150,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     verifyValue(Metric.MOVED_COUNT, 5L);
     verifyValue(
         Metric.LOAD_QUEUE_COUNT,
-        filter(Dimension.SERVER, historicalT12.getName()),
+        filterByServer(historicalT12),
         5L
     );
 
@@ -161,7 +160,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     verifyNotEmitted("segment/dropped/count");
     verifyValue(
         Metric.LOAD_QUEUE_COUNT,
-        filter(Dimension.SERVER, historicalT12.getName()),
+        filterByServer(historicalT12),
         5L
     );
 
@@ -188,7 +187,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     // Run 1: All segments are assigned to the first historical
     runCoordinatorCycle();
     verifyValue(Metric.ASSIGNED_COUNT, 10L);
-    verifyValue(Metric.LOAD_QUEUE_COUNT, filter(Dimension.SERVER, historicalT11.getName()), 10L);
+    verifyValue(Metric.LOAD_QUEUE_COUNT, filterByServer(historicalT11), 10L);
 
     // Run 2: Add new historical, some segments in the queue will be moved
     addServer(historicalT12);
@@ -197,8 +196,8 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     verifyValue(Metric.CANCELLED_ACTIONS, 5L);
     verifyValue(Metric.MOVED_COUNT, 5L);
 
-    verifyValue(Metric.LOAD_QUEUE_COUNT, filter(Dimension.SERVER, historicalT11.getName()), 5L);
-    verifyValue(Metric.LOAD_QUEUE_COUNT, filter(Dimension.SERVER, historicalT12.getName()), 5L);
+    verifyValue(Metric.LOAD_QUEUE_COUNT, filterByServer(historicalT11), 5L);
+    verifyValue(Metric.LOAD_QUEUE_COUNT, filterByServer(historicalT12), 5L);
 
     // Complete loading the segments
     loadQueuedSegments();
@@ -225,13 +224,13 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     // Run 1: Some segments are moved to histT12
     runCoordinatorCycle();
     verifyValue(Metric.MOVED_COUNT, 3L);
-    verifyValue(Metric.LOAD_QUEUE_COUNT, filter(Dimension.SERVER, historicalT12.getName()), 3L);
+    verifyValue(Metric.LOAD_QUEUE_COUNT, filterByServer(historicalT12), 3L);
 
     // Run 2: Some more segments are moved to histT12
     setDynamicConfig(createDynamicConfig(10, 0, 0));
     runCoordinatorCycle();
     verifyValue(Metric.MOVED_COUNT, 2L);
-    verifyValue(Metric.LOAD_QUEUE_COUNT, filter(Dimension.SERVER, historicalT12.getName()), 5L);
+    verifyValue(Metric.LOAD_QUEUE_COUNT, filterByServer(historicalT12), 5L);
 
     // Complete loading the segments
     loadQueuedSegments();

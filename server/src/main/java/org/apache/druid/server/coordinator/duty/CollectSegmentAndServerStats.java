@@ -66,16 +66,18 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
 
     final DruidCluster cluster = params.getDruidCluster();
     cluster.getHistoricals().forEach((tier, historicals) -> {
+      final RowKey rowKey = RowKey.forTier(tier);
+      stats.add(Stats.Tier.HISTORICAL_COUNT, rowKey, historicals.size());
       long totalCapacity = historicals.stream().map(ServerHolder::getMaxSize).reduce(0L, Long::sum);
-      stats.addToTieredStat(Stats.Tier.TOTAL_CAPACITY, tier, totalCapacity);
-      stats.addToTieredStat(Stats.Tier.HISTORICAL_COUNT, tier, historicals.size());
+      stats.add(Stats.Tier.TOTAL_CAPACITY, rowKey, totalCapacity);
     });
 
     // Collect load queue stats
     coordinator.getLoadManagementPeons().forEach((serverName, queuePeon) -> {
-      stats.addToServerStat(Stats.SegmentQueue.BYTES_TO_LOAD, serverName, queuePeon.getSizeOfSegmentsToLoad());
-      stats.addToServerStat(Stats.SegmentQueue.NUM_TO_LOAD, serverName, queuePeon.getSegmentsToLoad().size());
-      stats.addToServerStat(Stats.SegmentQueue.NUM_TO_DROP, serverName, queuePeon.getSegmentsToDrop().size());
+      final RowKey rowKey = RowKey.builder().add(Dimension.SERVER, serverName).build();
+      stats.add(Stats.SegmentQueue.BYTES_TO_LOAD, rowKey, queuePeon.getSizeOfSegmentsToLoad());
+      stats.add(Stats.SegmentQueue.NUM_TO_LOAD, rowKey, queuePeon.getSegmentsToLoad().size());
+      stats.add(Stats.SegmentQueue.NUM_TO_DROP, rowKey, queuePeon.getSegmentsToDrop().size());
 
       queuePeon.getAndResetStats().forEachStat(
           (dimValues, stat, statValue) ->

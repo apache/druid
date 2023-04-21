@@ -45,6 +45,16 @@ public class RowKey
     return new RowKey.Builder();
   }
 
+  public static RowKey forTier(String tier)
+  {
+    return RowKey.builder().add(Dimension.TIER, tier).build();
+  }
+
+  public static RowKey forDatasource(String datasource)
+  {
+    return RowKey.builder().add(Dimension.DATASOURCE, datasource).build();
+  }
+
   public Map<Dimension, String> getValues()
   {
     return values;

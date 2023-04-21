@@ -81,6 +81,7 @@ import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.server.initialization.jetty.ServiceUnavailableException;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
@@ -788,8 +789,8 @@ public class DruidCoordinator
               log.info("Finishing coordinator run since duty [%s] requested to stop run.", dutyName);
               return;
             } else {
-              params.getCoordinatorStats()
-                    .addToDutyStat(Stats.Run.DUTY_TIME, dutyName, end - start);
+              final RowKey rowKey = RowKey.builder().add(Dimension.DUTY, dutyName).build();
+              params.getCoordinatorStats().add(Stats.Run.DUTY_TIME, rowKey, end - start);
             }
           }
         }

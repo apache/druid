@@ -53,11 +53,6 @@ public class CoordinatorRunStats
     }
   }
 
-  public long getTieredStat(CoordinatorStat stat, String tier)
-  {
-    return get(stat, RowKey.builder().add(Dimension.TIER, tier).build());
-  }
-
   public long getSegmentStat(CoordinatorStat stat, String tier, String datasource)
   {
     return get(stat, RowKey.builder().add(Dimension.DATASOURCE, datasource).add(Dimension.TIER, tier).build());
@@ -65,17 +60,18 @@ public class CoordinatorRunStats
 
   public long getDataSourceStat(CoordinatorStat stat, String dataSource)
   {
-    return get(stat, RowKey.builder().add(Dimension.DATASOURCE, dataSource).build());
-  }
-
-  public long getDutyStat(CoordinatorStat stat, String duty)
-  {
-    return get(stat, RowKey.builder().add(Dimension.DUTY, duty).build());
+    return get(stat, RowKey.forDatasource(dataSource));
   }
 
   public long get(CoordinatorStat stat)
   {
     return get(stat, RowKey.EMPTY);
+  }
+
+  public long get(CoordinatorStat stat, RowKey rowKey)
+  {
+    Object2LongOpenHashMap<CoordinatorStat> statValues = allStats.get(rowKey);
+    return statValues == null ? 0 : statValues.getLong(stat);
   }
 
   public void forEachStat(StatHandler handler)
@@ -156,32 +152,25 @@ public class CoordinatorRunStats
 
   public void add(CoordinatorStat stat, long value)
   {
-    add(value, stat, RowKey.EMPTY);
+    add(stat, RowKey.EMPTY, value);
   }
 
   public void add(CoordinatorStat stat, RowKey rowKey, long value)
   {
-    add(value, stat, rowKey);
-  }
+    // Do not add a stat which will neither be emitted nor logged
+    if (!stat.shouldEmit()
+        && stat.getLevel() == CoordinatorStat.Level.DEBUG
+        && !hasDebugDimension(rowKey)) {
+      return;
+    }
 
-  public void addToTieredStat(CoordinatorStat stat, String tier, long value)
-  {
-    add(value, stat, RowKey.builder().add(Dimension.TIER, tier).build());
-  }
-
-  public void addToServerStat(CoordinatorStat stat, String serverName, long value)
-  {
-    add(value, stat, RowKey.builder().add(Dimension.SERVER, serverName).build());
-  }
-
-  public void addToDutyStat(CoordinatorStat stat, String duty, long value)
-  {
-    add(value, stat, RowKey.builder().add(Dimension.DUTY, duty).build());
+    allStats.computeIfAbsent(rowKey, d -> new Object2LongOpenHashMap<>())
+            .addTo(stat, value);
   }
 
   public void addToDatasourceStat(CoordinatorStat stat, String dataSource, long value)
   {
-    add(value, stat, RowKey.builder().add(Dimension.DATASOURCE, dataSource).build());
+    add(stat, RowKey.forDatasource(dataSource), value);
   }
 
   public void addToSegmentStat(CoordinatorStat stat, String tier, String datasource, long value)
@@ -189,12 +178,14 @@ public class CoordinatorRunStats
     RowKey rowKey = RowKey.builder()
                           .add(Dimension.TIER, tier)
                           .add(Dimension.DATASOURCE, datasource).build();
-    add(value, stat, rowKey);
+    add(stat, rowKey, value);
   }
 
-  public void accumulateMaxTieredStat(CoordinatorStat stat, final String tier, final long value)
+  /**
+   * Updates the maximum value of the stat for the given RowKey if applicable.
+   */
+  public void updateMax(CoordinatorStat stat, RowKey rowKey, long value)
   {
-    final RowKey rowKey = RowKey.builder().add(Dimension.TIER, tier).build();
     allStats.computeIfAbsent(rowKey, d -> new Object2LongOpenHashMap<>())
             .mergeLong(stat, value, Math::max);
   }
@@ -213,27 +204,15 @@ public class CoordinatorRunStats
     );
   }
 
-  private long get(CoordinatorStat stat, RowKey rowKey)
-  {
-    Object2LongOpenHashMap<CoordinatorStat> statValues = allStats.get(rowKey);
-    return statValues == null ? 0 : statValues.getLong(stat);
-  }
-
-  private void add(long value, CoordinatorStat stat, RowKey rowKey)
-  {
-    // Do not add a stat which will neither be emitted nor logged
-    if (!stat.shouldEmit()
-        && stat.getLevel() == CoordinatorStat.Level.DEBUG
-        && debugDimensions.isEmpty()) {
-      return;
-    }
-
-    allStats.computeIfAbsent(rowKey, d -> new Object2LongOpenHashMap<>())
-            .addTo(stat, value);
-  }
-
+  /**
+   * Checks if the given rowKey has any of the debug dimensions.
+   */
   private boolean hasDebugDimension(RowKey rowKey)
   {
+    if (debugDimensions.isEmpty()) {
+      return false;
+    }
+
     for (Map.Entry<Dimension, String> entry : rowKey.getValues().entrySet()) {
       String expectedValue = debugDimensions.get(entry.getKey());
       if (Objects.equals(expectedValue, entry.getValue())) {

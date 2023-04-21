@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -306,16 +307,14 @@ public class CostBalancerStrategy implements BalancerStrategy
     final double normalization = calculateNormalization(serverHolderList);
     final double normalizedInitialCost = initialTotalCost / normalization;
 
-    stats.addToTieredStat(Stats.Balancer.RAW_COST, tier, (long) initialTotalCost);
-    stats.addToTieredStat(Stats.Balancer.NORMALIZATION_COST, tier, (long) normalization);
-    stats.addToTieredStat(Stats.Balancer.NORMALIZED_COST_X_1000, tier, (long) (normalizedInitialCost * 1000));
+    final RowKey rowKey = RowKey.forTier(tier);
+    stats.add(Stats.Balancer.RAW_COST, rowKey, (long) initialTotalCost);
+    stats.add(Stats.Balancer.NORMALIZATION_COST, rowKey, (long) normalization);
+    stats.add(Stats.Balancer.NORMALIZED_COST_X_1000, rowKey, (long) (normalizedInitialCost * 1000));
 
     log.info(
         "[%s]: Initial Total Cost: [%f], Normalization: [%f], Initial Normalized Cost: [%f]",
-        tier,
-        initialTotalCost,
-        normalization,
-        normalizedInitialCost
+        tier, initialTotalCost, normalization, normalizedInitialCost
     );
   }
 

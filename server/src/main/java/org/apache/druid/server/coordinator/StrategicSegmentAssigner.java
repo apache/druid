@@ -27,7 +27,6 @@ import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.SegmentActionHandler;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
-import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -144,7 +143,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       incrementStat(Error.MOVE_SKIPPED_OPTIMALLY_PLACED, segment, tier);
       return false;
     } else if (moveSegment(segment, sourceServer, destination)) {
-      stats.addToSegmentStat(Stats.Segments.MOVED, tier, segment.getDataSource(), 1);
+      incrementStat(Stats.Segments.MOVED, segment, tier);
       return true;
     } else {
       incrementStat(Error.MOVE_FAILED, segment, tier);
@@ -230,8 +229,8 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       return 0;
     }
 
-    final String datasource = segment.getDataSource();
-    SegmentTierStatus segmentStatus = new SegmentTierStatus(segment, cluster.getHistoricalsByTier(tier));
+    final SegmentTierStatus segmentStatus =
+        new SegmentTierStatus(segment, cluster.getHistoricalsByTier(tier));
 
     // Cancel all moves in this tier if it does not need to have replicas
     if (shouldCancelMoves) {
@@ -250,8 +249,8 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
         boolean isFirstLoadOnTier = replicantLookup.getServedReplicas(segment.getId(), tier)
                                     + cancelledDrops < 1;
         int numLoadsQueued = loadReplicas(numReplicasToLoad, segment, tier, segmentStatus, isFirstLoadOnTier);
-        stats.addToSegmentStat(Stats.Segments.ASSIGNED, tier, datasource, numLoadsQueued);
-        stats.addToSegmentStat(Stats.Segments.UNDER_REPLICATED, tier, datasource, numReplicasToLoad);
+        incrementStat(Stats.Segments.ASSIGNED, segment, tier, numLoadsQueued);
+        incrementStat(Stats.Segments.UNDER_REPLICATED, segment, tier, numReplicasToLoad);
       }
     }
 
@@ -264,7 +263,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       int numReplicasToDrop = Math.min(replicaSurplus - cancelledLoads, maxReplicasToDrop);
       if (numReplicasToDrop > 0) {
         int dropsQueuedOnTier = dropReplicas(numReplicasToDrop, segment, tier, segmentStatus);
-        stats.addToSegmentStat(Stats.Segments.DROPPED, tier, datasource, dropsQueuedOnTier);
+        incrementStat(Stats.Segments.DROPPED, segment, tier, dropsQueuedOnTier);
         return dropsQueuedOnTier;
       }
     }
@@ -274,22 +273,14 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
   private void reportTierCapacityStats(DataSegment segment, int requiredReplicas, String tier)
   {
-    stats.accumulateMaxTieredStat(
-        Stats.Tier.REPLICATION_FACTOR,
-        tier,
-        requiredReplicas
-    );
-    stats.addToTieredStat(
-        Stats.Tier.REQUIRED_CAPACITY,
-        tier,
-        segment.getSize() * requiredReplicas
-    );
+    final RowKey rowKey = RowKey.forTier(tier);
+    stats.updateMax(Stats.Tier.REPLICATION_FACTOR, rowKey, requiredReplicas);
+    stats.add(Stats.Tier.REQUIRED_CAPACITY, rowKey, segment.getSize() * requiredReplicas);
   }
 
   @Override
   public void broadcastSegment(DataSegment segment)
   {
-    final String datasource = segment.getDataSource();
     for (ServerHolder server : cluster.getAllServers()) {
       // Ignore servers which are not broadcast targets
       if (!server.getServer().getType().isSegmentBroadcastTarget()) {
@@ -299,10 +290,10 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       // Drop from decommissioning servers and load on active servers
       final String tier = server.getServer().getTier();
       if (server.isDecommissioning() && dropBroadcastSegment(segment, server)) {
-        stats.addToSegmentStat(Stats.Segments.DROPPED_BROADCAST, tier, datasource, 1);
+        incrementStat(Stats.Segments.DROPPED_BROADCAST, segment, tier);
       }
       if (!server.isDecommissioning() && loadBroadcastSegment(segment, server)) {
-        stats.addToSegmentStat(Stats.Segments.ASSIGNED_BROADCAST, tier, datasource, 1);
+        incrementStat(Stats.Segments.ASSIGNED_BROADCAST, segment, tier);
       }
     }
   }
@@ -499,11 +490,12 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
   private void incrementStat(CoordinatorStat stat, DataSegment segment, String tier)
   {
-    RowKey rowKey = RowKey.builder()
-                          .add(Dimension.DATASOURCE, segment.getDataSource())
-                          .add(Dimension.TIER, tier)
-                          .build();
-    stats.add(stat, rowKey, 1);
+    incrementStat(stat, segment, tier, 1);
+  }
+
+  private void incrementStat(CoordinatorStat stat, DataSegment segment, String tier, long value)
+  {
+    stats.addToSegmentStat(stat, tier, segment.getDataSource(), value);
   }
 
   /**

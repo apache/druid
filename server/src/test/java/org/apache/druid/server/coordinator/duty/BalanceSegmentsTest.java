@@ -298,7 +298,7 @@ public class BalanceSegmentsTest
 
     CoordinatorRunStats stats = runBalancer(params);
     EasyMock.verify(strategy);
-    Assert.assertEquals(0, stats.getTieredStat(Stats.Segments.MOVED, "normal"));
+    Assert.assertFalse(stats.hasStat(Stats.Segments.MOVED));
   }
 
   @Test

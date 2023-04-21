@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.client.indexing.ClientCompactionTaskDimensionsSpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
@@ -44,7 +43,7 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.CoordinatorStat;
+import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -563,20 +562,17 @@ public class CompactSegments implements CoordinatorCustomDuty
       CoordinatorRunStats stats
   )
   {
-    final Object2LongOpenHashMap<CoordinatorStat> statToValue = new Object2LongOpenHashMap<>();
-    statToValue.addTo(Stats.Compaction.PENDING_BYTES, autoCompactionSnapshot.getBytesAwaitingCompaction());
-    statToValue.addTo(Stats.Compaction.PENDING_SEGMENTS, autoCompactionSnapshot.getSegmentCountAwaitingCompaction());
-    statToValue.addTo(Stats.Compaction.PENDING_INTERVALS, autoCompactionSnapshot.getIntervalCountAwaitingCompaction());
-    statToValue.addTo(Stats.Compaction.COMPACTED_BYTES, autoCompactionSnapshot.getBytesCompacted());
-    statToValue.addTo(Stats.Compaction.COMPACTED_SEGMENTS, autoCompactionSnapshot.getSegmentCountCompacted());
-    statToValue.addTo(Stats.Compaction.COMPACTED_INTERVALS, autoCompactionSnapshot.getIntervalCountCompacted());
-    statToValue.addTo(Stats.Compaction.SKIPPED_BYTES, autoCompactionSnapshot.getBytesSkipped());
-    statToValue.addTo(Stats.Compaction.SKIPPED_SEGMENTS, autoCompactionSnapshot.getSegmentCountSkipped());
-    statToValue.addTo(Stats.Compaction.SKIPPED_INTERVALS, autoCompactionSnapshot.getIntervalCountSkipped());
+    final RowKey rowKey = RowKey.forDatasource(dataSource);
 
-    statToValue.forEach(
-        (stat, value) -> stats.addToDatasourceStat(stat, dataSource, value)
-    );
+    stats.add(Stats.Compaction.PENDING_BYTES, rowKey, autoCompactionSnapshot.getBytesAwaitingCompaction());
+    stats.add(Stats.Compaction.PENDING_SEGMENTS, rowKey, autoCompactionSnapshot.getSegmentCountAwaitingCompaction());
+    stats.add(Stats.Compaction.PENDING_INTERVALS, rowKey, autoCompactionSnapshot.getIntervalCountAwaitingCompaction());
+    stats.add(Stats.Compaction.COMPACTED_BYTES, rowKey, autoCompactionSnapshot.getBytesCompacted());
+    stats.add(Stats.Compaction.COMPACTED_SEGMENTS, rowKey, autoCompactionSnapshot.getSegmentCountCompacted());
+    stats.add(Stats.Compaction.COMPACTED_INTERVALS, rowKey, autoCompactionSnapshot.getIntervalCountCompacted());
+    stats.add(Stats.Compaction.SKIPPED_BYTES, rowKey, autoCompactionSnapshot.getBytesSkipped());
+    stats.add(Stats.Compaction.SKIPPED_SEGMENTS, rowKey, autoCompactionSnapshot.getSegmentCountSkipped());
+    stats.add(Stats.Compaction.SKIPPED_INTERVALS, rowKey, autoCompactionSnapshot.getIntervalCountSkipped());
   }
 
   @Nullable

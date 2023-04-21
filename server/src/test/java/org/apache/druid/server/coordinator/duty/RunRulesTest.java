@@ -54,6 +54,8 @@ import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -1273,9 +1275,10 @@ public class RunRulesTest
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorRunStats stats = afterParams.getCoordinatorStats();
+    final RowKey tierRowKey = RowKey.builder().add(Dimension.TIER, DruidServer.DEFAULT_TIER).build();
     Assert.assertEquals(
         dataSegment.getSize() * numReplicants,
-        stats.getTieredStat(Stats.Tier.REQUIRED_CAPACITY, DruidServer.DEFAULT_TIER)
+        stats.get(Stats.Tier.REQUIRED_CAPACITY, tierRowKey)
     );
 
     // Verify that primary assignment failed
@@ -1335,9 +1338,10 @@ public class RunRulesTest
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorRunStats stats = afterParams.getCoordinatorStats();
+    final RowKey tierRowKey = RowKey.builder().add(Dimension.TIER, DruidServer.DEFAULT_TIER).build();
     Assert.assertEquals(
         dataSegment.getSize() * numReplicants,
-        stats.getTieredStat(Stats.Tier.REQUIRED_CAPACITY, DruidServer.DEFAULT_TIER)
+        stats.get(Stats.Tier.REQUIRED_CAPACITY, tierRowKey)
     );
     Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
