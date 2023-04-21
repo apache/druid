@@ -22,7 +22,9 @@ package org.apache.druid.segment;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.column.CapabilitiesBasedFormat;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
@@ -174,7 +176,6 @@ public interface DimensionIndexer<
    */
   CloseableIndexed<ActualType> getSortedIndexedValues();
 
-
   /**
    * Get the minimum dimension value seen by this indexer.
    *
@@ -236,6 +237,12 @@ public interface DimensionIndexer<
   );
 
   ColumnCapabilities getColumnCapabilities();
+
+  default ColumnFormat getFormat()
+  {
+    return CapabilitiesBasedFormat.forColumnIndexer(getColumnCapabilities());
+  }
+
   /**
    * Compares the row values for this DimensionIndexer's dimension from a Row key.
    *
@@ -301,6 +308,11 @@ public interface DimensionIndexer<
    * is needed to be able to correctly map per-segment encoded values to global values on the next conversion step,
    * {@link DimensionMerger#convertSortedSegmentRowValuesToMergedRowValues}. The latter method requires sorted encoding
    * values on the input, because {@link DimensionMerger#writeMergedValueDictionary} takes sorted lookups as it's input.
+   *
+   * For columns which do not use the {@link DimensionMerger} to merge dictionary encoded values, this method should
+   * provide a selector which is compatible with the expectations of
+   * {@link DimensionMerger#processMergedRow(ColumnValueSelector)}, which might simply be to pass-through the 'unsorted'
+   * selector.
    */
   ColumnValueSelector convertUnsortedValuesToSorted(ColumnValueSelector selectorWithUnsortedValues);
 

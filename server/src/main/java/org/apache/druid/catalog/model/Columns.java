@@ -54,6 +54,14 @@ public class Columns
         .put(VARCHAR, ColumnType.STRING)
         .build();
 
+  public static final Map<ColumnType, String> DRUID_TO_SQL_TYPES =
+      new ImmutableMap.Builder<ColumnType, String>()
+      .put(ColumnType.LONG, BIGINT)
+      .put(ColumnType.FLOAT, FLOAT)
+      .put(ColumnType.DOUBLE, DOUBLE)
+      .put(ColumnType.STRING, VARCHAR)
+      .build();
+
   private Columns()
   {
   }
@@ -73,7 +81,11 @@ public class Columns
     if (sqlType == null) {
       return null;
     }
-    return SQL_TO_DRUID_TYPES.get(StringUtils.toUpperCase(sqlType));
+    ColumnType druidType = SQL_TO_DRUID_TYPES.get(StringUtils.toUpperCase(sqlType));
+    if (druidType != null) {
+      return druidType;
+    }
+    return ColumnType.fromString(sqlType);
   }
 
   public static void validateScalarColumn(String name, String type)
@@ -91,17 +103,24 @@ public class Columns
     return TIME_COLUMN.equals(name);
   }
 
-  public static RowSignature convertSignature(TableSpec spec)
+  public static RowSignature convertSignature(List<ColumnSpec> columns)
   {
-    List<ColumnSpec> columns = spec.columns();
     RowSignature.Builder builder = RowSignature.builder();
     for (ColumnSpec col : columns) {
-      ColumnType druidType = Columns.SQL_TO_DRUID_TYPES.get(StringUtils.toUpperCase(col.sqlType()));
+      ColumnType druidType = null;
+      if (col.sqlType() != null) {
+        druidType = Columns.druidType(col.sqlType());
+      }
       if (druidType == null) {
         druidType = ColumnType.STRING;
       }
       builder.add(col.name(), druidType);
     }
     return builder.build();
+  }
+
+  public static String sqlType(ColumnType druidType)
+  {
+    return DRUID_TO_SQL_TYPES.get(druidType);
   }
 }

@@ -29,10 +29,15 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexing.common.TestUtils;
+import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.log.StartupLoggingConfig;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -54,13 +59,18 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 // must have a kind / minikube cluster installed and the image pushed to your repository
+@Disabled
 public class DruidPeonClientIntegrationTest
 {
-  private final KubernetesClientApi k8sClient;
-  private final DruidKubernetesPeonClient peonClient;
-  private final ObjectMapper jsonMapper;
+  private StartupLoggingConfig startupLoggingConfig;
+  private TaskConfig taskConfig;
+  private DruidNode druidNode;
+  private KubernetesClientApi k8sClient;
+  private DruidKubernetesPeonClient peonClient;
+  private ObjectMapper jsonMapper;
 
-  public DruidPeonClientIntegrationTest()
+  @BeforeEach
+  public void setup()
   {
     TestUtils utils = new TestUtils();
     jsonMapper = utils.getTestObjectMapper();
@@ -73,6 +83,17 @@ public class DruidPeonClientIntegrationTest
     );
     k8sClient = new DruidKubernetesClient();
     peonClient = new DruidKubernetesPeonClient(k8sClient, "default", false);
+    druidNode = new DruidNode(
+        "test",
+        null,
+        false,
+        null,
+        null,
+        true,
+        false
+    );
+    startupLoggingConfig = new StartupLoggingConfig();
+    taskConfig = new TaskConfigBuilder().setBaseDir("src/test/resources").build();
   }
 
   @Disabled
@@ -84,7 +105,14 @@ public class DruidPeonClientIntegrationTest
     Task task = K8sTestUtils.getTask();
     KubernetesTaskRunnerConfig config = new KubernetesTaskRunnerConfig();
     config.namespace = "default";
-    K8sTaskAdapter adapter = new SingleContainerTaskAdapter(k8sClient, config, jsonMapper);
+    K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
+        k8sClient,
+        config,
+        taskConfig,
+        startupLoggingConfig,
+        druidNode,
+        jsonMapper
+    );
     String taskBasePath = "/home/taskDir";
     PeonCommandContext context = new PeonCommandContext(Collections.singletonList(
         "sleep 10;  for i in `seq 1 1000`; do echo $i; done; exit 0"
@@ -117,7 +145,7 @@ public class DruidPeonClientIntegrationTest
     thread.start();
 
     // assert that the env variable is corret
-    Task taskFromEnvVar = adapter.toTask(peonClient.getMainJobPod(new K8sTaskId(task.getId())));
+    Task taskFromEnvVar = adapter.toTask(job);
     assertEquals(task, taskFromEnvVar);
 
     // now copy the task.json file from the pod and make sure its the same as our task.json we expected

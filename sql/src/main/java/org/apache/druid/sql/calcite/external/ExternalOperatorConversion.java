@@ -19,95 +19,115 @@
 
 package org.apache.druid.sql.calcite.external;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlCall;
-import org.apache.calcite.sql.SqlIdentifier;
-import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql.type.OperandTypes;
-import org.apache.calcite.sql.type.ReturnTypes;
-import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.calcite.sql.validate.SqlUserDefinedTableMacro;
+import org.apache.druid.catalog.model.CatalogUtils;
+import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.catalog.model.table.BaseTableFunction;
+import org.apache.druid.catalog.model.table.ExternalTableSpec;
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.Resource;
-import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.calcite.expression.AuthorizableOperator;
-import org.apache.druid.sql.calcite.expression.DruidExpression;
-import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
-import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 
-import javax.annotation.Nullable;
-import java.util.Collections;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Registers the "EXTERN" operator, which is used in queries like
- * "INSERT INTO dst SELECT * FROM TABLE(EXTERN(...))".
+ * <pre>{@code
+ * INSERT INTO dst SELECT * FROM TABLE(EXTERN(
+ *   "<input source>",
+ *   "<input format>",
+ *   "<signature>"))
  *
- * This class is exercised in CalciteInsertDmlTest but is not currently exposed to end users.
+ * INSERT INTO dst SELECT * FROM TABLE(EXTERN(
+ *   inputSource => "<input source>",
+ *   inputFormat => "<input format>"))
+ *   EXTEND (<columns>)
+ * }</pre>
+ * Where either the by-position or by-name forms are usable with either
+ * a Druid JSON signature, or an SQL {@code EXTEND} list of columns.
+ * As with all table functions, the {@code EXTEND} is optional.
  */
-public class ExternalOperatorConversion implements SqlOperatorConversion
+public class ExternalOperatorConversion extends DruidExternTableMacroConversion
 {
   public static final String FUNCTION_NAME = "EXTERN";
 
-  // Resource that allows reading external data via SQL.
-  public static final ResourceAction EXTERNAL_RESOURCE_ACTION =
-      new ResourceAction(new Resource("EXTERNAL", ResourceType.EXTERNAL), Action.READ);
+  public static final String INPUT_SOURCE_PARAM = "inputSource";
+  public static final String INPUT_FORMAT_PARAM = "inputFormat";
+  public static final String SIGNATURE_PARAM = "signature";
 
-  private final SqlUserDefinedTableMacro operator;
+  /**
+   * The use of a table function allows the use of optional arguments,
+   * so that the signature can be given either as the original-style
+   * serialized JSON signature, or the updated SQL-style EXTEND clause.
+   */
+  private static class ExternFunction extends BaseTableFunction
+  {
+    public ExternFunction()
+    {
+      super(Arrays.asList(
+          new Parameter(INPUT_SOURCE_PARAM, ParameterType.VARCHAR, false),
+          new Parameter(INPUT_FORMAT_PARAM, ParameterType.VARCHAR, false),
+
+          // Optional: the user can either provide the signature OR
+          // an EXTEND clause. Checked in the implementation.
+          new Parameter(SIGNATURE_PARAM, ParameterType.VARCHAR, true)
+      ));
+    }
+
+    @Override
+    public ExternalTableSpec apply(
+        final String fnName,
+        final Map<String, Object> args,
+        final List<ColumnSpec> columns,
+        final ObjectMapper jsonMapper
+    )
+    {
+      try {
+        final String sigValue = CatalogUtils.getString(args, SIGNATURE_PARAM);
+        if (sigValue == null && columns == null) {
+          throw new IAE(
+              "EXTERN requires either a %s value or an EXTEND clause",
+              SIGNATURE_PARAM
+          );
+        }
+        if (sigValue != null && columns != null) {
+          throw new IAE(
+              "EXTERN requires either a %s value or an EXTEND clause, but not both",
+              SIGNATURE_PARAM
+          );
+        }
+        final RowSignature rowSignature;
+        if (columns != null) {
+          rowSignature = Columns.convertSignature(columns);
+        } else {
+          rowSignature = jsonMapper.readValue(sigValue, RowSignature.class);
+        }
+
+        String inputSrcStr = CatalogUtils.getString(args, INPUT_SOURCE_PARAM);
+        InputSource inputSource = jsonMapper.readValue(inputSrcStr, InputSource.class);
+        return new ExternalTableSpec(
+            inputSource,
+            jsonMapper.readValue(CatalogUtils.getString(args, INPUT_FORMAT_PARAM), InputFormat.class),
+            rowSignature,
+            inputSource::getTypes
+        );
+      }
+      catch (JsonProcessingException e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
 
   @Inject
   public ExternalOperatorConversion(@Json final ObjectMapper jsonMapper)
   {
-    this.operator = new ExternalOperator(new ExternalTableMacro(jsonMapper));
-  }
-
-  @Override
-  public SqlOperator calciteOperator()
-  {
-    return operator;
-  }
-
-  @Nullable
-  @Override
-  public DruidExpression toDruidExpression(PlannerContext plannerContext, RowSignature rowSignature, RexNode rexNode)
-  {
-    return null;
-  }
-
-  private static class ExternalOperator extends SqlUserDefinedTableMacro implements AuthorizableOperator
-  {
-    public ExternalOperator(final ExternalTableMacro macro)
-    {
-      super(
-          new SqlIdentifier(FUNCTION_NAME, SqlParserPos.ZERO),
-          ReturnTypes.CURSOR,
-          null,
-          OperandTypes.sequence(
-              macro.signature(),
-              OperandTypes.family(SqlTypeFamily.STRING),
-              OperandTypes.family(SqlTypeFamily.STRING),
-              OperandTypes.family(SqlTypeFamily.STRING)
-          ),
-          macro.getParameters()
-               .stream()
-               .map(parameter -> parameter.getType(DruidTypeSystem.TYPE_FACTORY))
-               .collect(Collectors.toList()),
-          macro
-      );
-    }
-
-    @Override
-    public Set<ResourceAction> computeResources(final SqlCall call)
-    {
-      return Collections.singleton(EXTERNAL_RESOURCE_ACTION);
-    }
+    super(FUNCTION_NAME, new ExternFunction(), jsonMapper);
   }
 }

@@ -21,7 +21,7 @@ import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import React, { useState } from 'react';
-import { Column, ReactTableFunction } from 'react-table';
+import type { Column, ReactTableFunction } from 'react-table';
 
 import {
   combineModeAndNeedle,

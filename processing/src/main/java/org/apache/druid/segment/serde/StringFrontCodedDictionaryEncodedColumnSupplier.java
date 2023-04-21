@@ -21,6 +21,7 @@ package org.apache.druid.segment.serde;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
+import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringFrontCodedDictionaryEncodedColumn;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarMultiInts;
@@ -30,7 +31,7 @@ import javax.annotation.Nullable;
 
 /**
  * {@link DictionaryEncodedColumnSupplier} but for columns using a {@link StringFrontCodedDictionaryEncodedColumn}
- * instead of the traditional {@link org.apache.druid.segment.column.StringDictionaryEncodedColumn}
+ * instead of the traditional {@link StringDictionaryEncodedColumn}
  */
 public class StringFrontCodedDictionaryEncodedColumnSupplier implements Supplier<DictionaryEncodedColumn<?>>
 {

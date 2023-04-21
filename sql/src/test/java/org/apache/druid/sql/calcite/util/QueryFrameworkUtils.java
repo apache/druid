@@ -46,6 +46,7 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.log.NoopRequestLogger;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlLifecycleManager;
@@ -121,7 +122,6 @@ public class QueryFrameworkUtils
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
         new NoopRequestLogger(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        authConfig,
         new DefaultQueryConfig(ImmutableMap.of()),
         new SqlLifecycleManager()
     );
@@ -138,7 +138,13 @@ public class QueryFrameworkUtils
       final AuthorizerMapper authorizerMapper
   )
   {
-    DruidSchema druidSchema = createMockSchema(injector, conglomerate, walker, plannerConfig, druidSchemaManager);
+    DruidSchema druidSchema = createMockSchema(
+        injector,
+        conglomerate,
+        walker,
+        plannerConfig,
+        druidSchemaManager
+    );
     SystemSchema systemSchema =
         CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
 
@@ -184,7 +190,15 @@ public class QueryFrameworkUtils
       final AuthorizerMapper authorizerMapper
   )
   {
-    return createMockRootSchema(injector, conglomerate, walker, plannerConfig, null, new NoopDruidSchemaManager(), authorizerMapper);
+    return createMockRootSchema(
+        injector,
+        conglomerate,
+        walker,
+        plannerConfig,
+        null,
+        new NoopDruidSchemaManager(),
+        authorizerMapper
+    );
   }
 
   private static DruidSchema createMockSchema(
@@ -209,7 +223,8 @@ public class QueryFrameworkUtils
         createDefaultJoinableFactory(injector),
         SegmentMetadataCacheConfig.create(),
         CalciteTests.TEST_AUTHENTICATOR_ESCALATOR,
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        new NoopServiceEmitter()
     );
 
     try {

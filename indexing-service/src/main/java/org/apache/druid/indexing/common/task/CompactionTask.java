@@ -30,6 +30,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.curator.shaded.com.google.common.base.Verify;
@@ -41,10 +42,6 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.DoubleDimensionSchema;
-import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.LongDimensionSchema;
-import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.Property;
@@ -80,11 +77,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.DimensionHandler;
-import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -96,6 +91,7 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
+import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -399,6 +395,14 @@ public class CompactionTask extends AbstractBatchIndexTask
   public String getType()
   {
     return TYPE;
+  }
+
+  @Nonnull
+  @JsonIgnore
+  @Override
+  public Set<ResourceAction> getInputSourceResources()
+  {
+    return ImmutableSet.of();
   }
 
   @Override
@@ -821,82 +825,52 @@ public class CompactionTask extends AbstractBatchIndexTask
   {
     return Iterables.transform(
         Iterables.filter(dataSegments, dataSegment -> !dataSegment.isTombstone()),
-        dataSegment ->
-            Pair.of(
-                dataSegment,
-                () -> {
-                  try {
-                    final Closer closer = Closer.create();
-                    final File file = segmentCacheManager.getSegmentFiles(dataSegment);
-                    closer.register(() -> segmentCacheManager.cleanup(dataSegment));
-                    final QueryableIndex queryableIndex = closer.register(indexIO.loadIndex(file));
-                    return new ResourceHolder<QueryableIndex>()
-                    {
-                      @Override
-                      public QueryableIndex get()
-                      {
-                        return queryableIndex;
-                      }
-
-                      @Override
-                      public void close()
-                      {
-                        try {
-                          closer.close();
-                        }
-                        catch (IOException e) {
-                          throw new RuntimeException(e);
-                        }
-                      }
-                    };
-                  }
-                  catch (Exception e) {
-                    throw new RuntimeException(e);
-                  }
-                }
-            )
+        dataSegment -> fetchSegment(dataSegment, segmentCacheManager, indexIO)
     );
   }
 
-  @VisibleForTesting
-  static DimensionSchema createDimensionSchema(
-      String name,
-      ColumnCapabilities capabilities,
-      DimensionSchema.MultiValueHandling multiValueHandling
+  // Broken out into a separate function because Some tools can't infer the
+  // pair type, but if the type is given explicitly, IntelliJ inspections raises
+  // an error. Creating a function keeps everyone happy.
+  private static Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>> fetchSegment(
+      DataSegment dataSegment,
+      SegmentCacheManager segmentCacheManager,
+      IndexIO indexIO
   )
   {
-    switch (capabilities.getType()) {
-      case FLOAT:
-        Preconditions.checkArgument(
-            multiValueHandling == null,
-            "multi-value dimension [%s] is not supported for float type yet",
-            name
-        );
-        return new FloatDimensionSchema(name);
-      case LONG:
-        Preconditions.checkArgument(
-            multiValueHandling == null,
-            "multi-value dimension [%s] is not supported for long type yet",
-            name
-        );
-        return new LongDimensionSchema(name);
-      case DOUBLE:
-        Preconditions.checkArgument(
-            multiValueHandling == null,
-            "multi-value dimension [%s] is not supported for double type yet",
-            name
-        );
-        return new DoubleDimensionSchema(name);
-      case STRING:
-        return new StringDimensionSchema(name, multiValueHandling, capabilities.hasBitmapIndexes());
-      default:
-        DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(
-            name,
-            capabilities,
-            multiValueHandling
-        );
-        return handler.getDimensionSchema(capabilities);
-    }
+    return Pair.of(
+        dataSegment,
+        () -> {
+          try {
+            final Closer closer = Closer.create();
+            final File file = segmentCacheManager.getSegmentFiles(dataSegment);
+            closer.register(() -> segmentCacheManager.cleanup(dataSegment));
+            final QueryableIndex queryableIndex = closer.register(indexIO.loadIndex(file));
+            return new ResourceHolder<QueryableIndex>()
+            {
+              @Override
+              public QueryableIndex get()
+              {
+                return queryableIndex;
+              }
+
+              @Override
+              public void close()
+              {
+                try {
+                  closer.close();
+                }
+                catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
+              }
+            };
+          }
+          catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        }
+    );
   }
 
   /**
@@ -1098,7 +1072,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         );
 
         if (!uniqueDims.containsKey(dimension)) {
-          final DimensionHandler dimensionHandler = Preconditions.checkNotNull(
+          Preconditions.checkNotNull(
               dimensionHandlerMap.get(dimension),
               "Cannot find dimensionHandler for dimension[%s]",
               dimension
@@ -1107,11 +1081,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           uniqueDims.put(dimension, uniqueDims.size());
           dimensionSchemaMap.put(
               dimension,
-              createDimensionSchema(
-                  dimension,
-                  columnHolder.getCapabilities(),
-                  dimensionHandler.getMultivalueHandling()
-              )
+              columnHolder.getColumnFormat().getColumnSchema(dimension)
           );
         }
       }

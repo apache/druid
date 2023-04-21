@@ -35,6 +35,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.MultipleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskReportFileWriter;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -109,10 +110,11 @@ public class ThreadingTaskRunner
       ObjectMapper jsonMapper,
       AppenderatorsManager appenderatorsManager,
       TaskReportFileWriter taskReportFileWriter,
-      @Self DruidNode node
+      @Self DruidNode node,
+      TaskStorageDirTracker dirTracker
   )
   {
-    super(jsonMapper, taskConfig);
+    super(jsonMapper, taskConfig, dirTracker);
     this.toolboxFactory = toolboxFactory;
     this.taskLogPusher = taskLogPusher;
     this.node = node;
@@ -153,8 +155,21 @@ public class ThreadingTaskRunner
                         @Override
                         public TaskStatus call()
                         {
+                          final File baseDirForTask;
+                          try {
+                            baseDirForTask = getTracker().pickBaseDir(task.getId());
+                          }
+                          catch (RuntimeException e) {
+                            LOG.error(e, "Failed to get directory for task [%s], cannot schedule.", task.getId());
+                            return TaskStatus.failure(
+                                task.getId(),
+                                StringUtils.format("Could not schedule due to error [%s]", e.getMessage())
+                            );
+
+                          }
+                          final File taskDir = new File(baseDirForTask, task.getId());
+
                           final String attemptUUID = UUID.randomUUID().toString();
-                          final File taskDir = taskConfig.getTaskDir(task.getId());
                           final File attemptDir = new File(taskDir, attemptUUID);
 
                           final TaskLocation taskLocation = TaskLocation.create(
@@ -197,7 +212,7 @@ public class ThreadingTaskRunner
                                   .setName(StringUtils.format("[%s]-%s", task.getId(), priorThreadName));
 
                             TaskStatus taskStatus;
-                            final TaskToolbox toolbox = toolboxFactory.build(task);
+                            final TaskToolbox toolbox = toolboxFactory.build(baseDirForTask, task);
                             TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
                             TaskRunnerUtils.notifyStatusChanged(
                                 listeners,

@@ -23,9 +23,9 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableInputStreamFrameChannel;
+import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -96,24 +96,22 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
           workerNumber,
           remotePartitionPath
       );
-      RetryUtils.retry(() -> {
-        if (!storageConnector.pathExists(remotePartitionPath)) {
-          throw new ISE(
-              "Could not find remote outputs of stage [%d] partition [%d] for worker [%d] at the path [%s]",
-              stageId.getStageNumber(),
-              partitionNumber,
-              workerNumber,
-              remotePartitionPath
-          );
-        }
-        return Boolean.TRUE;
-      }, (throwable) -> true, 10);
+      if (!storageConnector.pathExists(remotePartitionPath)) {
+        throw new ISE(
+            "Could not find remote outputs of stage [%d] partition [%d] for worker [%d] at the path [%s]",
+            stageId.getStageNumber(),
+            partitionNumber,
+            workerNumber,
+            remotePartitionPath
+        );
+      }
       final InputStream inputStream = storageConnector.read(remotePartitionPath);
 
       return ReadableInputStreamFrameChannel.open(
           inputStream,
           remotePartitionPath,
-          remoteInputStreamPool
+          remoteInputStreamPool,
+          false
       );
     }
     catch (Exception e) {

@@ -30,7 +30,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.NamedFunction;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.segment.nested.StructuredData;
@@ -47,7 +47,7 @@ import java.util.stream.Collectors;
 public class NestedDataExpressions
 {
   public static final ExpressionType TYPE = Preconditions.checkNotNull(
-      ExpressionType.fromColumnType(NestedDataComplexTypeSerde.TYPE)
+      ExpressionType.fromColumnType(ColumnType.NESTED_DATA)
   );
 
   public static class JsonObjectExprMacro implements ExprMacroTable.ExprMacro
@@ -480,10 +480,25 @@ public class NestedDataExpressions
       final StructuredDataProcessor processor = new StructuredDataProcessor()
       {
         @Override
-        public int processLiteralField(ArrayList<NestedPathPart> fieldPath, Object fieldValue)
+        public ProcessedValue<?> processField(ArrayList<NestedPathPart> fieldPath, @Nullable Object fieldValue)
         {
           // do nothing, we only want the list of fields returned by this processor
-          return 0;
+          return ProcessedValue.NULL_LITERAL;
+        }
+
+        @Nullable
+        @Override
+        public ProcessedValue<?> processArrayField(
+            ArrayList<NestedPathPart> fieldPath,
+            @Nullable List<?> array
+        )
+        {
+          // we only want to return a non-null value here if the value is an array of primitive values
+          ExprEval<?> eval = ExprEval.bestEffortArray(array);
+          if (eval.type().isArray() && eval.type().getElementType().isPrimitive()) {
+            return ProcessedValue.NULL_LITERAL;
+          }
+          return null;
         }
       };
 

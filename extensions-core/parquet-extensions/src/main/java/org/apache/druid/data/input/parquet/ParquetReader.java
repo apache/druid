@@ -66,7 +66,13 @@ public class ParquetReader extends IntermediateRowParsingReader<Group>
     this.inputRowSchema = inputRowSchema;
     this.source = source;
     this.temporaryDirectory = temporaryDirectory;
-    this.flattener = ObjectFlatteners.create(flattenSpec, new ParquetGroupFlattenerMaker(binaryAsString));
+    this.flattener = ObjectFlatteners.create(
+        flattenSpec,
+        new ParquetGroupFlattenerMaker(
+            binaryAsString,
+            inputRowSchema.getDimensionsSpec().useSchemaDiscovery()
+        )
+    );
   }
 
   @Override

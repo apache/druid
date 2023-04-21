@@ -22,7 +22,6 @@ package org.apache.druid.testsEx.indexer;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.tests.indexer.AbstractLocalInputSourceParallelIndexTest;
 import org.apache.druid.testsEx.categories.InputFormat;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.junit.Test;
@@ -39,7 +38,7 @@ public class ITLocalInputSourceAllInputFormatTest extends AbstractLocalInputSour
   @Test
   public void testAvroInputFormatIndexDataIngestionSpecWithSchema() throws Exception
   {
-    List fieldList = ImmutableList.of(
+    List<Object> fieldList = ImmutableList.of(
         ImmutableMap.of("name", "timestamp", "type", "string"),
         ImmutableMap.of("name", "page", "type", "string"),
         ImmutableMap.of("name", "language", "type", "string"),
@@ -57,7 +56,8 @@ public class ITLocalInputSourceAllInputFormatTest extends AbstractLocalInputSour
         ImmutableMap.of("name", "deleted", "type", "int"),
         ImmutableMap.of("name", "delta", "type", "int")
     );
-    Map schema = ImmutableMap.of("namespace", "org.apache.druid.data.input",
+    Map<String, Object> schema = ImmutableMap.of(
+                                 "namespace", "org.apache.druid.data.input",
                                  "type", "record",
                                  "name", "wikipedia",
                                  "fields", fieldList);

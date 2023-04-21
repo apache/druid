@@ -72,10 +72,11 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
   @Rule
   public final ExpectedException expectedException = ExpectedException.none();
 
+  private final WorkerConfig workerConfig = new WorkerConfig();
   private final UnifiedIndexerAppenderatorsManager manager = new UnifiedIndexerAppenderatorsManager(
       DirectQueryProcessingPool.INSTANCE,
       JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
-      new WorkerConfig(),
+      workerConfig,
       MapCache.create(10),
       new CacheConfig(),
       new CachePopulatorStats(),
@@ -277,6 +278,12 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
     // "merge" is neither necessary nor implemented
     expectedException.expect(UnsupportedOperationException.class);
     Assert.assertEquals(file, limitedPoolIndexMerger.merge(null, false, null, file, null, null, -1));
+  }
+
+  @Test
+  public void test_getWorkerConfig()
+  {
+    Assert.assertSame(workerConfig, manager.getWorkerConfig());
   }
 
   /**

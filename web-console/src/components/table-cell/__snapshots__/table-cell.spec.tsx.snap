@@ -37,6 +37,7 @@ exports[`TableCell matches snapshot array long 1`] = `
     <svg
       data-icon="more"
       height="16"
+      role="img"
       viewBox="0 0 16 16"
       width="16"
     >
@@ -62,6 +63,14 @@ exports[`TableCell matches snapshot array short 1`] = `
   class="table-cell plain"
 >
   [a, b, c]
+</div>
+`;
+
+exports[`TableCell matches snapshot empty string 1`] = `
+<div
+  class="table-cell empty"
+>
+  empty
 </div>
 `;
 
@@ -108,6 +117,7 @@ exports[`TableCell matches snapshot truncate 1`] = `
     <svg
       data-icon="more"
       height="16"
+      role="img"
       viewBox="0 0 16 16"
       width="16"
     >

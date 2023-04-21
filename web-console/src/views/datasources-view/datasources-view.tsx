@@ -21,7 +21,8 @@ import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import { SqlQuery, T } from 'druid-query-toolkit';
 import React from 'react';
-import ReactTable, { Filter } from 'react-table';
+import type { Filter } from 'react-table';
+import ReactTable from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
@@ -38,22 +39,22 @@ import {
 } from '../../components';
 import {
   AsyncActionDialog,
-  CompactionDialog,
+  CompactionConfigDialog,
   KillDatasourceDialog,
   RetentionDialog,
 } from '../../dialogs';
 import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
-import {
+import type {
   CompactionConfig,
   CompactionInfo,
   CompactionStatus,
-  formatCompactionInfo,
   QueryWithContext,
-  zeroCompactionStatus,
 } from '../../druid-models';
-import { Capabilities, CapabilitiesMode } from '../../helpers';
+import { formatCompactionInfo, zeroCompactionStatus } from '../../druid-models';
+import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
+import type { NumberLike } from '../../utils';
 import {
   compact,
   countBy,
@@ -68,15 +69,15 @@ import {
   LocalStorageBackedVisibility,
   LocalStorageKeys,
   lookupBy,
-  NumberLike,
   pluralIfNeeded,
   queryDruidSql,
   QueryManager,
   QueryState,
   twoLines,
 } from '../../utils';
-import { BasicAction } from '../../utils/basic-action';
-import { Rule, RuleUtil } from '../../utils/load-rule';
+import type { BasicAction } from '../../utils/basic-action';
+import type { Rule } from '../../utils/load-rule';
+import { RuleUtil } from '../../utils/load-rule';
 
 import './datasources-view.scss';
 
@@ -232,7 +233,7 @@ interface RetentionDialogOpenOn {
   readonly rules: Rule[];
 }
 
-interface CompactionDialogOpenOn {
+interface CompactionConfigDialogOpenOn {
   readonly datasource: string;
   readonly compactionConfig?: CompactionConfig;
 }
@@ -253,7 +254,7 @@ export interface DatasourcesViewState {
 
   showUnused: boolean;
   retentionDialogOpenOn?: RetentionDialogOpenOn;
-  compactionDialogOpenOn?: CompactionDialogOpenOn;
+  compactionDialogOpenOn?: CompactionConfigDialogOpenOn;
   datasourceToMarkAsUnusedAllSegmentsIn?: string;
   datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn?: string;
   killDatasource?: string;
@@ -377,7 +378,7 @@ ORDER BY 1`;
       actions: [],
     };
 
-    this.datasourceQueryManager = new QueryManager({
+    this.datasourceQueryManager = new QueryManager<DatasourceQuery, DatasourcesAndDefaultRules>({
       processQuery: async (
         { capabilities, visibleColumns, showUnused },
         _cancelToken,
@@ -817,6 +818,7 @@ ORDER BY 1`;
       intent: Intent.DANGER,
       action: {
         text: 'Confirm',
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
         onClick: async () => {
           try {
             await Api.instance.delete(
@@ -979,12 +981,12 @@ ORDER BY 1`;
     );
   }
 
-  private renderCompactionDialog() {
+  private renderCompactionConfigDialog() {
     const { datasourcesAndDefaultRulesState, compactionDialogOpenOn } = this.state;
     if (!compactionDialogOpenOn || !datasourcesAndDefaultRulesState.data) return;
 
     return (
-      <CompactionDialog
+      <CompactionConfigDialog
         datasource={compactionDialogOpenOn.datasource}
         compactionConfig={compactionDialogOpenOn.compactionConfig}
         onClose={() => this.setState({ compactionDialogOpenOn: undefined })}
@@ -1569,7 +1571,7 @@ ORDER BY 1`;
         {this.renderUseUnuseActionByInterval()}
         {this.renderKillAction()}
         {this.renderRetentionDialog()}
-        {this.renderCompactionDialog()}
+        {this.renderCompactionConfigDialog()}
         {this.renderForceCompactAction()}
       </div>
     );

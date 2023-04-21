@@ -301,8 +301,7 @@ public class ServiceClientImpl implements ServiceClient
                     );
                   } else if (serviceLocations.getLocations()
                                              .stream()
-                                             .anyMatch(loc -> serviceLocationNoPath(loc)
-                                                 .equals(redirectLocationNoPath))) {
+                                             .anyMatch(loc -> serviceLocationMatches(loc, redirectLocationNoPath))) {
                     // Valid redirect, to a server that is one of the known locations.
                     final boolean isRedirectLoop = redirectLocations.contains(newUri);
                     final boolean isRedirectChainTooLong = redirectLocations.size() >= MAX_REDIRECTS;
@@ -415,7 +414,7 @@ public class ServiceClientImpl implements ServiceClient
     if (preferred != null) {
       // Preferred location is set. Use it if it's one of known locations.
       for (final ServiceLocation location : locations.getLocations()) {
-        if (serviceLocationNoPath(location).equals(preferred)) {
+        if (serviceLocationMatches(location, preferred)) {
           return location;
         }
       }
@@ -477,6 +476,18 @@ public class ServiceClientImpl implements ServiceClient
   }
 
   /**
+   * Sanitizes IPv6 address if it has brackets. Eg. host = "[1:2:3:4:5:6:7:8]" will be returned as "1:2:3:4:5:6:7:8"
+   * after this function
+   */
+  static String sanitizeHost(String host)
+  {
+    if (host.charAt(0) == '[') {
+      return host.substring(1, host.length() - 1);
+    }
+    return host;
+  }
+
+  /**
    * Returns a {@link ServiceLocation} without a path component, based on a URI.
    */
   @Nullable
@@ -489,13 +500,13 @@ public class ServiceClientImpl implements ServiceClient
 
     try {
       final URI uri = new URI(uriString);
-      final String host = uri.getHost();
 
-      if (host == null) {
+      if (uri.getHost() == null) {
         return null;
       }
 
       final String scheme = uri.getScheme();
+      final String host = sanitizeHost(uri.getHost());
 
       if ("http".equals(scheme)) {
         return new ServiceLocation(host, uri.getPort() < 0 ? 80 : uri.getPort(), -1, "");
@@ -511,11 +522,19 @@ public class ServiceClientImpl implements ServiceClient
   }
 
   /**
-   * Returns a {@link ServiceLocation} without its path.
+   * Returns true if two service locations are same or false otherwise. If a port is negative, we ignore that
+   * port for comparison.
    */
-  static ServiceLocation serviceLocationNoPath(final ServiceLocation location)
+  static boolean serviceLocationMatches(final ServiceLocation left, final ServiceLocation right)
   {
-    return new ServiceLocation(location.getHost(), location.getPlaintextPort(), location.getTlsPort(), "");
+    return left.getHost().equals(right.getHost())
+        && portMatches(left.getPlaintextPort(), right.getPlaintextPort())
+        && portMatches(left.getTlsPort(), right.getTlsPort());
+  }
+
+  static boolean portMatches(int left, int right)
+  {
+    return left < 0 || right < 0 || left == right;
   }
 
   @VisibleForTesting

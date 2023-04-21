@@ -42,6 +42,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.tasklogs.ConsoleLoggingEnforcementConfigurationFactory;
@@ -123,10 +124,11 @@ public class ForkingTaskRunner
       TaskLogPusher taskLogPusher,
       ObjectMapper jsonMapper,
       @Self DruidNode node,
-      StartupLoggingConfig startupLoggingConfig
+      StartupLoggingConfig startupLoggingConfig,
+      TaskStorageDirTracker dirTracker
   )
   {
-    super(jsonMapper, taskConfig);
+    super(jsonMapper, taskConfig, dirTracker);
     this.config = config;
     this.props = props;
     this.taskLogPusher = taskLogPusher;
@@ -153,8 +155,20 @@ public class ForkingTaskRunner
                 public TaskStatus call()
                 {
 
-                  final String attemptId = String.valueOf(getNextAttemptID(taskConfig, task.getId()));
-                  final File taskDir = taskConfig.getTaskDir(task.getId());
+                  final File baseDirForTask;
+                  try {
+                    baseDirForTask = getTracker().pickBaseDir(task.getId());
+                  }
+                  catch (RuntimeException e) {
+                    LOG.error(e, "Failed to get directory for task [%s], cannot schedule.", task.getId());
+                    return TaskStatus.failure(
+                        task.getId(),
+                        StringUtils.format("Could not schedule due to error [%s]", e.getMessage())
+                    );
+                  }
+
+                  final File taskDir = new File(baseDirForTask, task.getId());
+                  final String attemptId = String.valueOf(getNextAttemptID(taskDir));
                   final File attemptDir = Paths.get(taskDir.getAbsolutePath(), "attempt", attemptId).toFile();
 
                   final ProcessHolder processHolder;
@@ -365,6 +379,7 @@ public class ForkingTaskRunner
                         // for more information
                         // command.add("-XX:+UseThreadPriorities");
                         // command.add("-XX:ThreadPriorityPolicy=42");
+                        command.add(StringUtils.format("-Ddruid.indexer.task.baseTaskDir=%s", baseDirForTask.getAbsolutePath()));
 
                         command.add("org.apache.druid.cli.Main");
                         command.add("internal");
@@ -886,9 +901,8 @@ public class ForkingTaskRunner
   }
 
   @VisibleForTesting
-  static int getNextAttemptID(TaskConfig config, String taskId)
+  static int getNextAttemptID(File taskDir)
   {
-    File taskDir = config.getTaskDir(taskId);
     File attemptDir = new File(taskDir, "attempt");
     try {
       FileUtils.mkdirp(attemptDir);

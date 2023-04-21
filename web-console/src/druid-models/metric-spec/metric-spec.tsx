@@ -19,11 +19,12 @@
 import { Code } from '@blueprintjs/core';
 import React from 'react';
 
-import { ExternalLink, Field } from '../../components';
+import type { Field } from '../../components';
+import { ExternalLink } from '../../components';
 import { getLink } from '../../links';
 import { filterMap, typeIs } from '../../utils';
-import { SampleHeaderAndRows } from '../../utils/sampler';
-import { guessColumnTypeFromHeaderAndRows } from '../ingestion-spec/ingestion-spec';
+import type { SampleResponse } from '../../utils/sampler';
+import { guessColumnTypeFromSampleResponse } from '../ingestion-spec/ingestion-spec';
 
 export interface MetricSpec {
   readonly type: string;
@@ -387,16 +388,17 @@ export function getMetricSpecOutputType(metricSpec: MetricSpec): string | undefi
 }
 
 export function getMetricSpecs(
-  headerAndRows: SampleHeaderAndRows,
+  sampleResponse: SampleResponse,
   typeHints: Record<string, string>,
   guessNumericStringsAsNumbers: boolean,
 ): MetricSpec[] {
   return [{ name: 'count', type: 'count' }].concat(
-    filterMap(headerAndRows.header, h => {
+    filterMap(sampleResponse.logicalSegmentSchema, s => {
+      const h = s.name;
       if (h === '__time') return;
       const type =
         typeHints[h] ||
-        guessColumnTypeFromHeaderAndRows(headerAndRows, h, guessNumericStringsAsNumbers);
+        guessColumnTypeFromSampleResponse(sampleResponse, h, guessNumericStringsAsNumbers);
       switch (type) {
         case 'double':
           return { name: `sum_${h}`, type: 'doubleSum', fieldName: h };

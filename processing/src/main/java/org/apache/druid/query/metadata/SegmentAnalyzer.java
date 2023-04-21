@@ -134,6 +134,9 @@ public class SegmentAnalyzer
             analysis = analyzeStringColumn(capabilities, storageAdapter, columnName);
           }
           break;
+        case ARRAY:
+          analysis = analyzeArrayColumn(capabilities);
+          break;
         case COMPLEX:
           final ColumnHolder columnHolder = index != null ? index.getColumnHolder(columnName) : null;
           analysis = analyzeComplexColumn(capabilities, numRows, columnHolder);
@@ -222,11 +225,15 @@ public class SegmentAnalyzer
     } else if (capabilities.isDictionaryEncoded().isTrue()) {
       // fallback if no bitmap index
       try (BaseColumn column = columnHolder.getColumn()) {
-        DictionaryEncodedColumn<String> theColumn = (DictionaryEncodedColumn<String>) column;
-        cardinality = theColumn.getCardinality();
-        if (analyzingMinMax() && cardinality > 0) {
-          min = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(0));
-          max = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(cardinality - 1));
+        if (column instanceof DictionaryEncodedColumn) {
+          DictionaryEncodedColumn<String> theColumn = (DictionaryEncodedColumn<String>) column;
+          cardinality = theColumn.getCardinality();
+          if (analyzingMinMax() && cardinality > 0) {
+            min = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(0));
+            max = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(cardinality - 1));
+          }
+        } else {
+          cardinality = 0;
         }
       }
       catch (IOException e) {
@@ -380,5 +387,20 @@ public class SegmentAnalyzer
           null
       );
     }
+  }
+
+  private ColumnAnalysis analyzeArrayColumn(final ColumnCapabilities capabilities)
+  {
+    return new ColumnAnalysis(
+        capabilities.toColumnType(),
+        capabilities.getType().name(),
+        false,
+        capabilities.hasNulls().isTrue(),
+        0L,
+        null,
+        null,
+        null,
+        null
+    );
   }
 }

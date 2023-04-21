@@ -81,7 +81,7 @@ import static org.apache.druid.data.input.AvroStreamInputRowParserTest.buildSome
  *  "someOtherId": 6568719896,
  *  "isValid": true,
  *  "someIntArray": [1, 2, 4, 8],
- *  "someStringArray": ["8", "4", "2", "1"],
+ *  "someStringArray": ["8", "4", "2", "1", null],
  *  "someIntValueMap": {"8": 8, "1": 1, "2": 2, "4": 4},
  *  "someStringValueMap": {"8": "8", "1": "1", "2": "2", "4": "4"},
  *  "someUnion": "string as union",
@@ -106,16 +106,14 @@ public class AvroStreamInputFormatTest extends InitializedNullHandlingTest
   private static final String TOPIC = "aTopic";
   static final List<String> DIMENSIONS = Arrays.asList(EVENT_TYPE, ID, SOME_OTHER_ID, IS_VALID);
   private static final List<String> DIMENSIONS_SCHEMALESS = Arrays.asList(
-      "nested",
       SOME_OTHER_ID,
-      "someStringArray",
       "someIntArray",
       "someFloat",
+      "someUnion",
       EVENT_TYPE,
+      ID,
       "someFixed",
       "someBytes",
-      "someUnion",
-      ID,
       "someEnum",
       "someLong",
       "someInt",

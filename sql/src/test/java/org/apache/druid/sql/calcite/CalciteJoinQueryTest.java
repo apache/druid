@@ -54,7 +54,6 @@ import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.any.StringAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
-import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -62,6 +61,7 @@ import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.BoundDimFilter;
+import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
@@ -69,6 +69,7 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
@@ -86,6 +87,7 @@ import org.apache.druid.server.security.Access;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
@@ -94,8 +96,10 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -1412,7 +1416,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         "SELECT dim1, dim2, t1.v, t1.v\n"
             + "FROM foo\n"
             + "INNER JOIN \n"
-            + "  (SELECT SUBSTRING(k, 1, 1) k, LATEST(v, 10) v FROM lookup.lookyloo GROUP BY 1) t1\n"
+            + "  (SELECT SUBSTRING(k, 1, 1) k, ANY_VALUE(v, 10) v FROM lookup.lookyloo GROUP BY 1) t1\n"
             + "  ON foo.dim2 = t1.k",
         queryContext,
         ImmutableList.of(
@@ -1433,7 +1437,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                         new SubstringDimExtractionFn(0, 1)
                                     )
                                 )
-                                .setAggregatorSpecs(new StringLastAggregatorFactory("a0", "v", null, 10))
+                                .setAggregatorSpecs(new StringAnyAggregatorFactory("a0", "v", 10))
                                 .build()
                         ),
                         "j0.",
@@ -1447,9 +1451,21 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"", "a", "xabc", "xabc"},
-            new Object[]{"1", "a", "xabc", "xabc"}
+            new Object[]{"", "a", "xa", "xa"},
+            new Object[]{"1", "a", "xa", "xa"}
         )
+    );
+  }
+
+  @Test(expected = UnsupportedSQLQueryException.class)
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testTimeColumnAggregationsOnLookups(Map<String, Object> queryContext)
+  {
+    testQuery(
+        "SELECT k, LATEST(v) v FROM lookup.lookyloo GROUP BY k",
+        queryContext,
+        ImmutableList.of(),
+        ImmutableList.of()
     );
   }
 
@@ -2703,8 +2719,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ColumnType.STRING))
-                .columns("__time", "_v0")
+                .columns("__time", "v0")
                 .filters(new SelectorDimFilter("v0", "10.1", null))
                 .context(queryContext)
                 .build()
@@ -2815,9 +2830,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ColumnType.STRING))
-                .columns("__time", "_v0")
-                .filters(new SelectorDimFilter("v0", "10.1", null))
+                .columns("__time", "v0")
                 .context(queryContext)
                 .build()
         ),
@@ -3010,8 +3023,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             )
         )
         .intervals(querySegmentSpec(Filtration.eternity()))
-        .virtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ColumnType.STRING))
-        .columns("__time", "_v0")
+        .columns("__time", "v0")
         .context(queryContext);
 
     testQuery(
@@ -3127,6 +3139,90 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"10.1", 946771200000L}
+        )
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testGroupByOverGroupByOverInnerJoinOnTwoInlineDataSources(Map<String, Object> queryContext)
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "with abc as\n"
+        + "(\n"
+        + "  SELECT dim1, \"__time\", m1 from foo WHERE \"dim1\" = '10.1'\n"
+        + ")\n"
+        + "SELECT dim1 from (SELECT dim1,__time FROM (SELECT t1.dim1, t1.\"__time\" from abc as t1 INNER JOIN abc as t2 on t1.dim1 = t2.dim1) GROUP BY 1,2) GROUP BY dim1\n",
+        queryContext,
+        ImmutableList.of(
+            new GroupByQuery.Builder()
+                .setDataSource(
+                    new QueryDataSource(
+                        GroupByQuery.builder()
+                                    .setDataSource(
+                                        join(
+                                            new QueryDataSource(
+                                                newScanQueryBuilder()
+                                                    .dataSource(CalciteTests.DATASOURCE1)
+                                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                                    .filters(new SelectorDimFilter("dim1", "10.1", null))
+                                                    .virtualColumns(expressionVirtualColumn(
+                                                        "v0",
+                                                        "\'10.1\'",
+                                                        ColumnType.STRING
+                                                    ))
+                                                    .columns(ImmutableList.of("__time", "v0"))
+                                                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                                    .context(queryContext)
+                                                    .build()
+                                            ),
+                                            new QueryDataSource(
+                                                newScanQueryBuilder()
+                                                    .dataSource(CalciteTests.DATASOURCE1)
+                                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                                    .filters(new SelectorDimFilter("dim1", "10.1", null))
+                                                    .columns(ImmutableList.of("dim1"))
+                                                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                                    .context(queryContext)
+                                                    .build()
+                                            ),
+                                            "j0.",
+                                            equalsCondition(
+                                                makeColumnExpression("v0"),
+                                                makeColumnExpression("j0.dim1")
+                                            ),
+                                            JoinType.INNER
+                                        ))
+                                    .setInterval(querySegmentSpec(Filtration.eternity()))
+                                    .setVirtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ColumnType.STRING))
+                                    .setGranularity(Granularities.ALL)
+                                    .setDimensions(new DefaultDimensionSpec(
+                                        "_v0",
+                                        "d0",
+                                        ColumnType.STRING
+                                    ), new DefaultDimensionSpec(
+                                        "__time",
+                                        "d1",
+                                        ColumnType.LONG
+                                    ))
+                                    .setContext(queryContext)
+                                    .build()
+                    )
+                )
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setDimensions(new DefaultDimensionSpec(
+                    "d0",
+                    "_d0",
+                    ColumnType.STRING
+                ))
+                .setContext(queryContext)
+                .setGranularity(Granularities.ALL)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"10.1"}
         )
     );
   }
@@ -3854,18 +3950,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         )
                     )
                 )
-                .setLimitSpec(
-                    new DefaultLimitSpec(
-                        ImmutableList.of(
-                            new OrderByColumnSpec(
-                                "d0",
-                                OrderByColumnSpec.Direction.ASCENDING,
-                                StringComparators.NUMERIC
-                            )
-                        ),
-                        Integer.MAX_VALUE
-                    )
-                )
+                .setLimitSpec(NoopLimitSpec.instance())
                 .setContext(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
@@ -4074,18 +4159,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .setGranularity(Granularities.ALL)
                 .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
                 .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                .setLimitSpec(
-                    new DefaultLimitSpec(
-                        ImmutableList.of(
-                            new OrderByColumnSpec(
-                                "d0",
-                                OrderByColumnSpec.Direction.ASCENDING,
-                                StringComparators.LEXICOGRAPHIC
-                            )
-                        ),
-                        Integer.MAX_VALUE
-                    )
-                )
+                .setLimitSpec(NoopLimitSpec.instance())
                 .setContext(queryContext)
                 .build()
         ),
@@ -4196,18 +4270,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .setGranularity(Granularities.ALL)
                 .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
                 .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                .setLimitSpec(
-                    new DefaultLimitSpec(
-                        ImmutableList.of(
-                            new OrderByColumnSpec(
-                                "d0",
-                                OrderByColumnSpec.Direction.ASCENDING,
-                                StringComparators.LEXICOGRAPHIC
-                            )
-                        ),
-                        Integer.MAX_VALUE
-                    )
-                )
+                .setLimitSpec(NoopLimitSpec.instance())
                 .setContext(queryContext)
                 .build()
         ),
@@ -4790,8 +4853,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .context(queryContext)
                                 .build()
                         ),
-                        "j0.",
-                        equalsCondition(makeColumnExpression("v0"), makeColumnExpression("j0.v0")),
+                        "_j0.",
+                        equalsCondition(makeColumnExpression("v0"), makeColumnExpression("_j0.v0")),
                         JoinType.INNER
                     )
                 )
@@ -4802,7 +4865,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                     ImmutableSet.of("a"),
                     true
                 ))
-                .columns("dim3", "j0.dim3")
+                .columns("_j0.dim3", "dim3")
                 .context(queryContext)
                 .build()
         ),
@@ -5106,6 +5169,241 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
           // Ignore the results, only need to check that the type of query is a join.
         },
         null
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testRegressionFilteredAggregatorsSubqueryJoins(Map<String, Object> queryContext)
+  {
+    cannotVectorize();
+    testQuery(
+        "select\n" +
+        "count(*) filter (where trim(both from dim1) in (select dim2 from foo)),\n" +
+        "min(m1) filter (where 'A' not in (select m2 from foo))\n" +
+        "from foo as t0\n" +
+        "where __time in (select __time from foo)",
+        queryContext,
+        useDefault ?
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(
+                    join(
+                        join(
+                            join(
+                                new TableDataSource(CalciteTests.DATASOURCE1),
+                                new QueryDataSource(
+                                    GroupByQuery.builder()
+                                                .setDataSource(CalciteTests.DATASOURCE1)
+                                                .setInterval(querySegmentSpec(Filtration.eternity()))
+                                                .setDimensions(
+                                                    new DefaultDimensionSpec("__time", "d0", ColumnType.LONG)
+                                                )
+                                                .setGranularity(Granularities.ALL)
+                                                .setLimitSpec(NoopLimitSpec.instance())
+                                                .build()
+                                ),
+                                "j0.",
+                                equalsCondition(makeColumnExpression("__time"), makeColumnExpression("j0.d0")),
+                                JoinType.INNER
+                            ),
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE1)
+                                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                                            .setVirtualColumns(expressionVirtualColumn("v0", "1", ColumnType.LONG))
+                                            .setDimensions(
+                                                new DefaultDimensionSpec("dim2", "d0", ColumnType.STRING),
+                                                new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                                            )
+                                            .setGranularity(Granularities.ALL)
+                                            .setLimitSpec(NoopLimitSpec.instance())
+                                            .build()
+                            ),
+                            "_j0.",
+                            "(trim(\"dim1\",' ') == \"_j0.d0\")",
+                            JoinType.LEFT
+                        ),
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(CalciteTests.DATASOURCE1)
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setVirtualColumns(expressionVirtualColumn("v0", "1", ColumnType.LONG))
+                                        .setDimFilter(selector("m2", "A", null))
+                                        .setDimensions(
+                                            new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)
+                                        )
+                                        .setGranularity(Granularities.ALL)
+                                        .setLimitSpec(NoopLimitSpec.instance())
+                                        .build()
+                        ),
+                        "__j0.",
+                        "1",
+                        JoinType.LEFT
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .aggregators(
+                    new FilteredAggregatorFactory(
+                        new CountAggregatorFactory("a0"),
+                        and(
+                            not(selector("_j0.d1", null, null)),
+                            not(selector("dim1", null, null))
+                        ),
+                        "a0"
+                    ),
+                    new FilteredAggregatorFactory(
+                        new FloatMinAggregatorFactory("a1", "m1"),
+                        selector("__j0.d0", null, null),
+                        "a1"
+                    )
+                )
+                .context(queryContext)
+                .build()
+        ) :
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(
+                      join(
+                          join(
+                              join(
+                                  new TableDataSource(CalciteTests.DATASOURCE1),
+                                  new QueryDataSource(
+                                      GroupByQuery.builder()
+                                                  .setDataSource(CalciteTests.DATASOURCE1)
+                                                  .setInterval(querySegmentSpec(Filtration.eternity()))
+                                                  .setDimensions(
+                                                      new DefaultDimensionSpec("__time", "d0", ColumnType.LONG)
+                                                  )
+                                                  .setGranularity(Granularities.ALL)
+                                                  .setLimitSpec(NoopLimitSpec.instance())
+                                                  .build()
+                                  ),
+                                  "j0.",
+                                  equalsCondition(makeColumnExpression("__time"), makeColumnExpression("j0.d0")),
+                                  JoinType.INNER
+                              ),
+                              new QueryDataSource(
+                                  GroupByQuery.builder()
+                                              .setDataSource(CalciteTests.DATASOURCE1)
+                                              .setInterval(querySegmentSpec(Filtration.eternity()))
+                                              .setVirtualColumns(expressionVirtualColumn("v0", "1", ColumnType.LONG))
+                                              .setDimensions(
+                                                  new DefaultDimensionSpec("dim2", "d0", ColumnType.STRING),
+                                                  new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                                              )
+                                              .setGranularity(Granularities.ALL)
+                                              .setLimitSpec(NoopLimitSpec.instance())
+                                              .build()
+                              ),
+                              "_j0.",
+                              "(trim(\"dim1\",' ') == \"_j0.d0\")",
+                              JoinType.LEFT
+                          ),
+                          new QueryDataSource(
+                              new TopNQueryBuilder().dataSource(CalciteTests.DATASOURCE1)
+                                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                                    .filters(new InDimFilter("m2", new HashSet<>(Arrays.asList(null, "A"))))
+                                                    .virtualColumns(expressionVirtualColumn("v0", "notnull(\"m2\")", ColumnType.LONG))
+                                                    .dimension(new DefaultDimensionSpec("v0", "d0", ColumnType.LONG))
+                                                    .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC)))
+                                                    .aggregators(new CountAggregatorFactory("a0"))
+                                                    .threshold(1)
+                                                    .build()
+                          ),
+                          "__j0.",
+                          "1",
+                          JoinType.LEFT
+                      )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .aggregators(
+                      new FilteredAggregatorFactory(
+                          new CountAggregatorFactory("a0"),
+                          and(
+                              not(selector("_j0.d1", null, null)),
+                              not(selector("dim1", null, null))
+                          ),
+                          "a0"
+                      ),
+                      new FilteredAggregatorFactory(
+                          new FloatMinAggregatorFactory("a1", "m1"),
+                          or(
+                              selector("__j0.a0", null, null),
+                              not(
+                                  or(
+                                      not(expressionFilter("\"__j0.d0\"")),
+                                      not(selector("__j0.d0", null, null))
+                                  )
+                              )
+                          ),
+                          "a1"
+                      )
+                  )
+                  .context(queryContext)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{useDefault ? 1L : 2L, 1.0f}
+        )
+    );
+  }
+
+  @Test
+  public void testJoinWithAliasAndOrderByNoGroupBy()
+  {
+    minTopNThreshold = 1;
+    Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
+    testQuery(
+        "select t1.__time from druid.foo as t1 join\n"
+        + "  druid.numfoo as t2 on t1.dim2 = t2.dim2\n"
+        + " order by t1.__time ASC ",
+        context, // turn on exact topN
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dataSource(
+                    JoinDataSource.create(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE3)
+                                .intervals(querySegmentSpec(Intervals.of(
+                                    "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
+                                .columns("dim2")
+                                .context(context)
+                                .build()
+                        ),
+                        "j0.",
+                        "(\"dim2\" == \"j0.dim2\")",
+                        JoinType.INNER,
+                        null,
+                        ExprMacroTable.nil(),
+                        CalciteTests.createJoinableFactoryWrapper()
+                    )
+                )
+                .columns("__time")
+                .order(ScanQuery.Order.ASCENDING)
+                .context(context)
+                .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{946684800000L},
+            new Object[]{946684800000L},
+            new Object[]{946857600000L},
+            new Object[]{978307200000L},
+            new Object[]{978307200000L},
+            new Object[]{978393600000L}
+        )
+        : ImmutableList.of(
+            new Object[]{946684800000L},
+            new Object[]{946684800000L},
+            new Object[]{978307200000L},
+            new Object[]{978307200000L},
+            new Object[]{978393600000L}
+        )
     );
   }
 }

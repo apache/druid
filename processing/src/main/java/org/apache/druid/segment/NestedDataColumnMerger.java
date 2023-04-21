@@ -20,23 +20,15 @@
 package org.apache.druid.segment;
 
 import com.google.common.collect.PeekingIterator;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnDescriptor;
-import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
-import org.apache.druid.segment.incremental.IncrementalIndex;
-import org.apache.druid.segment.incremental.IncrementalIndexAdapter;
-import org.apache.druid.segment.nested.CompressedNestedDataComplexColumn;
-import org.apache.druid.segment.nested.GlobalDictionarySortedCollector;
-import org.apache.druid.segment.nested.NestedDataColumnSerializer;
+import org.apache.druid.segment.nested.FieldTypeInfo;
+import org.apache.druid.segment.nested.NestedDataColumnSerializerV4;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
-import org.apache.druid.segment.nested.NestedLiteralTypeInfo;
+import org.apache.druid.segment.nested.SortedValueDictionary;
 import org.apache.druid.segment.serde.ComplexColumnPartSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
@@ -51,167 +43,138 @@ import java.util.TreeMap;
 public class NestedDataColumnMerger implements DimensionMergerV9
 {
   private static final Logger log = new Logger(NestedDataColumnMerger.class);
-  public static final Comparator<Pair<Integer, PeekingIterator<Long>>> LONG_MERGING_COMPARATOR =
-      DictionaryMergingIterator.makePeekingComparator();
-  public static final Comparator<Pair<Integer, PeekingIterator<Double>>> DOUBLE_MERGING_COMPARATOR =
-      DictionaryMergingIterator.makePeekingComparator();
+
+  public static final Comparator<PeekingIterator<String>> STRING_MERGING_COMPARATOR =
+      SimpleDictionaryMergingIterator.makePeekingComparator();
+  public static final Comparator<PeekingIterator<Long>> LONG_MERGING_COMPARATOR =
+      SimpleDictionaryMergingIterator.makePeekingComparator();
+  public static final Comparator<PeekingIterator<Double>> DOUBLE_MERGING_COMPARATOR =
+      SimpleDictionaryMergingIterator.makePeekingComparator();
 
   private final String name;
+  private final IndexSpec indexSpec;
+  private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final Closer closer;
 
-  private NestedDataColumnSerializer serializer;
+  private ColumnDescriptor.Builder descriptorBuilder;
+  private GenericColumnSerializer<?> serializer;
 
   public NestedDataColumnMerger(
       String name,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
-      ProgressIndicator progressIndicator,
       Closer closer
   )
   {
 
     this.name = name;
-    this.serializer = new NestedDataColumnSerializer(name, indexSpec, segmentWriteOutMedium, progressIndicator, closer);
+    this.indexSpec = indexSpec;
+    this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.closer = closer;
   }
 
   @Override
   public void writeMergedValueDictionary(List<IndexableAdapter> adapters) throws IOException
   {
+    try {
+      long dimStartTime = System.currentTimeMillis();
 
-    long dimStartTime = System.currentTimeMillis();
+      int numMergeIndex = 0;
+      SortedValueDictionary sortedLookup = null;
+      final Indexed[] sortedLookups = new Indexed[adapters.size()];
+      final Indexed[] sortedLongLookups = new Indexed[adapters.size()];
+      final Indexed[] sortedDoubleLookups = new Indexed[adapters.size()];
 
-    int numMergeIndex = 0;
-    GlobalDictionarySortedCollector sortedLookup = null;
-    final Indexed[] sortedLookups = new Indexed[adapters.size()];
-    final Indexed[] sortedLongLookups = new Indexed[adapters.size()];
-    final Indexed[] sortedDoubleLookups = new Indexed[adapters.size()];
+      final SortedMap<String, FieldTypeInfo.MutableTypeSet> mergedFields = new TreeMap<>();
 
-    final SortedMap<String, NestedLiteralTypeInfo.MutableTypeSet> mergedFields = new TreeMap<>();
+      for (int i = 0; i < adapters.size(); i++) {
+        final IndexableAdapter adapter = adapters.get(i);
 
-    for (int i = 0; i < adapters.size(); i++) {
-      final IndexableAdapter adapter = adapters.get(i);
-      final GlobalDictionarySortedCollector dimValues;
-      if (adapter instanceof IncrementalIndexAdapter) {
-        dimValues = getSortedIndexFromIncrementalAdapter((IncrementalIndexAdapter) adapter, mergedFields);
-      } else if (adapter instanceof QueryableIndexIndexableAdapter) {
-        dimValues = getSortedIndexesFromQueryableAdapter((QueryableIndexIndexableAdapter) adapter, mergedFields);
-      } else {
-        throw new ISE("Unable to merge columns of unsupported adapter %s", adapter.getClass());
-      }
+        final IndexableAdapter.NestedColumnMergable mergable = closer.register(
+            adapter.getNestedColumnMergeables(name)
+        );
+        final SortedValueDictionary dimValues = mergable.getValueDictionary();
 
-      boolean allNulls = allNull(dimValues.getSortedStrings()) &&
-                         allNull(dimValues.getSortedLongs()) &&
-                         allNull(dimValues.getSortedDoubles());
-      sortedLookup = dimValues;
-      if (!allNulls) {
-        sortedLookups[i] = dimValues.getSortedStrings();
-        sortedLongLookups[i] = dimValues.getSortedLongs();
-        sortedDoubleLookups[i] = dimValues.getSortedDoubles();
-        numMergeIndex++;
-      }
-    }
-
-    serializer.open();
-    serializer.serializeFields(mergedFields);
-
-    int cardinality = 0;
-    if (numMergeIndex > 1) {
-      DictionaryMergingIterator<String> dictionaryMergeIterator = new DictionaryMergingIterator<>(
-          sortedLookups,
-          StringDimensionMergerV9.DICTIONARY_MERGING_COMPARATOR,
-          true
-      );
-      DictionaryMergingIterator<Long> longDictionaryMergeIterator = new DictionaryMergingIterator<>(
-          sortedLongLookups,
-          LONG_MERGING_COMPARATOR,
-          true
-      );
-      DictionaryMergingIterator<Double> doubleDictionaryMergeIterator = new DictionaryMergingIterator<>(
-          sortedDoubleLookups,
-          DOUBLE_MERGING_COMPARATOR,
-          true
-      );
-      serializer.serializeStringDictionary(() -> dictionaryMergeIterator);
-      serializer.serializeLongDictionary(() -> longDictionaryMergeIterator);
-      serializer.serializeDoubleDictionary(() -> doubleDictionaryMergeIterator);
-      cardinality = dictionaryMergeIterator.getCardinality();
-    } else if (numMergeIndex == 1) {
-      serializer.serializeStringDictionary(sortedLookup.getSortedStrings());
-      serializer.serializeLongDictionary(sortedLookup.getSortedLongs());
-      serializer.serializeDoubleDictionary(sortedLookup.getSortedDoubles());
-      cardinality = sortedLookup.size();
-    }
-
-    log.debug(
-        "Completed dim[%s] conversions with cardinality[%,d] in %,d millis.",
-        name,
-        cardinality,
-        System.currentTimeMillis() - dimStartTime
-    );
-  }
-
-  @Nullable
-  private GlobalDictionarySortedCollector getSortedIndexFromIncrementalAdapter(
-      IncrementalIndexAdapter adapter,
-      SortedMap<String, NestedLiteralTypeInfo.MutableTypeSet> mergedFields
-  )
-  {
-    final IncrementalIndex index = adapter.getIncrementalIndex();
-    final IncrementalIndex.DimensionDesc dim = index.getDimension(name);
-    if (dim == null || !(dim.getIndexer() instanceof NestedDataColumnIndexer)) {
-      return null;
-    }
-    final NestedDataColumnIndexer indexer = (NestedDataColumnIndexer) dim.getIndexer();
-    indexer.mergeFields(mergedFields);
-    return indexer.getSortedCollector();
-  }
-
-  @Nullable
-  private GlobalDictionarySortedCollector getSortedIndexesFromQueryableAdapter(
-      QueryableIndexIndexableAdapter adapter,
-      SortedMap<String, NestedLiteralTypeInfo.MutableTypeSet> mergedFields
-  )
-  {
-    final ColumnHolder columnHolder = adapter.getQueryableIndex().getColumnHolder(name);
-
-    if (columnHolder == null) {
-      return null;
-    }
-
-    final BaseColumn col = columnHolder.getColumn();
-
-    closer.register(col);
-
-    if (col instanceof CompressedNestedDataComplexColumn) {
-      return getSortedIndexFromV1QueryableAdapter(mergedFields, col);
-    }
-    return null;
-  }
-
-  private GlobalDictionarySortedCollector getSortedIndexFromV1QueryableAdapter(
-      SortedMap<String, NestedLiteralTypeInfo.MutableTypeSet> mergedFields,
-      BaseColumn col
-  )
-  {
-    @SuppressWarnings("unchecked")
-    CompressedNestedDataComplexColumn<?> column = (CompressedNestedDataComplexColumn) col;
-    closer.register(column);
-    for (int i = 0; i < column.getFields().size(); i++) {
-      String fieldPath = column.getFields().get(i);
-      NestedLiteralTypeInfo.TypeSet types = column.getFieldInfo().getTypes(i);
-      mergedFields.compute(fieldPath, (k, v) -> {
-        if (v == null) {
-          return new NestedLiteralTypeInfo.MutableTypeSet(types.getByteValue());
+        boolean allNulls = dimValues == null || dimValues.allNull();
+        sortedLookup = dimValues;
+        if (!allNulls) {
+          mergable.mergeFieldsInto(mergedFields);
+          sortedLookups[i] = dimValues.getSortedStrings();
+          sortedLongLookups[i] = dimValues.getSortedLongs();
+          sortedDoubleLookups[i] = dimValues.getSortedDoubles();
+          numMergeIndex++;
         }
-        return v.merge(types.getByteValue());
-      });
+      }
+
+      descriptorBuilder = new ColumnDescriptor.Builder();
+
+      final NestedDataColumnSerializerV4 defaultSerializer = new NestedDataColumnSerializerV4(
+          name,
+          indexSpec,
+          segmentWriteOutMedium,
+          closer
+      );
+      serializer = defaultSerializer;
+
+      final ComplexColumnPartSerde partSerde = ComplexColumnPartSerde.serializerBuilder()
+                                                                     .withTypeName(NestedDataComplexTypeSerde.TYPE_NAME)
+                                                                     .withDelegate(serializer)
+                                                                     .build();
+      descriptorBuilder.setValueType(ValueType.COMPLEX)
+                       .setHasMultipleValues(false)
+                       .addSerde(partSerde);
+
+      defaultSerializer.open();
+      defaultSerializer.serializeFields(mergedFields);
+
+      int stringCardinality;
+      int longCardinality;
+      int doubleCardinality;
+      if (numMergeIndex == 1) {
+        defaultSerializer.serializeDictionaries(
+            sortedLookup.getSortedStrings(),
+            sortedLookup.getSortedLongs(),
+            sortedLookup.getSortedDoubles()
+        );
+        stringCardinality = sortedLookup.getStringCardinality();
+        longCardinality = sortedLookup.getLongCardinality();
+        doubleCardinality = sortedLookup.getDoubleCardinality();
+      } else {
+        final SimpleDictionaryMergingIterator<String> stringIterator = new SimpleDictionaryMergingIterator<>(
+            sortedLookups,
+            STRING_MERGING_COMPARATOR
+        );
+        final SimpleDictionaryMergingIterator<Long> longIterator = new SimpleDictionaryMergingIterator<>(
+            sortedLongLookups,
+            LONG_MERGING_COMPARATOR
+        );
+        final SimpleDictionaryMergingIterator<Double> doubleIterator = new SimpleDictionaryMergingIterator<>(
+            sortedDoubleLookups,
+            DOUBLE_MERGING_COMPARATOR
+        );
+        defaultSerializer.serializeDictionaries(
+            () -> stringIterator,
+            () -> longIterator,
+            () -> doubleIterator
+        );
+        stringCardinality = stringIterator.getCardinality();
+        longCardinality = longIterator.getCardinality();
+        doubleCardinality = doubleIterator.getCardinality();
+      }
+
+      log.debug(
+          "Completed dim[%s] conversions with string cardinality[%,d], long cardinality[%,d], double cardinality[%,d] in %,d millis.",
+          name,
+          stringCardinality,
+          longCardinality,
+          doubleCardinality,
+          System.currentTimeMillis() - dimStartTime
+      );
     }
-    return new GlobalDictionarySortedCollector(
-        new StringEncodingStrategies.Utf8ToStringIndexed(column.getStringDictionary()),
-        column.getLongDictionary(),
-        column.getDoubleDictionary()
-    );
+    catch (IOException ioe) {
+      log.error(ioe, "Failed to merge dictionary for column [%s]", name);
+      throw ioe;
+    }
   }
 
   @Override
@@ -244,24 +207,7 @@ public class NestedDataColumnMerger implements DimensionMergerV9
   @Override
   public ColumnDescriptor makeColumnDescriptor()
   {
-    return new ColumnDescriptor.Builder()
-        .setValueType(ValueType.COMPLEX)
-        .setHasMultipleValues(false)
-        .addSerde(ComplexColumnPartSerde.serializerBuilder()
-                                        .withTypeName(NestedDataComplexTypeSerde.TYPE_NAME)
-                                        .withDelegate(serializer)
-                                        .build()
-        )
-        .build();
+    return descriptorBuilder.build();
   }
 
-  private <T> boolean allNull(Indexed<T> dimValues)
-  {
-    for (int i = 0, size = dimValues.size(); i < size; i++) {
-      if (dimValues.get(i) != null) {
-        return false;
-      }
-    }
-    return true;
-  }
 }

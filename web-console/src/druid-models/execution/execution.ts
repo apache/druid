@@ -26,8 +26,9 @@ import {
   oneOf,
   pluralIfNeeded,
 } from '../../utils';
-import { DruidEngine, validDruidEngine } from '../druid-engine/druid-engine';
-import { QueryContext } from '../query-context/query-context';
+import type { DruidEngine } from '../druid-engine/druid-engine';
+import { validDruidEngine } from '../druid-engine/druid-engine';
+import type { QueryContext } from '../query-context/query-context';
 import { Stages } from '../stages/stages';
 
 const IGNORE_CONTEXT_KEYS = [
@@ -66,7 +67,7 @@ type ExecutionDestination =
   | {
       type: 'taskReport';
     }
-  | { type: 'dataSource'; dataSource: string; exists?: boolean }
+  | { type: 'dataSource'; dataSource: string; loaded?: boolean }
   | { type: 'download' };
 
 export type ExecutionStatus = 'RUNNING' | 'FAILED' | 'SUCCESS';
@@ -504,7 +505,7 @@ export class Execution {
     });
   }
 
-  public markDestinationDatasourceExists(): Execution {
+  public markDestinationDatasourceLoaded(): Execution {
     const { destination } = this;
     if (destination?.type !== 'dataSource') return this;
 
@@ -512,7 +513,7 @@ export class Execution {
       ...this.valueOf(),
       destination: {
         ...destination,
-        exists: true,
+        loaded: true,
       },
     });
   }
@@ -536,7 +537,7 @@ export class Execution {
 
     const { status, destination } = this;
     if (status === 'SUCCESS' && destination?.type === 'dataSource') {
-      return Boolean(destination.exists);
+      return Boolean(destination.loaded);
     }
 
     return true;

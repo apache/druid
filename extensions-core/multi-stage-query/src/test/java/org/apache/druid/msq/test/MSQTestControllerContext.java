@@ -43,7 +43,10 @@ import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerImpl;
 import org.apache.druid.msq.exec.WorkerManagerClient;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
+import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
+import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.mockito.ArgumentMatchers;
@@ -111,14 +114,24 @@ public class MSQTestControllerContext implements ControllerContext
   WorkerManagerClient workerManagerClient = new WorkerManagerClient()
   {
     @Override
-    public String run(String controllerId, MSQWorkerTask task)
+    public String run(String taskId, MSQWorkerTask task)
     {
       if (controller == null) {
         throw new ISE("Controller needs to be set using the register method");
       }
+
+      WorkerStorageParameters workerStorageParameters;
+      // If we are testing durable storage, set a low limit on storage so that the durable storage will be used.
+      if (MultiStageQueryContext.isDurableStorageEnabled(QueryContext.of(task.getContext()))) {
+        workerStorageParameters = WorkerStorageParameters.createInstanceForTests(100);
+      } else {
+        workerStorageParameters = WorkerStorageParameters.createInstanceForTests(Long.MAX_VALUE);
+      }
+
       Worker worker = new WorkerImpl(
           task,
-          new MSQTestWorkerContext(inMemoryWorkers, controller, mapper, injector, workerMemoryParameters)
+          new MSQTestWorkerContext(inMemoryWorkers, controller, mapper, injector, workerMemoryParameters),
+          workerStorageParameters
       );
       inMemoryWorkers.put(task.getId(), worker);
       statusMap.put(task.getId(), TaskStatus.running(task.getId()));
@@ -161,8 +174,8 @@ public class MSQTestControllerContext implements ControllerContext
                     taskStatus.getId(),
                     taskStatus.getStatusCode(),
                     taskStatus.getDuration(),
-                    null,
-                    null
+                    taskStatus.getErrorMsg(),
+                    taskStatus.getLocation()
                 )
             );
           }

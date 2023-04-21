@@ -66,6 +66,7 @@ import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -75,6 +76,7 @@ import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcher;
 import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcherFactory;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -122,7 +124,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -292,6 +293,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>(){}).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())));
             binder.bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
             binder.bind(JoinableFactoryWrapper.class).toInstance(CalciteTests.createJoinableFactoryWrapper());
+            binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
           }
          )
         .build();
@@ -467,7 +469,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                       DUMMY_SQL_QUERY_ID
                   ),
                   "RESOURCES",
-                  "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]"
+                  "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]",
+                  "ATTRIBUTES",
+                  "{\"statementType\":\"SELECT\",\"targetDataSource\":null}"
               )
           ),
           getRows(resultSet)
@@ -820,7 +824,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   {
     final List<ListenableFuture<Integer>> futures = new ArrayList<>();
     final ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-        Executors.newFixedThreadPool(AVATICA_CONFIG.getMaxStatementsPerConnection())
+        Execs.multiThreaded(AVATICA_CONFIG.getMaxStatementsPerConnection(), "DruidAvaticaHandlerTest-%d")
     );
     for (int i = 0; i < 2000; i++) {
       final String query = StringUtils.format("SELECT COUNT(*) + %s AS ci FROM foo", i);
@@ -1000,7 +1004,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             CalciteTests.getJsonMapper(),
             CalciteTests.DRUID_SCHEMA_NAME,
             new CalciteRulesManager(ImmutableSet.of()),
-            CalciteTests.createJoinableFactoryWrapper()
+            CalciteTests.createJoinableFactoryWrapper(),
+            CatalogResolver.NULL_RESOLVER,
+            new AuthConfig()
         )
     );
   }

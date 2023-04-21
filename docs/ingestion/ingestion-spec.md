@@ -475,9 +475,9 @@ The `indexSpec` object can include the following properties:
 
 |Field|Description|Default|
 |-----|-----------|-------|
-|bitmap|Compression format for bitmap indexes. Should be a JSON object with `type` set to `roaring` or `concise`. For type `roaring`, the boolean property `compressRunOnSerialization` (defaults to true) controls whether or not run-length encoding will be used when it is determined to be more space-efficient.|`{"type": "roaring"}`|
+|bitmap|Compression format for bitmap indexes. Should be a JSON object with `type` set to `roaring` or `concise`.|`{"type": "roaring"}`|
 |dimensionCompression|Compression format for dimension columns. Options are `lz4`, `lzf`, `zstd`, or `uncompressed`.|`lz4`|
-|stringDictionaryEncoding|Encoding format for STRING value dictionaries used by STRING and COMPLEX&lt;json&gt; columns. <br>Example to enable front coding: `{"type":"frontCoded", "bucketSize": 4}`<br>`bucketSize` is the number of values to place in a bucket to perform delta encoding. Must be a power of 2, maximum is 128. Defaults to 4.<br>See [Front coding](#front-coding) for more information.|`{"type":"utf8"}`|
+|stringDictionaryEncoding|Encoding format for STRING value dictionaries used by STRING and COMPLEX&lt;json&gt; columns. <br /><br />Example to enable front coding: `{"type":"frontCoded", "bucketSize": 4}`<br />`bucketSize` is the number of values to place in a bucket to perform delta encoding. Must be a power of 2, maximum is 128. Defaults to 4.<br /> `formatVersion` can specify older versions for backwards compatibility during rolling upgrades, valid options are `0` and `1`. Defaults to `0` for backwards compatibility.<br /><br />See [Front coding](#front-coding) for more information.|`{"type":"utf8"}`|
 |metricCompression|Compression format for primitive type metric columns. Options are `lz4`, `lzf`, `zstd`, `uncompressed`, or `none` (which is more efficient than `uncompressed`, but not supported by older versions of Druid).|`lz4`|
 |longEncoding|Encoding format for long-typed columns. Applies regardless of whether they are dimensions or metrics. Options are `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as-is with 8 bytes each.|`longs`|
 |jsonCompression|Compression format to use for nested column raw data. Options are `lz4`, `lzf`, `zstd`, or `uncompressed`.|`lz4`|
@@ -488,7 +488,7 @@ Front coding is an experimental feature starting in version 25.0. Front coding i
 
 You can enable front coding with all types of ingestion. For information on defining an `indexSpec` in a query context, see [SQL-based ingestion reference](../multi-stage-query/reference.md#context-parameters).
 
-> Front coding is new to Druid 25.0 so the current recommendation is to enable it in a staging environment and fully test your use case before using in production. Segments created with front coding enabled are not compatible with Druid versions older than 25.0.
+> Front coding was originally introduced in Druid 25.0, and an improved 'version 1' was introduced in Druid 26.0, with typically faster read speed and smaller storage size. The current recommendation is to enable it in a staging environment and fully test your use case before using in production. By default, segments created with front coding enabled in Druid 26.0 are backwards compatible with Druid 25.0, but those created with Druid 26.0 or 25.0 are not compatible with Druid versions older than 25.0. If using front coding in Druid 25.0 and upgrading to Druid 26.0, the `formatVersion` defaults to `0` to keep writing out the older format to enable seamless downgrades to Druid 25.0, and then later is recommended to be changed to `1` once determined that rollback is not necessary.
 
 Beyond these properties, each ingestion method has its own specific tuning properties. See the documentation for each
 [ingestion method](./index.md#ingestion-methods) for details.

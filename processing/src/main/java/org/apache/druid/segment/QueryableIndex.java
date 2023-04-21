@@ -38,7 +38,7 @@ import java.util.Map;
  * @see QueryableIndexStorageAdapter for query path adapter
  * @see QueryableIndexIndexableAdapter for indexing path adapter
  */
-public interface QueryableIndex extends Closeable
+public interface QueryableIndex extends Closeable, ColumnInspector
 {
   Interval getDataInterval();
   int getNumRows();
@@ -52,6 +52,7 @@ public interface QueryableIndex extends Closeable
   @Nullable
   ColumnHolder getColumnHolder(String columnName);
 
+  @Override
   @Nullable
   default ColumnCapabilities getColumnCapabilities(String column)
   {
@@ -69,12 +70,4 @@ public interface QueryableIndex extends Closeable
   //@Deprecated // This is still required for SimpleQueryableIndex. It should not go away until SimpleQueryableIndex is fixed
   @Override
   void close();
-
-  /**
-   * @return true if this index was created from a tombstone or false otherwise
-   */
-  default boolean isFromTombstone()
-  {
-    return false;
-  }
 }

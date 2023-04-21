@@ -35,6 +35,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -78,13 +79,14 @@ public class SegmentToRowsAndColumnsOperatorTest
     SegmentToRowsAndColumnsOperator op = new SegmentToRowsAndColumnsOperator(
         new TestSegmentForAs(SegmentId.dummy("test"), aClass -> {
           Assert.assertEquals(CloseableShapeshifter.class, aClass);
+          //noinspection ReturnOfNull
           return null;
         })
     );
 
     boolean exceptionThrown = false;
     try {
-      op.go(new ExceptionalReceiver());
+      Operator.go(op, new ExceptionalReceiver());
     }
     catch (ISE e) {
       Assert.assertEquals(e.getMessage(), "Segment[class org.apache.druid.segment.TestSegmentForAs] cannot shapeshift");
@@ -104,7 +106,7 @@ public class SegmentToRowsAndColumnsOperatorTest
           {
             @Nullable
             @Override
-            public <T> T as(Class<T> clazz)
+            public <T> T as(@Nonnull Class<T> clazz)
             {
               Assert.assertEquals(RowsAndColumns.class, clazz);
               return null;
@@ -121,7 +123,7 @@ public class SegmentToRowsAndColumnsOperatorTest
 
     boolean exceptionThrown = false;
     try {
-      op.go(new ExceptionalReceiver());
+      Operator.go(op, new ExceptionalReceiver());
     }
     catch (ISE e) {
       Assert.assertEquals(
@@ -147,9 +149,8 @@ public class SegmentToRowsAndColumnsOperatorTest
           return new CloseableShapeshifter()
           {
             @SuppressWarnings("unchecked")
-            @Nullable
             @Override
-            public <T> T as(Class<T> clazz)
+            public <T> T as(@Nonnull Class<T> clazz)
             {
               Assert.assertEquals(RowsAndColumns.class, clazz);
               return (T) expectedRac;
@@ -170,7 +171,7 @@ public class SegmentToRowsAndColumnsOperatorTest
       new OperatorTestHelper()
           .withPushFn(rac -> {
             Assert.assertSame(expectedRac, rac);
-            return true;
+            return Operator.Signal.GO;
           })
           .runToCompletion(op);
     }

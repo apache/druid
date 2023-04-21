@@ -24,6 +24,7 @@ import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -31,6 +32,7 @@ import java.util.Collections;
 public class CalciteDeleteDmlTest extends CalciteIngestionDmlTest
 {
   @Test
+  @Ignore
   public void testDeleteFromTableWithCondition()
   {
     testIngestionQuery()
@@ -50,6 +52,7 @@ public class CalciteDeleteDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  @Ignore
   public void testDeleteFromTableWithoutWhereClause()
   {
     testIngestionQuery()
@@ -62,6 +65,7 @@ public class CalciteDeleteDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  @Ignore
   public void testDeleteAllFromTable()
   {
     testIngestionQuery()

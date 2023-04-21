@@ -20,8 +20,10 @@
 package org.apache.druid.indexing.common.task;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.UpdateStatusAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogPusher;
@@ -53,6 +55,10 @@ public class AbstractTaskTest
   @Test
   public void testSetupAndCleanupIsCalledWtihParameter() throws Exception
   {
+    // These tests apparently use Mockito.  Mockito is bad as we've seen it rewrite byte code and effectively cause
+    // impact to other totally unrelated tests.  Mockito needs to be completely erradicated from the codebase.  This
+    // comment is here to either cause me to do it in this commit or just for posterity so that it is clear that it
+    // should happen in the future.
     TaskToolbox toolbox = mock(TaskToolbox.class);
     when(toolbox.getAttemptId()).thenReturn("1");
 
@@ -73,7 +79,8 @@ public class AbstractTaskTest
     when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
 
 
-    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null, null, null) {
+    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null, null, null)
+    {
       @Nullable
       @Override
       public String setup(TaskToolbox toolbox) throws Exception
@@ -116,7 +123,8 @@ public class AbstractTaskTest
     when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
 
 
-    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null, null, null) {
+    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null, null, null)
+    {
       @Nullable
       @Override
       public String setup(TaskToolbox toolbox) throws Exception
@@ -134,6 +142,41 @@ public class AbstractTaskTest
     // encapsulated task is set to false, should never get called
     Mockito.verify(taskActionClient, never()).submit(any());
     verify(pusher, never()).pushTaskReports(eq("myID"), any());
+  }
+
+  @Test
+  public void testTaskFailureWithoutExceptionGetsReportedCorrectly() throws Exception
+  {
+    TaskToolbox toolbox = mock(TaskToolbox.class);
+    when(toolbox.getAttemptId()).thenReturn("1");
+
+    DruidNode node = new DruidNode("foo", "foo", false, 1, 2, true, true);
+    when(toolbox.getTaskExecutorNode()).thenReturn(node);
+
+    TaskLogPusher pusher = mock(TaskLogPusher.class);
+    when(toolbox.getTaskLogPusher()).thenReturn(pusher);
+
+    TaskConfig config = mock(TaskConfig.class);
+    when(config.isEncapsulatedTask()).thenReturn(true);
+    File folder = temporaryFolder.newFolder();
+    when(config.getTaskDir(eq("myID"))).thenReturn(folder);
+    when(toolbox.getConfig()).thenReturn(config);
+
+    TaskActionClient taskActionClient = mock(TaskActionClient.class);
+    when(taskActionClient.submit(any())).thenReturn(TaskConfig.class);
+    when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
+
+    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null, null, null)
+    {
+      @Override
+      public TaskStatus runTask(TaskToolbox toolbox) 
+      {
+        return TaskStatus.failure("myId", "failed");
+      }
+    };
+    task.run(toolbox);
+    UpdateStatusAction action = new UpdateStatusAction("failure");
+    verify(taskActionClient).submit(eq(action));
   }
 
   @Test

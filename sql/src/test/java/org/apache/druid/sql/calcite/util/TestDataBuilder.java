@@ -19,28 +19,26 @@
 
 package org.apache.druid.sql.calcite.util;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
@@ -53,6 +51,7 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -71,20 +70,13 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.zip.GZIPInputStream;
 
 /**
  * Builds a set of test data used by the Calcite query tests. The test data is
@@ -118,61 +110,67 @@ public class TestDataBuilder
     }
   };
 
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3"))
-          )
-      )
+  public static final JsonInputFormat DEFAULT_JSON_INPUT_FORMAT = new JsonInputFormat(
+      JSONPathSpec.DEFAULT,
+      null,
+      null,
+      null,
+      null
   );
 
-  private static final InputRowParser<Map<String, Object>> PARSER_NUMERIC_DIMS = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
-          new DimensionsSpec(
-              ImmutableList.<DimensionSchema>builder()
-                           .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
-                               "dim1",
-                               "dim2",
-                               "dim3",
-                               "dim4",
-                               "dim5",
-                               "dim6"
-                           )))
-                           .add(new DoubleDimensionSchema("d1"))
-                           .add(new DoubleDimensionSchema("d2"))
-                           .add(new FloatDimensionSchema("f1"))
-                           .add(new FloatDimensionSchema("f2"))
-                           .add(new LongDimensionSchema("l1"))
-                           .add(new LongDimensionSchema("l2"))
+  private static final InputRowSchema FOO_SCHEMA = new InputRowSchema(
+      new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
+      new DimensionsSpec(
+          DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3"))
+      ),
+      null
+  );
+
+  private static final InputRowSchema NUMFOO_SCHEMA = new InputRowSchema(
+      new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
+      new DimensionsSpec(
+          ImmutableList.<DimensionSchema>builder()
+                       .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                           "dim1",
+                           "dim2",
+                           "dim3",
+                           "dim4",
+                           "dim5",
+                           "dim6"
+                       )))
+                       .add(new DoubleDimensionSchema("d1"))
+                       .add(new DoubleDimensionSchema("d2"))
+                       .add(new FloatDimensionSchema("f1"))
+                       .add(new FloatDimensionSchema("f2"))
+                       .add(new LongDimensionSchema("l1"))
+                       .add(new LongDimensionSchema("l2"))
+                       .build()
+      ),
+      null
+  );
+
+  private static final InputRowSchema LOTS_OF_COLUMNS_SCHEMA = new InputRowSchema(
+      new TimestampSpec("timestamp", "millis", null),
+      new DimensionsSpec(
+          DimensionsSpec.getDefaultSchemas(
+              ImmutableList.<String>builder().add("dimHyperUnique")
+                           .add("dimMultivalEnumerated")
+                           .add("dimMultivalEnumerated2")
+                           .add("dimMultivalSequentialWithNulls")
+                           .add("dimSequential")
+                           .add("dimSequentialHalfNull")
+                           .add("dimUniform")
+                           .add("dimZipf")
+                           .add("metFloatNormal")
+                           .add("metFloatZipf")
+                           .add("metLongSequential")
+                           .add("metLongUniform")
                            .build()
           )
-      )
+      ),
+      null
   );
 
-  private static final InputRowParser<Map<String, Object>> PARSER_LOTS_OF_COLUMNS = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec("timestamp", "millis", null),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(
-                  ImmutableList.<String>builder().add("dimHyperUnique")
-                               .add("dimMultivalEnumerated")
-                               .add("dimMultivalEnumerated2")
-                               .add("dimMultivalSequentialWithNulls")
-                               .add("dimSequential")
-                               .add("dimSequentialHalfNull")
-                               .add("dimUniform")
-                               .add("dimZipf")
-                               .add("metFloatNormal")
-                               .add("metFloatZipf")
-                               .add("metLongSequential")
-                               .add("metLongUniform")
-                               .build()
-              )
-          )
-      )
-  );
 
   private static final IncrementalIndexSchema INDEX_SCHEMA = new IncrementalIndexSchema.Builder()
       .withMetrics(
@@ -213,14 +211,14 @@ public class TestDataBuilder
       .withRollup(false)
       .build();
 
-  private static final IncrementalIndexSchema INDEX_SCHEMA_NUMERIC_DIMS = new IncrementalIndexSchema.Builder()
+  public static final IncrementalIndexSchema INDEX_SCHEMA_NUMERIC_DIMS = new IncrementalIndexSchema.Builder()
       .withMetrics(
           new CountAggregatorFactory("cnt"),
           new FloatSumAggregatorFactory("m1", "m1"),
           new DoubleSumAggregatorFactory("m2", "m2"),
           new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
       )
-      .withDimensionsSpec(PARSER_NUMERIC_DIMS)
+      .withDimensionsSpec(NUMFOO_SCHEMA.getDimensionsSpec())
       .withRollup(false)
       .build();
 
@@ -228,7 +226,7 @@ public class TestDataBuilder
       .withMetrics(
           new CountAggregatorFactory("count")
       )
-      .withDimensionsSpec(PARSER_LOTS_OF_COLUMNS)
+      .withDimensionsSpec(LOTS_OF_COLUMNS_SCHEMA.getDimensionsSpec())
       .withRollup(false)
       .build();
 
@@ -436,7 +434,7 @@ public class TestDataBuilder
                   .build()
   );
   public static final List<InputRow> ROWS1_WITH_NUMERIC_DIMS =
-      RAW_ROWS1_WITH_NUMERIC_DIMS.stream().map(raw -> createRow(raw, PARSER_NUMERIC_DIMS)).collect(Collectors.toList());
+      RAW_ROWS1_WITH_NUMERIC_DIMS.stream().map(raw -> createRow(raw, NUMFOO_SCHEMA)).collect(Collectors.toList());
 
   public static final List<ImmutableMap<String, Object>> RAW_ROWS2 = ImmutableList.of(
       ImmutableMap.<String, Object>builder()
@@ -509,7 +507,7 @@ public class TestDataBuilder
                       .put("dimSequential", "0")
                       .put("dimSequentialHalfNull", "0")
                       .build(),
-          PARSER_LOTS_OF_COLUMNS
+          LOTS_OF_COLUMNS_SCHEMA
       ),
       createRow(
           ImmutableMap.<String, Object>builder()
@@ -525,7 +523,7 @@ public class TestDataBuilder
                       .put("dimHyperUnique", "8")
                       .put("dimSequential", "8")
                       .build(),
-          PARSER_LOTS_OF_COLUMNS
+          LOTS_OF_COLUMNS_SCHEMA
       )
   );
 
@@ -618,10 +616,6 @@ public class TestDataBuilder
         new LongDimensionSchema("added"),
         new LongDimensionSchema("deleted")
     );
-    ArrayList<String> dimensionNames = new ArrayList<>(dimensions.size());
-    for (DimensionSchema dimension : dimensions) {
-      dimensionNames.add(dimension.getName());
-    }
 
     return IndexBuilder
         .create()
@@ -629,51 +623,18 @@ public class TestDataBuilder
         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
         .schema(new IncrementalIndexSchema.Builder()
                     .withRollup(false)
+                    .withTimestampSpec(new TimestampSpec("time", null, null))
                     .withDimensionsSpec(new DimensionsSpec(dimensions))
                     .build()
         )
-        .rows(
-            () -> {
-              final InputStream is;
-              try {
-                is = new GZIPInputStream(
-                    // The extension ".json.gz" appears to not be included in resource bundles, so name it ".jgz"!
-                    ClassLoader.getSystemResourceAsStream("calcite/tests/wikiticker-2015-09-12-sampled.jgz")
-                );
-              }
-              catch (IOException e) {
-                throw new RE(e, "problem loading wikipedia dataset for tests");
-              }
-
-              ObjectMapper mapper = new DefaultObjectMapper();
-
-              // This method is returning an iterator over a BufferedReader, attempts are made to try to close the reader if
-              // exceptions occur, but this is happening in test setup and failures here should generally fail the tests, so
-              // leaks are not a primary concern.  If anything were to actually try to mimic this code in real life, it should
-              // do a better job of taking care of resources.
-              BufferedReader lines = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
-              return lines
-                  .lines()
-                  .map(line -> {
-                    try {
-                      Map map = mapper.readValue(line, Map.class);
-                      final String time = String.valueOf(map.get("time"));
-                      return (InputRow) new MapBasedInputRow(DateTimes.of(time), dimensionNames, map);
-                    }
-                    catch (JsonProcessingException e) {
-                      final RE toThrow = new RE(e, "Problem reading line setting up wikipedia dataset for tests.");
-                      try {
-                        is.close();
-                      }
-                      catch (IOException logged) {
-                        toThrow.addSuppressed(logged);
-                      }
-                      throw toThrow;
-                    }
-                  })
-                  .iterator();
-            }
+        .inputSource(
+            ResourceInputSource.of(
+                TestDataBuilder.class.getClassLoader(),
+                "calcite/tests/wikiticker-2015-09-12-sampled.json.gz"
+            )
         )
+        .inputFormat(DEFAULT_JSON_INPUT_FORMAT)
+        .inputTmpDir(new File(tmpDir, "tmpWikipedia1"))
         .buildMMappedIndex();
   }
 
@@ -816,7 +777,7 @@ public class TestDataBuilder
 
     return new SpecificSegmentsQuerySegmentWalker(
         conglomerate,
-        injector.getInstance(LookupExtractorFactoryContainerProvider.class),
+        injector.getInstance(SegmentWrangler.class),
         joinableFactoryWrapper,
         scheduler
     ).add(
@@ -928,23 +889,24 @@ public class TestDataBuilder
 
   public static InputRow createRow(final ImmutableMap<String, ?> map)
   {
-    return PARSER.parseBatch((Map<String, Object>) map).get(0);
+    return MapInputRowParser.parse(FOO_SCHEMA, (Map<String, Object>) map);
   }
 
-  public static InputRow createRow(final ImmutableMap<String, ?> map, InputRowParser<Map<String, Object>> parser)
+  public static InputRow createRow(final ImmutableMap<String, ?> map, InputRowSchema inputRowSchema)
   {
-    return parser.parseBatch((Map<String, Object>) map).get(0);
+    return MapInputRowParser.parse(inputRowSchema, (Map<String, Object>) map);
   }
 
   public static InputRow createRow(final Object t, final String dim1, final String dim2, final double m1)
   {
-    return PARSER.parseBatch(
+    return MapInputRowParser.parse(
+        FOO_SCHEMA,
         ImmutableMap.of(
             "t", new DateTime(t, ISOChronology.getInstanceUTC()).getMillis(),
             "dim1", dim1,
             "dim2", dim2,
             "m1", m1
         )
-    ).get(0);
+    );
   }
 }

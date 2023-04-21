@@ -28,6 +28,7 @@ import com.google.inject.Provides;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
@@ -47,6 +48,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -61,7 +63,6 @@ import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.timeline.DataSegment;
 
-import javax.inject.Singleton;
 import java.io.File;
 import java.io.IOException;
 import java.util.Properties;
@@ -148,13 +149,14 @@ public class SqlTestFramework
 
     SqlEngine createEngine(
         QueryLifecycleFactory qlf,
-        ObjectMapper objectMapper
+        ObjectMapper objectMapper,
+        Injector injector
     );
 
     /**
      * Configure the JSON mapper.
      *
-     * @see {@link #configureGuice(DruidInjectorBuilder)} for the preferred solution.
+     * @see #configureGuice(DruidInjectorBuilder) for the preferred solution.
      */
     void configureJsonMapper(ObjectMapper mapper);
 
@@ -239,7 +241,11 @@ public class SqlTestFramework
     }
 
     @Override
-    public SqlEngine createEngine(QueryLifecycleFactory qlf, ObjectMapper objectMapper)
+    public SqlEngine createEngine(
+        QueryLifecycleFactory qlf,
+        ObjectMapper objectMapper,
+        Injector injector
+    )
     {
       return new NativeSqlEngine(
           qlf,
@@ -353,6 +359,7 @@ public class SqlTestFramework
     private final QueryComponentSupplier componentSupplier;
     private int minTopNThreshold = TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
     private int mergeBufferCount;
+    private CatalogResolver catalogResolver = CatalogResolver.NULL_RESOLVER;
 
     public Builder(QueryComponentSupplier componentSupplier)
     {
@@ -368,6 +375,12 @@ public class SqlTestFramework
     public Builder mergeBufferCount(int mergeBufferCount)
     {
       this.mergeBufferCount = mergeBufferCount;
+      return this;
+    }
+
+    public Builder catalogResolver(CatalogResolver catalogResolver)
+    {
+      this.catalogResolver = catalogResolver;
       return this;
     }
 
@@ -416,7 +429,9 @@ public class SqlTestFramework
           framework.queryJsonMapper(),
           CalciteTests.DRUID_SCHEMA_NAME,
           new CalciteRulesManager(componentSupplier.extensionCalciteRules()),
-          framework.injector.getInstance(JoinableFactoryWrapper.class)
+          framework.injector.getInstance(JoinableFactoryWrapper.class),
+          framework.builder.catalogResolver,
+          authConfig != null ? authConfig : new AuthConfig()
       );
       componentSupplier.finalizePlanner(this);
       this.statementFactory = QueryFrameworkUtils.createSqlStatementFactory(
@@ -473,14 +488,14 @@ public class SqlTestFramework
     }
 
     @Provides
-    @Singleton
+    @LazySingleton
     public QueryRunnerFactoryConglomerate conglomerate()
     {
       return componentSupplier.createCongolmerate(builder, resourceCloser);
     }
 
     @Provides
-    @Singleton
+    @LazySingleton
     public JoinableFactoryWrapper joinableFactoryWrapper(final Injector injector)
     {
       return builder.componentSupplier.createJoinableFactoryWrapper(
@@ -507,7 +522,7 @@ public class SqlTestFramework
     }
 
     @Provides
-    @Singleton
+    @LazySingleton
     public QueryLifecycleFactory queryLifecycleFactory(final Injector injector)
     {
       return QueryFrameworkUtils.createMockQueryLifecycleFactory(
@@ -519,6 +534,7 @@ public class SqlTestFramework
 
   public static final DruidViewMacroFactory DRUID_VIEW_MACRO_FACTORY = new TestDruidViewMacroFactory();
 
+  private final Builder builder;
   private final QueryComponentSupplier componentSupplier;
   private final Closer resourceCloser = Closer.create();
   private final Injector injector;
@@ -527,6 +543,7 @@ public class SqlTestFramework
 
   private SqlTestFramework(Builder builder)
   {
+    this.builder = builder;
     this.componentSupplier = builder.componentSupplier;
     Properties properties = new Properties();
     this.componentSupplier.gatherProperties(properties);
@@ -538,13 +555,14 @@ public class SqlTestFramework
         // test pulls in a module, then pull in that module, even though we are
         // not the Druid node to which the module is scoped.
         .ignoreLoadScopes()
-        .addModule(new BasicTestModule())
+        .addModule(new LookylooModule())
+        .addModule(new SegmentWranglerModule())
         .addModule(new SqlAggregationModule())
         .addModule(new ExpressionModule())
         .addModule(new TestSetupModule(builder));
     builder.componentSupplier.configureGuice(injectorBuilder);
     this.injector = injectorBuilder.build();
-    this.engine = builder.componentSupplier.createEngine(queryLifecycleFactory(), queryJsonMapper());
+    this.engine = builder.componentSupplier.createEngine(queryLifecycleFactory(), queryJsonMapper(), injector);
     componentSupplier.configureJsonMapper(queryJsonMapper());
     componentSupplier.finalizeTestFramework(this);
   }
@@ -552,6 +570,11 @@ public class SqlTestFramework
   public Injector injector()
   {
     return injector;
+  }
+
+  public SqlEngine engine()
+  {
+    return engine;
   }
 
   public ObjectMapper queryJsonMapper()

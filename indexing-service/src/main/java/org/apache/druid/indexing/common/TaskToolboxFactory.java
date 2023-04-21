@@ -195,6 +195,16 @@ public class TaskToolboxFactory
 
   public TaskToolbox build(Task task)
   {
+    return build(config, task);
+  }
+
+  public TaskToolbox build(File baseTaskDir, Task task)
+  {
+    return build(config.withBaseTaskDir(baseTaskDir), task);
+  }
+
+  public TaskToolbox build(TaskConfig config, Task task)
+  {
     final File taskWorkDir = config.getTaskWorkDir(task.getId());
     return new TaskToolbox.Builder()
         .config(config)

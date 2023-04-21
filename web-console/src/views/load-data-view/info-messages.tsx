@@ -20,7 +20,8 @@ import { Button, Callout, Code, FormGroup, Intent } from '@blueprintjs/core';
 import React from 'react';
 
 import { ExternalLink, LearnMore } from '../../components';
-import { DimensionMode, getIngestionDocLink, IngestionSpec } from '../../druid-models';
+import type { DimensionMode, IngestionSpec } from '../../druid-models';
+import { getIngestionDocLink } from '../../druid-models';
 import { getLink } from '../../links';
 import { deepGet, deepSet } from '../../utils';
 
@@ -56,13 +57,7 @@ export const ConnectMessage = React.memo(function ConnectMessage(props: ConnectM
   );
 });
 
-export interface ParserMessageProps {
-  canHaveNestedData: boolean;
-}
-
-export const ParserMessage = React.memo(function ParserMessage(props: ParserMessageProps) {
-  const { canHaveNestedData } = props;
-
+export const ParserMessage = React.memo(function ParserMessage() {
   return (
     <FormGroup>
       <Callout>
@@ -70,24 +65,11 @@ export const ParserMessage = React.memo(function ParserMessage(props: ParserMess
           Druid needs to parse data as columns. Determine the format of your data and ensure that
           the columns are accurately parsed.
         </p>
-        {canHaveNestedData && (
-          <>
-            <p>
-              If you have nested data, you can ingest it into{' '}
-              <ExternalLink href={`${getLink('DOCS')}/querying/nested-columns.html`}>
-                COMPLEX&lt;json&gt;
-              </ExternalLink>{' '}
-              columns.
-            </p>
-            <p>
-              Alternatively, you can explicitly{' '}
-              <ExternalLink href={`${getLink('DOCS')}/ingestion/index.html#flattenspec`}>
-                flatten
-              </ExternalLink>{' '}
-              it here.
-            </p>
-          </>
-        )}
+        <p>
+          If you have nested data, you can ingest it as{' '}
+          <ExternalLink href={`${getLink('DOCS')}/querying/nested-columns.html`}>json</ExternalLink>{' '}
+          dimensions.
+        </p>
         <LearnMore href={`${getLink('DOCS')}/ingestion/data-formats.html`} />
       </Callout>
     </FormGroup>

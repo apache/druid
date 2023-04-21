@@ -20,6 +20,7 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.Memory;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -67,6 +68,12 @@ public class DoubleFieldReader implements FieldReader
   }
 
   @Override
+  public boolean isNull(Memory memory, long position)
+  {
+    return memory.getByte(position) == DoubleFieldWriter.NULL_BYTE;
+  }
+
+  @Override
   public boolean isComparable()
   {
     return true;
@@ -97,7 +104,7 @@ public class DoubleFieldReader implements FieldReader
     @Override
     public boolean isNull()
     {
-      return dataRegion.getByte(fieldPointer.position()) == DoubleFieldWriter.NULL_BYTE;
+      return NullHandling.sqlCompatible() && dataRegion.getByte(fieldPointer.position()) == DoubleFieldWriter.NULL_BYTE;
     }
 
     @Override

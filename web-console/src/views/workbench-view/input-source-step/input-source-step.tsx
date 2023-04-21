@@ -28,21 +28,19 @@ import {
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import { QueryResult } from 'druid-query-toolkit';
+import type { QueryResult } from 'druid-query-toolkit';
+import { SqlColumnDeclaration } from 'druid-query-toolkit';
 import React, { useEffect, useState } from 'react';
 
 import { AutoForm, ExternalLink } from '../../../components';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
+import type { Execution, ExecutionError, InputFormat, InputSource } from '../../../druid-models';
 import {
-  Execution,
-  ExecutionError,
   externalConfigToTableExpression,
   getIngestionImage,
   getIngestionTitle,
-  guessInputFormat,
+  guessSimpleInputFormat,
   INPUT_SOURCE_FIELDS,
-  InputFormat,
-  InputSource,
   PLACEHOLDER_TIMESTAMP_SPEC,
 } from '../../../druid-models';
 import {
@@ -53,7 +51,8 @@ import {
 import { useQueryManager } from '../../../hooks';
 import { UrlBaser } from '../../../singletons';
 import { filterMap, IntermediateQueryState } from '../../../utils';
-import { postToSampler, SampleSpec } from '../../../utils/sampler';
+import type { SampleSpec } from '../../../utils/sampler';
+import { postToSampler } from '../../../utils/sampler';
 
 import { EXAMPLE_INPUTS } from './example-inputs';
 import { InputSourceInfo } from './input-source-info';
@@ -62,7 +61,7 @@ import './input-source-step.scss';
 
 function resultToInputFormat(result: QueryResult): InputFormat {
   if (!result.rows.length) throw new Error('No data returned from sample query');
-  return guessInputFormat(result.rows.map((r: any) => r[0]));
+  return guessSimpleInputFormat(result.rows.map((r: any) => r[0]));
 }
 
 const BOGUS_LIST_DELIMITER = '56616469-6de2-9da4-efb8-8f416e6e6965'; // Just a UUID to disable the list delimiter, let's hope we do not see this UUID in the data
@@ -130,7 +129,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
         );
 
         if (!sampleLines.length) throw new Error('No data returned from sampler');
-        guessedInputFormat = guessInputFormat(sampleLines);
+        guessedInputFormat = guessSimpleInputFormat(sampleLines);
       } else {
         const tableExpression = externalConfigToTableExpression({
           inputSource,
@@ -140,7 +139,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
             listDelimiter: BOGUS_LIST_DELIMITER,
             columns: ['raw'],
           },
-          signature: [{ name: 'raw', type: 'string' }],
+          signature: [SqlColumnDeclaration.create('raw', 'VARCHAR')],
         });
 
         const result = extractResult(

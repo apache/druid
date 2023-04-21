@@ -319,13 +319,13 @@ public class ExtensionsLoader
       final String serviceImplName = serviceImpl.getClass().getName();
       if (serviceImplName == null) {
         log.warn(
-            "Implementation [%s] was ignored because it doesn't have a canonical name, "
+            "Implementation %s was ignored because it doesn't have a canonical name, "
             + "is it a local or anonymous class?",
             serviceImpl.getClass().getName()
         );
       } else if (!implClassNamesToLoad.contains(serviceImplName)) {
         log.debug(
-            "Adding implementation [%s] for class [%s] from %s extension",
+            "Adding implementation %s for class %s from %s extension",
             serviceImplName,
             serviceClass,
             extensionType

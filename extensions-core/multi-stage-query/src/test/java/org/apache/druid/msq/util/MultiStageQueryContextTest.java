@@ -34,13 +34,13 @@ import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import javax.annotation.Nullable;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_DESTINATION;
-import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_ENABLE_DURABLE_SHUFFLE_STORAGE;
+import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE;
+import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_FAULT_TOLERANCE;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MAX_NUM_TASKS;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MSQ_MODE;
@@ -53,16 +53,29 @@ import static org.apache.druid.msq.util.MultiStageQueryContext.DEFAULT_MAX_NUM_T
 public class MultiStageQueryContextTest
 {
   @Test
-  public void isDurableStorageEnabled_noParameterSetReturnsDefaultValue()
+  public void isDurableShuffleStorageEnabled_noParameterSetReturnsDefaultValue()
   {
     Assert.assertFalse(MultiStageQueryContext.isDurableStorageEnabled(QueryContext.empty()));
   }
 
   @Test
-  public void isDurableStorageEnabled_parameterSetReturnsCorrectValue()
+  public void isDurableShuffleStorageEnabled_parameterSetReturnsCorrectValue()
   {
-    Map<String, Object> propertyMap = ImmutableMap.of(CTX_ENABLE_DURABLE_SHUFFLE_STORAGE, "true");
+    Map<String, Object> propertyMap = ImmutableMap.of(CTX_DURABLE_SHUFFLE_STORAGE, "true");
     Assert.assertTrue(MultiStageQueryContext.isDurableStorageEnabled(QueryContext.of(propertyMap)));
+  }
+
+  @Test
+  public void isFaultToleranceEnabled_noParameterSetReturnsDefaultValue()
+  {
+    Assert.assertFalse(MultiStageQueryContext.isFaultToleranceEnabled(QueryContext.empty()));
+  }
+
+  @Test
+  public void isFaultToleranceEnabled_parameterSetReturnsCorrectValue()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(CTX_FAULT_TOLERANCE, "true");
+    Assert.assertTrue(MultiStageQueryContext.isFaultToleranceEnabled(QueryContext.of(propertyMap)));
   }
 
   @Test
@@ -85,6 +98,16 @@ public class MultiStageQueryContextTest
         WorkerAssignmentStrategy.MAX,
         MultiStageQueryContext.getAssignmentStrategy(QueryContext.empty())
     );
+  }
+
+  @Test
+  public void testGetMaxInputBytesPerWorker()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(MultiStageQueryContext.CTX_MAX_INPUT_BYTES_PER_WORKER, 1024);
+
+    Assert.assertEquals(
+        1024,
+        MultiStageQueryContext.getMaxInputBytesPerWorker(QueryContext.of(propertyMap)));
   }
 
   @Test
@@ -133,27 +156,33 @@ public class MultiStageQueryContextTest
   @Test
   public void getRowsPerSegment_noParameterSetReturnsDefaultValue()
   {
-    Assert.assertEquals(1000, MultiStageQueryContext.getRowsPerSegment(QueryContext.empty(), 1000));
+    Assert.assertEquals(
+        MultiStageQueryContext.DEFAULT_ROWS_PER_SEGMENT,
+        MultiStageQueryContext.getRowsPerSegment(QueryContext.empty())
+    );
   }
 
   @Test
   public void getRowsPerSegment_parameterSetReturnsCorrectValue()
   {
     Map<String, Object> propertyMap = ImmutableMap.of(CTX_ROWS_PER_SEGMENT, 10);
-    Assert.assertEquals(10, MultiStageQueryContext.getRowsPerSegment(QueryContext.of(propertyMap), 1000));
+    Assert.assertEquals(10, MultiStageQueryContext.getRowsPerSegment(QueryContext.of(propertyMap)));
   }
 
   @Test
   public void getRowsInMemory_noParameterSetReturnsDefaultValue()
   {
-    Assert.assertEquals(1000, MultiStageQueryContext.getRowsInMemory(QueryContext.empty(), 1000));
+    Assert.assertEquals(
+        MultiStageQueryContext.DEFAULT_ROWS_IN_MEMORY,
+        MultiStageQueryContext.getRowsInMemory(QueryContext.empty())
+    );
   }
 
   @Test
   public void getRowsInMemory_parameterSetReturnsCorrectValue()
   {
     Map<String, Object> propertyMap = ImmutableMap.of(CTX_ROWS_IN_MEMORY, 10);
-    Assert.assertEquals(10, MultiStageQueryContext.getRowsInMemory(QueryContext.of(propertyMap), 1000));
+    Assert.assertEquals(10, MultiStageQueryContext.getRowsInMemory(QueryContext.of(propertyMap)));
   }
 
   @Test
@@ -179,7 +208,7 @@ public class MultiStageQueryContextTest
     Assert.assertEquals(new IndexSpec(), decodeIndexSpec(Collections.emptyMap()));
 
     Assert.assertEquals(
-        new IndexSpec(null, null, new StringEncodingStrategy.FrontCoded(null), null, null, null, null),
+        new IndexSpec(null, null, new StringEncodingStrategy.FrontCoded(null, null), null, null, null, null),
         decodeIndexSpec("{\"stringDictionaryEncoding\":{\"type\":\"frontCoded\"}}")
     );
 

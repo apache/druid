@@ -59,6 +59,7 @@ public class DiscoveryDruidNodeTest
   {
     EqualsVerifier.forClass(DiscoveryDruidNode.class)
                   .withNonnullFields("druidNode", "nodeRole", "services")
+                  .withIgnoredFields("startTime")
                   .usingGetClass()
                   .verify();
   }

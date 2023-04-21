@@ -19,9 +19,10 @@
 import { T } from 'druid-query-toolkit';
 import React from 'react';
 
-import { Execution, WorkbenchQuery } from '../../../druid-models';
+import type { Execution } from '../../../druid-models';
+import { WorkbenchQuery } from '../../../druid-models';
 import { formatDuration, pluralIfNeeded } from '../../../utils';
-import { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
+import type { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
 
 import './ingest-success-pane.scss';
 
@@ -55,7 +56,7 @@ export const IngestSuccessPane = React.memo(function IngestSuccessPane(
   return (
     <div className="ingest-success-pane">
       <p>
-        {`${rows < 0 ? 'Data' : pluralIfNeeded(rows, 'row')} inserted into '${datasource}'.`}
+        {`${rows < 0 ? 'Data' : pluralIfNeeded(rows, 'row')} inserted into ${T(datasource)}.`}
         {warnings > 0 && (
           <>
             {' '}

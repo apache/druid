@@ -27,6 +27,7 @@ exports[`TableColumnSelector matches snapshot 1`] = `
       <svg
         data-icon="caret-down"
         height="16"
+        role="img"
         viewBox="0 0 16 16"
         width="16"
       >
