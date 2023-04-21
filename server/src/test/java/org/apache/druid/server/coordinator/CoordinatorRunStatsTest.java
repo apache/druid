@@ -27,7 +27,6 @@ import org.apache.druid.server.coordinator.stats.RowKey;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.HashMap;
