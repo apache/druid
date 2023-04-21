@@ -70,7 +70,7 @@ public class BalanceSegments implements CoordinatorDuty
         params.getSegmentReplicantLookup(),
         params.getReplicationManager(),
         params.getBalancerStrategy(),
-        dynamicConfig.isUseRoundRobinSegmentAssignment()
+        dynamicConfig
     );
 
     cluster.getHistoricals().forEach(
@@ -80,9 +80,7 @@ public class BalanceSegments implements CoordinatorDuty
 
     segmentAssigner.makeAlerts();
     final CoordinatorRunStats stats = segmentAssigner.getStats();
-    stats.forEachRow(
-        (row, statValues) -> log.info("Stats for row[%s] are [%s]", row, statValues)
-    );
+    stats.logStatsAndErrors(log);
 
     return params.buildFromExisting().withCoordinatorStats(stats).build();
   }

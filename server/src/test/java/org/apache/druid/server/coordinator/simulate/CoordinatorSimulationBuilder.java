@@ -40,6 +40,7 @@ import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyConfig;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyFactory;
@@ -229,15 +230,15 @@ public class CoordinatorSimulationBuilder
     }
 
     switch (balancerStrategy) {
-      case "cost":
+      case BalancerStrategy.COST:
         return new CostBalancerStrategyFactory();
-      case "cachingCost":
+      case BalancerStrategy.CACHING_COST:
         return buildCachingCostBalancerStrategy(env);
-      case "diskNormalized":
+      case BalancerStrategy.DISK_NORMALIZED:
         return new DiskNormalizedCostBalancerStrategyFactory();
-      case "random":
+      case BalancerStrategy.RANDOM:
         return new RandomBalancerStrategyFactory();
-      case "uniformInterval":
+      case BalancerStrategy.UNIFORM_INTERVAL:
         return new UniformIntervalBalancerStrategyFactory();
       default:
         throw new IAE("Unknown balancer stratgy: " + balancerStrategy);

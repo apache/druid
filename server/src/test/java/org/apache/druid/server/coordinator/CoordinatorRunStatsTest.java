@@ -33,9 +33,9 @@ import java.util.Map;
 
 public class CoordinatorRunStatsTest
 {
-  private static final CoordinatorStat STAT_1 = new CoordinatorStat("stat1");
-  private static final CoordinatorStat STAT_2 = new CoordinatorStat("stat2");
-  private static final CoordinatorStat STAT_3 = new CoordinatorStat("stat3");
+  private static final CoordinatorStat STAT_1 = new CoordinatorStat("stat1", "s1");
+  private static final CoordinatorStat STAT_2 = new CoordinatorStat("stat2", "s2");
+  private static final CoordinatorStat STAT_3 = new CoordinatorStat("stat3", "s3");
 
   private CoordinatorRunStats stats;
 

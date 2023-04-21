@@ -237,9 +237,12 @@ public class TierSegmentBalancer
 
   private static class Error
   {
-    static final CoordinatorStat SEGMENT_IS_UNUSED = new CoordinatorStat("move skipped (unused segment)");
-    static final CoordinatorStat DATASOURCE_NOT_FOUND = new CoordinatorStat("move skipped (invalid datasource)");
-    static final CoordinatorStat METADATA_NOT_FOUND = new CoordinatorStat("move skipped (invalid segment)");
+    static final CoordinatorStat SEGMENT_IS_UNUSED =
+        new CoordinatorStat("move skipped (unused segment)", CoordinatorStat.Level.INFO);
+    static final CoordinatorStat DATASOURCE_NOT_FOUND =
+        new CoordinatorStat("move skipped (invalid datasource)", CoordinatorStat.Level.INFO);
+    static final CoordinatorStat METADATA_NOT_FOUND =
+        new CoordinatorStat("move skipped (invalid segment)", CoordinatorStat.Level.INFO);
   }
 
 }

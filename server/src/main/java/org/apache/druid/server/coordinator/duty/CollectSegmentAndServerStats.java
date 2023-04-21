@@ -55,9 +55,7 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
     logServerAndLoadQueueStates(params.getDruidCluster());
 
     final CoordinatorRunStats stats = collectSegmentStats(params);
-    stats.forEachRow(
-        (row, statValues) -> log.info("Stats for row[%s] are [%s]", row, statValues)
-    );
+    stats.logStatsAndErrors(log);
 
     return params.buildFromExisting().withCoordinatorStats(stats).build();
   }

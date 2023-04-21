@@ -28,6 +28,7 @@ import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
+import org.apache.druid.server.coordinator.stats.Dimension;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -35,7 +36,10 @@ import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import java.util.Collection;
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -71,6 +75,9 @@ public class CoordinatorDynamicConfig
    */
   private final Set<String> specificDataSourcesToKillUnusedSegmentsIn;
   private final Set<String> decommissioningNodes;
+
+  private final Map<String, String> debugDimensions;
+  private final Map<Dimension, String> validDebugDimensions;
 
   @Deprecated
   private final int decommissioningMaxPercentOfMaxSegmentsToMove;
@@ -142,7 +149,8 @@ public class CoordinatorDynamicConfig
       @JsonProperty("pauseCoordination") boolean pauseCoordination,
       @JsonProperty("replicateAfterLoadTimeout") boolean replicateAfterLoadTimeout,
       @JsonProperty("maxNonPrimaryReplicantsToLoad") @Nullable Integer maxNonPrimaryReplicantsToLoad,
-      @JsonProperty("useRoundRobinSegmentAssignment") @Nullable Boolean useRoundRobinSegmentAssignment
+      @JsonProperty("useRoundRobinSegmentAssignment") @Nullable Boolean useRoundRobinSegmentAssignment,
+      @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions
   )
   {
     this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments =
@@ -213,6 +221,32 @@ public class CoordinatorDynamicConfig
         useRoundRobinSegmentAssignment,
         Defaults.USE_ROUND_ROBIN_ASSIGNMENT
     );
+    this.debugDimensions = debugDimensions;
+    this.validDebugDimensions = validateDebugDimensions(debugDimensions);
+  }
+
+  private Map<Dimension, String> validateDebugDimensions(Map<String, String> debugDimensions)
+  {
+    final Map<Dimension, String> validDebugDimensions = new EnumMap<>(Dimension.class);
+    if (debugDimensions == null || debugDimensions.isEmpty()) {
+      return validDebugDimensions;
+    }
+
+    final Map<String, Dimension> nameToDimension = new HashMap<>();
+    for (Dimension dimension : Dimension.values()) {
+      nameToDimension.put(dimension.reportedName(), dimension);
+    }
+
+    debugDimensions.forEach(
+        (dimensionName, value) -> {
+          Dimension dimension = nameToDimension.get(dimensionName);
+          if (dimension != null && value != null) {
+            validDebugDimensions.put(dimension, value);
+          }
+        }
+    );
+
+    return validDebugDimensions;
   }
 
   private static Set<String> parseJsonStringOrArray(Object jsonStringOrArray)
@@ -352,7 +386,18 @@ public class CoordinatorDynamicConfig
   public Set<String> getDecommissioningNodes()
   {
     return decommissioningNodes;
+  }
 
+  @JsonProperty
+  public Map<String, String> getDebugDimensions()
+  {
+    return debugDimensions;
+  }
+
+  @JsonIgnore
+  public Map<Dimension, String> getValidatedDebugDimensions()
+  {
+    return validDebugDimensions;
   }
 
   /**
@@ -525,6 +570,7 @@ public class CoordinatorDynamicConfig
     private Object dataSourcesToNotKillStalePendingSegmentsIn;
     private Integer maxSegmentsInNodeLoadingQueue;
     private Object decommissioningNodes;
+    private Map<String, String> debugDimensions;
     private Integer decommissioningMaxPercentOfMaxSegmentsToMove;
     private Boolean pauseCoordination;
     private Boolean replicateAfterLoadTimeout;
@@ -557,7 +603,8 @@ public class CoordinatorDynamicConfig
         @JsonProperty("pauseCoordination") @Nullable Boolean pauseCoordination,
         @JsonProperty("replicateAfterLoadTimeout") @Nullable Boolean replicateAfterLoadTimeout,
         @JsonProperty("maxNonPrimaryReplicantsToLoad") @Nullable Integer maxNonPrimaryReplicantsToLoad,
-        @JsonProperty("useRoundRobinSegmentAssignment") @Nullable Boolean useRoundRobinSegmentAssignment
+        @JsonProperty("useRoundRobinSegmentAssignment") @Nullable Boolean useRoundRobinSegmentAssignment,
+        @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions
     )
     {
       this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments =
@@ -580,6 +627,7 @@ public class CoordinatorDynamicConfig
       this.replicateAfterLoadTimeout = replicateAfterLoadTimeout;
       this.maxNonPrimaryReplicantsToLoad = maxNonPrimaryReplicantsToLoad;
       this.useRoundRobinSegmentAssignment = useRoundRobinSegmentAssignment;
+      this.debugDimensions = debugDimensions;
     }
 
     public Builder withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(long leadingTimeMillis)
@@ -723,7 +771,8 @@ public class CoordinatorDynamicConfig
           valueOrDefault(pauseCoordination, Defaults.PAUSE_COORDINATION),
           valueOrDefault(replicateAfterLoadTimeout, Defaults.REPLICATE_AFTER_LOAD_TIMEOUT),
           valueOrDefault(maxNonPrimaryReplicantsToLoad, Defaults.MAX_NON_PRIMARY_REPLICANTS_TO_LOAD),
-          valueOrDefault(useRoundRobinSegmentAssignment, Defaults.USE_ROUND_ROBIN_ASSIGNMENT)
+          valueOrDefault(useRoundRobinSegmentAssignment, Defaults.USE_ROUND_ROBIN_ASSIGNMENT),
+          debugDimensions
       );
     }
 
@@ -759,7 +808,8 @@ public class CoordinatorDynamicConfig
           valueOrDefault(pauseCoordination, defaults.getPauseCoordination()),
           valueOrDefault(replicateAfterLoadTimeout, defaults.getReplicateAfterLoadTimeout()),
           valueOrDefault(maxNonPrimaryReplicantsToLoad, defaults.getMaxNonPrimaryReplicantsToLoad()),
-          valueOrDefault(useRoundRobinSegmentAssignment, defaults.isUseRoundRobinSegmentAssignment())
+          valueOrDefault(useRoundRobinSegmentAssignment, defaults.isUseRoundRobinSegmentAssignment()),
+          valueOrDefault(debugDimensions, defaults.getDebugDimensions())
       );
     }
   }

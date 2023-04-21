@@ -24,7 +24,6 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
@@ -35,12 +34,10 @@ import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
-import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.curator.CuratorUtils;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.TestHelper;
@@ -76,7 +73,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * This tests zookeeper specific coordinator/load queue/historical interactions, such as moving segments by the balancer
@@ -126,23 +122,6 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     segmentsMetadataManager = EasyMock.createNiceMock(SegmentsMetadataManager.class);
     dataSourcesSnapshot = EasyMock.createNiceMock(DataSourcesSnapshot.class);
     coordinatorRuntimeParams = EasyMock.createNiceMock(DruidCoordinatorRuntimeParams.class);
-
-    JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
-    EasyMock.expect(
-        configManager.watch(
-            EasyMock.eq(CoordinatorDynamicConfig.CONFIG_KEY),
-            EasyMock.anyObject(Class.class),
-            EasyMock.anyObject()
-        )
-    ).andReturn(new AtomicReference<>(CoordinatorDynamicConfig.builder().build())).anyTimes();
-    EasyMock.expect(
-        configManager.watch(
-            EasyMock.eq(CoordinatorCompactionConfig.CONFIG_KEY),
-            EasyMock.anyObject(Class.class),
-            EasyMock.anyObject()
-        )
-    ).andReturn(new AtomicReference<>(CoordinatorCompactionConfig.empty())).anyTimes();
-    EasyMock.replay(configManager);
 
     setupServerAndCurator();
     curator.start();
@@ -246,20 +225,14 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     setupZNodeForServer(source, zkPathsConfig, jsonMapper);
     setupZNodeForServer(dest, zkPathsConfig, jsonMapper);
 
-    final List<DataSegment> sourceSegments = Lists.transform(
-        ImmutableList.of(
-            Pair.of("2011-04-01/2011-04-03", "v1"),
-            Pair.of("2011-04-03/2011-04-06", "v1"),
-            Pair.of("2011-04-06/2011-04-09", "v1")
-        ),
-        input -> dataSegmentWithIntervalAndVersion(input.lhs, input.rhs)
+    final List<DataSegment> sourceSegments = Arrays.asList(
+        createSegment("2011-04-01/2011-04-03", "v1"),
+        createSegment("2011-04-03/2011-04-06", "v1"),
+        createSegment("2011-04-06/2011-04-09", "v1")
     );
 
-    final List<DataSegment> destinationSegments = Lists.transform(
-        ImmutableList.of(
-            Pair.of("2011-03-31/2011-04-01", "v1")
-        ),
-        input -> dataSegmentWithIntervalAndVersion(input.lhs, input.rhs)
+    final List<DataSegment> destinationSegments = Collections.singletonList(
+        createSegment("2011-03-31/2011-04-01", "v1")
     );
 
     DataSegment segmentToMove = sourceSegments.get(2);
@@ -321,9 +294,11 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     EasyMock.replay(druidDataSource);
     EasyMock.expect(segmentsMetadataManager.getImmutableDataSourceWithUsedSegments(EasyMock.anyString()))
             .andReturn(druidDataSource);
-    EasyMock.expect(coordinatorRuntimeParams.getDataSourcesSnapshot()).andReturn(dataSourcesSnapshot).anyTimes();
+    EasyMock.expect(coordinatorRuntimeParams.getDataSourcesSnapshot())
+            .andReturn(dataSourcesSnapshot).anyTimes();
     EasyMock.expect(coordinatorRuntimeParams.getCoordinatorDynamicConfig())
-            .andReturn(CoordinatorDynamicConfig.builder().build()).anyTimes();
+            .andReturn(CoordinatorDynamicConfig.builder().withUseRoundRobinSegmentAssignment(false).build())
+            .anyTimes();
 
     final ServerHolder sourceServer = new ServerHolder(source.toImmutableDruidServer(), sourceLoadQueuePeon);
     final ServerHolder destinationServer = new ServerHolder(dest.toImmutableDruidServer(), destinationLoadQueuePeon);
@@ -430,7 +405,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     destinationLoadQueuePeon.start();
   }
 
-  private DataSegment dataSegmentWithIntervalAndVersion(String intervalStr, String version)
+  private DataSegment createSegment(String intervalStr, String version)
   {
     return DataSegment.builder()
                       .dataSource("test_curator_druid_coordinator")
@@ -464,7 +439,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         params.getSegmentReplicantLookup(),
         throttler,
         params.getBalancerStrategy(),
-        false
+        dynamicConfig
     );
   }
 }

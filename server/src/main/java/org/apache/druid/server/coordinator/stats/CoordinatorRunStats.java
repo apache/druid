@@ -20,11 +20,15 @@
 package org.apache.druid.server.coordinator.stats;
 
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.concurrent.ThreadSafe;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiConsumer;
 
 /**
  * Contains statistics tracked during a single coordinator run or the runtime of
@@ -33,8 +37,21 @@ import java.util.function.BiConsumer;
 @ThreadSafe
 public class CoordinatorRunStats
 {
-  private final ConcurrentHashMap<RowKey, Object2LongOpenHashMap<CoordinatorStat>> allStats
-      = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<RowKey, Object2LongOpenHashMap<CoordinatorStat>>
+      allStats = new ConcurrentHashMap<>();
+  private final Map<Dimension, String> debugDimensions = new HashMap<>();
+
+  public CoordinatorRunStats()
+  {
+    this(null);
+  }
+
+  public CoordinatorRunStats(Map<Dimension, String> debugDimensions)
+  {
+    if (debugDimensions != null) {
+      this.debugDimensions.putAll(debugDimensions);
+    }
+  }
 
   public long getTieredStat(CoordinatorStat stat, String tier)
   {
@@ -71,13 +88,50 @@ public class CoordinatorRunStats
   }
 
   /**
-   * Applies the given consumer to each row of the stats table. A single row is
-   * identified by a unique combination of dimension values and may have multiple
-   * stats (aka metrics) in it.
+   * Logs all the error, info and debug level stats (if applicable) with non-zero
+   * values, using the given logger.
    */
-  public void forEachRow(BiConsumer<RowKey, Map<CoordinatorStat, Long>> consumer)
+  public void logStatsAndErrors(Logger log)
   {
-    allStats.forEach(consumer);
+    allStats.forEach(
+        (rowKey, statMap) -> {
+          // Categorize the stats by level
+          final Map<CoordinatorStat.Level, Map<CoordinatorStat, Long>> levelToStats
+              = new EnumMap<>(CoordinatorStat.Level.class);
+
+          statMap.object2LongEntrySet().fastForEach(
+              stat -> {
+                if (stat.getLongValue() == 0) {
+                  return;
+                }
+
+                levelToStats.computeIfAbsent(stat.getKey().getLevel(), l -> new HashMap<>())
+                            .put(stat.getKey(), stat.getLongValue());
+              }
+          );
+
+          // Log all the errors
+          final Map<CoordinatorStat, Long> errorStats = levelToStats
+              .getOrDefault(CoordinatorStat.Level.ERROR, Collections.emptyMap());
+          if (!errorStats.isEmpty()) {
+            log.error("There were errors for row[%s]: %s", rowKey, errorStats);
+          }
+
+          // Log all the infos
+          final Map<CoordinatorStat, Long> infoStats = levelToStats
+              .getOrDefault(CoordinatorStat.Level.INFO, Collections.emptyMap());
+          if (!infoStats.isEmpty()) {
+            log.info("Stats for row[%s] are [%s].", rowKey, infoStats);
+          }
+
+          // Log all the debugs
+          final Map<CoordinatorStat, Long> debugStats = levelToStats
+              .getOrDefault(CoordinatorStat.Level.DEBUG, Collections.emptyMap());
+          if (!debugStats.isEmpty() && hasDebugDimension(rowKey)) {
+            log.info("Stats for row[%s] are [%s].", rowKey, debugStats);
+          }
+        }
+    );
   }
 
   public boolean hasStat(CoordinatorStat stat)
@@ -167,8 +221,27 @@ public class CoordinatorRunStats
 
   private void add(long value, CoordinatorStat stat, RowKey rowKey)
   {
+    // Do not add a stat which will neither be emitted nor logged
+    if (!stat.shouldEmit()
+        && stat.getLevel() == CoordinatorStat.Level.DEBUG
+        && debugDimensions.isEmpty()) {
+      return;
+    }
+
     allStats.computeIfAbsent(rowKey, d -> new Object2LongOpenHashMap<>())
             .addTo(stat, value);
+  }
+
+  private boolean hasDebugDimension(RowKey rowKey)
+  {
+    for (Map.Entry<Dimension, String> entry : rowKey.getValues().entrySet()) {
+      String expectedValue = debugDimensions.get(entry.getKey());
+      if (Objects.equals(expectedValue, entry.getValue())) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   public interface StatHandler

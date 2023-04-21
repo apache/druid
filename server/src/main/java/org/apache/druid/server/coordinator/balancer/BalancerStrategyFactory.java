@@ -25,11 +25,26 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "strategy", defaultImpl = CostBalancerStrategyFactory.class)
 @JsonSubTypes(value = {
-        @JsonSubTypes.Type(name = "diskNormalized", value = DiskNormalizedCostBalancerStrategyFactory.class),
-        @JsonSubTypes.Type(name = "cost", value = CostBalancerStrategyFactory.class),
-        @JsonSubTypes.Type(name = "cachingCost", value = CachingCostBalancerStrategyFactory.class),
-        @JsonSubTypes.Type(name = "random", value = RandomBalancerStrategyFactory.class),
-        @JsonSubTypes.Type(name = "uniformInterval", value = UniformIntervalBalancerStrategyFactory.class)
+    @JsonSubTypes.Type(
+        name = BalancerStrategy.COST,
+        value = CostBalancerStrategyFactory.class
+    ),
+    @JsonSubTypes.Type(
+        name = BalancerStrategy.CACHING_COST,
+        value = CachingCostBalancerStrategyFactory.class
+    ),
+    @JsonSubTypes.Type(
+        name = BalancerStrategy.DISK_NORMALIZED,
+        value = DiskNormalizedCostBalancerStrategyFactory.class
+    ),
+    @JsonSubTypes.Type(
+        name = BalancerStrategy.RANDOM,
+        value = RandomBalancerStrategyFactory.class
+    ),
+    @JsonSubTypes.Type(
+        name = BalancerStrategy.UNIFORM_INTERVAL,
+        value = UniformIntervalBalancerStrategyFactory.class
+    )
 })
 public interface BalancerStrategyFactory
 {

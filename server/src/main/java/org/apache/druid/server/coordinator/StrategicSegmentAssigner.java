@@ -53,7 +53,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
   private final SegmentLoadQueueManager loadQueueManager;
   private final DruidCluster cluster;
-  private final CoordinatorRunStats stats = new CoordinatorRunStats();
+  private final CoordinatorRunStats stats;
   private final SegmentReplicantLookup replicantLookup;
   private final ReplicationThrottler replicationThrottler;
   private final RoundRobinServerSelector serverSelector;
@@ -61,7 +61,6 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
   private final boolean useRoundRobinAssignment;
 
-  private boolean hasErrors;
   private final Set<String> tiersWithNoServer = new HashSet<>();
 
   public StrategicSegmentAssigner(
@@ -70,7 +69,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       SegmentReplicantLookup replicantLookup,
       ReplicationThrottler replicationThrottler,
       BalancerStrategy strategy,
-      boolean useRoundRobinAssignment
+      CoordinatorDynamicConfig dynamicConfig
   )
   {
     this.cluster = cluster;
@@ -78,7 +77,8 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     this.loadQueueManager = loadQueueManager;
     this.replicantLookup = replicantLookup;
     this.replicationThrottler = replicationThrottler;
-    this.useRoundRobinAssignment = useRoundRobinAssignment;
+    this.useRoundRobinAssignment = dynamicConfig.isUseRoundRobinSegmentAssignment();
+    this.stats = new CoordinatorRunStats(dynamicConfig.getValidatedDebugDimensions());
     this.serverSelector = useRoundRobinAssignment ? new RoundRobinServerSelector(cluster) : null;
   }
 
@@ -91,9 +91,6 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   {
     if (!tiersWithNoServer.isEmpty()) {
       log.makeAlert("Tiers [%s] have no servers! Check your cluster configuration.", tiersWithNoServer).emit();
-    }
-    if (hasErrors) {
-      log.warn("There were some assignment errors. Please check logged stats for more details.");
     }
   }
 
@@ -502,7 +499,6 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
   private void incrementStat(CoordinatorStat stat, DataSegment segment, String tier)
   {
-    hasErrors = true;
     RowKey rowKey = RowKey.builder()
                           .add(Dimension.DATASOURCE, segment.getDataSource())
                           .add(Dimension.TIER, tier)
@@ -516,17 +512,26 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
    */
   private static class Error
   {
-    static final CoordinatorStat MOVE_FAILED = new CoordinatorStat("failed to start move");
-    static final CoordinatorStat NO_ELIGIBLE_SERVER_FOR_MOVE = new CoordinatorStat("no eligible server for move");
-    static final CoordinatorStat MOVE_SKIPPED_OPTIMALLY_PLACED = new CoordinatorStat("move skipped (optimally placed)");
+    static final CoordinatorStat MOVE_FAILED
+        = new CoordinatorStat("failed to start move", CoordinatorStat.Level.ERROR);
+    static final CoordinatorStat NO_ELIGIBLE_SERVER_FOR_MOVE
+        = new CoordinatorStat("no eligible server for move", CoordinatorStat.Level.INFO);
+    static final CoordinatorStat MOVE_SKIPPED_OPTIMALLY_PLACED
+        = new CoordinatorStat("move skipped (optimally placed)");
 
-    static final CoordinatorStat DROP_FAILED = new CoordinatorStat("failed to start drop");
-    static final CoordinatorStat NO_ELIGIBLE_SERVER_FOR_DROP = new CoordinatorStat("no eligible server for drop");
+    static final CoordinatorStat DROP_FAILED
+        = new CoordinatorStat("failed to start drop", CoordinatorStat.Level.ERROR);
+    static final CoordinatorStat NO_ELIGIBLE_SERVER_FOR_DROP
+        = new CoordinatorStat("no eligible server for drop", CoordinatorStat.Level.INFO);
 
-    static final CoordinatorStat LOAD_FAILED = new CoordinatorStat("failed to start load");
-    static final CoordinatorStat REPLICA_THROTTLED = new CoordinatorStat("replica throttled");
-    static final CoordinatorStat NO_ELIGIBLE_SERVER_FOR_LOAD = new CoordinatorStat("no eligible server for load");
-    static final CoordinatorStat NO_STRATEGIC_SERVER_FOR_LOAD = new CoordinatorStat("no strategic server for load");
+    static final CoordinatorStat LOAD_FAILED
+        = new CoordinatorStat("failed to start load", CoordinatorStat.Level.ERROR);
+    static final CoordinatorStat REPLICA_THROTTLED
+        = new CoordinatorStat("replica throttled");
+    static final CoordinatorStat NO_ELIGIBLE_SERVER_FOR_LOAD
+        = new CoordinatorStat("no eligible server for load", CoordinatorStat.Level.INFO);
+    static final CoordinatorStat NO_STRATEGIC_SERVER_FOR_LOAD
+        = new CoordinatorStat("no strategic server for load", CoordinatorStat.Level.INFO);
   }
 
 }

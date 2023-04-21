@@ -39,6 +39,13 @@ import java.util.Set;
  */
 public interface BalancerStrategy
 {
+  // Strategy types
+  String COST = "cost";
+  String CACHING_COST = "cachingCost";
+  String DISK_NORMALIZED = "diskNormalized";
+  String RANDOM = "random";
+  String UNIFORM_INTERVAL = "uniformInterval";
+
   /**
    * Finds the best server to move a segment to according to the balancing strategy.
    *

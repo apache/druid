@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.simulate;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.server.coordinator.CreateDataSegments;
+import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -43,7 +44,11 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
   @Parameterized.Parameters(name = "{0}")
   public static String[] getTestParameters()
   {
-    return new String[]{"cost", "cachingCost", "uniformInterval"};
+    return new String[]{
+        BalancerStrategy.COST,
+        BalancerStrategy.CACHING_COST,
+        BalancerStrategy.UNIFORM_INTERVAL
+    };
   }
 
   public BalancingStrategiesTest(String strategy)

@@ -173,7 +173,7 @@ public class LoadRuleTest
         params.getSegmentReplicantLookup(),
         throttler,
         params.getBalancerStrategy(),
-        useRoundRobinAssignment
+        dynamicConfig
     );
     rule.run(segment, segmentAssigner);
     return segmentAssigner.getStats();

@@ -26,16 +26,34 @@ public class CoordinatorStat
 {
   private final String metricName;
   private final String shortName;
+  private final Level level;
 
+  /**
+   * Creates a new non-emitting, DEBUG level stat.
+   */
   public CoordinatorStat(String shortStatName)
   {
-    this(shortStatName, null);
+    this(shortStatName, null, Level.DEBUG);
   }
 
+  public CoordinatorStat(String shortName, Level level)
+  {
+    this(shortName, null, level);
+  }
+
+  /**
+   * Creates a new emitting, DEBUG level stat.
+   */
   public CoordinatorStat(String shortStatName, String metricName)
+  {
+    this(shortStatName, metricName, Level.DEBUG);
+  }
+
+  public CoordinatorStat(String shortStatName, String metricName, Level level)
   {
     this.metricName = metricName;
     this.shortName = shortStatName;
+    this.level = level == null ? Level.DEBUG : level;
   }
 
   /**
@@ -51,6 +69,11 @@ public class CoordinatorStat
     return shortName;
   }
 
+  public Level getLevel()
+  {
+    return level;
+  }
+
   /**
    * Whether this statistic should be emitted as a metric.
    */
@@ -63,6 +86,14 @@ public class CoordinatorStat
   public String toString()
   {
     return shortName;
+  }
+
+  /**
+   * Level of coordinator stat, typically used for logging.
+   */
+  public enum Level
+  {
+    DEBUG, INFO, ERROR
   }
 
 }

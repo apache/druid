@@ -20,7 +20,7 @@
 package org.apache.druid.server.coordinator.stats;
 
 /**
- * Dimensions used while reporting coordinator run stats.
+ * Dimensions used while collecting or reporting coordinator run stats.
  */
 public enum Dimension
 {
@@ -37,6 +37,9 @@ public enum Dimension
     this.reportedName = name;
   }
 
+  /**
+   * The name of this dimension used while emitting metrics.
+   */
   public String reportedName()
   {
     return reportedName;

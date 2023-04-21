@@ -28,18 +28,18 @@ public class Stats
   {
     // Decisions taken in a run
     public static final CoordinatorStat ASSIGNED
-        = new CoordinatorStat("assigned", "segment/assigned/count");
+        = new CoordinatorStat("assigned", "segment/assigned/count", CoordinatorStat.Level.INFO);
     public static final CoordinatorStat DROPPED
-        = new CoordinatorStat("dropped", "segment/dropped/count");
+        = new CoordinatorStat("dropped", "segment/dropped/count", CoordinatorStat.Level.INFO);
     public static final CoordinatorStat DELETED
-        = new CoordinatorStat("deleted", "segment/deleted/count");
+        = new CoordinatorStat("deleted", "segment/deleted/count", CoordinatorStat.Level.INFO);
     public static final CoordinatorStat MOVED
-        = new CoordinatorStat("moved", "segment/moved/count");
+        = new CoordinatorStat("moved", "segment/moved/count", CoordinatorStat.Level.INFO);
 
     public static final CoordinatorStat ASSIGNED_BROADCAST
-        = new CoordinatorStat("assignBroad", "segment/assigned/broadcast");
+        = new CoordinatorStat("assignBroad", "segment/assigned/broadcast", CoordinatorStat.Level.INFO);
     public static final CoordinatorStat DROPPED_BROADCAST
-        = new CoordinatorStat("dropBroad", "segment/dropped/broadcast");
+        = new CoordinatorStat("dropBroad", "segment/dropped/broadcast", CoordinatorStat.Level.INFO);
 
     // Current state of segments of a datasource
     public static final CoordinatorStat USED
@@ -70,7 +70,7 @@ public class Stats
     public static final CoordinatorStat COMPLETED_ACTIONS
         = new CoordinatorStat("successActions", "segment/loadQueue/success");
     public static final CoordinatorStat FAILED_ACTIONS
-        = new CoordinatorStat("failedActions", "segment/loadQueue/failed");
+        = new CoordinatorStat("failedActions", "segment/loadQueue/failed", CoordinatorStat.Level.ERROR);
     public static final CoordinatorStat CANCELLED_ACTIONS
         = new CoordinatorStat("cancelActions", "segment/loadQueue/cancelled");
   }
