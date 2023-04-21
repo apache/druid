@@ -19,17 +19,12 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
-
 public class ParallelIndexStatsReporterFactory
 {
   ParallelIndexStatsReporter create(ParallelIndexSupervisorTask task)
   {
     if (task.isParallelMode()) {
-      if (AbstractBatchIndexTask.isGuaranteedRollup(
-          task.getIngestionMode(),
-          task.getIngestionSchema().getTuningConfig()
-      )) {
+      if (task.isPerfectRollup()) {
         return new MultiPhaseParallelIndexStatsReporter();
       } else {
         return new SinglePhaseParallelIndexStatsReporter();

@@ -43,7 +43,7 @@ public class ClusterConfigTest
   {
     ClusterConfig config = ClusterConfig.loadFromResource("/config-test/test.yaml");
     // Uncomment this line to see the full config with includes resolved.
-    System.out.println(config.resolveIncludes());
+    //System.out.println(config.resolveIncludes());
 
     ResolvedConfig resolved = config.resolve("Test");
     assertEquals(ClusterType.docker, resolved.type());
