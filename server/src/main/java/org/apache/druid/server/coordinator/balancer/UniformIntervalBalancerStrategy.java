@@ -96,12 +96,12 @@ public class UniformIntervalBalancerStrategy implements BalancerStrategy
       List<ServerHolder> destinationServers
   )
   {
-    Iterator<ServerHolder> bestServers = chooseBestServers(segment, destinationServers, true);
-    if (!bestServers.hasNext()) {
+    Iterator<ServerHolder> candidateServers = findServersToLoad(segment, destinationServers);
+    if (!candidateServers.hasNext()) {
       return null;
     }
 
-    ServerHolder targetServer = bestServers.next();
+    final ServerHolder targetServer = candidateServers.next();
     final int countOnSource = sourceServer.getNumSegmentsInDatasourceInterval(segment);
     final int countOnTarget = targetServer.getNumSegmentsInDatasourceInterval(segment);
 
@@ -123,7 +123,7 @@ public class UniformIntervalBalancerStrategy implements BalancerStrategy
       List<ServerHolder> serverHolders
   )
   {
-    return chooseBestServers(proposalSegment, serverHolders, false);
+    return findServersToLoad(proposalSegment, serverHolders);
   }
 
   @Override
@@ -132,27 +132,26 @@ public class UniformIntervalBalancerStrategy implements BalancerStrategy
     // Do not emit anything
   }
 
-  private Iterator<ServerHolder> chooseBestServers(
+  /**
+   * Finds the servers from the given list that can load this segment.
+   * The servers are returned in the order of most preferred first.
+   */
+  private Iterator<ServerHolder> findServersToLoad(
       final DataSegment proposalSegment,
-      final Iterable<ServerHolder> serverHolders,
-      final boolean includeCurrentServer
+      final Iterable<ServerHolder> serverHolders
   )
   {
     final PriorityQueue<ServerSegmentCount> costPrioritizedServers =
         new PriorityQueue<>(CHEAPEST_SERVERS_FIRST);
 
     for (ServerHolder server : serverHolders) {
-      final int count = server.getNumSegmentsInDatasourceInterval(proposalSegment);
-      if (includeCurrentServer || server.canLoadSegment(proposalSegment)) {
+      if (server.canLoadSegment(proposalSegment)) {
+        final int count = server.getNumSegmentsInDatasourceInterval(proposalSegment);
         costPrioritizedServers.add(new ServerSegmentCount(server, count));
       }
     }
 
-    // Include current server only if specified
-    return costPrioritizedServers.stream()
-                                 .filter(entry -> includeCurrentServer
-                                                  || entry.server.canLoadSegment(proposalSegment))
-                                 .map(entry -> entry.server).iterator();
+    return costPrioritizedServers.stream().map(entry -> entry.server).iterator();
   }
 
   private static class ServerSegmentCount

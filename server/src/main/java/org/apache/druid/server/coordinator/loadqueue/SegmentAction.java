@@ -29,14 +29,14 @@ public enum SegmentAction
   /**
    * Drop a segment from a server.
    */
-  DROP,
+  DROP(false),
 
   /**
    * Load a segment on a server. This should be used when trying to load a segment
    * on a tier where it is currently unavailable (i.e. no replicas loaded).
    * This action cannot be throttled by the {@code replicationThrottleLimit}.
    */
-  LOAD,
+  LOAD(true),
 
   /**
    * Load a replica of a segment on a server. This should be used when trying to
@@ -50,16 +50,32 @@ public enum SegmentAction
    * </ul>
    * For all other purposes, REPLICATE is treated the same as LOAD.
    */
-  REPLICATE,
+  REPLICATE(true),
 
   /**
    * Move a segment to this server.
    */
-  MOVE_TO,
+  MOVE_TO(true),
 
   /**
    * Move a segment from this server to another. This is essentially a pending
    * DROP operation, which starts only when the corresponding MOVE_TO has succeded.
    */
-  MOVE_FROM
+  MOVE_FROM(false);
+
+  private final boolean isLoad;
+
+  SegmentAction(boolean isLoad)
+  {
+    this.isLoad = isLoad;
+  }
+
+  /**
+   * True only if this action loads a segment on a server, i.e. LOAD, REPLICATE
+   * or MOVE_TO.
+   */
+  public boolean isLoad()
+  {
+    return isLoad;
+  }
 }

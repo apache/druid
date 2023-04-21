@@ -106,7 +106,7 @@ public class ServerHolder implements Comparable<ServerHolder>
     peon.getSegmentsInQueue().forEach(
         (segment, action) -> {
           queuedSegments.put(segment, simplify(action));
-          if (isLoadAction(action)) {
+          if (action.isLoad()) {
             sizeOfLoadingSegments += segment.getSize();
             updateCountInInterval(segment, true);
           } else {
@@ -278,7 +278,7 @@ public class ServerHolder implements Comparable<ServerHolder>
       return false;
     }
 
-    if (isLoadAction(action)) {
+    if (action.isLoad()) {
       ++totalAssignmentsInRun;
       sizeOfLoadingSegments += segment.getSize();
       updateCountInInterval(segment, true);
@@ -314,17 +314,10 @@ public class ServerHolder implements Comparable<ServerHolder>
     return action == SegmentAction.REPLICATE ? SegmentAction.LOAD : action;
   }
 
-  private boolean isLoadAction(SegmentAction action)
-  {
-    return action == SegmentAction.LOAD
-           || action == SegmentAction.REPLICATE
-           || action == SegmentAction.MOVE_TO;
-  }
-
   private boolean cleanupState(DataSegment segment)
   {
     final SegmentAction action = queuedSegments.remove(segment);
-    if (isLoadAction(action)) {
+    if (action.isLoad()) {
       sizeOfLoadingSegments -= segment.getSize();
       updateCountInInterval(segment, false);
     } else {

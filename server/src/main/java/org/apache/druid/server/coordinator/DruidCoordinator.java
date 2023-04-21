@@ -74,7 +74,6 @@ import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.duty.UnloadUnusedSegments;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueueTaskMaster;
-import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
 import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
@@ -899,8 +898,8 @@ public class DruidCoordinator
       cluster.getAllServers().stream().filter(ServerHolder::isDecommissioning).forEach(
           server -> server.getQueuedSegments().forEach(
               (segment, action) -> {
-                if (action != SegmentAction.DROP
-                    && server.cancelOperation(action, segment)) {
+                // Cancel the operation if it is a type of load action
+                if (action.isLoad() && server.cancelOperation(action, segment)) {
                   cancelledCount.incrementAndGet();
                 }
               }

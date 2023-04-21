@@ -124,7 +124,7 @@ public class CoordinatorRunStats
           final Map<CoordinatorStat, Long> debugStats = levelToStats
               .getOrDefault(CoordinatorStat.Level.DEBUG, Collections.emptyMap());
           if (!debugStats.isEmpty() && hasDebugDimension(rowKey)) {
-            log.info("Stats for row[%s] are [%s].", rowKey, debugStats);
+            log.info("Debug stats for row[%s] are [%s].", rowKey, debugStats);
           }
         }
     );

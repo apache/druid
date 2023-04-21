@@ -29,7 +29,6 @@ import org.apache.druid.server.coordinator.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 
 import java.util.Collections;
 import java.util.Iterator;
@@ -208,8 +207,6 @@ public class TierSegmentBalancer
    */
   private DataSegment getLoadableSegment(DataSegment segmentToMove)
   {
-    final SegmentId segmentId = segmentToMove.getId();
-
     if (!params.getUsedSegments().contains(segmentToMove)) {
       markUnmoved(Error.SEGMENT_IS_UNUSED, segmentToMove);
       return null;
@@ -221,7 +218,7 @@ public class TierSegmentBalancer
       return null;
     }
 
-    DataSegment loadableSegment = datasource.getSegment(segmentId);
+    DataSegment loadableSegment = datasource.getSegment(segmentToMove.getId());
     if (loadableSegment == null) {
       markUnmoved(Error.METADATA_NOT_FOUND, segmentToMove);
       return null;

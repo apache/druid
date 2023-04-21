@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.balancer;
 
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.ArrayList;
@@ -35,13 +36,13 @@ final class ReservoirSegmentSampler
   private static final EmittingLogger log = new EmittingLogger(ReservoirSegmentSampler.class);
 
   static List<BalancerSegmentHolder> getRandomBalancerSegmentHolders(
-      final List<ServerHolder> serverHolders,
+      List<ServerHolder> serverHolders,
       Set<String> broadcastDatasources,
-      int k,
+      int maxSegmentsToPick,
       boolean pickLoadingSegments
   )
   {
-    List<BalancerSegmentHolder> holders = new ArrayList<>(k);
+    List<BalancerSegmentHolder> holders = new ArrayList<>(maxSegmentsToPick);
     int numSoFar = 0;
 
     for (ServerHolder server : serverHolders) {
@@ -58,15 +59,18 @@ final class ReservoirSegmentSampler
         if (broadcastDatasources.contains(segment.getDataSource())) {
           // we don't need to rebalance segments that were assigned via broadcast rules
           continue;
+        } else if (server.getActionOnSegment(segment) == SegmentAction.MOVE_FROM) {
+          // Do not pick a segment which is already being moved
+          continue;
         }
 
-        if (numSoFar < k) {
+        if (numSoFar < maxSegmentsToPick) {
           holders.add(new BalancerSegmentHolder(server, segment));
           numSoFar++;
           continue;
         }
         int randNum = ThreadLocalRandom.current().nextInt(numSoFar + 1);
-        if (randNum < k) {
+        if (randNum < maxSegmentsToPick) {
           holders.set(randNum, new BalancerSegmentHolder(server, segment));
         }
         numSoFar++;

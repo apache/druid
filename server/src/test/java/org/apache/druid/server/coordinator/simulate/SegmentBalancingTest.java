@@ -148,21 +148,13 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
 
     // Verify that there are segments in the load queue for balancing
     verifyValue(Metric.MOVED_COUNT, 5L);
-    verifyValue(
-        Metric.LOAD_QUEUE_COUNT,
-        filterByServer(historicalT12),
-        5L
-    );
+    verifyValue(Metric.LOAD_QUEUE_COUNT, filterByServer(historicalT12), 5L);
 
     runCoordinatorCycle();
 
     // Verify that the segments in the load queue are not considered as over-replicated
-    verifyNotEmitted("segment/dropped/count");
-    verifyValue(
-        Metric.LOAD_QUEUE_COUNT,
-        filterByServer(historicalT12),
-        5L
-    );
+    verifyNotEmitted(Metric.DROPPED_COUNT);
+    verifyValue(Metric.LOAD_QUEUE_COUNT, filterByServer(historicalT12), 5L);
 
     // Finish and verify balancing
     loadQueuedSegments();

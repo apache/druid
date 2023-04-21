@@ -157,7 +157,7 @@ public class HttpLoadQueuePeonTest
     Collections.shuffle(segmentsDay1);
 
     // Assign segments to the actions in their order of priority
-    // Order: drop, priorityLoad, load, move
+    // Order: drop, load, replicate, move
     final List<QueueAction> actions = Arrays.asList(
         QueueAction.of(segmentsDay1.get(0), s -> httpLoadQueuePeon.dropSegment(s, null)),
         QueueAction.of(segmentsDay1.get(1), s -> httpLoadQueuePeon.loadSegment(s, SegmentAction.LOAD, null)),

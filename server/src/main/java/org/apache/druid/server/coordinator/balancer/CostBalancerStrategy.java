@@ -381,7 +381,5 @@ public class CostBalancerStrategy implements BalancerStrategy
                       .filter(pair -> includeCurrentServer || pair.rhs.canLoadSegment(proposalSegment))
                       .map(pair -> pair.rhs).iterator();
   }
-
-
 }
 
