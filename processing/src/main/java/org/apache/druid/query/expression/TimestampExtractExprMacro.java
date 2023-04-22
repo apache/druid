@@ -107,6 +107,8 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
         }
         final DateTime dateTime = new DateTime(val, chronology);
         long epoch = dateTime.getMillis() / 1000;
+        int isoWeek = dateTime.weekOfWeekyear().get(); // get ISO week of year
+        int isoYear = dateTime.getWeekyear(); // get ISO year
 
         switch (unit) {
           case EPOCH:
@@ -138,7 +140,15 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
           case YEAR:
             return ExprEval.of(dateTime.year().get());
           case ISOYEAR:
-            return ExprEval.of(dateTime.weekyear().get());
+            if(isoWeek == 1 && dateTime.getMonthOfYear() == 12) {
+              // special case: if the date is in the last week of the previous year
+              isoYear--;
+            } 
+            else if(isoWeek >= 52 && dateTime.getMonthOfYear() == 1) {
+            // special case: if the date is in the first week of the next year
+            isoYear++;
+            }
+            return ExprEval.of(isoYear);
           case DECADE:
             // The year field divided by 10, See https://www.postgresql.org/docs/10/functions-datetime.html
             return ExprEval.of(dateTime.year().get() / 10);
