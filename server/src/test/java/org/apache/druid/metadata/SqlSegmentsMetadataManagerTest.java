@@ -33,8 +33,11 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.server.coordination.ChangeRequestHistory;
+import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegmentChange;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
@@ -46,6 +49,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -75,6 +79,28 @@ public class SqlSegmentsMetadataManagerTest
         binaryVersion,
         1234L
     );
+  }
+
+  private DataSegment dataSegmentWithIntervalAndVersion(String intervalStr, String version)
+  {
+    return DataSegment.builder()
+                      .dataSource("wikipedia")
+                      .interval(Intervals.of(intervalStr))
+                      .loadSpec(
+                          ImmutableMap.of(
+                              "type",
+                              "local",
+                              "path",
+                              "somewhere"
+                          )
+                      )
+                      .version(version)
+                      .dimensions(ImmutableList.of())
+                      .metrics(ImmutableList.of())
+                      .shardSpec(NoneShardSpec.instance())
+                      .binaryVersion(9)
+                      .size(0)
+                      .build();
   }
 
   @Rule
@@ -870,4 +896,76 @@ public class SqlSegmentsMetadataManagerTest
     Assert.assertTrue(dataSegmentSet.contains(newSegment2));
   }
 
+  @Test
+  public void testGetChangesSince() throws IOException
+  {
+    sqlSegmentsMetadataManager.poll();
+
+    ChangeRequestHistory<List<DataSegmentChange>> changeRequestHistory = sqlSegmentsMetadataManager.getChangeRequestHistory();
+    ChangeRequestHistory.Counter counterP1 = changeRequestHistory.getLastCounter();
+    Assert.assertEquals(0, counterP1.getCounter());
+
+    DataSegment dataSegment2 = dataSegmentWithIntervalAndVersion("2023-04-05T01:00:00Z/P1D", "v1");
+    DataSegment dataSegment3 = dataSegmentWithIntervalAndVersion("2023-04-06T01:00:00Z/P1D", "v1");
+    publisher.publishSegment(dataSegment2);
+    publisher.publishSegment(dataSegment3);
+    sqlSegmentsMetadataManager.markSegmentAsUnused(segment1.getId());
+    sqlSegmentsMetadataManager.markSegmentAsUnused(segment2.getId());
+    sqlSegmentsMetadataManager.poll();
+    ChangeRequestHistory.Counter counterP2 = changeRequestHistory.getLastCounter();
+    Assert.assertEquals(1, counterP2.getCounter());
+
+    DataSegment dataSegment4 = dataSegmentWithIntervalAndVersion("2023-04-07T01:00:00Z/P1D", "v1");
+    sqlSegmentsMetadataManager.markSegmentAsHandedOff(dataSegment2.getId());
+    publisher.publishSegment(dataSegment4);
+    sqlSegmentsMetadataManager.poll();
+    ChangeRequestHistory.Counter counterP3 = changeRequestHistory.getLastCounter();
+    Assert.assertEquals(2, counterP3.getCounter());
+
+    ChangeRequestsSnapshot<List<DataSegmentChange>> changeRequestsSnapshot = changeRequestHistory.getRequestsSinceSync(
+        new ChangeRequestHistory.Counter(-1));
+    Assert.assertTrue(changeRequestsSnapshot.isResetCounter());
+
+    changeRequestsSnapshot = changeRequestHistory.getRequestsSinceSync(ChangeRequestHistory.Counter.ZERO);
+    Assert.assertFalse(changeRequestsSnapshot.isResetCounter());
+
+    changeRequestsSnapshot = changeRequestHistory.getRequestsSinceSync(counterP1);
+    Assert.assertFalse(changeRequestsSnapshot.isResetCounter());
+    Assert.assertEquals(2, changeRequestsSnapshot.getRequests().size());
+    Assert.assertEquals(4, changeRequestsSnapshot.getRequests().get(0).size());
+    List<DataSegmentChange> changes = changeRequestsSnapshot.getRequests().get(0);
+    int segmentRemoved = 0, segmentAdded = 0;
+    for (DataSegmentChange change : changes) {
+      if (change.getChangeType() == DataSegmentChange.ChangeType.SEGMENT_ADDED) {
+        segmentAdded++;
+      } else if (change.getChangeType() == DataSegmentChange.ChangeType.SEGMENT_REMOVED) {
+        segmentRemoved++;
+      }
+    }
+    Assert.assertEquals(2, segmentAdded);
+    Assert.assertEquals(2, segmentRemoved);
+
+    Assert.assertEquals(2, changeRequestsSnapshot.getRequests().get(1).size());
+    changes = changeRequestsSnapshot.getRequests().get(1);
+    int segmentHandedOff = 0;
+    segmentAdded = 0;
+    for (DataSegmentChange change : changes) {
+      if (change.getChangeType() == DataSegmentChange.ChangeType.SEGMENT_ADDED) {
+        segmentAdded++;
+      } else if (change.getChangeType() == DataSegmentChange.ChangeType.SEGMENT_HANDED_OFF) {
+        segmentHandedOff++;
+      }
+    }
+    Assert.assertEquals(1, segmentAdded);
+    Assert.assertEquals(1, segmentHandedOff);
+
+    changeRequestsSnapshot = changeRequestHistory.getRequestsSinceSync(counterP2);
+    Assert.assertFalse(changeRequestsSnapshot.isResetCounter());
+    Assert.assertEquals(1, changeRequestsSnapshot.getRequests().size());
+    Assert.assertEquals(2, changeRequestsSnapshot.getRequests().get(0).size());
+
+    changeRequestsSnapshot = changeRequestHistory.getRequestsSinceSync(counterP3);
+    Assert.assertFalse(changeRequestsSnapshot.isResetCounter());
+    Assert.assertEquals(0, changeRequestsSnapshot.getRequests().size());
+  }
 }

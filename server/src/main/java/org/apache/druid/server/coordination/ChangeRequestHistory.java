@@ -42,7 +42,7 @@ import java.util.concurrent.ExecutorService;
  *
  * Clients call {@link #addChangeRequest} or {@link #addChangeRequests} to add updates (e. g. of segments).
  *
- * Clients call {@link #getRequestsSince} to get updates since given counter.
+ * Clients call {@link #getRequestsSinceAsync} to get updates since given counter.
  */
 
 public class ChangeRequestHistory<T>
@@ -51,38 +51,43 @@ public class ChangeRequestHistory<T>
 
   private final int maxSize;
 
+  private final boolean asyncMode;
+
   private final CircularBuffer<Holder<T>> changes;
 
   @VisibleForTesting
-  final LinkedHashMap<CustomSettableFuture<T>, Counter> waitingFutures;
+  LinkedHashMap<CustomSettableFuture<T>, Counter> waitingFutures;
 
-  private final ExecutorService singleThreadedExecutor;
-  private final Runnable resolveWaitingFuturesRunnable;
+  private ExecutorService singleThreadedExecutor;
+  private Runnable resolveWaitingFuturesRunnable;
 
   public ChangeRequestHistory()
   {
-    this(MAX_SIZE);
+    this(MAX_SIZE, true);
   }
 
-  public ChangeRequestHistory(int maxSize)
+  public ChangeRequestHistory(int maxSize, boolean asyncMode)
   {
     this.maxSize = maxSize;
+    this.asyncMode = asyncMode;
     this.changes = new CircularBuffer<>(maxSize);
 
-    this.waitingFutures = new LinkedHashMap<>();
-
-    this.resolveWaitingFuturesRunnable = this::resolveWaitingFutures;
-
-    this.singleThreadedExecutor = Execs.singleThreaded("SegmentChangeRequestHistory");
+    if (asyncMode) {
+      this.waitingFutures = new LinkedHashMap<>();
+      this.resolveWaitingFuturesRunnable = this::resolveWaitingFutures;
+      this.singleThreadedExecutor = Execs.singleThreaded("SegmentChangeRequestHistory");
+    }
   }
 
   public void stop()
   {
-    singleThreadedExecutor.shutdownNow();
-    final LinkedHashSet<CustomSettableFuture<?>> futures = new LinkedHashSet<>(waitingFutures.keySet());
-    waitingFutures.clear();
-    for (CustomSettableFuture<?> theFuture : futures) {
-      theFuture.setException(new IllegalStateException("Server is shutting down."));
+    if (asyncMode) {
+      singleThreadedExecutor.shutdownNow();
+      final LinkedHashSet<CustomSettableFuture<?>> futures = new LinkedHashSet<>(waitingFutures.keySet());
+      waitingFutures.clear();
+      for (CustomSettableFuture<?> theFuture : futures) {
+        theFuture.setException(new IllegalStateException("Server is shutting down."));
+      }
     }
   }
 
@@ -91,10 +96,10 @@ public class ChangeRequestHistory<T>
    */
   public synchronized void addChangeRequests(List<T> requests)
   {
-    if (singleThreadedExecutor.isShutdown()) {
+    if (asyncMode && singleThreadedExecutor.isShutdown()) {
       return;
     }
-    // We don't want to resolve our futures if there aren't actually any change requests being added!
+    // [in asyncMode] We don't want to resolve our futures if there aren't actually any change requests being added!
     if (requests.isEmpty()) {
       return;
     }
@@ -103,7 +108,9 @@ public class ChangeRequestHistory<T>
       changes.add(new Holder<>(request, getLastCounter().inc()));
     }
 
-    singleThreadedExecutor.execute(resolveWaitingFuturesRunnable);
+    if (asyncMode) {
+      singleThreadedExecutor.execute(resolveWaitingFuturesRunnable);
+    }
   }
 
   /**
@@ -125,8 +132,11 @@ public class ChangeRequestHistory<T>
    * is added to the "waitingFutures" list and all the futures in the list get resolved as soon as a segment
    * update is provided.
    */
-  public synchronized ListenableFuture<ChangeRequestsSnapshot<T>> getRequestsSince(final Counter counter)
+  public synchronized ListenableFuture<ChangeRequestsSnapshot<T>> getRequestsSinceAsync(final Counter counter)
   {
+    if (!asyncMode) {
+      throw new RuntimeException("getRequestsSinceAsync should be called to get changes only in async mode.");
+    }
     final CustomSettableFuture<T> future = new CustomSettableFuture<>(waitingFutures);
     if (singleThreadedExecutor.isShutdown()) {
       future.setException(new IllegalStateException("Server is shutting down."));
@@ -161,6 +171,18 @@ public class ChangeRequestHistory<T>
     }
 
     return future;
+  }
+
+  public synchronized ChangeRequestsSnapshot<T> getRequestsSinceSync(final Counter counter)
+  {
+    if (asyncMode) {
+      throw new RuntimeException("getRequestsSinceSync should be called to get changes only in sync mode.");
+    }
+    if (counter.getCounter() < 0) {
+      return ChangeRequestsSnapshot.fail(StringUtils.format("counter[%s] must be >= 0", counter));
+    }
+
+    return getRequestsSinceWithoutWait(counter);
   }
 
   private synchronized ChangeRequestsSnapshot<T> getRequestsSinceWithoutWait(final Counter counter)

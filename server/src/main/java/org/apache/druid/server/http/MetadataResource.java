@@ -58,6 +58,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -184,14 +185,26 @@ public class MetadataResource
   {
     Set<String> requiredDataSources = (null == dataSources) ? new HashSet<>() : dataSources;
 
-    log.debug("Changed segments requested. counter [%d], hash [%d], dataSources [%s]", counter, hash, requiredDataSources);
+    log.debug(
+        "Changed segments requested. counter [%d], hash [%d], dataSources [%s]",
+        counter,
+        hash,
+        requiredDataSources
+    );
 
     DataSourcesSnapshot dataSourcesSnapshot = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments();
+    ChangeRequestHistory<List<DataSegmentChange>> changeRequestHistory = segmentsMetadataManager.getChangeRequestHistory();
 
-    ChangeRequestsSnapshot<DataSegmentChange> changeRequestsSnapshot = dataSourcesSnapshot.getChangesSince(new ChangeRequestHistory.Counter(counter, hash));
+    ChangeRequestsSnapshot<List<DataSegmentChange>> changeRequestsSnapshot = changeRequestHistory.getRequestsSinceSync(
+        new ChangeRequestHistory.Counter(counter, hash));
+    List<List<DataSegmentChange>> requests = changeRequestsSnapshot.getRequests();
+    List<DataSegmentChange> flatRequests = new ArrayList<>();
+    if (null != requests) {
+      requests.forEach(flatRequests::addAll);
+    }
+
     List<DataSegmentChange> dataSegmentChanges;
-    ChangeRequestHistory.Counter lastCounter;
-
+    ChangeRequestHistory.Counter lastCounter = changeRequestsSnapshot.getCounter();
     boolean reset = false;
     String resetCause = "";
     if (changeRequestsSnapshot.isResetCounter()) {
@@ -201,34 +214,44 @@ public class MetadataResource
               .getDataSourcesWithAllUsedSegments()
               .stream()
               .flatMap(druidDataSource -> druidDataSource.getSegments().stream())
-              .filter(segment -> requiredDataSources.size() == 0 || requiredDataSources.contains(segment.getDataSource()))
+              .filter(segment -> requiredDataSources.size() == 0
+                                 || requiredDataSources.contains(segment.getDataSource()))
               .map(segment ->
                        new DataSegmentChange(
                            new SegmentWithOvershadowedStatus(
                                segment,
                                dataSourcesSnapshot.getOvershadowedSegments().contains(segment),
-                               getHandedOffStateForSegment(dataSourcesSnapshot, segment.getDataSource(), segment.getId())
+                               getHandedOffStateForSegment(
+                                   dataSourcesSnapshot,
+                                   segment.getDataSource(),
+                                   segment.getId()
+                               )
                            ),
-                           true,
-                           DataSegmentChange.ChangeReason.SEGMENT_ADDED))
+                           DataSegmentChange.ChangeType.SEGMENT_ADDED
+                       ))
               .collect(Collectors.toList());
-      lastCounter = DataSourcesSnapshot.getLastCounter(dataSourcesSnapshot.getChanges());
       resetCause = changeRequestsSnapshot.getResetCause();
       log.debug("Returning full snapshot. segment count [%d], counter [%d], hash [%d]",
-               dataSegmentChanges.size(), lastCounter.getCounter(), lastCounter.getHash());
+                dataSegmentChanges.size(), lastCounter.getCounter(), lastCounter.getHash()
+      );
     } else {
-      dataSegmentChanges = changeRequestsSnapshot.getRequests();
+      dataSegmentChanges = flatRequests;
       dataSegmentChanges = dataSegmentChanges
           .stream()
-          .filter(segment -> requiredDataSources.size() == 0 || requiredDataSources.contains(segment.getSegmentWithOvershadowedStatus().getDataSegment().getDataSource()))
+          .filter(segment -> requiredDataSources.size() == 0
+                             || requiredDataSources.contains(segment.getSegmentWithOvershadowedStatus()
+                                                                    .getDataSegment()
+                                                                    .getDataSource()))
           .collect(Collectors.toList());
-      lastCounter = changeRequestsSnapshot.getCounter();
       log.debug("Returning delta snapshot. segment count [%d], counter [%d], hash [%d]",
-               dataSegmentChanges.size(), lastCounter.getCounter(), lastCounter.getHash());
+                dataSegmentChanges.size(), lastCounter.getCounter(), lastCounter.getHash()
+      );
     }
 
     final Function<DataSegmentChange, Iterable<ResourceAction>> raGenerator = segment -> Collections
-        .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getSegmentWithOvershadowedStatus().getDataSegment().getDataSource()));
+        .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getSegmentWithOvershadowedStatus()
+                                                                                    .getDataSegment()
+                                                                                    .getDataSource()));
 
     final Iterable<DataSegmentChange> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
         req,
@@ -241,7 +264,8 @@ public class MetadataResource
         reset,
         resetCause,
         lastCounter,
-        Lists.newArrayList(authorizedSegments));
+        Lists.newArrayList(authorizedSegments)
+    );
 
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
     return builder.entity(finalChanges).build();

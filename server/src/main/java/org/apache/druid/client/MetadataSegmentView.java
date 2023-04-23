@@ -198,14 +198,18 @@ public class MetadataSegmentView
             .map(dataSegmentChange ->
                      new DataSegmentChange(
                          convert(dataSegmentChange.getSegmentWithOvershadowedStatus()),
-                         dataSegmentChange.isLoad(),
-                         dataSegmentChange.getChangeReason()))
+                         dataSegmentChange.getChangeType()
+                     ))
             .collect(Collectors.toList());
 
     counter = changedRequestsSnapshot.getCounter();
 
     log.debug("counter [%d], hash [%d], segments changed [%d], full sync: [%s]",
-              counter.getCounter(), counter.getHash(), dataSegmentChanges.size(), changedRequestsSnapshot.isResetCounter());
+              counter.getCounter(),
+              counter.getHash(),
+              dataSegmentChanges.size(),
+              changedRequestsSnapshot.isResetCounter()
+    );
 
     log.debug("Changes [%s]", dataSegmentChanges);
 
@@ -218,7 +222,8 @@ public class MetadataSegmentView
         dataSegmentChanges.forEach(
             dataSegmentChange -> publishedSegmentsCopy.put(
                 dataSegmentChange.getSegmentWithOvershadowedStatus().getDataSegment().getId(),
-                dataSegmentChange.getSegmentWithOvershadowedStatus()));
+                dataSegmentChange.getSegmentWithOvershadowedStatus()
+            ));
       }
     } else {
       runSegmentCallbacks(
@@ -232,7 +237,8 @@ public class MetadataSegmentView
           if (dataSegmentChange.isLoad()) {
             publishedSegmentsCopy.put(
                 dataSegmentChange.getSegmentWithOvershadowedStatus().getDataSegment().getId(),
-                dataSegmentChange.getSegmentWithOvershadowedStatus());
+                dataSegmentChange.getSegmentWithOvershadowedStatus()
+            );
           } else {
             publishedSegmentsCopy.remove(dataSegmentChange.getSegmentWithOvershadowedStatus().getDataSegment().getId());
           }

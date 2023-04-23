@@ -20,6 +20,7 @@
 package org.apache.druid.timeline;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import org.apache.druid.java.util.common.StringUtils;
@@ -27,19 +28,16 @@ import org.apache.druid.java.util.common.StringUtils;
 public class DataSegmentChange
 {
   private final SegmentWithOvershadowedStatus segmentWithOvershadowedStatus;
-  private final boolean load;
-  private final ChangeReason changeReason;
+  private final ChangeType changeType;
 
   @JsonCreator
   public DataSegmentChange(
       @JsonProperty("segmentWithOvershadowedStatus") SegmentWithOvershadowedStatus segmentWithOvershadowedStatus,
-      @JsonProperty("load") boolean load,
-      @JsonProperty("changeReason") ChangeReason changeReason
+      @JsonProperty("changeType") ChangeType changeType
   )
   {
     this.segmentWithOvershadowedStatus = segmentWithOvershadowedStatus;
-    this.load = load;
-    this.changeReason = changeReason;
+    this.changeType = changeType;
   }
 
   @JsonProperty
@@ -49,28 +47,27 @@ public class DataSegmentChange
   }
 
   @JsonProperty
-  public boolean isLoad()
+  public ChangeType getChangeType()
   {
-    return load;
+    return changeType;
   }
 
-  @JsonProperty
-  public ChangeReason getChangeReason()
+  @JsonIgnore
+  public boolean isLoad()
   {
-    return changeReason;
+    return changeType != ChangeType.SEGMENT_REMOVED;
   }
 
   @Override
   public String toString()
   {
     return "DataSegmentChangeRequest{" +
-           "load=" + load +
-           ", changeReason=" + changeReason +
+           ", changeReason=" + changeType +
            ", segmentWithOvershadowedStatus=" + segmentWithOvershadowedStatus +
            '}';
   }
 
-  public enum ChangeReason
+  public enum ChangeType
   {
     SEGMENT_ADDED,
     SEGMENT_REMOVED,
@@ -86,7 +83,7 @@ public class DataSegmentChange
     }
 
     @JsonCreator
-    public static ChangeReason fromString(String name)
+    public static ChangeType fromString(String name)
     {
       return valueOf(StringUtils.toUpperCase(name));
     }

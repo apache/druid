@@ -54,7 +54,6 @@ import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
-import org.apache.druid.utils.CircularBuffer;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -86,6 +85,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -172,6 +172,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
   private final Set<SegmentId> handedOffSegments = Sets.newConcurrentHashSet();
 
+  private final ChangeRequestHistory<List<DataSegmentChange>> dataSegmentChanges;
+
   /**
    * The latest {@link DatabasePoll} represent {@link #poll()} calls which update {@link #dataSourcesSnapshot}, either
    * periodically (see {@link PeriodicDatabasePoll}, {@link #startPollingDatabasePeriodically}, {@link
@@ -249,6 +251,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     this.periodicPollDelay = config.get().getPollDuration().toStandardDuration();
     this.dbTables = dbTables;
     this.connector = connector;
+    this.dataSegmentChanges = new ChangeRequestHistory<>(10, false);
   }
 
   /**
@@ -894,7 +897,9 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     }
   }
 
-  /** This method is extracted from {@link #poll()} solely to reduce code nesting. */
+  /**
+   * This method is extracted from {@link #poll()} solely to reduce code nesting.
+   */
   @GuardedBy("pollLock")
   private void doPoll()
   {
@@ -913,7 +918,10 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           public List<DataSegment> inTransaction(Handle handle, TransactionStatus status)
           {
             return handle
-                .createQuery(StringUtils.format("SELECT handed_off, payload FROM %s WHERE used=true", getSegmentsTable()))
+                .createQuery(StringUtils.format(
+                    "SELECT handed_off, payload FROM %s WHERE used=true",
+                    getSegmentsTable()
+                ))
                 .setFetchSize(connector.getStreamingFetchSize())
                 .map(
                     new ResultSetMapper<DataSegment>()
@@ -925,7 +933,10 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                           DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
                           boolean handedOff = r.getBoolean("handed_off");
                           if (handedOff) {
-                            datasourceToHandedOffSegments.computeIfAbsent(segment.getDataSource(), value -> new HashSet<>()).add(segment.getId());
+                            datasourceToHandedOffSegments.computeIfAbsent(
+                                segment.getDataSource(),
+                                value -> new HashSet<>()
+                            ).add(segment.getId());
                           }
                           return replaceWithExistingSegmentIfPresent(segment);
                         }
@@ -965,22 +976,39 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     }
 
     handedOffSegments.clear();
-    handedOffSegments.addAll(datasourceToHandedOffSegments.values().stream().flatMap(Collection::stream).collect(Collectors.toSet()));
+    handedOffSegments.addAll(datasourceToHandedOffSegments.values()
+                                                          .stream()
+                                                          .flatMap(Collection::stream)
+                                                          .collect(Collectors.toSet()));
 
     if (null != dataSourcesSnapshot) {
       Set<SegmentWithOvershadowedStatus> oldSegments = DataSourcesSnapshot.getSegmentsWithOvershadowedStatus(
           dataSourcesSnapshot.getDataSourcesWithAllUsedSegments(),
           dataSourcesSnapshot.getOvershadowedSegments(),
-          dataSourcesSnapshot.getHandedOffStatePerDataSource());
-
-      CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> oldChanges = dataSourcesSnapshot.getChanges();
+          dataSourcesSnapshot.getHandedOffStatePerDataSource()
+      );
 
       dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
           Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
           dataSourceProperties,
-          datasourceToHandedOffSegments,
-          oldSegments,
-          oldChanges
+          datasourceToHandedOffSegments
+      );
+
+      Set<SegmentWithOvershadowedStatus> newSegments = DataSourcesSnapshot.getSegmentsWithOvershadowedStatus(
+          dataSourcesSnapshot.getDataSourcesWithAllUsedSegments(),
+          dataSourcesSnapshot.getOvershadowedSegments(),
+          dataSourcesSnapshot.getHandedOffStatePerDataSource()
+      );
+
+      List<DataSegmentChange> changeList = computeChanges(oldSegments, newSegments);
+
+      if (changeList.size() > 0) {
+        dataSegmentChanges.addChangeRequest(changeList);
+      }
+
+      log.info(
+          "Finished computing segment changes. Changes count [%d], current counter [%d]",
+          changeList.size(), dataSegmentChanges.getLastCounter().getCounter()
       );
     } else {
       dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
@@ -1075,5 +1103,93 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           }
         }
     );
+  }
+
+  protected List<DataSegmentChange> computeChanges(
+      Set<SegmentWithOvershadowedStatus> oldSegments,
+      Set<SegmentWithOvershadowedStatus> currentSegments
+  )
+  {
+    if (oldSegments.isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    // a segment is added to the change set, if following changes:
+    // segmentId
+    // overshadowed state
+    // handed off state
+
+    Map<SegmentId, SegmentWithOvershadowedStatus> oldSegmentsMap =
+        oldSegments
+            .stream()
+            .collect(Collectors.toMap(
+                segment -> segment.getDataSegment().getId(),
+                Function.identity()
+            ));
+
+    Map<SegmentId, SegmentWithOvershadowedStatus> currentSegmentsMap =
+        currentSegments
+            .stream()
+            .collect(Collectors.toMap(
+                segment -> segment.getDataSegment().getId(),
+                Function.identity()
+            ));
+
+    Set<SegmentId> segmentToBeRemoved = Sets.difference(oldSegmentsMap.keySet(), currentSegmentsMap.keySet());
+    Set<SegmentId> segmentToBeAdded = Sets.difference(currentSegmentsMap.keySet(), oldSegmentsMap.keySet());
+    Set<SegmentId> commonSegmentIds = Sets.intersection(oldSegmentsMap.keySet(), currentSegmentsMap.keySet());
+
+    List<DataSegmentChange> changeList = new ArrayList<>();
+
+    segmentToBeRemoved.forEach(segmentId ->
+                                   changeList.add(
+                                       new DataSegmentChange(
+                                           oldSegmentsMap.get(segmentId),
+                                           DataSegmentChange.ChangeType.SEGMENT_REMOVED
+                                       )
+                                   )
+    );
+
+    segmentToBeAdded.forEach(segmentId ->
+                                 changeList.add(
+                                     new DataSegmentChange(
+                                         currentSegmentsMap.get(segmentId),
+                                         DataSegmentChange.ChangeType.SEGMENT_ADDED
+                                     )
+                                 )
+    );
+
+    commonSegmentIds.forEach(segmentId -> {
+      SegmentWithOvershadowedStatus oldSegment = oldSegmentsMap.get(segmentId);
+      SegmentWithOvershadowedStatus newSegment = currentSegmentsMap.get(segmentId);
+      if (null != oldSegment && null != newSegment) {
+        final boolean handoffStatusChanged = oldSegment.isHandedOff() != newSegment.isHandedOff();
+        final boolean overshadowStatusChanged = oldSegment.isOvershadowed() != newSegment.isOvershadowed();
+        DataSegmentChange.ChangeType changeType = null;
+        if (handoffStatusChanged && overshadowStatusChanged) {
+          changeType = DataSegmentChange.ChangeType.SEGMENT_OVERSHADOWED_AND_HANDED_OFF;
+        } else if (handoffStatusChanged) {
+          changeType = DataSegmentChange.ChangeType.SEGMENT_HANDED_OFF;
+        } else if (overshadowStatusChanged) {
+          changeType = DataSegmentChange.ChangeType.SEGMENT_OVERSHADOWED;
+        }
+        if (null != changeType) {
+          changeList.add(
+              new DataSegmentChange(
+                  newSegment,
+                  changeType
+              )
+          );
+        }
+      }
+    });
+
+    return changeList;
+  }
+
+  @Override
+  public ChangeRequestHistory<List<DataSegmentChange>> getChangeRequestHistory()
+  {
+    return dataSegmentChanges;
   }
 }

@@ -24,7 +24,9 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegmentChange;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -195,5 +197,11 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   public void poll()
   {
 
+  }
+
+  @Override
+  public ChangeRequestHistory<List<DataSegmentChange>> getChangeRequestHistory()
+  {
+    return null;
   }
 }

@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TableDataSource;
@@ -57,6 +58,7 @@ import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
 import org.easymock.EasyMock;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -65,6 +67,7 @@ import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -548,8 +551,7 @@ public class BrokerServerViewTest extends CuratorTestBase
                 false,
                 true
             ),
-            true,
-            DataSegmentChange.ChangeReason.SEGMENT_ADDED)
+            DataSegmentChange.ChangeType.SEGMENT_ADDED)
     );
 
     ChangeRequestsSnapshot<DataSegmentChange> changeRequestsSnapshot = new ChangeRequestsSnapshot<>(true, "", ChangeRequestHistory.Counter.ZERO, dataSegmentChanges);
@@ -559,7 +561,7 @@ public class BrokerServerViewTest extends CuratorTestBase
 
     DruidLeaderClient druidLeaderClient = EasyMock.mock(DruidLeaderClient.class);
     EasyMock.expect(druidLeaderClient.getThingsFromLeaderNode(EasyMock.anyString()))
-        .andReturn(expectedObject);
+        .andReturn(Pair.of(new Request(HttpMethod.GET, new URL("https://localhost:8888/sql/changedSegments")), expectedObject));
 
     BrokerSegmentWatcherConfig brokerSegmentWatcherConfig = getBrokerSegmentWatcherConfig(
         null,
@@ -645,15 +647,15 @@ public class BrokerServerViewTest extends CuratorTestBase
     final List<DataSegmentChange> dataSegmentChanges = Lists.transform(
         ImmutableList.of(
             ImmutableList.of("2011-04-01/2011-04-03", "v1", Boolean.FALSE.toString(),
-                             DataSegmentChange.ChangeReason.SEGMENT_REMOVED.toString()),
+                             DataSegmentChange.ChangeType.SEGMENT_REMOVED.toString()),
             ImmutableList.of("2011-04-06/2011-04-09", "v3", Boolean.FALSE.toString(),
-                             DataSegmentChange.ChangeReason.SEGMENT_REMOVED.toString()),
+                             DataSegmentChange.ChangeType.SEGMENT_REMOVED.toString()),
             ImmutableList.of("2011-04-01/2011-04-02", "v3", Boolean.FALSE.toString(),
-                             DataSegmentChange.ChangeReason.SEGMENT_HANDED_OFF.toString()),
+                             DataSegmentChange.ChangeType.SEGMENT_HANDED_OFF.toString()),
             ImmutableList.of("2011-04-01/2011-04-02", "v3", Boolean.FALSE.toString(),
-                             DataSegmentChange.ChangeReason.SEGMENT_OVERSHADOWED.toString()),
+                             DataSegmentChange.ChangeType.SEGMENT_OVERSHADOWED.toString()),
             ImmutableList.of("2011-04-11/2011-04-13", "v3", Boolean.TRUE.toString(),
-                             DataSegmentChange.ChangeReason.SEGMENT_ADDED.toString())
+                             DataSegmentChange.ChangeType.SEGMENT_ADDED.toString())
         ),
         input -> new DataSegmentChange(
             new SegmentWithOvershadowedStatus(
@@ -661,8 +663,7 @@ public class BrokerServerViewTest extends CuratorTestBase
                 false,
                 true
             ),
-            Boolean.parseBoolean(input.get(2)),
-            DataSegmentChange.ChangeReason.fromString(input.get(3)))
+            DataSegmentChange.ChangeType.fromString(input.get(3)))
     );
 
     ChangeRequestsSnapshot<DataSegmentChange> changeRequestsSnapshot = new ChangeRequestsSnapshot<>(
@@ -677,7 +678,7 @@ public class BrokerServerViewTest extends CuratorTestBase
 
     DruidLeaderClient druidLeaderClient = EasyMock.mock(DruidLeaderClient.class);
     EasyMock.expect(druidLeaderClient.getThingsFromLeaderNode(EasyMock.anyString()))
-            .andReturn(expectedObject);
+            .andReturn(Pair.of(new Request(HttpMethod.GET, new URL("https://localhost:8888/sql/changedSegments")), expectedObject));
 
     BrokerSegmentWatcherConfig brokerSegmentWatcherConfig = getBrokerSegmentWatcherConfig(
         null,

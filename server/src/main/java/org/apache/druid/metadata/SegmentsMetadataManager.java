@@ -23,7 +23,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegmentChange;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -151,4 +153,6 @@ public interface SegmentsMetadataManager
 
   @VisibleForTesting
   void poll();
+
+  ChangeRequestHistory<List<DataSegmentChange>> getChangeRequestHistory();
 }

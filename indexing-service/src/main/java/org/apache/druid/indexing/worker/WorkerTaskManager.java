@@ -426,7 +426,7 @@ public class WorkerTaskManager
         return future;
       }
     } else {
-      return changeHistory.getRequestsSince(counter);
+      return changeHistory.getRequestsSinceAsync(counter);
     }
   }
 

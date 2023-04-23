@@ -28,7 +28,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * Return type of {@link ChangeRequestHistory#getRequestsSince}.
+ * Return type of {@link ChangeRequestHistory#getRequestsSinceAsync}.
  */
 public final class ChangeRequestsSnapshot<T>
 {

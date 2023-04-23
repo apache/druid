@@ -425,7 +425,8 @@ public class BrokerServerView implements TimelineServerView
     int segmentsAdded = 0, segmentsHandedOff = 0;
     for (DataSegmentChange dataSegmentChange : dataSegmentChanges) {
       segmentsAdded++;
-      SegmentWithOvershadowedStatus segmentWithOvershadowedStatus = dataSegmentChange.getSegmentWithOvershadowedStatus();
+      SegmentWithOvershadowedStatus segmentWithOvershadowedStatus =
+          dataSegmentChange.getSegmentWithOvershadowedStatus();
       if (segmentWithOvershadowedStatus.isHandedOff()) {
         segmentsHandedOff++;
         handedOffSegmentsPerDataSource.computeIfAbsent(
@@ -453,21 +454,25 @@ public class BrokerServerView implements TimelineServerView
       // add segments from set1 not in set2 -> add handed off but unavialble segments to the timeline
       // update handed off time for elements of set2 in set1
 
-      for (Map.Entry<String, Map<SegmentId, SegmentWithOvershadowedStatus>> entry : handedOffSegmentsPerDataSource.entrySet()) {
+      for (Map.Entry<String, Map<SegmentId, SegmentWithOvershadowedStatus>> entry :
+          handedOffSegmentsPerDataSource.entrySet()) {
         String dataSource = entry.getKey();
         Map<SegmentId, SegmentWithOvershadowedStatus> segments = entry.getValue();
 
         VersionedIntervalTimeline<String, ServerSelector> versionedIntervalTimeline = timelines.get(dataSource);
 
-        Map<SegmentId, VersionedIntervalTimeline.PartitionChunkEntry<String, ServerSelector>> segmentIdPartitionChunkEntryMap =
+        Map<SegmentId, VersionedIntervalTimeline.PartitionChunkEntry<String, ServerSelector>>
+            segmentIdPartitionChunkEntryMap =
             versionedIntervalTimeline
                 .getAllPartitionChunkEntries()
                 .stream()
                 .collect(Collectors.toMap(
                     pce -> pce.getChunk().getObject().getSegment().getId(),
-                    Function.identity()));
+                    Function.identity()
+                ));
 
-        Set<SegmentId> segmentIdsToRemoveFromTimeline = Sets.difference(segmentIdPartitionChunkEntryMap.keySet(), segments.keySet());
+        Set<SegmentId> segmentIdsToRemoveFromTimeline =
+            Sets.difference(segmentIdPartitionChunkEntryMap.keySet(), segments.keySet());
 
         segmentIdsToRemoveFromTimeline.forEach(
             segmentId -> removeSegmentFromTimeline(
@@ -497,7 +502,7 @@ public class BrokerServerView implements TimelineServerView
         }
       } else {
         segmentsRemoved++;
-        if (dataSegmentChange.getChangeReason() == DataSegmentChange.ChangeReason.SEGMENT_REMOVED) {
+        if (dataSegmentChange.getChangeType() == DataSegmentChange.ChangeType.SEGMENT_REMOVED) {
           segmentsToRemove.add(dataSegmentChange.getSegmentWithOvershadowedStatus().getDataSegment());
         }
       }
@@ -526,7 +531,8 @@ public class BrokerServerView implements TimelineServerView
 
   private void addSegmentsToTimeline(List<SegmentWithOvershadowedStatus> segments)
   {
-    Map<String, List<VersionedIntervalTimeline.PartitionChunkEntry<String, ServerSelector>>> partitionChunkEntryMap = new HashMap<>();
+    Map<String, List<VersionedIntervalTimeline.PartitionChunkEntry<String, ServerSelector>>>
+        partitionChunkEntryMap = new HashMap<>();
 
     for (SegmentWithOvershadowedStatus segmentWithOvershadowedStatus : segments) {
       DataSegment segment = segmentWithOvershadowedStatus.getDataSegment();

@@ -22,19 +22,13 @@ package org.apache.druid.client;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
-import org.apache.druid.server.coordination.ChangeRequestHistory;
-import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.DataSegmentChange;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.utils.CircularBuffer;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
@@ -44,9 +38,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -66,9 +58,7 @@ public class DataSourcesSnapshot
     return fromUsedSegments(
         segments,
         dataSourceProperties,
-        ImmutableMap.of(),
-        ImmutableSet.of(),
-        new CircularBuffer<>(CHANGES_QUEUE_MAX_SIZE)
+        ImmutableMap.of()
     );
   }
 
@@ -78,39 +68,28 @@ public class DataSourcesSnapshot
       Map<String, Set<SegmentId>> handedOffState
   )
   {
-    return fromUsedSegments(
-        segments,
-        dataSourceProperties,
-        handedOffState,
-        ImmutableSet.of(),
-        new CircularBuffer<>(CHANGES_QUEUE_MAX_SIZE)
-    );
-  }
-
-  public static DataSourcesSnapshot fromUsedSegments(
-      Iterable<DataSegment> segments,
-      ImmutableMap<String, String> dataSourceProperties,
-      Map<String, Set<SegmentId>> handedOffState,
-      Set<SegmentWithOvershadowedStatus> oldSegments,
-      CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> oldChanges
-  )
-  {
     Map<String, DruidDataSource> dataSources = new HashMap<>();
     segments.forEach(segment -> dataSources
         .computeIfAbsent(segment.getDataSource(), dsName -> new DruidDataSource(dsName, dataSourceProperties))
         .addSegmentIfAbsent(segment));
-    Map<String, ImmutableDruidDataSource> immutableDruidDataSources = CollectionUtils.mapValues(dataSources, DruidDataSource::toImmutableDruidDataSource);
+    Map<String, ImmutableDruidDataSource> immutableDruidDataSources = CollectionUtils.mapValues(
+        dataSources,
+        DruidDataSource::toImmutableDruidDataSource
+    );
     Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource = CollectionUtils.mapValues(
         immutableDruidDataSources,
         dataSource -> SegmentTimeline.forSegments(dataSource.getSegments())
     );
-    ImmutableSet<DataSegment> overshadowedSegments = determineOvershadowedSegments(immutableDruidDataSources, usedSegmentsTimelinesPerDataSource);
-    CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> changes =
-        computeChanges(
-            oldSegments,
-            getSegmentsWithOvershadowedStatus(immutableDruidDataSources.values(), overshadowedSegments, handedOffState),
-            oldChanges);
-    return new DataSourcesSnapshot(immutableDruidDataSources, usedSegmentsTimelinesPerDataSource, overshadowedSegments, handedOffState, changes);
+    ImmutableSet<DataSegment> overshadowedSegments = determineOvershadowedSegments(
+        immutableDruidDataSources,
+        usedSegmentsTimelinesPerDataSource
+    );
+    return new DataSourcesSnapshot(
+        immutableDruidDataSources,
+        usedSegmentsTimelinesPerDataSource,
+        overshadowedSegments,
+        handedOffState
+    );
   }
 
   public static DataSourcesSnapshot fromUsedSegmentsTimelines(
@@ -130,19 +109,15 @@ public class DataSourcesSnapshot
     return new DataSourcesSnapshot(
         dataSourcesWithAllUsedSegments,
         usedSegmentsTimelinesPerDataSource,
-        ImmutableMap.of(),
-        new CircularBuffer<>(CHANGES_QUEUE_MAX_SIZE)
+        ImmutableMap.of()
     );
   }
 
-  private static final int CHANGES_QUEUE_MAX_SIZE = 10;
   private final Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments;
   private final Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource;
   private final ImmutableSet<DataSegment> overshadowedSegments;
 
   private final Map<String, Set<SegmentId>> handedOffStatePerDataSource;
-
-  private final CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> changes;
 
   public DataSourcesSnapshot(
       Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments
@@ -154,24 +129,21 @@ public class DataSourcesSnapshot
             dataSourcesWithAllUsedSegments,
             dataSource -> SegmentTimeline.forSegments(dataSource.getSegments())
         ),
-        ImmutableMap.of(),
-        new CircularBuffer<>(CHANGES_QUEUE_MAX_SIZE)
+        ImmutableMap.of()
     );
   }
 
   private DataSourcesSnapshot(
       Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments,
       Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource,
-      Map<String, Set<SegmentId>> handedOffStatePerDataSource,
-      CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> changes
+      Map<String, Set<SegmentId>> handedOffStatePerDataSource
   )
   {
     this(
         dataSourcesWithAllUsedSegments,
         usedSegmentsTimelinesPerDataSource,
         determineOvershadowedSegments(dataSourcesWithAllUsedSegments, usedSegmentsTimelinesPerDataSource),
-        handedOffStatePerDataSource,
-        changes
+        handedOffStatePerDataSource
     );
   }
 
@@ -179,15 +151,13 @@ public class DataSourcesSnapshot
       Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments,
       Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource,
       ImmutableSet<DataSegment> overshadowedSegments,
-      Map<String, Set<SegmentId>> handedOffStatePerDataSource,
-      CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> changes
+      Map<String, Set<SegmentId>> handedOffStatePerDataSource
   )
   {
     this.dataSourcesWithAllUsedSegments = dataSourcesWithAllUsedSegments;
     this.usedSegmentsTimelinesPerDataSource = usedSegmentsTimelinesPerDataSource;
     this.overshadowedSegments = overshadowedSegments;
     this.handedOffStatePerDataSource = handedOffStatePerDataSource;
-    this.changes = changes;
   }
 
   public Collection<ImmutableDruidDataSource> getDataSourcesWithAllUsedSegments()
@@ -219,65 +189,6 @@ public class DataSourcesSnapshot
   public Map<String, Set<SegmentId>> getHandedOffStatePerDataSource()
   {
     return handedOffStatePerDataSource;
-  }
-
-  public CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> getChanges()
-  {
-    return changes;
-  }
-
-  public ChangeRequestsSnapshot<DataSegmentChange> getChangesSince(ChangeRequestHistory.Counter counter)
-  {
-    if (counter.getCounter() < 0) {
-      return ChangeRequestsSnapshot.fail(StringUtils.format("counter[%s] must be >= 0", counter));
-    }
-
-    ChangeRequestHistory.Counter lastCounter = getLastCounter(changes);
-
-    if (counter.getCounter() == lastCounter.getCounter()) {
-      if (counter.matches(lastCounter)) {
-        return ChangeRequestsSnapshot.success(counter, new ArrayList<>());
-      } else {
-        return ChangeRequestsSnapshot.fail(StringUtils.format("counter[%s] failed to match with [%s]", counter, lastCounter));
-      }
-    } else if (counter.getCounter() > lastCounter.getCounter()) {
-      return ChangeRequestsSnapshot.fail(
-          StringUtils.format(
-            "counter[%s] > last counter[%s]",
-            counter,
-            lastCounter
-          )
-      );
-    } else if (lastCounter.getCounter() - counter.getCounter() >= CHANGES_QUEUE_MAX_SIZE) {
-      return ChangeRequestsSnapshot.fail(
-          StringUtils.format(
-              "can't serve request, not enough history is kept. given counter [%s] and current last counter [%s]",
-              counter,
-              lastCounter
-          )
-      );
-    } else {
-      int changeStartIndex = (int) (counter.getCounter() + changes.size() - lastCounter.getCounter());
-
-      ChangeRequestHistory.Counter counterToMatch = counter.getCounter() == 0 ? ChangeRequestHistory.Counter.ZERO : changes.get(changeStartIndex - 1).getCounter();
-
-      if (!counterToMatch.matches(counter)) {
-        return ChangeRequestsSnapshot.fail(
-            StringUtils.format(
-                "counter[%s] failed to match with [%s]",
-                counter,
-                lastCounter
-            )
-        );
-      }
-
-      List<DataSegmentChange> result = new ArrayList<>();
-      for (int i = changeStartIndex; i < changes.size(); i++) {
-        result.addAll(changes.get(i).getChangeRequest());
-      }
-
-      return ChangeRequestsSnapshot.success(changes.get(changes.size() - 1).getCounter(), result);
-    }
   }
 
   /**
@@ -332,7 +243,8 @@ public class DataSourcesSnapshot
   public static Set<SegmentWithOvershadowedStatus> getSegmentsWithOvershadowedStatus(
       Collection<ImmutableDruidDataSource> segments,
       Set<DataSegment> overshadowedSegments,
-      Map<String, Set<SegmentId>> handedOffState)
+      Map<String, Set<SegmentId>> handedOffState
+  )
   {
 
     final Stream<DataSegment> usedSegments = segments
@@ -341,9 +253,9 @@ public class DataSourcesSnapshot
 
     return usedSegments
         .map(segment -> new SegmentWithOvershadowedStatus(
-            segment,
-            overshadowedSegments.contains(segment),
-            getHandedOffStateForSegment(handedOffState, segment.getDataSource(), segment.getId())
+                 segment,
+                 overshadowedSegments.contains(segment),
+                 getHandedOffStateForSegment(handedOffState, segment.getDataSource(), segment.getId())
              )
         )
         .collect(Collectors.toSet());
@@ -357,81 +269,5 @@ public class DataSourcesSnapshot
     return handedOffState
         .getOrDefault(dataSource, new HashSet<>())
         .contains(segmentId);
-  }
-
-  private static CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> computeChanges(
-      Set<SegmentWithOvershadowedStatus> oldSegments,
-      Set<SegmentWithOvershadowedStatus> currentSegments,
-      CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> oldChanges
-  )
-  {
-    if (oldSegments.isEmpty()) {
-      return new CircularBuffer<>(CHANGES_QUEUE_MAX_SIZE);
-    }
-
-    // a segment is added to the change set, if following changes:
-    // segmentId
-    // overshadowed state
-    // handed off state
-
-    Map<SegmentId, SegmentWithOvershadowedStatus> oldSegmentsMap =
-        oldSegments
-            .stream()
-            .collect(Collectors.toMap(
-                segment -> segment.getDataSegment().getId(),
-                Function.identity()));
-
-    Map<SegmentId, SegmentWithOvershadowedStatus> currentSegmentsMap =
-        currentSegments
-            .stream()
-            .collect(Collectors.toMap(
-                segment -> segment.getDataSegment().getId(),
-                Function.identity()));
-
-    Set<SegmentWithOvershadowedStatus> segmentToBeRemoved = Sets.difference(oldSegments, currentSegments);
-    Set<SegmentWithOvershadowedStatus> segmentToBeAdded = Sets.difference(currentSegments, oldSegments);
-
-    List<DataSegmentChange> changeList = new ArrayList<>();
-
-    segmentToBeRemoved.forEach(segment -> {
-      SegmentWithOvershadowedStatus newSegment = currentSegmentsMap.get(segment.getDataSegment().getId());
-      if (null == newSegment) {
-        changeList.add(new DataSegmentChange(segment, false, DataSegmentChange.ChangeReason.SEGMENT_REMOVED));
-      }
-    });
-
-    segmentToBeAdded.forEach(segment -> {
-      SegmentWithOvershadowedStatus oldSegment = oldSegmentsMap.get(segment.getDataSegment().getId());
-      boolean handedOffStatusChanged = !Objects.equals(null != oldSegment && oldSegment.isHandedOff(), segment.isHandedOff());
-      boolean overshadowedStatusChanged = !Objects.equals(null != oldSegment && oldSegment.isOvershadowed(), segment.isOvershadowed());
-      DataSegmentChange.ChangeReason changeReason;
-
-      if (null == oldSegment) {
-        changeReason = DataSegmentChange.ChangeReason.SEGMENT_ADDED;
-      } else if (handedOffStatusChanged && overshadowedStatusChanged) {
-        changeReason = DataSegmentChange.ChangeReason.SEGMENT_OVERSHADOWED_AND_HANDED_OFF;
-      } else if (handedOffStatusChanged) {
-        changeReason = DataSegmentChange.ChangeReason.SEGMENT_HANDED_OFF;
-      } else {
-        changeReason = DataSegmentChange.ChangeReason.SEGMENT_OVERSHADOWED;
-      }
-      changeList.add(new DataSegmentChange(segment, true, changeReason));
-    });
-
-    ChangeRequestHistory.Counter lastCounter = getLastCounter(oldChanges);
-
-    if (changeList.size() > 0) {
-      oldChanges.add(new ChangeRequestHistory.Holder<>(changeList, lastCounter.inc()));
-    }
-
-    log.info(
-        "Finished computing segment changes. Changes count [%d], current counter [%d]",
-        changeList.size(), getLastCounter(oldChanges).getCounter());
-    return oldChanges;
-  }
-
-  public static ChangeRequestHistory.Counter getLastCounter(CircularBuffer<ChangeRequestHistory.Holder<List<DataSegmentChange>>> buffer)
-  {
-    return buffer.size() > 0 ? buffer.get(buffer.size() - 1).getCounter() : ChangeRequestHistory.Counter.ZERO;
   }
 }
