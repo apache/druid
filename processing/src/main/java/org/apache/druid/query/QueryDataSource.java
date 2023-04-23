@@ -98,7 +98,8 @@ public class QueryDataSource implements DataSource
       AtomicLong cpuTime
   )
   {
-    return Function.identity();
+    final Query<?> subQuery = this.getQuery();
+    return subQuery.getDataSource().createSegmentMapFunction(subQuery, cpuTime);
   }
 
   @Override
