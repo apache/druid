@@ -140,13 +140,13 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
           case YEAR:
             return ExprEval.of(dateTime.year().get());
           case ISOYEAR:
-            if(isoWeek == 1 && dateTime.getMonthOfYear() == 12) {
+            if(isoWeek == 1 && dateTime.getMonthOfYear() == 12){
               // special case: if the date is in the last week of the previous year
               isoYear--;
             } 
-            else if(isoWeek >= 52 && dateTime.getMonthOfYear() == 1) {
-            // special case: if the date is in the first week of the next year
-            isoYear++;
+            else if(isoWeek >= 52 && dateTime.getMonthOfYear() == 1){
+              // special case: if the date is in the first week of the next year
+              isoYear++;
             }
             return ExprEval.of(isoYear);
           case DECADE:
