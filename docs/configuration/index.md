@@ -424,7 +424,7 @@ There are several emitters available:
 
 The use this emitter module, set `druid.emitter=logging`. The Logging emitter will use the configured
 `druid.emitter.logging.loggerClass` to emit events. If the `loggerClass` is set to `LoggingEmitter` (the default), the
-events are emitted to the log as a single json object with a [Marker](https://logging.apache.org/log4j/2.x/manual/markers.html)
+events are emitted to the log as a single `json` object with a [Marker](https://logging.apache.org/log4j/2.x/manual/markers.html)
 as the feed of the event. Users may wish to edit the log4j config to route these logs to different sources based on the
 feed of the event.
 
