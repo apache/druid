@@ -38,6 +38,7 @@ import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.IndexTask;
@@ -261,11 +262,11 @@ public class KubernetesTaskRunnerTest
 
     K8sTaskAdapter adapter = mock(K8sTaskAdapter.class);
     when(adapter.fromTask(eq(task))).thenReturn(job);
-    when(adapter.toTask(eq(peonPod))).thenReturn(task);
+    when(adapter.toTask(eq(job))).thenReturn(task);
 
     DruidKubernetesPeonClient peonClient = mock(DruidKubernetesPeonClient.class);
 
-    when(peonClient.listPeonPods()).thenReturn(Collections.singletonList(peonPod));
+    when(peonClient.listAllPeonJobs()).thenReturn(Collections.singletonList(job));
     when(peonClient.jobExists(eq(k8sTaskId))).thenReturn(Optional.of(job));
     when(peonClient.launchJobAndWaitForStart(isA(Job.class), anyLong(), isA(TimeUnit.class))).thenReturn(peonPod);
     when(peonClient.getMainJobPod(eq(k8sTaskId))).thenReturn(peonPod);
@@ -324,11 +325,11 @@ public class KubernetesTaskRunnerTest
 
     K8sTaskAdapter adapter = mock(K8sTaskAdapter.class);
     when(adapter.fromTask(eq(task))).thenReturn(job);
-    when(adapter.toTask(eq(peonPod))).thenReturn(task);
+    when(adapter.toTask(eq(job))).thenReturn(task);
 
     DruidKubernetesPeonClient peonClient = mock(DruidKubernetesPeonClient.class);
 
-    when(peonClient.listPeonPods()).thenReturn(Collections.singletonList(peonPod));
+    when(peonClient.listAllPeonJobs()).thenReturn(Collections.singletonList(job));
     when(peonClient.jobExists(eq(k8sTaskId))).thenReturn(Optional.of(job));
     when(peonClient.launchJobAndWaitForStart(isA(Job.class), anyLong(), isA(TimeUnit.class))).thenReturn(peonPod);
     when(peonClient.getMainJobPod(eq(k8sTaskId))).thenReturn(peonPod);
@@ -694,6 +695,62 @@ public class KubernetesTaskRunnerTest
     assertEquals(TaskLocation.unknown(), location);
   }
 
+  @Test
+  public void testK8sJobManualShutdown() throws Exception
+  {
+    Task task = makeTask();
+    K8sTaskId k8sTaskId = new K8sTaskId(task.getId());
+
+    Job job = mock(Job.class);
+    ObjectMeta jobMetadata = mock(ObjectMeta.class);
+    when(jobMetadata.getName()).thenReturn(k8sTaskId.getK8sTaskId());
+    JobStatus status = mock(JobStatus.class);
+    when(status.getActive()).thenReturn(1);
+    when(job.getStatus()).thenReturn(status);
+    when(job.getMetadata()).thenReturn(jobMetadata);
+
+    Pod peonPod = mock(Pod.class);
+    ObjectMeta metadata = mock(ObjectMeta.class);
+    when(metadata.getName()).thenReturn("peonPodName");
+    when(metadata.getCreationTimestamp()).thenReturn(DateTimes.nowUtc().toString());
+    when(peonPod.getMetadata()).thenReturn(metadata);
+    PodStatus podStatus = mock(PodStatus.class);
+    when(podStatus.getPodIP()).thenReturn("SomeIP");
+    when(peonPod.getStatus()).thenReturn(podStatus);
+
+    K8sTaskAdapter adapter = mock(K8sTaskAdapter.class);
+    when(adapter.fromTask(eq(task))).thenReturn(job);
+    when(adapter.toTask(eq(job))).thenReturn(task);
+
+    DruidKubernetesPeonClient peonClient = mock(DruidKubernetesPeonClient.class);
+
+    when(peonClient.jobExists(eq(k8sTaskId))).thenReturn(Optional.of(job));
+    when(peonClient.getMainJobPod(eq(k8sTaskId))).thenReturn(peonPod);
+
+    // Client returns a null job if the job has been deleted
+    when(peonClient.waitForJobCompletion(eq(k8sTaskId), anyLong(), isA(TimeUnit.class))).thenReturn(new JobResponse(
+        null,
+        PeonPhase.FAILED
+    ));
+    when(peonClient.getPeonLogs(eq(k8sTaskId))).thenReturn(Optional.absent());
+    when(peonClient.cleanUpJob(eq(k8sTaskId))).thenReturn(true);
+
+    KubernetesTaskRunner taskRunner = new KubernetesTaskRunner(
+        adapter,
+        kubernetesTaskRunnerConfig,
+        taskQueueConfig,
+        taskLogPusher,
+        peonClient,
+        null
+    );
+    KubernetesTaskRunner spyRunner = spy(taskRunner);
+    ListenableFuture<TaskStatus> future = spyRunner.run(task);
+    TaskStatus taskStatus = future.get();
+    Assert.assertEquals(TaskState.FAILED, taskStatus.getStatusCode());
+    Assert.assertEquals("K8s Job for task disappeared before completion: [ k8sTaskId, k8staskid]", taskStatus.getErrorMsg());
+
+  }
+
   private Task makeTask()
   {
     return new TestableNoopTask(
@@ -711,7 +768,6 @@ public class KubernetesTaskRunnerTest
         )
     );
   }
-
   private static class TestableNoopTask extends NoopTask
   {
     TestableNoopTask(

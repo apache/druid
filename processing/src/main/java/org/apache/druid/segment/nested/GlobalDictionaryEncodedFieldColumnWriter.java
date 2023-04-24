@@ -50,11 +50,11 @@ import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
 /**
- * Base class for writer of global dictionary encoded nested literal columns for {@link NestedDataColumnSerializer}.
- * {@link NestedDataColumnSerializer} while processing the 'raw' nested data will call {@link #addValue(int, Object)}
- * for all literal writers, which for this type of writer entails building a local dictionary to map into to the global
- * dictionary ({@link #localDictionary}) and writes this unsorted localId to an intermediate integer column,
- * {@link #intermediateValueWriter}.
+ * Base class for writer of global dictionary encoded nested literal columns for {@link NestedDataColumnSerializerV4} and
+ * {@link NestedDataColumnSerializer}. While processing the 'raw' nested data, the
+ * serializers will call {@link #addValue(int, Object)} for writers, which for this type of writer entails building a
+ * local dictionary to map into to the global dictionary ({@link #localDictionary}) and writes this unsorted localId to
+ * an intermediate integer column, {@link #intermediateValueWriter}.
  * <p>
  * When processing the 'raw' value column is complete, the {@link #writeTo(int, FileSmoosher)} method will sort the
  * local ids and write them out to a local sorted dictionary, iterate over {@link #intermediateValueWriter} swapping
@@ -69,7 +69,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
   protected final String columnName;
   protected final String fieldName;
   protected final IndexSpec indexSpec;
-  protected final GlobalDictionaryIdLookup globalDictionaryIdLookup;
+  protected final DictionaryIdLookup globalDictionaryIdLookup;
   protected final LocalDimensionDictionary localDictionary = new LocalDimensionDictionary();
 
   protected final Int2ObjectRBTreeMap<MutableBitmap> arrayElements = new Int2ObjectRBTreeMap<>();
@@ -87,7 +87,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
       String fieldName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       IndexSpec indexSpec,
-      GlobalDictionaryIdLookup globalDictionaryIdLookup
+      DictionaryIdLookup globalDictionaryIdLookup
   )
   {
     this.columnName = columnName;
@@ -281,7 +281,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
         }
       }
     };
-    final String fieldFileName = NestedDataColumnSerializer.getInternalFileName(columnName, fieldName);
+    final String fieldFileName = NestedDataColumnSerializerV4.getInternalFileName(columnName, fieldName);
     final long size = fieldSerializer.getSerializedSize();
     log.debug("Column [%s] serializing [%s] field of size [%d].", columnName, fieldName, size);
     try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(fieldFileName, size)) {

@@ -78,7 +78,14 @@ public class PartialDruidQuery
 
     // WHERE_FILTER, SELECT_PROJECT may be present on any query, except ones with WINDOW.
     WHERE_FILTER,
-    SELECT_PROJECT,
+    SELECT_PROJECT {
+      @Override
+      public boolean canFollow(Stage stage)
+      {
+        // SELECT_PROJECT can be stacked on top of another SELECT_PROJECT.
+        return stage.compareTo(this) <= 0;
+      }
+    },
 
     // AGGREGATE, HAVING_FILTER, AGGREGATE_PROJECT can be present on non-WINDOW aggregating queries.
     AGGREGATE,

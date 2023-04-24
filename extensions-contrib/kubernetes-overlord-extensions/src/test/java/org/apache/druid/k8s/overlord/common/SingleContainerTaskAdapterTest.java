@@ -22,7 +22,6 @@ package org.apache.druid.k8s.overlord.common;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.google.common.collect.ImmutableList;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -30,6 +29,7 @@ import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
@@ -76,32 +76,14 @@ class SingleContainerTaskAdapterTest
         false
     );
     startupLoggingConfig = new StartupLoggingConfig();
-    taskConfig = new TaskConfig(
-        "src/test/resources",
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        null,
-        null,
-        false,
-        ImmutableList.of("src/test/resources")
-    );
+    taskConfig = new TaskConfigBuilder().setBaseDir("src/test/resources").build();
   }
 
   @Test
   public void testSingleContainerSupport() throws IOException
   {
     TestKubernetesClient testClient = new TestKubernetesClient(client);
-    Pod pod = client.pods()
-                    .load(this.getClass().getClassLoader().getResourceAsStream("multiContainerPodSpec.yaml"))
-                    .get();
+    Pod pod = K8sTestUtils.fileToResource("multiContainerPodSpec.yaml", Pod.class);
     KubernetesTaskRunnerConfig config = new KubernetesTaskRunnerConfig();
     config.namespace = "test";
     SingleContainerTaskAdapter adapter = new SingleContainerTaskAdapter(
@@ -122,13 +104,8 @@ class SingleContainerTaskAdapterTest
             new File("/tmp")
         )
     );
-    Job expected = client.batch()
-                         .v1()
-                         .jobs()
-                         .load(this.getClass()
-                                   .getClassLoader()
-                                   .getResourceAsStream("expectedSingleContainerOutput.yaml"))
-                         .get();
+
+    Job expected = K8sTestUtils.fileToResource("expectedSingleContainerOutput.yaml", Job.class);
     // something is up with jdk 17, where if you compress with jdk < 17 and try and decompress you get different results,
     // this would never happen in real life, but for the jdk 17 tests this is a problem
     // could be related to: https://bugs.openjdk.org/browse/JDK-8081450

@@ -496,11 +496,8 @@ public class MSQInsertTest extends MSQTestBase
                      .setQueryContext(localContext)
                      .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
                          CoreMatchers.instanceOf(ISE.class),
-                         ThrowableMessageMatcher.hasMessage(!FAULT_TOLERANCE.equals(contextName)
-                                                            ? CoreMatchers.containsString(
-                             "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false.")
-                                                            :
-                                                            CoreMatchers.containsString("exceeded max relaunch count")
+                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                             "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further.")
                          )
                      ))
                      .verifyExecutionError();
@@ -879,6 +876,30 @@ public class MSQInsertTest extends MSQTestBase
         .setQueryContext(context)
         .setExpectedMSQFault(new ColumnNameRestrictedFault("__bucket"))
         .verifyResults();
+  }
+
+  @Test
+  public void testInsertDuplicateColumnNames()
+  {
+    testIngestQuery()
+        .setSql(" insert into foo1 SELECT\n"
+                + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
+                + " namespace,\n"
+                + " \"user\" AS namespace\n"
+                + "FROM TABLE(\n"
+                + "  EXTERN(\n"
+                + "    '{ \"files\": [\"ignored\"],\"type\":\"local\"}',\n"
+                + "    '{\"type\": \"json\"}',\n"
+                + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"namespace\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}, {\"name\": \"__bucket\", \"type\": \"string\"}]'\n"
+                + "  )\n"
+                + ") PARTITIONED by day")
+        .setQueryContext(context)
+        .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
+            CoreMatchers.instanceOf(SqlPlanningException.class),
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                "Duplicate field in SELECT: [namespace]"))
+        ))
+        .verifyPlanningErrors();
   }
 
   @Test

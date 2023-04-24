@@ -2718,8 +2718,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         JoinType.LEFT
                     )
                 )
+                .virtualColumns(expressionVirtualColumn("_v0", "'10.1'", ColumnType.STRING))
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("__time", "v0")
+                .columns("__time", "_v0")
                 .filters(new SelectorDimFilter("v0", "10.1", null))
                 .context(queryContext)
                 .build()
@@ -2829,8 +2830,10 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         JoinType.LEFT
                     )
                 )
+                .virtualColumns(expressionVirtualColumn("_v0", "'10.1'", ColumnType.STRING))
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("__time", "v0")
+                .filters(selector("v0", "10.1", null))
+                .columns("__time", "_v0")
                 .context(queryContext)
                 .build()
         ),
@@ -3022,8 +3025,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 JoinType.INNER
             )
         )
+        .virtualColumns(expressionVirtualColumn("_v0", "'10.1'", ColumnType.STRING))
         .intervals(querySegmentSpec(Filtration.eternity()))
-        .columns("__time", "v0")
+        .columns("__time", "_v0")
         .context(queryContext);
 
     testQuery(
@@ -3139,6 +3143,90 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"10.1", 946771200000L}
+        )
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testGroupByOverGroupByOverInnerJoinOnTwoInlineDataSources(Map<String, Object> queryContext)
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "with abc as\n"
+        + "(\n"
+        + "  SELECT dim1, \"__time\", m1 from foo WHERE \"dim1\" = '10.1'\n"
+        + ")\n"
+        + "SELECT dim1 from (SELECT dim1,__time FROM (SELECT t1.dim1, t1.\"__time\" from abc as t1 INNER JOIN abc as t2 on t1.dim1 = t2.dim1) GROUP BY 1,2) GROUP BY dim1\n",
+        queryContext,
+        ImmutableList.of(
+            new GroupByQuery.Builder()
+                .setDataSource(
+                    new QueryDataSource(
+                        GroupByQuery.builder()
+                                    .setDataSource(
+                                        join(
+                                            new QueryDataSource(
+                                                newScanQueryBuilder()
+                                                    .dataSource(CalciteTests.DATASOURCE1)
+                                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                                    .filters(new SelectorDimFilter("dim1", "10.1", null))
+                                                    .virtualColumns(expressionVirtualColumn(
+                                                        "v0",
+                                                        "\'10.1\'",
+                                                        ColumnType.STRING
+                                                    ))
+                                                    .columns(ImmutableList.of("__time", "v0"))
+                                                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                                    .context(queryContext)
+                                                    .build()
+                                            ),
+                                            new QueryDataSource(
+                                                newScanQueryBuilder()
+                                                    .dataSource(CalciteTests.DATASOURCE1)
+                                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                                    .filters(new SelectorDimFilter("dim1", "10.1", null))
+                                                    .columns(ImmutableList.of("dim1"))
+                                                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                                    .context(queryContext)
+                                                    .build()
+                                            ),
+                                            "j0.",
+                                            equalsCondition(
+                                                makeColumnExpression("v0"),
+                                                makeColumnExpression("j0.dim1")
+                                            ),
+                                            JoinType.INNER
+                                        ))
+                                    .setInterval(querySegmentSpec(Filtration.eternity()))
+                                    .setVirtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ColumnType.STRING))
+                                    .setGranularity(Granularities.ALL)
+                                    .setDimensions(new DefaultDimensionSpec(
+                                        "_v0",
+                                        "d0",
+                                        ColumnType.STRING
+                                    ), new DefaultDimensionSpec(
+                                        "__time",
+                                        "d1",
+                                        ColumnType.LONG
+                                    ))
+                                    .setContext(queryContext)
+                                    .build()
+                    )
+                )
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setDimensions(new DefaultDimensionSpec(
+                    "d0",
+                    "_d0",
+                    ColumnType.STRING
+                ))
+                .setContext(queryContext)
+                .setGranularity(Granularities.ALL)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"10.1"}
         )
     );
   }
@@ -5222,7 +5310,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                     .filters(new InDimFilter("m2", new HashSet<>(Arrays.asList(null, "A"))))
                                                     .virtualColumns(expressionVirtualColumn("v0", "notnull(\"m2\")", ColumnType.LONG))
                                                     .dimension(new DefaultDimensionSpec("v0", "d0", ColumnType.LONG))
-                                                    .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC)))
+                                                    .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC)))
                                                     .aggregators(new CountAggregatorFactory("a0"))
                                                     .threshold(1)
                                                     .build()
@@ -5261,6 +5349,64 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{useDefault ? 1L : 2L, 1.0f}
+        )
+    );
+  }
+
+  @Test
+  public void testJoinWithAliasAndOrderByNoGroupBy()
+  {
+    minTopNThreshold = 1;
+    Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
+    testQuery(
+        "select t1.__time from druid.foo as t1 join\n"
+        + "  druid.numfoo as t2 on t1.dim2 = t2.dim2\n"
+        + " order by t1.__time ASC ",
+        context, // turn on exact topN
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dataSource(
+                    JoinDataSource.create(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE3)
+                                .intervals(querySegmentSpec(Intervals.of(
+                                    "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
+                                .columns("dim2")
+                                .context(context)
+                                .build()
+                        ),
+                        "j0.",
+                        "(\"dim2\" == \"j0.dim2\")",
+                        JoinType.INNER,
+                        null,
+                        ExprMacroTable.nil(),
+                        CalciteTests.createJoinableFactoryWrapper()
+                    )
+                )
+                .columns("__time")
+                .order(ScanQuery.Order.ASCENDING)
+                .context(context)
+                .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{946684800000L},
+            new Object[]{946684800000L},
+            new Object[]{946857600000L},
+            new Object[]{978307200000L},
+            new Object[]{978307200000L},
+            new Object[]{978393600000L}
+        )
+        : ImmutableList.of(
+            new Object[]{946684800000L},
+            new Object[]{946684800000L},
+            new Object[]{978307200000L},
+            new Object[]{978307200000L},
+            new Object[]{978393600000L}
         )
     );
   }

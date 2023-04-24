@@ -569,7 +569,7 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
         return;
       }
     }
-    if (!"segments".equals(segmentsName)) {
+    if (!"segments".equals(segmentsName) && !"segments-frontcoded".equals(segmentsName)) {
       if (GroupByStrategySelector.STRATEGY_V1.equals(config.getDefaultStrategy())) {
         Throwable t = Assert.assertThrows(RuntimeException.class, runner::get);
         Assert.assertEquals(

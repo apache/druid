@@ -19,6 +19,7 @@
 # one word per line, to define a file override use ' - filename'
 # where filename is relative to this configuration file
 1M
+100MiB
 32-bit
 500MiB
 64-bit
@@ -170,6 +171,7 @@ Montréal
 MSQ
 Murmur3
 MVCC
+MV_TO_ARRAY
 NFS
 OCF
 OIDC
@@ -378,6 +380,7 @@ namespaced
 namespaces
 natively
 netflow
+nondescriptive
 nonfinalized
 non-null
 non-nullable
@@ -473,6 +476,7 @@ smooshed
 splittable
 ssl
 sslmode
+start_time
 stdout
 storages
 stringDictionaryEncoding

@@ -32,7 +32,11 @@ public interface NumericRangeIndex
    * Get a {@link BitmapColumnIndex} corresponding to the values supplied in the specified range. If supplied starting
    * value is null, the range will begin at the first non-null value in the underlying value dictionary. If the end
    * value is null, the range will extend to the last value in the underlying value dictionary.
+   * <p>
+   * If this method returns null it indicates that there is no index available that matches the requested range and a
+   * {@link org.apache.druid.query.filter.ValueMatcher} must be used instead.
    */
+  @Nullable
   BitmapColumnIndex forRange(
       @Nullable Number startValue,
       boolean startStrict,

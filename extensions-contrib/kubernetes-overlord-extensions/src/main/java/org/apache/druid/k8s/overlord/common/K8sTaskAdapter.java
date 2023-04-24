@@ -19,6 +19,7 @@
 
 package org.apache.druid.k8s.overlord.common;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -51,7 +52,6 @@ import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -108,7 +108,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     PeonCommandContext context = new PeonCommandContext(
         generateCommand(task),
         javaOpts(task),
-        new File(taskConfig.getBaseTaskDirPaths().get(0)),
+        taskConfig.getBaseTaskDir(),
         node.isEnableTlsPort()
     );
     PodSpec podSpec = pod.getSpec();
@@ -117,9 +117,9 @@ public abstract class K8sTaskAdapter implements TaskAdapter
   }
 
   @Override
-  public Task toTask(Pod from) throws IOException
+  public Task toTask(Job from) throws IOException
   {
-    PodSpec podSpec = from.getSpec();
+    PodSpec podSpec = from.getSpec().getTemplate().getSpec();
     massageSpec(podSpec, "main");
     List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
     Optional<EnvVar> taskJson = envVars.stream().filter(x -> "TASK_JSON".equals(x.getName())).findFirst();
@@ -199,8 +199,19 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     mainContainer.setPorts(Lists.newArrayList(httpsPort, tcpPort));
   }
 
-  protected void addEnvironmentVariables(Container mainContainer, PeonCommandContext context, String taskContents)
+  @VisibleForTesting
+  void addEnvironmentVariables(Container mainContainer, PeonCommandContext context, String taskContents)
+      throws JsonProcessingException
   {
+    // if the peon monitors are set, override the overlord's monitors (if set) with the peon monitors
+    if (!taskRunnerConfig.peonMonitors.isEmpty()) {
+      mainContainer.getEnv().removeIf(x -> "druid_monitoring_monitors".equals(x.getName()));
+      mainContainer.getEnv().add(new EnvVarBuilder()
+                                     .withName("druid_monitoring_monitors")
+                                     .withValue(mapper.writeValueAsString(taskRunnerConfig.peonMonitors))
+                                     .build());
+    }
+
     mainContainer.getEnv().addAll(Lists.newArrayList(
         new EnvVarBuilder()
             .withName(DruidK8sConstants.TASK_DIR_ENV)
@@ -234,7 +245,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
       PeonCommandContext context,
       long containerSize,
       String taskContents
-  )
+  ) throws JsonProcessingException
   {
     // prepend the startup task.json extraction command
     List<String> mainCommand = Lists.newArrayList("sh", "-c");
@@ -359,7 +370,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
   {
     final List<String> command = new ArrayList<>();
     command.add("/peon.sh");
-    command.add(new File(taskConfig.getBaseTaskDirPaths().get(0)).getAbsolutePath());
+    command.add(taskConfig.getBaseTaskDir().getAbsolutePath());
     command.add("1"); // the attemptId is always 1, we never run the task twice on the same pod.
 
     String nodeType = task.getNodeType();

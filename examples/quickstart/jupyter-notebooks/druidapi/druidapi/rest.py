@@ -95,10 +95,27 @@ class DruidRestClient:
     concatenating the service endpoint with the request URL.
     '''
 
-    def __init__(self, endpoint):
+    def __init__(self, endpoint, auth=None):
+        '''
+        Creates a Druid rest client endpoint using the given endpoint URI and
+        optional authentication.
+
+        Parameters
+        ----------
+        endpoint: str
+            The Druid router endpoint of the form `'server:port'`. Use
+            `'localhost:8888'` for a Druid instance running locally.
+
+        auth: str, default = None
+            Optional authorization credentials in the format described
+            by the Requests library. For Basic auth use
+            `auth=('user', 'password')`
+        '''
         self.endpoint = endpoint
         self.trace = False
         self.session = requests.Session()
+        if auth:
+            self.session.auth = auth
 
     def enable_trace(self, flag=True):
         self.trace = flag
@@ -210,7 +227,7 @@ class DruidRestClient:
         check_error(r)
         return r.json()
 
-    def post_only_json(self, req, body, args=None, headers=None, params=None) -> requests.Request:
+    def post_only_json(self, req, body, args=None, headers=None, params=None, require_ok=True) -> requests.Request:
         '''
         Issues a POST request for the given URL on this node, with a JSON request, returning
         the Requests library `Response` object.
@@ -244,13 +261,18 @@ class DruidRestClient:
         if self.trace:
             print('POST:', url)
             print('body:', body)
-        return self.session.post(url, json=body, headers=headers, params=params)
+        r = self.session.post(url, json=body, headers=headers, params=params)
+        if require_ok:
+            check_error(r)
+        return r
 
-    def delete(self, req, args=None, params=None, headers=None):
+    def delete(self, req, args=None, params=None, headers=None, require_ok=True):
         url = self.build_url(req, args)
         if self.trace:
             print('DELETE:', url)
         r = self.session.delete(url, params=params, headers=headers)
+        if require_ok:
+            check_error(r)
         return r
 
     def delete_json(self, req, args=None, params=None, headers=None):
