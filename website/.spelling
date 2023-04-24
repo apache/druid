@@ -19,12 +19,14 @@
 # one word per line, to define a file override use ' - filename'
 # where filename is relative to this configuration file
 1M
+100MiB
 32-bit
 500MiB
 64-bit
 ACL
 ACLs
 APIs
+apache.org
 AvroStorage
 ARN
 autokill
@@ -139,6 +141,7 @@ JSONPath
 JSSE
 JVM
 JVMs
+JWT
 Joda
 JsonProperty
 Jupyter
@@ -168,8 +171,10 @@ Montréal
 MSQ
 Murmur3
 MVCC
+MV_TO_ARRAY
 NFS
 OCF
+OIDC
 OLAP
 OOMs
 OpenJDK
@@ -375,6 +380,7 @@ namespaced
 namespaces
 natively
 netflow
+nondescriptive
 nonfinalized
 non-null
 non-nullable
@@ -470,6 +476,7 @@ smooshed
 splittable
 ssl
 sslmode
+start_time
 stdout
 storages
 stringDictionaryEncoding
@@ -2256,6 +2263,11 @@ DS_QUANTILE_SUMMARY
 DS_QUANTILES_SKETCH
 DS_RANK
 DS_THETA
+DS_TUPLE_DOUBLES
+DS_TUPLE_DOUBLES_INTERSECT
+DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE
+DS_TUPLE_DOUBLES_NOT
+DS_TUPLE_DOUBLES_UNION
 EARLIEST_BY
 _e_
 HLL_SKETCH_ESTIMATE

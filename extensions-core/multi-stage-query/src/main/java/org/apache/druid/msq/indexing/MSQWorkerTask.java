@@ -21,9 +21,11 @@ package org.apache.druid.msq.indexing;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -35,9 +37,12 @@ import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerImpl;
+import org.apache.druid.server.security.ResourceAction;
 
+import javax.annotation.Nonnull;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 @JsonTypeName(MSQWorkerTask.TYPE)
 public class MSQWorkerTask extends AbstractTask
@@ -109,6 +114,15 @@ public class MSQWorkerTask extends AbstractTask
   public String getType()
   {
     return TYPE;
+  }
+
+  @Nonnull
+  @JsonIgnore
+  @Override
+  public Set<ResourceAction> getInputSourceResources()
+  {
+    // the input sources are properly computed in the SQL / calcite layer, but not in the native MSQ task here.
+    return ImmutableSet.of();
   }
 
 

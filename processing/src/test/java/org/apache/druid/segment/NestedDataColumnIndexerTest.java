@@ -364,7 +364,7 @@ public class NestedDataColumnIndexerTest extends InitializedNullHandlingTest
         UnsupportedOperationException.class,
         () -> cursorList.get(0).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
     );
-    Assert.assertEquals(StructuredData.wrap(new Object[]{"a"}), valueSelector.getObject());
+    Assert.assertArrayEquals(new Object[]{"a"}, (Object[]) valueSelector.getObject());
 
     columnSelectorFactory = cursorList.get(1).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(STRING_ARRAY_COL);
@@ -372,8 +372,7 @@ public class NestedDataColumnIndexerTest extends InitializedNullHandlingTest
         UnsupportedOperationException.class,
         () -> cursorList.get(1).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
     );
-    Assert.assertEquals(StructuredData.wrap(new Object[]{"b", "c"}), valueSelector.getObject());
-    Assert.assertFalse(valueSelector.isNull());
+    Assert.assertArrayEquals(new Object[]{"b", "c"}, (Object[]) valueSelector.getObject());
 
     columnSelectorFactory = cursorList.get(2).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(STRING_ARRAY_COL);
@@ -381,9 +380,7 @@ public class NestedDataColumnIndexerTest extends InitializedNullHandlingTest
         UnsupportedOperationException.class,
         () -> cursorList.get(2).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
     );
-    // raw data is left as is, so is currently still a list while in incremental index...
-    Assert.assertEquals(StructuredData.wrap(ImmutableList.of("d", "e")), valueSelector.getObject());
-    Assert.assertFalse(valueSelector.isNull());
+    Assert.assertArrayEquals(new Object[]{"d", "e"}, (Object[]) valueSelector.getObject());
 
     columnSelectorFactory = cursorList.get(3).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(STRING_ARRAY_COL);

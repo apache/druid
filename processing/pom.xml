@@ -29,7 +29,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>26.0.0-SNAPSHOT</version>
+    <version>27.0.0-SNAPSHOT</version>
   </parent>
 
   <properties>
@@ -146,7 +146,7 @@
     </dependency>
     <dependency>
       <groupId>org.glassfish</groupId>
-      <artifactId>javax.el</artifactId>
+      <artifactId>jakarta.el</artifactId>
       <scope>runtime</scope>
     </dependency>
     <dependency>

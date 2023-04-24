@@ -24,6 +24,7 @@ exports[`RuleEditor matches snapshot no tier in rule 1`] = `
         <svg
           data-icon="caret-down"
           height="16"
+          role="img"
           viewBox="0 0 16 16"
           width="16"
         >
@@ -45,11 +46,11 @@ exports[`RuleEditor matches snapshot no tier in rule 1`] = `
         aria-hidden="true"
         class="bp4-icon bp4-icon-trash"
         icon="trash"
-        tabindex="0"
       >
         <svg
           data-icon="trash"
           height="16"
+          role="img"
           viewBox="0 0 16 16"
           width="16"
         >
@@ -142,14 +143,18 @@ exports[`RuleEditor matches snapshot no tier in rule 1`] = `
                   icon="double-caret-vertical"
                 >
                   <svg
+                    aria-labelledby="iconTitle-2"
                     data-icon="double-caret-vertical"
                     height="16"
+                    role="img"
                     viewBox="0 0 16 16"
                     width="16"
                   >
-                    <desc>
+                    <title
+                      id="iconTitle-2"
+                    >
                       Open dropdown
-                    </desc>
+                    </title>
                     <path
                       d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
                       fill-rule="evenodd"
@@ -169,85 +174,6 @@ exports[`RuleEditor matches snapshot no tier in rule 1`] = `
             <div
               class="bp4-control-group"
             >
-              <button
-                class="bp4-button bp4-minimal"
-                style="pointer-events: none;"
-                type="button"
-              >
-                <span
-                  class="bp4-button-text"
-                >
-                  Replicants:
-                </span>
-              </button>
-              <div
-                class="bp4-control-group bp4-numeric-input"
-              >
-                <div
-                  class="bp4-input-group"
-                >
-                  <input
-                    autocomplete="off"
-                    class="bp4-input"
-                    max="256"
-                    min="0"
-                    type="text"
-                    value="1"
-                  />
-                </div>
-                <div
-                  class="bp4-button-group bp4-vertical bp4-fixed"
-                >
-                  <button
-                    aria-label="increment"
-                    class="bp4-button"
-                    type="button"
-                  >
-                    <span
-                      aria-hidden="true"
-                      class="bp4-icon bp4-icon-chevron-up"
-                      icon="chevron-up"
-                      tabindex="0"
-                    >
-                      <svg
-                        data-icon="chevron-up"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <path
-                          d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 001.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </button>
-                  <button
-                    aria-label="decrement"
-                    class="bp4-button"
-                    type="button"
-                  >
-                    <span
-                      aria-hidden="true"
-                      class="bp4-icon bp4-icon-chevron-down"
-                      icon="chevron-down"
-                      tabindex="0"
-                    >
-                      <svg
-                        data-icon="chevron-down"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <path
-                          d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0012 5z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </button>
-                </div>
-              </div>
               <button
                 class="bp4-button bp4-minimal"
                 style="pointer-events: none;"
@@ -289,20 +215,110 @@ exports[`RuleEditor matches snapshot no tier in rule 1`] = `
                   icon="double-caret-vertical"
                 >
                   <svg
+                    aria-labelledby="iconTitle-3"
                     data-icon="double-caret-vertical"
                     height="16"
+                    role="img"
                     viewBox="0 0 16 16"
                     width="16"
                   >
-                    <desc>
+                    <title
+                      id="iconTitle-3"
+                    >
                       Open dropdown
-                    </desc>
+                    </title>
                     <path
                       d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
                       fill-rule="evenodd"
                     />
                   </svg>
                 </span>
+              </div>
+              <button
+                class="bp4-button bp4-minimal"
+                style="pointer-events: none;"
+                type="button"
+              >
+                <span
+                  class="bp4-button-text"
+                >
+                  Replicants:
+                </span>
+              </button>
+              <div
+                class="bp4-control-group bp4-numeric-input"
+              >
+                <div
+                  class="bp4-input-group"
+                >
+                  <input
+                    aria-valuemax="256"
+                    aria-valuemin="0"
+                    aria-valuenow="1"
+                    autocomplete="off"
+                    class="bp4-input"
+                    id="numericInput-0"
+                    max="256"
+                    min="0"
+                    role="spinbutton"
+                    type="text"
+                    value="1"
+                  />
+                </div>
+                <div
+                  class="bp4-button-group bp4-vertical bp4-fixed"
+                >
+                  <button
+                    aria-controls="numericInput-0"
+                    aria-label="increment"
+                    class="bp4-button"
+                    type="button"
+                  >
+                    <span
+                      aria-hidden="true"
+                      class="bp4-icon bp4-icon-chevron-up"
+                      icon="chevron-up"
+                    >
+                      <svg
+                        data-icon="chevron-up"
+                        height="16"
+                        role="img"
+                        viewBox="0 0 16 16"
+                        width="16"
+                      >
+                        <path
+                          d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 001.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71z"
+                          fill-rule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                  </button>
+                  <button
+                    aria-controls="numericInput-0"
+                    aria-label="decrement"
+                    class="bp4-button"
+                    type="button"
+                  >
+                    <span
+                      aria-hidden="true"
+                      class="bp4-icon bp4-icon-chevron-down"
+                      icon="chevron-down"
+                    >
+                      <svg
+                        data-icon="chevron-down"
+                        height="16"
+                        role="img"
+                        viewBox="0 0 16 16"
+                        width="16"
+                      >
+                        <path
+                          d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0012 5z"
+                          fill-rule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                  </button>
+                </div>
               </div>
               <button
                 class="bp4-button bp4-disabled"
@@ -314,11 +330,11 @@ exports[`RuleEditor matches snapshot no tier in rule 1`] = `
                   aria-hidden="true"
                   class="bp4-icon bp4-icon-trash"
                   icon="trash"
-                  tabindex="0"
                 >
                   <svg
                     data-icon="trash"
                     height="16"
+                    role="img"
                     viewBox="0 0 16 16"
                     width="16"
                   >
@@ -344,11 +360,11 @@ exports[`RuleEditor matches snapshot no tier in rule 1`] = `
                     aria-hidden="true"
                     class="bp4-icon bp4-icon-plus"
                     icon="plus"
-                    tabindex="-1"
                   >
                     <svg
                       data-icon="plus"
                       height="16"
+                      role="img"
                       viewBox="0 0 16 16"
                       width="16"
                     >
@@ -398,6 +414,7 @@ exports[`RuleEditor matches snapshot with broadcast rule 1`] = `
         <svg
           data-icon="caret-down"
           height="16"
+          role="img"
           viewBox="0 0 16 16"
           width="16"
         >
@@ -419,11 +436,11 @@ exports[`RuleEditor matches snapshot with broadcast rule 1`] = `
         aria-hidden="true"
         class="bp4-icon bp4-icon-trash"
         icon="trash"
-        tabindex="0"
       >
         <svg
           data-icon="trash"
           height="16"
+          role="img"
           viewBox="0 0 16 16"
           width="16"
         >
@@ -516,14 +533,18 @@ exports[`RuleEditor matches snapshot with broadcast rule 1`] = `
                   icon="double-caret-vertical"
                 >
                   <svg
+                    aria-labelledby="iconTitle-38"
                     data-icon="double-caret-vertical"
                     height="16"
+                    role="img"
                     viewBox="0 0 16 16"
                     width="16"
                   >
-                    <desc>
+                    <title
+                      id="iconTitle-38"
+                    >
                       Open dropdown
-                    </desc>
+                    </title>
                     <path
                       d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
                       fill-rule="evenodd"
@@ -574,6 +595,7 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
         <svg
           data-icon="caret-down"
           height="16"
+          role="img"
           viewBox="0 0 16 16"
           width="16"
         >
@@ -595,11 +617,11 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
         aria-hidden="true"
         class="bp4-icon bp4-icon-trash"
         icon="trash"
-        tabindex="0"
       >
         <svg
           data-icon="trash"
           height="16"
+          role="img"
           viewBox="0 0 16 16"
           width="16"
         >
@@ -692,14 +714,18 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                   icon="double-caret-vertical"
                 >
                   <svg
+                    aria-labelledby="iconTitle-26"
                     data-icon="double-caret-vertical"
                     height="16"
+                    role="img"
                     viewBox="0 0 16 16"
                     width="16"
                   >
-                    <desc>
+                    <title
+                      id="iconTitle-26"
+                    >
                       Open dropdown
-                    </desc>
+                    </title>
                     <path
                       d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
                       fill-rule="evenodd"
@@ -737,85 +763,6 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                 <span
                   class="bp4-button-text"
                 >
-                  Replicants:
-                </span>
-              </button>
-              <div
-                class="bp4-control-group bp4-numeric-input"
-              >
-                <div
-                  class="bp4-input-group"
-                >
-                  <input
-                    autocomplete="off"
-                    class="bp4-input"
-                    max="256"
-                    min="0"
-                    type="text"
-                    value="1"
-                  />
-                </div>
-                <div
-                  class="bp4-button-group bp4-vertical bp4-fixed"
-                >
-                  <button
-                    aria-label="increment"
-                    class="bp4-button"
-                    type="button"
-                  >
-                    <span
-                      aria-hidden="true"
-                      class="bp4-icon bp4-icon-chevron-up"
-                      icon="chevron-up"
-                      tabindex="0"
-                    >
-                      <svg
-                        data-icon="chevron-up"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <path
-                          d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 001.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </button>
-                  <button
-                    aria-label="decrement"
-                    class="bp4-button"
-                    type="button"
-                  >
-                    <span
-                      aria-hidden="true"
-                      class="bp4-icon bp4-icon-chevron-down"
-                      icon="chevron-down"
-                      tabindex="0"
-                    >
-                      <svg
-                        data-icon="chevron-down"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <path
-                          d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0012 5z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </button>
-                </div>
-              </div>
-              <button
-                class="bp4-button bp4-minimal"
-                style="pointer-events: none;"
-                type="button"
-              >
-                <span
-                  class="bp4-button-text"
-                >
                   Tier:
                 </span>
               </button>
@@ -844,14 +791,18 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                   icon="double-caret-vertical"
                 >
                   <svg
+                    aria-labelledby="iconTitle-27"
                     data-icon="double-caret-vertical"
                     height="16"
+                    role="img"
                     viewBox="0 0 16 16"
                     width="16"
                   >
-                    <desc>
+                    <title
+                      id="iconTitle-27"
+                    >
                       Open dropdown
-                    </desc>
+                    </title>
                     <path
                       d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
                       fill-rule="evenodd"
@@ -859,33 +810,6 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                   </svg>
                 </span>
               </div>
-              <button
-                class="bp4-button"
-                type="button"
-              >
-                <span
-                  aria-hidden="true"
-                  class="bp4-icon bp4-icon-trash"
-                  icon="trash"
-                  tabindex="0"
-                >
-                  <svg
-                    data-icon="trash"
-                    height="16"
-                    viewBox="0 0 16 16"
-                    width="16"
-                  >
-                    <path
-                      d="M14.49 3.99h-13c-.28 0-.5.22-.5.5s.22.5.5.5h.5v10c0 .55.45 1 1 1h10c.55 0 1-.45 1-1v-10h.5c.28 0 .5-.22.5-.5s-.22-.5-.5-.5zm-8.5 9c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm2-12h-4c0-.55-.45-1-1-1h-2c-.55 0-1 .45-1 1h-4c-.55 0-1 .45-1 1v1h14v-1c0-.55-.45-1-1-1z"
-                      fill-rule="evenodd"
-                    />
-                  </svg>
-                </span>
-              </button>
-            </div>
-            <div
-              class="bp4-control-group"
-            >
               <button
                 class="bp4-button bp4-minimal"
                 style="pointer-events: none;"
@@ -904,18 +828,24 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                   class="bp4-input-group"
                 >
                   <input
+                    aria-valuemax="256"
+                    aria-valuemin="0"
+                    aria-valuenow="1"
                     autocomplete="off"
                     class="bp4-input"
+                    id="numericInput-3"
                     max="256"
                     min="0"
+                    role="spinbutton"
                     type="text"
-                    value="2"
+                    value="1"
                   />
                 </div>
                 <div
                   class="bp4-button-group bp4-vertical bp4-fixed"
                 >
                   <button
+                    aria-controls="numericInput-3"
                     aria-label="increment"
                     class="bp4-button"
                     type="button"
@@ -924,11 +854,11 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                       aria-hidden="true"
                       class="bp4-icon bp4-icon-chevron-up"
                       icon="chevron-up"
-                      tabindex="0"
                     >
                       <svg
                         data-icon="chevron-up"
                         height="16"
+                        role="img"
                         viewBox="0 0 16 16"
                         width="16"
                       >
@@ -940,6 +870,7 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                     </span>
                   </button>
                   <button
+                    aria-controls="numericInput-3"
                     aria-label="decrement"
                     class="bp4-button"
                     type="button"
@@ -948,11 +879,11 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                       aria-hidden="true"
                       class="bp4-icon bp4-icon-chevron-down"
                       icon="chevron-down"
-                      tabindex="0"
                     >
                       <svg
                         data-icon="chevron-down"
                         height="16"
+                        role="img"
                         viewBox="0 0 16 16"
                         width="16"
                       >
@@ -965,6 +896,33 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                   </button>
                 </div>
               </div>
+              <button
+                class="bp4-button"
+                type="button"
+              >
+                <span
+                  aria-hidden="true"
+                  class="bp4-icon bp4-icon-trash"
+                  icon="trash"
+                >
+                  <svg
+                    data-icon="trash"
+                    height="16"
+                    role="img"
+                    viewBox="0 0 16 16"
+                    width="16"
+                  >
+                    <path
+                      d="M14.49 3.99h-13c-.28 0-.5.22-.5.5s.22.5.5.5h.5v10c0 .55.45 1 1 1h10c.55 0 1-.45 1-1v-10h.5c.28 0 .5-.22.5-.5s-.22-.5-.5-.5zm-8.5 9c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm2-12h-4c0-.55-.45-1-1-1h-2c-.55 0-1 .45-1 1h-4c-.55 0-1 .45-1 1v1h14v-1c0-.55-.45-1-1-1z"
+                      fill-rule="evenodd"
+                    />
+                  </svg>
+                </span>
+              </button>
+            </div>
+            <div
+              class="bp4-control-group"
+            >
               <button
                 class="bp4-button bp4-minimal"
                 style="pointer-events: none;"
@@ -1001,20 +959,110 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                   icon="double-caret-vertical"
                 >
                   <svg
+                    aria-labelledby="iconTitle-31"
                     data-icon="double-caret-vertical"
                     height="16"
+                    role="img"
                     viewBox="0 0 16 16"
                     width="16"
                   >
-                    <desc>
+                    <title
+                      id="iconTitle-31"
+                    >
                       Open dropdown
-                    </desc>
+                    </title>
                     <path
                       d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
                       fill-rule="evenodd"
                     />
                   </svg>
                 </span>
+              </div>
+              <button
+                class="bp4-button bp4-minimal"
+                style="pointer-events: none;"
+                type="button"
+              >
+                <span
+                  class="bp4-button-text"
+                >
+                  Replicants:
+                </span>
+              </button>
+              <div
+                class="bp4-control-group bp4-numeric-input"
+              >
+                <div
+                  class="bp4-input-group"
+                >
+                  <input
+                    aria-valuemax="256"
+                    aria-valuemin="0"
+                    aria-valuenow="2"
+                    autocomplete="off"
+                    class="bp4-input"
+                    id="numericInput-4"
+                    max="256"
+                    min="0"
+                    role="spinbutton"
+                    type="text"
+                    value="2"
+                  />
+                </div>
+                <div
+                  class="bp4-button-group bp4-vertical bp4-fixed"
+                >
+                  <button
+                    aria-controls="numericInput-4"
+                    aria-label="increment"
+                    class="bp4-button"
+                    type="button"
+                  >
+                    <span
+                      aria-hidden="true"
+                      class="bp4-icon bp4-icon-chevron-up"
+                      icon="chevron-up"
+                    >
+                      <svg
+                        data-icon="chevron-up"
+                        height="16"
+                        role="img"
+                        viewBox="0 0 16 16"
+                        width="16"
+                      >
+                        <path
+                          d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 001.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71z"
+                          fill-rule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                  </button>
+                  <button
+                    aria-controls="numericInput-4"
+                    aria-label="decrement"
+                    class="bp4-button"
+                    type="button"
+                  >
+                    <span
+                      aria-hidden="true"
+                      class="bp4-icon bp4-icon-chevron-down"
+                      icon="chevron-down"
+                    >
+                      <svg
+                        data-icon="chevron-down"
+                        height="16"
+                        role="img"
+                        viewBox="0 0 16 16"
+                        width="16"
+                      >
+                        <path
+                          d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0012 5z"
+                          fill-rule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                  </button>
+                </div>
               </div>
               <button
                 class="bp4-button"
@@ -1024,11 +1072,11 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                   aria-hidden="true"
                   class="bp4-icon bp4-icon-trash"
                   icon="trash"
-                  tabindex="0"
                 >
                   <svg
                     data-icon="trash"
                     height="16"
+                    role="img"
                     viewBox="0 0 16 16"
                     width="16"
                   >
@@ -1054,11 +1102,11 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                     aria-hidden="true"
                     class="bp4-icon bp4-icon-plus"
                     icon="plus"
-                    tabindex="-1"
                   >
                     <svg
                       data-icon="plus"
                       height="16"
+                      role="img"
                       viewBox="0 0 16 16"
                       width="16"
                     >
@@ -1108,6 +1156,7 @@ exports[`RuleEditor matches snapshot with existing tier in rule 1`] = `
         <svg
           data-icon="caret-down"
           height="16"
+          role="img"
           viewBox="0 0 16 16"
           width="16"
         >
@@ -1129,11 +1178,11 @@ exports[`RuleEditor matches snapshot with existing tier in rule 1`] = `
         aria-hidden="true"
         class="bp4-icon bp4-icon-trash"
         icon="trash"
-        tabindex="0"
       >
         <svg
           data-icon="trash"
           height="16"
+          role="img"
           viewBox="0 0 16 16"
           width="16"
         >
@@ -1226,14 +1275,18 @@ exports[`RuleEditor matches snapshot with existing tier in rule 1`] = `
                   icon="double-caret-vertical"
                 >
                   <svg
+                    aria-labelledby="iconTitle-18"
                     data-icon="double-caret-vertical"
                     height="16"
+                    role="img"
                     viewBox="0 0 16 16"
                     width="16"
                   >
-                    <desc>
+                    <title
+                      id="iconTitle-18"
+                    >
                       Open dropdown
-                    </desc>
+                    </title>
                     <path
                       d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
                       fill-rule="evenodd"
@@ -1271,85 +1324,6 @@ exports[`RuleEditor matches snapshot with existing tier in rule 1`] = `
                 <span
                   class="bp4-button-text"
                 >
-                  Replicants:
-                </span>
-              </button>
-              <div
-                class="bp4-control-group bp4-numeric-input"
-              >
-                <div
-                  class="bp4-input-group"
-                >
-                  <input
-                    autocomplete="off"
-                    class="bp4-input"
-                    max="256"
-                    min="0"
-                    type="text"
-                    value="2"
-                  />
-                </div>
-                <div
-                  class="bp4-button-group bp4-vertical bp4-fixed"
-                >
-                  <button
-                    aria-label="increment"
-                    class="bp4-button"
-                    type="button"
-                  >
-                    <span
-                      aria-hidden="true"
-                      class="bp4-icon bp4-icon-chevron-up"
-                      icon="chevron-up"
-                      tabindex="0"
-                    >
-                      <svg
-                        data-icon="chevron-up"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <path
-                          d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 001.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </button>
-                  <button
-                    aria-label="decrement"
-                    class="bp4-button"
-                    type="button"
-                  >
-                    <span
-                      aria-hidden="true"
-                      class="bp4-icon bp4-icon-chevron-down"
-                      icon="chevron-down"
-                      tabindex="0"
-                    >
-                      <svg
-                        data-icon="chevron-down"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <path
-                          d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0012 5z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </button>
-                </div>
-              </div>
-              <button
-                class="bp4-button bp4-minimal"
-                style="pointer-events: none;"
-                type="button"
-              >
-                <span
-                  class="bp4-button-text"
-                >
                   Tier:
                 </span>
               </button>
@@ -1378,20 +1352,110 @@ exports[`RuleEditor matches snapshot with existing tier in rule 1`] = `
                   icon="double-caret-vertical"
                 >
                   <svg
+                    aria-labelledby="iconTitle-19"
                     data-icon="double-caret-vertical"
                     height="16"
+                    role="img"
                     viewBox="0 0 16 16"
                     width="16"
                   >
-                    <desc>
+                    <title
+                      id="iconTitle-19"
+                    >
                       Open dropdown
-                    </desc>
+                    </title>
                     <path
                       d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
                       fill-rule="evenodd"
                     />
                   </svg>
                 </span>
+              </div>
+              <button
+                class="bp4-button bp4-minimal"
+                style="pointer-events: none;"
+                type="button"
+              >
+                <span
+                  class="bp4-button-text"
+                >
+                  Replicants:
+                </span>
+              </button>
+              <div
+                class="bp4-control-group bp4-numeric-input"
+              >
+                <div
+                  class="bp4-input-group"
+                >
+                  <input
+                    aria-valuemax="256"
+                    aria-valuemin="0"
+                    aria-valuenow="2"
+                    autocomplete="off"
+                    class="bp4-input"
+                    id="numericInput-2"
+                    max="256"
+                    min="0"
+                    role="spinbutton"
+                    type="text"
+                    value="2"
+                  />
+                </div>
+                <div
+                  class="bp4-button-group bp4-vertical bp4-fixed"
+                >
+                  <button
+                    aria-controls="numericInput-2"
+                    aria-label="increment"
+                    class="bp4-button"
+                    type="button"
+                  >
+                    <span
+                      aria-hidden="true"
+                      class="bp4-icon bp4-icon-chevron-up"
+                      icon="chevron-up"
+                    >
+                      <svg
+                        data-icon="chevron-up"
+                        height="16"
+                        role="img"
+                        viewBox="0 0 16 16"
+                        width="16"
+                      >
+                        <path
+                          d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 001.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71z"
+                          fill-rule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                  </button>
+                  <button
+                    aria-controls="numericInput-2"
+                    aria-label="decrement"
+                    class="bp4-button"
+                    type="button"
+                  >
+                    <span
+                      aria-hidden="true"
+                      class="bp4-icon bp4-icon-chevron-down"
+                      icon="chevron-down"
+                    >
+                      <svg
+                        data-icon="chevron-down"
+                        height="16"
+                        role="img"
+                        viewBox="0 0 16 16"
+                        width="16"
+                      >
+                        <path
+                          d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0012 5z"
+                          fill-rule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                  </button>
+                </div>
               </div>
               <button
                 class="bp4-button bp4-disabled"
@@ -1403,11 +1467,11 @@ exports[`RuleEditor matches snapshot with existing tier in rule 1`] = `
                   aria-hidden="true"
                   class="bp4-icon bp4-icon-trash"
                   icon="trash"
-                  tabindex="0"
                 >
                   <svg
                     data-icon="trash"
                     height="16"
+                    role="img"
                     viewBox="0 0 16 16"
                     width="16"
                   >
@@ -1433,11 +1497,11 @@ exports[`RuleEditor matches snapshot with existing tier in rule 1`] = `
                     aria-hidden="true"
                     class="bp4-icon bp4-icon-plus"
                     icon="plus"
-                    tabindex="-1"
                   >
                     <svg
                       data-icon="plus"
                       height="16"
+                      role="img"
                       viewBox="0 0 16 16"
                       width="16"
                     >
@@ -1487,6 +1551,7 @@ exports[`RuleEditor matches snapshot with non existing tier in rule 1`] = `
         <svg
           data-icon="caret-down"
           height="16"
+          role="img"
           viewBox="0 0 16 16"
           width="16"
         >
@@ -1508,11 +1573,11 @@ exports[`RuleEditor matches snapshot with non existing tier in rule 1`] = `
         aria-hidden="true"
         class="bp4-icon bp4-icon-trash"
         icon="trash"
-        tabindex="0"
       >
         <svg
           data-icon="trash"
           height="16"
+          role="img"
           viewBox="0 0 16 16"
           width="16"
         >
@@ -1605,14 +1670,18 @@ exports[`RuleEditor matches snapshot with non existing tier in rule 1`] = `
                   icon="double-caret-vertical"
                 >
                   <svg
+                    aria-labelledby="iconTitle-10"
                     data-icon="double-caret-vertical"
                     height="16"
+                    role="img"
                     viewBox="0 0 16 16"
                     width="16"
                   >
-                    <desc>
+                    <title
+                      id="iconTitle-10"
+                    >
                       Open dropdown
-                    </desc>
+                    </title>
                     <path
                       d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
                       fill-rule="evenodd"
@@ -1642,85 +1711,6 @@ exports[`RuleEditor matches snapshot with non existing tier in rule 1`] = `
             <div
               class="bp4-control-group"
             >
-              <button
-                class="bp4-button bp4-minimal"
-                style="pointer-events: none;"
-                type="button"
-              >
-                <span
-                  class="bp4-button-text"
-                >
-                  Replicants:
-                </span>
-              </button>
-              <div
-                class="bp4-control-group bp4-numeric-input"
-              >
-                <div
-                  class="bp4-input-group"
-                >
-                  <input
-                    autocomplete="off"
-                    class="bp4-input"
-                    max="256"
-                    min="0"
-                    type="text"
-                    value="2"
-                  />
-                </div>
-                <div
-                  class="bp4-button-group bp4-vertical bp4-fixed"
-                >
-                  <button
-                    aria-label="increment"
-                    class="bp4-button"
-                    type="button"
-                  >
-                    <span
-                      aria-hidden="true"
-                      class="bp4-icon bp4-icon-chevron-up"
-                      icon="chevron-up"
-                      tabindex="0"
-                    >
-                      <svg
-                        data-icon="chevron-up"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <path
-                          d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 001.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </button>
-                  <button
-                    aria-label="decrement"
-                    class="bp4-button"
-                    type="button"
-                  >
-                    <span
-                      aria-hidden="true"
-                      class="bp4-icon bp4-icon-chevron-down"
-                      icon="chevron-down"
-                      tabindex="0"
-                    >
-                      <svg
-                        data-icon="chevron-down"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <path
-                          d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0012 5z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </button>
-                </div>
-              </div>
               <button
                 class="bp4-button bp4-minimal"
                 style="pointer-events: none;"
@@ -1762,20 +1752,110 @@ exports[`RuleEditor matches snapshot with non existing tier in rule 1`] = `
                   icon="double-caret-vertical"
                 >
                   <svg
+                    aria-labelledby="iconTitle-11"
                     data-icon="double-caret-vertical"
                     height="16"
+                    role="img"
                     viewBox="0 0 16 16"
                     width="16"
                   >
-                    <desc>
+                    <title
+                      id="iconTitle-11"
+                    >
                       Open dropdown
-                    </desc>
+                    </title>
                     <path
                       d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
                       fill-rule="evenodd"
                     />
                   </svg>
                 </span>
+              </div>
+              <button
+                class="bp4-button bp4-minimal"
+                style="pointer-events: none;"
+                type="button"
+              >
+                <span
+                  class="bp4-button-text"
+                >
+                  Replicants:
+                </span>
+              </button>
+              <div
+                class="bp4-control-group bp4-numeric-input"
+              >
+                <div
+                  class="bp4-input-group"
+                >
+                  <input
+                    aria-valuemax="256"
+                    aria-valuemin="0"
+                    aria-valuenow="2"
+                    autocomplete="off"
+                    class="bp4-input"
+                    id="numericInput-1"
+                    max="256"
+                    min="0"
+                    role="spinbutton"
+                    type="text"
+                    value="2"
+                  />
+                </div>
+                <div
+                  class="bp4-button-group bp4-vertical bp4-fixed"
+                >
+                  <button
+                    aria-controls="numericInput-1"
+                    aria-label="increment"
+                    class="bp4-button"
+                    type="button"
+                  >
+                    <span
+                      aria-hidden="true"
+                      class="bp4-icon bp4-icon-chevron-up"
+                      icon="chevron-up"
+                    >
+                      <svg
+                        data-icon="chevron-up"
+                        height="16"
+                        role="img"
+                        viewBox="0 0 16 16"
+                        width="16"
+                      >
+                        <path
+                          d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 001.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71z"
+                          fill-rule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                  </button>
+                  <button
+                    aria-controls="numericInput-1"
+                    aria-label="decrement"
+                    class="bp4-button"
+                    type="button"
+                  >
+                    <span
+                      aria-hidden="true"
+                      class="bp4-icon bp4-icon-chevron-down"
+                      icon="chevron-down"
+                    >
+                      <svg
+                        data-icon="chevron-down"
+                        height="16"
+                        role="img"
+                        viewBox="0 0 16 16"
+                        width="16"
+                      >
+                        <path
+                          d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0012 5z"
+                          fill-rule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                  </button>
+                </div>
               </div>
               <button
                 class="bp4-button bp4-disabled"
@@ -1787,11 +1867,11 @@ exports[`RuleEditor matches snapshot with non existing tier in rule 1`] = `
                   aria-hidden="true"
                   class="bp4-icon bp4-icon-trash"
                   icon="trash"
-                  tabindex="0"
                 >
                   <svg
                     data-icon="trash"
                     height="16"
+                    role="img"
                     viewBox="0 0 16 16"
                     width="16"
                   >
@@ -1817,11 +1897,11 @@ exports[`RuleEditor matches snapshot with non existing tier in rule 1`] = `
                     aria-hidden="true"
                     class="bp4-icon bp4-icon-plus"
                     icon="plus"
-                    tabindex="-1"
                   >
                     <svg
                       data-icon="plus"
                       height="16"
+                      role="img"
                       viewBox="0 0 16 16"
                       width="16"
                     >

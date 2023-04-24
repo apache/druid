@@ -42,7 +42,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.segment.NestedDataDimensionSchema;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.transform.TransformingInputEntityReader;
@@ -75,7 +75,7 @@ public class ProtobufInputFormatTest
   public void setUp() throws Exception
   {
     NullHandling.initializeForTests();
-    ExpressionProcessing.initializeForTests(null);
+    ExpressionProcessing.initializeForTests();
     timestampSpec = new TimestampSpec("timestamp", "iso", null);
     dimensionsSpec = new DimensionsSpec(Lists.newArrayList(
         new StringDimensionSchema("event"),
@@ -243,7 +243,6 @@ public class ProtobufInputFormatTest
                      .add("someFloatColumn")
                      .add("id")
                      .add("someBytesColumn")
-                     .add("timestamp")
                      .build(),
         row.getDimensions()
     );
@@ -270,14 +269,14 @@ public class ProtobufInputFormatTest
             timestampSpec,
             new DimensionsSpec(
                 Lists.newArrayList(
-                    new StringDimensionSchema("event"),
-                    new StringDimensionSchema("id"),
-                    new StringDimensionSchema("someOtherId"),
-                    new StringDimensionSchema("isValid"),
-                    new StringDimensionSchema("eventType"),
-                    new NestedDataDimensionSchema("foo"),
-                    new NestedDataDimensionSchema("bar"),
-                    new StringDimensionSchema("someBytesColumn")
+                    new AutoTypeColumnSchema("event"),
+                    new AutoTypeColumnSchema("id"),
+                    new AutoTypeColumnSchema("someOtherId"),
+                    new AutoTypeColumnSchema("isValid"),
+                    new AutoTypeColumnSchema("eventType"),
+                    new AutoTypeColumnSchema("foo"),
+                    new AutoTypeColumnSchema("bar"),
+                    new AutoTypeColumnSchema("someBytesColumn")
                 )
             ),
             null
@@ -380,8 +379,7 @@ public class ProtobufInputFormatTest
             "someFloatColumn",
             "eventType",
             "id",
-            "someBytesColumn",
-            "timestamp"
+            "someBytesColumn"
         ),
         row.getDimensions()
     );

@@ -395,7 +395,7 @@ public class QueryTestRunner
         expectedQueries.add(BaseCalciteQueryTest.recursivelyClearContext(query, queryJsonMapper));
       }
 
-      final List<Query> recordedQueries = queryResults.recordedQueries
+      final List<Query<?>> recordedQueries = queryResults.recordedQueries
           .stream()
           .map(q -> BaseCalciteQueryTest.recursivelyClearContext(q, queryJsonMapper))
           .collect(Collectors.toList());
@@ -608,7 +608,6 @@ public class QueryTestRunner
       }
     }
   }
-
 
   private final List<QueryTestRunner.QueryRunStep> runSteps = new ArrayList<>();
   private final List<QueryTestRunner.QueryVerifyStep> verifySteps = new ArrayList<>();

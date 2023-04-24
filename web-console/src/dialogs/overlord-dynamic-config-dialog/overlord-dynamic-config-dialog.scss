@@ -27,8 +27,6 @@
 
   .loader {
     position: relative;
-    height: 60vh;
-    width: 100%;
   }
 
   .#{$bp-ns}-dialog-body {
@@ -37,14 +35,6 @@
     .auto-form {
       max-height: 60vh;
       overflow: auto;
-
-      .ace_editor {
-        height: 25vh !important;
-      }
-    }
-
-    .html-select {
-      width: 195px;
     }
 
     .config-comment {

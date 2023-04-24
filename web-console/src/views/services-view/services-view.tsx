@@ -59,23 +59,43 @@ import type { BasicAction } from '../../utils/basic-action';
 
 import './services-view.scss';
 
-const allColumns: string[] = [
-  'Service',
-  'Type',
-  'Tier',
-  'Host',
-  'Port',
-  'Current size',
-  'Max size',
-  'Usage',
-  'Detail',
-  ACTION_COLUMN_LABEL,
-];
-
 const tableColumns: Record<CapabilitiesMode, string[]> = {
-  'full': allColumns,
-  'no-sql': allColumns,
-  'no-proxy': ['Service', 'Type', 'Tier', 'Host', 'Port', 'Current size', 'Max size', 'Usage'],
+  'full': [
+    'Service',
+    'Type',
+    'Tier',
+    'Host',
+    'Port',
+    'Current size',
+    'Max size',
+    'Usage',
+    'Start time',
+    'Detail',
+    ACTION_COLUMN_LABEL,
+  ],
+  'no-sql': [
+    'Service',
+    'Type',
+    'Tier',
+    'Host',
+    'Port',
+    'Current size',
+    'Max size',
+    'Usage',
+    'Detail',
+    ACTION_COLUMN_LABEL,
+  ],
+  'no-proxy': [
+    'Service',
+    'Type',
+    'Tier',
+    'Host',
+    'Port',
+    'Current size',
+    'Max size',
+    'Usage',
+    'Start time',
+  ],
 };
 
 function formatQueues(
@@ -128,6 +148,7 @@ interface ServiceResultRow {
   readonly max_size: NumberLike;
   readonly plaintext_port: number;
   readonly tls_port: number;
+  readonly start_time: string;
   loadQueueInfo?: LoadQueueInfo;
   workerInfo?: WorkerInfo;
 }
@@ -178,7 +199,8 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
   "tls_port",
   "curr_size",
   "max_size",
-  "is_leader"
+  "is_leader",
+  "start_time"
 FROM sys.servers
 ORDER BY
   (
@@ -514,6 +536,14 @@ ORDER BY
                   return '';
               }
             },
+          },
+          {
+            Header: 'Start time',
+            show: visibleColumns.shown('Start time'),
+            accessor: 'start_time',
+            width: 200,
+            Cell: this.renderFilterableCell('start_time'),
+            Aggregated: () => '',
           },
           {
             Header: 'Detail',

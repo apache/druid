@@ -24,6 +24,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -54,7 +55,7 @@ public class MSQTuningConfigTest
         new IndexSpec(
             null,
             null,
-            new StringEncodingStrategy.FrontCoded(null),
+            new StringEncodingStrategy.FrontCoded(null, FrontCodedIndexed.V1),
             null,
             null,
             null,

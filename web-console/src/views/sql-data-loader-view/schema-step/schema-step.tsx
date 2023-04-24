@@ -32,21 +32,29 @@ import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import { select, selectAll } from 'd3-selection';
-import type { QueryResult } from 'druid-query-toolkit';
-import { C, F, QueryRunner, SqlExpression, SqlQuery } from 'druid-query-toolkit';
+import {
+  C,
+  Column,
+  F,
+  QueryResult,
+  QueryRunner,
+  SqlExpression,
+  SqlQuery,
+  SqlType,
+} from 'druid-query-toolkit';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { ClearableInput, LearnMore, Loader } from '../../../components';
 import { AsyncActionDialog } from '../../../dialogs';
-import type { Execution, IngestQueryPattern } from '../../../druid-models';
+import type { Execution, ExternalConfig, IngestQueryPattern } from '../../../druid-models';
 import {
   changeQueryPatternExpression,
-  externalConfigToTableExpression,
   fitIngestQueryPattern,
   getDestinationMode,
   getQueryPatternExpression,
   getQueryPatternExpressionType,
   ingestQueryPatternToQuery,
+  PLACEHOLDER_TIMESTAMP_SPEC,
   possibleDruidFormatForValues,
   TIME_COLUMN,
   WorkbenchQueryPart,
@@ -57,6 +65,7 @@ import {
   submitTaskQuery,
 } from '../../../helpers';
 import { useLastDefined, usePermanentCallback, useQueryManager } from '../../../hooks';
+import { useLastDefinedDeep } from '../../../hooks/use-last-defined-deep';
 import { getLink } from '../../../links';
 import { AppToaster } from '../../../singletons';
 import type { QueryAction } from '../../../utils';
@@ -64,6 +73,7 @@ import {
   caseInsensitiveContains,
   change,
   dataTypeToIcon,
+  deepSet,
   DruidError,
   filterMap,
   oneOf,
@@ -74,6 +84,7 @@ import {
   wait,
   without,
 } from '../../../utils';
+import { postToSampler } from '../../../utils/sampler';
 import { FlexibleQueryInput } from '../../workbench-view/flexible-query-input/flexible-query-input';
 import { ColumnActions } from '../column-actions/column-actions';
 import { ColumnEditor } from '../column-editor/column-editor';
@@ -375,28 +386,67 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
     },
   });
 
-  const sampleQueryString = useLastDefined(
+  const sampleExternalConfig = useLastDefinedDeep(
     ingestQueryPattern && mode !== 'sql' // Only sample the data if we are not in the SQL tab live editing the SQL
-      ? SqlQuery.create(
-          externalConfigToTableExpression(ingestQueryPattern.mainExternalConfig),
-        ).toString()
+      ? ingestQueryPattern.mainExternalConfig
       : undefined,
   );
 
-  const [sampleState] = useQueryManager<string, QueryResult, Execution>({
-    query: sampleQueryString,
-    processQuery: async (sampleQueryString, cancelToken) => {
-      return extractResult(
-        await submitTaskQuery({
-          query: sampleQueryString,
-          context: {
-            sqlOuterLimit: 50,
+  const [sampleState] = useQueryManager<ExternalConfig, QueryResult, Execution>({
+    query: sampleExternalConfig,
+    processQuery: async sampleExternalConfig => {
+      const sampleResponse = await postToSampler(
+        {
+          type: 'index_parallel',
+          spec: {
+            ioConfig: {
+              type: 'index_parallel',
+              inputSource: sampleExternalConfig.inputSource,
+              inputFormat: deepSet(sampleExternalConfig.inputFormat, 'keepNullColumns', true),
+            },
+            dataSchema: {
+              dataSource: 'sample',
+              timestampSpec: PLACEHOLDER_TIMESTAMP_SPEC,
+              dimensionsSpec: {
+                dimensions: sampleExternalConfig.signature.map(s => {
+                  const t = s.columnType.getNativeType();
+                  return {
+                    name: s.getColumnName(),
+                    type: t === 'COMPLEX<json>' ? 'json' : t,
+                  };
+                }),
+              },
+              granularitySpec: {
+                rollup: false,
+              },
+            },
           },
-          cancelToken,
-        }),
+          samplerConfig: {
+            numRows: 50,
+            timeoutMs: 15000,
+          },
+        },
+        'sample',
       );
+
+      const columns = filterMap(sampleResponse.logicalSegmentSchema, ({ name, type }) => {
+        if (name === '__time') return;
+        return new Column({
+          name,
+          nativeType: type,
+          sqlType: SqlType.fromNativeType(type).toString(),
+        });
+      });
+
+      return new QueryResult({
+        header: columns,
+        rows: filterMap(sampleResponse.data, r => {
+          const { parsed } = r;
+          if (!parsed) return;
+          return columns.map(({ name }) => parsed[name]);
+        }),
+      });
     },
-    backgroundStatusCheck: executionBackgroundResultStatusCheck,
   });
 
   const sampleDataQuery = useMemo(() => {
@@ -451,11 +501,13 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
   }, [previewResultState]);
 
   const unusedColumns = ingestQueryPattern
-    ? ingestQueryPattern.mainExternalConfig.signature.filter(
-        ({ name }) =>
-          !ingestQueryPattern.dimensions.some(d => d.containsColumnName(name)) &&
-          !ingestQueryPattern.metrics?.some(m => m.containsColumnName(name)),
-      )
+    ? ingestQueryPattern.mainExternalConfig.signature.filter(columnDeclaration => {
+        const columnName = columnDeclaration.getColumnName();
+        return (
+          !ingestQueryPattern.dimensions.some(d => d.containsColumnName(columnName)) &&
+          !ingestQueryPattern.metrics?.some(m => m.containsColumnName(columnName))
+        );
+      })
     : [];
 
   const timeColumn =
@@ -699,23 +751,26 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                     )}
                     <MenuDivider />
                     {unusedColumns.length ? (
-                      unusedColumns.map((column, i) => (
-                        <MenuItem
-                          key={i}
-                          icon={dataTypeToIcon(column.type)}
-                          text={column.name}
-                          onClick={() => {
-                            handleQueryAction(q =>
-                              q.addSelect(
-                                C(column.name),
-                                ingestQueryPattern.metrics
-                                  ? { insertIndex: 'last-grouping', addToGroupBy: 'end' }
-                                  : {},
-                              ),
-                            );
-                          }}
-                        />
-                      ))
+                      unusedColumns.map((columnDeclaration, i) => {
+                        const columnName = columnDeclaration.getColumnName();
+                        return (
+                          <MenuItem
+                            key={i}
+                            icon={dataTypeToIcon(columnDeclaration.columnType.getNativeType())}
+                            text={columnName}
+                            onClick={() => {
+                              handleQueryAction(q =>
+                                q.addSelect(
+                                  C(columnName),
+                                  ingestQueryPattern.metrics
+                                    ? { insertIndex: 'last-grouping', addToGroupBy: 'end' }
+                                    : {},
+                                ),
+                              );
+                            }}
+                          />
+                        );
+                      })
                     ) : (
                       <MenuItem icon={IconNames.BLANK} text="No column suggestions" disabled />
                     )}

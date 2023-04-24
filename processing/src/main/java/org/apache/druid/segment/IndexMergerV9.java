@@ -40,10 +40,8 @@ import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnCapabilities.CoercionLogic;
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnDescriptor;
+import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -82,7 +80,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
@@ -92,75 +89,6 @@ import java.util.stream.IntStream;
 public class IndexMergerV9 implements IndexMerger
 {
   private static final Logger log = new Logger(IndexMergerV9.class);
-
-  // merge logic for the state capabilities will be in after incremental index is persisted
-  public static final ColumnCapabilities.CoercionLogic DIMENSION_CAPABILITY_MERGE_LOGIC =
-      new ColumnCapabilities.CoercionLogic()
-      {
-        @Override
-        public boolean dictionaryEncoded()
-        {
-          return true;
-        }
-
-        @Override
-        public boolean dictionaryValuesSorted()
-        {
-          return true;
-        }
-
-        @Override
-        public boolean dictionaryValuesUnique()
-        {
-          return true;
-        }
-
-        @Override
-        public boolean multipleValues()
-        {
-          return false;
-        }
-
-        @Override
-        public boolean hasNulls()
-        {
-          return false;
-        }
-      };
-
-  public static final ColumnCapabilities.CoercionLogic METRIC_CAPABILITY_MERGE_LOGIC =
-      new ColumnCapabilities.CoercionLogic()
-      {
-        @Override
-        public boolean dictionaryEncoded()
-        {
-          return false;
-        }
-
-        @Override
-        public boolean dictionaryValuesSorted()
-        {
-          return false;
-        }
-
-        @Override
-        public boolean dictionaryValuesUnique()
-        {
-          return false;
-        }
-
-        @Override
-        public boolean multipleValues()
-        {
-          return false;
-        }
-
-        @Override
-        public boolean hasNulls()
-        {
-          return false;
-        }
-      };
 
   private final ObjectMapper mapper;
   private final IndexIO indexIO;
@@ -263,11 +191,11 @@ public class IndexMergerV9 implements IndexMerger
       log.debug("Completed factory.json in %,d millis", System.currentTimeMillis() - startTime);
 
       progress.progress();
-      final Map<String, TypeSignature<ValueType>> metricTypes = new TreeMap<>(Comparators.naturalNullsFirst());
-      final List<ColumnCapabilities> dimCapabilities = Lists.newArrayListWithCapacity(mergedDimensions.size());
-      mergeCapabilities(adapters, mergedDimensions, metricTypes, dimCapabilities);
+      final Map<String, ColumnFormat> metricFormats = new TreeMap<>(Comparators.naturalNullsFirst());
+      final List<ColumnFormat> dimFormats = Lists.newArrayListWithCapacity(mergedDimensions.size());
+      mergeFormat(adapters, mergedDimensions, metricFormats, dimFormats);
 
-      final Map<String, DimensionHandler> handlers = makeDimensionHandlers(mergedDimensions, dimCapabilities);
+      final Map<String, DimensionHandler> handlers = makeDimensionHandlers(mergedDimensions, dimFormats);
       final List<DimensionMergerV9> mergers = new ArrayList<>();
       for (int i = 0; i < mergedDimensions.size(); i++) {
         DimensionHandler handler = handlers.get(mergedDimensions.get(i));
@@ -275,7 +203,7 @@ public class IndexMergerV9 implements IndexMerger
             handler.makeMerger(
                 indexSpec,
                 segmentWriteOutMedium,
-                dimCapabilities.get(i),
+                dimFormats.get(i).toColumnCapabilities(),
                 progress,
                 closer
             )
@@ -301,7 +229,7 @@ public class IndexMergerV9 implements IndexMerger
       closer.register(timeAndDimsIterator);
       final GenericColumnSerializer timeWriter = setupTimeWriter(segmentWriteOutMedium, indexSpec);
       final ArrayList<GenericColumnSerializer> metricWriters =
-          setupMetricsWriters(segmentWriteOutMedium, mergedMetrics, metricTypes, indexSpec);
+          setupMetricsWriters(segmentWriteOutMedium, mergedMetrics, metricFormats, indexSpec);
       IndexMergeResult indexMergeResult = mergeIndexesAndWriteColumns(
           adapters,
           progress,
@@ -320,7 +248,7 @@ public class IndexMergerV9 implements IndexMerger
           v9Smoosher,
           progress,
           mergedMetrics,
-          metricTypes,
+          metricFormats,
           metricWriters,
           indexSpec
       );
@@ -335,7 +263,7 @@ public class IndexMergerV9 implements IndexMerger
           // shouldStore AND hasOnlyNulls
           ColumnDescriptor columnDesc = ColumnDescriptor
               .builder()
-              .setValueType(dimCapabilities.get(i).getType())
+              .setValueType(dimFormats.get(i).getLogicalType().getType())
               .addSerde(new NullColumnPartSerde(indexMergeResult.rowCount, indexSpec.getBitmapSerdeFactory()))
               .build();
           makeColumn(v9Smoosher, mergedDimensions.get(i), columnDesc);
@@ -493,7 +421,7 @@ public class IndexMergerV9 implements IndexMerger
       final FileSmoosher v9Smoosher,
       final ProgressIndicator progress,
       final List<String> mergedMetrics,
-      final Map<String, TypeSignature<ValueType>> metricsTypes,
+      final Map<String, ColumnFormat> metricsTypes,
       final List<GenericColumnSerializer> metWriters,
       final IndexSpec indexSpec
   ) throws IOException
@@ -508,7 +436,7 @@ public class IndexMergerV9 implements IndexMerger
       GenericColumnSerializer writer = metWriters.get(i);
 
       final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
-      TypeSignature<ValueType> type = metricsTypes.get(metric);
+      TypeSignature<ValueType> type = metricsTypes.get(metric).getLogicalType();
       switch (type.getType()) {
         case LONG:
           builder.setValueType(ValueType.LONG);
@@ -761,14 +689,14 @@ public class IndexMergerV9 implements IndexMerger
   private ArrayList<GenericColumnSerializer> setupMetricsWriters(
       final SegmentWriteOutMedium segmentWriteOutMedium,
       final List<String> mergedMetrics,
-      final Map<String, TypeSignature<ValueType>> metricsTypes,
+      final Map<String, ColumnFormat> metricsTypes,
       final IndexSpec indexSpec
   ) throws IOException
   {
     ArrayList<GenericColumnSerializer> metWriters = Lists.newArrayListWithCapacity(mergedMetrics.size());
 
     for (String metric : mergedMetrics) {
-      TypeSignature<ValueType> type = metricsTypes.get(metric);
+      TypeSignature<ValueType> type = metricsTypes.get(metric).getLogicalType();
       GenericColumnSerializer writer;
       switch (type.getType()) {
         case LONG:
@@ -890,100 +818,30 @@ public class IndexMergerV9 implements IndexMerger
     progress.stopSection(section);
   }
 
-  private void mergeCapabilities(
+  private void mergeFormat(
       final List<IndexableAdapter> adapters,
       final List<String> mergedDimensions,
-      final Map<String, TypeSignature<ValueType>> metricTypes,
-      final List<ColumnCapabilities> dimCapabilities
+      final Map<String, ColumnFormat> metricTypes,
+      final List<ColumnFormat> dimFormats
   )
   {
-    final Map<String, ColumnCapabilities> capabilitiesMap = new HashMap<>();
+    final Map<String, ColumnFormat> columnFormats = new HashMap<>();
     for (IndexableAdapter adapter : adapters) {
       for (String dimension : adapter.getDimensionNames()) {
-        ColumnCapabilities capabilities = adapter.getCapabilities(dimension);
-        capabilitiesMap.compute(dimension, (d, existingCapabilities) ->
-            mergeCapabilities(capabilities, existingCapabilities, DIMENSION_CAPABILITY_MERGE_LOGIC)
-        );
+        ColumnFormat format = adapter.getFormat(dimension);
+        columnFormats.compute(dimension, (d, existingFormat) -> existingFormat == null ? format : format.merge(existingFormat));
       }
       for (String metric : adapter.getMetricNames()) {
-        final ColumnCapabilities capabilities = adapter.getCapabilities(metric);
-        final ColumnCapabilities merged = capabilitiesMap.compute(metric, (m, existingCapabilities) ->
-            mergeCapabilities(capabilities, existingCapabilities, METRIC_CAPABILITY_MERGE_LOGIC)
+        final ColumnFormat format = adapter.getFormat(metric);
+        final ColumnFormat merged = columnFormats.compute(metric, (m, existingFormat) ->
+            existingFormat == null ? format : format.merge(existingFormat)
         );
+
         metricTypes.put(metric, merged);
       }
     }
     for (String dim : mergedDimensions) {
-      dimCapabilities.add(capabilitiesMap.get(dim));
-    }
-  }
-
-  /**
-   * Creates a merged columnCapabilities to merge two queryableIndexes.
-   * This method first snapshots a pair of capabilities and then merges them.
-   */
-  @Nullable
-  private static ColumnCapabilitiesImpl mergeCapabilities(
-      @Nullable final ColumnCapabilities capabilities,
-      @Nullable final ColumnCapabilities other,
-      CoercionLogic coercionLogic
-  )
-  {
-    ColumnCapabilitiesImpl merged = ColumnCapabilitiesImpl.snapshot(capabilities, coercionLogic);
-    ColumnCapabilitiesImpl otherSnapshot = ColumnCapabilitiesImpl.snapshot(other, coercionLogic);
-    if (merged == null) {
-      return otherSnapshot;
-    } else if (otherSnapshot == null) {
-      return merged;
-    }
-
-    throwIfTypeNotMatchToMerge(merged, otherSnapshot);
-
-    merged.setDictionaryEncoded(merged.isDictionaryEncoded().or(otherSnapshot.isDictionaryEncoded()).isTrue());
-    merged.setHasMultipleValues(merged.hasMultipleValues().or(otherSnapshot.hasMultipleValues()).isTrue());
-    merged.setDictionaryValuesSorted(
-        merged.areDictionaryValuesSorted().and(otherSnapshot.areDictionaryValuesSorted()).isTrue()
-    );
-    merged.setDictionaryValuesUnique(
-        merged.areDictionaryValuesUnique().and(otherSnapshot.areDictionaryValuesUnique()).isTrue()
-    );
-    merged.setHasNulls(merged.hasNulls().or(other.hasNulls()).isTrue());
-    // When merging persisted queryableIndexes in the same ingestion job,
-    // all queryableIndexes should have the exact same hasBitmapIndexes flag set which is set in the ingestionSpec.
-    // One exception is null-only columns as they always do NOT have bitmap indexes no matter whether the flag is set
-    // in the ingestionSpec. As a result, the mismatch checked in the if clause below can happen
-    // when one of the columnCapability is from a real column and another is from a null-only column.
-    // See NullColumnPartSerde for how columnCapability is created for null-only columns.
-    // When the mismatch is found, we prefer the flag set in the ingestionSpec over
-    // the columnCapability of null-only columns.
-    if (merged.hasBitmapIndexes() != otherSnapshot.hasBitmapIndexes()) {
-      merged.setHasBitmapIndexes(false);
-    }
-    if (merged.hasSpatialIndexes() != otherSnapshot.hasSpatialIndexes()) {
-      merged.setHasSpatialIndexes(merged.hasSpatialIndexes() || otherSnapshot.hasSpatialIndexes());
-    }
-    merged.setFilterable(merged.isFilterable() && otherSnapshot.isFilterable());
-
-    return merged;
-  }
-
-  private static void throwIfTypeNotMatchToMerge(ColumnCapabilitiesImpl c1, ColumnCapabilitiesImpl c2)
-  {
-    if (!Objects.equals(c1.getType(), c2.getType())
-        || !Objects.equals(c1.getElementType(), c2.getElementType())) {
-      final String mergedType = c1.getType() == null ? null : c1.asTypeString();
-      final String otherType = c2.getType() == null ? null : c2.asTypeString();
-      throw new ISE(
-          "Cannot merge columns of type[%s] and [%s]",
-          mergedType,
-          otherType
-      );
-    } else if (!Objects.equals(c1.getComplexTypeName(), c2.getComplexTypeName())) {
-      throw new ISE(
-          "Cannot merge columns of type[%s] and [%s]",
-          c1.getComplexTypeName(),
-          c2.getComplexTypeName()
-      );
+      dimFormats.add(columnFormats.get(dim));
     }
   }
 
@@ -1311,17 +1169,13 @@ public class IndexMergerV9 implements IndexMerger
 
   private Map<String, DimensionHandler> makeDimensionHandlers(
       final List<String> mergedDimensions,
-      final List<ColumnCapabilities> dimCapabilities
+      final List<ColumnFormat> dimFormats
   )
   {
     Map<String, DimensionHandler> handlers = new LinkedHashMap<>();
     for (int i = 0; i < mergedDimensions.size(); i++) {
-      ColumnCapabilities capabilities = ColumnCapabilitiesImpl.snapshot(
-          dimCapabilities.get(i),
-          DIMENSION_CAPABILITY_MERGE_LOGIC
-      );
       String dimName = mergedDimensions.get(i);
-      DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dimName, capabilities, null);
+      DimensionHandler handler = dimFormats.get(i).getColumnHandler(dimName);
       handlers.put(dimName, handler);
     }
     return handlers;
@@ -1461,7 +1315,7 @@ public class IndexMergerV9 implements IndexMerger
       this.explicitDimensions = dimensionsSpec == null
                                 ? ImmutableSet.of()
                                 : new HashSet<>(dimensionsSpec.getDimensionNames());
-      this.includeAllDimensions = dimensionsSpec != null && dimensionsSpec.isIncludeAllDimensions();
+      this.includeAllDimensions = dimensionsSpec != null && (dimensionsSpec.isIncludeAllDimensions() || dimensionsSpec.useSchemaDiscovery());
     }
 
     /**

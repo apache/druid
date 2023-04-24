@@ -130,6 +130,7 @@ public class Pac4jAuthenticator implements Authenticator
     oidcConf.setClientId(oidcConfig.getClientID());
     oidcConf.setSecret(oidcConfig.getClientSecret().getPassword());
     oidcConf.setDiscoveryURI(oidcConfig.getDiscoveryURI());
+    oidcConf.setScope(oidcConfig.getScope());
     oidcConf.setExpireSessionWithToken(true);
     oidcConf.setUseNonce(true);
     oidcConf.setReadTimeout(Ints.checkedCast(pac4jCommonConfig.getReadTimeout().getMillis()));
