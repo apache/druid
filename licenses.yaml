@@ -644,7 +644,7 @@ name: Apache Commons Configuration
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.1.1
+version: 2.8.0
 libraries:
   - org.apache.commons: commons-configuration2
 
@@ -2913,22 +2913,10 @@ name: Apache Hadoop
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 3.3.1
+version: 3.3.5
 libraries:
-  - org.apache.hadoop: hadoop-annotations
   - org.apache.hadoop: hadoop-auth
-  - org.apache.hadoop: hadoop-client
   - org.apache.hadoop: hadoop-common
-  - org.apache.hadoop: hadoop-hdfs-client
-  - org.apache.hadoop: hadoop-mapreduce-client-app
-  - org.apache.hadoop: hadoop-mapreduce-client-common
-  - org.apache.hadoop: hadoop-mapreduce-client-core
-  - org.apache.hadoop: hadoop-mapreduce-client-jobclient
-  - org.apache.hadoop: hadoop-mapreduce-client-shuffle
-  - org.apache.hadoop: hadoop-yarn-api
-  - org.apache.hadoop: hadoop-yarn-client
-  - org.apache.hadoop: hadoop-yarn-common
-  - org.apache.hadoop: hadoop-yarn-server-common
 
 ---
 
@@ -3485,6 +3473,43 @@ notices:
 
 ---
 
+name: reload4j
+license_category: binary
+module: hadoop-common
+license_name: Apache License version 2.0
+version: 1.2.22
+libraries:
+  - ch.qos.reload4j: reload4j
+notices:
+  - reload4j: |
+      Apache log4j
+      Copyright 2010 The Apache Software Foundation
+
+      This product includes software developed at
+      The Apache Software Foundation (http://www.apache.org/).
+
+---
+
+name: slf4j-reload4j
+license_category: binary
+module: hadoop-common
+license_name: MIT License
+version: 1.7.36
+libraries:
+  - org.slf4j: slf4j-reload4j
+
+---
+
+name: com.github.pjfanning jersey-json
+license_category: binary
+module: druid-kerberos
+license_name: CDDL 1.1
+version: 1.20
+libraries:
+  - com.github.pjfanning: jersey-json
+
+---
+
 name: Kafka Schema Registry Client
 version: 5.5.1
 license_category: binary
@@ -3790,7 +3815,7 @@ name: Hadoop Client API
 license_category: binary
 module: extensions/druid-hdfs-storage
 license_name: Apache License version 2.0
-version: 3.3.1
+version: 3.3.5
 libraries:
   - org.apache.hadoop: hadoop-client-api
 
@@ -5047,7 +5072,7 @@ name: Woodstox
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.3.0
+version: 5.4.0
 libraries:
   - com.fasterxml.woodstox: woodstox-core
 
