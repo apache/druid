@@ -95,6 +95,7 @@ public class S3DataSegmentKiller implements DataSegmentKiller
                      .map(segment -> MapUtils.getString(segment.getLoadSpec(), "key"))
                      .toArray(String[]::new);
         deleteObjectsRequest = deleteObjectsRequest.withKeys(keys);
+        log.info("Removing indexes from s3, bucket: %s, keys %s", deleteObjectsRequest.getBucketName(), deleteObjectsRequest.getKeys().toString());
         DeleteObjectsResult deleteResult = s3Client.deleteObjects(deleteObjectsRequest);
         log.info("deleted objects %s", deleteResult);
 
