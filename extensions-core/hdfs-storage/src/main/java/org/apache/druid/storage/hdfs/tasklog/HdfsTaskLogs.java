@@ -75,6 +75,15 @@ public class HdfsTaskLogs implements TaskLogs
     log.info("Wrote task reports to: %s", path);
   }
 
+  @Override
+  public void pushTaskStatus(String taskId, File statusFile) throws IOException
+  {
+    final Path path = getTaskStatusFileFromId(taskId);
+    log.info("Writing task status to: %s", path);
+    pushTaskFile(path, statusFile);
+    log.info("Wrote task status to: %s", path);
+  }
+
   private void pushTaskFile(Path path, File logFile) throws IOException
   {
     final FileSystem fs = path.getFileSystem(hadoopConfig);
@@ -97,6 +106,13 @@ public class HdfsTaskLogs implements TaskLogs
   public Optional<InputStream> streamTaskReports(String taskId) throws IOException
   {
     final Path path = getTaskReportsFileFromId(taskId);
+    return streamTaskFile(path, 0);
+  }
+
+  @Override
+  public Optional<InputStream> streamTaskStatus(String taskId) throws IOException
+  {
+    final Path path = getTaskStatusFileFromId(taskId);
     return streamTaskFile(path, 0);
   }
 
@@ -137,6 +153,15 @@ public class HdfsTaskLogs implements TaskLogs
   private Path getTaskReportsFileFromId(String taskId)
   {
     return new Path(mergePaths(config.getDirectory(), taskId.replace(':', '_') + ".reports.json"));
+  }
+
+  /**
+   * Due to https://issues.apache.org/jira/browse/HDFS-13 ":" are not allowed in
+   * path names. So we format paths differently for HDFS.
+   */
+  private Path getTaskStatusFileFromId(String taskId)
+  {
+    return new Path(mergePaths(config.getDirectory(), taskId.replace(':', '_') + ".status.json"));
   }
 
   // some hadoop version Path.mergePaths does not exist
