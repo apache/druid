@@ -23,6 +23,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.PeekingIterator;
 import com.google.inject.Inject;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
@@ -58,7 +60,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -218,66 +219,52 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   )
   {
     final AtomicLong memoryLimitAccumulator = memoryLimitBytes != null ? new AtomicLong(memoryLimitBytes) : null;
-
-    Iterable<FrameSignaturePair> iterable = () -> new Iterator<FrameSignaturePair>()
+    Iterator<ScanResultValue> resultSequenceIterator = new Iterator<ScanResultValue>()
     {
-      ScanResultValue nextScanResultValue = null;
       Yielder<ScanResultValue> yielder = Yielders.each(resultSequence);
-      boolean started = false;
 
       @Override
       public boolean hasNext()
       {
-        return !yielder.isDone() || nextScanResultValue != null;
+        return !yielder.isDone();
+      }
+
+      @Override
+      public ScanResultValue next()
+      {
+        ScanResultValue scanResultValue = yielder.get();
+        yielder = yielder.next(null);
+        return scanResultValue;
+      }
+    };
+
+    Iterable<FrameSignaturePair> retVal = () -> new Iterator<FrameSignaturePair>()
+    {
+      PeekingIterator<ScanResultValue> scanResultValuePeekingIterator = Iterators.peekingIterator(resultSequenceIterator);
+
+      @Override
+      public boolean hasNext()
+      {
+        return scanResultValuePeekingIterator.hasNext();
       }
 
       @Override
       public FrameSignaturePair next()
       {
-        if (nextScanResultValue == null) {
-          if (!started) {
-            nextScanResultValue = yielder.get();
-            yielder = yielder.next(null);
-            started = true;
-            return next();
-          } else {
-            throw new NoSuchElementException();
+        final List<ScanResultValue> batch = new ArrayList<>();
+        final ScanResultValue scanResultValue = scanResultValuePeekingIterator.next();
+        batch.add(scanResultValue);
+        final RowSignature rowSignature = scanResultValue.getRowSignature();
+        while (scanResultValuePeekingIterator.hasNext()) {
+          final RowSignature nextRowSignature = scanResultValuePeekingIterator.peek().getRowSignature();
+          if (nextRowSignature != null && nextRowSignature.equals(rowSignature)) {
+            batch.add(scanResultValuePeekingIterator.next());
           }
         }
-        List<ScanResultValue> batch = new ArrayList<>();
-        RowSignature signature = nextScanResultValue.getRowSignature();
-        batch.add(nextScanResultValue);
-        boolean updatedNextScanResultValue = false;
-        while (!yielder.isDone()) {
-          ScanResultValue potentiallyBatchableScanResultValue = yielder.get();
-          if (signature != null && signature.equals(potentiallyBatchableScanResultValue.getRowSignature())) {
-            batch.add(potentiallyBatchableScanResultValue);
-            yielder = yielder.next(null);
-          } else {
-            nextScanResultValue = potentiallyBatchableScanResultValue;
-            updatedNextScanResultValue = true;
-            yielder = yielder.next(null);
-            break;
-          }
-        }
-
-        // We are done iterating over the elements, and next call to hasNext() should return false
-        if (yielder.isDone() && !updatedNextScanResultValue) {
-          nextScanResultValue = null;
-        }
-
-        FrameSignaturePair retVal = convertScanResultValuesToFrame(batch, signature, query, memoryLimitAccumulator);
-
-        if (memoryLimitAccumulator != null) {
-          memoryLimitAccumulator.getAndAdd(-retVal.getFrame().numBytes());
-        }
-
-        return retVal;
-
+        return convertScanResultValuesToFrame(batch, rowSignature, query, memoryLimitAccumulator);
       }
     };
-
-    return Optional.of(Sequences.simple(iterable));
+    return Optional.of(Sequences.simple(retVal));
   }
 
   private FrameSignaturePair convertScanResultValuesToFrame(
@@ -287,7 +274,6 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
       AtomicLong memoryLimitAccumulator
   )
   {
-
     List<Cursor> cursors = new ArrayList<>();
 
     for (ScanResultValue scanResultValue : batch) {
@@ -316,6 +302,10 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
         frameWriterFactory,
         memoryLimitAccumulator != null ? memoryLimitAccumulator.get() : null
     );
+
+    if (memoryLimitAccumulator != null) {
+      memoryLimitAccumulator.getAndAdd(-frame.numBytes());
+    }
 
     return new FrameSignaturePair(frame, rowSignature);
   }
