@@ -348,7 +348,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     final PartitionsSpec partitionsSpecFromConfig = findPartitionsSpecFromConfig(tuningConfig);
     final CompactionState lastCompactionState = candidates.segments.get(0).getLastCompactionState();
     if (lastCompactionState == null) {
-      log.info("Candidate segment[%s] is not compacted yet. Needs compaction.", candidates.segments.get(0).getId());
+      log.debug("Candidate segment[%s] is not compacted yet. Needs compaction.", candidates.segments.get(0).getId());
       return true;
     }
 
