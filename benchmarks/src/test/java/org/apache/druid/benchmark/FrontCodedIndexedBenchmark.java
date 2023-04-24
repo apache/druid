@@ -86,18 +86,28 @@ public class FrontCodedIndexedBenchmark
   @Param({"16"})
   public int width;
 
-  @Param({"generic", "front-coded-4", "front-coded-16"})
+  @Param({
+      "generic",
+      "front-coded-4",
+      "front-coded-16",
+      "front-coded-incremental-buckets-4",
+      "front-coded-incremental-buckets-16"
+  })
   public String indexType;
 
   @Param({"10000"})
   public int numOperations;
 
   private File fileFrontCoded;
+  private File fileFrontCodedIncrementalBuckets;
   private File fileGeneric;
   private File smooshDirFrontCoded;
+  private File smooshDirFrontCodedIncrementalBuckets;
   private File smooshDirGeneric;
   private GenericIndexed<ByteBuffer> genericIndexed;
   private FrontCodedIndexed frontCodedIndexed;
+
+  private FrontCodedIndexed frontCodedIndexedIncrementalBuckets;
 
   private Indexed<ByteBuffer> indexed;
 
@@ -128,9 +138,18 @@ public class FrontCodedIndexedBenchmark
     FrontCodedIndexedWriter frontCodedIndexedWriter = new FrontCodedIndexedWriter(
         new OnHeapMemorySegmentWriteOutMedium(),
         ByteOrder.nativeOrder(),
-        "front-coded-4".equals(indexType) ? 4 : 16
+        "front-coded-4".equals(indexType) ? 4 : 16,
+        FrontCodedIndexed.V0
     );
     frontCodedIndexedWriter.open();
+
+    FrontCodedIndexedWriter frontCodedIndexedWriterIncrementalBuckets = new FrontCodedIndexedWriter(
+        new OnHeapMemorySegmentWriteOutMedium(),
+        ByteOrder.nativeOrder(),
+        "front-coded-incremental-buckets-4".equals(indexType) ? 4 : 16,
+        FrontCodedIndexed.V1
+    );
+    frontCodedIndexedWriterIncrementalBuckets.open();
 
     int count = 0;
     while (iterator.hasNext()) {
@@ -138,21 +157,35 @@ public class FrontCodedIndexedBenchmark
       values[count++] = next;
       frontCodedIndexedWriter.write(StringUtils.toUtf8Nullable(next));
       genericIndexedWriter.write(next);
+      frontCodedIndexedWriterIncrementalBuckets.write(StringUtils.toUtf8Nullable(next));
     }
     smooshDirFrontCoded = FileUtils.createTempDir();
     fileFrontCoded = File.createTempFile("frontCodedIndexedBenchmark", "meta");
+
     smooshDirGeneric = FileUtils.createTempDir();
     fileGeneric = File.createTempFile("genericIndexedBenchmark", "meta");
 
+    smooshDirFrontCodedIncrementalBuckets = FileUtils.createTempDir();
+    fileFrontCodedIncrementalBuckets = File.createTempFile("frontCodedIndexedBenchmarkIncrementalBuckets", "meta");
+
     EncodingSizeProfiler.encodedSize = (int) ("generic".equals(indexType)
                                               ? genericIndexedWriter.getSerializedSize()
-                                              : frontCodedIndexedWriter.getSerializedSize());
+                                              : indexType.startsWith("front-coded-incremental-buckets")
+                                                ? frontCodedIndexedWriterIncrementalBuckets.getSerializedSize()
+                                                : frontCodedIndexedWriter.getSerializedSize());
     try (
         FileChannel fileChannelFrontCoded = FileChannel.open(
             fileFrontCoded.toPath(),
             StandardOpenOption.CREATE, StandardOpenOption.WRITE
         );
         FileSmoosher fileSmoosherFrontCoded = new FileSmoosher(smooshDirFrontCoded);
+
+        FileChannel fileChannelFrontCodedIncrementalBuckets = FileChannel.open(
+            fileFrontCodedIncrementalBuckets.toPath(),
+            StandardOpenOption.CREATE, StandardOpenOption.WRITE
+        );
+        FileSmoosher fileSmoosherFrontCodedIncrementalBuckets = new FileSmoosher(smooshDirFrontCodedIncrementalBuckets);
+
         FileChannel fileChannelGeneric = FileChannel.open(
             fileGeneric.toPath(),
             StandardOpenOption.CREATE, StandardOpenOption.WRITE
@@ -161,6 +194,10 @@ public class FrontCodedIndexedBenchmark
     ) {
       frontCodedIndexedWriter.writeTo(fileChannelFrontCoded, fileSmoosherFrontCoded);
       genericIndexedWriter.writeTo(fileChannelGeneric, fileSmoosherGeneric);
+      frontCodedIndexedWriterIncrementalBuckets.writeTo(
+          fileChannelFrontCodedIncrementalBuckets,
+          fileSmoosherFrontCodedIncrementalBuckets
+      );
     }
 
     FileChannel fileChannelGeneric = FileChannel.open(fileGeneric.toPath());
@@ -172,6 +209,13 @@ public class FrontCodedIndexedBenchmark
         fileFrontCoded.length()
     );
 
+    FileChannel fileChannelFrontCodedIncrementalBuckets = FileChannel.open(fileFrontCodedIncrementalBuckets.toPath());
+    MappedByteBuffer byteBufferFrontCodedIncrementalBuckets = fileChannelFrontCodedIncrementalBuckets.map(
+        FileChannel.MapMode.READ_ONLY,
+        0,
+        fileFrontCodedIncrementalBuckets.length()
+    );
+
     genericIndexed = GenericIndexed.read(
         byteBufferGeneric,
         GenericIndexed.UTF8_STRATEGY,
@@ -181,19 +225,29 @@ public class FrontCodedIndexedBenchmark
         byteBufferFrontCoded.order(ByteOrder.nativeOrder()),
         ByteOrder.nativeOrder()
     ).get();
+    frontCodedIndexedIncrementalBuckets = FrontCodedIndexed.read(
+        byteBufferFrontCodedIncrementalBuckets.order(ByteOrder.nativeOrder()),
+        ByteOrder.nativeOrder()
+    ).get();
 
     // sanity test
     for (int i = 0; i < numElements; i++) {
       final String expected = StringUtils.fromUtf8Nullable(genericIndexed.get(i));
       final String actual = StringUtils.fromUtf8Nullable(frontCodedIndexed.get(i));
+      final String actual2 = StringUtils.fromUtf8Nullable(frontCodedIndexedIncrementalBuckets.get(i));
       Preconditions.checkArgument(
           Objects.equals(expected, actual),
           "elements not equal: " + i + " " + expected + " " + actual
+      );
+      Preconditions.checkArgument(
+          Objects.equals(expected, actual2),
+          "elements not equal (incremental buckets): " + i + " " + expected + " " + actual
       );
     }
 
     Iterator<ByteBuffer> genericIterator = genericIndexed.iterator();
     Iterator<ByteBuffer> frontCodedIterator = frontCodedIndexed.iterator();
+    Iterator<ByteBuffer> frontCodedIteratorIncrementalBuckets = frontCodedIndexedIncrementalBuckets.iterator();
     Iterator<String> frontCodedStringIterator =
         new StringEncodingStrategies.Utf8ToStringIndexed(frontCodedIndexed).iterator();
 
@@ -202,6 +256,7 @@ public class FrontCodedIndexedBenchmark
       final String expected = StringUtils.fromUtf8Nullable(genericIterator.next());
       final String actual = StringUtils.fromUtf8Nullable(frontCodedIterator.next());
       final String actual2 = frontCodedStringIterator.next();
+      final String actual3 = StringUtils.fromUtf8Nullable(frontCodedIteratorIncrementalBuckets.next());
       Preconditions.checkArgument(
           Objects.equals(expected, actual),
           "elements not equal: " + counter + " " + expected + " " + actual
@@ -210,11 +265,16 @@ public class FrontCodedIndexedBenchmark
           Objects.equals(expected, actual2),
           "elements not equal: " + counter + " " + expected + " " + actual
       );
+      Preconditions.checkArgument(
+          Objects.equals(expected, actual3),
+          "elements not equal: " + counter + " " + expected + " " + actual
+      );
       counter++;
     }
     Preconditions.checkArgument(counter == numElements);
     Preconditions.checkArgument(genericIterator.hasNext() == frontCodedIterator.hasNext());
     Preconditions.checkArgument(genericIterator.hasNext() == frontCodedStringIterator.hasNext());
+    Preconditions.checkArgument(genericIterator.hasNext() == frontCodedIteratorIncrementalBuckets.hasNext());
 
     elementsToSearch = new String[numOperations];
     for (int i = 0; i < numOperations; i++) {
@@ -226,6 +286,8 @@ public class FrontCodedIndexedBenchmark
     }
     if ("generic".equals(indexType)) {
       indexed = genericIndexed.singleThreaded();
+    } else if (indexType.startsWith("front-coded-incremental-buckets")) {
+      indexed = frontCodedIndexedIncrementalBuckets;
     } else {
       indexed = frontCodedIndexed;
     }

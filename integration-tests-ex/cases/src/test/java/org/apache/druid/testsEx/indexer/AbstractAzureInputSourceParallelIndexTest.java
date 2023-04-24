@@ -42,6 +42,7 @@ public class AbstractAzureInputSourceParallelIndexTest extends AbstractCloudInpu
   public static void uploadDataFilesToAzure()
   {
     try {
+      LOG.info("Uploading files to Azure");
       azure = new AzureTestUtil();
       // Creating a container with name set in AZURE_CONTAINER env variable.
       azure.createStorageContainer();

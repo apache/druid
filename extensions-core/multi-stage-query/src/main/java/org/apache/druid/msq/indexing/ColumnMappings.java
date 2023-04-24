@@ -22,12 +22,12 @@ package org.apache.druid.msq.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntLists;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.RowSignature;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -36,23 +36,32 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Maps column names from {@link MSQSpec#getQuery()} to output names desired by the user, in the order
+ * desired by the user.
+ *
+ * The {@link MSQSpec#getQuery()} is translated by {@link org.apache.druid.msq.querykit.QueryKit} into
+ * a {@link org.apache.druid.msq.kernel.QueryDefinition}. So, this class also represents mappings from
+ * {@link org.apache.druid.msq.kernel.QueryDefinition#getFinalStageDefinition()} into the output names desired
+ * by the user.
+ */
 public class ColumnMappings
 {
   private final List<ColumnMapping> mappings;
-  private final Map<String, String> outputToQueryColumnMap;
-  private final Map<String, List<String>> queryToOutputColumnsMap;
+  private final Map<String, IntList> outputColumnNameToPositionMap;
+  private final Map<String, IntList> queryColumnNameToPositionMap;
 
   @JsonCreator
   public ColumnMappings(final List<ColumnMapping> mappings)
   {
-    this.mappings = validateNoDuplicateOutputColumns(Preconditions.checkNotNull(mappings, "mappings"));
-    this.outputToQueryColumnMap = new HashMap<>();
-    this.queryToOutputColumnsMap = new HashMap<>();
+    this.mappings = Preconditions.checkNotNull(mappings, "mappings");
+    this.outputColumnNameToPositionMap = new HashMap<>();
+    this.queryColumnNameToPositionMap = new HashMap<>();
 
-    for (final ColumnMapping mapping : mappings) {
-      outputToQueryColumnMap.put(mapping.getOutputColumn(), mapping.getQueryColumn());
-      queryToOutputColumnsMap.computeIfAbsent(mapping.getQueryColumn(), k -> new ArrayList<>())
-                             .add(mapping.getOutputColumn());
+    for (int i = 0; i < mappings.size(); i++) {
+      final ColumnMapping mapping = mappings.get(i);
+      outputColumnNameToPositionMap.computeIfAbsent(mapping.getOutputColumn(), k -> new IntArrayList()).add(i);
+      queryColumnNameToPositionMap.computeIfAbsent(mapping.getQueryColumn(), k -> new IntArrayList()).add(i);
     }
   }
 
@@ -66,34 +75,95 @@ public class ColumnMappings
     );
   }
 
+  /**
+   * Number of output columns.
+   */
+  public int size()
+  {
+    return mappings.size();
+  }
+
+  /**
+   * All output column names, in order. Some names may appear more than once, unless
+   * {@link #hasUniqueOutputColumnNames()} is true.
+   */
   public List<String> getOutputColumnNames()
   {
     return mappings.stream().map(ColumnMapping::getOutputColumn).collect(Collectors.toList());
   }
 
-  public boolean hasOutputColumn(final String columnName)
+  /**
+   * Whether output column names from {@link #getOutputColumnNames()} are all unique.
+   */
+  public boolean hasUniqueOutputColumnNames()
   {
-    return outputToQueryColumnMap.containsKey(columnName);
+    final Set<String> encountered = new HashSet<>();
+
+    for (final ColumnMapping mapping : mappings) {
+      if (!encountered.add(mapping.getOutputColumn())) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
-  public String getQueryColumnForOutputColumn(final String outputColumn)
+  /**
+   * Whether a particular output column name exists.
+   */
+  public boolean hasOutputColumn(final String outputColumnName)
   {
-    final String queryColumn = outputToQueryColumnMap.get(outputColumn);
-    if (queryColumn != null) {
-      return queryColumn;
-    } else {
-      throw new IAE("No such output column [%s]", outputColumn);
-    }
+    return outputColumnNameToPositionMap.containsKey(outputColumnName);
   }
 
-  public List<String> getOutputColumnsForQueryColumn(final String queryColumn)
+  /**
+   * Query column name for a particular output column position.
+   *
+   * @throws IllegalArgumentException if the output column position is out of range
+   */
+  public String getQueryColumnName(final int outputColumn)
   {
-    final List<String> outputColumns = queryToOutputColumnsMap.get(queryColumn);
-    if (outputColumns != null) {
-      return outputColumns;
-    } else {
-      return Collections.emptyList();
+    if (outputColumn < 0 || outputColumn >= mappings.size()) {
+      throw new IAE("Output column position[%d] out of range", outputColumn);
     }
+
+    return mappings.get(outputColumn).getQueryColumn();
+  }
+
+  /**
+   * Output column name for a particular output column position.
+   *
+   * @throws IllegalArgumentException if the output column position is out of range
+   */
+  public String getOutputColumnName(final int outputColumn)
+  {
+    if (outputColumn < 0 || outputColumn >= mappings.size()) {
+      throw new IAE("Output column position[%d] out of range", outputColumn);
+    }
+
+    return mappings.get(outputColumn).getOutputColumn();
+  }
+
+  /**
+   * Output column positions for a particular output column name.
+   */
+  public IntList getOutputColumnsByName(final String outputColumnName)
+  {
+    return outputColumnNameToPositionMap.getOrDefault(outputColumnName, IntLists.emptyList());
+  }
+
+  /**
+   * Output column positions for a particular query column name.
+   */
+  public IntList getOutputColumnsForQueryColumn(final String queryColumnName)
+  {
+    final IntList outputColumnPositions = queryColumnNameToPositionMap.get(queryColumnName);
+
+    if (outputColumnPositions == null) {
+      return IntLists.emptyList();
+    }
+
+    return outputColumnPositions;
   }
 
   @JsonValue
@@ -127,18 +197,5 @@ public class ColumnMappings
     return "ColumnMappings{" +
            "mappings=" + mappings +
            '}';
-  }
-
-  private static List<ColumnMapping> validateNoDuplicateOutputColumns(final List<ColumnMapping> mappings)
-  {
-    final Set<String> encountered = new HashSet<>();
-
-    for (final ColumnMapping mapping : mappings) {
-      if (!encountered.add(mapping.getOutputColumn())) {
-        throw new ISE("Duplicate output column [%s]", mapping.getOutputColumn());
-      }
-    }
-
-    return mappings;
   }
 }

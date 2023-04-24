@@ -19,15 +19,16 @@
 
 package org.apache.druid.k8s.overlord.common;
 
+import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import org.apache.druid.indexing.common.task.Task;
 
 import java.io.IOException;
 
-public interface TaskAdapter<K, V>
+public interface TaskAdapter
 {
 
-  V fromTask(Task task, PeonCommandContext context) throws IOException;
+  Job fromTask(Task task) throws IOException;
 
-  Task toTask(K from) throws IOException;
+  Task toTask(Job from) throws IOException;
 
 }

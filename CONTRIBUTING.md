@@ -21,6 +21,7 @@
 
 When submitting a pull request (PR), please use the following guidelines:
 
+- A description of style conventions can be found at [`dev/style-conventions.md`](dev/style-conventions.md) 
 - Make sure your code respects existing formatting conventions. In general, follow
   the same coding style as the code that you are modifying.
 - For Intellij you can import our code style settings xml: [`druid_intellij_formatting.xml`](

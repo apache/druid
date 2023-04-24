@@ -48,7 +48,6 @@ import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskReport;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
@@ -67,11 +66,15 @@ import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.util.ToolRunner;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
@@ -85,18 +88,20 @@ import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class HadoopIndexTask extends HadoopTask implements ChatHandler
 {
+  public static final String INPUT_SOURCE_TYPE = "hadoop";
   private static final Logger log = new Logger(HadoopIndexTask.class);
   private static final String HADOOP_JOB_ID_FILENAME = "mapReduceJobId.json";
   private static final String TYPE = "index_hadoop";
   private TaskConfig taskConfig = null;
-  private TaskStorageDirTracker dirTracker = null;
 
   private static String getTheDataSource(HadoopIngestionSpec spec)
   {
@@ -193,6 +198,14 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     return "index_hadoop";
   }
 
+  @Nonnull
+  @JsonIgnore
+  @Override
+  public Set<ResourceAction> getInputSourceResources()
+  {
+    return Collections.singleton(new ResourceAction(new Resource(INPUT_SOURCE_TYPE, ResourceType.EXTERNAL), Action.READ));
+  }
+
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
@@ -281,7 +294,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
   private File getHadoopJobIdFile()
   {
-    return new File(dirTracker.getTaskDir(getId()), HADOOP_JOB_ID_FILENAME);
+    return new File(taskConfig.getTaskDir(getId()), HADOOP_JOB_ID_FILENAME);
   }
 
   @Override
@@ -289,7 +302,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   {
     try {
       taskConfig = toolbox.getConfig();
-      dirTracker = toolbox.getDirTracker();
       if (chatHandlerProvider.isPresent()) {
         log.info("Found chat handler of class[%s]", chatHandlerProvider.get().getClass().getName());
         chatHandlerProvider.get().register(getId(), this, false);

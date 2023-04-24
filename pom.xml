@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>26.0.0-SNAPSHOT</version>
+    <version>27.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -118,15 +118,15 @@
         <hibernate-validator.version>5.3.6.Final</hibernate-validator.version>
         <httpclient.version>4.5.13</httpclient.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
-        <zookeeper.version>3.5.9</zookeeper.version>
+        <zookeeper.version>3.5.10</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
         <com.google.apis.client.version>1.26.0</com.google.apis.client.version>
         <com.google.apis.compute.version>v1-rev20190607-${com.google.apis.client.version}</com.google.apis.compute.version>
         <com.google.apis.storage.version>v1-rev20190523-${com.google.apis.client.version}</com.google.apis.storage.version>
         <jdk.surefire.argLine><!-- empty placeholder --></jdk.surefire.argLine>
-        <repoOrgId>apache.snapshots</repoOrgId>
-        <repoOrgName>Apache Snapshot Repository</repoOrgName>
-        <repoOrgUrl>https://repository.apache.org/snapshots</repoOrgUrl>
+        <repoOrgId>maven.org</repoOrgId>
+        <repoOrgName>Maven Central Repository</repoOrgName>
+        <repoOrgUrl>https://repo1.maven.org/maven2/</repoOrgUrl>
 
         <!-- Allow the handful of flaky tests with transient failures to pass. -->
         <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
@@ -138,6 +138,12 @@
         <skipTests>false</skipTests>
         <skipUTs>${skipTests}</skipUTs>
         <skipITs>${skipTests}</skipITs>
+
+        <!-- NetBeans has a problem when we use late binding with @ in the surefire arg line.
+             Therefore we set this empty property here.
+             ref: https://github.com/mapstruct/mapstruct/pull/1241
+             -->
+         <jacocoArgLine />
     </properties>
 
     <modules>
@@ -225,14 +231,31 @@
             <id>${repoOrgId}</id>
             <name>${repoOrgName}</name>
             <url>${repoOrgUrl}</url>
+            <snapshots>
+               <enabled>false</enabled>
+            </snapshots>
         </repository>
-
+        
         <!-- Only used by core, but moved to root for parallel build dependency resolution -->
         <repository>
-          <id>sigar</id>
-          <url>https://repository.mulesoft.org/nexus/content/repositories/public</url>
+            <id>sigar</id>
+            <url>https://repository.mulesoft.org/nexus/content/repositories/public</url>
+            <snapshots>
+               <enabled>false</enabled>
+            </snapshots>
         </repository>
     </repositories>
+    
+    <pluginRepositories>
+        <pluginRepository>
+            <id>${repoOrgId}</id>
+            <name>${repoOrgName}</name>
+            <url>${repoOrgUrl}</url>
+            <snapshots>
+               <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
 
     <dependencyManagement>
         <dependencies>
@@ -520,8 +543,8 @@
             </dependency>
             <dependency>
                 <groupId>org.glassfish</groupId>
-                <artifactId>javax.el</artifactId>
-                <version>3.0.0</version>
+                <artifactId>jakarta.el</artifactId>
+                <version>3.0.4</version>
             </dependency>
             <dependency>
                 <groupId>org.glassfish.grizzly</groupId>
@@ -648,7 +671,7 @@
             <dependency>
                 <groupId>joda-time</groupId>
                 <artifactId>joda-time</artifactId>
-                <version>2.10.5</version>
+                <version>2.12.4</version>
             </dependency>
             <dependency>
                 <groupId>com.google.code.findbugs</groupId>
@@ -1508,7 +1531,7 @@
                                 <projectName>Apache Druid</projectName>
                             </properties>
                             <resourceBundles>
-                                <resourceBundle>org.apache.apache.resources:apache-jar-resource-bundle:1.5-SNAPSHOT</resourceBundle>
+                                <resourceBundle>org.apache.apache.resources:apache-jar-resource-bundle:1.5</resourceBundle>
                             </resourceBundles>
                         </configuration>
                     </execution>

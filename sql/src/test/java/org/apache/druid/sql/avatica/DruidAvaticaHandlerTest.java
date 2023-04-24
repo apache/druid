@@ -66,6 +66,7 @@ import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -468,7 +469,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                       DUMMY_SQL_QUERY_ID
                   ),
                   "RESOURCES",
-                  "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]"
+                  "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]",
+                  "ATTRIBUTES",
+                  "{\"statementType\":\"SELECT\",\"targetDataSource\":null}"
               )
           ),
           getRows(resultSet)
@@ -1002,7 +1005,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             CalciteTests.DRUID_SCHEMA_NAME,
             new CalciteRulesManager(ImmutableSet.of()),
             CalciteTests.createJoinableFactoryWrapper(),
-            CatalogResolver.NULL_RESOLVER
+            CatalogResolver.NULL_RESOLVER,
+            new AuthConfig()
         )
     );
   }

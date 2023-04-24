@@ -20,6 +20,7 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.Memory;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -100,7 +101,7 @@ public class FloatFieldReader implements FieldReader
     @Override
     public boolean isNull()
     {
-      return dataRegion.getByte(fieldPointer.position()) == FloatFieldWriter.NULL_BYTE;
+      return NullHandling.sqlCompatible() && dataRegion.getByte(fieldPointer.position()) == FloatFieldWriter.NULL_BYTE;
     }
 
     @Override

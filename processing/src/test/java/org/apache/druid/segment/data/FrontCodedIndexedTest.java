@@ -43,17 +43,24 @@ import java.util.TreeSet;
 @RunWith(Parameterized.class)
 public class FrontCodedIndexedTest extends InitializedNullHandlingTest
 {
-  @Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "byteOrder: {0} useIncrementalBuckets: {1}")
   public static Collection<Object[]> constructorFeeder()
   {
-    return ImmutableList.of(new Object[]{ByteOrder.LITTLE_ENDIAN}, new Object[]{ByteOrder.BIG_ENDIAN});
+    return ImmutableList.of(
+        new Object[]{ByteOrder.LITTLE_ENDIAN, FrontCodedIndexed.V1},
+        new Object[]{ByteOrder.LITTLE_ENDIAN, FrontCodedIndexed.V0},
+        new Object[]{ByteOrder.BIG_ENDIAN, FrontCodedIndexed.V1},
+        new Object[]{ByteOrder.BIG_ENDIAN, FrontCodedIndexed.V0}
+    );
   }
 
   private final ByteOrder order;
+  private final byte version;
 
-  public FrontCodedIndexedTest(ByteOrder byteOrder)
+  public FrontCodedIndexedTest(ByteOrder byteOrder, byte version)
   {
     this.order = byteOrder;
+    this.version = version;
   }
 
   @Test
@@ -61,7 +68,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
   {
     ByteBuffer buffer = ByteBuffer.allocate(1 << 12).order(order);
     List<String> theList = ImmutableList.of("hello", "helloo", "hellooo", "hellooz", "helloozy");
-    fillBuffer(buffer, theList, 4);
+    persistToBuffer(buffer, theList, 4, version);
 
     buffer.position(0);
     FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
@@ -92,13 +99,16 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
   {
     ByteBuffer buffer = ByteBuffer.allocate(1 << 12).order(order);
     List<String> theList = ImmutableList.of("hello", "helloo", "hellooo", "hellooz", "helloozy");
-    fillBuffer(buffer, theList, 16);
+    persistToBuffer(buffer, theList, 16, version);
 
     FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
         buffer,
         buffer.order()
     ).get();
+    Assert.assertEquals("hello", StringUtils.fromUtf8(codedUtf8Indexed.get(0)));
     Assert.assertEquals("helloo", StringUtils.fromUtf8(codedUtf8Indexed.get(1)));
+    Assert.assertEquals("hellooo", StringUtils.fromUtf8(codedUtf8Indexed.get(2)));
+    Assert.assertEquals("hellooz", StringUtils.fromUtf8(codedUtf8Indexed.get(3)));
     Assert.assertEquals("helloozy", StringUtils.fromUtf8(codedUtf8Indexed.get(4)));
 
     Iterator<String> newListIterator = theList.iterator();
@@ -127,7 +137,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
       for (int i = 0; i < sizeBase + sizeAdjust; i++) {
         values.add(IdUtils.getRandomId() + IdUtils.getRandomId() + IdUtils.getRandomId() + IdUtils.getRandomId());
       }
-      fillBuffer(buffer, values, bucketSize);
+      persistToBuffer(buffer, values, bucketSize, version);
 
       FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
           buffer,
@@ -163,7 +173,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
       for (int i = 0; i < sizeBase + sizeAdjust; i++) {
         values.add(IdUtils.getRandomId() + IdUtils.getRandomId() + IdUtils.getRandomId() + IdUtils.getRandomId());
       }
-      fillBuffer(buffer, values, bucketSize);
+      persistToBuffer(buffer, values, bucketSize, version);
 
       FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
           buffer,
@@ -197,7 +207,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
     ByteBuffer buffer = ByteBuffer.allocate(1 << 12).order(order);
     List<String> theList = ImmutableList.of("hello", "helloo", "hellooo", "hellooz", "helloozy");
 
-    fillBuffer(buffer, theList, 4);
+    persistToBuffer(buffer, theList, 4, version);
 
     FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
         buffer,
@@ -221,7 +231,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
     TreeSet<String> values = new TreeSet<>(GenericIndexed.STRING_STRATEGY);
     values.add(null);
     values.addAll(theList);
-    fillBuffer(buffer, values, 4);
+    persistToBuffer(buffer, values, 4, version);
 
     FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
         buffer,
@@ -244,7 +254,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
 
     // "\uD83D\uDCA9" and "（請參見已被刪除版本）" are a regression test for https://github.com/apache/druid/pull/13364
     List<String> theList = ImmutableList.of("Győ-Moson-Sopron", "Győr", "\uD83D\uDCA9", "（請參見已被刪除版本）");
-    fillBuffer(buffer, theList, 4);
+    persistToBuffer(buffer, theList, 4, version);
 
     buffer.position(0);
     FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
@@ -260,7 +270,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
       final ByteBuffer nextUtf8 = utf8Iterator.next();
       Assert.assertEquals(next, StringUtils.fromUtf8(nextUtf8));
       nextUtf8.position(0);
-      Assert.assertEquals(next, StringUtils.fromUtf8(codedUtf8Indexed.get(ctr)));
+      Assert.assertEquals("mismatch row " + ctr, next, StringUtils.fromUtf8(codedUtf8Indexed.get(ctr)));
       Assert.assertEquals(ctr, codedUtf8Indexed.indexOf(nextUtf8));
       ctr++;
     }
@@ -272,7 +282,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
   {
     ByteBuffer buffer = ByteBuffer.allocate(1 << 12).order(order);
     List<String> theList = Collections.singletonList(null);
-    fillBuffer(buffer, theList, 4);
+    persistToBuffer(buffer, theList, 4, version);
 
     buffer.position(0);
     FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
@@ -290,6 +300,32 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
     Iterator<ByteBuffer> utf8Iterator = codedUtf8Indexed.iterator();
     Assert.assertTrue(utf8Iterator.hasNext());
     Assert.assertNull(utf8Iterator.next());
+    Assert.assertFalse(utf8Iterator.hasNext());
+  }
+
+  @Test
+  public void testFrontCodedEmpty() throws IOException
+  {
+    ByteBuffer buffer = ByteBuffer.allocate(1 << 6).order(order);
+    List<String> theList = Collections.emptyList();
+    persistToBuffer(buffer, theList, 4, version);
+
+    buffer.position(0);
+    FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
+        buffer,
+        buffer.order()
+    ).get();
+
+    Assert.assertEquals(0, codedUtf8Indexed.size());
+    Throwable t = Assert.assertThrows(IAE.class, () -> codedUtf8Indexed.get(0));
+    Assert.assertEquals("Index[0] >= size[0]", t.getMessage());
+    Assert.assertThrows(IllegalArgumentException.class, () -> codedUtf8Indexed.get(-1));
+    Assert.assertThrows(IllegalArgumentException.class, () -> codedUtf8Indexed.get(theList.size()));
+
+    Assert.assertEquals(-1, codedUtf8Indexed.indexOf(null));
+    Assert.assertEquals(-1, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("hello")));
+
+    Iterator<ByteBuffer> utf8Iterator = codedUtf8Indexed.iterator();
     Assert.assertFalse(utf8Iterator.hasNext());
   }
 
@@ -315,7 +351,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
       values.add(IdUtils.getRandomId() + IdUtils.getRandomId() + IdUtils.getRandomId() + IdUtils.getRandomId());
     }
     for (int bucketSize : bucketSizes) {
-      fillBuffer(buffer, values, bucketSize);
+      persistToBuffer(buffer, values, bucketSize, version);
       FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
           buffer,
           buffer.order()
@@ -352,7 +388,8 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
         () -> new FrontCodedIndexedWriter(
             medium,
             ByteOrder.nativeOrder(),
-            0
+            0,
+            version
         )
     );
 
@@ -361,7 +398,8 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
         () -> new FrontCodedIndexedWriter(
             medium,
             ByteOrder.nativeOrder(),
-            15
+            15,
+            version
         )
     );
 
@@ -370,20 +408,28 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
         () -> new FrontCodedIndexedWriter(
             medium,
             ByteOrder.nativeOrder(),
-            256
+            256,
+            version
         )
     );
   }
 
-  private static long fillBuffer(ByteBuffer buffer, Iterable<String> sortedIterable, int bucketSize) throws IOException
+  private static long persistToBuffer(
+      ByteBuffer buffer,
+      Iterable<String> sortedIterable,
+      int bucketSize,
+      byte version
+  ) throws IOException
   {
     Iterator<String> sortedStrings = sortedIterable.iterator();
     buffer.position(0);
     OnHeapMemorySegmentWriteOutMedium medium = new OnHeapMemorySegmentWriteOutMedium();
-    FrontCodedIndexedWriter writer = new FrontCodedIndexedWriter(
+    DictionaryWriter<byte[]> writer;
+    writer = new FrontCodedIndexedWriter(
         medium,
         buffer.order(),
-        bucketSize
+        bucketSize,
+        version
     );
     writer.open();
     int index = 0;
@@ -398,6 +444,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
       }
       index++;
     }
+    Assert.assertEquals(index, writer.getCardinality());
 
     // check 'get' again so that we aren't always reading from current page
     index = 0;

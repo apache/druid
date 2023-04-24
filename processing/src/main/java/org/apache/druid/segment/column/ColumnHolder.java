@@ -39,9 +39,9 @@ public interface ColumnHolder
 
   ColumnCapabilities getCapabilities();
 
-  default ColumnCapabilities getHandlerCapabilities()
+  default ColumnFormat getColumnFormat()
   {
-    return getCapabilities();
+    return new CapabilitiesBasedFormat(getCapabilities());
   }
 
   int getLength();

@@ -23,13 +23,19 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.segment.DimensionHandler;
+import org.apache.druid.segment.NestedDataDimensionHandler;
+import org.apache.druid.segment.NestedDataDimensionSchema;
 import org.apache.druid.segment.column.ColumnBuilder;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
@@ -42,7 +48,6 @@ import java.nio.ByteBuffer;
 public class NestedDataComplexTypeSerde extends ComplexMetricSerde
 {
   public static final String TYPE_NAME = "json";
-  public static final ColumnType TYPE = ColumnType.ofComplex(TYPE_NAME);
 
   public static final ObjectMapper OBJECT_MAPPER;
 
@@ -83,28 +88,25 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
       ColumnConfig columnConfig
   )
   {
-    NestedDataColumnSupplier supplier = NestedDataColumnSupplier.read(buffer, builder, columnConfig, OBJECT_MAPPER);
-    ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
+    final NestedDataColumnSupplierV4 supplier = NestedDataColumnSupplierV4.read(
+        buffer,
+        builder,
+        columnConfig,
+        OBJECT_MAPPER
+    );
+    final ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
     capabilitiesBuilder.setDictionaryEncoded(true);
     capabilitiesBuilder.setDictionaryValuesSorted(true);
     capabilitiesBuilder.setDictionaryValuesUnique(true);
-    ColumnType simpleType = supplier.getSimpleType();
+    final ColumnType simpleType = supplier.getSimpleType();
     if (simpleType != null) {
       builder.setType(simpleType);
     } else {
       builder.setComplexTypeName(TYPE_NAME);
-
     }
     builder.setComplexColumnSupplier(supplier);
-
-    // always use the nested column dimension handler, regardless what we claim our query time type is
-    builder.setHandlerCapabilities(
-        new ColumnCapabilitiesImpl().setType(TYPE)
-                                    .setDictionaryEncoded(true)
-                                    .setDictionaryValuesUnique(true)
-                                    .setDictionaryValuesSorted(true)
-                                    .setHasNulls(capabilitiesBuilder.hasNulls())
-    );
+    builder.setColumnFormat(new NestedColumnFormatV4());
+    builder.setFilterable(true);
   }
 
   @Override
@@ -112,7 +114,6 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
   {
     return new ObjectStrategy<Object>()
     {
-
       @Override
       public int compare(Object o1, Object o2)
       {
@@ -155,5 +156,39 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
         }
       }
     };
+  }
+
+  public static class NestedColumnFormatV4 implements ColumnFormat
+  {
+    @Override
+    public ColumnType getLogicalType()
+    {
+      return ColumnType.NESTED_DATA;
+    }
+
+    @Override
+    public DimensionHandler getColumnHandler(String columnName)
+    {
+      return new NestedDataDimensionHandler(columnName);
+    }
+
+    @Override
+    public DimensionSchema getColumnSchema(String columnName)
+    {
+      return new NestedDataDimensionSchema(columnName);
+    }
+
+    @Override
+    public ColumnFormat merge(@Nullable ColumnFormat otherFormat)
+    {
+      // we don't care, we are anything, there is no configurability
+      return this;
+    }
+
+    @Override
+    public ColumnCapabilities toColumnCapabilities()
+    {
+      return ColumnCapabilitiesImpl.createDefault().setType(ColumnType.NESTED_DATA).setHasNulls(true).setFilterable(true);
+    }
   }
 }
