@@ -2707,12 +2707,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.sqlCompatible() ?
         ImmutableList.of(
-            new Object[]{"100", 2L}
-        ) :
-        ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"100", 2L}
         ),
         RowSignature.builder()
@@ -2973,12 +2968,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.sqlCompatible() ?
         ImmutableList.of(
-            new Object[]{"2.02", 2L}
-        ) :
-        ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"2.02", 2L}
         ),
         RowSignature.builder()

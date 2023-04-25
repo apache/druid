@@ -22,7 +22,6 @@ package org.apache.druid.segment.nested;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Doubles;
 import it.unimi.dsi.fastutil.doubles.DoubleArraySet;
 import it.unimi.dsi.fastutil.doubles.DoubleIterator;
@@ -67,7 +66,6 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.SortedSet;
 
 /**
@@ -132,9 +130,6 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
   public <T> T as(Class<T> clazz)
   {
     if (clazz.equals(NullValueIndex.class)) {
-      if (NullHandling.replaceWithDefault() && singleType != null && singleType.isNumeric()) {
-        return (T) (NullValueIndex) () -> new SimpleImmutableBitmapIndex(bitmapFactory.makeEmptyImmutableBitmap());
-      }
       final BitmapColumnIndex nullIndex;
       if (localDictionarySupplier.get().get(0) == 0) {
         // null index is always 0 in the global dictionary, even if there are no null rows in any of the literal columns
@@ -619,7 +614,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         public double estimateSelectivity(int totalRows)
         {
           if (longValue == null) {
-            if (inputNull && NullHandling.sqlCompatible()) {
+            if (inputNull) {
               return (double) getBitmap(localDictionary.indexOf(0)).size() / totalRows;
             } else {
               return 0.0;
@@ -636,25 +631,13 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
         {
           if (longValue == null) {
-            if (inputNull && NullHandling.sqlCompatible()) {
+            if (inputNull) {
               return bitmapResultFactory.wrapDimensionValue(getBitmap(localDictionary.indexOf(0)));
             } else {
               return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
             }
           }
           final int globalId = longDictionary.indexOf(longValue);
-          if (NullHandling.replaceWithDefault() && longValue.equals(NullHandling.defaultLongValue())) {
-            if (globalId >= 0) {
-              return bitmapResultFactory.unionDimensionValueBitmaps(
-                  ImmutableList.of(
-                      getBitmap(0),
-                      getBitmap(globalId + adjustLongId)
-                  )
-              );
-            }
-            // nulls are zeros in default mode
-            return bitmapResultFactory.wrapDimensionValue(getBitmap(0));
-          }
           if (globalId < 0) {
             return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
           }
@@ -680,9 +663,6 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
               Long theValue = GuavaUtils.tryParseLong(value);
               if (theValue != null) {
                 longs.add(theValue.longValue());
-                if (NullHandling.replaceWithDefault() && Objects.equals(NullHandling.defaultLongValue(), theValue)) {
-                  needNullCheck = true;
-                }
               }
             }
           }
@@ -815,11 +795,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
               while (!nextSet && iterator.hasNext()) {
                 Integer nextValue = iterator.next();
                 if (nextValue == 0) {
-                  if (NullHandling.sqlCompatible()) {
-                    nextSet = longPredicate.applyNull();
-                  } else {
-                    nextSet = longPredicate.applyLong(NullHandling.defaultLongValue());
-                  }
+                  nextSet = longPredicate.applyNull();
                 } else {
                   nextSet = longPredicate.applyLong(longDictionary.get(nextValue - adjustLongId));
                 }
@@ -850,14 +826,13 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         public double estimateSelectivity(int totalRows)
         {
           if (doubleValue == null) {
-            if (inputNull && NullHandling.sqlCompatible()) {
+            if (inputNull) {
               return (double) getBitmap(localDictionary.indexOf(0)).size() / totalRows;
             } else {
               return 0.0;
             }
           }
           final int globalId = doubleDictionary.indexOf(doubleValue);
-
           if (globalId < 0) {
             return 0.0;
           }
@@ -868,25 +843,13 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
         {
           if (doubleValue == null) {
-            if (inputNull && NullHandling.sqlCompatible()) {
+            if (inputNull) {
               return bitmapResultFactory.wrapDimensionValue(getBitmap(localDictionary.indexOf(0)));
             } else {
               return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
             }
           }
           final int globalId = doubleDictionary.indexOf(doubleValue);
-          if (NullHandling.replaceWithDefault() && doubleValue.equals(NullHandling.defaultDoubleValue())) {
-            if (globalId >= 0) {
-              return bitmapResultFactory.unionDimensionValueBitmaps(
-                  ImmutableList.of(
-                      getBitmap(0),
-                      getBitmap(globalId + adjustDoubleId)
-                  )
-              );
-            }
-            // nulls are zeros in default mode
-            return bitmapResultFactory.wrapDimensionValue(getBitmap(0));
-          }
           if (globalId < 0) {
             return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
           }
@@ -912,9 +875,6 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
               Double theValue = Doubles.tryParse(value);
               if (theValue != null) {
                 doubles.add(theValue.doubleValue());
-                if (NullHandling.replaceWithDefault() && Objects.equals(NullHandling.defaultDoubleValue(), theValue)) {
-                  needNullCheck = true;
-                }
               }
             }
           }
@@ -1047,11 +1007,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
               while (!nextSet && iterator.hasNext()) {
                 Integer nextValue = iterator.next();
                 if (nextValue == 0) {
-                  if (NullHandling.sqlCompatible()) {
-                    nextSet = doublePredicate.applyNull();
-                  } else {
-                    nextSet = doublePredicate.applyDouble(NullHandling.defaultDoubleValue());
-                  }
+                  nextSet = doublePredicate.applyNull();
                 } else {
                   nextSet = doublePredicate.applyDouble(doubleDictionary.get(nextValue - adjustDoubleId));
                 }

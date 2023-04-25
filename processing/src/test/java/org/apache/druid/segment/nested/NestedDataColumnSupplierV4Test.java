@@ -56,7 +56,6 @@ import org.apache.druid.segment.column.DruidPredicateIndex;
 import org.apache.druid.segment.column.NullValueIndex;
 import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.column.TypeStrategy;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ColumnPartSerde;
 import org.apache.druid.segment.serde.ComplexColumnPartSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -521,31 +520,11 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
       Assert.assertNull(dimSelector.getObject());
       Assert.assertNull(dimSelector.lookupName(dimSelector.getRow().get(0)));
 
-      if (NullHandling.sqlCompatible() || singleType == null || !singleType.isNumeric()) {
-        Assert.assertTrue(valueSetIndex.forValue(null).computeBitmapResult(resultFactory).get(rowNumber));
-        Assert.assertTrue(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(rowNumber));
-        Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(null))
-                                        .computeBitmapResult(resultFactory)
-                                        .get(rowNumber));
-      } else {
-        Assert.assertFalse(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(rowNumber));
-        Assert.assertFalse(valueSetIndex.forValue(null).computeBitmapResult(resultFactory).get(rowNumber));
-        Assert.assertFalse(predicateIndex.forPredicate(new SelectorPredicateFactory(null))
-                                         .computeBitmapResult(resultFactory)
-                                         .get(rowNumber));
-        if (singleType.isNumeric()) {
-          final String defaultString;
-          if (singleType.is(ValueType.LONG)) {
-            defaultString = String.valueOf(NullHandling.defaultLongValue());
-          } else {
-            defaultString = String.valueOf(NullHandling.defaultDoubleValue());
-          }
-          Assert.assertTrue(valueSetIndex.forValue(defaultString).computeBitmapResult(resultFactory).get(rowNumber));
-          Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(defaultString))
-                                          .computeBitmapResult(resultFactory)
-                                          .get(rowNumber));
-        }
-      }
+      Assert.assertTrue(valueSetIndex.forValue(null).computeBitmapResult(resultFactory).get(rowNumber));
+      Assert.assertTrue(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(rowNumber));
+      Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(null))
+                                      .computeBitmapResult(resultFactory)
+                                      .get(rowNumber));
       Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(rowNumber));
 
 
