@@ -1,5 +1,5 @@
 module.exports={
-  "title": "Apache Druid",
+  "title": "Apache® Druid",
   "tagline": "A fast analytical database",
   "url": "https://druid.apache.org",
   "baseUrl": "/",
@@ -51,8 +51,12 @@ module.exports={
     ]
   ],
   "themeConfig": {
+    colorMode: {
+      defaultMode: 'light',
+      disableSwitch: true,
+      respectPrefersColorScheme: false,
+    },
     "navbar": {
-      "title": "Apache Druid",
       "logo": {
         "src": "img/druid_nav.png"
       },
@@ -60,37 +64,66 @@ module.exports={
         {
           "href": "/technology",
           "label": "Technology",
-          "position": "left"
+          "position": "right"
         },
         {
           "href": "/use-cases",
           "label": "Use Cases",
-          "position": "left"
-        },
-        {
-          "href": "/druid-powered",
-          "label": "Powered By",
-          "position": "left"
+          "position": "right",
+          "items": [
+            {
+              "href": "/druid-powered",
+              "label": "Powered By"
+            },
+          ],
         },
         {
           "to": "docs/design/",
           "label": "Docs",
-          "position": "left"
+          "position": "right"
         },
         {
           "href": "/community/",
           "label": "Community",
-          "position": "left"
+          "position": "right"
         },
         {
           "href": "https://www.apache.org",
           "label": "Apache",
-          "position": "left"
+          "position": "right",
+          "items": [
+            {
+              "href": "https://www.apache.org/",
+              "label": "Foundation"
+            },
+            {
+              "href": "https://apachecon.com/?ref=druid.apache.org",
+              "label": "Events"
+            },
+            {
+              "href": "https://www.apache.org/licenses/",
+              "label": "License"
+            },
+            {
+              "href": "https://www.apache.org/foundation/thanks.html",
+              "label": "Thanks"
+            },
+            {
+              "href": "https://www.apache.org/security/",
+              "label": "Security"
+            },
+            {
+              "href": "https://www.apache.org/foundation/sponsorship.html",
+              "label": "Sponsorship"
+            }
+
+
+          ],
         },
         {
           "href": "/downloads.html",
           "label": "Download",
-          "position": "left"
+          "position": "right"
         }
       ]
     },
