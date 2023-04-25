@@ -39,6 +39,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -143,8 +144,14 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
   {
     private final Supplier<ResourceHolder<Segment>> holderSupplier;
     private final Closeable cleanupFn;
+
+    @GuardedBy("this")
     private ReferenceCountingResourceHolder<Segment> holder;
+
+    @GuardedBy("this")
     private boolean closing;
+
+    @GuardedBy("this")
     private boolean closed;
 
     public SegmentHolder(Supplier<ResourceHolder<Segment>> holderSupplier, Closeable cleanupFn)
