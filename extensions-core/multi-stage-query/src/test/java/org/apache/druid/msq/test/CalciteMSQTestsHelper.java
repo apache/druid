@@ -236,6 +236,7 @@ public class CalciteMSQTestsHelper
               .buildMMappedIndex();
           break;
         case DATASOURCE3:
+        case CalciteTests.BROADCAST_DATASOURCE:
           index = IndexBuilder
               .create()
               .tmpDir(new File(temporaryFolder.newFolder(), "3"))
