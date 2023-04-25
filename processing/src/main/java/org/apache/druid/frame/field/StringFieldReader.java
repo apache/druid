@@ -93,7 +93,9 @@ public class StringFieldReader implements FieldReader
   {
     final byte nullByte = memory.getByte(position);
     assert nullByte == StringFieldWriter.NULL_BYTE || nullByte == StringFieldWriter.NOT_NULL_BYTE;
-    return nullByte == StringFieldWriter.NULL_BYTE
+
+    // When NullHandling.replaceWithDefault(), empty strings are considered nulls as well.
+    return (NullHandling.replaceWithDefault() || nullByte == StringFieldWriter.NULL_BYTE)
            && memory.getByte(position + 1) == StringFieldWriter.VALUE_TERMINATOR
            && memory.getByte(position + 2) == StringFieldWriter.ROW_TERMINATOR;
   }
