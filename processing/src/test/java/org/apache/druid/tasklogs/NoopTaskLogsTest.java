@@ -19,24 +19,17 @@
 
 package org.apache.druid.tasklogs;
 
-import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.junit.Assert;
+import org.junit.Test;
 
-import java.io.File;
 import java.io.IOException;
 
-/**
- * Something that knows how to persist local task logs to some form of long-term storage.
- */
-@ExtensionPoint
-public interface TaskLogPusher
+public class NoopTaskLogsTest
 {
-  void pushTaskLog(String taskid, File logFile) throws IOException;
-
-  default void pushTaskReports(String taskid, File reportFile) throws IOException
+  @Test
+  public void test_streamTaskStatus() throws IOException
   {
-  }
-
-  default void pushTaskStatus(String taskid, File reportFile) throws IOException
-  {
+    TaskLogs taskLogs = new NoopTaskLogs();
+    Assert.assertFalse(taskLogs.streamTaskStatus("id").isPresent());
   }
 }
