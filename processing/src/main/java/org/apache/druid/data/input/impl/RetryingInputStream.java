@@ -87,31 +87,31 @@ public class RetryingInputStream<T> extends InputStream
     this.retryCondition = Preconditions.checkNotNull(retryCondition, "retryCondition");
     this.maxTries = maxTries == null ? RetryUtils.DEFAULT_MAX_TRIES : maxTries;
     this.doWait = doWait;
-    this.startOffset = 0;
 
     if (this.maxTries <= 1) {
       throw new IAE("maxTries must be greater than 1");
     }
-    openWithRetry();
+    openWithRetry(0);
   }
 
   private void openIfNeeded() throws IOException
   {
     if (delegate == null) {
-      openWithRetry();
+      openWithRetry(startOffset);
     }
   }
 
-  private void openWithRetry() throws IOException
+  private void openWithRetry(final long offset) throws IOException
   {
     for (int nTry = 0; nTry < maxTries; nTry++) {
       try {
-        delegate = new CountingInputStream(objectOpenFunction.open(object, startOffset));
+        delegate = new CountingInputStream(objectOpenFunction.open(object, offset));
+        break;
       }
       catch (Throwable t) {
         final int nextTry = nTry + 1;
         if (nextTry < maxTries && retryCondition.apply(t)) {
-          final String message = StringUtils.format("Stream interrupted at position [%d]", startOffset);
+          final String message = StringUtils.format("Stream interrupted at position [%d]", offset);
           try {
             if (doWait) {
               RetryUtils.awaitNextRetry(t, message, nextTry, maxTries, false);
@@ -154,7 +154,7 @@ public class RetryingInputStream<T> extends InputStream
         if (doWait) {
           RetryUtils.awaitNextRetry(t, message, nextTry, maxTries, false);
         }
-        openWithRetry();
+        openWithRetry(startOffset);
       }
       catch (InterruptedException | IOException e) {
         t.addSuppressed(e);

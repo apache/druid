@@ -50,6 +50,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 public class RetryingInputStreamTest
 {
@@ -65,7 +67,7 @@ public class RetryingInputStreamTest
   private int throwIOExceptions = 0;
 
 
-  private final ObjectOpenFunction<File> objectOpenFunction = new ObjectOpenFunction<File>()
+  private final ObjectOpenFunction<File> objectOpenFunction = spy(new ObjectOpenFunction<File>()
   {
     @Override
     public InputStream open(File object) throws IOException
@@ -80,7 +82,7 @@ public class RetryingInputStreamTest
       Preconditions.checkState(fis.skip(start) == start);
       return new TestInputStream(fis);
     }
-  };
+  });
 
   @Before
   public void setup() throws IOException
@@ -228,7 +230,6 @@ public class RetryingInputStreamTest
   {
     throwCustomExceptions = 2;
 
-    ObjectOpenFunction<File> spyObjectOpenFunction = spy(objectOpenFunction);
     doAnswer(new Answer<InputStream>()
     {
       int retryCount = 0;
@@ -243,15 +244,16 @@ public class RetryingInputStreamTest
           return (InputStream) invocation.callRealMethod();
         }
       }
-    }).when(spyObjectOpenFunction).open(any(), anyLong());
+    }).when(objectOpenFunction).open(any(), anyLong());
 
-    final RetryingInputStream<File> retryingInputStream = new RetryingInputStream<>(
+    new RetryingInputStream<>(
         testFile,
-        spyObjectOpenFunction,
+        objectOpenFunction,
         t -> t instanceof CustomException,
         MAX_RETRY,
         false
     );
+    verify(objectOpenFunction, times(3)).open(any(), anyLong());
     Assert.assertEquals(0, throwCustomExceptions);
   }
 
