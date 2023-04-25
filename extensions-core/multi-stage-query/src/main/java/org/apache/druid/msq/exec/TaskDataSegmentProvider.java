@@ -186,12 +186,22 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
               () -> {
                 synchronized (this) {
                   CloseableUtils.closeAll(
-                      () -> closing = true,
+                      () -> {
+                        // synchronized block not strictly needed here, but errorprone needs it since it doesn't
+                        // understand the lambda is immediately called. See https://errorprone.info/bugpattern/GuardedBy
+                        synchronized (this) {
+                          closing = true;
+                        }
+                      },
                       segmentHolder,
                       cleanupFn, // removes this holder from the "holders" map
                       () -> {
-                        closed = true;
-                        SegmentHolder.this.notifyAll();
+                        // synchronized block not strictly needed here, but errorprone needs it since it doesn't
+                        // understand the lambda is immediately called. See https://errorprone.info/bugpattern/GuardedBy
+                        synchronized (this) {
+                          closed = true;
+                          SegmentHolder.this.notifyAll();
+                        }
                       }
                   );
                 }
