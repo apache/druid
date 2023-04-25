@@ -17,5 +17,5 @@
   ~ under the License.
   -->
 
-This module contains an implementation of  using s3 as storage for segments and task reports 
+This module contains an implementation of  using S3 as storage for segments and task reports 
 More details [here](https://druid.apache.org/docs/latest/development/extensions-core/s3.html).
