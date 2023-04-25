@@ -30,6 +30,8 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Numbers;
+import org.apache.druid.math.expr.Evals;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -390,9 +392,6 @@ public class NestedFieldVirtualColumn implements VirtualColumn
         @Override
         public boolean isNull()
         {
-          if (NullHandling.replaceWithDefault()) {
-            return false;
-          }
           Object o = getObject();
           return !(o instanceof Number);
         }
@@ -610,13 +609,79 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       if (parts.isEmpty()) {
         ColumnCapabilities capabilities = holder.getCapabilities();
         if (theColumn instanceof DictionaryEncodedColumn) {
-          return ExpressionVectorSelectors.castObjectSelectorToNumeric(
-              offset,
-              this.columnName,
-              theColumn.makeVectorObjectSelector(offset),
-              capabilities.toColumnType(),
-              expectedType
-          );
+          final VectorObjectSelector delegate = theColumn.makeVectorObjectSelector(offset);
+          return new VectorValueSelector()
+          {
+            private int currentOffsetId = ReadableVectorInspector.NULL_ID;
+            @Nullable
+            private long[] longs = new long[delegate.getMaxVectorSize()];
+            @Nullable
+            private double[] doubles = new double[delegate.getMaxVectorSize()];
+
+            @Nullable
+            private float[] floats = new float[delegate.getMaxVectorSize()];
+
+            @Nullable
+            private boolean[] nulls = new boolean[delegate.getMaxVectorSize()];
+            @Override
+            public long[] getLongVector()
+            {
+              computeNumbers();
+              return longs;
+            }
+
+            @Override
+            public float[] getFloatVector()
+            {
+              computeNumbers();
+              return floats;
+            }
+
+            @Override
+            public double[] getDoubleVector()
+            {
+              computeNumbers();
+              return doubles;
+            }
+
+            @Nullable
+            @Override
+            public boolean[] getNullVector()
+            {
+              computeNumbers();
+              return nulls;
+            }
+
+            @Override
+            public int getMaxVectorSize()
+            {
+              return delegate.getMaxVectorSize();
+            }
+
+            @Override
+            public int getCurrentVectorSize()
+            {
+              return delegate.getCurrentVectorSize();
+            }
+
+            private void computeNumbers()
+            {
+              if (currentOffsetId != offset.getId()) {
+                final Object[] values = delegate.getObjectVector();
+                for (int i = 0; i < values.length; i++) {
+                  Number n = ExprEval.computeNumber(Evals.asString(values[i]));
+                  if (n != null) {
+                    longs[i] = n.longValue();
+                    doubles[i] = n.doubleValue();
+                    floats[i] = n.floatValue();
+                    nulls[i] = false;
+                  } else {
+                    nulls[i] = true;
+                  }
+                }
+              }
+            }
+          };
         }
         return theColumn.makeVectorValueSelector(offset);
       }
@@ -783,7 +848,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
                 nullVector = new boolean[objectSelector.getMaxVectorSize()];
               }
               longVector[i] = 0L;
-              nullVector[i] = NullHandling.sqlCompatible();
+              nullVector[i] = true;
             } else {
               Long l;
               if (v instanceof Number) {
@@ -801,7 +866,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
                   nullVector = new boolean[objectSelector.getMaxVectorSize()];
                 }
                 longVector[i] = 0L;
-                nullVector[i] = NullHandling.sqlCompatible();
+                nullVector[i] = true;
               }
             }
           }
@@ -846,7 +911,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
                 nullVector = new boolean[objectSelector.getMaxVectorSize()];
               }
               doubleVector[i] = 0.0;
-              nullVector[i] = NullHandling.sqlCompatible();
+              nullVector[i] = true;
             } else {
               Double d;
               if (v instanceof Number) {
@@ -864,7 +929,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
                   nullVector = new boolean[objectSelector.getMaxVectorSize()];
                 }
                 doubleVector[i] = 0.0;
-                nullVector[i] = NullHandling.sqlCompatible();
+                nullVector[i] = true;
               }
             }
           }
@@ -939,7 +1004,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     // from here
     return ColumnCapabilitiesImpl.createDefault()
                                  .setType(expectedType != null ? expectedType : ColumnType.STRING)
-                                 .setHasNulls(expectedType == null || !expectedType.isNumeric() || (expectedType.isNumeric() && NullHandling.sqlCompatible()));
+                                 .setHasNulls(true);
   }
 
   @Nullable
@@ -969,8 +1034,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
                                      .setDictionaryValuesSorted(useDictionary)
                                      .setDictionaryValuesUnique(useDictionary)
                                      .setHasBitmapIndexes(useDictionary)
-                                     .setHasNulls(expectedType == null || (expectedType.isNumeric()
-                                                                           && NullHandling.sqlCompatible()));
+                                     .setHasNulls(true);
       }
       // column is not nested, use underlying column capabilities, adjusted for expectedType as necessary
       if (parts.isEmpty()) {
@@ -1086,9 +1150,6 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     @Override
     public boolean isNull()
     {
-      if (NullHandling.replaceWithDefault()) {
-        return false;
-      }
       Object o = getObject();
       return !(o instanceof Number || (o instanceof String && Doubles.tryParse((String) o) != null));
     }
@@ -1098,11 +1159,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     public Object getObject()
     {
       StructuredData data = StructuredData.wrap(baseSelector.getObject());
-      Object o = NestedPathFinder.findLiteral(data == null ? null : data.getValue(), parts);
-      if (o == null) {
-        return defaultValue;
-      }
-      return o;
+      return NestedPathFinder.findLiteral(data == null ? null : data.getValue(), parts);
     }
 
     @Override
@@ -1172,9 +1229,6 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     @Override
     public boolean isNull()
     {
-      if (NullHandling.replaceWithDefault()) {
-        return false;
-      }
       StructuredData data = (StructuredData) getObject();
       if (data == null) {
         return true;
@@ -1391,9 +1445,6 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     @Override
     public boolean isNull()
     {
-      if (NullHandling.replaceWithDefault()) {
-        return false;
-      }
       final IndexedInts row = getRow();
       if (row.size() != 1) {
         return true;

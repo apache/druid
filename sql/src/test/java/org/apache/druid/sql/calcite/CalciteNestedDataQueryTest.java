@@ -4592,12 +4592,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.sqlCompatible() ?
         ImmutableList.of(
             new Object[]{NullHandling.defaultStringValue(), NullHandling.defaultLongValue(), 4L},
             new Object[]{"100", NullHandling.defaultLongValue(), 1L},
             new Object[]{"200", NullHandling.defaultLongValue(), 1L}
-        ) : Collections.emptyList(),
+        ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.STRING)
                     .add("EXPR$1", ColumnType.LONG)
@@ -4635,15 +4634,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.sqlCompatible() ?
         ImmutableList.of(
             new Object[]{"100", 1L, 1L}
-        ) :
-        ImmutableList.of(
-            new Object[]{"", 0L, 4L},
-            new Object[]{"100", 0L, 1L},
-            new Object[]{"100", 1L, 1L},
-            new Object[]{"200", 0L, 1L}
         ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.STRING)
@@ -4715,11 +4707,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.sqlCompatible() ? ImmutableList.of(
-            new Object[]{10L, 2L}
-        ) :
         ImmutableList.of(
-            new Object[]{0L, 12L},
             new Object[]{10L, 2L}
         ),
         RowSignature.builder()
