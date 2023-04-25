@@ -121,6 +121,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
         builder.setStandardTypeColumnSupplier(supplier);
         builder.setIndexSupplier(supplier, true, false);
         builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
+        builder.setFilterable(true);
       });
     }
     if (logicalType.is(ValueType.LONG)) {
@@ -140,6 +141,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
         builder.setStandardTypeColumnSupplier(supplier);
         builder.setIndexSupplier(supplier, true, false);
         builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
+        builder.setFilterable(true);
       });
     }
     if (logicalType.is(ValueType.DOUBLE)) {
@@ -159,6 +161,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
         builder.setStandardTypeColumnSupplier(supplier);
         builder.setIndexSupplier(supplier, true, false);
         builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
+        builder.setFilterable(true);
       });
     }
     if (logicalType.isArray()) {
@@ -178,6 +181,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
         builder.setType(logicalType);
         builder.setStandardTypeColumnSupplier(supplier);
         builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
+        builder.setFilterable(true);
       });
     }
     return (buffer, builder, columnConfig) -> {
@@ -198,6 +202,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       builder.setType(logicalType);
       builder.setStandardTypeColumnSupplier(supplier);
       builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, hasNulls));
+      builder.setFilterable(true);
     };
   }
 

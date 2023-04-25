@@ -51,6 +51,7 @@ import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedSegment;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.timeline.SegmentId;
@@ -119,7 +120,7 @@ public class ExternalInputSliceReader implements InputSliceReader
   )
   {
     final InputRowSchema schema = new InputRowSchema(
-        new TimestampSpec("__dummy__", "auto", DateTimes.utc(0)),
+        new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "auto", DateTimes.utc(0)),
         new DimensionsSpec(
             signature.getColumnNames().stream().map(
                 column ->

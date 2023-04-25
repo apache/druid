@@ -103,10 +103,10 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
   @Nonnull
   @JsonIgnore
   @Override
-  public Set<ResourceAction> getInputSourceTypes()
+  public Set<ResourceAction> getInputSourceResources()
   {
     return Collections.singleton(new ResourceAction(
-        new Resource(ResourceType.EXTERNAL, TASK_TYPE),
+        new Resource(TASK_TYPE, ResourceType.EXTERNAL),
         Action.READ
     ));
   }

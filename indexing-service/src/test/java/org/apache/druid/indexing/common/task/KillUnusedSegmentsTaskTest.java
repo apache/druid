@@ -142,6 +142,20 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     );
   }
 
+  @Test
+  public void testGetInputSourceResources()
+  {
+    final KillUnusedSegmentsTask task =
+        new KillUnusedSegmentsTask(
+            null,
+            DATA_SOURCE,
+            Intervals.of("2019-03-01/2019-04-01"),
+            null,
+            true
+        );
+    Assert.assertTrue(task.getInputSourceResources().isEmpty());
+  }
+
   private static DataSegment newSegment(Interval interval, String version)
   {
     return new DataSegment(

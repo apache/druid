@@ -74,7 +74,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
   ) throws IOException
   {
     // BaseLeafFrameProcessorFactory is used for native Druid queries, where the following input cases can happen:
-    //   1) Union datasources: N nonbroadcast inputs, which are are treated as one big input
+    //   1) Union datasources: N nonbroadcast inputs, which are treated as one big input
     //   2) Join datasources: one nonbroadcast input, N broadcast inputs
     //   3) All other datasources: single input
 
