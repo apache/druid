@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 
 import java.util.concurrent.RejectedExecutionException;
