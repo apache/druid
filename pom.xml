@@ -1228,6 +1228,7 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
                 <configuration>
                     <excludes>
                         <!-- Ignore initialization classes, these are tested by the integration tests. -->
