@@ -747,7 +747,7 @@ public class Expressions
       final ExpressionParser parser
   )
   {
-    final Expr expr = parser.parseAndAnalyze(expression.getExpression()).expr() ;
+    final Expr expr = parser.parseAndAnalyze(expression.getExpression()).expr();
 
     if (expr instanceof TimestampFloorExprMacro.TimestampFloorExpr) {
       return (TimestampFloorExprMacro.TimestampFloorExpr) expr;
