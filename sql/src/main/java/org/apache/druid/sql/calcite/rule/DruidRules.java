@@ -313,9 +313,31 @@ public class DruidRules
     @Override
     public boolean matches(final RelOptRuleCall call)
     {
-      // Only consider doing a subquery when the stage cannot be fused into a single query.
-      final DruidRel<?> druidRel = call.rel(call.getRelList().size() - 1);
-      return !stage.canFollow(druidRel.getPartialDruidQuery().stage());
+      final DruidRel<?> lowerDruidRel = call.rel(call.getRelList().size() - 1);
+      final RelNode lowerRel = lowerDruidRel.getPartialDruidQuery().leafRel();
+      final PartialDruidQuery.Stage lowerStage = lowerDruidRel.getPartialDruidQuery().stage();
+
+      if (stage.canFollow(lowerStage)
+          || (stage == PartialDruidQuery.Stage.WHERE_FILTER
+              && PartialDruidQuery.Stage.HAVING_FILTER.canFollow(lowerStage))
+          || (stage == PartialDruidQuery.Stage.SELECT_PROJECT
+             && PartialDruidQuery.Stage.SORT_PROJECT.canFollow(lowerStage))) {
+        // Don't consider cases that can be fused into a single query.
+        return false;
+      } else if (stage == PartialDruidQuery.Stage.WHERE_FILTER && lowerRel instanceof Filter) {
+        // Don't consider filter-on-filter. FilterMergeRule will handle it.
+        return false;
+      } else if (stage == PartialDruidQuery.Stage.WHERE_FILTER
+                 && lowerStage == PartialDruidQuery.Stage.SELECT_PROJECT) {
+        // Don't consider filter-on-project. ProjectFilterTransposeRule will handle it by swapping them.
+        return false;
+      } else if (stage == PartialDruidQuery.Stage.SELECT_PROJECT && lowerRel instanceof Project) {
+        // Don't consider project-on-project. ProjectMergeRule will handle it.
+        return false;
+      } else {
+        // Consider subqueries in all other cases.
+        return true;
+      }
     }
   }
 }

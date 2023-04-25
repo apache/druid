@@ -20,33 +20,29 @@
 package org.apache.druid.tasklogs;
 
 import com.google.common.base.Optional;
-import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
 
-/**
- * Something that knows how to stream logs for tasks.
- */
-@ExtensionPoint
-public interface TaskLogStreamer
+public class TaskLogStreamerTest
 {
   /**
-   * Stream log for a task.
+   * Test default implemenation of streamTaskStatus in TaskLogStreamer interface for code coverage
    *
-   * @param offset If zero, stream the entire log. If positive, attempt to read from this position onwards. If
-   *               negative, attempt to read this many bytes from the end of the file (like <tt>tail -n</tt>).
-   * @return inputStream for this log, if available
+   * @throws IOException
    */
-  Optional<InputStream> streamTaskLog(String taskid, long offset) throws IOException;
-
-  default Optional<InputStream> streamTaskReports(final String taskid) throws IOException
+  @Test
+  public void test_streamTaskStatus() throws IOException
   {
-    return Optional.absent();
-  }
-
-  default Optional<InputStream> streamTaskStatus(final String taskid) throws IOException
-  {
-    return Optional.absent();
+    TaskLogStreamer taskLogStreamer = new TaskLogStreamer() {
+      @Override
+      public Optional<InputStream> streamTaskLog(String taskid, long offset)
+      {
+        return Optional.absent();
+      }
+    };
+    Assert.assertFalse(taskLogStreamer.streamTaskStatus("id").isPresent());
   }
 }
