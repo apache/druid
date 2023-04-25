@@ -90,7 +90,7 @@ public class ParallelIndexStatsReporterTest
   private TestReporter reporter;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     reporter = new TestReporter();
   }
@@ -109,17 +109,6 @@ public class ParallelIndexStatsReporterTest
         ImmutableSet.of()
     );
     Assert.assertEquals(stats, stats2);
-  }
-
-  @Test
-  public void testStatsEqualsIdentity()
-  {
-    ParallelIndexStats stats = new ParallelIndexStats(
-        ImmutableMap.of("foo", "bar"),
-        ImmutableMap.of("foo", "bar"),
-        ImmutableSet.of()
-    );
-    Assert.assertSame(stats, stats);
   }
 
   @Test
