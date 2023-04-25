@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.DefaultBitmapResultFactory;
@@ -762,9 +763,15 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
 
     BitmapColumnIndex columnIndex = nullIndex.forNull();
     Assert.assertNotNull(columnIndex);
-    Assert.assertEquals(0.3, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
-    checkBitmap(bitmap, 2, 5, 8);
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertEquals(0.3, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
+      ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+      checkBitmap(bitmap, 2, 5, 8);
+    } else {
+      Assert.assertEquals(0.0, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
+      ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+      checkBitmap(bitmap);
+    }
   }
 
   @Test
@@ -807,9 +814,15 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     // null value should really use NullValueIndex, but this works for classic reasons
     columnIndex = valueSetIndex.forValue(null);
     Assert.assertNotNull(columnIndex);
-    Assert.assertEquals(0.3, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
-    checkBitmap(bitmap, 2, 5, 8);
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertEquals(0.3, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
+      bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+      checkBitmap(bitmap, 2, 5, 8);
+    } else {
+      Assert.assertEquals(0.0, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
+      bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+      checkBitmap(bitmap);
+    }
   }
 
   @Test
@@ -1059,9 +1072,15 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
 
     BitmapColumnIndex columnIndex = nullIndex.forNull();
     Assert.assertNotNull(columnIndex);
-    Assert.assertEquals(0.3, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
-    checkBitmap(bitmap, 1, 3, 6);
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertEquals(0.3, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
+      ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+      checkBitmap(bitmap, 1, 3, 6);
+    }  else {
+      Assert.assertEquals(0.0, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
+      ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+      checkBitmap(bitmap);
+    }
   }
 
   @Test
@@ -1104,9 +1123,15 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     // null value should really use NullValueIndex, but this works for classic reasons
     columnIndex = valueSetIndex.forValue(null);
     Assert.assertNotNull(columnIndex);
-    Assert.assertEquals(0.3, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
-    checkBitmap(bitmap, 1, 3, 6);
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertEquals(0.3, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
+      bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+      checkBitmap(bitmap, 1, 3, 6);
+    } else {
+      Assert.assertEquals(0.0, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
+      bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+      checkBitmap(bitmap);
+    }
   }
 
   @Test

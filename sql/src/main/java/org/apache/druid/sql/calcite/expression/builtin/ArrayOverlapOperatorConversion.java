@@ -53,14 +53,8 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
       .operandTypeChecker(
           OperandTypes.sequence(
               "(array,array)",
-              OperandTypes.or(
-                  OperandTypes.family(SqlTypeFamily.ARRAY),
-                  OperandTypes.family(SqlTypeFamily.STRING)
-              ),
-              OperandTypes.or(
-                  OperandTypes.family(SqlTypeFamily.ARRAY),
-                  OperandTypes.family(SqlTypeFamily.STRING)
-              )
+              OperandTypes.family(SqlTypeFamily.ANY),
+              OperandTypes.family(SqlTypeFamily.ANY)
           )
       )
       .returnTypeInference(ReturnTypes.BOOLEAN)
