@@ -936,9 +936,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
+  private boolean randomFunction(boolean isPresent) {
+    return !isPresent;
+  }
+
   @Override
   public void stop(boolean stopGracefully)
   {
+    // Random lines to fail with coverage issues
+    // line 1
+    // line 2
+    // line 3
     synchronized (stateChangeLock) {
       Preconditions.checkState(lifecycleStarted, "lifecycle not started");
 
@@ -954,6 +962,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           Optional<TaskRunner> taskRunner = taskMaster.getTaskRunner();
           if (taskRunner.isPresent()) {
             taskRunner.get().unregisterListener(supervisorId);
+            log.info("Some random log line");
+          } else {
+            log.info("Some other random log line to fail branch & function coverage %s", randomFunction(taskRunner.isPresent()));
           }
 
           // Stopping gracefully will synchronize the end sequences of the tasks and signal them to publish, and will block
