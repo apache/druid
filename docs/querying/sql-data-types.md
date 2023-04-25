@@ -96,14 +96,15 @@ for additional details.
 > nearly all possible native functionality.
 
 ## Arrays
-Druid supports `ARRAY` types constructed at query time, though it currently lacks the ability to store them in
-segments. `ARRAY` types behave as standard SQL arrays, where results are grouped by matching entire arrays. This is in
-contrast to the implicit `UNNEST` that occurs when grouping on multi-value dimensions directly or when used with the
-multi-value functions. You can convert multi-value dimensions to standard SQL arrays either by explicitly by converting
-them with `MV_TO_ARRAY` or implicitly when used within the [array functions](./sql-array-functions.md). Arrays may
-also be constructed from multiple columns using the array functions.
+
+Druid supports `ARRAY` types constructed at query time. `ARRAY` types behave as standard SQL arrays, where results are grouped by matching entire arrays. This is in contrast to the implicit `UNNEST` that occurs when grouping on multi-value dimensions directly or when used with the multi-value functions.
+
+You can convert multi-value dimensions to standard SQL arrays explicitly by converting them with `MV_TO_ARRAY` or implicitly when used within the [array functions](./sql-array-functions.md). You can also use the array functions to construct arrays from multiple columns.
+
+You can use [schema auto-discovery for dimensions](../ingestion/schema-design.md#schema-auto-discovery-for-dimensions) to store arrays.
 
 ## Multi-value strings behavior
+
 The behavior of Druid [multi-value string dimensions](multi-value-dimensions.md) varies depending on the context of
 their usage.
 
