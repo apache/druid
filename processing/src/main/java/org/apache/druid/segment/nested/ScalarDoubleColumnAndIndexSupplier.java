@@ -21,6 +21,7 @@ package org.apache.druid.segment.nested;
 
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Doubles;
 import it.unimi.dsi.fastutil.doubles.DoubleArraySet;
 import it.unimi.dsi.fastutil.doubles.DoubleIterator;
@@ -29,6 +30,7 @@ import it.unimi.dsi.fastutil.ints.IntIntPair;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
@@ -184,7 +186,12 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
   public <T> T as(Class<T> clazz)
   {
     if (clazz.equals(NullValueIndex.class)) {
-      final BitmapColumnIndex nullIndex = new SimpleImmutableBitmapIndex(nullValueBitmap);
+      final BitmapColumnIndex nullIndex;
+      if (NullHandling.replaceWithDefault()) {
+        nullIndex = new SimpleImmutableBitmapIndex(bitmapFactory.makeEmptyImmutableBitmap());
+      } else {
+        nullIndex = new SimpleImmutableBitmapIndex(nullValueBitmap);
+      }
       return (T) (NullValueIndex) () -> nullIndex;
     } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)
                || clazz.equals(DictionaryEncodedValueIndex.class)) {
@@ -217,19 +224,26 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     {
       final boolean inputNull = value == null;
       final Double doubleValue = Strings.isNullOrEmpty(value) ? null : Doubles.tryParse(value);
+      final FixedIndexed<Double> dictionary = doubleDictionarySupplier.get();
+      int defaultValueIndex = dictionary.indexOf(NullHandling.defaultDoubleValue());
+
       return new SimpleBitmapColumnIndex()
       {
-        final FixedIndexed<Double> dictionary = doubleDictionarySupplier.get();
-
         @Override
         public double estimateSelectivity(int totalRows)
         {
           if (doubleValue == null) {
-            if (inputNull) {
+            if (inputNull && NullHandling.sqlCompatible()) {
               return (double) getBitmap(0).size() / totalRows;
             } else {
               return 0.0;
             }
+          }
+          if (NullHandling.replaceWithDefault() && doubleValue.equals(NullHandling.defaultDoubleValue())) {
+            if (defaultValueIndex >= 0) {
+              return ((double) getBitmap(0).size() + (double) getBitmap(defaultValueIndex).size()) / totalRows;
+            }
+            return (double) getBitmap(0).size() / totalRows;
           }
           final int id = dictionary.indexOf(doubleValue);
           if (id < 0) {
@@ -242,11 +256,23 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
         {
           if (doubleValue == null) {
-            if (inputNull) {
+            if (inputNull && NullHandling.sqlCompatible()) {
               return bitmapResultFactory.wrapDimensionValue(getBitmap(0));
             } else {
+              // input was not null but not a double... no match
               return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
             }
+          }
+          if (NullHandling.replaceWithDefault() && doubleValue.equals(NullHandling.defaultDoubleValue())) {
+            if (defaultValueIndex >= 0) {
+              return bitmapResultFactory.unionDimensionValueBitmaps(
+                  ImmutableList.of(
+                      getBitmap(0),
+                      getBitmap(defaultValueIndex)
+                  )
+              );
+            }
+            return bitmapResultFactory.wrapDimensionValue(getBitmap(0));
           }
           final int id = dictionary.indexOf(doubleValue);
           if (id < 0) {
@@ -274,6 +300,10 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
               Double theValue = Doubles.tryParse(value);
               if (theValue != null) {
                 doubles.add(theValue.doubleValue());
+                // add null value index in default value mode
+                if (NullHandling.replaceWithDefault() && theValue.equals(NullHandling.defaultDoubleValue())) {
+                  needNullCheck = true;
+                }
               }
             }
           }
@@ -429,7 +459,11 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
               while (!nextSet && iterator.hasNext()) {
                 Double nextValue = iterator.next();
                 if (nextValue == null) {
-                  nextSet = doublePredicate.applyNull();
+                  if (NullHandling.sqlCompatible()) {
+                    nextSet = doublePredicate.applyNull();
+                  } else {
+                    nextSet = doublePredicate.applyDouble(NullHandling.defaultDoubleValue());
+                  }
                 } else {
                   nextSet = doublePredicate.applyDouble(nextValue);
                 }

@@ -813,15 +813,26 @@ public class EvalTest extends InitializedNullHandlingTest
     Assert.assertEquals(type, eval.type());
     Assert.assertEquals(pair, eval.value());
 
-    // json type isn't defined in druid-core
-    ExpressionType json = ExpressionType.fromString("COMPLEX<json>");
-    eval = ExprEval.ofType(json, ImmutableMap.of("x", 1L, "y", 2L));
-    Assert.assertEquals(json, eval.type());
+    // json type best efforts its way to other types
+    eval = ExprEval.ofType(ExpressionType.NESTED_DATA, ImmutableMap.of("x", 1L, "y", 2L));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
     Assert.assertEquals(ImmutableMap.of("x", 1L, "y", 2L), eval.value());
 
-    eval = ExprEval.ofType(json, "hello");
-    Assert.assertEquals(json, eval.type());
+    eval = ExprEval.ofType(ExpressionType.NESTED_DATA, ImmutableList.of("a", "b", "c"));
+    Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[]{"a", "b", "c"}, (Object[]) eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.NESTED_DATA, ImmutableList.of(1L, 2L, 3L));
+    Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[]{1L, 2L, 3L}, (Object[]) eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.NESTED_DATA, "hello");
+    Assert.assertEquals(ExpressionType.STRING, eval.type());
     Assert.assertEquals("hello", eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.NESTED_DATA, 1.23);
+    Assert.assertEquals(ExpressionType.DOUBLE, eval.type());
+    Assert.assertEquals(1.23, eval.value());
 
     ExpressionType stringyComplexThing = ExpressionType.fromString("COMPLEX<somestringything>");
     eval = ExprEval.ofType(stringyComplexThing, "notbase64");

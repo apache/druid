@@ -247,20 +247,42 @@ public class NestedDataColumnIndexerTest extends InitializedNullHandlingTest
     columnSelectorFactory = cursorList.get(3).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(LONG_COL);
     dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimensionSpec);
-    Assert.assertNull(valueSelector.getObject());
-    Assert.assertTrue(valueSelector.isNull());
-    Assert.assertEquals(1, dimensionSelector.getRow().size());
-    Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-    Assert.assertNull(dimensionSelector.getObject());
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertNull(valueSelector.getObject());
+      Assert.assertTrue(valueSelector.isNull());
+      Assert.assertEquals(1, dimensionSelector.getRow().size());
+      Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+      Assert.assertNull(dimensionSelector.getObject());
+    } else {
+      Assert.assertEquals(NullHandling.defaultLongValue(), valueSelector.getObject());
+      Assert.assertFalse(valueSelector.isNull());
+      Assert.assertEquals(1, dimensionSelector.getRow().size());
+      Assert.assertEquals(
+          String.valueOf(NullHandling.defaultLongValue()),
+          dimensionSelector.lookupName(dimensionSelector.getRow().get(0))
+      );
+      Assert.assertEquals(String.valueOf(NullHandling.defaultLongValue()), dimensionSelector.getObject());
+    }
 
     columnSelectorFactory = cursorList.get(4).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(LONG_COL);
     dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimensionSpec);
-    Assert.assertNull(valueSelector.getObject());
-    Assert.assertTrue(valueSelector.isNull());
-    Assert.assertEquals(1, dimensionSelector.getRow().size());
-    Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-    Assert.assertNull(dimensionSelector.getObject());
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertNull(valueSelector.getObject());
+      Assert.assertTrue(valueSelector.isNull());
+      Assert.assertEquals(1, dimensionSelector.getRow().size());
+      Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+      Assert.assertNull(dimensionSelector.getObject());
+    } else {
+      Assert.assertEquals(NullHandling.defaultLongValue(), valueSelector.getObject());
+      Assert.assertFalse(valueSelector.isNull());
+      Assert.assertEquals(1, dimensionSelector.getRow().size());
+      Assert.assertEquals(
+          String.valueOf(NullHandling.defaultLongValue()),
+          dimensionSelector.lookupName(dimensionSelector.getRow().get(0))
+      );
+      Assert.assertEquals(String.valueOf(NullHandling.defaultLongValue()), dimensionSelector.getObject());
+    }
   }
 
   @Test
@@ -320,18 +342,42 @@ public class NestedDataColumnIndexerTest extends InitializedNullHandlingTest
     columnSelectorFactory = cursorList.get(3).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(DOUBLE_COL);
     dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimensionSpec);
-    Assert.assertNull(valueSelector.getObject());
-    Assert.assertEquals(1, dimensionSelector.getRow().size());
-    Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-    Assert.assertNull(dimensionSelector.getObject());
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertNull(valueSelector.getObject());
+      Assert.assertTrue(valueSelector.isNull());
+      Assert.assertEquals(1, dimensionSelector.getRow().size());
+      Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+      Assert.assertNull(dimensionSelector.getObject());
+    } else {
+      Assert.assertEquals(NullHandling.defaultDoubleValue(), valueSelector.getObject());
+      Assert.assertFalse(valueSelector.isNull());
+      Assert.assertEquals(1, dimensionSelector.getRow().size());
+      Assert.assertEquals(
+          String.valueOf(NullHandling.defaultDoubleValue()),
+          dimensionSelector.lookupName(dimensionSelector.getRow().get(0))
+      );
+      Assert.assertEquals(String.valueOf(NullHandling.defaultDoubleValue()), dimensionSelector.getObject());
+    }
 
     columnSelectorFactory = cursorList.get(4).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(DOUBLE_COL);
     dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimensionSpec);
-    Assert.assertNull(valueSelector.getObject());
-    Assert.assertEquals(1, dimensionSelector.getRow().size());
-    Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-    Assert.assertNull(dimensionSelector.getObject());
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertNull(valueSelector.getObject());
+      Assert.assertTrue(valueSelector.isNull());
+      Assert.assertEquals(1, dimensionSelector.getRow().size());
+      Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+      Assert.assertNull(dimensionSelector.getObject());
+    } else {
+      Assert.assertEquals(NullHandling.defaultDoubleValue(), valueSelector.getObject());
+      Assert.assertFalse(valueSelector.isNull());
+      Assert.assertEquals(1, dimensionSelector.getRow().size());
+      Assert.assertEquals(
+          String.valueOf(NullHandling.defaultDoubleValue()),
+          dimensionSelector.lookupName(dimensionSelector.getRow().get(0))
+      );
+      Assert.assertEquals(String.valueOf(NullHandling.defaultDoubleValue()), dimensionSelector.getObject());
+    }
   }
 
   @Test

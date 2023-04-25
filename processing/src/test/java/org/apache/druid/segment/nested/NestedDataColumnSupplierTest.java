@@ -555,15 +555,25 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
         Assert.assertEquals(s[1], sElementSelector.getObject());
       }
       if (l == null || l.length < 1 || l[1] == null) {
-        Assert.assertTrue(lElementSelector.isNull());
-        Assert.assertNull(lElementSelector.getObject());
+        if (NullHandling.sqlCompatible()) {
+          Assert.assertTrue(lElementSelector.isNull());
+          Assert.assertNull(lElementSelector.getObject());
+        } else {
+          Assert.assertFalse(lElementSelector.isNull());
+          Assert.assertEquals(NullHandling.defaultLongValue(), lElementSelector.getObject());
+        }
       } else {
         Assert.assertEquals(l[1], lElementSelector.getLong());
         Assert.assertEquals(l[1], lElementSelector.getObject());
       }
       if (d == null || d.length < 1 || d[1] == null) {
-        Assert.assertTrue(dElementSelector.isNull());
-        Assert.assertNull(dElementSelector.getObject());
+        if (NullHandling.sqlCompatible()) {
+          Assert.assertTrue(dElementSelector.isNull());
+          Assert.assertNull(dElementSelector.getObject());
+        } else {
+          Assert.assertFalse(dElementSelector.isNull());
+          Assert.assertEquals(NullHandling.defaultDoubleValue(), dElementSelector.getObject());
+        }
       } else {
         Assert.assertEquals((Double) d[1], dElementSelector.getDouble(), 0.0);
         Assert.assertEquals(d[1], dElementSelector.getObject());
@@ -608,15 +618,25 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
           Assert.assertEquals(s[1], sElementVector[i]);
         }
         if (l == null || l.length < 1 || l[1] == null) {
-          Assert.assertTrue(lElementNulls[i]);
-          Assert.assertNull(lElementObjectVector[i]);
+          if (NullHandling.sqlCompatible()) {
+            Assert.assertTrue(lElementNulls[i]);
+            Assert.assertNull(lElementObjectVector[i]);
+          } else {
+            Assert.assertNull(lElementNulls);
+            Assert.assertEquals(NullHandling.defaultLongValue(), lElementObjectVector[i]);
+          }
         } else {
           Assert.assertEquals(l[1], lElementVector[i]);
           Assert.assertEquals(l[1], lElementObjectVector[i]);
         }
         if (d == null || d.length < 1 || d[1] == null) {
-          Assert.assertTrue(dElementNulls[i]);
-          Assert.assertNull(dElementObjectVector[i]);
+          if (NullHandling.sqlCompatible()) {
+            Assert.assertTrue(dElementNulls[i]);
+            Assert.assertNull(dElementObjectVector[i]);
+          } else {
+            Assert.assertNull(dElementNulls);
+            Assert.assertEquals(NullHandling.defaultDoubleValue(), dElementObjectVector[i]);
+          }
         } else {
           Assert.assertEquals((Double) d[1], dElementVector[i], 0.0);
           Assert.assertEquals(d[1], dElementObjectVector[i]);
@@ -657,12 +677,20 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
           Assert.assertEquals(s[1], sElementVector[i]);
         }
         if (l == null || l.length < 1 || l[1] == null) {
-          Assert.assertTrue(lElementNulls[i]);
+          if (NullHandling.sqlCompatible()) {
+            Assert.assertTrue(lElementNulls[i]);
+          } else {
+            Assert.assertNull(lElementNulls);
+          }
         } else {
           Assert.assertEquals(l[1], lElementVector[i]);
         }
         if (d == null || d.length < 1 || d[1] == null) {
-          Assert.assertTrue(dElementNulls[i]);
+          if (NullHandling.sqlCompatible()) {
+            Assert.assertTrue(dElementNulls[i]);
+          } else {
+            Assert.assertNull(dElementNulls);
+          }
         } else {
           Assert.assertEquals((Double) d[1], dElementVector[i], 0.0);
         }

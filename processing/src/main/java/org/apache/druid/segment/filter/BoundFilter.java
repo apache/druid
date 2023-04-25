@@ -106,21 +106,28 @@ public class BoundFilter implements Filter
       }
       final NumericRangeIndex rangeIndex = indexSupplier.as(NumericRangeIndex.class);
       if (rangeIndex != null) {
-        final Number lower = boundDimFilter.hasLowerBound() ? Double.parseDouble(boundDimFilter.getLower()) : null;
-        final Number upper = boundDimFilter.hasUpperBound() ? Double.parseDouble(boundDimFilter.getUpper()) : null;
-        final BitmapColumnIndex rangeBitmaps = rangeIndex.forRange(
-            lower,
-            boundDimFilter.isLowerStrict(),
-            upper,
-            boundDimFilter.isUpperStrict()
-        );
-        if (rangeBitmaps != null) {
-          // preserve sad backwards compatible behavior where bound filter matches 'null' if the lower bound is not set
-          if (boundDimFilter.hasLowerBound() && !NullHandling.isNullOrEquivalent(boundDimFilter.getLower())) {
-            return rangeBitmaps;
-          } else {
-            return wrapRangeIndexWithNullValueIndex(indexSupplier, rangeBitmaps);
+        try {
+          final Number lower = boundDimFilter.hasLowerBound() ? Double.parseDouble(boundDimFilter.getLower()) : null;
+          final Number upper = boundDimFilter.hasUpperBound() ? Double.parseDouble(boundDimFilter.getUpper()) : null;
+          final BitmapColumnIndex rangeBitmaps = rangeIndex.forRange(
+              lower,
+              boundDimFilter.isLowerStrict(),
+              upper,
+              boundDimFilter.isUpperStrict()
+          );
+          if (rangeBitmaps != null) {
+            // preserve sad backwards compatible behavior where bound filter matches 'null' if the lower bound is not set
+            if (boundDimFilter.hasLowerBound() && !NullHandling.isNullOrEquivalent(boundDimFilter.getLower())) {
+              return rangeBitmaps;
+            } else {
+              return wrapRangeIndexWithNullValueIndex(indexSupplier, rangeBitmaps);
+            }
           }
+        }
+        catch (NumberFormatException ignored) {
+          // bounds are not numeric? might as well return null here since a predicate index probably isn't going to
+          // fare any better...
+          return null;
         }
       }
     }

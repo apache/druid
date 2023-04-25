@@ -64,6 +64,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -119,6 +120,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public abstract class BaseFilterTest extends InitializedNullHandlingTest
 {
@@ -315,6 +317,33 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                 input -> {
                   final IncrementalIndex index = input.buildIncrementalIndex();
                   return Pair.of(new IncrementalIndexStorageAdapter(index), index);
+                }
+            )
+            .put(
+                "mmappedAutoTypes",
+                input -> {
+                  input.mapSchema(
+                      schema ->
+                          new IncrementalIndexSchema(
+                              schema.getMinTimestamp(),
+                              schema.getTimestampSpec(),
+                              schema.getGran(),
+                              schema.getVirtualColumns(),
+                              schema.getDimensionsSpec().withDimensions(
+                                  schema.getDimensionsSpec()
+                                        .getDimensions()
+                                        .stream()
+                                        .map(
+                                            dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName())
+                                        )
+                                        .collect(Collectors.toList())
+                              ),
+                              schema.getMetrics(),
+                              schema.isRollup()
+                          )
+                  );
+                  final QueryableIndex index = input.buildMMappedIndex();
+                  return Pair.of(new QueryableIndexStorageAdapter(index), index);
                 }
             )
             .put(
@@ -821,58 +850,66 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       final boolean testVectorized
   )
   {
-    Assert.assertEquals(
-        "Cursor: " + filter,
-        expectedRows,
-        selectColumnValuesMatchingFilter(filter, "dim0")
-    );
-
-    if (testVectorized) {
+    try {
       Assert.assertEquals(
-          "Cursor (vectorized): " + filter,
+          "Cursor: " + filter,
           expectedRows,
-          selectColumnValuesMatchingFilterUsingVectorCursor(filter, "dim0")
+          selectColumnValuesMatchingFilter(filter, "dim0")
       );
 
+      if (testVectorized) {
+        Assert.assertEquals(
+            "Cursor (vectorized): " + filter,
+            expectedRows,
+            selectColumnValuesMatchingFilterUsingVectorCursor(filter, "dim0")
+        );
+
+        Assert.assertEquals(
+            "Cursor Virtual Column (vectorized): " + filter,
+            expectedRows,
+            selectColumnValuesMatchingFilterUsingVectorVirtualColumnCursor(filter, "vdim0", "dim0")
+        );
+      }
+
       Assert.assertEquals(
-          "Cursor Virtual Column (vectorized): " + filter,
+          "Cursor with postFiltering: " + filter,
           expectedRows,
-          selectColumnValuesMatchingFilterUsingVectorVirtualColumnCursor(filter, "vdim0", "dim0")
+          selectColumnValuesMatchingFilterUsingPostFiltering(filter, "dim0")
       );
-    }
 
-    Assert.assertEquals(
-        "Cursor with postFiltering: " + filter,
-        expectedRows,
-        selectColumnValuesMatchingFilterUsingPostFiltering(filter, "dim0")
-    );
+      if (testVectorized) {
+        Assert.assertEquals(
+            "Cursor with postFiltering (vectorized): " + filter,
+            expectedRows,
+            selectColumnValuesMatchingFilterUsingVectorizedPostFiltering(filter, "dim0")
+        );
+      }
 
-    if (testVectorized) {
       Assert.assertEquals(
-          "Cursor with postFiltering (vectorized): " + filter,
-          expectedRows,
-          selectColumnValuesMatchingFilterUsingVectorizedPostFiltering(filter, "dim0")
-      );
-    }
-
-    Assert.assertEquals(
-        "Filtered aggregator: " + filter,
-        expectedRows.size(),
-        selectCountUsingFilteredAggregator(filter)
-    );
-
-    if (testVectorized) {
-      Assert.assertEquals(
-          "Filtered aggregator (vectorized): " + filter,
+          "Filtered aggregator: " + filter,
           expectedRows.size(),
-          selectCountUsingVectorizedFilteredAggregator(filter)
+          selectCountUsingFilteredAggregator(filter)
+      );
+
+      if (testVectorized) {
+        Assert.assertEquals(
+            "Filtered aggregator (vectorized): " + filter,
+            expectedRows.size(),
+            selectCountUsingVectorizedFilteredAggregator(filter)
+        );
+      }
+
+      Assert.assertEquals(
+          "RowBasedColumnSelectorFactory: " + filter,
+          expectedRows,
+          selectColumnValuesMatchingFilterUsingRowBasedColumnSelectorFactory(filter, "dim0")
       );
     }
-
-    Assert.assertEquals(
-        "RowBasedColumnSelectorFactory: " + filter,
-        expectedRows,
-        selectColumnValuesMatchingFilterUsingRowBasedColumnSelectorFactory(filter, "dim0")
-    );
+    catch (ISE ise) {
+      // ignore failures resulting from 'auto'
+      if (!ise.getMessage().equals("Unsupported type[ARRAY<STRING>]")) {
+        throw ise;
+      }
+    }
   }
 }

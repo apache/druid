@@ -36,6 +36,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
+import org.apache.druid.segment.nested.CompressedNestedDataComplexColumn;
 import org.apache.druid.segment.nested.FieldTypeInfo;
 import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
@@ -406,6 +407,9 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
     if (root == null || !root.isSingleType()) {
       return null;
     }
+    final Object defaultValue = CompressedNestedDataComplexColumn.getDefaultValueForType(
+        root.getTypes().getSingleType()
+    );
     return new ColumnValueSelector<Object>()
     {
       @Override
@@ -459,11 +463,12 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
         if (0 <= dimIndex && dimIndex < dims.length) {
           final StructuredData data = (StructuredData) dims[dimIndex];
           if (data != null) {
-            return ExprEval.bestEffortOf(data.getValue()).valueOrDefault();
+            final Object o = ExprEval.bestEffortOf(data.getValue()).valueOrDefault();
+            return o == null ? defaultValue : o;
           }
         }
 
-        return null;
+        return defaultValue;
       }
 
       @Override

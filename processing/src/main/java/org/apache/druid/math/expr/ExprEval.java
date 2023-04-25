@@ -30,11 +30,13 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategy;
+import org.apache.druid.segment.nested.StructuredData;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Generic result holder for evaluated {@link Expr} containing the value and {@link ExprType} of the value to allow
@@ -549,10 +551,13 @@ public abstract class ExprEval<T>
         }
         return ofDouble(null);
       case COMPLEX:
-        // json isn't currently defined in druid-core, this can be reworked once
-        // https://github.com/apache/druid/pull/13698 is merged (or COMPLEX<json> is promoted to a real built-in type(s)
-        if ("json".equals(type.getComplexTypeName())) {
-          return ofComplex(type, value);
+        if (ExpressionType.NESTED_DATA.equals(type)) {
+          // is the thing actually nested?
+          final Object unwrapped = StructuredData.unwrap(value);
+          if (unwrapped instanceof Map) {
+            return ofComplex(type, unwrapped);
+          }
+          return bestEffortOf(unwrapped);
         }
         byte[] bytes = null;
         if (value instanceof String) {
@@ -844,6 +849,10 @@ public abstract class ExprEval<T>
             case STRING:
               return ExprEval.ofStringArray(value == null ? null : new Object[] {value.toString()});
           }
+        case COMPLEX:
+          if (ExpressionType.NESTED_DATA.equals(castTo)) {
+            return ExprEval.ofComplex(castTo, value);
+          }
       }
       throw new IAE("invalid type cannot cast " + type() + " to " + castTo);
     }
@@ -917,6 +926,10 @@ public abstract class ExprEval<T>
               return ExprEval.ofLongArray(asArray());
             case STRING:
               return ExprEval.ofStringArray(value == null ? null : new Object[] {value.toString()});
+          }
+        case COMPLEX:
+          if (ExpressionType.NESTED_DATA.equals(castTo)) {
+            return ExprEval.ofComplex(castTo, value);
           }
       }
       throw new IAE("invalid type cannot cast " + type() + " to " + castTo);
@@ -1088,6 +1101,10 @@ public abstract class ExprEval<T>
               );
             case STRING:
               return ExprEval.ofStringArray(value == null ? null : new Object[] {value});
+          }
+        case COMPLEX:
+          if (ExpressionType.NESTED_DATA.equals(castTo)) {
+            return ExprEval.ofComplex(castTo, value);
           }
       }
       throw new IAE("invalid type cannot cast " + type() + " to " + castTo);
@@ -1272,6 +1289,10 @@ public abstract class ExprEval<T>
             cast[i] = ExprEval.ofType(elementType(), value[i]).castTo(elementType).value();
           }
           return ExprEval.ofArray(castTo, cast);
+        case COMPLEX:
+          if (ExpressionType.NESTED_DATA.equals(castTo)) {
+            return ExprEval.ofComplex(castTo, value);
+          }
       }
 
       throw new IAE("invalid type cannot cast " + type() + " to " + castTo);
@@ -1345,7 +1366,14 @@ public abstract class ExprEval<T>
     @Override
     public Object[] asArray()
     {
-      return new Object[0];
+      if (ExpressionType.NESTED_DATA.equals(expressionType)) {
+        Object val = StructuredData.unwrap(value);
+        ExprEval maybeArray = ExprEval.bestEffortOf(val);
+        if (maybeArray.type().isPrimitive() || maybeArray.isArray()) {
+          return maybeArray.asArray();
+        }
+      }
+      return null;
     }
 
     @Override
@@ -1355,8 +1383,16 @@ public abstract class ExprEval<T>
         return this;
       }
       // allow cast of unknown complex to some other complex type
-      if (expressionType.getComplexTypeName() == null) {
+      if (expressionType.getComplexTypeName() == null && castTo.getType().equals(ExprType.COMPLEX)) {
         return new ComplexExprEval(castTo, value);
+      }
+      if (ExpressionType.NESTED_DATA.equals(expressionType)) {
+        Object val = StructuredData.unwrap(value);
+        ExprEval bestEffortOf = ExprEval.bestEffortOf(val);
+
+        if (bestEffortOf.type().isPrimitive() || bestEffortOf.type().isArray()) {
+          return bestEffortOf.castTo(castTo);
+        }
       }
       throw new IAE("invalid type cannot cast " + expressionType + " to " + castTo);
     }

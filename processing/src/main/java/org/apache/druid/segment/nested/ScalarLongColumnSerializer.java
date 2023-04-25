@@ -22,6 +22,7 @@ package org.apache.druid.segment.nested;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -44,6 +45,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
+import java.util.Objects;
 
 public class ScalarLongColumnSerializer extends NestedCommonFormatColumnSerializer
 {
@@ -173,8 +175,14 @@ public class ScalarLongColumnSerializer extends NestedCommonFormatColumnSerializ
     // null is always 0
     longDictionaryWriter.write(null);
     dictionaryIdLookup.addNumericNull();
+    final Long defaultLong = NullHandling.defaultLongValue();
+    final boolean useDefault = NullHandling.replaceWithDefault();
+    if (useDefault) {
+      longDictionaryWriter.write(defaultLong);
+      dictionaryIdLookup.addLong(defaultLong);
+    }
     for (Long value : longs) {
-      if (value == null) {
+      if (value == null || (useDefault && Objects.equals(defaultLong, value))) {
         continue;
       }
       longDictionaryWriter.write(value);

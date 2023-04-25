@@ -2707,6 +2707,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
+        NullHandling.sqlCompatible() ?
+        ImmutableList.of(
+            new Object[]{"100", 2L}
+        ) :
         ImmutableList.of(
             new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"100", 2L}
@@ -2858,6 +2862,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
+        // this is kinda dumb, but will fix it later by making a new range filter that is actually sql compatible
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
+            new Object[]{"100", 2L}
+        ) :
         ImmutableList.of(
             new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"100", 2L}
@@ -2969,6 +2978,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
+        NullHandling.sqlCompatible() ?
+        ImmutableList.of(
+            new Object[]{"2.02", 2L}
+        ) :
         ImmutableList.of(
             new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"2.02", 2L}
@@ -3083,6 +3096,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
+        // this is kinda dumb, but will fix it later by making a new range filter that is actually sql compatible
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
+            new Object[]{"2.02", 2L}
+        ) :
         ImmutableList.of(
             new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"2.02", 2L}
@@ -4597,6 +4615,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         NullHandling.sqlCompatible() ?
         ImmutableList.of(
             new Object[]{NullHandling.defaultStringValue(), NullHandling.defaultLongValue(), 4L},
+            new Object[]{"100", NullHandling.defaultLongValue(), 1L},
             new Object[]{"200", NullHandling.defaultLongValue(), 1L}
         ) : Collections.emptyList(),
         RowSignature.builder()

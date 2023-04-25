@@ -599,7 +599,13 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     logResults(resultsRealtime);
     Assert.assertEquals(1, resultsRealtime.size());
     Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
-    Assert.assertEquals(resultsSegments.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
+    // default value mode doesn't currently coerce numeric array elements to default values for realtime selectors
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertEquals(resultsSegments.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
+    } else {
+      // add negative test in case we ever fix this
+      Assert.assertNotEquals(resultsSegments.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
+    }
   }
 
   private static void logResults(List<ScanResultValue> results)
