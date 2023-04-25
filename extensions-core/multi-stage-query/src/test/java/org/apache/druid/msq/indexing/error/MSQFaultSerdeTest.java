@@ -81,6 +81,7 @@ public class MSQFaultSerdeTest
     assertFaultSerde(UnknownFault.forMessage("the message"));
     assertFaultSerde(new WorkerFailedFault("the worker task", "the error msg"));
     assertFaultSerde(new WorkerRpcFailedFault("the worker task"));
+    assertFaultSerde(new NotEnoughTemporaryStorageFault(250, 2));
   }
 
   @Test

@@ -58,7 +58,7 @@ public class DruidExternTableMacro extends DruidUserDefinedTableMacro
     try {
       InputSource inputSource = ((DruidTableMacro) macro).getJsonMapper().readValue(inputSourceStr, InputSource.class);
       return inputSource.getTypes().stream()
-          .map(inputSourceType -> new ResourceAction(new Resource(ResourceType.EXTERNAL, inputSourceType), Action.READ))
+          .map(inputSourceType -> new ResourceAction(new Resource(inputSourceType, ResourceType.EXTERNAL), Action.READ))
           .collect(Collectors.toSet());
     }
     catch (JsonProcessingException e) {

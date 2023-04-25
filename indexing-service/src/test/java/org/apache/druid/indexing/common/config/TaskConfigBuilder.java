@@ -40,6 +40,7 @@ public class TaskConfigBuilder
   private String batchProcessingMode;
   private Boolean storeEmptyColumns;
   private boolean enableTaskLevelLogPush;
+  private Long tmpStorageBytesPerTask;
 
   public TaskConfigBuilder setBaseDir(String baseDir)
   {
@@ -125,6 +126,12 @@ public class TaskConfigBuilder
     return this;
   }
 
+  public TaskConfigBuilder setTmpStorageBytesPerTask(Long tmpStorageBytesPerTask)
+  {
+    this.tmpStorageBytesPerTask = tmpStorageBytesPerTask;
+    return this;
+  }
+
   public TaskConfig build()
   {
     return new TaskConfig(
@@ -141,7 +148,8 @@ public class TaskConfigBuilder
         batchMemoryMappedIndex,
         batchProcessingMode,
         storeEmptyColumns,
-        enableTaskLevelLogPush
+        enableTaskLevelLogPush,
+        tmpStorageBytesPerTask
     );
   }
 }

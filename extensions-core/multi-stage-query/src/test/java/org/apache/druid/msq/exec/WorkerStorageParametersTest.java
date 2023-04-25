@@ -17,52 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord.supervisor;
+package org.apache.druid.msq.exec;
 
-import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.msq.indexing.error.MSQException;
+import org.apache.druid.msq.indexing.error.NotEnoughTemporaryStorageFault;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.List;
-
-public class SupervisorSpecTest
+public class WorkerStorageParametersTest
 {
-  private static final SupervisorSpec SUPERVISOR_SPEC = new SupervisorSpec()
+  @Test
+  public void test_WorkerStorageParameter_createInstance()
   {
-    @Override
-    public String getId()
-    {
-      return null;
-    }
-
-    @Override
-    public Supervisor createSupervisor()
-    {
-      return null;
-    }
-
-    @Override
-    public List<String> getDataSources()
-    {
-      return null;
-    }
-
-    @Override
-    public String getType()
-    {
-      return null;
-    }
-
-    @Override
-    public String getSource()
-    {
-      return null;
-    }
-  };
+    Assert.assertEquals(WorkerStorageParameters.createInstanceForTests(1000000000), WorkerStorageParameters.createInstance(2_250_000_000L, true));
+  }
 
   @Test
-  public void test()
+  public void test_insufficientTemporaryStorage()
   {
-    Assert.assertThrows(UOE.class, () -> SUPERVISOR_SPEC.getInputSourceResources());
+    final MSQException e = Assert.assertThrows(
+        MSQException.class,
+        () -> WorkerStorageParameters.createInstance(2_000L, true)
+    );
+    Assert.assertEquals(new NotEnoughTemporaryStorageFault(2250000000L, 2000), e.getFault());
   }
 }
