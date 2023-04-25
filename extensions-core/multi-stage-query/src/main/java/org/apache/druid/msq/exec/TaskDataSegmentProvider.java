@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.exec;
 
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.FutureUtils;
@@ -39,7 +40,6 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
