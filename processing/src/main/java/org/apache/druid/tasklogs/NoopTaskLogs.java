@@ -48,6 +48,12 @@ public class NoopTaskLogs implements TaskLogs
   }
 
   @Override
+  public void pushTaskStatus(String taskid, File statusFile)
+  {
+    log.info("Not pushing status for task: %s", taskid);
+  }
+
+  @Override
   public void killAll()
   {
     log.info("Noop: No task logs are deleted.");
