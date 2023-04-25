@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.common;
+package org.apache.druid.k8s.overlord.taskadapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.PodTemplate;
@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.server.DruidNode;
 import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
@@ -57,7 +58,7 @@ public class PodTemplateTaskAdapterTest
   @BeforeEach
   public void setup()
   {
-    taskRunnerConfig = new KubernetesTaskRunnerConfig();
+    taskRunnerConfig = KubernetesTaskRunnerConfig.builder().build();
     taskConfig = new TaskConfigBuilder().setBaseDir("/tmp").build();
     node = new DruidNode(
         "test",

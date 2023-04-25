@@ -17,12 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.common;
+package org.apache.druid.k8s.overlord.taskadapter;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.api.client.util.Joiner;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.fabric8.kubernetes.api.model.Container;
@@ -46,6 +48,12 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
+import org.apache.druid.k8s.overlord.common.K8sTestUtils;
+import org.apache.druid.k8s.overlord.common.KubernetesExecutor;
+import org.apache.druid.k8s.overlord.common.KubernetesResourceNotFoundException;
+import org.apache.druid.k8s.overlord.common.PeonCommandContext;
+import org.apache.druid.k8s.overlord.common.TestKubernetesClient;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.junit.jupiter.api.Assertions;
@@ -117,10 +125,11 @@ class K8sTaskAdapterTest
       }
     };
 
-    KubernetesTaskRunnerConfig config = new KubernetesTaskRunnerConfig();
-    config.namespace = "test";
-    config.annotations.put("annotation_key", "annotation_value");
-    config.labels.put("label_key", "label_value");
+    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
+        .withNamespace("test")
+        .withAnnotations(ImmutableMap.of("annotation_key", "annotation_value"))
+        .withLabels(ImmutableMap.of("label_key", "label_value"))
+        .build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
@@ -145,8 +154,9 @@ class K8sTaskAdapterTest
   {
     // given a task create a k8s job
     TestKubernetesClient testClient = new TestKubernetesClient(client);
-    KubernetesTaskRunnerConfig config = new KubernetesTaskRunnerConfig();
-    config.namespace = "test";
+    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
+        .withNamespace("test")
+        .build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
@@ -260,8 +270,9 @@ class K8sTaskAdapterTest
         new ArrayList<>(),
         new File("/tmp/")
     );
-    KubernetesTaskRunnerConfig config = new KubernetesTaskRunnerConfig();
-    config.namespace = "test";
+    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
+        .withNamespace("test")
+        .build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
@@ -281,7 +292,10 @@ class K8sTaskAdapterTest
     );
 
     // we have an override, but nothing in the overlord
-    config.peonMonitors = jsonMapper.readValue("[\"org.apache.druid.java.util.metrics.JvmMonitor\"]", List.class);
+    config = KubernetesTaskRunnerConfig.builder()
+        .withNamespace("test")
+        .withPeonMonitors(ImmutableList.of("org.apache.druid.java.util.metrics.JvmMonitor"))
+        .build();
     adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
@@ -296,10 +310,9 @@ class K8sTaskAdapterTest
                           .filter(x -> x.getName().equals("druid_monitoring_monitors"))
                           .findFirst()
                           .get();
-    assertEquals(jsonMapper.writeValueAsString(config.peonMonitors), env.getValue());
+    assertEquals(jsonMapper.writeValueAsString(config.getPeonMonitors()), env.getValue());
 
     // we override what is in the overlord
-    config.peonMonitors = jsonMapper.readValue("[\"org.apache.druid.java.util.metrics.JvmMonitor\"]", List.class);
     adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
@@ -320,6 +333,6 @@ class K8sTaskAdapterTest
                    .filter(x -> x.getName().equals("druid_monitoring_monitors"))
                    .findFirst()
                    .get();
-    assertEquals(jsonMapper.writeValueAsString(config.peonMonitors), env.getValue());
+    assertEquals(jsonMapper.writeValueAsString(config.getPeonMonitors()), env.getValue());
   }
 }

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.common;
+package org.apache.druid.k8s.overlord.taskadapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.cfg.MapperConfig;
@@ -44,6 +44,9 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.k8s.overlord.common.Base64Compression;
+import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
+import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.server.DruidNode;
 
 import java.io.File;
@@ -137,9 +140,9 @@ public class PodTemplateTaskAdapter implements TaskAdapter
         .endContainer()
         .endSpec()
         .endTemplate()
-        .withActiveDeadlineSeconds(taskRunnerConfig.maxTaskDuration.toStandardDuration().getStandardSeconds())
+        .withActiveDeadlineSeconds(taskRunnerConfig.getTaskTimeout().toStandardDuration().getStandardSeconds())
         .withBackoffLimit(0)  // druid does not support an external system retrying failed tasks
-        .withTtlSecondsAfterFinished((int) taskRunnerConfig.taskCleanupDelay.toStandardDuration().getStandardSeconds())
+        .withTtlSecondsAfterFinished((int) taskRunnerConfig.getTaskCleanupDelay().toStandardDuration().getStandardSeconds())
         .endSpec()
         .build();
   }
@@ -244,7 +247,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   private Map<String, String> getJobLabels(KubernetesTaskRunnerConfig config)
   {
     return ImmutableMap.<String, String>builder()
-        .putAll(config.labels)
+        .putAll(config.getLabels())
         .put(DruidK8sConstants.LABEL_KEY, "true")
         .build();
   }
@@ -252,7 +255,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   private Map<String, String> getJobAnnotations(KubernetesTaskRunnerConfig config, Task task)
   {
     return ImmutableMap.<String, String>builder()
-        .putAll(config.annotations)
+        .putAll(config.getAnnotations())
         .put(DruidK8sConstants.TASK_ID, task.getId())
         .put(DruidK8sConstants.TASK_TYPE, task.getType())
         .put(DruidK8sConstants.TASK_GROUP_ID, task.getGroupId())
