@@ -680,7 +680,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
               Long theValue = GuavaUtils.tryParseLong(value);
               if (theValue != null) {
                 longs.add(theValue.longValue());
-                if ( NullHandling.replaceWithDefault() && Objects.equals(NullHandling.defaultLongValue(), theValue)) {
+                if (NullHandling.replaceWithDefault() && Objects.equals(NullHandling.defaultLongValue(), theValue)) {
                   needNullCheck = true;
                 }
               }
