@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Revised Integration Tests shared workflow
+name: "Standard ITs shared workflow"
 on:
   workflow_call:
     inputs:
@@ -88,7 +88,7 @@ jobs:
           ${MVN} verify -pl integration-tests -P integration-tests ${{ inputs.testing_groups }} -Djvm.runtime=${{ inputs.runtime_jdk }} -Dit.indexer=${{ inputs.use_indexer }} ${MAVEN_SKIP} -Doverride.config.path=${{ inputs.override_config_path }}
 
       - name: Debug IT
-        if: steps.run-it.conclusion == 'failure'
+        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
         run: |
           for v in broker router ${{ inputs.use_indexer }} historical coordinator overlord; do
             echo "------------------------druid-"$v"-------------------------";

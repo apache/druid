@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-name: Revised Unit Tests shared workflow
+name: "Unit Tests shared workflow"
 on:
   workflow_call:
     inputs:

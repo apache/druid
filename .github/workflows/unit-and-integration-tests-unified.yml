@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Unit & Integration tests CI
+name: "Unit & Integration tests CI"
 on:
   push:
     paths-ignore:
@@ -128,8 +128,10 @@ jobs:
 
   standard-its:
     needs: unit-tests
+    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.coverage-failure == true) }}
     uses: ./.github/workflows/standard-its.yml
 
   revised-its:
     needs: unit-tests
+    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.coverage-failure == true) }}
     uses: ./.github/workflows/revised-its.yml
