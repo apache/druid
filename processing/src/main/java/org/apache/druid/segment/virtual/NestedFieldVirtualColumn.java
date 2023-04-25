@@ -606,7 +606,6 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     if (!(theColumn instanceof NestedDataComplexColumn)) {
 
       if (parts.isEmpty()) {
-        ColumnCapabilities capabilities = holder.getCapabilities();
         if (theColumn instanceof DictionaryEncodedColumn) {
           final VectorObjectSelector delegate = theColumn.makeVectorObjectSelector(offset);
           return new VectorValueSelector()
