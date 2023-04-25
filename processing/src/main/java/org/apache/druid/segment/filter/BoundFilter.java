@@ -49,6 +49,7 @@ import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.LexicographicalRangeIndex;
 import org.apache.druid.segment.column.NullValueIndex;
 import org.apache.druid.segment.column.NumericRangeIndex;
+import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -125,9 +126,7 @@ public class BoundFilter implements Filter
           }
         }
         catch (NumberFormatException ignored) {
-          // bounds are not numeric? might as well return null here since a predicate index probably isn't going to
-          // fare any better...
-          return null;
+          // bounds are not numeric?
         }
       }
     }
@@ -143,11 +142,22 @@ public class BoundFilter implements Filter
       BitmapColumnIndex rangeIndex
   )
   {
-    final NullValueIndex nulls = indexSupplier.as(NullValueIndex.class);
-    if (nulls == null) {
-      return null;
+
+
+    final BitmapColumnIndex nullBitmap;
+    if (NullHandling.sqlCompatible() || !boundDimFilter.getOrdering().equals(StringComparators.NUMERIC)) {
+      final NullValueIndex nulls = indexSupplier.as(NullValueIndex.class);
+      if (nulls == null) {
+        return null;
+      }
+      nullBitmap = nulls.forNull();
+    } else {
+      // use string value set index, since it gives us both null and default value when using 0
+      // this is hella hacky, i hate default value mode so much
+      final StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
+      nullBitmap = valueSetIndex.forValue(String.valueOf(NullHandling.defaultLongValue()));
     }
-    final BitmapColumnIndex nullBitmap = nulls.forNull();
+
     return new BitmapColumnIndex()
     {
       @Override

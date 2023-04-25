@@ -2862,11 +2862,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        // this is kinda dumb, but will fix it later by making a new range filter that is actually sql compatible
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
-            new Object[]{"100", 2L}
-        ) :
         ImmutableList.of(
             new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"100", 2L}
@@ -3096,11 +3091,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        // this is kinda dumb, but will fix it later by making a new range filter that is actually sql compatible
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
-            new Object[]{"2.02", 2L}
-        ) :
         ImmutableList.of(
             new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"2.02", 2L}
