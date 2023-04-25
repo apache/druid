@@ -1319,6 +1319,8 @@ public abstract class ExprEval<T>
   private static class ComplexExprEval extends ExprEval<Object>
   {
     private final ExpressionType expressionType;
+    @Nullable
+    private Number number;
 
     private ComplexExprEval(ExpressionType expressionType, @Nullable Object value)
     {
@@ -1335,31 +1337,77 @@ public abstract class ExprEval<T>
     @Override
     public boolean isNumericNull()
     {
-      return false;
+      if (ExpressionType.NESTED_DATA.equals(expressionType)) {
+        computeNumber();
+        return number != null;
+      }
+      return true;
     }
 
     @Override
     public int asInt()
     {
+      if (ExpressionType.NESTED_DATA.equals(expressionType)) {
+        computeNumber();
+        if (number != null) {
+          return number.intValue();
+        }
+      }
       return 0;
     }
 
     @Override
     public long asLong()
     {
+      if (ExpressionType.NESTED_DATA.equals(expressionType)) {
+        computeNumber();
+        if (number != null) {
+          return number.longValue();
+        }
+      }
       return 0;
     }
 
     @Override
     public double asDouble()
     {
+      if (ExpressionType.NESTED_DATA.equals(expressionType)) {
+        computeNumber();
+        if (number != null) {
+          return number.doubleValue();
+        }
+      }
       return 0;
     }
 
     @Override
     public boolean asBoolean()
     {
+      if (ExpressionType.NESTED_DATA.equals(expressionType)) {
+        Object val = StructuredData.unwrap(value);
+        if (val instanceof Boolean) {
+          return (Boolean) val;
+        } else if (val instanceof String) {
+          return Evals.asBoolean((String) val);
+        } else if (val instanceof Long) {
+          return Evals.asBoolean((Long) val);
+        } else if (val instanceof Double) {
+          return Evals.asBoolean((Double) val);
+        }
+      }
       return false;
+    }
+
+    private void computeNumber()
+    {
+      if (number == null && value != null) {
+        Object val = StructuredData.unwrap(value);
+        if (val instanceof Number) {
+          number = (Number) val;
+        } else if (val instanceof String) {
+          number = ExprEval.computeNumber((String) val);
+        }
+      }
     }
 
     @Nullable
