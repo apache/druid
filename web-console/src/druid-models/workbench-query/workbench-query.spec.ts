@@ -127,6 +127,24 @@ describe('WorkbenchQuery', () => {
     expect(String(WorkbenchQuery.fromString(tabString))).toEqual(tabString);
   });
 
+  describe('.getRowColumnFromIssue', () => {
+    it('works when it can not find at line', () => {
+      expect(WorkbenchQuery.getRowColumnFromIssue(`lol`)).toBeUndefined();
+    });
+
+    it('works when it can find at line', () => {
+      expect(
+        WorkbenchQuery.getRowColumnFromIssue(
+          `End of input while parsing an object (missing '}') at line 40,2 >>>} ...`,
+        ),
+      ).toEqual({
+        match: '',
+        row: 39,
+        column: 1,
+      });
+    });
+  });
+
   describe('#makePreview', () => {
     it('works', () => {
       const workbenchQuery = WorkbenchQuery.blank().changeQueryString(sane`
@@ -638,6 +656,21 @@ describe('WorkbenchQuery', () => {
         LIMIT 10
         )
       `);
+    });
+  });
+
+  describe('#getIssue', () => {
+    it('works', () => {
+      expect(
+        WorkbenchQuery.blank()
+          .changeQueryString(
+            sane`
+              {
+                lol: 1
+            `,
+          )
+          .getIssue(),
+      ).toEqual("End of input while parsing an object (missing '}') at line 2,9 >>>  lol: 1 ...");
     });
   });
 });
