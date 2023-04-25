@@ -669,7 +669,7 @@ public class ControllerQueryKernel
       errorCode = msqFault.getErrorCode();
     }
 
-    log.info("Parsed out errorCode[%s] to check eligibility for retry", errorCode);
+    log.debug("Parsed out errorCode[%s] to check eligibility for retry for workerNumber[%s]", errorCode, workerNumber);
 
     if (RETRIABLE_ERROR_CODES.contains(errorCode)) {
       return getWorkInCaseWorkerEligibleForRetry(workerNumber);
