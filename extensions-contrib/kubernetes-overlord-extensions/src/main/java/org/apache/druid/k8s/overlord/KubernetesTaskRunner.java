@@ -78,8 +78,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   // to cleanup old jobs that might not have been deleted.
   private final ScheduledExecutorService cleanupExecutor;
 
-  final ConcurrentHashMap<String, KubernetesWorkItem> tasks = new ConcurrentHashMap<>();
-
+  protected final ConcurrentHashMap<String, KubernetesWorkItem> tasks = new ConcurrentHashMap<>();
   protected final TaskAdapter adapter;
 
   private final KubernetesPeonClient client;
