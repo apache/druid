@@ -109,6 +109,8 @@ public class MultiStageQueryContext
 
   public static final String CTX_INDEX_SPEC = "indexSpec";
 
+  public static final String CTX_USE_AUTO_SCHEMAS = "useAutoColumnSchemas";
+
   private static final Pattern LOOKS_LIKE_JSON_ARRAY = Pattern.compile("^\\s*\\[.*", Pattern.DOTALL);
 
   public static String getMSQMode(final QueryContext queryContext)
@@ -211,6 +213,11 @@ public class MultiStageQueryContext
   public static IndexSpec getIndexSpec(final QueryContext queryContext, final ObjectMapper objectMapper)
   {
     return decodeIndexSpec(queryContext.get(CTX_INDEX_SPEC), objectMapper);
+  }
+
+  public static boolean useAutoColumnSchemas(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(CTX_USE_AUTO_SCHEMAS, false);
   }
 
   /**

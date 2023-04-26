@@ -50,6 +50,7 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
@@ -301,6 +302,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
       {
         // We want this module to bring InputSourceModule along for the ride.
         binder.install(new InputSourceModule());
+        binder.install(new NestedDataModule());
+        NestedDataModule.registerHandlersAndSerde();
         SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
       }
 
@@ -1129,7 +1132,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
         log.info(
             "Found rows which are sorted forcefully %s",
-            transformedOutputRows.stream().map(a -> Arrays.toString(a)).collect(Collectors.joining("\n"))
+            transformedOutputRows.stream().map(Arrays::deepToString).collect(Collectors.joining("\n"))
         );
 
 
