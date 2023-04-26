@@ -282,7 +282,8 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
     segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
     segmentKiller.kill(ImmutableList.of());
-    // has an assertion error if there is an unexpected method call
+    // has an assertion error if there is an unexpected method call on a mock. Do nothing because we expect the kill
+    // method to not interact with mocks
   }
 
   @Test
