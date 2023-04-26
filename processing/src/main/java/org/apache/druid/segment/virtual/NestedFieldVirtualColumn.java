@@ -242,7 +242,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     // processFromRaw is true that means JSON_QUERY, which can return partial results, otherwise this virtual column
     // is JSON_VALUE which only returns literals, so use the literal value selector instead
     return processFromRaw
-           ? new RawFieldColumnSelector(baseSelector, parts, expectedType)
+           ? new RawFieldColumnSelector(baseSelector, parts)
            : new RawFieldLiteralColumnValueSelector(baseSelector, parts, expectedType);
   }
 
@@ -1114,7 +1114,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
         ColumnType expectedType
     )
     {
-      super(baseSelector, parts, expectedType);
+      super(baseSelector, parts);
     }
 
     @Override
@@ -1175,16 +1175,11 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   {
     protected final ColumnValueSelector baseSelector;
     protected final List<NestedPathPart> parts;
-    protected final ColumnType expectedType;
-    @Nullable
-    protected final Object defaultValue;
 
-    public RawFieldColumnSelector(ColumnValueSelector baseSelector, List<NestedPathPart> parts, ColumnType expectedType)
+    public RawFieldColumnSelector(ColumnValueSelector baseSelector, List<NestedPathPart> parts)
     {
       this.baseSelector = baseSelector;
       this.parts = parts;
-      this.expectedType = expectedType;
-      this.defaultValue = CompressedNestedDataComplexColumn.getDefaultValueForType(expectedType);
     }
 
     @Override
@@ -1240,11 +1235,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     public Object getObject()
     {
       StructuredData data = StructuredData.wrap(baseSelector.getObject());
-      final Object o = NestedPathFinder.find(data == null ? null : data.getValue(), parts);
-      if (o == null) {
-        return StructuredData.wrap(defaultValue);
-      }
-      return StructuredData.wrap(o);
+      return StructuredData.wrap(NestedPathFinder.find(data == null ? null : data.getValue(), parts));
     }
 
     @Override

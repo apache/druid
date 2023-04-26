@@ -358,7 +358,7 @@ public class EvalTest extends InitializedNullHandlingTest
   @Test
   public void testNestedDataCast()
   {
-    ExprEval cast = null;
+    ExprEval cast;
     cast = ExprEval.ofComplex(ExpressionType.NESTED_DATA, "hello").castTo(ExpressionType.STRING);
     Assert.assertEquals("hello", cast.value());
     Assert.assertEquals("hello", ExprEval.ofComplex(ExpressionType.NESTED_DATA, "hello").asString());
@@ -386,6 +386,10 @@ public class EvalTest extends InitializedNullHandlingTest
     Assert.assertEquals(123.0, ExprEval.ofComplex(ExpressionType.NESTED_DATA, 123L).asDouble(), 0.0);
     Assert.assertEquals(ExpressionType.DOUBLE, cast.type());
 
+    cast = ExprEval.of(12.3).castTo(ExpressionType.NESTED_DATA);
+    Assert.assertEquals(12.3, cast.value());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, cast.type());
+
     cast = ExprEval.ofComplex(ExpressionType.NESTED_DATA, ImmutableList.of("a", "b", "c")).castTo(ExpressionType.STRING_ARRAY);
     Assert.assertArrayEquals(new Object[]{"a", "b", "c"}, (Object[]) cast.value());
     Assert.assertArrayEquals(
@@ -393,6 +397,10 @@ public class EvalTest extends InitializedNullHandlingTest
         ExprEval.ofComplex(ExpressionType.NESTED_DATA, ImmutableList.of("a", "b", "c")).asArray()
     );
     Assert.assertEquals(ExpressionType.STRING_ARRAY, cast.type());
+
+    cast = ExprEval.ofArray(ExpressionType.STRING_ARRAY, new Object[]{"a", "b", "c"}).castTo(ExpressionType.NESTED_DATA);
+    Assert.assertArrayEquals(new Object[]{"a", "b", "c"}, (Object[]) cast.value());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, cast.type());
 
     cast = ExprEval.ofComplex(ExpressionType.NESTED_DATA, ImmutableList.of(1L, 2L, 3L)).castTo(ExpressionType.LONG_ARRAY);
     Assert.assertArrayEquals(new Object[]{1L, 2L, 3L}, (Object[]) cast.value());
@@ -402,9 +410,17 @@ public class EvalTest extends InitializedNullHandlingTest
     );
     Assert.assertEquals(ExpressionType.LONG_ARRAY, cast.type());
 
+    cast = ExprEval.ofArray(ExpressionType.LONG_ARRAY, new Object[]{1L, 2L, 3L}).castTo(ExpressionType.NESTED_DATA);
+    Assert.assertArrayEquals(new Object[]{1L, 2L, 3L}, (Object[]) cast.value());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, cast.type());
+
     cast = ExprEval.ofComplex(ExpressionType.NESTED_DATA, ImmutableList.of(1L, 2L, 3L)).castTo(ExpressionType.DOUBLE_ARRAY);
     Assert.assertArrayEquals(new Object[]{1.0, 2.0, 3.0}, (Object[]) cast.value());
     Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, cast.type());
+
+    cast = ExprEval.ofArray(ExpressionType.DOUBLE_ARRAY, new Object[]{1.1, 2.2, 3.3}).castTo(ExpressionType.NESTED_DATA);
+    Assert.assertArrayEquals(new Object[]{1.1, 2.2, 3.3}, (Object[]) cast.value());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, cast.type());
 
     ExpressionType nestedArray = ExpressionTypeFactory.getInstance().ofArray(ExpressionType.NESTED_DATA);
     cast = ExprEval.ofComplex(
