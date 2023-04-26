@@ -19,14 +19,45 @@
 
 package org.apache.druid.k8s.overlord;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
+
 public class KubernetesTaskRunnerConfigTest
 {
+  @Test
+  public void test_deserializable() throws IOException
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+    KubernetesTaskRunnerConfig config = mapper.readValue(
+        this.getClass().getClassLoader().getResource("kubernetesTaskRunnerConfig.json"),
+        KubernetesTaskRunnerConfig.class
+    );
+
+    Assert.assertEquals("namespace", config.getNamespace());
+    Assert.assertFalse(config.isDebugJobs());
+    Assert.assertFalse(config.isSidecarSupport());
+    Assert.assertEquals("name", config.getPrimaryContainerName());
+    Assert.assertEquals("karlkfi/kubexit:v0.3.2", config.getKubexitImage());
+    Assert.assertNull(config.getGraceTerminationPeriodSeconds());
+    Assert.assertTrue(config.isDisableClientProxy());
+    Assert.assertEquals(new Period("PT4H"), config.getTaskTimeout());
+    Assert.assertEquals(new Period("P2D"), config.getTaskCleanupDelay());
+    Assert.assertEquals(new Period("PT10m"), config.getTaskCleanupInterval());
+    Assert.assertEquals(new Period("PT1H"), config.getTaskLaunchTimeout());
+    Assert.assertEquals(ImmutableList.of(), config.getPeonMonitors());
+    Assert.assertEquals(ImmutableList.of(), config.getJavaOptsArray());
+    Assert.assertEquals(ImmutableMap.of(), config.getLabels());
+    Assert.assertEquals(ImmutableMap.of(), config.getAnnotations());
+    Assert.assertEquals(Integer.valueOf(Integer.MAX_VALUE), config.getCapacity());
+  }
+
   @Test
   public void test_builder_preservesDefaults()
   {

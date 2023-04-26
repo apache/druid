@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang3.ObjectUtils;
 import org.joda.time.Period;
 
+import javax.annotation.Nonnull;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import java.util.List;
@@ -112,8 +113,12 @@ public class KubernetesTaskRunnerConfig
   @NotNull
   private Integer capacity = Integer.MAX_VALUE;
 
+  public KubernetesTaskRunnerConfig()
+  {
+  }
+
   private KubernetesTaskRunnerConfig(
-      String namespace,
+      @Nonnull String namespace,
       boolean debugJobs,
       boolean sidecarSupport,
       String primaryContainerName,
