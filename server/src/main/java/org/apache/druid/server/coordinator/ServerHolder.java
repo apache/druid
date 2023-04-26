@@ -77,12 +77,12 @@ public class ServerHolder implements Comparable<ServerHolder>
 
   public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon)
   {
-    this(server, peon, false, 0);
+    this(server, peon, false, 0, 1);
   }
 
   public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon, boolean isDecommissioning)
   {
-    this(server, peon, isDecommissioning, 0);
+    this(server, peon, isDecommissioning, 0, 1);
   }
 
   /**
@@ -94,12 +94,15 @@ public class ServerHolder implements Comparable<ServerHolder>
    * @param maxSegmentsInLoadQueue Max number of segments that can be present in
    *                               the load queue at any point. If this is 0, the
    *                               load queue can have an unlimited number of segments.
+   * @param maxLifetimeInQueue     Number of coordinator runs after a which a segment
+   *                               in load/drop queue is considered to be stuck.
    */
   public ServerHolder(
       ImmutableDruidServer server,
       LoadQueuePeon peon,
       boolean isDecommissioning,
-      int maxSegmentsInLoadQueue
+      int maxSegmentsInLoadQueue,
+      int maxLifetimeInQueue
   )
   {
     this.server = server;
@@ -109,7 +112,7 @@ public class ServerHolder implements Comparable<ServerHolder>
     this.maxAssignmentsInRun = maxSegmentsInLoadQueue == 0
                                ? Integer.MAX_VALUE
                                : maxSegmentsInLoadQueue - peon.getSegmentsToLoad().size();
-    this.maxLifetimeInQueue = 15;
+    this.maxLifetimeInQueue = maxLifetimeInQueue;
 
     updateQueuedSegments();
   }

@@ -869,7 +869,7 @@ public class DruidCoordinator
       startPeonsForNewServers(currentServers);
       stopPeonsForDisappearedServers(currentServers);
 
-      cluster = prepareCluster(params, currentServers);
+      cluster = prepareCluster(params.getCoordinatorDynamicConfig(), currentServers);
       cancelLoadsOnDecommissioningServers(cluster);
 
       final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
@@ -957,10 +957,9 @@ public class DruidCoordinator
       }
     }
 
-    DruidCluster prepareCluster(DruidCoordinatorRuntimeParams params, List<ImmutableDruidServer> currentServers)
+    DruidCluster prepareCluster(CoordinatorDynamicConfig dynamicConfig, List<ImmutableDruidServer> currentServers)
     {
-      Set<String> decommissioningServers = params.getCoordinatorDynamicConfig().getDecommissioningNodes();
-      final int maxSegmentsInLoadQueue = params.getCoordinatorDynamicConfig().getMaxSegmentsInNodeLoadingQueue();
+      final Set<String> decommissioningServers = dynamicConfig.getDecommissioningNodes();
       final DruidCluster.Builder cluster = DruidCluster.builder();
       for (ImmutableDruidServer server : currentServers) {
         cluster.add(
@@ -968,7 +967,8 @@ public class DruidCoordinator
                 server,
                 loadManagementPeons.get(server.getName()),
                 decommissioningServers.contains(server.getHost()),
-                maxSegmentsInLoadQueue
+                dynamicConfig.getMaxSegmentsInNodeLoadingQueue(),
+                dynamicConfig.getReplicantLifetime()
             )
         );
       }
