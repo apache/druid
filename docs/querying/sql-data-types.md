@@ -95,7 +95,7 @@ for additional details.
 
 Druid supports ARRAY types constructed at query time. ARRAY types behave as standard SQL arrays, where results are grouped by matching entire arrays. This is in contrast to the implicit UNNEST that occurs when grouping on multi-value dimensions directly or when used with the multi-value functions.
 
-You can convert multi-value dimensions to standard SQL arrays explicitly by converting them with `MV_TO_ARRAY` or implicitly using [array functions](./sql-array-functions.md). You can also use the array functions to construct arrays from multiple columns.
+You can convert multi-value dimensions to standard SQL arrays explicitly with `MV_TO_ARRAY` or implicitly using [array functions](./sql-array-functions.md). You can also use the array functions to construct arrays from multiple columns.
 
 You can use [schema auto-discovery](../ingestion/schema-design.md#schema-auto-discovery-for-dimensions) to detect and ingest arrays as ARRAY typed columns.
 
