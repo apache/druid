@@ -47,6 +47,8 @@ import java.net.URI;
 public class S3DataSegmentKillerTest extends EasyMockSupport
 {
   private static final String KEY_1 = "key1";
+  private static final String KEY_1_PATH = KEY_1 + "/";
+  private static final String KEY_1_DESCRIPTOR_PATH = KEY_1_PATH + "descriptor.json";
   private static final String KEY_2 = "key2";
   private static final String TEST_BUCKET = "test_bucket";
   private static final String TEST_PREFIX = "test_prefix";
@@ -222,9 +224,9 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
   @Test
   public void test_kill_singleSegment_doesntexist_passes() throws SegmentLoadingException
   {
-    EasyMock.expect(s3Client.doesObjectExist(TEST_BUCKET, "/"+KEY_1+"/")).andReturn(false);
+    EasyMock.expect(s3Client.doesObjectExist(TEST_BUCKET, KEY_1_PATH)).andReturn(false);
     EasyMock.expectLastCall().once();
-    EasyMock.expect(s3Client.doesObjectExist(TEST_BUCKET, "/"+KEY_1+"/descriptor.json")).andReturn(false);
+    EasyMock.expect(s3Client.doesObjectExist(TEST_BUCKET, KEY_1_DESCRIPTOR_PATH)).andReturn(false);
     EasyMock.expectLastCall().once();
     EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
 
@@ -235,16 +237,16 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
   @Test
   public void test_kill_singleSegment_exists_passes() throws SegmentLoadingException
   {
-    EasyMock.expect(s3Client.doesObjectExist(TEST_BUCKET, KEY_1+"/")).andReturn(true);
+    EasyMock.expect(s3Client.doesObjectExist(TEST_BUCKET, KEY_1_PATH)).andReturn(true);
     EasyMock.expectLastCall().once();
 
-    s3Client.deleteObject(TEST_BUCKET, KEY_1+"/");
+    s3Client.deleteObject(TEST_BUCKET, KEY_1_PATH);
     EasyMock.expectLastCall().andVoid();
 
-    EasyMock.expect(s3Client.doesObjectExist(TEST_BUCKET, KEY_1+"/descriptor.json")).andReturn(true);
+    EasyMock.expect(s3Client.doesObjectExist(TEST_BUCKET, KEY_1_DESCRIPTOR_PATH)).andReturn(true);
     EasyMock.expectLastCall().once();
 
-    s3Client.deleteObject(TEST_BUCKET, KEY_1+"/descriptor.json");
+    s3Client.deleteObject(TEST_BUCKET, KEY_1_DESCRIPTOR_PATH);
     EasyMock.expectLastCall().andVoid();
 
     EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
@@ -256,16 +258,16 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
   @Test
   public void test_kill_listOfOneSegment() throws SegmentLoadingException
   {
-    EasyMock.expect(s3Client.doesObjectExist(TEST_BUCKET, KEY_1+"/")).andReturn(true);
+    EasyMock.expect(s3Client.doesObjectExist(TEST_BUCKET, KEY_1_PATH)).andReturn(true);
     EasyMock.expectLastCall().once();
 
-    s3Client.deleteObject(TEST_BUCKET, KEY_1+"/");
+    s3Client.deleteObject(TEST_BUCKET, KEY_1_PATH);
     EasyMock.expectLastCall().andVoid();
 
-    EasyMock.expect(s3Client.doesObjectExist(TEST_BUCKET, KEY_1+"/descriptor.json")).andReturn(true);
+    EasyMock.expect(s3Client.doesObjectExist(TEST_BUCKET, KEY_1_DESCRIPTOR_PATH)).andReturn(true);
     EasyMock.expectLastCall().once();
 
-    s3Client.deleteObject(TEST_BUCKET, KEY_1+"/descriptor.json");
+    s3Client.deleteObject(TEST_BUCKET, KEY_1_DESCRIPTOR_PATH);
     EasyMock.expectLastCall().andVoid();
 
 
@@ -287,7 +289,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
   public void test_kill_listOfSegments() throws SegmentLoadingException
   {
     DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(TEST_BUCKET);
-    deleteObjectsRequest.withKeys(KEY_1+"/", KEY_1+"/");
+    deleteObjectsRequest.withKeys(KEY_1_PATH, KEY_1_PATH);
     // struggled with the idea of making it match on equaling this
     EasyMock.expect(s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class))).andReturn(new DeleteObjectsResult(ImmutableList.of()));
     EasyMock.expectLastCall().times(2);
@@ -302,7 +304,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
       "test",
       Intervals.of("2015-04-12/2015-04-13"),
       "1",
-      ImmutableMap.of("bucket", TEST_BUCKET, "key", KEY_1+"/"),
+      ImmutableMap.of("bucket", TEST_BUCKET, "key", KEY_1_PATH),
       null,
       null,
       NoneShardSpec.instance(),

@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.GuiceInjectors;
@@ -35,6 +36,12 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
+import java.util.List;
+import java.util.Map;
+
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.mockito.hamcrest.MockitoHamcrest.argThat;
 
 public class OmniDataSegmentKillerTest
 {
@@ -100,6 +107,19 @@ public class OmniDataSegmentKillerTest
     );
   }
 
+  private static Injector createInjectorFromMap(@NotNull Map<String, DataSegmentKiller> killerMap)
+  {
+    ImmutableList.Builder<Module> moduleListBuilder = ImmutableList.builder();
+    for (Map.Entry<String, DataSegmentKiller> typeToKiller : killerMap.entrySet()) {
+      moduleListBuilder.add(binder -> {
+        MapBinder<String, DataSegmentKiller> mapBinder = Binders.dataSegmentKillerBinder(binder);
+        mapBinder.addBinding(typeToKiller.getKey()).toInstance(typeToKiller.getValue());
+      });
+    }
+
+    return GuiceInjectors.makeStartupInjectorWithModules(moduleListBuilder.build());
+  }
+
   @Test
   public void testKillTombstone() throws Exception
   {
@@ -117,6 +137,31 @@ public class OmniDataSegmentKillerTest
     final Injector injector = createInjector(null);
     final OmniDataSegmentKiller segmentKiller = injector.getInstance(OmniDataSegmentKiller.class);
     segmentKiller.kill(tombstone);
+  }
+
+  @Test
+  public void testKillMultipleSegmentsWithType() throws SegmentLoadingException
+  {
+    final DataSegmentKiller killerSane = Mockito.mock(DataSegmentKiller.class);
+    final DataSegmentKiller killerSaneTwo = Mockito.mock(DataSegmentKiller.class);
+    final DataSegment segment1 = Mockito.mock(DataSegment.class);
+    final DataSegment segment2 = Mockito.mock(DataSegment.class);
+    final DataSegment segment3 = Mockito.mock(DataSegment.class);
+    Mockito.when(segment1.isTombstone()).thenReturn(false);
+    Mockito.when(segment1.getLoadSpec()).thenReturn(ImmutableMap.of("type", "sane"));
+    Mockito.when(segment2.isTombstone()).thenReturn(false);
+    Mockito.when(segment2.getLoadSpec()).thenReturn(ImmutableMap.of("type", "sane"));
+    Mockito.when(segment3.isTombstone()).thenReturn(false);
+    Mockito.when(segment3.getLoadSpec()).thenReturn(ImmutableMap.of("type", "sane_2"));
+
+    final Injector injector = createInjectorFromMap(ImmutableMap.of("sane", killerSane, "sane_2", killerSaneTwo));
+    final OmniDataSegmentKiller segmentKiller = injector.getInstance(OmniDataSegmentKiller.class);
+    segmentKiller.kill(ImmutableList.of(segment1, segment2, segment3));
+
+    Mockito.verify(killerSane, Mockito.times(1))
+           .kill((List<DataSegment>) argThat(containsInAnyOrder(segment1, segment2)));
+    Mockito.verify(killerSaneTwo, Mockito.times(1))
+           .kill((List<DataSegment>) argThat(containsInAnyOrder(segment3)));
   }
 
   @LazySingleton

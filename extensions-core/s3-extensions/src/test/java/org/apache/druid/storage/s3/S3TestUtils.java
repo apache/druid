@@ -131,7 +131,7 @@ public class S3TestUtils extends EasyMockSupport
         resultExpectationSetter = EasyMock.expectLastCall();
         requestToResultExpectationSetter.put(request, resultExpectationSetter);
       }
-      resultExpectationSetter.andVoid();
+      resultExpectationSetter.andReturn(null);
     }
   }
 
