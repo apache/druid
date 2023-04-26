@@ -27,7 +27,6 @@ import io.fabric8.kubernetes.api.model.PodStatus;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
@@ -46,13 +45,25 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class KubernetesPeonLifecycle
 {
   private static final EmittingLogger log = new EmittingLogger(KubernetesPeonLifecycle.class);
 
-  private RunnerTaskState taskState = RunnerTaskState.WAITING;
+  protected enum State
+  {
+    /** Lifecycle's state before {@link #run(Job, long, long)} or {@link #join(long)} is called. */
+    NOT_STARTED,
+    /** Lifecycle's state since {@link #run(Job, long, long)} is called. */
+    PENDING,
+    /** Lifecycle's state since {@link #join(long)} is called. */
+    RUNNING,
+    /** Lifecycle's state since the task has completed. */
+    STOPPED
+  }
 
+  private final AtomicReference<State> state = new AtomicReference<>(State.NOT_STARTED);
   private final K8sTaskId taskId;
   private final TaskLogs taskLogs;
   private final KubernetesPeonClient kubernetesClient;
@@ -84,14 +95,12 @@ public class KubernetesPeonLifecycle
   {
     try {
       Preconditions.checkState(
-          RunnerTaskState.WAITING.equals(getRunnerTaskState()),
-          "Task [%s] failed to run: invalid state transition [%s]->[%s]",
+          state.compareAndSet(State.NOT_STARTED, State.PENDING),
+          "Task [%s] failed to run: invalid peon lifecycle state transition [%s]->[%s]",
           taskId.getOriginalTaskId(),
-          getRunnerTaskState(),
-          RunnerTaskState.PENDING
+          state.get(),
+          State.PENDING
       );
-
-      taskState = RunnerTaskState.PENDING;
 
       kubernetesClient.launchPeonJobAndWaitForStart(
           job,
@@ -102,7 +111,7 @@ public class KubernetesPeonLifecycle
       return join(timeout);
     }
     finally {
-      taskState = RunnerTaskState.NONE;
+      state.set(State.STOPPED);
     }
   }
 
@@ -117,14 +126,15 @@ public class KubernetesPeonLifecycle
   {
     try {
       Preconditions.checkState(
-          RunnerTaskState.WAITING.equals(getRunnerTaskState()) || RunnerTaskState.PENDING.equals(getRunnerTaskState()),
-          "Task [%s] failed to run: invalid state transition [%s]->[%s]",
-          taskId,
-          getRunnerTaskState(),
-          RunnerTaskState.RUNNING
+          (
+              state.compareAndSet(State.NOT_STARTED, State.RUNNING) ||
+              state.compareAndSet(State.PENDING, State.RUNNING)
+          ),
+          "Task [%s] failed to join: invalid peon lifecycle state transition [%s]->[%s]",
+          taskId.getOriginalTaskId(),
+          state.get(),
+          State.RUNNING
       );
-
-      taskState = RunnerTaskState.RUNNING;
 
       Optional<Job> maybeJob = kubernetesClient.getPeonJob(taskId);
       if (!maybeJob.isPresent()) {
@@ -151,7 +161,7 @@ public class KubernetesPeonLifecycle
         log.warn(e, "Task [%s] shutdown failed", taskId);
       }
 
-      taskState = RunnerTaskState.NONE;
+      state.set(State.STOPPED);
     }
   }
 
@@ -165,10 +175,7 @@ public class KubernetesPeonLifecycle
    */
   protected void shutdown()
   {
-    if (
-        RunnerTaskState.PENDING.equals(getRunnerTaskState()) ||
-        RunnerTaskState.RUNNING.equals(getRunnerTaskState())
-    ) {
+    if (State.PENDING.equals(state.get()) || State.RUNNING.equals(state.get())) {
       kubernetesClient.deletePeonJob(taskId);
     }
   }
@@ -180,20 +187,20 @@ public class KubernetesPeonLifecycle
    */
   protected Optional<InputStream> streamLogs()
   {
-    if (!RunnerTaskState.RUNNING.equals(getRunnerTaskState())) {
+    if (!State.RUNNING.equals(state.get())) {
       return Optional.absent();
     }
     return kubernetesClient.getPeonLogs(taskId);
   }
 
   /**
-   * Get RunnerTaskState
+   * Get peon lifecycle state
    *
    * @return
    */
-  protected RunnerTaskState getRunnerTaskState()
+  protected State getState()
   {
-    return taskState;
+    return state.get();
   }
 
   /**
@@ -203,7 +210,7 @@ public class KubernetesPeonLifecycle
    */
   protected TaskLocation getTaskLocation()
   {
-    if (!RunnerTaskState.RUNNING.equals(getRunnerTaskState())) {
+    if (!State.RUNNING.equals(state.get())) {
       return TaskLocation.unknown();
     }
 

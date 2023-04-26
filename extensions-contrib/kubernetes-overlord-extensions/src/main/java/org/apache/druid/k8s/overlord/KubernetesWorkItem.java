@@ -27,6 +27,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
+import org.apache.druid.java.util.common.ISE;
 
 import java.io.InputStream;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -77,9 +78,20 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
   protected RunnerTaskState getRunnerTaskState()
   {
     if (kubernetesPeonLifecycle == null) {
-      return RunnerTaskState.WAITING;
+      return RunnerTaskState.PENDING;
     }
-    return kubernetesPeonLifecycle.getRunnerTaskState();
+
+    switch (kubernetesPeonLifecycle.getState()) {
+      case NOT_STARTED:
+      case PENDING:
+        return RunnerTaskState.PENDING;
+      case RUNNING:
+        return RunnerTaskState.RUNNING;
+      case STOPPED:
+        return RunnerTaskState.NONE;
+      default:
+        throw new ISE("Peon lifecycle in unknown state");
+    }
   }
 
   protected Optional<InputStream> streamTaskLogs()

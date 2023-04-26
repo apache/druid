@@ -141,13 +141,13 @@ public class KubernetesWorkItemTest
   }
 
   @Test
-  public void test_getRunnerTaskState_withoutKubernetesPeonLifecycle()
+  public void test_getRunnerTaskState_withoutKubernetesPeonLifecycle_returnsPending()
   {
-    Assert.assertEquals(RunnerTaskState.WAITING, workItem.getRunnerTaskState());
+    Assert.assertEquals(RunnerTaskState.PENDING, workItem.getRunnerTaskState());
   }
 
   @Test
-  public void test_getRunnerTaskState_withKubernetesPeonLifecycle()
+  public void test_getRunnerTaskState_withKubernetesPeonLifecycle_returnsPending()
   {
     workItem.setKubernetesPeonLifecycle(new KubernetesPeonLifecycle(
         task,
@@ -156,7 +156,70 @@ public class KubernetesWorkItemTest
         null
     ));
 
-    Assert.assertEquals(RunnerTaskState.WAITING, workItem.getRunnerTaskState());
+    Assert.assertEquals(RunnerTaskState.PENDING, workItem.getRunnerTaskState());
+  }
+
+  @Test
+  public void test_getRunnerTaskState_withKubernetesPeonLifecycle_inPendingState_returnsPending()
+  {
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
+        task,
+        null,
+        null,
+        null
+    ) {
+      @Override
+      protected State getState()
+      {
+        return State.PENDING;
+      }
+    };
+
+    workItem.setKubernetesPeonLifecycle(peonLifecycle);
+
+    Assert.assertEquals(RunnerTaskState.PENDING, workItem.getRunnerTaskState());
+  }
+
+  @Test
+  public void test_getRunnerTaskState_withKubernetesPeonLifecycle_inRunningState_returnsRunning()
+  {
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
+        task,
+        null,
+        null,
+        null
+    ) {
+      @Override
+      protected State getState()
+      {
+        return State.RUNNING;
+      }
+    };
+
+    workItem.setKubernetesPeonLifecycle(peonLifecycle);
+
+    Assert.assertEquals(RunnerTaskState.RUNNING, workItem.getRunnerTaskState());
+  }
+
+  @Test
+  public void test_getRunnerTaskState_withKubernetesPeonLifecycle_inStoppedState_returnsNone()
+  {
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
+        task,
+        null,
+        null,
+        null
+    ) {
+      @Override
+      protected State getState()
+      {
+        return State.STOPPED;
+      }
+    };
+
+    workItem.setKubernetesPeonLifecycle(peonLifecycle);
+
+    Assert.assertEquals(RunnerTaskState.NONE, workItem.getRunnerTaskState());
   }
 
   @Test

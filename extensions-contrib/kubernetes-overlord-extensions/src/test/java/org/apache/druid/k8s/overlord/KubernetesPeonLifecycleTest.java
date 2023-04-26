@@ -26,7 +26,6 @@ import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.apache.commons.io.IOUtils;
-import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TestUtils;
@@ -47,8 +46,10 @@ import org.junit.runner.RunWith;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 @RunWith(EasyMockRunner.class)
 public class KubernetesPeonLifecycleTest extends EasyMockSupport
@@ -60,17 +61,15 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   @Mock TaskLogs taskLogs;
 
   private ObjectMapper mapper;
-  private K8sTaskId k8sTaskId;
   private Task task;
+  private K8sTaskId k8sTaskId;
 
   @Before
   public void setup()
   {
-    task = NoopTask.create(ID, 0);
-
-    k8sTaskId = new K8sTaskId(task);
-
     mapper = new TestUtils().getTestObjectMapper();
+    task = NoopTask.create(ID, 0);
+    k8sTaskId = new K8sTaskId(task);
   }
 
   @Test
@@ -92,7 +91,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         EasyMock.eq(TimeUnit.MILLISECONDS)
     )).andReturn(null);
 
-    Assert.assertEquals(RunnerTaskState.WAITING, peonLifecycle.getRunnerTaskState());
+    Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
     replayAll();
 
@@ -102,7 +101,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     Assert.assertTrue(taskStatus.isSuccess());
     Assert.assertEquals(ID, taskStatus.getId());
-    Assert.assertEquals(RunnerTaskState.NONE, peonLifecycle.getRunnerTaskState());
+    Assert.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());
   }
 
   @Test
@@ -124,21 +123,21 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         EasyMock.eq(TimeUnit.MILLISECONDS)
     )).andReturn(null);
 
-    Assert.assertEquals(RunnerTaskState.WAITING, peonLifecycle.getRunnerTaskState());
+    Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
     replayAll();
 
     peonLifecycle.run(job, 0L, 0L);
 
     Assert.assertThrows(
-        "Task [id] failed to run: invalid state transition [NONE]->[PENDING]",
+        "Task [id] failed to run: invalid peon lifecycle state transition [STOPPED]->[PENDING]",
         IllegalStateException.class,
         () -> peonLifecycle.run(job, 0L, 0L)
     );
 
     verifyAll();
 
-    Assert.assertEquals(RunnerTaskState.NONE, peonLifecycle.getRunnerTaskState());
+    Assert.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());
   }
 
   @Test
@@ -160,7 +159,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         EasyMock.eq(TimeUnit.MILLISECONDS)
     )).andReturn(null);
 
-    Assert.assertEquals(RunnerTaskState.WAITING, peonLifecycle.getRunnerTaskState());
+    Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
     replayAll();
 
@@ -171,7 +170,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     verifyAll();
 
-    Assert.assertEquals(RunnerTaskState.NONE, peonLifecycle.getRunnerTaskState());
+    Assert.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());
   }
 
   @Test
@@ -182,7 +181,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     EasyMock.expect(kubernetesClient.getPeonJob(k8sTaskId)).andReturn(Optional.absent());
     EasyMock.expect(kubernetesClient.deletePeonJob(k8sTaskId)).andReturn(true);
 
-    Assert.assertEquals(RunnerTaskState.WAITING, peonLifecycle.getRunnerTaskState());
+    Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
     replayAll();
 
@@ -194,7 +193,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     verifyAll();
 
-    Assert.assertEquals(RunnerTaskState.NONE, peonLifecycle.getRunnerTaskState());
+    Assert.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());
   }
 
   @Test
@@ -227,7 +226,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     EasyMock.expectLastCall();
     EasyMock.expect(kubernetesClient.deletePeonJob(k8sTaskId)).andReturn(true);
 
-    Assert.assertEquals(RunnerTaskState.WAITING, peonLifecycle.getRunnerTaskState());
+    Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
     replayAll();
 
@@ -236,7 +235,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     verifyAll();
 
     Assert.assertEquals(SUCCESS, taskStatus);
-    Assert.assertEquals(RunnerTaskState.NONE, peonLifecycle.getRunnerTaskState());
+    Assert.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());
   }
 
   @Test
@@ -264,14 +263,14 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     EasyMock.expectLastCall();
     EasyMock.expect(kubernetesClient.deletePeonJob(k8sTaskId)).andReturn(true);
 
-    Assert.assertEquals(RunnerTaskState.WAITING, peonLifecycle.getRunnerTaskState());
+    Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
     replayAll();
 
     TaskStatus taskStatus = peonLifecycle.join(0L);
 
     Assert.assertThrows(
-        "Task [id] failed to run: invalid state transition [NONE]->[PENDING]",
+        "Task [id] failed to join: invalid peon lifecycle state transition [STOPPED]->[PENDING]",
         IllegalStateException.class,
         () -> peonLifecycle.join(0L)
     );
@@ -279,7 +278,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     verifyAll();
 
     Assert.assertEquals(SUCCESS, taskStatus);
-    Assert.assertEquals(RunnerTaskState.NONE, peonLifecycle.getRunnerTaskState());
+    Assert.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());
   }
 
   @Test
@@ -305,7 +304,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     EasyMock.expectLastCall();
     EasyMock.expect(kubernetesClient.deletePeonJob(k8sTaskId)).andReturn(true);
 
-    Assert.assertEquals(RunnerTaskState.WAITING, peonLifecycle.getRunnerTaskState());
+    Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
     replayAll();
 
@@ -316,7 +315,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     Assert.assertTrue(taskStatus.isFailure());
     Assert.assertEquals(ID, taskStatus.getId());
     Assert.assertEquals("Task [id] failed, task status not found", taskStatus.getErrorMsg());
-    Assert.assertEquals(RunnerTaskState.NONE, peonLifecycle.getRunnerTaskState());
+    Assert.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());
   }
 
   @Test
@@ -342,7 +341,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     EasyMock.expectLastCall();
     EasyMock.expect(kubernetesClient.deletePeonJob(k8sTaskId)).andReturn(true);
 
-    Assert.assertEquals(RunnerTaskState.WAITING, peonLifecycle.getRunnerTaskState());
+    Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
     replayAll();
 
@@ -356,7 +355,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         "Task [id] failed, caught exception when loading task status: null",
         taskStatus.getErrorMsg()
     );
-    Assert.assertEquals(RunnerTaskState.NONE, peonLifecycle.getRunnerTaskState());
+    Assert.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());
   }
 
   @Test
@@ -384,7 +383,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     EasyMock.expectLastCall().andThrow(new IOException());
     EasyMock.expect(kubernetesClient.deletePeonJob(k8sTaskId)).andReturn(true);
 
-    Assert.assertEquals(RunnerTaskState.WAITING, peonLifecycle.getRunnerTaskState());
+    Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
     replayAll();
 
@@ -393,33 +392,21 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     verifyAll();
 
     Assert.assertEquals(SUCCESS, taskStatus);
-    Assert.assertEquals(RunnerTaskState.NONE, peonLifecycle.getRunnerTaskState());
+    Assert.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());
   }
 
   @Test
-  public void test_shutdown_withWaitingTaskState()
+  public void test_shutdown_withNotStartedTaskState()
   {
-    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper) {
-      @Override
-      protected RunnerTaskState getRunnerTaskState()
-      {
-        return RunnerTaskState.WAITING;
-      }
-    };
-
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
     peonLifecycle.shutdown();
   }
 
   @Test
-  public void test_shutdown_withPendingTaskState()
+  public void test_shutdown_withPendingTaskState() throws NoSuchFieldException, IllegalAccessException
   {
-    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper) {
-      @Override
-      protected RunnerTaskState getRunnerTaskState()
-      {
-        return RunnerTaskState.PENDING;
-      }
-    };
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
+    setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.PENDING);
 
     EasyMock.expect(kubernetesClient.deletePeonJob(k8sTaskId)).andReturn(true);
 
@@ -431,15 +418,10 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   }
 
   @Test
-  public void test_shutdown_withRunningTaskState()
+  public void test_shutdown_withRunningTaskState() throws NoSuchFieldException, IllegalAccessException
   {
-    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper) {
-      @Override
-      protected RunnerTaskState getRunnerTaskState()
-      {
-        return RunnerTaskState.RUNNING;
-      }
-    };
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
+    setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.RUNNING);
 
     EasyMock.expect(kubernetesClient.deletePeonJob(k8sTaskId)).andReturn(true);
 
@@ -451,57 +433,37 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   }
 
   @Test
-  public void test_shutdown_withNoneTaskState()
+  public void test_shutdown_withStoppedTaskState() throws NoSuchFieldException, IllegalAccessException
   {
-    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper) {
-      @Override
-      protected RunnerTaskState getRunnerTaskState()
-      {
-        return RunnerTaskState.NONE;
-      }
-    };
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
+    setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.STOPPED);
 
     peonLifecycle.shutdown();
   }
 
   @Test
-  public void test_streamLogs_withWaitingTaskState()
+  public void test_streamLogs_withNotStartedTaskState() throws NoSuchFieldException, IllegalAccessException
   {
-    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper) {
-      @Override
-      protected RunnerTaskState getRunnerTaskState()
-      {
-        return RunnerTaskState.WAITING;
-      }
-    };
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
+    setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.NOT_STARTED);
 
     peonLifecycle.streamLogs();
   }
 
   @Test
-  public void test_streamLogs_withPendingTaskState()
+  public void test_streamLogs_withPendingTaskState() throws NoSuchFieldException, IllegalAccessException
   {
-    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper) {
-      @Override
-      protected RunnerTaskState getRunnerTaskState()
-      {
-        return RunnerTaskState.PENDING;
-      }
-    };
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
+    setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.PENDING);
 
     peonLifecycle.streamLogs();
   }
 
   @Test
-  public void test_streamLogs_withRunningTaskState()
+  public void test_streamLogs_withRunningTaskState() throws NoSuchFieldException, IllegalAccessException
   {
-    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper) {
-      @Override
-      protected RunnerTaskState getRunnerTaskState()
-      {
-        return RunnerTaskState.RUNNING;
-      }
-    };
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
+    setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.RUNNING);
 
     EasyMock.expect(kubernetesClient.getPeonLogs(k8sTaskId)).andReturn(
         Optional.of(IOUtils.toInputStream("", StandardCharsets.UTF_8))
@@ -515,57 +477,40 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   }
 
   @Test
-  public void test_streamLogs_withNoneTaskState()
+  public void test_streamLogs_withStoppedTaskState() throws NoSuchFieldException, IllegalAccessException
   {
-    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper) {
-      @Override
-      protected RunnerTaskState getRunnerTaskState()
-      {
-        return RunnerTaskState.NONE;
-      }
-    };
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
+    setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.STOPPED);
 
     peonLifecycle.streamLogs();
   }
 
   @Test
-  public void test_getTaskLocation_withWaitingTaskState_returnsUnknown()
+  public void test_getTaskLocation_withNotStartedTaskState_returnsUnknown()
+      throws NoSuchFieldException, IllegalAccessException
   {
-    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper) {
-      @Override
-      protected RunnerTaskState getRunnerTaskState()
-      {
-        return RunnerTaskState.WAITING;
-      }
-    };
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
+    setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.NOT_STARTED);
 
     Assert.assertEquals(TaskLocation.unknown(), peonLifecycle.getTaskLocation());
   }
 
   @Test
   public void test_getTaskLocation_withPendingTaskState_returnsUnknown()
+      throws NoSuchFieldException, IllegalAccessException
   {
-    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper) {
-      @Override
-      protected RunnerTaskState getRunnerTaskState()
-      {
-        return RunnerTaskState.WAITING;
-      }
-    };
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
+    setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.PENDING);
 
     Assert.assertEquals(TaskLocation.unknown(), peonLifecycle.getTaskLocation());
   }
 
   @Test
   public void test_getTaskLocation_withRunningTaskState_withoutPeonPod_returnsUnknown()
+      throws NoSuchFieldException, IllegalAccessException
   {
-    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper) {
-      @Override
-      protected RunnerTaskState getRunnerTaskState()
-      {
-        return RunnerTaskState.RUNNING;
-      }
-    };
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
+    setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.RUNNING);
 
     EasyMock.expect(kubernetesClient.getPeonPod(k8sTaskId)).andReturn(Optional.absent());
 
@@ -578,14 +523,10 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
   @Test
   public void test_getTaskLocation_withRunningTaskState_withPeonPodWithoutStatus_returnsUnknown()
+      throws NoSuchFieldException, IllegalAccessException
   {
-    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper) {
-      @Override
-      protected RunnerTaskState getRunnerTaskState()
-      {
-        return RunnerTaskState.RUNNING;
-      }
-    };
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
+    setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.RUNNING);
 
     Pod pod = new PodBuilder()
         .withNewMetadata()
@@ -604,14 +545,10 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
   @Test
   public void test_getTaskLocation_withRunningTaskState_withPeonPodWithStatus_returnsLocation()
+      throws NoSuchFieldException, IllegalAccessException
   {
-    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper) {
-      @Override
-      protected RunnerTaskState getRunnerTaskState()
-      {
-        return RunnerTaskState.RUNNING;
-      }
-    };
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
+    setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.RUNNING);
 
     Pod pod = new PodBuilder()
         .withNewMetadata()
@@ -637,14 +574,10 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
   @Test
   public void test_getTaskLocation_withRunningTaskState_withPeonPodWithStatusWithTLSAnnotation_returnsLocation()
+      throws NoSuchFieldException, IllegalAccessException
   {
-    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper) {
-      @Override
-      protected RunnerTaskState getRunnerTaskState()
-      {
-        return RunnerTaskState.RUNNING;
-      }
-    };
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
+    setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.RUNNING);
 
     Pod pod = new PodBuilder()
         .withNewMetadata()
@@ -670,16 +603,23 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   }
 
   @Test
-  public void test_getTaskLocation_withNoneTaskState_returnsUnknown()
+  public void test_getTaskLocation_withStoppedTaskState_returnsUnknown()
+      throws NoSuchFieldException, IllegalAccessException
   {
-    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper) {
-      @Override
-      protected RunnerTaskState getRunnerTaskState()
-      {
-        return RunnerTaskState.NONE;
-      }
-    };
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
+    setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.STOPPED);
 
     Assert.assertEquals(TaskLocation.unknown(), peonLifecycle.getTaskLocation());
+  }
+
+  private void setPeonLifecycleState(
+      KubernetesPeonLifecycle peonLifecycle,
+      KubernetesPeonLifecycle.State state
+  )
+      throws NoSuchFieldException, IllegalAccessException
+  {
+    Field stateField = peonLifecycle.getClass().getDeclaredField("state");
+    stateField.setAccessible(true);
+    stateField.set(peonLifecycle, new AtomicReference<>(state));
   }
 }
