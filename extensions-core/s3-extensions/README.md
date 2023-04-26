@@ -17,5 +17,5 @@
   ~ under the License.
   -->
 
-This module contains an implementation of  using s3 as storage for segments and task reports 
-More details [here](https://druid.apache.org/docs/latest/development/extensions-core/s3.html).
+This extension provides an integration between Druid and S3. For more details read 
+the S3 extension docs [here](../../docs/development/extensions-core/s3.md).
