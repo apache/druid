@@ -656,7 +656,7 @@ public class ControllerImpl implements Controller
     List<WorkOrder> retriableWorkOrders = kernel.getWorkInCaseWorkerEligibleForRetryElseThrow(worker, fault);
     if (retriableWorkOrders.size() != 0) {
       log.info("Submitting worker[%s] for relaunch because of fault[%s]", worker, fault);
-      workerTaskLauncher.submitForRelaunch(worker);
+      workerTaskLauncher.submitForRelaunch(worker, true);
       workOrdersToRetry.compute(worker, (workerNumber, workOrders) -> {
         if (workOrders == null) {
           return new HashSet<>(retriableWorkOrders);
@@ -670,6 +670,7 @@ public class ControllerImpl implements Controller
           "Worker[%d] has no active workOrders that need relaunch therefore not relaunching",
           worker
       );
+      workerTaskLauncher.submitForRelaunch(worker, false);
     }
   }
 

@@ -124,6 +124,10 @@ public class MSQWorkerTaskLauncher
   // workers to relaunch
   private final Set<Integer> workersToRelaunch = ConcurrentHashMap.newKeySet();
 
+  // workers that failed, but without active work orders. There is no need to retry these unless a future stage
+  // requires it.
+  private final Set<Integer> failedWorkersWithoutWorkOrders = ConcurrentHashMap.newKeySet();
+
   private final ConcurrentHashMap<Integer, List<String>> workerToTaskIds = new ConcurrentHashMap<>();
   private final RetryTask retryTask;
 
@@ -221,6 +225,17 @@ public class MSQWorkerTaskLauncher
    */
   public void launchTasksIfNeeded(final int taskCount) throws InterruptedException
   {
+    // Fetch the list of workers which failed without work orders
+    Iterator<Integer> iterator = failedWorkersWithoutWorkOrders.iterator();
+    while (iterator.hasNext()) {
+      Integer workerNumber = iterator.next();
+      // If the controller expects the task to be running, queue it for retry
+      if (workerNumber < taskCount) {
+        submitForRelaunch(workerNumber, true);
+        iterator.remove();
+      }
+    }
+
     synchronized (taskIds) {
       if (taskCount > desiredTaskCount) {
         desiredTaskCount = taskCount;
@@ -241,11 +256,16 @@ public class MSQWorkerTaskLauncher
   /**
    * Queues worker for relaunch. A noop if the worker is already in the queue.
    *
-   * @param workerNumber
+   * @param workerNumber worker number
+   * @param retryNow if the worker should be restarted immediately or just registered as failed to retry next stage
    */
-  public void submitForRelaunch(int workerNumber)
+  public void submitForRelaunch(int workerNumber, boolean retryNow)
   {
-    workersToRelaunch.add(workerNumber);
+    if (retryNow) {
+      workersToRelaunch.add(workerNumber);
+    } else {
+      failedWorkersWithoutWorkOrders.add(workerNumber);
+    }
   }
 
   /**
