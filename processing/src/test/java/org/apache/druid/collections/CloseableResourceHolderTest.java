@@ -19,13 +19,29 @@
 
 package org.apache.druid.collections;
 
-import java.io.Closeable;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- * Releaser is like Closeable, but doesn't throw IOExceptions.
- */
-public interface Releaser extends Closeable
+import java.io.Closeable;
+import java.util.concurrent.atomic.AtomicLong;
+
+public class CloseableResourceHolderTest
 {
-  @Override
-  void close();
+  @Test
+  public void testCloseableResourceHolder()
+  {
+    final AtomicLong closeCounter = new AtomicLong();
+    final Closeable closeable = closeCounter::incrementAndGet;
+    final ResourceHolder<Closeable> holder = ResourceHolder.fromCloseable(closeable);
+
+    Assert.assertSame(closeable, holder.get());
+
+    holder.close();
+    Assert.assertEquals(1, closeCounter.get());
+
+    holder.close();
+    Assert.assertEquals(1, closeCounter.get());
+
+    Assert.assertThrows(IllegalStateException.class, holder::get);
+  }
 }

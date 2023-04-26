@@ -28,11 +28,9 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.write.FrameWriterFactory;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessorFactory;
-import org.apache.druid.msq.querykit.LazyResourceHolder;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 
@@ -69,7 +67,7 @@ public class GroupByPreShuffleFrameProcessorFactory extends BaseLeafFrameProcess
         frameContext.groupByStrategySelector(),
         new JoinableFactoryWrapper(frameContext.joinableFactory()),
         outputChannelHolder,
-        new LazyResourceHolder<>(() -> Pair.of(frameWriterFactoryHolder.get(), frameWriterFactoryHolder)),
+        frameWriterFactoryHolder,
         frameContext.memoryParameters().getBroadcastJoinMemory()
     );
   }
