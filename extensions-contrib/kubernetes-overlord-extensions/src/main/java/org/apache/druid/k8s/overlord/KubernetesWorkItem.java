@@ -29,12 +29,13 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 
 import java.io.InputStream;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class KubernetesWorkItem extends TaskRunnerWorkItem
 {
   private final Task task;
 
-  private volatile boolean shutdownRequested = false;
+  private final AtomicBoolean shutdownRequested = new AtomicBoolean(false);
   private KubernetesPeonLifecycle kubernetesPeonLifecycle = null;
 
   public KubernetesWorkItem(Task task, ListenableFuture<TaskStatus> statusFuture)
@@ -51,7 +52,7 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
 
   protected synchronized void shutdown()
   {
-    this.shutdownRequested = true;
+    this.shutdownRequested.set(true);
 
     if (this.kubernetesPeonLifecycle != null) {
       this.kubernetesPeonLifecycle.shutdown();
@@ -60,7 +61,7 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
 
   protected boolean isShutdownRequested()
   {
-    return shutdownRequested;
+    return shutdownRequested.get();
   }
 
   protected boolean isPending()
