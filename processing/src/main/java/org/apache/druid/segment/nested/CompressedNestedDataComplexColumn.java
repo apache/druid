@@ -24,7 +24,6 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Doubles;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -792,9 +791,6 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
           @Override
           public boolean[] getNullVector()
           {
-            if (NullHandling.replaceWithDefault()) {
-              return null;
-            }
             if (readableOffset.getId() != id) {
               computeNumbers();
             }
