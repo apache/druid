@@ -72,10 +72,25 @@ export interface SampleResponse {
 
 export function getHeaderNamesFromSampleResponse(
   sampleResponse: SampleResponse,
-  ignoreTimeColumn = false,
-) {
-  return filterMap(sampleResponse.logicalSegmentSchema, s =>
-    ignoreTimeColumn && s.name === '__time' ? undefined : s.name,
+  timeColumnAction: 'preserve' | 'ignore' | 'ignoreIfZero' = 'preserve',
+): string[] {
+  return getHeaderFromSampleResponse(sampleResponse, timeColumnAction).map(s => s.name);
+}
+
+export function getHeaderFromSampleResponse(
+  sampleResponse: SampleResponse,
+  timeColumnAction: 'preserve' | 'ignore' | 'ignoreIfZero' = 'preserve',
+): { name: string; type: string }[] {
+  const ignoreTimeColumn =
+    timeColumnAction === 'ignore' ||
+    (timeColumnAction === 'ignoreIfZero' &&
+      !sampleResponse.data.some(d => {
+        const t = d.parsed?.[TIME_COLUMN];
+        return typeof t === 'number' && t > 0;
+      }));
+
+  return sampleResponse.logicalSegmentSchema.filter(
+    s => !ignoreTimeColumn || s.name !== TIME_COLUMN,
   );
 }
 
@@ -532,7 +547,7 @@ export async function sampleForFilter(
       specialDimensionSpec,
       'dimensions',
       dedupe(
-        getHeaderNamesFromSampleResponse(sampleResponseHack, true).concat(
+        getHeaderNamesFromSampleResponse(sampleResponseHack, 'ignore').concat(
           getDimensionNamesFromTransforms(transforms),
         ),
       ),
