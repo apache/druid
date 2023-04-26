@@ -537,7 +537,6 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
         }
         DictionaryEncodedColumn<?> col = (DictionaryEncodedColumn<?>) getColumnHolder(arrayField, arrayFieldIndex).getColumn();
         ColumnValueSelector arraySelector = col.makeColumnValueSelector(readableOffset);
-        final FieldTypeInfo.TypeSet types = fieldInfo.getTypes(arrayFieldIndex);
         return new ColumnValueSelector<Object>()
         {
           @Override
