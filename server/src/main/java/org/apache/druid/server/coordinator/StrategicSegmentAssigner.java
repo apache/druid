@@ -167,7 +167,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       // Could not cancel load, let the segment load on serverA and count it as unmoved
       return false;
     } else if (serverA.isServingSegment(segment)) {
-      return loadQueueManager.moveSegment(segment, serverA, serverB, replicationThrottler.getMaxLifetime());
+      return loadQueueManager.moveSegment(segment, serverA, serverB);
     } else {
       return false;
     }

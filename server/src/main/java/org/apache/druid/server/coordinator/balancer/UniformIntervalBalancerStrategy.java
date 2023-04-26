@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.balancer;
 
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.timeline.DataSegment;
@@ -29,6 +30,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A balancing strategy that tries to have a uniform number of segments in each
@@ -78,6 +80,7 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class UniformIntervalBalancerStrategy implements BalancerStrategy
 {
+  private static final Logger log = new Logger(UniformIntervalBalancerStrategy.class);
 
   /**
    * Orders servers first by number of segments in datasource interval (lowest first)
@@ -87,6 +90,9 @@ public class UniformIntervalBalancerStrategy implements BalancerStrategy
       = Comparator.<ServerSegmentCount>comparingInt(entry -> entry.segmentCount)
       .thenComparingDouble(entry -> entry.server.getPercentUsed())
       .thenComparingInt(entry -> ThreadLocalRandom.current().nextInt());
+
+  private final AtomicInteger movedByCount = new AtomicInteger();
+  private final AtomicInteger movedBySize = new AtomicInteger();
 
   @Nullable
   @Override
@@ -105,12 +111,19 @@ public class UniformIntervalBalancerStrategy implements BalancerStrategy
     final int countOnSource = sourceServer.getNumSegmentsInDatasourceInterval(segment);
     final int countOnTarget = targetServer.getNumSegmentsInDatasourceInterval(segment);
 
+    // If the source server is being decommissioned, move must happen
+    if (sourceServer.isDecommissioning()) {
+      return targetServer;
+    }
+
     // Avoid unnecessary moves that do not lead to balance and would only result
     // in a reversal of roles of source and target
     if (countOnSource - countOnTarget >= 2) {
+      movedByCount.incrementAndGet();
       return targetServer;
     } else if (countOnSource - countOnTarget == 1
                && (sourceServer.getSizeUsed() - targetServer.getSizeUsed() >= 2 * segment.getSize())) {
+      movedBySize.incrementAndGet();
       return targetServer;
     } else {
       return null;
@@ -129,7 +142,11 @@ public class UniformIntervalBalancerStrategy implements BalancerStrategy
   @Override
   public void emitStats(String tier, CoordinatorRunStats stats, List<ServerHolder> serverHolderList)
   {
-    // Do not emit anything
+    // Do not emit anything, just log decision types
+    log.info(
+        "Moved [%d] segments because of count skew, moved [%d] segments because of size skew.",
+        movedByCount.getAndSet(0), movedBySize.getAndSet(0)
+    );
   }
 
   /**

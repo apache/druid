@@ -30,11 +30,11 @@ public class Stats
     public static final CoordinatorStat ASSIGNED
         = new CoordinatorStat("assigned", "segment/assigned/count", CoordinatorStat.Level.INFO);
     public static final CoordinatorStat DROPPED
-        = new CoordinatorStat("dropped", "segment/dropped/count", CoordinatorStat.Level.INFO);
+        = new CoordinatorStat("dropped", "segment/dropped/count");
     public static final CoordinatorStat DELETED
         = new CoordinatorStat("deleted", "segment/deleted/count", CoordinatorStat.Level.INFO);
     public static final CoordinatorStat MOVED
-        = new CoordinatorStat("moved", "segment/moved/count", CoordinatorStat.Level.INFO);
+        = new CoordinatorStat("moved", "segment/moved/count");
 
     public static final CoordinatorStat ASSIGNED_BROADCAST
         = new CoordinatorStat("assignBroad", "segment/assigned/broadcast", CoordinatorStat.Level.INFO);

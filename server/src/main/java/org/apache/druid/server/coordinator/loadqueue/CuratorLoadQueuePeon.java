@@ -38,8 +38,7 @@ import org.apache.zookeeper.data.Stat;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -136,11 +135,11 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
   }
 
   @Override
-  public Map<DataSegment, SegmentAction> getSegmentsInQueue()
+  public Set<SegmentHolder> getSegmentsInQueue()
   {
-    final Map<DataSegment, SegmentAction> segmentsInQueue = new HashMap<>();
-    segmentsToLoad.values().forEach(s -> segmentsInQueue.put(s.getSegment(), s.getAction()));
-    segmentsToDrop.values().forEach(s -> segmentsInQueue.put(s.getSegment(), s.getAction()));
+    final Set<SegmentHolder> segmentsInQueue = new HashSet<>();
+    segmentsInQueue.addAll(segmentsToLoad.values());
+    segmentsInQueue.addAll(segmentsToDrop.values());
     return segmentsInQueue;
   }
 
@@ -177,12 +176,6 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
     collectedStats.accumulate(stats);
     stats.clear();
     return collectedStats;
-  }
-
-  @Override
-  public int getNumberOfSegmentsToLoad()
-  {
-    return segmentsToLoad.size();
   }
 
   @Override

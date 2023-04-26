@@ -55,21 +55,13 @@ public class MarkAsUnusedOvershadowedSegmentsTest
 
   private final LoadQueuePeon mockPeon = EasyMock.createMock(LoadQueuePeon.class);
   private final ImmutableDruidDataSource druidDataSource = EasyMock.createMock(ImmutableDruidDataSource.class);
-  private final DataSegment segmentV0 = new DataSegment.Builder().dataSource("test")
-                                                                 .interval(new Interval(start, start.plusHours(1)))
-                                                                 .version("0")
-                                                                 .size(0)
-                                                                 .build();
-  private final DataSegment segmentV1 = new DataSegment.Builder().dataSource("test")
-                                                                 .interval(new Interval(start, start.plusHours(1)))
-                                                                 .version("1")
-                                                                 .size(0)
-                                                                 .build();
-  private final DataSegment segmentV2 = new DataSegment.Builder().dataSource("test")
-                                                                 .interval(new Interval(start, start.plusHours(1)))
-                                                                 .version("2")
-                                                                 .size(0)
-                                                                 .build();
+  private final DataSegment segmentV0 = DataSegment.builder().dataSource("test")
+                                                   .interval(new Interval(start, start.plusHours(1)))
+                                                   .version("0")
+                                                   .size(0)
+                                                   .build();
+  private final DataSegment segmentV1 = segmentV0.withVersion("1");
+  private final DataSegment segmentV2 = segmentV0.withVersion("2");
 
   @Test
   @Parameters({"historical", "broker"})
@@ -83,7 +75,7 @@ public class MarkAsUnusedOvershadowedSegmentsTest
 
     // Dummy values for comparisons in TreeSet
     EasyMock.expect(mockPeon.getSegmentsInQueue())
-            .andReturn(Collections.emptyMap()).anyTimes();
+            .andReturn(Collections.emptySet()).anyTimes();
     EasyMock.expect(mockPeon.getSegmentsMarkedToDrop())
             .andReturn(Collections.emptySet()).anyTimes();
     final ImmutableDruidServer druidServer = new DruidServer("", "", "", 0L, serverType, "", 0)

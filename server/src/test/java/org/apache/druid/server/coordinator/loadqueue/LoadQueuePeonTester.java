@@ -58,10 +58,4 @@ public class LoadQueuePeonTester extends CuratorLoadQueuePeon
   {
     return segmentsToLoad;
   }
-
-  @Override
-  public int getNumberOfSegmentsToLoad()
-  {
-    return segmentsToLoad.size();
-  }
 }

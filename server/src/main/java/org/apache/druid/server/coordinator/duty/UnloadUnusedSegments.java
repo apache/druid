@@ -26,13 +26,11 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
-import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -82,7 +80,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
     for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
       boolean isBroadcastDatasource = broadcastStatusByDatasource.computeIfAbsent(
           dataSource.getName(),
-          dataSourceName -> hasBroadcastRule(dataSourceName, params)
+          dataSourceName -> isBroadcastDatasource(dataSourceName, params)
       );
 
       // The coordinator tracks used segments by examining the metadata store.
@@ -119,14 +117,9 @@ public class UnloadUnusedSegments implements CoordinatorDuty
   /**
    * A datasource is considered a broadcast datasource if it has even one broadcast rule.
    */
-  private boolean hasBroadcastRule(String datasource, DruidCoordinatorRuntimeParams params)
+  private boolean isBroadcastDatasource(String datasource, DruidCoordinatorRuntimeParams params)
   {
-    List<Rule> rules = params.getDatabaseRuleManager().getRulesWithDefault(datasource);
-    for (Rule rule : rules) {
-      if (rule instanceof BroadcastDistributionRule) {
-        return true;
-      }
-    }
-    return false;
+    return params.getDatabaseRuleManager().getRulesWithDefault(datasource).stream()
+                 .anyMatch(rule -> rule instanceof BroadcastDistributionRule);
   }
 }

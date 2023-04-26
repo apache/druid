@@ -37,7 +37,6 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.assertj.core.util.Sets;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -432,9 +431,7 @@ public class BroadcastDistributionRuleTest
   {
     final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
     ReplicationThrottler throttler = new ReplicationThrottler(
-        Sets.newHashSet(params.getDruidCluster().getTierNames()),
         dynamicConfig.getReplicationThrottleLimit(),
-        dynamicConfig.getReplicantLifetime(),
         dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
     );
     StrategicSegmentAssigner segmentAssigner = new StrategicSegmentAssigner(

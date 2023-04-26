@@ -31,7 +31,6 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.utils.CollectionUtils;
 
 import java.util.Map;
 
@@ -119,25 +118,19 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
 
   private void logServerAndLoadQueueStates(DruidCluster cluster)
   {
-    log.info("Load Queues:");
     for (ServerHolder serverHolder : cluster.getAllServers()) {
       ImmutableDruidServer server = serverHolder.getServer();
       LoadQueuePeon queuePeon = serverHolder.getPeon();
       log.info(
-          "Server[%s, %s, %s] has [%,d] left to drop, [%,d (%,d MBs)] left to load, [%,d (%,d MBs)] served.",
-          server.getName(), server.getType().toString(), server.getTier(),
-          queuePeon.getSegmentsToDrop().size(), queuePeon.getSegmentsToLoad().size(),
-          queuePeon.getSizeOfSegmentsToLoad() >> 20,
-          server.getNumSegments(), server.getCurrSize() >> 20
+          "Server[%s], type[%s] in [%s] is serving [%d (%d MBs)], loading [%d (%d MBs)], dropping [%d] segments.",
+          server.getName(), server.getType(), server.getTier(),
+          server.getNumSegments(), server.getCurrSize() >> 20,
+          queuePeon.getSegmentsToLoad().size(), queuePeon.getSizeOfSegmentsToLoad() >> 20,
+          queuePeon.getSegmentsToDrop().size()
       );
-      if (log.isDebugEnabled()) {
-        log.debug(
-            "Segments in queue: [%s]",
-            CollectionUtils.mapKeys(queuePeon.getSegmentsInQueue(), DataSegment::getId)
-        );
-      }
+
       if (log.isTraceEnabled()) {
-        log.trace("Segments in queue: [%s]", queuePeon.getSegmentsInQueue());
+        log.trace("Segments to load: [%s]", queuePeon.getSegmentsToLoad());
       }
     }
   }

@@ -111,9 +111,9 @@ public class DruidCoordinator
 {
   /**
    * This comparator orders "freshest" segments first, i. e. segments with most recent intervals.
-   *
+   * <p>
    * It is used in historical nodes' {@link LoadQueuePeon}s to make historicals load more recent segment first.
-   *
+   * <p>
    * It is also used in {@link DruidCoordinatorRuntimeParams} for {@link
    * DruidCoordinatorRuntimeParams#getUsedSegments()} - a collection of segments to be considered during some
    * coordinator run for different {@link CoordinatorDuty}s. The order matters only for {@link
@@ -121,7 +121,7 @@ public class DruidCoordinator
    * this comparator. In {@link LoadRule} the throttling limit may be hit (via {@link ReplicationThrottler}; see
    * {@link CoordinatorDynamicConfig#getReplicationThrottleLimit()}). So before we potentially hit this limit, we want
    * to schedule loading the more recent segments (among all of those that need to be loaded).
-   *
+   * <p>
    * In both {@link LoadQueuePeon}s and {@link RunRules}, we want to load more recent segments first
    * because presumably they are queried more often and contain are more important data for users, so if the Druid
    * cluster has availability problems and struggling to make all segments available immediately, at least we try to
@@ -681,7 +681,10 @@ public class DruidCoordinator
       return new CompactSegments(config, compactionSegmentSearchPolicy, indexingServiceClient);
     } else {
       if (compactSegmentsDutyFromCustomGroups.size() > 1) {
-        log.warn("More than one compactSegments duty is configured in the Coordinator Custom Duty Group. The first duty will be picked up.");
+        log.warn(
+            "More than one compactSegments duty is configured in the Coordinator Custom Duty Group."
+            + " The first duty will be picked up."
+        );
       }
       return compactSegmentsDutyFromCustomGroups.get(0);
     }
@@ -692,7 +695,8 @@ public class DruidCoordinator
   {
     return customDutyGroups.getCoordinatorCustomDutyGroups()
                            .stream()
-                           .flatMap(coordinatorCustomDutyGroup -> coordinatorCustomDutyGroup.getCustomDutyList().stream())
+                           .flatMap(coordinatorCustomDutyGroup ->
+                                        coordinatorCustomDutyGroup.getCustomDutyList().stream())
                            .filter(duty -> duty instanceof CompactSegments)
                            .map(duty -> (CompactSegments) duty)
                            .collect(Collectors.toList());
@@ -797,8 +801,19 @@ public class DruidCoordinator
         // Emit stats collected from all duties
         CoordinatorRunStats allStats = params.getCoordinatorStats();
         if (allStats.rowCount() > 0) {
-          log.info("Emitting [%d] rows of stats for group [%s].", allStats.rowCount(), dutyGroupName);
-          allStats.forEachStat((dimensionValues, stat, value) -> emitStat(stat, dimensionValues, value));
+          final AtomicInteger emittedCount = new AtomicInteger();
+          allStats.forEachStat(
+              (dimensionValues, stat, value) -> {
+                if (stat.shouldEmit()) {
+                  emitStat(stat, dimensionValues, value);
+                  emittedCount.incrementAndGet();
+                }
+              }
+          );
+          log.info(
+              "Collected [%d] rows of stats for group [%s]. Emitted [%d] stats.",
+              allStats.rowCount(), dutyGroupName, emittedCount.get()
+          );
         }
 
         // Emit the runtime of the full DutiesRunnable
@@ -817,15 +832,12 @@ public class DruidCoordinator
         value = value / 1000;
       }
 
-      if (stat.shouldEmit()) {
-        ServiceMetricEvent.Builder eventBuilder = new ServiceMetricEvent.Builder()
-            .setDimension(Dimension.DUTY_GROUP.reportedName(), dutyGroupName);
-
-        dimensionValues.forEach(
-            (dim, dimValue) -> eventBuilder.setDimension(dim.reportedName(), dimValue)
-        );
-        emitter.emit(eventBuilder.build(stat.getMetricName(), value));
-      }
+      ServiceMetricEvent.Builder eventBuilder = new ServiceMetricEvent.Builder()
+          .setDimension(Dimension.DUTY_GROUP.reportedName(), dutyGroupName);
+      dimensionValues.forEach(
+          (dim, dimValue) -> eventBuilder.setDimension(dim.reportedName(), dimValue)
+      );
+      emitter.emit(eventBuilder.build(stat.getMetricName(), value));
     }
 
     Duration getPeriod()

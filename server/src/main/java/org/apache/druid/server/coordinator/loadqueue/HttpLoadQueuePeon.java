@@ -54,11 +54,9 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
@@ -388,7 +386,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   @Override
   public void loadSegment(DataSegment segment, SegmentAction action, LoadPeonCallback callback)
   {
-    if (action == SegmentAction.DROP) {
+    if (!action.isLoad()) {
       log.warn("Invalid load action [%s] for segment [%s] on server [%s].", action, segment.getId(), serverId);
       return;
     }
@@ -397,10 +395,11 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       if (stopped) {
         log.warn(
             "Server[%s] cannot load segment[%s] because load queue peon is stopped.",
-            serverId,
-            segment.getId()
+            serverId, segment.getId()
         );
-        callback.execute(false);
+        if (callback != null) {
+          callback.execute(false);
+        }
         return;
       }
 
@@ -426,10 +425,11 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       if (stopped) {
         log.warn(
             "Server[%s] cannot drop segment[%s] because load queue peon is stopped.",
-            serverId,
-            segment.getId()
+            serverId, segment.getId()
         );
-        callback.execute(false);
+        if (callback != null) {
+          callback.execute(false);
+        }
         return;
       }
       SegmentHolder holder = segmentsToDrop.get(segment);
@@ -466,11 +466,11 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   }
 
   @Override
-  public Map<DataSegment, SegmentAction> getSegmentsInQueue()
+  public Set<SegmentHolder> getSegmentsInQueue()
   {
-    final Map<DataSegment, SegmentAction> segmentsInQueue = new HashMap<>();
+    final Set<SegmentHolder> segmentsInQueue;
     synchronized (lock) {
-      queuedSegments.forEach(s -> segmentsInQueue.put(s.getSegment(), s.getAction()));
+      segmentsInQueue = new HashSet<>(queuedSegments);
     }
     return segmentsInQueue;
   }
@@ -503,12 +503,6 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   public void unmarkSegmentToDrop(DataSegment dataSegment)
   {
     segmentsMarkedToDrop.remove(dataSegment);
-  }
-
-  @Override
-  public int getNumberOfSegmentsToLoad()
-  {
-    return segmentsToLoad.size();
   }
 
   @Override

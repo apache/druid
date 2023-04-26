@@ -66,7 +66,6 @@ import org.junit.rules.TestRule;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -422,15 +421,12 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
 
   private StrategicSegmentAssigner createSegmentAssigner(
       SegmentLoadQueueManager loadQueueManager,
-      DruidCoordinatorRuntimeParams params,
-      String... tiersEligibleForReplication
+      DruidCoordinatorRuntimeParams params
   )
   {
     final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
     ReplicationThrottler throttler = new ReplicationThrottler(
-        new HashSet<>(Arrays.asList(tiersEligibleForReplication)),
         dynamicConfig.getReplicationThrottleLimit(),
-        dynamicConfig.getReplicantLifetime(),
         dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
     );
     return new StrategicSegmentAssigner(

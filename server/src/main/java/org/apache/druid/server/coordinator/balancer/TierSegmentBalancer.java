@@ -30,6 +30,7 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -63,6 +64,8 @@ public class TierSegmentBalancer
   private final List<ServerHolder> decommissioningServers;
   private final int totalMaxSegmentsToMove;
 
+  private final int movingSegmentCount;
+
   public TierSegmentBalancer(
       String tier,
       Set<ServerHolder> servers,
@@ -81,9 +84,11 @@ public class TierSegmentBalancer
 
     Map<Boolean, List<ServerHolder>> partitions =
         servers.stream().collect(Collectors.partitioningBy(ServerHolder::isDecommissioning));
-    decommissioningServers = partitions.get(true);
-    activeServers = partitions.get(false);
+    this.decommissioningServers = partitions.get(true);
+    this.activeServers = partitions.get(false);
     this.allServers = servers;
+
+    this.movingSegmentCount = activeServers.stream().mapToInt(ServerHolder::getNumMovingSegments).sum();
   }
 
   public void run()
@@ -97,8 +102,9 @@ public class TierSegmentBalancer
     }
 
     log.info(
-        "Balancing segments in tier [%s] with [%d] active servers and [%d] decommissioning servers.",
-        tier, activeServers.size(), decommissioningServers.size()
+        "Moving max [%d] segments in tier [%s] with [%d] active servers and"
+        + " [%d] decommissioning servers. There are [%d] segments already in queue.",
+        totalMaxSegmentsToMove, tier, activeServers.size(), decommissioningServers.size(), movingSegmentCount
     );
 
     // Move segments from decommissioning to active servers
@@ -139,13 +145,17 @@ public class TierSegmentBalancer
       return 0;
     }
 
+    // Always move loading segments first as it is a cheaper operation
     Iterator<BalancerSegmentHolder> pickedSegments
         = pickSegmentsFrom(sourceServers, maxSegmentsToMove, true);
     int movedCount = moveSegmentsTo(destServers, pickedSegments, maxSegmentsToMove, skipIfOptimallyPlaced);
 
-    maxSegmentsToMove -= movedCount;
-    pickedSegments = pickSegmentsFrom(sourceServers, maxSegmentsToMove, false);
-    movedCount += moveSegmentsTo(destServers, pickedSegments, maxSegmentsToMove, skipIfOptimallyPlaced);
+    // Move loaded segments if tier is not busy
+    if (movingSegmentCount <= 0) {
+      maxSegmentsToMove -= movedCount;
+      pickedSegments = pickSegmentsFrom(sourceServers, maxSegmentsToMove, false);
+      movedCount += moveSegmentsTo(destServers, pickedSegments, maxSegmentsToMove, skipIfOptimallyPlaced);
+    }
 
     return movedCount;
   }
@@ -205,6 +215,7 @@ public class TierSegmentBalancer
    * metadata store). This method may return null if there is no snapshot available
    * for the underlying datasource or if the segment is unused.
    */
+  @Nullable
   private DataSegment getLoadableSegment(DataSegment segmentToMove)
   {
     if (!params.getUsedSegments().contains(segmentToMove)) {

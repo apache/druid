@@ -46,12 +46,12 @@ import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
+import org.apache.druid.server.coordinator.loadqueue.SegmentHolder;
 import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.assertj.core.util.Sets;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -162,9 +162,7 @@ public class LoadRuleTest
   {
     final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
     ReplicationThrottler throttler = new ReplicationThrottler(
-        Sets.newHashSet(params.getDruidCluster().getTierNames()),
         dynamicConfig.getReplicationThrottleLimit(),
-        dynamicConfig.getReplicantLifetime(),
         dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
     );
     StrategicSegmentAssigner segmentAssigner = new StrategicSegmentAssigner(
@@ -734,10 +732,9 @@ public class LoadRuleTest
   {
     final LoadQueuePeon mockPeon = EasyMock.createMock(LoadQueuePeon.class);
     EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Collections.emptySet()).anyTimes();
-    EasyMock.expect(mockPeon.getSegmentsInQueue()).andReturn(Collections.emptyMap()).anyTimes();
+    EasyMock.expect(mockPeon.getSegmentsInQueue()).andReturn(Collections.emptySet()).anyTimes();
     EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Collections.emptySet()).anyTimes();
     EasyMock.expect(mockPeon.getSizeOfSegmentsToLoad()).andReturn(0L).anyTimes();
-    EasyMock.expect(mockPeon.getNumberOfSegmentsToLoad()).andReturn(0).anyTimes();
 
     return mockPeon;
   }
@@ -751,8 +748,7 @@ public class LoadRuleTest
     EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Collections.emptySet()).anyTimes();
     EasyMock.expect(mockPeon.getSegmentsToDrop()).andReturn(Collections.emptySet()).anyTimes();
     EasyMock.expect(mockPeon.getSegmentsInQueue())
-            .andReturn(ImmutableMap.of(segment, SegmentAction.LOAD)).anyTimes();
-    EasyMock.expect(mockPeon.getNumberOfSegmentsToLoad()).andReturn(segs.size()).anyTimes();
+            .andReturn(Collections.singleton(new SegmentHolder(segment, SegmentAction.LOAD, null))).anyTimes();
 
     EasyMock.expect(mockPeon.getTimedOutSegments())
             .andReturn(slowLoading ? segs : Collections.emptySet()).anyTimes();

@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * The ReplicationThrottler is used to throttle the number of segment replicas
@@ -37,9 +36,7 @@ import java.util.Set;
  */
 public class ReplicationThrottler
 {
-  private final Set<String> eligibleTiers;
   private final int replicationThrottleLimit;
-  private final int maxLifetime;
   private final int maxReplicaAssignmentsInRun;
 
   private final Map<String, Integer> tierToNumAssigned = new HashMap<>();
@@ -50,25 +47,17 @@ public class ReplicationThrottler
   /**
    * Creates a new ReplicationThrottler for use during a single coordinator run.
    *
-   * @param eligibleTiers              Set of tiers eligible for replication.
    * @param replicationThrottleLimit   Maximum number of replicas that can be
    *                                   assigned to a single tier in the current run.
-   * @param maxLifetime                Number of coordinator runs after which a
-   *                                   replica remaining in the queue is considered
-   *                                   to be stuck and triggers an alert.
    * @param maxReplicaAssignmentsInRun Max number of total replicas that can be
    *                                   assigned across all tiers in the current run.
    */
   public ReplicationThrottler(
-      Set<String> eligibleTiers,
       int replicationThrottleLimit,
-      int maxLifetime,
       int maxReplicaAssignmentsInRun
   )
   {
-    this.eligibleTiers = eligibleTiers;
     this.replicationThrottleLimit = replicationThrottleLimit;
-    this.maxLifetime = maxLifetime;
     this.maxReplicaAssignmentsInRun = maxReplicaAssignmentsInRun;
     this.totalReplicasAssignedInRun = 0;
   }
@@ -76,8 +65,7 @@ public class ReplicationThrottler
   public boolean canAssignReplica(String tier)
   {
     return totalReplicasAssignedInRun < maxReplicaAssignmentsInRun
-           && tierToNumAssigned.computeIfAbsent(tier, t -> 0) < replicationThrottleLimit
-           && eligibleTiers.contains(tier);
+           && tierToNumAssigned.computeIfAbsent(tier, t -> 0) < replicationThrottleLimit;
   }
 
   public void incrementAssignedReplicas(String tier)
@@ -94,11 +82,6 @@ public class ReplicationThrottler
   public Map<String, Integer> getTierToNumThrottled()
   {
     return tierToNumThrottled;
-  }
-
-  public int getMaxLifetime()
-  {
-    return maxLifetime;
   }
 
 }

@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator.loadqueue;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.timeline.DataSegment;
 
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -38,7 +37,7 @@ public interface LoadQueuePeon
 
   Set<DataSegment> getSegmentsToLoad();
 
-  Map<DataSegment, SegmentAction> getSegmentsInQueue();
+  Set<SegmentHolder> getSegmentsInQueue();
 
   Set<DataSegment> getSegmentsToDrop();
 
@@ -55,8 +54,6 @@ public interface LoadQueuePeon
   void dropSegment(DataSegment segment, LoadPeonCallback callback);
 
   long getSizeOfSegmentsToLoad();
-
-  int getNumberOfSegmentsToLoad();
 
   CoordinatorRunStats getAndResetStats();
 

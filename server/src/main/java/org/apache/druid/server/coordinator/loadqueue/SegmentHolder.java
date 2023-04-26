@@ -60,6 +60,7 @@ public class SegmentHolder implements Comparable<SegmentHolder>
   // Guaranteed to store only non-null elements
   private final List<LoadPeonCallback> callbacks = new ArrayList<>();
   private final AtomicLong firstRequestMillis = new AtomicLong(0);
+  private int runsInQueue = 0;
 
   public SegmentHolder(
       DataSegment segment,
@@ -136,6 +137,11 @@ public class SegmentHolder implements Comparable<SegmentHolder>
     return firstRequestMillis.get();
   }
 
+  public int incrementAndGetRunsInQueue()
+  {
+    return ++runsInQueue;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -164,6 +170,9 @@ public class SegmentHolder implements Comparable<SegmentHolder>
   @Override
   public String toString()
   {
-    return changeRequest.toString();
+    return action + "{" +
+           "segment=" + segment.getId() +
+           ", runsInQueue=" + runsInQueue +
+           '}';
   }
 }

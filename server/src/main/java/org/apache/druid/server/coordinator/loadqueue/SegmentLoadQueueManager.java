@@ -27,16 +27,9 @@ import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
 /**
  * Manager for addition/removal of segments to server load queues and the
- * corresponding success/failure callbacks. Also maintains list of segments
- * currently being moved or replicated in a tier.
+ * corresponding success/failure callbacks.
  */
 public class SegmentLoadQueueManager
 {
@@ -45,11 +38,6 @@ public class SegmentLoadQueueManager
   private final LoadQueueTaskMaster taskMaster;
   private final ServerInventoryView serverInventoryView;
   private final SegmentsMetadataManager segmentsMetadataManager;
-
-  private final ConcurrentHashMap<String, TierLoadingState> currentlyMovingSegments =
-      new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<String, TierLoadingState> currentlyReplicatingSegments
-      = new ConcurrentHashMap<>();
 
   @Inject
   public SegmentLoadQueueManager(
@@ -78,7 +66,7 @@ public class SegmentLoadQueueManager
     final SegmentAction action;
     if (isFirstLoadOnTier) {
       action = SegmentAction.LOAD;
-    } else if (canLoadReplica(tier, throttler)) {
+    } else if (canLoadReplica(server, tier, throttler)) {
       action = SegmentAction.REPLICATE;
     } else {
       throttler.incrementThrottledReplicas(tier);
@@ -91,19 +79,11 @@ public class SegmentLoadQueueManager
         return false;
       }
 
-      final LoadPeonCallback callback;
-      if (isFirstLoadOnTier) {
-        callback = null;
-      } else {
+      if (!isFirstLoadOnTier) {
         throttler.incrementAssignedReplicas(tier);
-
-        final TierLoadingState replicatingInTier = currentlyReplicatingSegments
-            .computeIfAbsent(tier, t -> new TierLoadingState());
-        replicatingInTier.markStarted(segment.getId(), serverName, throttler.getMaxLifetime());
-        callback = success -> replicatingInTier.markCompleted(segment.getId());
       }
 
-      server.getPeon().loadSegment(segment, action, callback);
+      server.getPeon().loadSegment(segment, action, null);
       return true;
     }
     catch (Exception e) {
@@ -134,30 +114,23 @@ public class SegmentLoadQueueManager
   public boolean moveSegment(
       DataSegment segment,
       ServerHolder serverA,
-      ServerHolder serverB,
-      int maxLifetimeInBalancingQueue
+      ServerHolder serverB
   )
   {
-    final TierLoadingState segmentsMovingInTier = currentlyMovingSegments.computeIfAbsent(
-        serverB.getServer().getTier(),
-        t -> new TierLoadingState()
-    );
     final LoadQueuePeon peonA = serverA.getPeon();
-    final LoadPeonCallback moveFinishCallback = success -> {
-      peonA.unmarkSegmentToDrop(segment);
-      segmentsMovingInTier.markCompleted(segment.getId());
-    };
+    final LoadPeonCallback moveFinishCallback = success -> peonA.unmarkSegmentToDrop(segment);
+
+    if (!serverA.startOperation(SegmentAction.MOVE_FROM, segment)) {
+      return false;
+    }
+    if (!serverB.startOperation(SegmentAction.MOVE_TO, segment)) {
+      serverA.cancelOperation(SegmentAction.MOVE_FROM, segment);
+      return false;
+    }
 
     // mark segment to drop before it is actually loaded on server
     // to be able to account for this information in BalancerStrategy immediately
-    serverB.startOperation(SegmentAction.MOVE_TO, segment);
-    serverA.startOperation(SegmentAction.MOVE_FROM, segment);
     peonA.markSegmentToDrop(segment);
-    segmentsMovingInTier.markStarted(
-        segment.getId(),
-        serverA.getServer().getName(),
-        maxLifetimeInBalancingQueue
-    );
 
     final LoadQueuePeon peonB = serverB.getPeon();
     final String serverNameB = serverB.getServer().getName();
@@ -205,46 +178,9 @@ public class SegmentLoadQueueManager
     return segmentsMetadataManager.markSegmentAsUnused(segment.getId());
   }
 
-  /**
-   * Reduces the lifetimes of the segments currently being moved in all the tiers,
-   * and returns a map from tier names to the corresponding state.
-   */
-  public Map<String, TierLoadingState> reduceLifetimesOfMovingSegments()
+  private boolean canLoadReplica(ServerHolder server, String tier, ReplicationThrottler throttler)
   {
-    return reduceLifetimesAndCreateCopy(currentlyMovingSegments);
-  }
-
-  /**
-   * Reduces the lifetimes of the segments currently being replicated in the tiers,
-   * and returns a map from tier names to the corresponding state.
-   */
-  public Map<String, TierLoadingState> reduceLifetimesOfReplicatingSegments()
-  {
-    return reduceLifetimesAndCreateCopy(currentlyReplicatingSegments);
-  }
-
-  private Map<String, TierLoadingState> reduceLifetimesAndCreateCopy(
-      Map<String, TierLoadingState> inFlightSegments
-  )
-  {
-    final Set<String> inactiveTiers = new HashSet<>();
-    inFlightSegments.forEach((tier, holder) -> {
-      if (holder.getNumProcessingSegments() == 0) {
-        inactiveTiers.add(tier);
-      }
-      holder.reduceLifetime();
-    });
-
-    // Reset state for inactive tiers
-    inactiveTiers.forEach(inFlightSegments::remove);
-
-    return Collections.unmodifiableMap(inFlightSegments);
-  }
-
-  private boolean canLoadReplica(String tier, ReplicationThrottler throttler)
-  {
-    final TierLoadingState tierState = currentlyReplicatingSegments.get(tier);
-    return tierState == null || throttler.canAssignReplica(tier);
+    return !server.isLoadingReplicas() && throttler.canAssignReplica(tier);
   }
 
 }

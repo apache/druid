@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -38,9 +37,9 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Duty to run retention rules.
@@ -77,34 +76,17 @@ public class RunRules implements CoordinatorDuty
     // eventually will be unloaded from Historical servers. Segments overshadowed by *served* used segments are marked
     // as unused in MarkAsUnusedOvershadowedSegments, and then eventually Coordinator sends commands to Historical nodes
     // to unload such segments in UnloadUnusedSegments.
-    Set<DataSegment> overshadowed = params.getDataSourcesSnapshot().getOvershadowedSegments();
-
-    // Run through all matched rules for used segments
-    DateTime now = DateTimes.nowUtc();
-    MetadataRuleManager databaseRuleManager = params.getDatabaseRuleManager();
-
-    final List<SegmentId> segmentsWithMissingRules = Lists.newArrayListWithCapacity(MAX_MISSING_RULES);
-    int missingRules = 0;
-
-    final Set<String> broadcastDatasources = new HashSet<>();
-    for (ImmutableDruidDataSource dataSource : params.getDataSourcesSnapshot().getDataSourcesMap().values()) {
-      List<Rule> rules = databaseRuleManager.getRulesWithDefault(dataSource.getName());
-      for (Rule rule : rules) {
-        // A datasource is considered a broadcast datasource if it has any broadcast rules.
-        // The set of broadcast datasources is used by BalanceSegments and UnloadUnusedSegments,
-        // so it's important that RunRules executes before those duties
-        if (rule instanceof BroadcastDistributionRule) {
-          broadcastDatasources.add(dataSource.getName());
-          break;
-        }
-      }
-    }
+    final Set<DataSegment> overshadowed = params.getDataSourcesSnapshot().getOvershadowedSegments();
+    final Set<DataSegment> usedSegments = params.getUsedSegments();
+    log.info(
+        "Running rules for [%d] used segments. Skipping [%d] overshadowed segments.",
+        usedSegments.size(), overshadowed.size()
+    );
 
     final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
-    final ReplicationThrottler replicationThrottler = createReplicationThrottler(
-        reduceLifetimesAndGetBusyTiers(dynamicConfig),
-        cluster,
-        dynamicConfig
+    final ReplicationThrottler replicationThrottler = new ReplicationThrottler(
+        dynamicConfig.getReplicationThrottleLimit(),
+        dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
     );
     final StrategicSegmentAssigner segmentAssigner = new StrategicSegmentAssigner(
         loadQueueManager,
@@ -114,9 +96,17 @@ public class RunRules implements CoordinatorDuty
         params.getBalancerStrategy(),
         dynamicConfig
     );
-    for (DataSegment segment : params.getUsedSegments()) {
+
+    final MetadataRuleManager databaseRuleManager = params.getDatabaseRuleManager();
+
+    int missingRules = 0;
+    final DateTime now = DateTimes.nowUtc();
+    final List<SegmentId> segmentsWithMissingRules = Lists.newArrayListWithCapacity(MAX_MISSING_RULES);
+
+    // Run through all matched rules for used segments
+    for (DataSegment segment : usedSegments) {
       if (overshadowed.contains(segment)) {
-        // Skipping overshadowed segments
+        // Skip overshadowed segments
         continue;
       }
       List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
@@ -151,64 +141,37 @@ public class RunRules implements CoordinatorDuty
 
     return params.buildFromExisting()
                  .withCoordinatorStats(stats)
-                 .withBroadcastDatasources(broadcastDatasources)
+                 .withBroadcastDatasources(getBroadcastDatasources(params))
                  .withReplicationManager(replicationThrottler)
                  .build();
   }
 
-  /**
-   * Reduces the lifetimes of segments currently being replicated in all the tiers.
-   * Returns the set of tiers that are currently replicatinng some segments and
-   * won't be eligible for assigning more replicas in this run.
-   */
-  private Set<String> reduceLifetimesAndGetBusyTiers(CoordinatorDynamicConfig dynamicConfig)
+  private Set<String> getBroadcastDatasources(DruidCoordinatorRuntimeParams params)
   {
-    final Set<String> busyTiers = new HashSet<>();
-    loadQueueManager.reduceLifetimesOfReplicatingSegments().forEach((tier, replicatingState) -> {
-      int numReplicatingSegments = replicatingState.getNumProcessingSegments();
-      if (numReplicatingSegments <= 0) {
-        return;
-      }
+    final Set<String> broadcastDatasources =
+        params.getDataSourcesSnapshot().getDataSourcesMap().values().stream()
+              .map(ImmutableDruidDataSource::getName)
+              .filter(datasource -> isBroadcastDatasource(datasource, params))
+              .collect(Collectors.toSet());
 
-      busyTiers.add(tier);
-      log.info(
-          "Skipping replication on tier [%s] as is it still has"
-          + " [%d] segments in queue with lifetime [%d / %d].",
-          tier,
-          numReplicatingSegments,
-          replicatingState.getMinLifetime(),
-          dynamicConfig.getReplicantLifetime()
-      );
+    if (!broadcastDatasources.isEmpty()) {
+      log.info("Found broadcast datasources [%s] which will not participate in balancing.", broadcastDatasources);
+    }
 
-      // Create alerts for stuck tiers
-      if (replicatingState.getMinLifetime() <= 0) {
-        log.makeAlert(
-            "Replication queue for tier [%s] has [%d] segments stuck.",
-            tier,
-            replicatingState.getNumExpiredSegments()
-        ).addData("segments", replicatingState.getExpiredSegments()).emit();
-      }
-    });
-
-    return busyTiers;
+    return broadcastDatasources;
   }
 
-  private ReplicationThrottler createReplicationThrottler(
-      Set<String> busyTiers,
-      DruidCluster cluster,
-      CoordinatorDynamicConfig dynamicConfig
-  )
+  /**
+   * A datasource is considered a broadcast datasource if it has even one
+   * Broadcast Rule. Segments of broadcast datasources:
+   * <ul>
+   *   <li>Do not participate in balancing</li>
+   *   <li>Are unloaded if unused, even from realtime servers</li>
+   * </ul>
+   */
+  private boolean isBroadcastDatasource(String datasource, DruidCoordinatorRuntimeParams params)
   {
-    // Tiers that already have some replication in progress are not eligible for
-    // replication in this coordinator run
-    final Set<String> tiersEligibleForReplication = Sets.newHashSet(cluster.getTierNames());
-    tiersEligibleForReplication.removeAll(busyTiers);
-
-    return new ReplicationThrottler(
-        tiersEligibleForReplication,
-        dynamicConfig.getReplicationThrottleLimit(),
-        dynamicConfig.getReplicantLifetime(),
-        dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
-    );
+    return params.getDatabaseRuleManager().getRulesWithDefault(datasource).stream()
+                 .anyMatch(rule -> rule instanceof BroadcastDistributionRule);
   }
 }

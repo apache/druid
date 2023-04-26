@@ -322,8 +322,8 @@ public class BalanceSegmentsTest
     CoordinatorRunStats stats = runBalancer(params);
     EasyMock.verify(strategy);
     Assert.assertEquals(1, stats.getSegmentStat(Stats.Segments.MOVED, "normal", segment1.getDataSource()));
-    Assert.assertEquals(0, holder1.getPeon().getNumberOfSegmentsToLoad());
-    Assert.assertEquals(1, holder2.getPeon().getNumberOfSegmentsToLoad());
+    Assert.assertEquals(0, holder1.getPeon().getSegmentsToLoad().size());
+    Assert.assertEquals(1, holder2.getPeon().getSegmentsToLoad().size());
   }
 
   @Test
@@ -530,9 +530,7 @@ public class BalanceSegmentsTest
   {
     CoordinatorDynamicConfig dynamicConfig = CoordinatorDynamicConfig.builder().build();
     return new ReplicationThrottler(
-        Collections.singleton("normal"),
         dynamicConfig.getReplicationThrottleLimit(),
-        dynamicConfig.getReplicantLifetime(),
         dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
     );
   }

@@ -198,36 +198,41 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
   }
 
   @Test
-  public void testBalancingMovesSegmentsWhenSomeAreAlreadyMoving()
+  public void testBalancingDoesNotMoveLoadedSegmentsWhenTierIsBusy()
   {
+    // maxSegmentsToMove = 3, unlimited load queue
     CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
                              .withDynamicConfig(createDynamicConfig(3, 0, 0))
                              .withSegments(segments)
-                             .withServers(historicalT11, historicalT12)
+                             .withServers(historicalT11)
                              .withRules(datasource, Load.on(Tier.T1, 1).forever())
                              .build();
 
     startSimulation(sim);
 
-    // Keep all the segments loaded on histT11
-    segments.forEach(historicalT11::addDataSegment);
+    // Pre-load some of the segments on histT11
+    segments.subList(2, segments.size()).forEach(historicalT11::addDataSegment);
 
-    // Run 1: Some segments are moved to histT12
+    // Run 1: The remaining segments are assigned to histT11
+    runCoordinatorCycle();
+    verifyValue(Metric.ASSIGNED_COUNT, 2L);
+
+    // Run 2: Add histT12, some loading segments and some loaded segments are moved to it
+    addServer(historicalT12);
     runCoordinatorCycle();
     verifyValue(Metric.MOVED_COUNT, 3L);
+    verifyValue(Metric.CANCELLED_ACTIONS, 2L);
     verifyValue(Metric.LOAD_QUEUE_COUNT, filterByServer(historicalT12), 3L);
 
-    // Run 2: Some more segments are moved to histT12
-    setDynamicConfig(createDynamicConfig(10, 0, 0));
+    // Run 3: No more segments are moved as tier is already busy moving
     runCoordinatorCycle();
-    verifyValue(Metric.MOVED_COUNT, 2L);
-    verifyValue(Metric.LOAD_QUEUE_COUNT, filterByServer(historicalT12), 5L);
+    verifyNotEmitted(Metric.MOVED_COUNT);
 
-    // Complete loading the segments
+    // Run 4: Load pending segments, more are moved
     loadQueuedSegments();
-    Assert.assertEquals(5, historicalT11.getTotalSegments());
-    Assert.assertEquals(5, historicalT12.getTotalSegments());
+    runCoordinatorCycle();
+    Assert.assertTrue(getValue(Metric.MOVED_COUNT, null).intValue() > 0);
   }
 
 }

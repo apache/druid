@@ -44,8 +44,6 @@ public class BalanceSegments implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    reduceLifetimesAndAlert();
-
     if (params.getUsedSegments().isEmpty()) {
       log.info("Skipping balance as there are no used segments.");
       return params;
@@ -85,26 +83,4 @@ public class BalanceSegments implements CoordinatorDuty
     return params.buildFromExisting().withCoordinatorStats(stats).build();
   }
 
-  /**
-   * Reduces the lifetimes of segments currently being moved in all the tiers.
-   * Raises alerts for segments stuck in the queue.
-   */
-  private void reduceLifetimesAndAlert()
-  {
-    loadQueueManager.reduceLifetimesOfMovingSegments().forEach((tier, movingState) -> {
-      int numMovingSegments = movingState.getNumProcessingSegments();
-      if (numMovingSegments <= 0) {
-        return;
-      }
-
-      // Create alerts for stuck tiers
-      int numExpiredSegments = movingState.getNumExpiredSegments();
-      if (movingState.getMinLifetime() < 0 && numExpiredSegments > 0) {
-        log.makeAlert(
-            "Balancing queue for tier [%s] has [%d] segments stuck.",
-            tier, numExpiredSegments
-        ).addData("segments", movingState.getExpiredSegments()).emit();
-      }
-    });
-  }
 }

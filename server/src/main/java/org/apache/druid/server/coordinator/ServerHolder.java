@@ -21,9 +21,11 @@ package org.apache.druid.server.coordinator;
 
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
+import org.apache.druid.server.coordinator.loadqueue.SegmentHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
@@ -36,6 +38,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Encapsulates the state of a DruidServer during a single coordinator run.
@@ -48,10 +52,16 @@ public class ServerHolder implements Comparable<ServerHolder>
                 .thenComparing(holder -> holder.getServer().getTier())
                 .thenComparing(holder -> holder.getServer().getType());
 
+  private static final EmittingLogger log = new EmittingLogger(ServerHolder.class);
+
   private final ImmutableDruidServer server;
   private final LoadQueuePeon peon;
   private final boolean isDecommissioning;
   private final int maxAssignmentsInRun;
+  private final int maxLifetimeInQueue;
+
+  private final AtomicInteger movingSegmentCount = new AtomicInteger(0);
+  private final AtomicBoolean isLoadingReplicas = new AtomicBoolean(false);
 
   private int totalAssignmentsInRun;
   private long sizeOfLoadingSegments;
@@ -98,13 +108,27 @@ public class ServerHolder implements Comparable<ServerHolder>
 
     this.maxAssignmentsInRun = maxSegmentsInLoadQueue == 0
                                ? Integer.MAX_VALUE
-                               : maxSegmentsInLoadQueue - peon.getNumberOfSegmentsToLoad();
+                               : maxSegmentsInLoadQueue - peon.getSegmentsToLoad().size();
+    this.maxLifetimeInQueue = 15;
 
+    updateQueuedSegments();
+  }
+
+  private void updateQueuedSegments()
+  {
     server.iterateAllSegments()
           .forEach(segment -> updateCountInInterval(segment, true));
 
+    final List<SegmentHolder> expiredSegments = new ArrayList<>();
     peon.getSegmentsInQueue().forEach(
-        (segment, action) -> {
+        (holder) -> {
+          int runsInQueue = holder.incrementAndGetRunsInQueue();
+          if (runsInQueue > maxLifetimeInQueue) {
+            expiredSegments.add(holder);
+          }
+
+          final SegmentAction action = holder.getAction();
+          final DataSegment segment = holder.getSegment();
           queuedSegments.put(segment, simplify(action));
           if (action.isLoad()) {
             sizeOfLoadingSegments += segment.getSize();
@@ -112,6 +136,13 @@ public class ServerHolder implements Comparable<ServerHolder>
           } else {
             sizeOfDroppingSegments += segment.getSize();
             updateCountInInterval(segment, false);
+          }
+
+          if (action == SegmentAction.MOVE_TO) {
+            movingSegmentCount.incrementAndGet();
+          }
+          if (action == SegmentAction.REPLICATE) {
+            isLoadingReplicas.set(true);
           }
         }
     );
@@ -122,6 +153,16 @@ public class ServerHolder implements Comparable<ServerHolder>
           queuedSegments.put(segment, SegmentAction.MOVE_FROM);
         }
     );
+
+    if (!expiredSegments.isEmpty()) {
+      List<SegmentHolder> expiredSegmentsSubList =
+          expiredSegments.size() > 10 ? expiredSegments.subList(0, 10) : expiredSegments;
+
+      log.makeAlert(
+          "Load queue for server [%s], tier [%s] has [%d] segments stuck.",
+          server.getName(), server.getTier(), expiredSegments.size()
+      ).addData("segments", expiredSegmentsSubList).addData("maxLifetime", maxLifetimeInQueue).emit();
+    }
   }
 
   public ImmutableDruidServer getServer()
@@ -270,6 +311,16 @@ public class ServerHolder implements Comparable<ServerHolder>
   public boolean isDroppingSegment(DataSegment segment)
   {
     return getActionOnSegment(segment) == SegmentAction.DROP;
+  }
+
+  public int getNumMovingSegments()
+  {
+    return movingSegmentCount.get();
+  }
+
+  public boolean isLoadingReplicas()
+  {
+    return isLoadingReplicas.get();
   }
 
   public boolean startOperation(SegmentAction action, DataSegment segment)

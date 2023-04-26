@@ -66,7 +66,7 @@ public class CostBalancerStrategyTest
 
       List<DataSegment> segments = IntStream
           .range(0, maxSegments)
-          .mapToObj(j -> getSegment(j))
+          .mapToObj(CostBalancerStrategyTest::getSegment)
           .collect(Collectors.toList());
       ImmutableDruidDataSource dataSource = new ImmutableDruidDataSource("DUMMY", Collections.emptyMap(), segments);
 
@@ -119,7 +119,7 @@ public class CostBalancerStrategyTest
   public static DataSegment getSegment(int index, String dataSource, Interval interval)
   {
     // Not using EasyMock as it hampers the performance of multithreads.
-    DataSegment segment = new DataSegment(
+    return new DataSegment(
         dataSource,
         interval,
         String.valueOf(index),
@@ -130,7 +130,6 @@ public class CostBalancerStrategyTest
         0,
         index * 100L
     );
-    return segment;
   }
 
   @Test
