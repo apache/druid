@@ -27,7 +27,7 @@ import java.util.function.Function;
 
 /**
  * Encapsulates either an "error" or a "value".
- *
+ * <br/>
  * Similar to the Either class in Scala or Haskell, except the possibilities are named "error" and "value" instead of
  * "left" and "right".
  */
@@ -77,11 +77,26 @@ public class Either<L, R>
   }
 
   /**
-   * If this Either represents a value, returns it. If this Either represents an error, throw an error.
-   *
-   * If the error is a {@link Throwable}, it is wrapped in a RuntimeException and thrown. If it is not a throwable,
-   * a generic error is thrown containing the string representation of the error object.
-   *
+   * <ul>
+   *  <li>
+   *  If this Either represents a value, returns it.
+   *  </li>
+   *  <li>
+   *  If this Either represents an error, throw an error.
+   *  <ul>
+   *    <li>
+   *    If the error is an {@link EitherException}, the original exception is thrown.
+   *    </li>
+   *    <li>
+   *    If the error is a {@link Throwable}, it is wrapped in an {@link EitherException} and thrown.
+   *    </li>
+   *    <li>
+   *    If it is not a throwable, a generic {@link EitherException} is thrown containing the string representation of the error object.
+   *    </li>
+   *    </li>
+   *  </ul>
+   * </ul>
+   * <br/>
    * To retrieve the error as-is, use {@link #isError()} and {@link #error()} instead.
    */
   @Nullable
@@ -89,21 +104,23 @@ public class Either<L, R>
   {
     if (isValue()) {
       return value;
+    } else if (error instanceof EitherException) {
+      throw (EitherException) error;
     } else if (error instanceof Throwable) {
       // Always wrap Throwable, even if we could throw it directly, to provide additional context
       // about where the exception happened (we want the current stack frame in the trace).
-      throw new RuntimeException((Throwable) error);
+      throw new EitherException((Throwable) error);
     } else {
-      throw new RuntimeException(error.toString());
+      throw new EitherException(error.toString());
     }
   }
 
   /**
    * Applies a function to this value, if present.
-   *
+   * <br/>
    * If the mapping function throws an exception, it is thrown by this method instead of being packed up into
    * the returned Either.
-   *
+   * <br/>
    * If this Either represents an error, the mapping function is not applied.
    *
    * @throws NullPointerException if the mapping function returns null
