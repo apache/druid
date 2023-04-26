@@ -152,10 +152,7 @@ public class KubernetesTaskRunnerConfig
         graceTerminationPeriodSeconds,
         this.graceTerminationPeriodSeconds
     );
-    this.disableClientProxy = ObjectUtils.defaultIfNull(
-        disableClientProxy,
-        this.disableClientProxy
-    );
+    this.disableClientProxy = disableClientProxy;
     this.maxTaskDuration = ObjectUtils.defaultIfNull(
         maxTaskDuration,
         this.maxTaskDuration
