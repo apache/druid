@@ -126,7 +126,7 @@ public class MSQWorkerTaskLauncher
 
   // workers that failed, but without active work orders. There is no need to retry these unless a future stage
   // requires it.
-  private final Set<Integer> failedWorkersWithoutWorkOrders = ConcurrentHashMap.newKeySet();
+  private final Set<Integer> failedInactiveWorkers = ConcurrentHashMap.newKeySet();
 
   private final ConcurrentHashMap<Integer, List<String>> workerToTaskIds = new ConcurrentHashMap<>();
   private final RetryTask retryTask;
@@ -226,12 +226,12 @@ public class MSQWorkerTaskLauncher
   public void launchTasksIfNeeded(final int taskCount) throws InterruptedException
   {
     // Fetch the list of workers which failed without work orders
-    Iterator<Integer> iterator = failedWorkersWithoutWorkOrders.iterator();
+    Iterator<Integer> iterator = failedInactiveWorkers.iterator();
     while (iterator.hasNext()) {
       Integer workerNumber = iterator.next();
       // If the controller expects the task to be running, queue it for retry
       if (workerNumber < taskCount) {
-        submitForRelaunch(workerNumber, true);
+        submitForRelaunch(workerNumber);
         iterator.remove();
       }
     }
@@ -257,15 +257,19 @@ public class MSQWorkerTaskLauncher
    * Queues worker for relaunch. A noop if the worker is already in the queue.
    *
    * @param workerNumber worker number
-   * @param retryNow if the worker should be restarted immediately or just registered as failed to retry next stage
    */
-  public void submitForRelaunch(int workerNumber, boolean retryNow)
+  public void submitForRelaunch(int workerNumber)
   {
-    if (retryNow) {
-      workersToRelaunch.add(workerNumber);
-    } else {
-      failedWorkersWithoutWorkOrders.add(workerNumber);
-    }
+    workersToRelaunch.add(workerNumber);
+  }
+
+  /**
+   * Report a worker that failed without active orders. To be retried if it is requried for future stages only.
+   * @param workerNumber worker number
+   */
+  public void reportFailedInactiveWorker(int workerNumber)
+  {
+    failedInactiveWorkers.add(workerNumber);
   }
 
   /**
