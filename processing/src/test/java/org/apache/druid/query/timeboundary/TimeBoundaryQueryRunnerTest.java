@@ -46,6 +46,7 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -66,7 +67,7 @@ import java.util.List;
 /**
  */
 @RunWith(Parameterized.class)
-public class TimeBoundaryQueryRunnerTest
+public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
 {
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
