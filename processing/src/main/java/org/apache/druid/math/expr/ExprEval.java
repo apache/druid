@@ -355,7 +355,7 @@ public abstract class ExprEval<T>
       case STRING:
         return ExprEval.of(String.valueOf(value));
       default:
-        throw new IllegalArgumentException("invalid type " + type);
+        throw new IllegalArgumentException("Invalid type, cannot coerce [" + type + "] to boolean");
     }
   }
 
@@ -854,7 +854,7 @@ public abstract class ExprEval<T>
             return ExprEval.ofComplex(castTo, value);
           }
       }
-      throw new IAE("invalid type cannot cast " + type() + " to " + castTo);
+      throw invalidCast(type(), castTo);
     }
 
     @Override
@@ -932,7 +932,7 @@ public abstract class ExprEval<T>
             return ExprEval.ofComplex(castTo, value);
           }
       }
-      throw new IAE("invalid type cannot cast " + type() + " to " + castTo);
+      throw invalidCast(type(), castTo);
     }
 
     @Override
@@ -1107,7 +1107,7 @@ public abstract class ExprEval<T>
             return ExprEval.ofComplex(castTo, value);
           }
       }
-      throw new IAE("invalid type cannot cast " + type() + " to " + castTo);
+      throw invalidCast(type(), castTo);
     }
 
     @Override
@@ -1295,7 +1295,7 @@ public abstract class ExprEval<T>
           }
       }
 
-      throw new IAE("invalid type cannot cast " + type() + " to " + castTo);
+      throw invalidCast(type(), castTo);
     }
 
     @Override
@@ -1442,7 +1442,7 @@ public abstract class ExprEval<T>
           return bestEffortOf.castTo(castTo);
         }
       }
-      throw new IAE("invalid type cannot cast " + expressionType + " to " + castTo);
+      throw invalidCast(expressionType, castTo);
     }
 
     @Override
@@ -1450,5 +1450,10 @@ public abstract class ExprEval<T>
     {
       return new ComplexExpr(expressionType, value);
     }
+  }
+
+  public static IAE invalidCast(ExpressionType fromType, ExpressionType toType)
+  {
+    return new IAE("Invalid type, cannot cast [" + fromType + "] to [" + toType + "]");
   }
 }

@@ -272,7 +272,7 @@ public class EvalTest extends InitializedNullHandlingTest
         IAE.class,
         () -> ExprEval.ofStringArray(new String[]{"foo", "bar"}).castTo(ExpressionType.STRING)
     );
-    Assert.assertEquals("invalid type cannot cast ARRAY<STRING> to STRING", t.getMessage());
+    Assert.assertEquals("Invalid type, cannot cast [ARRAY<STRING>] to [STRING]", t.getMessage());
   }
 
   @Test
@@ -282,7 +282,7 @@ public class EvalTest extends InitializedNullHandlingTest
         IAE.class,
         () -> ExprEval.ofStringArray(new String[]{"foo", "bar"}).castTo(ExpressionType.LONG)
     );
-    Assert.assertEquals("invalid type cannot cast ARRAY<STRING> to LONG", t.getMessage());
+    Assert.assertEquals("Invalid type, cannot cast [ARRAY<STRING>] to [LONG]", t.getMessage());
   }
 
   @Test
@@ -292,7 +292,7 @@ public class EvalTest extends InitializedNullHandlingTest
         IAE.class,
         () -> ExprEval.ofStringArray(new String[]{"foo", "bar"}).castTo(ExpressionType.DOUBLE)
     );
-    Assert.assertEquals("invalid type cannot cast ARRAY<STRING> to DOUBLE", t.getMessage());
+    Assert.assertEquals("Invalid type, cannot cast [ARRAY<STRING>] to [DOUBLE]", t.getMessage());
   }
 
   @Test
@@ -302,7 +302,7 @@ public class EvalTest extends InitializedNullHandlingTest
         IAE.class,
         () -> ExprEval.ofLongArray(new Long[]{1L, 2L}).castTo(ExpressionType.STRING)
     );
-    Assert.assertEquals("invalid type cannot cast ARRAY<LONG> to STRING", t.getMessage());
+    Assert.assertEquals("Invalid type, cannot cast [ARRAY<LONG>] to [STRING]", t.getMessage());
   }
 
   @Test
@@ -312,7 +312,7 @@ public class EvalTest extends InitializedNullHandlingTest
         IAE.class,
         () -> ExprEval.ofLongArray(new Long[]{1L, 2L}).castTo(ExpressionType.LONG)
     );
-    Assert.assertEquals("invalid type cannot cast ARRAY<LONG> to LONG", t.getMessage());
+    Assert.assertEquals("Invalid type, cannot cast [ARRAY<LONG>] to [LONG]", t.getMessage());
   }
 
   @Test
@@ -322,7 +322,7 @@ public class EvalTest extends InitializedNullHandlingTest
         IAE.class,
         () -> ExprEval.ofLongArray(new Long[]{1L, 2L}).castTo(ExpressionType.DOUBLE)
     );
-    Assert.assertEquals("invalid type cannot cast ARRAY<LONG> to DOUBLE", t.getMessage());
+    Assert.assertEquals("Invalid type, cannot cast [ARRAY<LONG>] to [DOUBLE]", t.getMessage());
   }
 
   @Test
@@ -332,7 +332,7 @@ public class EvalTest extends InitializedNullHandlingTest
         IAE.class,
         () -> ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).castTo(ExpressionType.STRING)
     );
-    Assert.assertEquals("invalid type cannot cast ARRAY<DOUBLE> to STRING", t.getMessage());
+    Assert.assertEquals("Invalid type, cannot cast [ARRAY<DOUBLE>] to [STRING]", t.getMessage());
   }
 
   @Test
@@ -342,7 +342,7 @@ public class EvalTest extends InitializedNullHandlingTest
         IAE.class,
         () -> ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).castTo(ExpressionType.LONG)
     );
-    Assert.assertEquals("invalid type cannot cast ARRAY<DOUBLE> to LONG", t.getMessage());
+    Assert.assertEquals("Invalid type, cannot cast [ARRAY<DOUBLE>] to [LONG]", t.getMessage());
   }
 
   @Test
@@ -352,7 +352,7 @@ public class EvalTest extends InitializedNullHandlingTest
         IAE.class,
         () -> ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).castTo(ExpressionType.DOUBLE)
     );
-    Assert.assertEquals("invalid type cannot cast ARRAY<DOUBLE> to DOUBLE", t.getMessage());
+    Assert.assertEquals("Invalid type, cannot cast [ARRAY<DOUBLE>] to [DOUBLE]", t.getMessage());
   }
 
   @Test
@@ -448,6 +448,53 @@ public class EvalTest extends InitializedNullHandlingTest
             )
         ).asArray()
     );
+  }
+
+  @Test
+  public void testNonNestedComplexCastThrows()
+  {
+    ExpressionType someComplex = ExpressionTypeFactory.getInstance().ofComplex("tester");
+    Throwable t = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> ExprEval.ofType(someComplex, "hello").castTo(ExpressionType.STRING)
+    );
+    Assert.assertEquals("Invalid type, cannot cast [COMPLEX<tester>] to [STRING]", t.getMessage());
+
+    t = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> ExprEval.ofType(someComplex, "hello").castTo(ExpressionType.LONG)
+    );
+    Assert.assertEquals("Invalid type, cannot cast [COMPLEX<tester>] to [LONG]", t.getMessage());
+
+    t = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> ExprEval.ofType(someComplex, "hello").castTo(ExpressionType.DOUBLE)
+    );
+    Assert.assertEquals("Invalid type, cannot cast [COMPLEX<tester>] to [DOUBLE]", t.getMessage());
+
+    t = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> ExprEval.ofType(someComplex, "hello").castTo(ExpressionType.STRING_ARRAY)
+    );
+    Assert.assertEquals("Invalid type, cannot cast [COMPLEX<tester>] to [ARRAY<STRING>]", t.getMessage());
+
+    t = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> ExprEval.ofType(someComplex, "hello").castTo(ExpressionType.LONG_ARRAY)
+    );
+    Assert.assertEquals("Invalid type, cannot cast [COMPLEX<tester>] to [ARRAY<LONG>]", t.getMessage());
+
+    t = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> ExprEval.ofType(someComplex, "hello").castTo(ExpressionType.DOUBLE_ARRAY)
+    );
+    Assert.assertEquals("Invalid type, cannot cast [COMPLEX<tester>] to [ARRAY<DOUBLE>]", t.getMessage());
+
+    t = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> ExprEval.ofType(someComplex, "hello").castTo(ExpressionType.NESTED_DATA)
+    );
+    Assert.assertEquals("Invalid type, cannot cast [COMPLEX<tester>] to [COMPLEX<json>]", t.getMessage());
   }
 
   @Test
