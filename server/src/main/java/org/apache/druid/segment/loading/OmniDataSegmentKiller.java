@@ -54,7 +54,7 @@ public class OmniDataSegmentKiller implements DataSegmentKiller
   }
 
   @Override
-  public void killBatched(List<DataSegment> segments) throws SegmentLoadingException
+  public void kill(List<DataSegment> segments) throws SegmentLoadingException
   {
     Map<DataSegmentKiller, List<DataSegment>> killersToSegments = new HashMap<>();
     for (DataSegment segment : segments) {
@@ -65,7 +65,7 @@ public class OmniDataSegmentKiller implements DataSegmentKiller
       }
     }
     for (Map.Entry<DataSegmentKiller, List<DataSegment>> killerAndSegments : killersToSegments.entrySet()) {
-      killerAndSegments.getKey().killBatched(killerAndSegments.getValue());
+      killerAndSegments.getKey().kill(killerAndSegments.getValue());
     }
   }
 

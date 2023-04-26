@@ -71,7 +71,7 @@ public class S3DataSegmentKiller implements DataSegmentKiller
   }
 
   @Override
-  public void killBatched(List<DataSegment> segments) throws SegmentLoadingException
+  public void kill(List<DataSegment> segments) throws SegmentLoadingException
   {
     int size = segments.size();
     if (size == 0) {
@@ -111,7 +111,7 @@ public class S3DataSegmentKiller implements DataSegmentKiller
         throw new SegmentLoadingException(e, "Couldn't kill all segment but deleted[%s]: [%s]", e.getDeletedObjects(), e);
       }
       catch (AmazonServiceException e) {
-
+        throw new SegmentLoadingException(e, "Couldn't kill segments[%s]:", e);
       }
     }
   }

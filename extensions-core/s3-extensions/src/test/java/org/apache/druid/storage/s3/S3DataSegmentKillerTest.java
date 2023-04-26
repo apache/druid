@@ -21,12 +21,17 @@ package org.apache.druid.storage.s3;
 
 import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
+import com.amazonaws.services.s3.model.DeleteObjectsResult;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
@@ -213,4 +218,95 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     Assert.assertTrue(ioExceptionThrown);
     EasyMock.verify(s3Client, segmentPusherConfig, inputDataConfig);
   }
+
+  @Test
+  public void test_kill_singleSegment_doesntexist_passes() throws SegmentLoadingException
+  {
+    EasyMock.expect(s3Client.doesObjectExist(TEST_BUCKET, "/"+KEY_1+"/")).andReturn(false);
+    EasyMock.expectLastCall().once();
+    EasyMock.expect(s3Client.doesObjectExist(TEST_BUCKET, "/"+KEY_1+"/descriptor.json")).andReturn(false);
+    EasyMock.expectLastCall().once();
+    EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
+
+    segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
+    segmentKiller.kill(DATA_SEGMENT);
+  }
+
+  @Test
+  public void test_kill_singleSegment_exists_passes() throws SegmentLoadingException
+  {
+    EasyMock.expect(s3Client.doesObjectExist(TEST_BUCKET, KEY_1+"/")).andReturn(true);
+    EasyMock.expectLastCall().once();
+
+    s3Client.deleteObject(TEST_BUCKET, KEY_1+"/");
+    EasyMock.expectLastCall().andVoid();
+
+    EasyMock.expect(s3Client.doesObjectExist(TEST_BUCKET, KEY_1+"/descriptor.json")).andReturn(true);
+    EasyMock.expectLastCall().once();
+
+    s3Client.deleteObject(TEST_BUCKET, KEY_1+"/descriptor.json");
+    EasyMock.expectLastCall().andVoid();
+
+    EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
+
+    segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
+    segmentKiller.kill(DATA_SEGMENT);
+  }
+
+  @Test
+  public void test_kill_listOfOneSegment() throws SegmentLoadingException
+  {
+    EasyMock.expect(s3Client.doesObjectExist(TEST_BUCKET, KEY_1+"/")).andReturn(true);
+    EasyMock.expectLastCall().once();
+
+    s3Client.deleteObject(TEST_BUCKET, KEY_1+"/");
+    EasyMock.expectLastCall().andVoid();
+
+    EasyMock.expect(s3Client.doesObjectExist(TEST_BUCKET, KEY_1+"/descriptor.json")).andReturn(true);
+    EasyMock.expectLastCall().once();
+
+    s3Client.deleteObject(TEST_BUCKET, KEY_1+"/descriptor.json");
+    EasyMock.expectLastCall().andVoid();
+
+
+    EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
+    segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
+    segmentKiller.kill(ImmutableList.of(DATA_SEGMENT));
+  }
+
+  @Test
+  public void test_kill_listOfNoSegments() throws SegmentLoadingException
+  {
+    EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
+    segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
+    segmentKiller.kill(ImmutableList.of());
+    // has an assertion error if there is an unexpected method call
+  }
+
+  @Test
+  public void test_kill_listOfSegments() throws SegmentLoadingException
+  {
+    DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(TEST_BUCKET);
+    deleteObjectsRequest.withKeys(KEY_1+"/", KEY_1+"/");
+    // struggled with the idea of making it match on equaling this
+    EasyMock.expect(s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class))).andReturn(new DeleteObjectsResult(ImmutableList.of()));
+    EasyMock.expectLastCall().times(2);
+
+
+    EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
+    segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
+    segmentKiller.kill(ImmutableList.of(DATA_SEGMENT, DATA_SEGMENT));
+  }
+
+  private static final DataSegment DATA_SEGMENT = new DataSegment(
+      "test",
+      Intervals.of("2015-04-12/2015-04-13"),
+      "1",
+      ImmutableMap.of("bucket", TEST_BUCKET, "key", KEY_1+"/"),
+      null,
+      null,
+      NoneShardSpec.instance(),
+      0,
+      1
+  );
 }
