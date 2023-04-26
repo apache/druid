@@ -243,7 +243,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     // is JSON_VALUE which only returns literals, so use the literal value selector instead
     return processFromRaw
            ? new RawFieldColumnSelector(baseSelector, parts)
-           : new RawFieldLiteralColumnValueSelector(baseSelector, parts, expectedType);
+           : new RawFieldLiteralColumnValueSelector(baseSelector, parts);
   }
 
   @Nullable
@@ -1110,8 +1110,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   {
     public RawFieldLiteralColumnValueSelector(
         ColumnValueSelector baseSelector,
-        List<NestedPathPart> parts,
-        ColumnType expectedType
+        List<NestedPathPart> parts
     )
     {
       super(baseSelector, parts);
