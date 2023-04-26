@@ -612,10 +612,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     Assert.assertEquals(TaskLocation.unknown(), peonLifecycle.getTaskLocation());
   }
 
-  private void setPeonLifecycleState(
-      KubernetesPeonLifecycle peonLifecycle,
-      KubernetesPeonLifecycle.State state
-  )
+  private void setPeonLifecycleState(KubernetesPeonLifecycle peonLifecycle, KubernetesPeonLifecycle.State state)
       throws NoSuchFieldException, IllegalAccessException
   {
     Field stateField = peonLifecycle.getClass().getDeclaredField("state");
