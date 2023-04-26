@@ -171,6 +171,12 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
                   grandTotals[i] = aggregatorFactory.combine(grandTotals[i], value);
                 }
               }
+              try {
+                Thread.sleep(1500);
+              }
+              catch (InterruptedException e) {
+                throw new RuntimeException(e);
+              }
               return resultValue;
             }
         );
@@ -184,6 +190,12 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
 
                       for (int i = 0; i < query.getAggregatorSpecs().size(); i++) {
                         totalsMap.put(query.getAggregatorSpecs().get(i).getName(), grandTotals[i]);
+                      }
+                      try {
+                        Thread.sleep(1500);
+                      }
+                      catch (InterruptedException e) {
+                        throw new RuntimeException(e);
                       }
 
                       final Result<TimeseriesResultValue> result = new Result<>(

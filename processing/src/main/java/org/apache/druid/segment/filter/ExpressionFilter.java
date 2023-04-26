@@ -312,21 +312,7 @@ public class ExpressionFilter implements Filter
       @Override
       public Predicate<Object> makeObjectPredicate()
       {
-        return new Predicate<Object>()
-        {
-          @Override
-          public boolean apply(@Nullable Object input)
-          {
-            if (input instanceof Long) {
-              return Evals.asBoolean((Long) input);
-            } else if (input instanceof Double) {
-              return Evals.asBoolean((Double) input);
-            } else if (input instanceof String) {
-              return Evals.asBoolean((String) input);
-            }
-            return Evals.asBoolean(null);
-          }
-        };
+        return Evals::objectAsBoolean;
       }
 
       // The hashcode and equals are to make SubclassesMustOverrideEqualsAndHashCodeTest stop complaining..

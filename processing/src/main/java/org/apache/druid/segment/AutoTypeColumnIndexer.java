@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -36,7 +37,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
-import org.apache.druid.segment.nested.CompressedNestedDataComplexColumn;
 import org.apache.druid.segment.nested.FieldTypeInfo;
 import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
@@ -407,7 +407,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
     if (root == null || !root.isSingleType()) {
       return null;
     }
-    final Object defaultValue = CompressedNestedDataComplexColumn.getDefaultValueForType(
+    final Object defaultValue = getDefaultValueForType(
         root.getTypes().getSingleType()
     );
     return new ColumnValueSelector<Object>()
@@ -613,5 +613,20 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
                                    .setType(logicalType)
                                    .setHasNulls(hasNulls);
     }
+  }
+
+  @Nullable
+  private static Object getDefaultValueForType(@Nullable ColumnType columnType)
+  {
+    if (NullHandling.replaceWithDefault()) {
+      if (columnType != null) {
+        if (ColumnType.LONG.equals(columnType) || ColumnType.LONG.equals(columnType.getElementType())) {
+          return NullHandling.defaultLongValue();
+        } else if (ColumnType.DOUBLE.equals(columnType) || ColumnType.DOUBLE.equals(columnType.getElementType())) {
+          return NullHandling.defaultDoubleValue();
+        }
+      }
+    }
+    return null;
   }
 }

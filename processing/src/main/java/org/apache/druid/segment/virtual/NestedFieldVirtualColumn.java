@@ -611,16 +611,11 @@ public class NestedFieldVirtualColumn implements VirtualColumn
           return new VectorValueSelector()
           {
             private int currentOffsetId = ReadableVectorInspector.NULL_ID;
-            @Nullable
             private long[] longs = new long[delegate.getMaxVectorSize()];
-            @Nullable
             private double[] doubles = new double[delegate.getMaxVectorSize()];
-
-            @Nullable
             private float[] floats = new float[delegate.getMaxVectorSize()];
-
-            @Nullable
             private boolean[] nulls = new boolean[delegate.getMaxVectorSize()];
+
             @Override
             public long[] getLongVector()
             {
@@ -665,6 +660,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
             private void computeNumbers()
             {
               if (currentOffsetId != offset.getId()) {
+                currentOffsetId = offset.getId();
                 final Object[] values = delegate.getObjectVector();
                 for (int i = 0; i < values.length; i++) {
                   Number n = ExprEval.computeNumber(Evals.asString(values[i]));

@@ -191,6 +191,13 @@ public class TimeseriesQueryEngine
                     while (!cursor.isDone()) {
                       granularizer.setCurrentOffsets(bucketInterval);
 
+                      try {
+                        Thread.sleep(1500);
+                      }
+                      catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                      }
+
                       if (granularizer.getEndOffset() > granularizer.getStartOffset()) {
                         if (emptyBucket) {
                           aggregators.init(buffer, 0);

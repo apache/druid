@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategiesTest;
+import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -447,6 +448,52 @@ public class EvalTest extends InitializedNullHandlingTest
                 ImmutableMap.of("x", 3, "y", 4)
             )
         ).asArray()
+    );
+  }
+
+  @Test
+  public void testNestedAsBoolean()
+  {
+    Assert.assertTrue(
+        ExprEval.ofComplex(ExpressionType.NESTED_DATA, StructuredData.wrap(true)).asBoolean()
+    );
+    Assert.assertTrue(
+        ExprEval.ofComplex(ExpressionType.NESTED_DATA, true).asBoolean()
+    );
+    Assert.assertTrue(
+        ExprEval.ofComplex(ExpressionType.NESTED_DATA, StructuredData.wrap("true")).asBoolean()
+    );
+    Assert.assertTrue(
+        ExprEval.ofComplex(ExpressionType.NESTED_DATA, "true").asBoolean()
+    );
+    Assert.assertTrue(
+        ExprEval.ofComplex(ExpressionType.NESTED_DATA, "TRUE").asBoolean()
+    );
+    Assert.assertTrue(
+        ExprEval.ofComplex(ExpressionType.NESTED_DATA, "True").asBoolean()
+    );
+    Assert.assertTrue(
+        ExprEval.ofComplex(ExpressionType.NESTED_DATA, StructuredData.wrap(1L)).asBoolean()
+    );
+    Assert.assertTrue(
+        ExprEval.ofComplex(ExpressionType.NESTED_DATA, 1L).asBoolean()
+    );
+    Assert.assertTrue(
+        ExprEval.ofComplex(ExpressionType.NESTED_DATA, StructuredData.wrap(true)).asBoolean()
+    );
+    Assert.assertTrue(
+        ExprEval.ofComplex(ExpressionType.NESTED_DATA, true).asBoolean()
+    );
+
+
+    Assert.assertFalse(
+        ExprEval.ofComplex(
+            ExpressionType.NESTED_DATA,
+            ImmutableList.of(
+                ImmutableMap.of("x", 1, "y", 2),
+                ImmutableMap.of("x", 3, "y", 4)
+            )
+        ).asBoolean()
     );
   }
 

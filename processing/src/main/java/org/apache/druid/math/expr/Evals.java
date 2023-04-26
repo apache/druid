@@ -69,6 +69,20 @@ public class Evals
     return !NullHandling.isNullOrEquivalent(x) && Boolean.parseBoolean(x);
   }
 
+  public static boolean objectAsBoolean(Object val)
+  {
+    if (val instanceof Boolean) {
+      return (Boolean) val;
+    } else if (val instanceof String) {
+      return Evals.asBoolean((String) val);
+    } else if (val instanceof Long) {
+      return Evals.asBoolean((Long) val);
+    } else if (val instanceof Number) {
+      return Evals.asBoolean(((Number) val).doubleValue());
+    }
+    return false;
+  }
+
   /**
    * Call {@link Object#toString()} on a non-null value
    */

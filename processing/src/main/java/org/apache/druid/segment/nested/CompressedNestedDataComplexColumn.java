@@ -538,15 +538,11 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
         DictionaryEncodedColumn<?> col = (DictionaryEncodedColumn<?>) getColumnHolder(arrayField, arrayFieldIndex).getColumn();
         ColumnValueSelector arraySelector = col.makeColumnValueSelector(readableOffset);
         final FieldTypeInfo.TypeSet types = fieldInfo.getTypes(arrayFieldIndex);
-        final Object defaultValue = getDefaultValueForType(types.getSingleType());
         return new ColumnValueSelector<Object>()
         {
           @Override
           public boolean isNull()
           {
-            if (NullHandling.replaceWithDefault()) {
-              return false;
-            }
             Object o = getObject();
             return !(o instanceof Number);
           }
@@ -586,14 +582,10 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
             if (o instanceof Object[]) {
               Object[] array = (Object[]) o;
               if (elementNumber < array.length) {
-                final Object element = array[elementNumber];
-                if (element == null) {
-                  return defaultValue;
-                }
-                return element;
+                return array[elementNumber];
               }
             }
-            return defaultValue;
+            return null;
           }
 
           @Override
@@ -605,28 +597,6 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       }
     }
     return NilColumnValueSelector.instance();
-  }
-
-  @Nullable
-  public static Object getDefaultValueForType(@Nullable ColumnType columnType)
-  {
-    final Object defaultValue;
-    if (NullHandling.replaceWithDefault()) {
-      if (columnType != null) {
-        if (ColumnType.LONG.equals(columnType) || ColumnType.LONG.equals(columnType.getElementType())) {
-          defaultValue = NullHandling.defaultLongValue();
-        } else if (ColumnType.DOUBLE.equals(columnType) || ColumnType.DOUBLE.equals(columnType.getElementType())) {
-          defaultValue = NullHandling.defaultDoubleValue();
-        } else {
-          defaultValue = null;
-        }
-      } else {
-        defaultValue = null;
-      }
-    } else {
-      defaultValue = null;
-    }
-    return defaultValue;
   }
 
   @Override
@@ -667,8 +637,6 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
         }
         DictionaryEncodedColumn<?> col = (DictionaryEncodedColumn<?>) getColumnHolder(arrayField, arrayFieldIndex).getColumn();
         VectorObjectSelector arraySelector = col.makeVectorObjectSelector(readableOffset);
-        FieldTypeInfo.TypeSet types = fieldInfo.getTypes(arrayFieldIndex);
-        final Object defaultValue = getDefaultValueForType(types.getSingleType());
 
         return new VectorObjectSelector()
         {
@@ -686,16 +654,12 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
                   Object[] anArray = (Object[]) maybeArray;
                   if (elementNumber < anArray.length) {
                     final Object element = anArray[elementNumber];
-                    if (element == null) {
-                      elements[i] = defaultValue;
-                    } else {
-                      elements[i] = element;
-                    }
+                    elements[i] = element;
                   } else {
-                    elements[i] = defaultValue;
+                    elements[i] = null;
                   }
                 } else {
-                  elements[i] = defaultValue;
+                  elements[i] = null;
                 }
               }
               id = readableOffset.getId();

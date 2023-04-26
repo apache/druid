@@ -1385,14 +1385,8 @@ public abstract class ExprEval<T>
     {
       if (ExpressionType.NESTED_DATA.equals(expressionType)) {
         Object val = StructuredData.unwrap(value);
-        if (val instanceof Boolean) {
-          return (Boolean) val;
-        } else if (val instanceof String) {
-          return Evals.asBoolean((String) val);
-        } else if (val instanceof Long) {
-          return Evals.asBoolean((Long) val);
-        } else if (val instanceof Double) {
-          return Evals.asBoolean((Double) val);
+        if (val != null) {
+          return Evals.objectAsBoolean(val);
         }
       }
       return false;
