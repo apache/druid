@@ -35,7 +35,7 @@ import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollectorImpl;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
-import org.apache.druid.query.lookup.LookupReferencesManager;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 
@@ -563,7 +563,8 @@ public class WorkerMemoryParameters
     // Subtract memory taken up by lookups. Correctness of this operation depends on lookups being loaded *before*
     // we create this instance. Luckily, this is the typical mode of operation, since by default
     // druid.lookup.enableLookupSyncOnStartup = true.
-    final LookupReferencesManager lookupManager = injector.getInstance(LookupReferencesManager.class);
+    final LookupExtractorFactoryContainerProvider lookupManager =
+        injector.getInstance(LookupExtractorFactoryContainerProvider.class);
 
     int lookupCount = 0;
     long lookupFootprint = 0;

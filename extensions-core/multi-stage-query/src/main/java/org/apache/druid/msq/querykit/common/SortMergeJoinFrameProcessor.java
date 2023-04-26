@@ -577,7 +577,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
      */
     public boolean hasCompletelyNonNullMark()
     {
-      return hasMark() && !holders.get(markFrame).comparisonWidget.isPartiallyNullKey(markRow);
+      return hasMark() && holders.get(markFrame).comparisonWidget.isCompletelyNonNullKey(markRow);
     }
 
     /**

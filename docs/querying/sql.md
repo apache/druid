@@ -250,8 +250,8 @@ Add "EXPLAIN PLAN FOR" to the beginning of any query to get information about ho
 the query will not actually be executed. Refer to the [Query translation](sql-translation.md#interpreting-explain-plan-output)
 documentation for more information on the output of EXPLAIN PLAN.
 
-> Be careful when interpreting EXPLAIN PLAN output, and use [request logging](../configuration/index.md#request-logging) if in doubt.
-Request logs show the exact native query that will be run.
+> For the legacy plan, be careful when interpreting EXPLAIN PLAN output, and use [request logging](../configuration/index.md#request-logging) if in doubt.
+Request logs show the exact native query that will be run. Alternatively, to see the native query plan, set `useNativeQueryExplain` to true in the query context.
 
 ## Identifiers and literals
 

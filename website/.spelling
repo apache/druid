@@ -19,6 +19,7 @@
 # one word per line, to define a file override use ' - filename'
 # where filename is relative to this configuration file
 1M
+100MiB
 32-bit
 500MiB
 64-bit
@@ -475,6 +476,7 @@ smooshed
 splittable
 ssl
 sslmode
+start_time
 stdout
 storages
 stringDictionaryEncoding
@@ -744,6 +746,7 @@ APPROX_QUANTILE_FIXED_BUCKETS
 100x
  - ../docs/configuration/logging.md
 _common
+appender
 appenders
  - ../docs/design/deep-storage.md
 druid-hdfs-storage

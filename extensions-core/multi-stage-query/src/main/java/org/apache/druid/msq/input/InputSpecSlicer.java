@@ -26,6 +26,9 @@ import java.util.List;
  */
 public interface InputSpecSlicer
 {
+  /**
+   * Whether {@link #sliceDynamic(InputSpec, int, int, long)} is usable for a given {@link InputSpec}.
+   */
   boolean canSliceDynamic(InputSpec inputSpec);
 
   /**
@@ -51,6 +54,8 @@ public interface InputSpecSlicer
    * {@link org.apache.druid.msq.kernel.StageDefinition} would be created with two {@link InputSpec} other than
    * {@link org.apache.druid.msq.input.stage.StageInputSpec} (which is not dynamically splittable, so would not
    * use this method anyway). If this changes in the future, we'll want to revisit the design of this method.
+   *
+   * @throws UnsupportedOperationException if {@link #canSliceDynamic(InputSpec)} returns false
    */
   List<InputSlice> sliceDynamic(InputSpec inputSpec, int maxNumSlices, int maxFilesPerSlice, long maxBytesPerSlice);
 }

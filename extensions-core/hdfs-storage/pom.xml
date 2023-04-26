@@ -45,6 +45,12 @@
           <artifactId>hadoop-aws</artifactId>
           <version>${hadoop.compile.version}</version>
           <scope>runtime</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>com.amazonaws</groupId>
+              <artifactId>aws-java-sdk-bundle</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>
@@ -137,7 +143,10 @@
     <profile>
       <id>hadoop2</id>
       <activation>
-        <activeByDefault>true</activeByDefault>
+        <property>
+          <name>hadoop2.enabled</name>
+          <value>true</value>
+        </property>
       </activation>
       <dependencies>
         <dependency>
@@ -423,10 +432,7 @@
     <profile>
       <id>hadoop3</id>
       <activation>
-        <property>
-          <name>hadoop3.enabled</name>
-          <value>true</value>
-        </property>
+        <activeByDefault>true</activeByDefault>
       </activation>
       <dependencies>
         <dependency>
@@ -446,6 +452,12 @@
           <artifactId>hadoop-client-minicluster</artifactId>
           <version>${hadoop.compile.version}</version>
           <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>com.amazonaws</groupId>
+          <artifactId>aws-java-sdk-s3</artifactId>
+          <version>${aws.sdk.version}</version>
+          <scope>runtime</scope>
         </dependency>
         <dependency>
           <groupId>log4j</groupId>

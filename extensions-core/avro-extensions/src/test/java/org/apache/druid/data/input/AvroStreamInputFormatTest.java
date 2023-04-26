@@ -102,10 +102,12 @@ public class AvroStreamInputFormatTest extends InitializedNullHandlingTest
   private static final String EVENT_TYPE = "eventType";
   private static final String ID = "id";
   private static final String SOME_OTHER_ID = "someOtherId";
+  private static final String NESTED_ARRAY_VAL = "nestedArrayVal";
   private static final String IS_VALID = "isValid";
   private static final String TOPIC = "aTopic";
-  static final List<String> DIMENSIONS = Arrays.asList(EVENT_TYPE, ID, SOME_OTHER_ID, IS_VALID);
+  static final List<String> DIMENSIONS = Arrays.asList(EVENT_TYPE, ID, SOME_OTHER_ID, IS_VALID, NESTED_ARRAY_VAL);
   private static final List<String> DIMENSIONS_SCHEMALESS = Arrays.asList(
+      NESTED_ARRAY_VAL,
       SOME_OTHER_ID,
       "someIntArray",
       "someFloat",
@@ -135,7 +137,9 @@ public class AvroStreamInputFormatTest extends InitializedNullHandlingTest
     flattenSpec = new JSONPathSpec(
       true,
       ImmutableList.of(
-          new JSONPathFieldSpec(JSONPathFieldType.PATH, "nested", "someRecord.subLong")
+          new JSONPathFieldSpec(JSONPathFieldType.PATH, "nested", "someRecord.subLong"),
+          new JSONPathFieldSpec(JSONPathFieldType.PATH, "nestedArrayVal", "someRecordArray[?(@.nestedString=='string in record')].nestedString")
+
       )
   );
     for (Module jacksonModule : new AvroExtensionsModule().getJacksonModules()) {

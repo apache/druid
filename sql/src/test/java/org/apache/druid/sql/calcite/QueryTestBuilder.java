@@ -42,6 +42,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 /**
  * Gathers per-test information for a SQL query test. Information is of
@@ -96,9 +97,9 @@ public class QueryTestBuilder
   @Nullable
   protected Consumer<ExpectedException> expectedExceptionInitializer;
   protected boolean skipVectorize;
-  protected boolean msqCompatible;
+  protected boolean msqCompatible = true;
   protected boolean queryCannotVectorize;
-  protected boolean verifyNativeQueries = true;
+  protected Predicate<List<Query<?>>> verifyNativeQueries = xs -> true;
   protected AuthConfig authConfig = new AuthConfig();
   protected PlannerFixture plannerFixture;
   protected String expectedLogicalPlan;
@@ -169,29 +170,11 @@ public class QueryTestBuilder
     return this;
   }
 
-  public QueryTestBuilder setCustomRunners(
-      List<QueryTestRunner.QueryRunStepFactory> factories
-  )
-  {
-    this.customRunners = new ArrayList<>(factories);
-    return this;
-  }
-
-
   public QueryTestBuilder addCustomVerification(
       QueryTestRunner.QueryVerifyStepFactory factory
   )
   {
     this.customVerifications.add(factory);
-    return this;
-  }
-
-  public QueryTestBuilder setCustomVerifications(
-      List<QueryTestRunner.QueryVerifyStepFactory> factories
-  )
-  {
-    this.customVerifications = new ArrayList<>();
-    this.customVerifications.addAll(factories);
     return this;
   }
 
@@ -238,7 +221,7 @@ public class QueryTestBuilder
     return this;
   }
 
-  public QueryTestBuilder verifyNativeQueries(boolean verifyNativeQueries)
+  public QueryTestBuilder verifyNativeQueries(Predicate<List<Query<?>>> verifyNativeQueries)
   {
     this.verifyNativeQueries = verifyNativeQueries;
     return this;
@@ -280,10 +263,9 @@ public class QueryTestBuilder
     return this;
   }
 
-  public QueryTestBuilder expectedSqlSchema(SqlSchema querySchema)
+  public Map<String, Object> getQueryContext()
   {
-    this.expectedSqlSchema = querySchema;
-    return this;
+    return queryContext;
   }
 
   public List<Query<?>> getExpectedQueries()

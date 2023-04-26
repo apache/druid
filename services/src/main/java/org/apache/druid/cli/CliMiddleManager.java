@@ -47,6 +47,7 @@ import org.apache.druid.guice.MiddleManagerServiceModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
@@ -155,7 +156,7 @@ public class CliMiddleManager extends ServerRunnable
                 .in(LazySingleton.class);
             binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
 
-            bindWorkerManagementClasses(binder, isZkEnabled);
+            binder.install(makeWorkerManagementModule(isZkEnabled));
 
             binder.bind(JettyServerInitializer.class)
                   .to(MiddleManagerJettyServerInitializer.class)
@@ -230,18 +231,32 @@ public class CliMiddleManager extends ServerRunnable
     );
   }
 
-  public static void bindWorkerManagementClasses(Binder binder, boolean isZkEnabled)
+  public static Module makeWorkerManagementModule(boolean isZkEnabled)
   {
-    if (isZkEnabled) {
-      binder.bind(WorkerTaskManager.class).to(WorkerTaskMonitor.class);
-      binder.bind(WorkerTaskMonitor.class).in(ManageLifecycle.class);
-      binder.bind(WorkerCuratorCoordinator.class).in(ManageLifecycle.class);
-      LifecycleModule.register(binder, WorkerTaskMonitor.class);
-    } else {
-      binder.bind(WorkerTaskManager.class).in(ManageLifecycle.class);
-    }
+    return new Module()
+    {
+      @Override
+      public void configure(Binder binder)
+      {
+        if (isZkEnabled) {
+          binder.bind(WorkerTaskManager.class).to(WorkerTaskMonitor.class);
+          binder.bind(WorkerTaskMonitor.class).in(ManageLifecycle.class);
+          binder.bind(WorkerCuratorCoordinator.class).in(ManageLifecycle.class);
+          LifecycleModule.register(binder, WorkerTaskMonitor.class);
+        } else {
+          binder.bind(WorkerTaskManager.class).in(ManageLifecycle.class);
+        }
 
-    Jerseys.addResource(binder, WorkerResource.class);
-    Jerseys.addResource(binder, TaskManagementResource.class);
+        Jerseys.addResource(binder, WorkerResource.class);
+        Jerseys.addResource(binder, TaskManagementResource.class);
+      }
+
+      @Provides
+      @ManageLifecycle
+      public TaskStorageDirTracker getTaskStorageDirTracker(WorkerConfig workerConfig, TaskConfig taskConfig)
+      {
+        return TaskStorageDirTracker.fromConfigs(workerConfig, taskConfig);
+      }
+    };
   }
 }

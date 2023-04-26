@@ -173,8 +173,6 @@ public class MSQTaskSqlEngine implements SqlEngine
       final PlannerContext plannerContext
   ) throws ValidationException
   {
-    validateNoDuplicateAliases(fieldMappings);
-
     if (plannerContext.queryContext().containsKey(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)) {
       throw new ValidationException(
           StringUtils.format("Cannot use \"%s\" without INSERT", DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
@@ -248,7 +246,8 @@ public class MSQTaskSqlEngine implements SqlEngine
   }
 
   /**
-   * SQL allows multiple output columns with the same name, but multi-stage queries doesn't.
+   * SQL allows multiple output columns with the same name. However, we don't allow this for INSERT or REPLACE
+   * queries, because we use these output names to generate columns in segments. They must be unique.
    */
   private static void validateNoDuplicateAliases(final List<Pair<Integer, String>> fieldMappings)
       throws ValidationException
@@ -257,7 +256,7 @@ public class MSQTaskSqlEngine implements SqlEngine
 
     for (final Pair<Integer, String> field : fieldMappings) {
       if (!aliasesSeen.add(field.right)) {
-        throw new ValidationException("Duplicate field in SELECT: " + field.right);
+        throw new ValidationException("Duplicate field in SELECT: [" + field.right + "]");
       }
     }
   }

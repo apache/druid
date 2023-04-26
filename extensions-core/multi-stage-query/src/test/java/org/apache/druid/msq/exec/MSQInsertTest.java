@@ -138,6 +138,43 @@ public class MSQInsertTest extends MSQTestBase
   }
 
   @Test
+  public void testInsertWithExistingTimeColumn() throws IOException
+  {
+    List<Object[]> expectedRows = ImmutableList.of(
+        new Object[] {1678897351000L, "A"},
+        new Object[] {1679588551000L, "B"},
+        new Object[] {1682266951000L, "C"}
+    );
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("flags", ColumnType.STRING)
+                                            .build();
+
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this,
+                                                                    "/dataset-with-time-column.json"
+    );
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
+
+    testIngestQuery().setSql(" INSERT INTO foo1 SELECT\n"
+                             + "  __time,\n"
+                             + "  flags\n"
+                             + "FROM TABLE(\n"
+                             + "  EXTERN(\n"
+                             + "    '{ \"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
+                             + "    '{\"type\": \"json\"}',\n"
+                             + "    '[{\"name\": \"__time\", \"type\": \"long\"}, {\"name\": \"flags\", \"type\": \"string\"}]'\n"
+                             + "  )\n"
+                             + ") PARTITIONED BY day")
+                     .setQueryContext(context)
+                     .setExpectedResultRows(expectedRows)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .verifyResults();
+
+  }
+
+  @Test
   public void testInsertOnExternalDataSource() throws IOException
   {
     final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/wikipedia-sampled.json");
@@ -876,6 +913,30 @@ public class MSQInsertTest extends MSQTestBase
         .setQueryContext(context)
         .setExpectedMSQFault(new ColumnNameRestrictedFault("__bucket"))
         .verifyResults();
+  }
+
+  @Test
+  public void testInsertDuplicateColumnNames()
+  {
+    testIngestQuery()
+        .setSql(" insert into foo1 SELECT\n"
+                + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
+                + " namespace,\n"
+                + " \"user\" AS namespace\n"
+                + "FROM TABLE(\n"
+                + "  EXTERN(\n"
+                + "    '{ \"files\": [\"ignored\"],\"type\":\"local\"}',\n"
+                + "    '{\"type\": \"json\"}',\n"
+                + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"namespace\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}, {\"name\": \"__bucket\", \"type\": \"string\"}]'\n"
+                + "  )\n"
+                + ") PARTITIONED by day")
+        .setQueryContext(context)
+        .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
+            CoreMatchers.instanceOf(SqlPlanningException.class),
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                "Duplicate field in SELECT: [namespace]"))
+        ))
+        .verifyPlanningErrors();
   }
 
   @Test
