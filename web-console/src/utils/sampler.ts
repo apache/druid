@@ -32,6 +32,7 @@ import type {
   TransformSpec,
 } from '../druid-models';
 import {
+  DETECTION_TIMESTAMP_SPEC,
   getDimensionNamesFromTransforms,
   getDimensionSpecName,
   getSpecType,
@@ -343,7 +344,7 @@ export async function sampleForParser(
       ioConfig,
       dataSchema: {
         dataSource: 'sample',
-        timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : PLACEHOLDER_TIMESTAMP_SPEC,
+        timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : DETECTION_TIMESTAMP_SPEC,
         dimensionsSpec: {
           useSchemaDiscovery: true,
         },
