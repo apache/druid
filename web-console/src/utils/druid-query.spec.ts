@@ -18,7 +18,7 @@
 
 import { sane } from 'druid-query-toolkit';
 
-import { DruidError, getDruidErrorMessage, parseHtmlError } from './druid-query';
+import { DruidError, getDruidErrorMessage } from './druid-query';
 
 describe('DruidQuery', () => {
   describe('DruidError.parsePosition', () => {
@@ -198,13 +198,41 @@ describe('DruidQuery', () => {
     });
   });
 
-  describe('misc', () => {
-    it('parseHtmlError', () => {
-      expect(parseHtmlError('<div></div>')).toMatchInlineSnapshot(`undefined`);
+  describe('getDruidErrorMessage', () => {
+    it('works with regular error response', () => {
+      expect(
+        getDruidErrorMessage({
+          response: {
+            data: {
+              error: 'SQL parse failed',
+              errorMessage: 'Encountered "<EOF>" at line 1, column 26.\nWas expecting one of:...',
+              errorClass: 'org.apache.calcite.sql.parser.SqlParseException',
+              host: null,
+            },
+          },
+        }),
+      ).toEqual(`SQL parse failed / Encountered "<EOF>" at line 1, column 26.
+Was expecting one of:... / org.apache.calcite.sql.parser.SqlParseException`);
     });
 
-    it('parseHtmlError', () => {
-      expect(getDruidErrorMessage({})).toMatchInlineSnapshot(`undefined`);
+    it('works with task error response', () => {
+      expect(
+        getDruidErrorMessage({
+          response: {
+            data: {
+              taskId: '60a761ee-1ef5-437f-ae4c-adcc78c8a94c',
+              state: 'FAILED',
+              error: {
+                error: 'SQL parse failed',
+                errorMessage: 'Encountered "<EOF>" at line 1, column 26.\nWas expecting one of:...',
+                errorClass: 'org.apache.calcite.sql.parser.SqlParseException',
+                host: null,
+              },
+            },
+          },
+        }),
+      ).toEqual(`SQL parse failed / Encountered "<EOF>" at line 1, column 26.
+Was expecting one of:... / org.apache.calcite.sql.parser.SqlParseException`);
     });
   });
 });
