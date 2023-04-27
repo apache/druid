@@ -46,7 +46,7 @@ import java.util.function.Predicate;
 
 /**
  * Abstraction for parsing stream data which internally uses {@link org.apache.druid.data.input.InputEntityReader}
- * or {@link InputRowParser}. This class will be useful untill we remove the deprecated InputRowParser.
+ * or {@link InputRowParser}. This class will be useful until we remove the deprecated {@link InputRowParser}.
  */
 class StreamChunkParser<RecordType extends ByteEntity>
 {
