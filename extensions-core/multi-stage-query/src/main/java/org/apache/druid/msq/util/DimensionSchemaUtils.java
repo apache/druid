@@ -47,7 +47,8 @@ public class DimensionSchemaUtils
   )
   {
     if (useAutoType) {
-
+      // for complex types that are not COMPLEX<json>, we still want to use the handler since 'auto' typing
+      // only works for the 'standard' built-in typesg
       if (type != null && type.is(ValueType.COMPLEX) && !ColumnType.NESTED_DATA.equals(type)) {
         final ColumnCapabilities capabilities = ColumnCapabilitiesImpl.createDefault().setType(type);
         return DimensionHandlerUtils.getHandlerFromCapabilities(column, capabilities, null)
