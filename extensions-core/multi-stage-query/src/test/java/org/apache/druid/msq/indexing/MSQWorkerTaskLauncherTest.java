@@ -35,7 +35,7 @@ public class MSQWorkerTaskLauncherTest
   MSQWorkerTaskLauncher target;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     target = new MSQWorkerTaskLauncher(
         "controller-id",
