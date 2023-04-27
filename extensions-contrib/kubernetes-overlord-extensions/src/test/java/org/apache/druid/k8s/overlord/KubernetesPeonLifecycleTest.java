@@ -31,9 +31,10 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.k8s.overlord.common.JobResponse;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
+import org.apache.druid.k8s.overlord.common.PeonPhase;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -174,30 +175,37 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   }
 
   @Test
-  public void test_join_withoutJob_raisesISE()
+  public void test_join_withoutJob_returnsFailedTaskStatus() throws IOException
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
 
-    EasyMock.expect(kubernetesClient.getPeonJob(k8sTaskId)).andReturn(Optional.absent());
+    EasyMock.expect(kubernetesClient.waitForPeonJobCompletion(
+        EasyMock.eq(k8sTaskId),
+        EasyMock.anyLong(),
+        EasyMock.eq(TimeUnit.MILLISECONDS)
+    )).andReturn(new JobResponse(null, PeonPhase.FAILED));
+    EasyMock.expect(kubernetesClient.getPeonLogs(k8sTaskId)).andReturn(Optional.of(
+        IOUtils.toInputStream("", StandardCharsets.UTF_8)
+    ));
+    EasyMock.expect(taskLogs.streamTaskStatus(ID)).andReturn(Optional.absent());
+    taskLogs.pushTaskLog(EasyMock.eq(ID), EasyMock.anyObject(File.class));
+    EasyMock.expectLastCall();
     EasyMock.expect(kubernetesClient.deletePeonJob(k8sTaskId)).andReturn(true);
-
-    Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
     replayAll();
 
-    Assert.assertThrows(
-        "Failed to join job [id], does not exist",
-        ISE.class,
-        () -> peonLifecycle.join(0L)
-    );
+    TaskStatus taskStatus = peonLifecycle.join(0L);
 
     verifyAll();
 
+    Assert.assertTrue(taskStatus.isFailure());
+    Assert.assertEquals(ID, taskStatus.getId());
+    Assert.assertEquals("task status not found", taskStatus.getErrorMsg());
     Assert.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());
   }
 
   @Test
-  public void test_join_withActiveJob() throws IOException
+  public void test_join() throws IOException
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
 
@@ -206,16 +214,17 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         .withName(ID)
         .endMetadata()
         .withNewStatus()
-        .withActive(1)
+        .withSucceeded(1)
+        .withStartTime("2022-09-19T23:31:50Z")
+        .withCompletionTime("2022-09-19T23:32:48Z")
         .endStatus()
         .build();
 
-    EasyMock.expect(kubernetesClient.getPeonJob(k8sTaskId)).andReturn(Optional.of(job));
     EasyMock.expect(kubernetesClient.waitForPeonJobCompletion(
         EasyMock.eq(k8sTaskId),
         EasyMock.anyLong(),
         EasyMock.eq(TimeUnit.MILLISECONDS)
-    )).andReturn(null);
+    )).andReturn(new JobResponse(job, PeonPhase.SUCCEEDED));
     EasyMock.expect(kubernetesClient.getPeonLogs(k8sTaskId)).andReturn(Optional.of(
         IOUtils.toInputStream("", StandardCharsets.UTF_8)
     ));
@@ -234,7 +243,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     verifyAll();
 
-    Assert.assertEquals(SUCCESS, taskStatus);
+    Assert.assertEquals(SUCCESS.withDuration(58000), taskStatus);
     Assert.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());
   }
 
@@ -252,7 +261,11 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         .endStatus()
         .build();
 
-    EasyMock.expect(kubernetesClient.getPeonJob(k8sTaskId)).andReturn(Optional.of(job));
+    EasyMock.expect(kubernetesClient.waitForPeonJobCompletion(
+        EasyMock.eq(k8sTaskId),
+        EasyMock.anyLong(),
+        EasyMock.eq(TimeUnit.MILLISECONDS)
+    )).andReturn(new JobResponse(job, PeonPhase.SUCCEEDED));
     EasyMock.expect(kubernetesClient.getPeonLogs(k8sTaskId)).andReturn(
         Optional.of(IOUtils.toInputStream("", StandardCharsets.UTF_8))
     );
@@ -295,7 +308,11 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         .endStatus()
         .build();
 
-    EasyMock.expect(kubernetesClient.getPeonJob(k8sTaskId)).andReturn(Optional.of(job));
+    EasyMock.expect(kubernetesClient.waitForPeonJobCompletion(
+        EasyMock.eq(k8sTaskId),
+        EasyMock.anyLong(),
+        EasyMock.eq(TimeUnit.MILLISECONDS)
+    )).andReturn(new JobResponse(job, PeonPhase.SUCCEEDED));
     EasyMock.expect(kubernetesClient.getPeonLogs(k8sTaskId)).andReturn(
         Optional.of(IOUtils.toInputStream("", StandardCharsets.UTF_8))
     );
@@ -314,7 +331,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     Assert.assertTrue(taskStatus.isFailure());
     Assert.assertEquals(ID, taskStatus.getId());
-    Assert.assertEquals("Task [id] failed, task status not found", taskStatus.getErrorMsg());
+    Assert.assertEquals("task status not found", taskStatus.getErrorMsg());
     Assert.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());
   }
 
@@ -332,7 +349,11 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         .endStatus()
         .build();
 
-    EasyMock.expect(kubernetesClient.getPeonJob(k8sTaskId)).andReturn(Optional.of(job));
+    EasyMock.expect(kubernetesClient.waitForPeonJobCompletion(
+        EasyMock.eq(k8sTaskId),
+        EasyMock.anyLong(),
+        EasyMock.eq(TimeUnit.MILLISECONDS)
+    )).andReturn(new JobResponse(job, PeonPhase.SUCCEEDED));
     EasyMock.expect(kubernetesClient.getPeonLogs(k8sTaskId)).andReturn(
         Optional.of(IOUtils.toInputStream("", StandardCharsets.UTF_8))
     );
@@ -351,10 +372,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     Assert.assertTrue(taskStatus.isFailure());
     Assert.assertEquals(ID, taskStatus.getId());
-    Assert.assertEquals(
-        "Task [id] failed, caught exception when loading task status: null",
-        taskStatus.getErrorMsg()
-    );
+    Assert.assertEquals("error loading status: null", taskStatus.getErrorMsg());
     Assert.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());
   }
 
@@ -372,7 +390,11 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         .endStatus()
         .build();
 
-    EasyMock.expect(kubernetesClient.getPeonJob(k8sTaskId)).andReturn(Optional.of(job));
+    EasyMock.expect(kubernetesClient.waitForPeonJobCompletion(
+        EasyMock.eq(k8sTaskId),
+        EasyMock.anyLong(),
+        EasyMock.eq(TimeUnit.MILLISECONDS)
+    )).andReturn(new JobResponse(job, PeonPhase.SUCCEEDED));
     EasyMock.expect(kubernetesClient.getPeonLogs(k8sTaskId)).andReturn(
         Optional.of(IOUtils.toInputStream("", StandardCharsets.UTF_8))
     );

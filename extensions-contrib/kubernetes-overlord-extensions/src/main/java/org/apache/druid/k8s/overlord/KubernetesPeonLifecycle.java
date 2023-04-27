@@ -30,11 +30,10 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
-import org.apache.druid.k8s.overlord.common.JobStatus;
+import org.apache.druid.k8s.overlord.common.JobResponse;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.tasklogs.TaskLogs;
@@ -136,22 +135,15 @@ public class KubernetesPeonLifecycle
           State.RUNNING
       );
 
-      Optional<Job> maybeJob = kubernetesClient.getPeonJob(taskId);
-      if (!maybeJob.isPresent()) {
-        throw new ISE("Failed to join job [%s], does not exist", taskId);
-      }
-
-      if (JobStatus.isActive(maybeJob.get())) {
-        kubernetesClient.waitForPeonJobCompletion(
-            taskId,
-            timeout,
-            TimeUnit.MILLISECONDS
-        );
-      }
+      JobResponse jobResponse = kubernetesClient.waitForPeonJobCompletion(
+          taskId,
+          timeout,
+          TimeUnit.MILLISECONDS
+      );
 
       saveLogs();
 
-      return getTaskStatus();
+      return getTaskStatus(jobResponse.getJobDuration());
     }
     finally {
       try {
@@ -237,32 +229,29 @@ public class KubernetesPeonLifecycle
     );
   }
 
-  private TaskStatus getTaskStatus()
+  private TaskStatus getTaskStatus(long duration)
   {
+    TaskStatus taskStatus;
     try {
       Optional<InputStream> maybeTaskStatusStream = taskLogs.streamTaskStatus(taskId.getOriginalTaskId());
       if (maybeTaskStatusStream.isPresent()) {
-        return mapper.readValue(
+        taskStatus = mapper.readValue(
             IOUtils.toString(maybeTaskStatusStream.get(), StandardCharsets.UTF_8),
             TaskStatus.class
         );
       } else {
-        return TaskStatus.failure(
-            taskId.getOriginalTaskId(),
-            StringUtils.format("Task [%s] failed, task status not found", taskId.getOriginalTaskId())
-        );
+        taskStatus = TaskStatus.failure(taskId.getOriginalTaskId(), "task status not found");
       }
     }
     catch (IOException e) {
-      return TaskStatus.failure(
+      log.error(e, "Failed to load task status for task [%s]", taskId.getOriginalTaskId());
+      taskStatus = TaskStatus.failure(
           taskId.getOriginalTaskId(),
-          StringUtils.format(
-              "Task [%s] failed, caught exception when loading task status: %s",
-              taskId.getOriginalTaskId(),
-              e.getMessage()
-          )
+          StringUtils.format("error loading status: %s", e.getMessage())
       );
     }
+
+    return taskStatus.withDuration(duration);
   }
 
   private void saveLogs()

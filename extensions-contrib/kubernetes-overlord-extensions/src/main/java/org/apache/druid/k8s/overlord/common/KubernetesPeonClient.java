@@ -50,21 +50,6 @@ public class KubernetesPeonClient
     this.debugJobs = debugJobs;
   }
 
-  public Optional<Job> getPeonJob(K8sTaskId taskId)
-  {
-    return clientApi.executeRequest(
-        client -> {
-          return Optional.fromNullable(
-              client.batch()
-                    .v1()
-                    .jobs()
-                    .inNamespace(namespace)
-                    .withName(taskId.getK8sTaskId())
-                    .get());
-        }
-    );
-  }
-
   public Pod launchPeonJobAndWaitForStart(Job job, long howLong, TimeUnit timeUnit)
   {
     long start = System.currentTimeMillis();
@@ -74,16 +59,6 @@ public class KubernetesPeonClient
       K8sTaskId taskId = new K8sTaskId(job.getMetadata().getName());
       log.info("Successfully submitted job: %s ... waiting for job to launch", taskId);
       // wait until the pod is running or complete or failed, any of those is fine
-      // TODO: I believe we can do the following instead and remove getPeonPodWithRetries
-      // Pod result = client.pods()
-      //     .inNamespace(namespace)
-      //     .withLabel("job-name", job.getMetadata().getName())
-      //     .waitUntilCondition(pod -> {
-      //       if (pod == null || pod.getStatus() == null) {
-      //         return false;
-      //       }
-      //       return pod.getStatus().getPodIP() != null;
-      //     }, howLong, timeUnit);
       Pod mainPod = getPeonPodWithRetries(taskId);
       Pod result = client.pods().inNamespace(namespace).withName(mainPod.getMetadata().getName())
                          .waitUntilCondition(pod -> {
@@ -230,7 +205,6 @@ public class KubernetesPeonClient
     return pods.isEmpty() ? Optional.absent() : Optional.of(pods.get(0));
   }
 
-  // Make me private once KubernetesTaskRunnerTest tests are fixed
   public Pod getPeonPodWithRetries(K8sTaskId taskId)
   {
     return clientApi.executeRequest(client -> getPeonPodWithRetries(client, taskId, 5, RetryUtils.DEFAULT_MAX_TRIES));

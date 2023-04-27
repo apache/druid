@@ -61,29 +61,6 @@ public class KubernetesPeonClientTest
   }
 
   @Test
-  void test_getPeonJob_withJob_returnsJobInOptional()
-  {
-    Job job = new JobBuilder()
-        .withNewMetadata()
-        .withName(JOB_NAME)
-        .endMetadata()
-        .build();
-
-    client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job).create();
-
-    Optional<Job> maybeJob = instance.getPeonJob(new K8sTaskId(ID));
-
-    Assertions.assertTrue(maybeJob.isPresent());
-  }
-
-  @Test
-  void test_getPeonJob_withoutJob_returnsEmptyOptional()
-  {
-    Optional<Job> maybeJob = instance.getPeonJob(new K8sTaskId(ID));
-    Assertions.assertFalse(maybeJob.isPresent());
-  }
-
-  @Test
   void test_launchPeonJobAndWaitForStart()
   {
     Job job = new JobBuilder()
