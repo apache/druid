@@ -1339,7 +1339,7 @@ public abstract class ExprEval<T>
     {
       if (ExpressionType.NESTED_DATA.equals(expressionType)) {
         computeNumber();
-        return number != null;
+        return number == null;
       }
       return true;
     }
@@ -1398,6 +1398,8 @@ public abstract class ExprEval<T>
         Object val = StructuredData.unwrap(value);
         if (val instanceof Number) {
           number = (Number) val;
+        } else if (val instanceof Boolean) {
+          number = Evals.asLong((Boolean) val);
         } else if (val instanceof String) {
           number = ExprEval.computeNumber((String) val);
         }
