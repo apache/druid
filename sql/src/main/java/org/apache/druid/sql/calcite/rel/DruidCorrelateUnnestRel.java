@@ -45,10 +45,13 @@ import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.FilterDataSource;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.SelectProjectDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -144,6 +147,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     final DruidQuery leftQuery = Preconditions.checkNotNull(leftDruidRel.toDruidQuery(false), "leftQuery");
     final DruidUnnestRel unnestDatasourceRel = (DruidUnnestRel) right;
     final DataSource leftDataSource;
+    DataSource leftDataSource1;
     final RowSignature leftDataSourceSignature;
     final Filter unnestFilter = unnestDatasourceRel.getUnnestFilter();
 
@@ -153,12 +157,15 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
 
     // Compute the expression to unnest.
     final RexNode rexNodeToUnnest = getRexNodeToUnnest(correlateRel, unnestDatasourceRel);
-    if (computeLeftRequiresSubquery(leftDruidRel)
-        && unnestDatasourceRel.getInputRexNode().getKind() == SqlKind.OTHER_FUNCTION) {
+    if (unnestDatasourceRel.getInputRexNode().getKind() == SqlKind.OTHER_FUNCTION) {
       // Left side is doing more than simple scan: generate a subquery.
       leftDataSourceSignature = leftQuery.getOutputRowSignature();
     } else {
-      leftDataSourceSignature = DruidRels.dataSourceSignature(leftDruidRel);
+      if (leftDruidRel instanceof DruidOuterQueryRel) {
+        leftDataSourceSignature = DruidRels.dataSourceSignature((DruidRel<?>) leftDruidRel.getInputs().get(0));
+      } else {
+        leftDataSourceSignature = DruidRels.dataSourceSignature(leftDruidRel);
+      }
     }
     final DruidExpression expressionToUnnest = Expressions.toDruidExpression(
         getPlannerContext(),
@@ -192,28 +199,14 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     final DruidRel<?> newLeftDruidRel;
     final DruidQuery updatedLeftQuery;
 
-    // This is for the particular case where there is a selector filter on a dimension of the left table
-    // e.g. SELECT t, d3 FROM (select FLOOR(__time TO HOUR) t, dim3 from druid.numfoo where dim2='a'), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)
-    // In such a case Calcite plans the LogicalProject on the left as LogicalProject.NONE.[](input=RelSubset#169,exprs=[$2, FLOOR($0, FLAG(HOUR)), MV_TO_ARRAY($3)])
-    // From the RexNode on the right side we are already figuring out the rexNode that unnest refers to
-    // So this project can be rewritten to use the input ref (here $3)
-    // We use a RexShuttle to make the change to the list of RexNodes in the project
-    // Create a new left project with this list and the updated RelDataType
-    // And update the partial druid query on the left
-    // Before:
-    // 0 = {RexInputRef@11598} "$2"
-    // 1 = {RexCall@11599} "FLOOR($0, FLAG(HOUR))"
-    // 2 = {RexCall@11600} "MV_TO_ARRAY($3)"
-    // RecordType(VARCHAR dim2, TIMESTAMP(3) $f1, VARCHAR ARRAY $f2)
-    // After:
-    // 0 = {RexInputRef@11616} "$2"
-    // 1 = {RexCall@11617} "FLOOR($0, FLAG(HOUR))"
-    // 2 = {RexInputRef@11599} "$3"
-    // RecordType(VARCHAR dim2, TIMESTAMP(3) $f1, VARCHAR dim3)
-
-
     if (unnestDatasourceRel.getInputRexNode().getKind() == SqlKind.FIELD_ACCESS) {
-      final Project leftProject = leftPartialQuery.getSelectProject();
+      final PartialDruidQuery leftPartialQueryToBeUpdated;
+      if (leftDruidRel instanceof DruidOuterQueryRel) {
+        leftPartialQueryToBeUpdated = ((DruidRel) leftDruidRel.getInputs().get(0)).getPartialDruidQuery();
+      } else {
+        leftPartialQueryToBeUpdated = leftPartialQuery;
+      }
+      final Project leftProject = leftPartialQueryToBeUpdated.getSelectProject();
       final String dimensionToUpdate = expressionToUnnest.getDirectColumn();
       final ProjectUpdateShuttle pus = new ProjectUpdateShuttle(
           unwrapMvToArray(rexNodeToUnnest),
@@ -229,22 +222,53 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
           structType
       );
 
-      newLeftDruidRel = leftDruidRel.withPartialQuery(
-          PartialDruidQuery.create(leftPartialQuery.getScan())
-                           .withWhereFilter(leftPartialQuery.getWhereFilter())
-                           .withSelectProject(newProject)
-                           .withSort(leftPartialQuery.getSort()));
+      if (leftDruidRel instanceof DruidOuterQueryRel) {
+        newLeftDruidRel = ((DruidRel<?>) leftDruidRel.getInputs().get(0)).withPartialQuery(
+            PartialDruidQuery.create(leftPartialQueryToBeUpdated.getScan())
+                             .withWhereFilter(leftPartialQueryToBeUpdated.getWhereFilter())
+                             .withSelectProject(newProject)
+                             .withSort(leftPartialQueryToBeUpdated.getSort()));
+      } else {
+        newLeftDruidRel = leftDruidRel.withPartialQuery(
+            PartialDruidQuery.create(leftPartialQueryToBeUpdated.getScan())
+                             .withWhereFilter(leftPartialQueryToBeUpdated.getWhereFilter())
+                             .withSelectProject(newProject)
+                             .withSort(leftPartialQueryToBeUpdated.getSort()));
+      }
     } else {
       newLeftDruidRel = leftDruidRel;
     }
     updatedLeftQuery = Preconditions.checkNotNull(newLeftDruidRel.toDruidQuery(false), "leftQuery");
+    VirtualColumns virtualColumns = updatedLeftQuery.getVirtualColumns(false);
 
-    if (computeLeftRequiresSubquery(newLeftDruidRel)) {
-      // Left side is doing more than simple scan: generate a subquery.
-      leftDataSource = new QueryDataSource(updatedLeftQuery.getQuery());
+    if (newLeftDruidRel.getPartialDruidQuery().stage().compareTo(PartialDruidQuery.Stage.SELECT_PROJECT) <= 0) {
+      final Filter whereFilter = newLeftDruidRel.getPartialDruidQuery().getWhereFilter();
+      final RowSignature leftSignature = DruidRels.dataSourceSignature(newLeftDruidRel);
+      if (whereFilter == null) {
+        if (computeLeftRequiresSubquery(newLeftDruidRel)) {
+          // Left side is doing more than simple scan: generate a subquery.
+          leftDataSource1 = new QueryDataSource(updatedLeftQuery.getQuery());
+        } else {
+          leftDataSource1 = updatedLeftQuery.getDataSource();
+        }
+      } else {
+        final DimFilter dimFilter = Filtration.create(DruidQuery.getDimFilter(
+                                                  getPlannerContext(),
+                                                  leftSignature,
+                                                  null,
+                                                  whereFilter
+                                              ))
+                                              .optimizeFilterOnly(leftSignature).getDimFilter();
+        leftDataSource1 = FilterDataSource.create(updatedLeftQuery.getDataSource(), dimFilter);
+      }
+      if (virtualColumns.getVirtualColumns().length > 0) {
+        leftDataSource1 = SelectProjectDataSource.create(leftDataSource1, virtualColumns);
+      }
     } else {
-      leftDataSource = updatedLeftQuery.getDataSource();
+      leftDataSource1 = new QueryDataSource(updatedLeftQuery.getQuery());
     }
+    //if(updatedLeftQuery.getV)
+    leftDataSource = leftDataSource1;
     return partialQuery.build(
         UnnestDataSource.create(
             leftDataSource,
@@ -434,35 +458,39 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     // Update unnestDatasourceRel.getUnnestProject() so it refers to the left-hand side rather than the correlation
     // variable. This is the expression to unnest.
     final RexNode unnestRexNode;
-    if (correlate.getLeft() instanceof DruidQueryRel) {
-      final PartialDruidQuery partialDruidQuery = ((DruidQueryRel) correlate.getLeft()).getPartialDruidQuery();
-      // The mv_to_array can appear either in
-      // 1. select project for the left
-      // 2. sort project for the left
-      final Project leftProject = partialDruidQuery.getSelectProject();
-      final Project sortProject = partialDruidQuery.getSortProject();
-
-      if (leftProject == null && sortProject == null) {
-        unnestRexNode = unnestDatasourceRel.getInputRexNode();
-      } else {
-        if (unnestDatasourceRel.getInputRexNode().getKind() == SqlKind.FIELD_ACCESS) {
-          final int indexRef = ((RexFieldAccess) unnestDatasourceRel.getInputRexNode()).getField().getIndex();
-          if (leftProject != null) {
-            unnestRexNode = leftProject
-                .getProjects()
-                .get(indexRef);
-          } else {
-            unnestRexNode = sortProject
-                .getProjects()
-                .get(indexRef);
-          }
-        } else {
-          unnestRexNode = unnestDatasourceRel.getInputRexNode();
-        }
-      }
+    final PartialDruidQuery partialDruidQuery;
+    if (correlate.getLeft() instanceof DruidOuterQueryRel) {
+      partialDruidQuery = ((DruidRel) correlate.getLeft().getInputs().get(0)).getPartialDruidQuery();
+    } else if (correlate.getLeft() instanceof DruidQueryRel) {
+      partialDruidQuery = ((DruidQueryRel) correlate.getLeft()).getPartialDruidQuery();
     } else {
-      unnestRexNode = unnestDatasourceRel.getInputRexNode();
+      partialDruidQuery = ((DruidRel) correlate.getLeft()).getPartialDruidQuery();
     }
+    // The mv_to_array can appear either in
+    // 1. select project for the left
+    // 2. sort project for the left
+    final Project leftProject = partialDruidQuery.getSelectProject();
+    final Project sortProject = partialDruidQuery.getSortProject();
+
+    if (leftProject == null && sortProject == null) {
+      unnestRexNode = unnestDatasourceRel.getInputRexNode();
+    } else {
+      if (unnestDatasourceRel.getInputRexNode().getKind() == SqlKind.FIELD_ACCESS) {
+        final int indexRef = ((RexFieldAccess) unnestDatasourceRel.getInputRexNode()).getField().getIndex();
+        if (leftProject != null) {
+          unnestRexNode = leftProject
+              .getProjects()
+              .get(indexRef);
+        } else {
+          unnestRexNode = sortProject
+              .getProjects()
+              .get(indexRef);
+        }
+      } else {
+        unnestRexNode = unnestDatasourceRel.getInputRexNode();
+      }
+    }
+
     final RexNode rexNodeToUnnest =
         new CorrelatedFieldAccessToInputRef(correlate.getCorrelationId())
             .apply(unnestRexNode);

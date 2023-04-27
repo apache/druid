@@ -42,7 +42,9 @@ import java.util.function.Function;
     @JsonSubTypes.Type(value = LookupDataSource.class, name = "lookup"),
     @JsonSubTypes.Type(value = InlineDataSource.class, name = "inline"),
     @JsonSubTypes.Type(value = GlobalTableDataSource.class, name = "globalTable"),
-    @JsonSubTypes.Type(value = UnnestDataSource.class, name = "unnest")
+    @JsonSubTypes.Type(value = UnnestDataSource.class, name = "unnest"),
+    @JsonSubTypes.Type(value = FilterDataSource.class, name = "filter"),
+    @JsonSubTypes.Type(value = SelectProjectDataSource.class, name = "selectProject")
 })
 public interface DataSource
 {
