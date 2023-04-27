@@ -3107,7 +3107,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQuery(
         "SELECT d3 FROM (select * from druid.numfoo where dim2='a'), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
-        //QUERY_CONTEXT_DEFAULT,
         QUERY_CONTEXT_UNNEST,
         ImmutableList.of(
             Druids.newScanQueryBuilder()
@@ -3145,7 +3144,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQuery(
         "SELECT t,d3 FROM (select FLOOR(__time to hour) t, dim3 from druid.numfoo where dim2='a'), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
-        //QUERY_CONTEXT_DEFAULT,
         QUERY_CONTEXT_UNNEST,
         ImmutableList.of(
             Druids.newScanQueryBuilder()
@@ -3190,7 +3188,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQuery(
         "SELECT t,d3 FROM (select FLOOR(__time to hour) t, dim3 from druid.numfoo where dim2 IN ('a','b')), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
-        //QUERY_CONTEXT_DEFAULT,
         QUERY_CONTEXT_UNNEST,
         ImmutableList.of(
             Druids.newScanQueryBuilder()
@@ -3235,7 +3232,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQuery(
         "SELECT d3 FROM (select dim2,dim3 from druid.numfoo where dim2='a' LIMIT 2), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
-        //QUERY_CONTEXT_DEFAULT,
         QUERY_CONTEXT_UNNEST,
         ImmutableList.of(
             Druids.newScanQueryBuilder()
@@ -3290,7 +3286,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         + "  UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)\n"
         + "WHERE dim1 <> 'foo'\n"
         + "AND (unnested.d3 IN ('a', 'c') OR unnested.d3 LIKE '_')",
-        //QUERY_CONTEXT_DEFAULT,
         QUERY_CONTEXT_UNNEST,
         ImmutableList.of(
             Druids.newScanQueryBuilder()
@@ -3337,7 +3332,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         + "WHERE t.dim2='a'\n"
         + "AND t.dim1 <> 'foo'\n"
         + "AND (unnested.d3 IN ('a', 'c') OR unnested.d3 LIKE '_')",
-        //QUERY_CONTEXT_DEFAULT,
         QUERY_CONTEXT_UNNEST,
         ImmutableList.of(
             Druids.newScanQueryBuilder()
@@ -3380,7 +3374,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQuery(
         "SELECT d3 FROM (select * from druid.numfoo where dim2 IN ('a','b','ab','abc')), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
-        //QUERY_CONTEXT_DEFAULT,
         QUERY_CONTEXT_UNNEST,
         ImmutableList.of(
             Druids.newScanQueryBuilder()
@@ -3683,7 +3676,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQuery(
         "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3 IN ('a','b') and m1 < 10",
-        //QUERY_CONTEXT_DEFAULT,
         QUERY_CONTEXT_UNNEST,
         ImmutableList.of(
             Druids.newScanQueryBuilder()
