@@ -26,6 +26,7 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.joda.time.Period;
 
 import javax.annotation.Nonnull;
+import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import java.util.List;
@@ -110,6 +111,7 @@ public class KubernetesTaskRunnerConfig
 
   @JsonProperty
   @Min(1)
+  @Max(Integer.MAX_VALUE)
   @NotNull
   private Integer capacity = Integer.MAX_VALUE;
 
@@ -395,7 +397,7 @@ public class KubernetesTaskRunnerConfig
       return this;
     }
 
-    public Builder withCapacity(Integer capacity)
+    public Builder withCapacity(@Min(0) @Max(Integer.MAX_VALUE) Integer capacity)
     {
       this.capacity = capacity;
       return this;
