@@ -215,6 +215,3 @@
 {"source": "tutorials/tutorial-loading-streaming-data.html", "target": "tutorial-kafka.html"}
 {"source": "tutorials/tutorial-the-druid-cluster.html", "target": "cluster.html"}
 {"source": "tutorials/tutorial-tranquility.html", "target": "../ingestion/tranquility.html"}
-
-
-
