@@ -25,14 +25,11 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
-import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
-import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.type.InferTypes;
-import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -48,10 +45,12 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
+import org.apache.druid.sql.calcite.expression.BasicOperandTypeChecker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
@@ -60,15 +59,27 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * Implements {@link org.apache.calcite.sql.fun.SqlLibraryOperators#STRING_AGG} and
+ * {@link org.apache.calcite.sql.fun.SqlStdOperatorTable#LISTAGG}, as well as our extended versions of these
+ * functions that include {@code maxSizeBytes}.
+ */
 public class StringSqlAggregator implements SqlAggregator
 {
-  private static final String NAME = "STRING_AGG";
-  private static final SqlAggFunction FUNCTION = new StringAggFunction();
+  private final SqlAggFunction function;
+
+  public static final StringSqlAggregator STRING_AGG = new StringSqlAggregator(new StringAggFunction("STRING_AGG"));
+  public static final StringSqlAggregator LISTAGG = new StringSqlAggregator(new StringAggFunction("LISTAGG"));
+
+  public StringSqlAggregator(SqlAggFunction function)
+  {
+    this.function = function;
+  }
 
   @Override
   public SqlAggFunction calciteFunction()
   {
-    return FUNCTION;
+    return function;
   }
 
   @Nullable
@@ -96,39 +107,40 @@ public class StringSqlAggregator implements SqlAggregator
       return null;
     }
 
-    RexNode separatorNode = Expressions.fromFieldAccess(
-        rexBuilder.getTypeFactory(),
-        rowSignature,
-        project,
-        aggregateCall.getArgList().get(1)
-    );
-    if (!separatorNode.isA(SqlKind.LITERAL)) {
-      // separator must be a literal
-      return null;
-    }
-    String separator = RexLiteral.stringValue(separatorNode);
+    final String separator;
 
-    if (separator == null) {
-      // separator must not be null
-      return null;
-    }
-
-    Integer maxSizeBytes = null;
-    if (arguments.size() > 2) {
-      RexNode maxBytes = Expressions.fromFieldAccess(
-          rexBuilder.getTypeFactory(),
-          rowSignature,
-          project,
-          aggregateCall.getArgList().get(2)
+    if (arguments.size() > 1) {
+      separator = RexLiteral.stringValue(
+          Expressions.fromFieldAccess(
+              rexBuilder.getTypeFactory(),
+              rowSignature,
+              project,
+              aggregateCall.getArgList().get(1)
+          )
       );
-      if (!maxBytes.isA(SqlKind.LITERAL)) {
-        // maxBytes must be a literal
-        return null;
-      }
-      maxSizeBytes = ((Number) RexLiteral.value(maxBytes)).intValue();
+    } else {
+      separator = "";
     }
+
+    final HumanReadableBytes maxSizeBytes;
+
+    if (arguments.size() > 2) {
+      maxSizeBytes = HumanReadableBytes.valueOf(
+          RexLiteral.intValue(
+              Expressions.fromFieldAccess(
+                  rexBuilder.getTypeFactory(),
+                  rowSignature,
+                  project,
+                  aggregateCall.getArgList().get(2)
+              )
+          )
+      );
+    } else {
+      maxSizeBytes = null;
+    }
+
     final DruidExpression arg = arguments.get(0);
-    final ExprMacroTable macroTable = plannerContext.getPlannerToolbox().exprMacroTable();
+    final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
 
     final String initialvalue = "[]";
     final ColumnType elementType = ColumnType.STRING;
@@ -139,7 +151,11 @@ public class StringSqlAggregator implements SqlAggregator
       fieldName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, elementType);
     }
 
-    final String finalizer = StringUtils.format("if(array_length(o) == 0, null, array_to_string(o, '%s'))", separator);
+    final String finalizer = StringUtils.format(
+        "if(array_length(o) == 0, null, array_to_string(o, %s))",
+        DruidExpression.ofStringLiteral(separator).getExpression()
+    );
+
     final NotDimFilter dimFilter = new NotDimFilter(new SelectorDimFilter(fieldName, null, null));
     if (aggregateCall.isDistinct()) {
       return Aggregation.create(
@@ -158,7 +174,7 @@ public class StringSqlAggregator implements SqlAggregator
                   StringUtils.format("array_set_add_all(\"__acc\", \"%s\")", name),
                   null,
                   finalizer,
-                  maxSizeBytes != null ? new HumanReadableBytes(maxSizeBytes) : null,
+                  maxSizeBytes,
                   macroTable
               ),
               dimFilter
@@ -181,7 +197,7 @@ public class StringSqlAggregator implements SqlAggregator
                   StringUtils.format("array_concat(\"__acc\", \"%s\")", name),
                   null,
                   finalizer,
-                  maxSizeBytes != null ? new HumanReadableBytes(maxSizeBytes) : null,
+                  maxSizeBytes,
                   macroTable
               ),
               dimFilter
@@ -197,21 +213,12 @@ public class StringSqlAggregator implements SqlAggregator
     {
       RelDataType type = sqlOperatorBinding.getOperandType(0);
       if (type instanceof RowSignatures.ComplexSqlType) {
-        String columnName = "";
-        if (sqlOperatorBinding instanceof SqlCallBinding) {
-          columnName = ((SqlCallBinding) sqlOperatorBinding).getCall().operand(0).toString();
-        }
-
-        throw SimpleSqlAggregator.badTypeException(
-            columnName,
-            "STRING_AGG",
-            ((RowSignatures.ComplexSqlType) type).getColumnType()
-        );
+        throw new UnsupportedSQLQueryException("Cannot use STRING_AGG on complex type [%s]", type);
       }
       return Calcites.createSqlTypeWithNullability(
           sqlOperatorBinding.getTypeFactory(),
           SqlTypeName.VARCHAR,
-          true
+          type.isNullable()
       );
     }
   }
@@ -220,33 +227,19 @@ public class StringSqlAggregator implements SqlAggregator
   {
     private static final StringAggReturnTypeInference RETURN_TYPE_INFERENCE = new StringAggReturnTypeInference();
 
-    StringAggFunction()
+    StringAggFunction(final String name)
     {
       super(
-          NAME,
+          name,
           null,
           SqlKind.OTHER_FUNCTION,
           RETURN_TYPE_INFERENCE,
           InferTypes.ANY_NULLABLE,
-          OperandTypes.or(
-              OperandTypes.and(
-                  OperandTypes.sequence(
-                      StringUtils.format("'%s(expr, separator)'", NAME),
-                      OperandTypes.ANY,
-                      OperandTypes.STRING
-                  ),
-                  OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.STRING)
-              ),
-              OperandTypes.and(
-                  OperandTypes.sequence(
-                      StringUtils.format("'%s(expr, separator, maxSizeBytes)'", NAME),
-                      OperandTypes.ANY,
-                      OperandTypes.STRING,
-                      OperandTypes.POSITIVE_INTEGER_LITERAL
-                  ),
-                  OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.STRING, SqlTypeFamily.NUMERIC)
-              )
-          ),
+          BasicOperandTypeChecker.builder()
+                                 .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.STRING, SqlTypeFamily.INTEGER)
+                                 .requiredOperandCount(1)
+                                 .literalOperands(1, 2)
+                                 .build(),
           SqlFunctionCategory.STRING,
           false,
           false,
