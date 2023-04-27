@@ -144,13 +144,13 @@ export class WorkbenchQueryPart {
     return this.queryString.trim().startsWith('{');
   }
 
-  public validJson(): boolean {
+  public issueWithJson(): string | undefined {
     try {
       Hjson.parse(this.queryString);
-      return true;
-    } catch {
-      return false;
+    } catch (e) {
+      return e.message;
     }
+    return;
   }
 
   public isSqlInJson(): boolean {

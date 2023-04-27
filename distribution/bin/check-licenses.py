@@ -293,6 +293,8 @@ def build_compatible_license_names():
     compatible_licenses['The MIT License (MIT)'] = 'MIT License'
     compatible_licenses['Bouncy Castle Licence'] = 'MIT License'
 
+    compatible_licenses['The Go license'] = 'The Go license'
+
     compatible_licenses['-'] = '-'
     return compatible_licenses
 

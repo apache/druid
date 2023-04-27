@@ -81,7 +81,7 @@ ORDER BY 1`,
     initQuery: props.datasource,
     processQuery: async datasource => {
       const historyResp = await Api.instance.get(
-        `/druid/coordinator/v1/rules/${Api.encodePath(datasource)}/history`,
+        `/druid/coordinator/v1/rules/${Api.encodePath(datasource)}/history?count=200`,
       );
       return historyResp.data;
     },
