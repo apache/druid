@@ -196,7 +196,7 @@ The following table defines the primary sections of the input spec:
 |type|The task type. For parallel task indexing, set the value to `index_parallel`.|yes|
 |id|The task ID. If omitted, Druid generates the task ID using the task type, data source name, interval, and date-time stamp. |no|
 |spec|The ingestion spec that defines the [data schema](#dataschema), [IO config](#ioconfig), and [tuning config](#tuningconfig).|yes|
-|context|Context to specify various task configuration parameters. See [Task context parameters](../api-reference/tasks.md#context-parameters) for more details.|no|
+|context|Context to specify various task configuration parameters. See [Task context parameters](../ingestion/tasks.md#context-parameters) for more details.|no|
 
 ### `dataSchema`
 

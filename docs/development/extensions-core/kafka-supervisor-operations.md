@@ -82,7 +82,7 @@ state until it is idle, stopped, suspended, or hits a task failure threshold and
 
 `GET /druid/indexer/v1/supervisor/<supervisorId>/stats` returns a snapshot of the current ingestion row counters for each task being managed by the supervisor, along with moving averages for the row counters.
 
-See [Task Reports: Row Stats](../../api-reference/tasks.md#row-stats) for more information.
+See [Task Reports: Row Stats](../../ingestion/tasks.md#row-stats) for more information.
 
 ## Supervisor Health Check
 

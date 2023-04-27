@@ -1,5 +1,5 @@
 ---
-id: api
+id: sql-ingestion-api
 title: SQL-based ingestion and multi-stage task engine API
 sidebar_label: MSQ task engine API
 ---

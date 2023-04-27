@@ -38,7 +38,7 @@ and at least one worker task. As an experimental feature, the MSQ task engine al
 batch tasks. The behavior and result format of plain SELECT (without INSERT or REPLACE) is subject to change.
 
 You can execute SQL statements using the MSQ task engine through the **Query** view in the [web
-console](../operations/web-console.md) or through the [`/druid/v2/sql/task` API](../api-reference/api.md).
+console](../operations/web-console.md) or through the [`/druid/v2/sql/task` API](../api-reference/sql-ingestion-api.md).
 
 For more details on how SQL queries are executed using the MSQ task engine, see [multi-stage query
 tasks](#multi-stage-query-tasks).

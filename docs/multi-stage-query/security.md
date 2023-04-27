@@ -43,7 +43,7 @@ To submit a query:
 Once a query is submitted, it executes as a [`query_controller`](concepts.md#execution-flow) task. Query tasks that
 users submit to the MSQ task engine are Overlord tasks, so they follow the Overlord's security model. This means that
 users with access to the Overlord API can perform some actions even if they didn't submit the query, including
-retrieving status or canceling a query. For more information about the Overlord API and the task API, see [APIs for SQL-based ingestion](../api-reference/api.md).
+retrieving status or canceling a query. For more information about the Overlord API and the task API, see [APIs for SQL-based ingestion](../api-reference/sql-ingestion-api.md).
 
 To interact with a query through the Overlord API, users need the following permissions:
 

@@ -1,6 +1,6 @@
 ---
 id: api-reference
-title: Druid API endpoints reference
+title: HTTP API endpoints reference
 sidebar_label: API endpoints reference
 ---
 
@@ -339,7 +339,7 @@ the segments were marked as unused) as the result of this API call.
 `DELETE /druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}`
 `@Deprecated. /druid/coordinator/v1/datasources/{dataSourceName}?kill=true&interval={myInterval}`
 
-Runs a [Kill task](../api-reference/tasks.md) for a given interval and datasource.
+Runs a [Kill task](../ingestion/tasks.md) for a given interval and datasource.
 
 `DELETE /druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
 
@@ -545,7 +545,7 @@ Retrieve list of tasks. Accepts query string parameters `state`, `datasource`, `
 | `datasource`| return tasks filtered by Druid datasource.|
 | `createdTimeInterval`| return tasks created within the specified interval. |
 | `max`| maximum number of `"complete"` tasks to return. Only applies when `state` is set to `"complete"`.|
-| `type`| filter tasks by task type. See [task documentation](../api-reference/tasks.md) for more details.|
+| `type`| filter tasks by task type. See [task documentation](../ingestion/tasks.md) for more details.|
 
 
 `GET /druid/indexer/v1/completeTasks`
@@ -580,7 +580,7 @@ Retrieve information about the segments of a task.
 
 `GET /druid/indexer/v1/task/{taskId}/reports`
 
-Retrieve a [task completion report](../api-reference/tasks.md#task-reports) for a task. Only works for completed tasks.
+Retrieve a [task completion report](../ingestion/tasks.md#task-reports) for a task. Only works for completed tasks.
 
 `POST /druid/indexer/v1/task`
 
@@ -780,11 +780,11 @@ Shutdown a running task by `taskid`. Normal usage should prefer to use the `/dru
 
 `GET /druid/worker/v1/chat/{taskId}/rowStats`
 
-Retrieve a live row stats report from a Peon. See [task reports](../api-reference/tasks.md#task-reports) for more details.
+Retrieve a live row stats report from a Peon. See [task reports](../ingestion/tasks.md#task-reports) for more details.
 
 `GET /druid/worker/v1/chat/{taskId}/unparseableEvents`
 
-Retrieve an unparseable events report from a Peon. See [task reports](../api-reference/tasks.md#task-reports) for more details.
+Retrieve an unparseable events report from a Peon. See [task reports](../ingestion/tasks.md#task-reports) for more details.
 
 ### Historical
 

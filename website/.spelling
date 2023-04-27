@@ -1447,7 +1447,7 @@ segmentWriteOutMediumFactory
 product_category
 product_id
 product_name
- - ../docs/api-reference/tasks.md
+ - ../docs/ingestion/tasks.md
 BUILD_SEGMENTS
 DETERMINE_PARTITIONS
 forceTimeChunkLock
