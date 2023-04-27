@@ -90,13 +90,13 @@ public class TaskStartTimeoutFault extends BaseMSQFault
       return false;
     }
     TaskStartTimeoutFault that = (TaskStartTimeoutFault) o;
-    return totalTasks == that.totalTasks && timeout == that.timeout;
+    return numTasksNotStarted == that.numTasksNotStarted && totalTasks == that.totalTasks && timeout == that.timeout;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), totalTasks, timeout);
+    return Objects.hash(super.hashCode(), numTasksNotStarted, totalTasks, timeout);
   }
 
 
