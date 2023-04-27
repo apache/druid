@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputFormat;
@@ -29,6 +30,7 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexing.common.task.FilteringCloseableInputRowIterator;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -85,6 +87,30 @@ class StreamChunkParser<RecordType extends ByteEntity>
     } else {
       this.byteEntityReader = null;
     }
+    this.rowFilter = rowFilter;
+    this.rowIngestionMeters = rowIngestionMeters;
+    this.parseExceptionHandler = parseExceptionHandler;
+  }
+
+  @VisibleForTesting
+  StreamChunkParser(
+      @Nullable InputRowParser<ByteBuffer> parser,
+      @Nullable InputFormat inputFormat,
+      InputRowSchema inputRowSchema,
+      TransformSpec transformSpec,
+      File indexingTmpDir,
+      Predicate<InputRow> rowFilter,
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler,
+      SettableByteEntityReader<RecordType> byteEntityReader
+  )
+  {
+    if (parser == null && inputFormat == null) {
+      throw new IAE("Either parser or inputFormat should be set");
+    }
+    // parser is already decorated with transformSpec in DataSchema
+    this.parser = parser;
+    this.byteEntityReader = byteEntityReader;
     this.rowFilter = rowFilter;
     this.rowIngestionMeters = rowIngestionMeters;
     this.parseExceptionHandler = parseExceptionHandler;
@@ -151,6 +177,8 @@ class StreamChunkParser<RecordType extends ByteEntity>
           parseExceptionHandler
       )) {
         rowIterator.forEachRemaining(rows::add);
+      } catch (ParseException pe) {
+        parseExceptionHandler.handle(pe);
       }
     }
     return rows;
