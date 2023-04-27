@@ -119,8 +119,7 @@ public class CalciteRulesManager
           CoreRules.SORT_REMOVE_CONSTANT_KEYS,
           CoreRules.SORT_UNION_TRANSPOSE,
           CoreRules.EXCHANGE_REMOVE_CONSTANT_KEYS,
-          CoreRules.SORT_EXCHANGE_REMOVE_CONSTANT_KEYS,
-          CoreRules.PROJECT_FILTER_TRANSPOSE_WHOLE_PROJECT_EXPRESSIONS
+          CoreRules.SORT_EXCHANGE_REMOVE_CONSTANT_KEYS
       );
 
   /**
