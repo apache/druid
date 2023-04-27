@@ -37,7 +37,6 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogKiller;
 import org.apache.druid.tasklogs.TaskLogPusher;
-import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.druid.tasklogs.TaskLogs;
 
 @LoadScope(roles = NodeRole.OVERLORD_JSON_NAME)
@@ -79,7 +78,6 @@ public class KubernetesOverlordModule implements DruidModule
     binder.bind(FileTaskLogs.class).in(LazySingleton.class);
 
     binder.bind(TaskLogPusher.class).to(TaskLogs.class);
-    binder.bind(TaskLogStreamer.class).to(TaskLogs.class);
     binder.bind(TaskLogKiller.class).to(TaskLogs.class);
   }
 
