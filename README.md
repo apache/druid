@@ -75,7 +75,7 @@ Load [streaming](https://druid.apache.org/docs/latest/ingestion/index.html#strea
 
 [![management](https://user-images.githubusercontent.com/177816/65819338-08499d00-e1d0-11e9-80fe-faee9e9468cb.gif)](https://druid.apache.org/docs/latest/ingestion/data-management.html)
 
-Manage your cluster with ease. Get a view of your [datasources](https://druid.apache.org/docs/latest/design/architecture.html), [segments](https://druid.apache.org/docs/latest/design/segments.html), [ingestion tasks](https://druid.apache.org/docs/latest/api-reference/tasks.html), and [services](https://druid.apache.org/docs/latest/design/processes.html) from one convenient location. All powered by [SQL systems tables](https://druid.apache.org/docs/latest/querying/sql.html#metadata-tables), allowing you to see the underlying query for each view.
+Manage your cluster with ease. Get a view of your [datasources](https://druid.apache.org/docs/latest/design/architecture.html), [segments](https://druid.apache.org/docs/latest/design/segments.html), [ingestion tasks](https://druid.apache.org/docs/latest/ingestion/tasks.html), and [services](https://druid.apache.org/docs/latest/design/processes.html) from one convenient location. All powered by [SQL systems tables](https://druid.apache.org/docs/latest/querying/sql.html#metadata-tables), allowing you to see the underlying query for each view.
 
 #### Issue queries
 
@@ -85,7 +85,7 @@ Use the built-in query workbench to prototype [DruidSQL](https://druid.apache.or
 
 ### Documentation
 
-See the [latest documentation](https://druid.apache.org/docs/latest/) for the documentation for the current official release.  If you need information on a previous release, you can browse [previous releases documentation](https://druid.apache.org/docs/).
+See the [latest documentation](https://druid.apache.org/docs/latest/) for the documentation for the current official release. If you need information on a previous release, you can browse [previous releases documentation](https://druid.apache.org/docs/).
 
 Make documentation and tutorials updates in [`/docs`](https://github.com/apache/druid/tree/master/docs) using [MarkDown](https://www.markdownguide.org/) and contribute them using a pull request.
 

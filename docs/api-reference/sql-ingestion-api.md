@@ -34,7 +34,7 @@ interface.
 When using the API for the MSQ task engine, the action you want to take determines the endpoint you use:
 
 - `/druid/v2/sql/task` endpoint: Submit a query for ingestion.
-- `/druid/indexer/v1/task` endpoint: Interact with a query, including getting its status, getting its details, or canceling it. This page describes a few of the Overlord Task APIs that you can use with the MSQ task engine. For information about Druid APIs, see the [API reference for Druid](tasks.md).
+- `/druid/indexer/v1/task` endpoint: Interact with a query, including getting its status, getting its details, or canceling it. This page describes a few of the Overlord Task APIs that you can use with the MSQ task engine. For information about Druid APIs, see the [API reference for Druid](../ingestion/tasks.md).
 
 ## Submit a query
 
