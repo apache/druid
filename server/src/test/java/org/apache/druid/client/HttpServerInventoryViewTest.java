@@ -66,6 +66,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -301,7 +302,7 @@ public class HttpServerInventoryViewTest
   }
 
   @Test(timeout = 60_000L)
-  public void testSyncMonitoring()
+  public void testSyncMonitoring() throws InterruptedException
   {
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
@@ -326,11 +327,24 @@ public class HttpServerInventoryViewTest
     httpServerInventoryView.serverAdded(makeServer("abc.com:8080"));
     httpServerInventoryView.serverAdded(makeServer("xyz.com:8080"));
     httpServerInventoryView.serverAdded(makeServer("lol.com:8080"));
+
+    while (!serversSynced(httpServerInventoryView)) {
+      Thread.sleep(1000);
+    }
     Assert.assertEquals(3, httpServerInventoryView.getDebugInfo().size());
     httpServerInventoryView.syncMonitoring();
     Assert.assertEquals(3, httpServerInventoryView.getDebugInfo().size());
   }
 
+  private boolean serversSynced(HttpServerInventoryView httpServerInventoryView)
+  {
+    return httpServerInventoryView.getDebugInfo()
+        .values()
+        .stream()
+        .map(serverDebugInfo -> (Map<String, Object>) serverDebugInfo)
+        .filter(serverDebugInfo -> serverDebugInfo.getOrDefault("notSyncedForSecs", "").equals("Never Synced"))
+        .collect(Collectors.toSet()).size() == 0;
+  }
   private DruidServer makeServer(String host)
   {
     return new DruidServer(
