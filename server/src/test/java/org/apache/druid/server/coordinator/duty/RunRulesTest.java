@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -162,7 +163,11 @@ public class RunRulesTest
 
     // There are 24 under-replicated segments, but only 10 replicas are assigned
     Assert.assertEquals(10L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
-    Assert.assertEquals(24L, stats.getSegmentStat(Stats.Segments.UNDER_REPLICATED, "normal", DATASOURCE));
+
+    SegmentReplicantLookup replicantLookup = afterParams.getSegmentReplicantLookup();
+    Map<String, Object2LongMap<String>> tierToUnderReplicated
+        = replicantLookup.getTierToDatasourceToUnderReplicated(usedSegments, false);
+    Assert.assertEquals(24L, tierToUnderReplicated.get("normal").getLong(DATASOURCE));
 
     exec.shutdown();
     EasyMock.verify(mockPeon);

@@ -20,7 +20,9 @@
 package org.apache.druid.server.coordinator;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * The ReplicationThrottler is used to throttle the number of segment replicas
@@ -40,19 +42,23 @@ public class ReplicationThrottler
   private final int maxReplicaAssignmentsInRun;
 
   private final Map<String, Integer> tierToNumAssigned = new HashMap<>();
-  private final Map<String, Integer> tierToNumThrottled = new HashMap<>();
+  private final Set<String> tiersLoadingReplicas = new HashSet<>();
 
   private int totalReplicasAssignedInRun;
 
   /**
    * Creates a new ReplicationThrottler for use during a single coordinator run.
    *
+   * @param tiersLoadingReplicas       Set of tier names which are already loading
+   *                                   replicas and will not be eligible for loading
+   *                                   more replicas in this run.
    * @param replicationThrottleLimit   Maximum number of replicas that can be
    *                                   assigned to a single tier in the current run.
    * @param maxReplicaAssignmentsInRun Max number of total replicas that can be
    *                                   assigned across all tiers in the current run.
    */
   public ReplicationThrottler(
+      Set<String> tiersLoadingReplicas,
       int replicationThrottleLimit,
       int maxReplicaAssignmentsInRun
   )
@@ -60,11 +66,20 @@ public class ReplicationThrottler
     this.replicationThrottleLimit = replicationThrottleLimit;
     this.maxReplicaAssignmentsInRun = maxReplicaAssignmentsInRun;
     this.totalReplicasAssignedInRun = 0;
+    if (tiersLoadingReplicas != null) {
+      this.tiersLoadingReplicas.addAll(tiersLoadingReplicas);
+    }
+  }
+
+  public boolean isTierLoadingReplicas(String tier)
+  {
+    return tiersLoadingReplicas.contains(tier);
   }
 
   public boolean canAssignReplica(String tier)
   {
-    return totalReplicasAssignedInRun < maxReplicaAssignmentsInRun
+    return !tiersLoadingReplicas.contains(tier)
+           && totalReplicasAssignedInRun < maxReplicaAssignmentsInRun
            && tierToNumAssigned.computeIfAbsent(tier, t -> 0) < replicationThrottleLimit;
   }
 
@@ -72,16 +87,6 @@ public class ReplicationThrottler
   {
     ++totalReplicasAssignedInRun;
     tierToNumAssigned.compute(tier, (t, count) -> (count == null) ? 1 : count + 1);
-  }
-
-  public void incrementThrottledReplicas(String tier)
-  {
-    tierToNumThrottled.compute(tier, (t, count) -> (count == null) ? 1 : count + 1);
-  }
-
-  public Map<String, Integer> getTierToNumThrottled()
-  {
-    return tierToNumThrottled;
   }
 
 }

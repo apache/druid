@@ -531,6 +531,7 @@ public class BalanceSegmentsTest
   {
     CoordinatorDynamicConfig dynamicConfig = CoordinatorDynamicConfig.builder().build();
     return new ReplicationThrottler(
+        null,
         dynamicConfig.getReplicationThrottleLimit(),
         dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
     );

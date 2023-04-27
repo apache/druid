@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.Sets;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
@@ -115,8 +116,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   public boolean moveSegment(
       DataSegment segment,
       ServerHolder sourceServer,
-      List<ServerHolder> destinationServers,
-      boolean skipIfOptimallyPlaced
+      List<ServerHolder> destinationServers
   )
   {
     final String tier = sourceServer.getServer().getTier();
@@ -131,8 +131,9 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       return false;
     }
 
-    // Add the source server as an eligible server if skipping is allowed
-    if (skipIfOptimallyPlaced) {
+    // If the source server is not decommissioning, move can be skipped if the
+    // segment is already optimally placed
+    if (!sourceServer.isDecommissioning()) {
       eligibleDestinationServers.add(sourceServer);
     }
 
@@ -161,7 +162,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       // Cancel the load on serverA and load on serverB instead
       if (serverA.cancelOperation(SegmentAction.LOAD, segment)) {
         int loadedCountOnTier = replicantLookup.getServedReplicas(segment.getId(), tier);
-        return loadQueueManager.loadSegment(segment, serverB, loadedCountOnTier < 1, replicationThrottler);
+        return loadSegment(segment, serverB, loadedCountOnTier >= 1);
       }
 
       // Could not cancel load, let the segment load on serverA and count it as unmoved
@@ -181,6 +182,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     final Set<String> allTiers = Sets.newHashSet(cluster.getTierNames());
     tierToReplicaCount.forEach((tier, requiredReplicas) -> {
       reportTierCapacityStats(segment, requiredReplicas, tier);
+      replicantLookup.setRequiredReplicas(segment.getId(), false, tier, requiredReplicas);
       if (allTiers.contains(tier)) {
         requiredTotalReplicas.addAndGet(requiredReplicas);
       } else {
@@ -235,6 +237,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     // Cancel all moves in this tier if it does not need to have replicas
     if (shouldCancelMoves) {
       cancelOperations(SegmentAction.MOVE_TO, movingReplicas, segment, segmentStatus);
+      cancelOperations(SegmentAction.MOVE_FROM, movingReplicas, segment, segmentStatus);
     }
 
     // Cancel drops and queue loads if the projected count is below the requirement
@@ -246,11 +249,10 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       // Cancelled drops can be counted as loaded replicas, thus reducing deficit
       int numReplicasToLoad = replicaDeficit - cancelledDrops;
       if (numReplicasToLoad > 0) {
-        boolean isFirstLoadOnTier = replicantLookup.getServedReplicas(segment.getId(), tier)
-                                    + cancelledDrops < 1;
-        int numLoadsQueued = loadReplicas(numReplicasToLoad, segment, tier, segmentStatus, isFirstLoadOnTier);
+        boolean isAlreadyLoadedOnTier = replicantLookup.getServedReplicas(segment.getId(), tier)
+                                        + cancelledDrops >= 1;
+        int numLoadsQueued = loadReplicas(numReplicasToLoad, segment, tier, segmentStatus, isAlreadyLoadedOnTier);
         incrementStat(Stats.Segments.ASSIGNED, segment, tier, numLoadsQueued);
-        incrementStat(Stats.Segments.UNDER_REPLICATED, segment, tier, numReplicasToLoad);
       }
     }
 
@@ -281,6 +283,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   @Override
   public void broadcastSegment(DataSegment segment)
   {
+    final Object2IntOpenHashMap<String> tierToRequiredReplicas = new Object2IntOpenHashMap<>();
     for (ServerHolder server : cluster.getAllServers()) {
       // Ignore servers which are not broadcast targets
       if (!server.getServer().getType().isSegmentBroadcastTarget()) {
@@ -289,13 +292,22 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
       // Drop from decommissioning servers and load on active servers
       final String tier = server.getServer().getTier();
-      if (server.isDecommissioning() && dropBroadcastSegment(segment, server)) {
-        incrementStat(Stats.Segments.DROPPED_BROADCAST, segment, tier);
-      }
-      if (!server.isDecommissioning() && loadBroadcastSegment(segment, server)) {
+      if (server.isDecommissioning()) {
+        boolean dropQueued = dropBroadcastSegment(segment, server);
+        incrementStat(Stats.Segments.DROPPED_BROADCAST, segment, tier, dropQueued ? 1 : 0);
+      } else if (loadBroadcastSegment(segment, server)) {
+        tierToRequiredReplicas.addTo(tier, 1);
         incrementStat(Stats.Segments.ASSIGNED_BROADCAST, segment, tier);
+      } else {
+        tierToRequiredReplicas.addTo(tier, 1);
       }
     }
+
+    // Update required replica counts
+    tierToRequiredReplicas.object2IntEntrySet().fastForEach(
+        entry -> replicantLookup
+            .setRequiredReplicas(segment.getId(), true, entry.getKey(), entry.getIntValue())
+    );
   }
 
   @Override
@@ -317,11 +329,10 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       return server.cancelOperation(SegmentAction.DROP, segment);
     }
 
-    if (server.canLoadSegment(segment)
-        && loadQueueManager.loadSegment(segment, server, true, replicationThrottler)) {
+    if (server.canLoadSegment(segment) && loadSegment(segment, server, false)) {
       return true;
     } else {
-      log.makeAlert("Failed to assign broadcast segment for datasource [%s]", segment.getDataSource())
+      log.makeAlert("Could not assign broadcast segment for datasource [%s]", segment.getDataSource())
          .addData("segmentId", segment.getId())
          .addData("segmentSize", segment.getSize())
          .addData("hostName", server.getServer().getHost())
@@ -433,9 +444,14 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       DataSegment segment,
       String tier,
       SegmentTierStatus segmentStatus,
-      boolean isFirstLoadOnTier
+      boolean isAlreadyLoadedOnTier
   )
   {
+    // Do not assign replicas if tier is already busy loading some
+    if (isAlreadyLoadedOnTier && replicationThrottler.isTierLoadingReplicas(tier)) {
+      return 0;
+    }
+
     final List<ServerHolder> eligibleServers = segmentStatus.getServersEligibleToLoad();
     if (eligibleServers.isEmpty()) {
       incrementStat(Error.NO_ELIGIBLE_SERVER_FOR_LOAD, segment, tier);
@@ -454,19 +470,31 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     // Load the replicas on this tier
     int numLoadsQueued = 0;
     while (numLoadsQueued < numToLoad && serverIterator.hasNext()) {
-      boolean queueSuccess =
-          loadQueueManager.loadSegment(segment, serverIterator.next(), isFirstLoadOnTier, replicationThrottler);
-
-      if (queueSuccess) {
-        ++numLoadsQueued;
-      } else if (isFirstLoadOnTier) {
-        incrementStat(Error.LOAD_FAILED, segment, tier);
-      } else {
-        incrementStat(Error.REPLICA_THROTTLED, segment, tier);
-      }
+      numLoadsQueued += loadSegment(segment, serverIterator.next(), isAlreadyLoadedOnTier)
+                        ? 1 : 0;
     }
 
     return numLoadsQueued;
+  }
+
+  private boolean loadSegment(DataSegment segment, ServerHolder server, boolean isAlreadyLoadedOnTier)
+  {
+    final String tier = server.getServer().getTier();
+    if (isAlreadyLoadedOnTier && !replicationThrottler.canAssignReplica(tier)) {
+      incrementStat(Error.REPLICA_THROTTLED, segment, tier);
+      return false;
+    }
+
+    final SegmentAction action = isAlreadyLoadedOnTier ? SegmentAction.REPLICATE : SegmentAction.LOAD;
+    final boolean assigned = loadQueueManager.loadSegment(segment, server, action);
+
+    if (!assigned) {
+      incrementStat(Error.LOAD_FAILED, segment, tier);
+    } else if (isAlreadyLoadedOnTier) {
+      replicationThrottler.incrementAssignedReplicas(tier);
+    }
+
+    return assigned;
   }
 
   private int cancelOperations(

@@ -431,6 +431,7 @@ public class BroadcastDistributionRuleTest
   {
     final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
     ReplicationThrottler throttler = new ReplicationThrottler(
+        null,
         dynamicConfig.getReplicationThrottleLimit(),
         dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
     );

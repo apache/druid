@@ -290,23 +290,15 @@ public class DruidCoordinatorTest extends CuratorTestBase
     // The load rules asks for 2 replicas, therefore 1 replica should still be pending
     Assert.assertEquals(1L, underRepliicationCountsPerDataSource.getLong(dataSource));
 
-
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTierUsingClusterView =
         coordinator.computeUnderReplicationCountsPerDataSourcePerTierUsingClusterView();
     Assert.assertNotNull(underReplicationCountsPerDataSourcePerTier);
     Assert.assertEquals(1, underReplicationCountsPerDataSourcePerTier.size());
-
-    Object2LongMap<String> underRepliicationCountsPerDataSourceUsingClusterView =
-        underReplicationCountsPerDataSourcePerTierUsingClusterView.get(tier);
-    Assert.assertNotNull(underRepliicationCountsPerDataSourceUsingClusterView);
-    Assert.assertEquals(1, underRepliicationCountsPerDataSourceUsingClusterView.size());
-    //noinspection deprecation
-    Assert.assertNotNull(underRepliicationCountsPerDataSourceUsingClusterView.get(dataSource));
+    Assert.assertTrue(underReplicationCountsPerDataSourcePerTierUsingClusterView.isEmpty());
     // Simulated the adding of segment to druidServer during SegmentChangeRequestLoad event
     // The load rules asks for 2 replicas, but only 1 historical server in cluster. Since computing using cluster view
     // the segments are replicated as many times as they can be given state of cluster, therefore should not be
     // under-replicated.
-    Assert.assertEquals(0L, underRepliicationCountsPerDataSourceUsingClusterView.getLong(dataSource));
 
     coordinator.stop();
     leaderUnannouncerLatch.await();
@@ -389,15 +381,11 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier =
         coordinator.computeUnderReplicationCountsPerDataSourcePerTier();
-    Assert.assertEquals(2, underReplicationCountsPerDataSourcePerTier.size());
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(hotTierName).getLong(dataSource));
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(coldTierName).getLong(dataSource));
+    Assert.assertTrue(underReplicationCountsPerDataSourcePerTier.isEmpty());
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTierUsingClusterView =
         coordinator.computeUnderReplicationCountsPerDataSourcePerTierUsingClusterView();
-    Assert.assertEquals(2, underReplicationCountsPerDataSourcePerTierUsingClusterView.size());
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(hotTierName).getLong(dataSource));
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(coldTierName).getLong(dataSource));
+    Assert.assertTrue(underReplicationCountsPerDataSourcePerTierUsingClusterView.isEmpty());
 
     coordinator.stop();
     leaderUnannouncerLatch.await();
@@ -516,10 +504,10 @@ public class DruidCoordinatorTest extends CuratorTestBase
     pathChildrenCacheBroker2.start();
     pathChildrenCachePeon.start();
 
-    DruidDataSource[] druidDataSources = {new DruidDataSource(dataSource, Collections.emptyMap())};
-    dataSegments.values().forEach(druidDataSources[0]::addSegment);
+    DruidDataSource druidDataSource = new DruidDataSource(dataSource, Collections.emptyMap());
+    dataSegments.values().forEach(druidDataSource::addSegment);
 
-    setupSegmentsMetadataMock(druidDataSources[0]);
+    setupSegmentsMetadataMock(druidDataSource);
 
     final Rule broadcastDistributionRule = new ForeverBroadcastDistributionRule();
     EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
@@ -552,21 +540,22 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
     Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getLoadStatus());
 
+    // Under-replicated counts are updated only after the next coordinator run
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier =
         coordinator.computeUnderReplicationCountsPerDataSourcePerTier();
-    Assert.assertEquals(4, underReplicationCountsPerDataSourcePerTier.size());
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(hotTierName).getLong(dataSource));
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(coldTierName).getLong(dataSource));
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(tierName1).getLong(dataSource));
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(tierName2).getLong(dataSource));
+    Assert.assertEquals(2, underReplicationCountsPerDataSourcePerTier.size());
+    Assert.assertNull(underReplicationCountsPerDataSourcePerTier.get(hotTierName));
+    Assert.assertNull(underReplicationCountsPerDataSourcePerTier.get(coldTierName));
+    Assert.assertEquals(3L, underReplicationCountsPerDataSourcePerTier.get(tierName1).getLong(dataSource));
+    Assert.assertEquals(6L, underReplicationCountsPerDataSourcePerTier.get(tierName2).getLong(dataSource));
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTierUsingClusterView =
         coordinator.computeUnderReplicationCountsPerDataSourcePerTierUsingClusterView();
-    Assert.assertEquals(4, underReplicationCountsPerDataSourcePerTierUsingClusterView.size());
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(hotTierName).getLong(dataSource));
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(coldTierName).getLong(dataSource));
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(tierName1).getLong(dataSource));
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(tierName2).getLong(dataSource));
+    Assert.assertEquals(2, underReplicationCountsPerDataSourcePerTierUsingClusterView.size());
+    Assert.assertNull(underReplicationCountsPerDataSourcePerTier.get(hotTierName));
+    Assert.assertNull(underReplicationCountsPerDataSourcePerTier.get(coldTierName));
+    Assert.assertEquals(3L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(tierName1).getLong(dataSource));
+    Assert.assertEquals(6L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(tierName2).getLong(dataSource));
 
     coordinator.stop();
     leaderUnannouncerLatch.await();

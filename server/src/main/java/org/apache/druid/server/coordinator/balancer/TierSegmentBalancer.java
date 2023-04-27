@@ -113,20 +113,20 @@ public class TierSegmentBalancer
       int maxDecommPercentToMove = dynamicConfig.getDecommissioningMaxPercentOfMaxSegmentsToMove();
       int maxDecommSegmentsToMove = (int) Math.ceil(totalMaxSegmentsToMove * (maxDecommPercentToMove / 100.0));
       movedDecommSegments +=
-          moveSegmentsFromTo(decommissioningServers, activeServers, maxDecommSegmentsToMove, false);
+          moveSegmentsFromTo(decommissioningServers, activeServers, maxDecommSegmentsToMove);
       log.info(
-          "Moved [%d] segments out of max [%d (%d%%)] from decommissioning to active servers.",
-          movedDecommSegments, maxDecommSegmentsToMove, maxDecommPercentToMove
+          "Moved [%d] segments out of max [%d (%d%%)] from decommissioning to active servers in tier [%s].",
+          movedDecommSegments, maxDecommSegmentsToMove, maxDecommPercentToMove, tier
       );
     }
 
     // Move segments across active servers
     int maxGeneralSegmentsToMove = totalMaxSegmentsToMove - movedDecommSegments;
     int movedGeneralSegments =
-        moveSegmentsFromTo(activeServers, activeServers, maxGeneralSegmentsToMove, true);
+        moveSegmentsFromTo(activeServers, activeServers, maxGeneralSegmentsToMove);
     log.info(
-        "Moved [%d] segments out of max [%d] between active servers.",
-        movedGeneralSegments, maxGeneralSegmentsToMove
+        "Moved [%d] segments out of max [%d] between active servers in tier [%s].",
+        movedGeneralSegments, maxGeneralSegmentsToMove, tier
     );
 
     if (dynamicConfig.emitBalancingStats()) {
@@ -137,8 +137,7 @@ public class TierSegmentBalancer
   private int moveSegmentsFromTo(
       List<ServerHolder> sourceServers,
       List<ServerHolder> destServers,
-      int maxSegmentsToMove,
-      boolean skipIfOptimallyPlaced
+      int maxSegmentsToMove
   )
   {
     if (maxSegmentsToMove <= 0 || sourceServers.isEmpty() || destServers.isEmpty()) {
@@ -148,13 +147,13 @@ public class TierSegmentBalancer
     // Always move loading segments first as it is a cheaper operation
     Iterator<BalancerSegmentHolder> pickedSegments
         = pickSegmentsFrom(sourceServers, maxSegmentsToMove, true);
-    int movedCount = moveSegmentsTo(destServers, pickedSegments, maxSegmentsToMove, skipIfOptimallyPlaced);
+    int movedCount = moveSegmentsTo(destServers, pickedSegments, maxSegmentsToMove);
 
-    // Move loaded segments if tier is not busy
+    // Move loaded segments only if tier is not already busy moving segments
     if (movingSegmentCount <= 0) {
       maxSegmentsToMove -= movedCount;
       pickedSegments = pickSegmentsFrom(sourceServers, maxSegmentsToMove, false);
-      movedCount += moveSegmentsTo(destServers, pickedSegments, maxSegmentsToMove, skipIfOptimallyPlaced);
+      movedCount += moveSegmentsTo(destServers, pickedSegments, maxSegmentsToMove);
     }
 
     return movedCount;
@@ -191,8 +190,7 @@ public class TierSegmentBalancer
   private int moveSegmentsTo(
       List<ServerHolder> destinationServers,
       Iterator<BalancerSegmentHolder> segmentsToMove,
-      int maxSegmentsToMove,
-      boolean skipIfOptimallyPlaced
+      int maxSegmentsToMove
   )
   {
     int processed = 0;
@@ -202,8 +200,8 @@ public class TierSegmentBalancer
 
       final BalancerSegmentHolder segmentHolder = segmentsToMove.next();
       DataSegment segmentToMove = getLoadableSegment(segmentHolder.getSegment());
-      if (segmentToMove != null && segmentAssigner
-          .moveSegment(segmentToMove, segmentHolder.getServer(), destinationServers, skipIfOptimallyPlaced)) {
+      if (segmentToMove != null &&
+          segmentAssigner.moveSegment(segmentToMove, segmentHolder.getServer(), destinationServers)) {
         ++movedCount;
       }
     }

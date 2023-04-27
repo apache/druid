@@ -28,6 +28,7 @@ import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
+import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
@@ -37,6 +38,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -83,18 +85,14 @@ public class RunRules implements CoordinatorDuty
         usedSegments.size(), overshadowed.size()
     );
 
-    final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
-    final ReplicationThrottler replicationThrottler = new ReplicationThrottler(
-        dynamicConfig.getReplicationThrottleLimit(),
-        dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
-    );
+    final ReplicationThrottler replicationThrottler = createReplicationThrottler(params);
     final StrategicSegmentAssigner segmentAssigner = new StrategicSegmentAssigner(
         loadQueueManager,
         cluster,
         params.getSegmentReplicantLookup(),
         replicationThrottler,
         params.getBalancerStrategy(),
-        dynamicConfig
+        params.getCoordinatorDynamicConfig()
     );
 
     final MetadataRuleManager databaseRuleManager = params.getDatabaseRuleManager();
@@ -173,5 +171,29 @@ public class RunRules implements CoordinatorDuty
   {
     return params.getDatabaseRuleManager().getRulesWithDefault(datasource).stream()
                  .anyMatch(rule -> rule instanceof BroadcastDistributionRule);
+  }
+
+  private ReplicationThrottler createReplicationThrottler(DruidCoordinatorRuntimeParams params)
+  {
+    final Set<String> tiersLoadingReplicas = new HashSet<>();
+
+    params.getDruidCluster().getHistoricals().forEach(
+        (tier, historicals) -> {
+          int numLoadingReplicas = historicals.stream().mapToInt(ServerHolder::getNumLoadingReplicas).sum();
+          if (numLoadingReplicas > 0) {
+            log.info(
+                "Tier [%s] will not be assigned replicas as it is already loading [%d] replicas.",
+                tier, numLoadingReplicas
+            );
+            tiersLoadingReplicas.add(tier);
+          }
+        }
+    );
+    final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
+    return new ReplicationThrottler(
+        tiersLoadingReplicas,
+        dynamicConfig.getReplicationThrottleLimit(),
+        dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
+    );
   }
 }

@@ -23,7 +23,6 @@ import com.google.inject.Inject;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 
@@ -54,33 +53,11 @@ public class SegmentLoadQueueManager
   /**
    * Queues load of the segment on the given server.
    */
-  public boolean loadSegment(
-      DataSegment segment,
-      ServerHolder server,
-      boolean isFirstLoadOnTier,
-      ReplicationThrottler throttler
-  )
+  public boolean loadSegment(DataSegment segment, ServerHolder server, SegmentAction action)
   {
-    // Check if this load operation has to be throttled
-    final String tier = server.getServer().getTier();
-    final SegmentAction action;
-    if (isFirstLoadOnTier) {
-      action = SegmentAction.LOAD;
-    } else if (canLoadReplica(server, tier, throttler)) {
-      action = SegmentAction.REPLICATE;
-    } else {
-      throttler.incrementThrottledReplicas(tier);
-      return false;
-    }
-
-    final String serverName = server.getServer().getName();
     try {
       if (!server.startOperation(action, segment)) {
         return false;
-      }
-
-      if (!isFirstLoadOnTier) {
-        throttler.incrementAssignedReplicas(tier);
       }
 
       server.getPeon().loadSegment(segment, action, null);
@@ -88,6 +65,7 @@ public class SegmentLoadQueueManager
     }
     catch (Exception e) {
       server.cancelOperation(action, segment);
+      final String serverName = server.getServer().getName();
       log.error(e, "Error while loading segment[%s] on server[%s]", segment.getId(), serverName);
       return false;
     }
@@ -176,11 +154,6 @@ public class SegmentLoadQueueManager
   public boolean deleteSegment(DataSegment segment)
   {
     return segmentsMetadataManager.markSegmentAsUnused(segment.getId());
-  }
-
-  private boolean canLoadReplica(ServerHolder server, String tier, ReplicationThrottler throttler)
-  {
-    return !server.isLoadingReplicas() && throttler.canAssignReplica(tier);
   }
 
 }

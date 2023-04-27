@@ -19,12 +19,7 @@
 
 package org.apache.druid.server.coordinator.rules;
 
-import it.unimi.dsi.fastutil.objects.Object2LongMap;
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.server.coordinator.DruidCluster;
-import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Map;
@@ -34,66 +29,10 @@ import java.util.Map;
  */
 public abstract class LoadRule implements Rule
 {
-  private static final EmittingLogger log = new EmittingLogger(LoadRule.class);
-
   @Override
   public void run(DataSegment segment, SegmentActionHandler handler)
   {
     handler.updateSegmentReplicasInTiers(segment, getTieredReplicants());
-  }
-
-  @Override
-  public boolean canLoadSegments()
-  {
-    return true;
-  }
-
-  @Override
-  public void updateUnderReplicated(
-      Map<String, Object2LongMap<String>> underReplicatedPerTier,
-      SegmentReplicantLookup segmentReplicantLookup,
-      DataSegment segment
-  )
-  {
-    getTieredReplicants().forEach((final String tier, final Integer ruleReplicants) -> {
-      int currentReplicants = segmentReplicantLookup.getServedReplicas(segment.getId(), tier);
-      Object2LongMap<String> underReplicationPerDataSource = underReplicatedPerTier.computeIfAbsent(
-          tier,
-          ignored -> new Object2LongOpenHashMap<>()
-      );
-      ((Object2LongOpenHashMap<String>) underReplicationPerDataSource).addTo(
-          segment.getDataSource(),
-          Math.max(ruleReplicants - currentReplicants, 0)
-      );
-    });
-  }
-
-  @Override
-  public void updateUnderReplicatedWithClusterView(
-      Map<String, Object2LongMap<String>> underReplicatedPerTier,
-      SegmentReplicantLookup segmentReplicantLookup,
-      DruidCluster cluster,
-      DataSegment segment
-  )
-  {
-    getTieredReplicants().forEach((final String tier, final Integer ruleReplicants) -> {
-      int currentReplicants = segmentReplicantLookup.getServedReplicas(segment.getId(), tier);
-      Object2LongMap<String> underReplicationPerDataSource = underReplicatedPerTier.computeIfAbsent(
-          tier,
-          ignored -> new Object2LongOpenHashMap<>()
-      );
-      int possibleReplicants = Math.min(ruleReplicants, cluster.getHistoricals().get(tier).size());
-      log.debug(
-          "ruleReplicants: [%d], possibleReplicants: [%d], currentReplicants: [%d]",
-          ruleReplicants,
-          possibleReplicants,
-          currentReplicants
-      );
-      ((Object2LongOpenHashMap<String>) underReplicationPerDataSource).addTo(
-          segment.getDataSource(),
-          Math.max(possibleReplicants - currentReplicants, 0)
-      );
-    });
   }
 
   protected static void validateTieredReplicants(final Map<String, Integer> tieredReplicants)

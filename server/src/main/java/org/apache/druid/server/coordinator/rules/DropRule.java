@@ -32,9 +32,4 @@ public abstract class DropRule implements Rule
     handler.deleteSegment(segment);
   }
 
-  @Override
-  public boolean canLoadSegments()
-  {
-    return false;
-  }
 }

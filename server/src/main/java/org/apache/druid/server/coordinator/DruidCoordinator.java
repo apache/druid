@@ -45,7 +45,6 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.CoordinatorIndexingServiceDuty;
 import org.apache.druid.guice.annotations.CoordinatorMetadataStoreManagementDuty;
 import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
@@ -76,17 +75,14 @@ import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.LoadRule;
-import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
-import org.apache.druid.server.initialization.jetty.ServiceUnavailableException;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -234,7 +230,7 @@ public class DruidCoordinator
   public Map<String, Object2LongMap<String>> computeUnderReplicationCountsPerDataSourcePerTier()
   {
     final Iterable<DataSegment> dataSegments = segmentsMetadataManager.iterateAllUsedSegments();
-    return computeUnderReplicationCountsPerDataSourcePerTierForSegmentsInternal(dataSegments, false);
+    return computeUnderReplicated(dataSegments, false);
   }
 
   /**
@@ -243,7 +239,7 @@ public class DruidCoordinator
   public Map<String, Object2LongMap<String>> computeUnderReplicationCountsPerDataSourcePerTierUsingClusterView()
   {
     final Iterable<DataSegment> dataSegments = segmentsMetadataManager.iterateAllUsedSegments();
-    return computeUnderReplicationCountsPerDataSourcePerTierForSegmentsInternal(dataSegments, true);
+    return computeUnderReplicated(dataSegments, true);
   }
 
   /**
@@ -258,7 +254,7 @@ public class DruidCoordinator
       Iterable<DataSegment> dataSegments
   )
   {
-    return computeUnderReplicationCountsPerDataSourcePerTierForSegmentsInternal(dataSegments, false);
+    return computeUnderReplicated(dataSegments, false);
   }
 
   /**
@@ -273,7 +269,7 @@ public class DruidCoordinator
       Iterable<DataSegment> dataSegments
   )
   {
-    return computeUnderReplicationCountsPerDataSourcePerTierForSegmentsInternal(dataSegments, true);
+    return computeUnderReplicated(dataSegments, true);
   }
 
   public Object2IntMap<String> computeNumsUnavailableUsedSegmentsPerDataSource()
@@ -285,7 +281,6 @@ public class DruidCoordinator
     final Object2IntOpenHashMap<String> numsUnavailableUsedSegmentsPerDataSource = new Object2IntOpenHashMap<>();
 
     final Iterable<DataSegment> dataSegments = segmentsMetadataManager.iterateAllUsedSegments();
-
     for (DataSegment segment : dataSegments) {
       if (segmentReplicantLookup.getTotalServedReplicas(segment.getId()) == 0) {
         numsUnavailableUsedSegmentsPerDataSource.addTo(segment.getDataSource(), 1);
@@ -439,56 +434,16 @@ public class DruidCoordinator
     compactSegmentsDuty.run();
   }
 
-  private Map<String, Object2LongMap<String>> computeUnderReplicationCountsPerDataSourcePerTierForSegmentsInternal(
+  private Map<String, Object2LongMap<String>> computeUnderReplicated(
       Iterable<DataSegment> dataSegments,
       boolean computeUsingClusterView
   )
   {
-    final Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier = new HashMap<>();
-
     if (segmentReplicantLookup == null) {
-      return underReplicationCountsPerDataSourcePerTier;
+      return Collections.emptyMap();
+    } else {
+      return segmentReplicantLookup.getTierToDatasourceToUnderReplicated(dataSegments, !computeUsingClusterView);
     }
-
-    if (computeUsingClusterView && cluster == null) {
-      throw new ServiceUnavailableException(
-          "coordinator hasn't populated information about cluster yet, try again later");
-    }
-
-    final DateTime now = DateTimes.nowUtc();
-
-    for (final DataSegment segment : dataSegments) {
-      final List<Rule> rules = metadataRuleManager.getRulesWithDefault(segment.getDataSource());
-
-      for (final Rule rule : rules) {
-        if (!rule.appliesTo(segment, now)) {
-          // Rule did not match. Continue to the next Rule.
-          continue;
-        }
-        if (!rule.canLoadSegments()) {
-          // Rule matched but rule does not and cannot load segments.
-          // Hence, there is no need to update underReplicationCountsPerDataSourcePerTier map
-          break;
-        }
-
-        if (computeUsingClusterView) {
-          rule.updateUnderReplicatedWithClusterView(
-              underReplicationCountsPerDataSourcePerTier,
-              segmentReplicantLookup,
-              cluster,
-              segment
-          );
-        } else {
-          rule.updateUnderReplicated(underReplicationCountsPerDataSourcePerTier, segmentReplicantLookup, segment);
-        }
-
-        // Only the first matching rule applies. This is because the Coordinator cycle through all used segments
-        // and match each segment with the first rule that applies. Each segment may only match a single rule.
-        break;
-      }
-    }
-
-    return underReplicationCountsPerDataSourcePerTier;
   }
 
   private void becomeLeader()

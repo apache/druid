@@ -27,6 +27,7 @@ import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -72,7 +73,7 @@ public class SegmentReplicantLookup
   }
 
   private final Table<SegmentId, String, ReplicaCount> replicaCounts;
-  private final DruidCluster cluster;
+  private final Map<String, Integer> tierToHistoricalCount = new HashMap<>();
 
   private SegmentReplicantLookup(
       Table<SegmentId, String, ReplicaCount> replicaCounts,
@@ -80,7 +81,10 @@ public class SegmentReplicantLookup
   )
   {
     this.replicaCounts = replicaCounts;
-    this.cluster = cluster;
+
+    cluster.getHistoricals().forEach(
+        (tier, historicals) -> tierToHistoricalCount.put(tier, historicals.size())
+    );
   }
 
   /**
@@ -129,19 +133,46 @@ public class SegmentReplicantLookup
     return totalServed;
   }
 
-  public Object2LongMap<String> getBroadcastUnderReplication(SegmentId segmentId)
+  /**
+   * Sets the number of replicas required for the specified segment in the tier.
+   * In a given coordinator run, this method must be called atleast once for
+   * every segment every tier.
+   */
+  public void setRequiredReplicas(SegmentId segmentId, boolean isBroadcast, String tier, int requiredReplicas)
   {
-    Object2LongOpenHashMap<String> perTier = new Object2LongOpenHashMap<>();
-    for (ServerHolder holder : cluster.getAllServers()) {
-      if (holder.getServer().getType().isSegmentBroadcastTarget()) {
-        if (holder.hasSegmentLoaded(segmentId)) {
-          perTier.putIfAbsent(holder.getServer().getTier(), 0);
-        } else {
-          perTier.addTo(holder.getServer().getTier(), 1L);
-        }
-      }
+    ReplicaCount counts = computeIfAbsent(replicaCounts, segmentId, tier);
+    counts.required = requiredReplicas;
+    if (isBroadcast) {
+      counts.possible = requiredReplicas;
+    } else {
+      counts.possible = tierToHistoricalCount.getOrDefault(tier, 0);
     }
-    return perTier;
+  }
+
+  public Map<String, Object2LongMap<String>> getTierToDatasourceToUnderReplicated(
+      Iterable<DataSegment> usedSegments,
+      boolean ignoreMissingServers
+  )
+  {
+    final Map<String, Object2LongMap<String>> tierToUnderReplicated = new HashMap<>();
+
+    for (DataSegment segment : usedSegments) {
+      final Map<String, ReplicaCount> tierToReplicaCount = replicaCounts.row(segment.getId());
+      if (tierToReplicaCount == null) {
+        continue;
+      }
+
+      tierToReplicaCount.forEach((tier, counts) -> {
+        final int underReplicated = counts.underReplicated(ignoreMissingServers);
+        if (underReplicated > 0) {
+          Object2LongOpenHashMap<String> datasourceToUnderReplicated = (Object2LongOpenHashMap<String>)
+              tierToUnderReplicated.computeIfAbsent(tier, ds -> new Object2LongOpenHashMap<>());
+          datasourceToUnderReplicated.addTo(segment.getDataSource(), underReplicated);
+        }
+      });
+    }
+
+    return tierToUnderReplicated;
   }
 
   /**
@@ -149,6 +180,8 @@ public class SegmentReplicantLookup
    */
   private static class ReplicaCount
   {
+    int possible;
+    int required;
     int loaded;
     int loading;
     int dropping;
@@ -185,6 +218,13 @@ public class SegmentReplicantLookup
     int served()
     {
       return loaded - dropping;
+    }
+
+    int underReplicated(boolean ignoreMissingServers)
+    {
+      int served = served();
+      int targetCount = ignoreMissingServers ? required : Math.min(required, possible);
+      return targetCount > served ? targetCount - served : 0;
     }
   }
 }

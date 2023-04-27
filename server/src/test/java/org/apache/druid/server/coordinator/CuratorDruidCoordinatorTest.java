@@ -329,8 +329,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     segmentAssigner.moveSegment(
         segmentToMove,
         sourceServer,
-        Collections.singletonList(destinationServer),
-        false
+        Collections.singletonList(destinationServer)
     );
 
     // wait for destination server to load segment
@@ -426,6 +425,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   {
     final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
     ReplicationThrottler throttler = new ReplicationThrottler(
+        null,
         dynamicConfig.getReplicationThrottleLimit(),
         dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
     );

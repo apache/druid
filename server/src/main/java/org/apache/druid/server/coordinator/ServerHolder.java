@@ -38,7 +38,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -60,8 +59,10 @@ public class ServerHolder implements Comparable<ServerHolder>
   private final int maxAssignmentsInRun;
   private final int maxLifetimeInQueue;
 
+  // These numbers are initialized at the start of the run to limit
+  // replication and balancing. They need not be updated during the run.
   private final AtomicInteger movingSegmentCount = new AtomicInteger(0);
-  private final AtomicBoolean isLoadingReplicas = new AtomicBoolean(false);
+  private final AtomicInteger loadingReplicaCount = new AtomicInteger(0);
 
   private int totalAssignmentsInRun;
   private long sizeOfLoadingSegments;
@@ -145,7 +146,7 @@ public class ServerHolder implements Comparable<ServerHolder>
             movingSegmentCount.incrementAndGet();
           }
           if (action == SegmentAction.REPLICATE) {
-            isLoadingReplicas.set(true);
+            loadingReplicaCount.incrementAndGet();
           }
         }
     );
@@ -321,9 +322,9 @@ public class ServerHolder implements Comparable<ServerHolder>
     return movingSegmentCount.get();
   }
 
-  public boolean isLoadingReplicas()
+  public int getNumLoadingReplicas()
   {
-    return isLoadingReplicas.get();
+    return loadingReplicaCount.get();
   }
 
   public boolean startOperation(SegmentAction action, DataSegment segment)
