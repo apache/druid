@@ -227,16 +227,7 @@ public class MSQWorkerTaskLauncher
   public void launchTasksIfNeeded(final int taskCount) throws InterruptedException
   {
     synchronized (taskIds) {
-      // Fetch the list of workers which failed without work orders
-      Iterator<Integer> iterator = failedInactiveWorkers.iterator();
-      while (iterator.hasNext()) {
-        Integer workerNumber = iterator.next();
-        // If the controller expects the task to be running, queue it for retry
-        if (workerNumber < taskCount) {
-          submitForRelaunch(workerNumber);
-          iterator.remove();
-        }
-      }
+      retryInactiveTasksIfNeeded(taskCount);
 
       if (taskCount > desiredTaskCount) {
         desiredTaskCount = taskCount;
@@ -252,6 +243,27 @@ public class MSQWorkerTaskLauncher
         taskIds.wait();
       }
     }
+  }
+
+  public void retryInactiveTasksIfNeeded(int taskCount)
+  {
+    synchronized (taskIds) {
+      // Fetch the list of workers which failed without work orders
+      Iterator<Integer> iterator = failedInactiveWorkers.iterator();
+      while (iterator.hasNext()) {
+        Integer workerNumber = iterator.next();
+        // If the controller expects the task to be running, queue it for retry
+        if (workerNumber < taskCount) {
+          submitForRelaunch(workerNumber);
+          iterator.remove();
+        }
+      }
+    }
+  }
+
+  Set<Integer> getWorkersToRelaunch()
+  {
+    return workersToRelaunch;
   }
 
   /**
@@ -632,11 +644,10 @@ public class MSQWorkerTaskLauncher
         context.workerManager().cancel(taskId);
       }
     }
-
   }
 
   /**
-   * Cleans the task indentified in {@link MSQWorkerTaskLauncher#relaunchTasks()} for relaunch. Asks the overlord to cancel the task.
+   * Cleans the task identified in {@link MSQWorkerTaskLauncher#relaunchTasks()} for relaunch. Asks the overlord to cancel the task.
    */
   private void cleanFailedTasksWhichAreRelaunched()
   {
