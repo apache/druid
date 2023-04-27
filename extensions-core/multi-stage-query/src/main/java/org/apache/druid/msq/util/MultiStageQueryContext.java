@@ -63,6 +63,11 @@ import java.util.stream.Collectors;
  * <li><b>clusterStatisticsMergeMode</b>: Whether to use parallel or sequential mode for merging of the worker sketches.
  * Can be <b>PARALLEL</b>, <b>SEQUENTIAL</b> or <b>AUTO</b>. See {@link ClusterStatisticsMergeMode} for more information on each mode.
  * Default value is <b>PARALLEL</b></li>
+ *
+ * <li><b>useAutoColumnSchemas</b>: Temporary flag to allow experimentation using
+ * {@link org.apache.druid.segment.AutoTypeColumnSchema} for all 'standard' type columns during segment generation,
+ * see {@link DimensionSchemaUtils#createDimensionSchema} for more details.
+ *
  * </ol>
  **/
 public class MultiStageQueryContext
