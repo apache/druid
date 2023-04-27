@@ -19,6 +19,7 @@
 
 package org.apache.druid.frame.write;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.Frame;
@@ -173,29 +174,43 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_readNullAsDefaultValue()
+  public void test_readNullsInDefaultValueMode()
   {
-    // Test that nulls written in SQL-compatible mode are read as default values in defaut-value mode.
-    Assume.assumeTrue(NullHandling.sqlCompatible());
+    // Test that nulls written in SQL-compatible mode are read as nulls in default-value mode.
 
     final RowSignature signature =
         RowSignature.builder()
-                    .add("l", ColumnType.LONG)
-                    .add("f", ColumnType.FLOAT)
-                    .add("d", ColumnType.DOUBLE)
-                    .add("s", ColumnType.STRING)
+                    .add("l1", ColumnType.LONG)
+                    .add("f1", ColumnType.FLOAT)
+                    .add("d1", ColumnType.DOUBLE)
+                    .add("s1", ColumnType.STRING)
+                    .add("l2", ColumnType.LONG)
+                    .add("f2", ColumnType.FLOAT)
+                    .add("d2", ColumnType.DOUBLE)
+                    .add("s2", ColumnType.STRING)
                     .build();
 
-    final Sequence<List<Object>> rowSequence =
-        Sequences.simple(Collections.singletonList(Arrays.asList(null, null, null, null)));
-    final Pair<Frame, Integer> writeResult = writeFrame(rowSequence, signature, signature.getColumnNames());
+    final Pair<Frame, Integer> writeResult;
+
+    try {
+      // Write frame in SQL-compatible mode.
+      NullHandling.initializeForTestsWithValues(false, null);
+      final Sequence<List<Object>> rowSequence =
+          Sequences.simple(ImmutableList.of(Arrays.asList(null, null, null, null, 0L, 0f, 0d, "")));
+      writeResult = writeFrame(rowSequence, signature, signature.getColumnNames());
+    }
+    finally {
+      NullHandling.initializeForTests();
+    }
 
     Assert.assertEquals(1, (int) writeResult.rhs);
 
     try {
+      // Read frame in default-value mode.
       NullHandling.initializeForTestsWithValues(true, null);
       verifyFrame(
-          Sequences.simple(Collections.singletonList(Arrays.asList(0L, 0f, 0d, null))),
+          // Empty string is read back as null.
+          Sequences.simple(ImmutableList.of(Arrays.asList(null, null, null, null, 0L, 0f, 0d, null))),
           writeResult.lhs,
           signature
       );

@@ -19,20 +19,39 @@
 
 package org.apache.druid.collections;
 
-import java.io.Closeable;
+import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.utils.CloseableUtils;
 
-/**
- *
- */
-public interface ResourceHolder<T> extends Closeable
+import java.io.Closeable;
+import java.util.concurrent.atomic.AtomicReference;
+
+public class CloseableResourceHolder<T extends Closeable> implements ResourceHolder<T>
 {
-  T get();
+  private final AtomicReference<T> resource;
+
+  /**
+   * Use {@link ResourceHolder#fromCloseable}.
+   */
+  CloseableResourceHolder(T resource)
+  {
+    this.resource = new AtomicReference<>(Preconditions.checkNotNull(resource, "resource"));
+  }
 
   @Override
-  void close();
-
-  static <T extends Closeable> ResourceHolder<T> fromCloseable(final T resource)
+  public T get()
   {
-    return new CloseableResourceHolder<>(resource);
+    final T retVal = resource.get();
+    if (retVal == null) {
+      throw new ISE("Already closed");
+    }
+    return retVal;
+  }
+
+  @Override
+  public void close()
+  {
+    final T oldResource = resource.getAndSet(null);
+    CloseableUtils.closeAndWrapExceptions(oldResource);
   }
 }

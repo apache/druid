@@ -19,6 +19,7 @@
 
 package org.apache.druid.frame.write.columnar;
 
+import com.google.common.base.Throwables;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
@@ -83,6 +84,7 @@ public class ColumnarFrameWriter implements FrameWriter
       }
     }
     catch (Exception e) {
+      Throwables.propagateIfInstanceOf(e, ParseException.class);
       throw new ParseException("", e, "Unable to add the row to the frame. Type conversion might be required.");
     }
 
