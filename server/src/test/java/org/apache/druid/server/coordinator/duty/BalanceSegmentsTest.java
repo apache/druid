@@ -482,7 +482,8 @@ public class BalanceSegmentsTest
         server.toImmutableDruidServer(),
         new LoadQueuePeonTester(),
         isDecommissioning,
-        maxSegmentsInLoadQueue
+        maxSegmentsInLoadQueue,
+        10
     );
   }
 

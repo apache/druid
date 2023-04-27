@@ -506,7 +506,8 @@ public class LoadRuleTest
                 createServer(Tier.T1).toImmutableDruidServer(),
                 peon,
                 false,
-                maxSegmentsInQueue
+                maxSegmentsInQueue,
+                10
             )
         )
         .build();
