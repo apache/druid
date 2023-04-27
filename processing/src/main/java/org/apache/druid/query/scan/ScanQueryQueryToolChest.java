@@ -22,8 +22,10 @@ package org.apache.druid.query.scan;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
 import com.google.inject.Inject;
 import org.apache.druid.frame.Frame;
@@ -55,6 +57,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.CloseableUtils;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -219,6 +222,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   )
   {
     final AtomicLong memoryLimitAccumulator = memoryLimitBytes != null ? new AtomicLong(memoryLimitBytes) : null;
+    final RowSignature defaultRowSignature = resultArraySignature(query);
     Iterator<ScanResultValue> resultSequenceIterator = new Iterator<ScanResultValue>()
     {
       Yielder<ScanResultValue> yielder = Yielders.each(resultSequence);
@@ -254,11 +258,20 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
         final List<ScanResultValue> batch = new ArrayList<>();
         final ScanResultValue scanResultValue = scanResultValuePeekingIterator.next();
         batch.add(scanResultValue);
-        final RowSignature rowSignature = scanResultValue.getRowSignature();
+        // If the rowSignature is not provided, assume that the scanResultValue can contain any number of the columns
+        // that appear in the original scan query
+        final RowSignature rowSignature = scanResultValue.getRowSignature() != null
+                                          ? scanResultValue.getRowSignature()
+                                          : defaultRowSignature;
         while (scanResultValuePeekingIterator.hasNext()) {
-          final RowSignature nextRowSignature = scanResultValuePeekingIterator.peek().getRowSignature();
+          RowSignature nextRowSignature = scanResultValuePeekingIterator.peek().getRowSignature();
+          if (nextRowSignature == null) {
+            nextRowSignature = defaultRowSignature;
+          }
           if (nextRowSignature != null && nextRowSignature.equals(rowSignature)) {
             batch.add(scanResultValuePeekingIterator.next());
+          } else {
+            break;
           }
         }
         return convertScanResultValuesToFrame(batch, rowSignature, query, memoryLimitAccumulator);
@@ -269,17 +282,19 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
 
   private FrameSignaturePair convertScanResultValuesToFrame(
       List<ScanResultValue> batch,
-      RowSignature rowSignature,
+      @Nonnull RowSignature rowSignature,
       ScanQuery query,
       AtomicLong memoryLimitAccumulator
   )
   {
+    Preconditions.checkNotNull(rowSignature, "'rowSignature' must be provided");
+
     List<Cursor> cursors = new ArrayList<>();
 
     for (ScanResultValue scanResultValue : batch) {
       final List rows = (List) scanResultValue.getEvents();
-      final Function<?, Object[]> mapper = getResultFormatMapper(query);
-      final Iterable<Object[]> formattedRows = Iterables.transform(rows, (Function) mapper);
+      final Function<?, Object[]> mapper = getResultFormatMapper(query.getResultFormat(), rowSignature.getColumnNames());
+      final Iterable<Object[]> formattedRows = Lists.newArrayList(Iterables.transform(rows, (Function) mapper));
 
       cursors.add(IterableRowsCursorHelper.getCursorFromIterable(
           formattedRows,
@@ -313,7 +328,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   @Override
   public Sequence<Object[]> resultsAsArrays(final ScanQuery query, final Sequence<ScanResultValue> resultSequence)
   {
-    final Function<?, Object[]> mapper = getResultFormatMapper(query);
+    final Function<?, Object[]> mapper = getResultFormatMapper(query.getResultFormat(), resultArraySignature(query).getColumnNames());
 
     return resultSequence.flatMap(
         result -> {
@@ -325,12 +340,11 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
     );
   }
 
-  private Function<?, Object[]> getResultFormatMapper(ScanQuery query)
+  private Function<?, Object[]> getResultFormatMapper(ScanQuery.ResultFormat resultFormat, List<String> fields)
   {
     Function<?, Object[]> mapper;
-    final List<String> fields = resultArraySignature(query).getColumnNames();
 
-    switch (query.getResultFormat()) {
+    switch (resultFormat) {
       case RESULT_FORMAT_LIST:
         mapper = (Map<String, Object> row) -> {
           final Object[] rowArray = new Object[fields.size()];
@@ -357,7 +371,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
         };
         break;
       default:
-        throw new UOE("Unsupported resultFormat for array-based results: %s", query.getResultFormat());
+        throw new UOE("Unsupported resultFormat for array-based results: %s", resultFormat);
     }
     return mapper;
   }

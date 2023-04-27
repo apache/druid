@@ -53,6 +53,9 @@ public class IterableRowsCursorHelper
       @Override
       public Function<Object[], Object> columnFunction(String columnName)
       {
+        if (rowSignature == null) {
+          return row -> null;
+        }
         final int columnIndex = rowSignature.indexOf(columnName);
         if (columnIndex < 0) {
           return row -> null;
@@ -69,7 +72,7 @@ public class IterableRowsCursorHelper
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
-        rowSignature
+        rowSignature != null ? rowSignature : RowSignature.empty()
     );
   }
 

@@ -19,14 +19,30 @@
 
 package org.apache.druid.query.scan;
 
+import com.google.common.base.Predicate;
+import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.IdLookup;
+import org.apache.druid.segment.RowIdSupplier;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.data.IndexedInts;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
  * Combines multiple cursors and iterates over them. It skips over the empty cursors
+ * The {@link DimensionSelector} and {@link ColumnValueSelector} it generates hold the reference to the original object
+ * because the cursor might be advanced independently after extracting out the {@link ColumnSelectorFactory} like in
+ * {@link org.apache.druid.frame.segment.FrameCursorUtils#cursorToFrame}. This ensures that the selectors always return
+ * the value pointed by the {@link #currentCursor}.
  */
 public class ConcatCursor implements Cursor
 {
@@ -46,7 +62,196 @@ public class ConcatCursor implements Cursor
   @Override
   public ColumnSelectorFactory getColumnSelectorFactory()
   {
-    return cursors.get(currentCursor).getColumnSelectorFactory();
+    return new ColumnSelectorFactory()
+    {
+      @Override
+      public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
+      {
+        return new DimensionSelector()
+        {
+          @Override
+          public IndexedInts getRow()
+          {
+            return cursors.get(currentCursor).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec).getRow();
+          }
+
+          @Override
+          public ValueMatcher makeValueMatcher(@Nullable String value)
+          {
+            return cursors.get(currentCursor)
+                          .getColumnSelectorFactory()
+                          .makeDimensionSelector(dimensionSpec)
+                          .makeValueMatcher(value);
+          }
+
+          @Override
+          public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+          {
+            return cursors.get(currentCursor)
+                          .getColumnSelectorFactory()
+                          .makeDimensionSelector(dimensionSpec)
+                          .makeValueMatcher(predicate);
+          }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+            cursors.get(currentCursor)
+                   .getColumnSelectorFactory()
+                   .makeDimensionSelector(dimensionSpec)
+                   .inspectRuntimeShape(inspector);
+          }
+
+          @Nullable
+          @Override
+          public Object getObject()
+          {
+            return cursors.get(currentCursor)
+                          .getColumnSelectorFactory()
+                          .makeDimensionSelector(dimensionSpec)
+                          .getObject();
+          }
+
+          @Override
+          public Class<?> classOfObject()
+          {
+            return cursors.get(currentCursor)
+                          .getColumnSelectorFactory()
+                          .makeDimensionSelector(dimensionSpec)
+                          .classOfObject();
+          }
+
+          @Override
+          public int getValueCardinality()
+          {
+            return cursors.get(currentCursor)
+                          .getColumnSelectorFactory()
+                          .makeDimensionSelector(dimensionSpec)
+                          .getValueCardinality();
+          }
+
+          @Nullable
+          @Override
+          public String lookupName(int id)
+          {
+            return cursors.get(currentCursor)
+                          .getColumnSelectorFactory()
+                          .makeDimensionSelector(dimensionSpec)
+                          .lookupName(id);
+          }
+
+          @Override
+          public boolean nameLookupPossibleInAdvance()
+          {
+            return cursors.get(currentCursor)
+                          .getColumnSelectorFactory()
+                          .makeDimensionSelector(dimensionSpec)
+                          .nameLookupPossibleInAdvance();
+          }
+
+          @Nullable
+          @Override
+          public IdLookup idLookup()
+          {
+            return cursors.get(currentCursor)
+                          .getColumnSelectorFactory()
+                          .makeDimensionSelector(dimensionSpec)
+                          .idLookup();
+          }
+        };
+      }
+
+      @Override
+      public ColumnValueSelector makeColumnValueSelector(String columnName)
+      {
+        return new ColumnValueSelector()
+        {
+          @Override
+          public double getDouble()
+          {
+            return cursors.get(currentCursor)
+                          .getColumnSelectorFactory()
+                          .makeColumnValueSelector(columnName)
+                          .getDouble();
+          }
+
+          @Override
+          public float getFloat()
+          {
+            return cursors.get(currentCursor).getColumnSelectorFactory().makeColumnValueSelector(columnName).getFloat();
+          }
+
+          @Override
+          public long getLong()
+          {
+            return cursors.get(currentCursor).getColumnSelectorFactory().makeColumnValueSelector(columnName).getLong();
+          }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+            cursors.get(currentCursor)
+                   .getColumnSelectorFactory()
+                   .makeColumnValueSelector(columnName)
+                   .inspectRuntimeShape(inspector);
+          }
+
+          @Override
+          public boolean isNull()
+          {
+            return cursors.get(currentCursor).getColumnSelectorFactory().makeColumnValueSelector(columnName).isNull();
+          }
+
+          @Nullable
+          @Override
+          public Object getObject()
+          {
+            return cursors.get(currentCursor)
+                          .getColumnSelectorFactory()
+                          .makeColumnValueSelector(columnName)
+                          .getObject();
+          }
+
+          @Override
+          public Class classOfObject()
+          {
+            return cursors.get(currentCursor)
+                          .getColumnSelectorFactory()
+                          .makeColumnValueSelector(columnName)
+                          .classOfObject();
+          }
+        };
+      }
+
+      @Override
+      public ColumnCapabilities getColumnCapabilitiesWithDefault(String column, ColumnCapabilities defaultCapabilites)
+      {
+        return cursors.get(currentCursor)
+                      .getColumnSelectorFactory()
+                      .getColumnCapabilitiesWithDefault(column, defaultCapabilites);
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getType(String name)
+      {
+        return cursors.get(currentCursor).getColumnSelectorFactory().getType(name);
+      }
+
+      @Nullable
+      @Override
+      public ColumnCapabilities getColumnCapabilities(String column)
+      {
+        return cursors.get(currentCursor).getColumnSelectorFactory().getColumnCapabilities(column);
+      }
+
+      @Nullable
+      @Override
+      public RowIdSupplier getRowIdSupplier()
+      {
+        return cursors.get(currentCursor).getColumnSelectorFactory().getRowIdSupplier();
+      }
+    };
   }
 
   @Override
