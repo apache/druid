@@ -96,9 +96,6 @@ class StreamChunkParser<RecordType extends ByteEntity>
   StreamChunkParser(
       @Nullable InputRowParser<ByteBuffer> parser,
       @Nullable InputFormat inputFormat,
-      InputRowSchema inputRowSchema,
-      TransformSpec transformSpec,
-      File indexingTmpDir,
       Predicate<InputRow> rowFilter,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,

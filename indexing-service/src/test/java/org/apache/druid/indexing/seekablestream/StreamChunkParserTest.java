@@ -245,9 +245,6 @@ public class StreamChunkParserTest
     final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         parser,
         inputFormat,
-        new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
-        TransformSpec.NONE,
-        temporaryFolder.newFolder(),
         row -> true,
         rowIngestionMeters,
         new ParseExceptionHandler(
@@ -292,9 +289,6 @@ public class StreamChunkParserTest
     final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         parser,
         inputFormat,
-        new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
-        TransformSpec.NONE,
-        temporaryFolder.newFolder(),
         row -> true,
         rowIngestionMeters,
         parseExceptionHandler,
@@ -340,9 +334,6 @@ public class StreamChunkParserTest
     final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         parser,
         inputFormat,
-        new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
-        TransformSpec.NONE,
-        temporaryFolder.newFolder(),
         row -> true,
         rowIngestionMeters,
         new ParseExceptionHandler(
