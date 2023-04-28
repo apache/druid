@@ -178,8 +178,6 @@ public class QuerySchedulerTest
   @Test
   public void testHiLoReleaseLaneWhenSequenceExplodes() throws Exception
   {
-    expected.expectMessage("exploded");
-    expected.expect(ExecutionException.class);
     TopNQuery interactive = makeInteractiveQuery();
     ListenableFuture<?> future = executorService.submit(() -> {
       try {
@@ -204,72 +202,83 @@ public class QuerySchedulerTest
         throw new RuntimeException(ex);
       }
     });
-    future.get();
+    Throwable t = Assert.assertThrows(ExecutionException.class, future::get);
+    Assert.assertEquals(5, scheduler.getTotalAvailableCapacity());
   }
 
   @Test
   public void testHiLoFailsWhenOutOfLaneCapacity()
   {
-    expected.expectMessage(
-        QueryCapacityExceededException.makeLaneErrorMessage(HiLoQueryLaningStrategy.LOW, TEST_LO_CAPACITY)
-    );
-    expected.expect(QueryCapacityExceededException.class);
-
     Query<?> report1 = scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of());
-    scheduler.run(report1, Sequences.empty());
+    Sequence<?> sequence = scheduler.run(report1, Sequences.empty());
+    // making the sequence doesn't count, only running it does
+    Assert.assertEquals(5, scheduler.getTotalAvailableCapacity());
+    // this counts though since we are doing stuff
+    Yielders.each(sequence);
     Assert.assertNotNull(report1);
     Assert.assertEquals(4, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(1, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
 
     Query<?> report2 = scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of());
-    scheduler.run(report2, Sequences.empty());
+    Yielders.each(scheduler.run(report2, Sequences.empty()));
     Assert.assertNotNull(report2);
     Assert.assertEquals(3, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(0, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
 
     // too many reports
-    scheduler.run(
-        scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of()), Sequences.empty()
+    Throwable t = Assert.assertThrows(
+        QueryCapacityExceededException.class,
+        () -> Yielders.each(
+            scheduler.run(
+                scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of()), Sequences.empty()
+            )
+        )
     );
+    Assert.assertEquals("Too many concurrent queries for lane 'low', query capacity of 2 exceeded. Please try your query again later.", t.getMessage());
   }
 
   @Test
   public void testHiLoFailsWhenOutOfTotalCapacity()
   {
-    expected.expectMessage(QueryCapacityExceededException.makeTotalErrorMessage(TEST_HI_CAPACITY));
-    expected.expect(QueryCapacityExceededException.class);
-
     Query<?> interactive1 = scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of());
-    scheduler.run(interactive1, Sequences.empty());
+    Sequence<?> sequence = scheduler.run(interactive1, Sequences.empty());
+    // making the sequence doesn't count, only running it does
+    Assert.assertEquals(5, scheduler.getTotalAvailableCapacity());
+    // this counts tho
+    Yielders.each(sequence);
     Assert.assertNotNull(interactive1);
     Assert.assertEquals(4, scheduler.getTotalAvailableCapacity());
 
     Query<?> report1 = scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of());
-    scheduler.run(report1, Sequences.empty());
+    Yielders.each(scheduler.run(report1, Sequences.empty()));
     Assert.assertNotNull(report1);
     Assert.assertEquals(3, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(1, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
 
     Query<?> interactive2 = scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of());
-    scheduler.run(interactive2, Sequences.empty());
+    Yielders.each(scheduler.run(interactive2, Sequences.empty()));
     Assert.assertNotNull(interactive2);
     Assert.assertEquals(2, scheduler.getTotalAvailableCapacity());
 
     Query<?> report2 = scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of());
-    scheduler.run(report2, Sequences.empty());
+    Yielders.each(scheduler.run(report2, Sequences.empty()));
     Assert.assertNotNull(report2);
     Assert.assertEquals(1, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(0, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
 
     Query<?> interactive3 = scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of());
-    scheduler.run(interactive3, Sequences.empty());
+    Yielders.each(scheduler.run(interactive3, Sequences.empty()));
     Assert.assertNotNull(interactive3);
     Assert.assertEquals(0, scheduler.getTotalAvailableCapacity());
 
     // one too many
-    scheduler.run(
-        scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of()), Sequences.empty()
+    Throwable t = Assert.assertThrows(
+        QueryCapacityExceededException.class,
+        () -> Yielders.each(scheduler.run(
+            scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of()), Sequences.empty()
+        ))
     );
+    Assert.assertEquals("Too many concurrent queries, total query capacity of 5 exceeded. Please try your query again later.", t.getMessage());
   }
 
   @Test
@@ -367,7 +376,6 @@ public class QuerySchedulerTest
   @Test
   public void testMisConfigHiLo()
   {
-    expected.expect(ProvisionException.class);
     final Injector injector = createInjector();
     final String propertyPrefix = "druid.query.scheduler";
     final JsonConfigProvider<QuerySchedulerProvider> provider = JsonConfigProvider.of(
@@ -377,9 +385,16 @@ public class QuerySchedulerTest
     final Properties properties = new Properties();
     properties.setProperty(propertyPrefix + ".laning.strategy", "hilo");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
-    final QueryScheduler scheduler = provider.get().get().get();
-    Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
-    Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
+    Throwable t = Assert.assertThrows(ProvisionException.class, () -> provider.get().get().get());
+    Assert.assertEquals(
+        "Unable to provision, see the following errors:\n"
+        + "\n"
+        + "1) Problem parsing object at prefix[druid.query.scheduler]: Cannot construct instance of `org.apache.druid.server.scheduling.HiLoQueryLaningStrategy`, problem: maxLowPercent must be set\n"
+        + " at [Source: UNKNOWN; line: -1, column: -1] (through reference chain: org.apache.druid.server.QuerySchedulerProvider[\"laning\"]).\n"
+        + "\n"
+        + "1 error",
+        t.getMessage()
+    );
   }
 
   @Test
@@ -418,7 +433,6 @@ public class QuerySchedulerTest
   @Test
   public void testMisConfigThreshold()
   {
-    expected.expect(ProvisionException.class);
     final Injector injector = createInjector();
     final String propertyPrefix = "druid.query.scheduler";
     final JsonConfigProvider<QuerySchedulerProvider> provider = JsonConfigProvider.of(
@@ -428,9 +442,16 @@ public class QuerySchedulerTest
     final Properties properties = new Properties();
     properties.setProperty(propertyPrefix + ".prioritization.strategy", "threshold");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
-    final QueryScheduler scheduler = provider.get().get().get();
-    Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
-    Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
+    Throwable t = Assert.assertThrows(ProvisionException.class, () -> provider.get().get().get());
+    Assert.assertEquals(
+        "Unable to provision, see the following errors:\n"
+        + "\n"
+        + "1) Problem parsing object at prefix[druid.query.scheduler]: Cannot construct instance of `org.apache.druid.server.scheduling.ThresholdBasedQueryPrioritizationStrategy`, problem: periodThreshold, durationThreshold, or segmentCountThreshold must be set\n"
+        + " at [Source: UNKNOWN; line: -1, column: -1] (through reference chain: org.apache.druid.server.QuerySchedulerProvider[\"prioritization\"]).\n"
+        + "\n"
+        + "1 error",
+        t.getMessage()
+    );
   }
 
 
@@ -497,6 +518,7 @@ public class QuerySchedulerTest
         .context(ImmutableMap.of("queryId", "default-" + UUID.randomUUID()))
         .build();
   }
+
   private TopNQuery makeInteractiveQuery()
   {
     return makeBaseBuilder()
