@@ -29,6 +29,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -69,10 +70,14 @@ public class FramesBackedInlineDataSourceSerializer extends StdSerializer<Frames
       catch (IOException e) {
         // Ideally, this shouldn't be reachable.
         // Wrap the IO exception in the runtime exception and propogate it forward
+        List<String> elements = new ArrayList<>();
+        for (Object o : row) {
+          elements.add(o.toString());
+        }
         throw new RE(
             e,
             "Exception encountered while serializing [%s] in [%s]",
-            row,
+            String.join(", ", elements),
             FramesBackedInlineDataSource.class
         );
       }

@@ -20,6 +20,7 @@
 package org.apache.druid.query.scan;
 
 import com.google.common.base.Predicate;
+import com.google.common.math.IntMath;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -297,7 +298,7 @@ public class ConcatCursor implements Cursor
       if (currentCursor < cursors.size()) {
         cursors.get(currentCursor).reset();
       }
-      --currentCursor;
+      currentCursor = IntMath.checkedSubtract(currentCursor, 1);
     }
     currentCursor = 0;
     skipEmptyCursors();
@@ -310,7 +311,7 @@ public class ConcatCursor implements Cursor
   private void skipEmptyCursors()
   {
     while (currentCursor < cursors.size() && cursors.get(currentCursor).isDone()) {
-      ++currentCursor;
+      currentCursor = IntMath.checkedAdd(currentCursor, 1);
     }
   }
 
@@ -320,7 +321,7 @@ public class ConcatCursor implements Cursor
   private void advanceCursor()
   {
     if (cursors.get(currentCursor).isDone()) {
-      ++currentCursor;
+      currentCursor = IntMath.checkedAdd(currentCursor, 1);
       skipEmptyCursors();
     }
   }
