@@ -49,12 +49,12 @@ import { AsyncActionDialog } from '../../../dialogs';
 import type { Execution, ExternalConfig, IngestQueryPattern } from '../../../druid-models';
 import {
   changeQueryPatternExpression,
+  DETECTION_TIMESTAMP_SPEC,
   fitIngestQueryPattern,
   getDestinationMode,
   getQueryPatternExpression,
   getQueryPatternExpressionType,
   ingestQueryPatternToQuery,
-  PLACEHOLDER_TIMESTAMP_SPEC,
   possibleDruidFormatForValues,
   TIME_COLUMN,
   WorkbenchQueryPart,
@@ -84,7 +84,7 @@ import {
   wait,
   without,
 } from '../../../utils';
-import { postToSampler } from '../../../utils/sampler';
+import { getHeaderFromSampleResponse, postToSampler } from '../../../utils/sampler';
 import { FlexibleQueryInput } from '../../workbench-view/flexible-query-input/flexible-query-input';
 import { ColumnActions } from '../column-actions/column-actions';
 import { ColumnEditor } from '../column-editor/column-editor';
@@ -406,12 +406,14 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
             },
             dataSchema: {
               dataSource: 'sample',
-              timestampSpec: PLACEHOLDER_TIMESTAMP_SPEC,
+              timestampSpec: DETECTION_TIMESTAMP_SPEC,
               dimensionsSpec: {
-                dimensions: sampleExternalConfig.signature.map(s => {
+                dimensions: filterMap(sampleExternalConfig.signature, s => {
+                  const columnName = s.getColumnName();
+                  if (columnName === TIME_COLUMN) return;
                   const t = s.columnType.getNativeType();
                   return {
-                    name: s.getColumnName(),
+                    name: columnName,
                     type: t === 'COMPLEX<json>' ? 'json' : t,
                   };
                 }),
@@ -429,12 +431,11 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
         'sample',
       );
 
-      const columns = filterMap(sampleResponse.logicalSegmentSchema, ({ name, type }) => {
-        if (name === '__time') return;
+      const columns = getHeaderFromSampleResponse(sampleResponse).map(({ name, type }) => {
         return new Column({
           name,
           nativeType: type,
-          sqlType: SqlType.fromNativeType(type).toString(),
+          sqlType: name === TIME_COLUMN ? 'TIMESTAMP' : SqlType.fromNativeType(type).toString(),
         });
       });
 

@@ -79,6 +79,9 @@ public class S3Utils
         // SdkClientException can be thrown for many reasons and the only way to distinguish it is to look at
         // the message. This is not ideal, since the message may change, so it may need to be adjusted in the future.
         return true;
+      } else if (e instanceof SdkClientException && e.getMessage().contains("Unable to execute HTTP request")) {
+        // This is likely due to a temporary DNS issue and can be retried.
+        return true;
       } else if (e instanceof AmazonClientException) {
         return AWSClientUtil.isClientExceptionRecoverable((AmazonClientException) e);
       } else {
