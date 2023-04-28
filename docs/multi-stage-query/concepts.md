@@ -215,7 +215,7 @@ For an example, see [INSERT with rollup example](examples.md#insert-with-rollup)
 
 ### Execution flow
 
-When you execute a SQL statement using the task endpoint [`/druid/v2/sql/task`](../api-reference/api.md#submit-a-query), the following
+When you execute a SQL statement using the task endpoint [`/druid/v2/sql/task`](../api-reference/sql-ingestion-api.md#submit-a-query), the following
 happens:
 
 1. The Broker plans your SQL query into a native query, as usual.
