@@ -318,7 +318,8 @@ public class WorkerMemoryParameters
 
     final int isSmallWorker = usableMemoryInJvm < SMALL_WORKER_CAPACITY_THRESHOLD_BYTES ? 1 : 0;
     // Apportion max frames to all processors equally, then subtract one to account for an output frame and one to account
-    // for the durable storage's output frame in the supersorter
+    // for the durable storage's output frame in the supersorter. The extra frame is required in case of durable storage
+    // since composing output channel factories keep a frame open while writing to them
     final int superSorterMaxChannelsPerProcessor = maxNumFramesForSuperSorter / superSorterMaxActiveProcessors
                                                    - 1
                                                    - isSmallWorker;
