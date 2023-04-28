@@ -198,6 +198,7 @@ public class QuerySchedulerTest
       }
     });
     Throwable t = Assert.assertThrows(ExecutionException.class, future::get);
+    Assert.assertEquals("java.lang.RuntimeException: exploded", t.getMessage());
     Assert.assertEquals(5, scheduler.getTotalAvailableCapacity());
   }
 
