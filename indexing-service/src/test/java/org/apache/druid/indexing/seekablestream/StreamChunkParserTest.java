@@ -34,6 +34,7 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -236,11 +237,6 @@ public class StreamChunkParserTest
         StringUtils.UTF8_STRING
     );
 
-    final TrackingJsonInputFormat inputFormat = new TrackingJsonInputFormat(
-        JSONPathSpec.DEFAULT,
-        Collections.emptyMap()
-    );
-
     final int maxAllowedParseExceptions = 1;
     final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         parser,
@@ -278,11 +274,6 @@ public class StreamChunkParserTest
             false
         ),
         StringUtils.UTF8_STRING
-    );
-
-    final TrackingJsonInputFormat inputFormat = new TrackingJsonInputFormat(
-        JSONPathSpec.DEFAULT,
-        Collections.emptyMap()
     );
 
     final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
@@ -324,11 +315,6 @@ public class StreamChunkParserTest
         StringUtils.UTF8_STRING
     );
 
-    final TrackingJsonInputFormat inputFormat = new TrackingJsonInputFormat(
-        JSONPathSpec.DEFAULT,
-        Collections.emptyMap()
-    );
-
     final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         parser,
         mockedByteEntityReader,
@@ -357,6 +343,22 @@ public class StreamChunkParserTest
     // no exception since we've unlimited threhold for parse exceptions
     Assert.assertEquals(0, parsedRows.size());
     Assert.assertEquals(byteEntities.size(), rowIngestionMeters.getUnparseable());
+  }
+
+  @Test
+  public void testWithNullParserAndNullByteEntityReaderFailToInstantiate()
+  {
+    Assert.assertThrows(
+        "Either parser or byteEntityReader should be set",
+        IAE.class,
+        () -> new StreamChunkParser<>(
+            null,
+            null,
+            row -> true,
+            rowIngestionMeters,
+            parseExceptionHandler
+        )
+    );
   }
 
   private void parseAndAssertResult(StreamChunkParser<ByteEntity> chunkParser) throws IOException
