@@ -39,6 +39,12 @@ export const PLACEHOLDER_TIMESTAMP_SPEC: TimestampSpec = {
   missingValue: '1970-01-01T00:00:00Z',
 };
 
+export const DETECTION_TIMESTAMP_SPEC: TimestampSpec = {
+  column: TIME_COLUMN,
+  format: 'millis',
+  missingValue: '1970-01-01T00:00:00Z',
+};
+
 export const REINDEX_TIMESTAMP_SPEC: TimestampSpec = {
   column: TIME_COLUMN,
   format: 'millis',
