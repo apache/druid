@@ -22,7 +22,6 @@ package org.apache.druid.segment.nested;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -45,7 +44,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
-import java.util.Objects;
 
 public class ScalarDoubleColumnSerializer extends NestedCommonFormatColumnSerializer
 {
@@ -172,16 +170,10 @@ public class ScalarDoubleColumnSerializer extends NestedCommonFormatColumnSerial
 
     // null is always 0
     doubleDictionaryWriter.write(null);
-    // put a dummy string in there
     dictionaryIdLookup.addNumericNull();
-    final Double defaultDouble = NullHandling.defaultDoubleValue();
-    final boolean useDefault = NullHandling.replaceWithDefault();
-    if (useDefault) {
-      doubleDictionaryWriter.write(defaultDouble);
-      dictionaryIdLookup.addDouble(defaultDouble);
-    }
+
     for (Double value : doubles) {
-      if (value == null || (useDefault && Objects.equals(defaultDouble, value))) {
+      if (value == null) {
         continue;
       }
       doubleDictionaryWriter.write(value);
