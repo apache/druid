@@ -95,17 +95,15 @@ class StreamChunkParser<RecordType extends ByteEntity>
   @VisibleForTesting
   StreamChunkParser(
       @Nullable InputRowParser<ByteBuffer> parser,
-      @Nullable InputFormat inputFormat,
+      @Nullable SettableByteEntityReader<RecordType> byteEntityReader,
       Predicate<InputRow> rowFilter,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      SettableByteEntityReader<RecordType> byteEntityReader
+      ParseExceptionHandler parseExceptionHandler
   )
   {
-    if (parser == null && inputFormat == null) {
-      throw new IAE("Either parser or inputFormat should be set");
+    if (parser == null && byteEntityReader == null) {
+      throw new IAE("Either parser or byteEntityReader should be set");
     }
-    // parser is already decorated with transformSpec in DataSchema
     this.parser = parser;
     this.byteEntityReader = byteEntityReader;
     this.rowFilter = rowFilter;
@@ -174,7 +172,8 @@ class StreamChunkParser<RecordType extends ByteEntity>
           parseExceptionHandler
       )) {
         rowIterator.forEachRemaining(rows::add);
-      } catch (ParseException pe) {
+      }
+      catch (ParseException pe) {
         parseExceptionHandler.handle(pe);
       }
     }

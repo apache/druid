@@ -66,9 +66,6 @@ public class StreamChunkParserTest
 {
   private static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec(null, null, null);
 
-  @Mock
-  private SettableByteEntityReader mockedByteEntityReader;
-
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
@@ -82,6 +79,9 @@ public class StreamChunkParserTest
       0,
       0
   );
+
+  @Mock
+  private SettableByteEntityReader mockedByteEntityReader;
 
   @Test
   public void testWithParserAndNullInputformatParseProperly() throws IOException
@@ -98,7 +98,7 @@ public class StreamChunkParserTest
     );
     final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         parser,
-        // Set nulls for all parameters below since inputFormat will be never used.
+        // Set nulls for all parameters below since inputFormat will never be used.
         null,
         null,
         null,
@@ -244,7 +244,7 @@ public class StreamChunkParserTest
     final int maxAllowedParseExceptions = 1;
     final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         parser,
-        inputFormat,
+        mockedByteEntityReader,
         row -> true,
         rowIngestionMeters,
         new ParseExceptionHandler(
@@ -252,8 +252,7 @@ public class StreamChunkParserTest
             false,
             maxAllowedParseExceptions,
             0
-        ),
-        mockedByteEntityReader
+        )
     );
     Mockito.when(mockedByteEntityReader.read()).thenThrow(new ParseException(null, "error parsing malformed data"));
     final String json = "malformedJson";
@@ -288,11 +287,10 @@ public class StreamChunkParserTest
 
     final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         parser,
-        inputFormat,
+        mockedByteEntityReader,
         row -> true,
         rowIngestionMeters,
-        parseExceptionHandler,
-        mockedByteEntityReader
+        parseExceptionHandler
     );
 
     Mockito.when(mockedByteEntityReader.read()).thenThrow(new ParseException(null, "error parsing malformed data"));
@@ -333,7 +331,7 @@ public class StreamChunkParserTest
 
     final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         parser,
-        inputFormat,
+        mockedByteEntityReader,
         row -> true,
         rowIngestionMeters,
         new ParseExceptionHandler(
@@ -341,8 +339,7 @@ public class StreamChunkParserTest
             false,
             Integer.MAX_VALUE,
             0
-        ),
-        mockedByteEntityReader
+        )
     );
 
     Mockito.when(mockedByteEntityReader.read()).thenThrow(new ParseException(null, "error parsing malformed data"));
