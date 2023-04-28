@@ -292,8 +292,8 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(TEST_BUCKET);
     deleteObjectsRequest.withKeys(KEY_1_PATH, KEY_1_PATH);
     // struggled with the idea of making it match on equaling this
-    EasyMock.expect(s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class))).andReturn(new DeleteObjectsResult(ImmutableList.of()));
-    EasyMock.expectLastCall().times(2);
+    s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class));
+    EasyMock.expectLastCall().andVoid().times(2);
 
 
     EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);

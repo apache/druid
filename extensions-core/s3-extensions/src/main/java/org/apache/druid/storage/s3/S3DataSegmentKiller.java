@@ -21,7 +21,6 @@ package org.apache.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.DeleteObjectsResult;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -106,19 +105,21 @@ public class S3DataSegmentKiller implements DataSegmentKiller
     for (List<DeleteObjectsRequest.KeyVersion> keysChunk : keysChunks) {
       try {
         deleteObjectsRequest.setKeys(keysChunk);
-        log.info("Removing from bucket: %s the following index files: %s from s3!", s3Bucket, keysChunk);
+        log.info("Removing from bucket: %s the following index files: %s from s3!", s3Bucket, keysChunk.stream().map(
+            DeleteObjectsRequest.KeyVersion::getKey).collect(Collectors.toList()));
         s3Client.deleteObjects(deleteObjectsRequest);
-      } catch (AmazonServiceException e) {
+      }
+      catch (AmazonServiceException e) {
         exceptions.add(e);
       }
     }
     if (exceptions.size() > 0) {
-    List<String> segmentsNotDeleted =
-        exceptions.stream().filter(exc -> exc instanceof MultiObjectDeleteException)
-        .map(exc -> (MultiObjectDeleteException) exc)
-        .map(MultiObjectDeleteException::getErrors)
-        .flatMap(errors -> errors.stream().map(MultiObjectDeleteException.DeleteError::getKey))
-        .collect(Collectors.toList());
+      List<String> segmentsNotDeleted = exceptions.stream()
+          .filter(exc -> exc instanceof MultiObjectDeleteException)
+          .map(exc -> (MultiObjectDeleteException) exc)
+          .map(MultiObjectDeleteException::getErrors)
+          .flatMap(errors -> errors.stream().map(MultiObjectDeleteException.DeleteError::getKey))
+          .collect(Collectors.toList());
       SegmentLoadingException segmentLoadingException =
           new SegmentLoadingException(exceptions.get(0), "For bucket: %s unable to delete some or all segments %s", s3Bucket, segmentsNotDeleted);
       for (int ii = 1; ii < exceptions.size(); ii++) {

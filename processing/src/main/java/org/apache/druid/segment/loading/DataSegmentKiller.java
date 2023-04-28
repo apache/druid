@@ -56,10 +56,11 @@ public interface DataSegmentKiller
   void kill(DataSegment segment) throws SegmentLoadingException;
 
   /**
-   * Removes a list of segment files (indexes and metadata) from deep storage. This method can be more efficient if
-   * implementer of this interface leverages batch/bulk deletes.
+   * Kills a list of segments from deep storage. The default implementation calls kill on the segments in a loop.
+   * Implementers of this interface can leverage batch / bulk deletes to be more efficient.
    * @param segments The list of segments to kill
-   * @throws SegmentLoadingException If there is an exception during deletion
+   * @throws SegmentLoadingException If there is an exception during deletion such as a segment in the list could not be
+   * completely removed
    */
   default void kill(List<DataSegment> segments) throws SegmentLoadingException
   {

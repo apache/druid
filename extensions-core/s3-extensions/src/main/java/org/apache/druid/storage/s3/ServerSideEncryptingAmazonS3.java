@@ -30,7 +30,6 @@ import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.CopyObjectResult;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.DeleteObjectsResult;
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
@@ -139,9 +138,9 @@ public class ServerSideEncryptingAmazonS3
     amazonS3.deleteObject(bucket, key);
   }
 
-  public DeleteObjectsResult deleteObjects(DeleteObjectsRequest request)
+  public void deleteObjects(DeleteObjectsRequest request)
   {
-    return amazonS3.deleteObjects(request);
+    amazonS3.deleteObjects(request);
   }
 
 
