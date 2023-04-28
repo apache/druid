@@ -407,9 +407,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
     if (root == null || !root.isSingleType()) {
       return null;
     }
-    final Object defaultValue = getDefaultValueForType(
-        root.getTypes().getSingleType()
-    );
+    final Object defaultValue = getDefaultValueForType(root.getTypes().getSingleType());
     return new ColumnValueSelector<Object>()
     {
       @Override

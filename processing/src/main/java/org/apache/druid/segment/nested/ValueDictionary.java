@@ -85,6 +85,7 @@ public class ValueDictionary
     this.longArrays = new TreeSet<>(ColumnType.LONG_ARRAY.getNullableStrategy());
     this.doubleArrays = new TreeSet<>(ColumnType.DOUBLE_ARRAY.getNullableStrategy());
 
+    // always add default values in default value mode. they don't cost much even if they aren't used
     if (NullHandling.replaceWithDefault()) {
       longDictionary.add(NullHandling.defaultLongValue());
       doubleDictionary.add(NullHandling.defaultDoubleValue());
