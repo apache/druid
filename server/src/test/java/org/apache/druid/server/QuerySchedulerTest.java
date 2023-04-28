@@ -60,9 +60,7 @@ import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -80,9 +78,6 @@ public class QuerySchedulerTest
   private static final int NUM_ROWS = 10000;
   private static final int TEST_HI_CAPACITY = 5;
   private static final int TEST_LO_CAPACITY = 2;
-
-  @Rule
-  public ExpectedException expected = ExpectedException.none();
 
   private ListeningExecutorService executorService;
   private ObservableQueryScheduler scheduler;
@@ -230,11 +225,15 @@ public class QuerySchedulerTest
         QueryCapacityExceededException.class,
         () -> Yielders.each(
             scheduler.run(
-                scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of()), Sequences.empty()
+                scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of()),
+                Sequences.empty()
             )
         )
     );
-    Assert.assertEquals("Too many concurrent queries for lane 'low', query capacity of 2 exceeded. Please try your query again later.", t.getMessage());
+    Assert.assertEquals(
+        "Too many concurrent queries for lane 'low', query capacity of 2 exceeded. Please try your query again later.",
+        t.getMessage()
+    );
   }
 
   @Test
@@ -275,10 +274,14 @@ public class QuerySchedulerTest
     Throwable t = Assert.assertThrows(
         QueryCapacityExceededException.class,
         () -> Yielders.each(scheduler.run(
-            scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of()), Sequences.empty()
+            scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of()),
+            Sequences.empty()
         ))
     );
-    Assert.assertEquals("Too many concurrent queries, total query capacity of 5 exceeded. Please try your query again later.", t.getMessage());
+    Assert.assertEquals(
+        "Too many concurrent queries, total query capacity of 5 exceeded. Please try your query again later.",
+        t.getMessage()
+    );
   }
 
   @Test
