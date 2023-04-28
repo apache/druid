@@ -68,60 +68,70 @@ public class NestedDataColumnIndexerTest extends InitializedNullHandlingTest
   public void testKeySizeEstimation()
   {
     NestedDataColumnIndexer indexer = new NestedDataColumnIndexer();
-    Assert.assertEquals(0, indexer.getCardinality());
+    int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
+    Assert.assertEquals(baseCardinality, indexer.getCardinality());
 
     EncodedKeyComponent<StructuredData> key;
     // new raw value, new field, new dictionary entry
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of("x", "foo"), false);
     Assert.assertEquals(228, key.getEffectiveSizeBytes());
-    Assert.assertEquals(1, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
     // adding same value only adds estimated size of value itself
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of("x", "foo"), false);
     Assert.assertEquals(112, key.getEffectiveSizeBytes());
-    Assert.assertEquals(1, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
     // new raw value, new field, new dictionary entry
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(10L, false);
     Assert.assertEquals(94, key.getEffectiveSizeBytes());
-    Assert.assertEquals(2, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 2, indexer.getCardinality());
     // adding same value only adds estimated size of value itself
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(10L, false);
     Assert.assertEquals(16, key.getEffectiveSizeBytes());
-    Assert.assertEquals(2, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 2, indexer.getCardinality());
     // new raw value, new dictionary entry
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(11L, false);
     Assert.assertEquals(48, key.getEffectiveSizeBytes());
-    Assert.assertEquals(3, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 3, indexer.getCardinality());
 
     // new raw value, new fields
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(1L, 2L, 10L), false);
     Assert.assertEquals(276, key.getEffectiveSizeBytes());
-    Assert.assertEquals(5, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 5, indexer.getCardinality());
     // new raw value, re-use fields and dictionary
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(1L, 2L, 10L), false);
     Assert.assertEquals(56, key.getEffectiveSizeBytes());
-    Assert.assertEquals(5, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 5, indexer.getCardinality());
     // new raw value, new fields
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(
         ImmutableMap.of("x", ImmutableList.of(1L, 2L, 10L)),
         false
     );
     Assert.assertEquals(286, key.getEffectiveSizeBytes());
-    Assert.assertEquals(5, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 5, indexer.getCardinality());
     // new raw value
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(
         ImmutableMap.of("x", ImmutableList.of(1L, 2L, 10L)),
         false
     );
     Assert.assertEquals(118, key.getEffectiveSizeBytes());
-    Assert.assertEquals(5, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 5, indexer.getCardinality());
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent("", false);
     if (NullHandling.replaceWithDefault()) {
       Assert.assertEquals(0, key.getEffectiveSizeBytes());
-      Assert.assertEquals(6, indexer.getCardinality());
+      Assert.assertEquals(baseCardinality + 6, indexer.getCardinality());
     } else {
       Assert.assertEquals(104, key.getEffectiveSizeBytes());
-      Assert.assertEquals(6, indexer.getCardinality());
+      Assert.assertEquals(baseCardinality + 6, indexer.getCardinality());
+    }
+
+    key = indexer.processRowValsToUnsortedEncodedKeyComponent(0, false);
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(16, key.getEffectiveSizeBytes());
+      Assert.assertEquals(baseCardinality + 6, indexer.getCardinality());
+    } else {
+      Assert.assertEquals(48, key.getEffectiveSizeBytes());
+      Assert.assertEquals(baseCardinality + 7, indexer.getCardinality());
     }
   }
 
