@@ -297,6 +297,15 @@ PARTITIONED BY HOUR
 CLUSTERED BY page
 ```
 
+## DELETE rows based on a condition
+
+<details><summary>Show the query</summary>
+```sql
+DELETE FROM w000
+WHERE country = 'New Zealand'
+PARTITIONED BY HOUR
+CLUSTERED BY page
+```
 </details>
 
 ## SELECT with EXTERN and JOIN

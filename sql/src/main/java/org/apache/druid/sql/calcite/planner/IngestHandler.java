@@ -385,7 +385,7 @@ public abstract class IngestHandler extends QueryHandler
     {
       if (!handlerContext.plannerContext().featureAvailable(EngineFeature.CAN_REPLACE)) {
         throw new ValidationException(StringUtils.format(
-            "Cannot DELETE REPLACE with SQL engine '%s'.",
+            "Cannot DELETE with SQL engine '%s'.",
             handlerContext.engine().name())
         );
       }

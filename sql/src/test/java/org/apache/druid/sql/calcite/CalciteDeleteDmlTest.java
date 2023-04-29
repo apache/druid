@@ -19,12 +19,13 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -32,11 +33,10 @@ import java.util.Collections;
 public class CalciteDeleteDmlTest extends CalciteIngestionDmlTest
 {
   @Test
-  @Ignore
   public void testDeleteFromTableWithCondition()
   {
     testIngestionQuery()
-        .sql("DELETE FROM foo WHERE dim1 = 'New' PARTITIONED BY ALL TIME")
+        .sql("DELETE FROM foo WHERE dim1 = 'New' PARTITIONED BY ALL TIME CLUSTERED BY dim1, dim2")
         .expectTarget("foo", FOO_TABLE_SIGNATURE)
         .expectResources(dataSourceRead("foo"), dataSourceWrite("foo"))
         .expectQuery(
@@ -45,6 +45,12 @@ public class CalciteDeleteDmlTest extends CalciteIngestionDmlTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(new NotDimFilter(new SelectorDimFilter("dim1", "New", null)))
                 .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
+                .orderBy(
+                    ImmutableList.of(
+                        new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING),
+                        new ScanQuery.OrderBy("dim2", ScanQuery.Order.ASCENDING)
+                    )
+                )
                 .context(REPLACE_ALL_TIME_CHUNKS)
                 .build()
         )
@@ -52,7 +58,6 @@ public class CalciteDeleteDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  @Ignore
   public void testDeleteFromTableWithoutWhereClause()
   {
     testIngestionQuery()
@@ -65,7 +70,6 @@ public class CalciteDeleteDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  @Ignore
   public void testDeleteAllFromTable()
   {
     testIngestionQuery()
@@ -82,6 +86,5 @@ public class CalciteDeleteDmlTest extends CalciteIngestionDmlTest
                 .build()
         )
         .verify();
-
   }
 }

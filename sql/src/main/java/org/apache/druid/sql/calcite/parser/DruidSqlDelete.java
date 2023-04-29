@@ -36,26 +36,33 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collections;
 
+/**
+ * Extends the 'insert' call to hold custom parameters specific to Druid i.e. PARTITIONED BY and CLUSTERED BY
+ * This class extends the {@link DruidSqlIngest} so that this SqlNode can be used in
+ * {@link org.apache.calcite.sql2rel.SqlToRelConverter} for getting converted into RelNode, and further processing.
+ */
 public class DruidSqlDelete extends DruidSqlIngest
 {
   public static final SqlOperator OPERATOR = new SqlSpecialOperator("DELETE", SqlKind.OTHER);
 
+  final SqlNode deleteCondition;
+
   public static DruidSqlDelete create(
       SqlParserPos pos,
       SqlNode targetTable,
-      SqlNode source,
+      SqlNode deleteCondition,
       @Nullable Granularity partitionedBy,
       @Nullable String partitionedByStringForUnparse,
       @Nullable SqlNodeList clusteredBy
   )
   {
-    SqlBasicCall invertedSource = new SqlBasicCall(SqlStdOperatorTable.NOT, new SqlNode[] {source}, pos);
-    SqlSelect sqlSelect = new SqlSelect(
+    SqlBasicCall invertedDeleteCondition = new SqlBasicCall(SqlStdOperatorTable.NOT, new SqlNode[] {deleteCondition}, pos);
+    SqlSelect undeletedRowsSelect = new SqlSelect(
         pos,
         SqlNodeList.EMPTY,
         new SqlNodeList(Collections.singleton(SqlIdentifier.star(pos)), pos),
         targetTable,
-        invertedSource,
+        invertedDeleteCondition,
         null,
         null,
         null,
@@ -63,27 +70,36 @@ public class DruidSqlDelete extends DruidSqlIngest
         null,
         null
     );
-    return new DruidSqlDelete(pos, targetTable, sqlSelect, partitionedBy, partitionedByStringForUnparse, clusteredBy);
+    return new DruidSqlDelete(pos, targetTable, undeletedRowsSelect, partitionedBy, partitionedByStringForUnparse, clusteredBy, deleteCondition);
   }
 
-  public DruidSqlDelete(SqlParserPos pos,
-                        SqlNode targetTable,
-                        SqlNode source,
-                        @Nullable Granularity partitionedBy,
-                        @Nullable String partitionedByStringForUnparse,
-                        @Nullable SqlNodeList clusteredBy
+  /**
+   * While partitionedBy and partitionedByStringForUnparse can be null as arguments to the constructor, this is
+   * disallowed (semantically) and the constructor performs checks to ensure that. This helps in producing friendly
+   * errors when the PARTITIONED BY custom clause is not present, and keeps its error separate from JavaCC/Calcite's
+   * custom errors which can be cryptic when someone accidentally forgets to explicitly specify the PARTITIONED BY clause
+   */
+  public DruidSqlDelete(
+      SqlParserPos pos,
+      SqlNode targetTable,
+      SqlNode undeletedRowsSelect,
+      @Nullable Granularity partitionedBy,
+      @Nullable String partitionedByStringForUnparse,
+      @Nullable SqlNodeList clusteredBy,
+      SqlNode deleteCondition
   )
   {
     super(
         pos,
         SqlNodeList.EMPTY,
         targetTable,
-        source,
+        undeletedRowsSelect,
         null,
         partitionedBy,
         partitionedByStringForUnparse,
         clusteredBy
     );
+    this.deleteCondition = deleteCondition;
   }
 
   @Nonnull
@@ -96,9 +112,20 @@ public class DruidSqlDelete extends DruidSqlIngest
   @Override
   public void unparse(SqlWriter writer, int leftPrec, int rightPrec)
   {
-    super.unparse(writer, leftPrec, rightPrec);
+    writer.sep("DELETE FROM");
+    final int opLeft = getOperator().getLeftPrec();
+    final int opRight = getOperator().getRightPrec();
+    getTargetTable().unparse(writer, opLeft, opRight);
+
+    writer.newlineAndIndent();
+    writer.sep("WHERE");
+    deleteCondition.unparse(writer, 0, 0);
+
+    writer.newlineAndIndent();
     writer.keyword("PARTITIONED BY");
     writer.keyword(partitionedByStringForUnparse);
+
+    writer.newlineAndIndent();
     if (getClusteredBy() != null) {
       writer.keyword("CLUSTERED BY");
       SqlWriter.Frame frame = writer.startList("", "");

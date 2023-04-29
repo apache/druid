@@ -17,11 +17,11 @@
  * under the License.
  */
 
-// Taken from syntax of SqlInsert statement from calcite parser, edited for replace syntax
+// Taken from syntax of SqlInsert statement from calcite parser, edited for delete syntax
 SqlNode DruidSqlDeleteEof() :
 {
     SqlNode table;
-    SqlNode source = null;
+    SqlNode deleteCondition = null;
     final Span s;
     // Using fully qualified name for Pair class, since Calcite also has a same class name being used in the Parser.jj
     org.apache.druid.java.util.common.Pair<Granularity, String> partitionedBy = new org.apache.druid.java.util.common.Pair(null, null);
@@ -32,7 +32,8 @@ SqlNode DruidSqlDeleteEof() :
     <FROM>
     table = CompoundIdentifier()
     [
-      <WHERE> source = Expression(ExprContext.ACCEPT_SUB_QUERY)
+      <WHERE> deleteCondition = Expression(ExprContext.ACCEPT_SUB_QUERY)
+      { s.add(deleteCondition); }
     ]
     [
       <PARTITIONED> <BY>
@@ -43,8 +44,12 @@ SqlNode DruidSqlDeleteEof() :
       clusteredBy = ClusterItems()
     ]
     {
+        // In the future, if the existing partitioning and clustering could be infered, these parameters could be made optional.
         if (clusteredBy != null && partitionedBy.lhs == null) {
           throw new ParseException("CLUSTERED BY found before PARTITIONED BY. In Druid, the CLUSTERED BY clause must follow the PARTITIONED BY clause");
+        }
+        if (clusteredBy != null) {
+          s.addAll(clusteredBy);
         }
     }
     // EOF is also present in SqlStmtEof but EOF is a special case and a single EOF can be consumed multiple times.
@@ -53,13 +58,13 @@ SqlNode DruidSqlDeleteEof() :
     // actual error message.
     <EOF>
     {
-        if (source == null) {
+        if (deleteCondition == null) {
           throw new ParseException("WHERE clause must be present in DELETE statements. (To delete all rows, WHERE TRUE must be explicitly specified.)");
         }
         return DruidSqlDelete.create(
-          s.end(source),
+          s.pos(),
           table,
-          source,
+          deleteCondition,
           partitionedBy.lhs,
           partitionedBy.rhs,
           clusteredBy
