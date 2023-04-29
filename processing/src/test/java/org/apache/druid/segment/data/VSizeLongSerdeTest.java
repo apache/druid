@@ -306,9 +306,9 @@ public class VSizeLongSerdeTest
   }
 
   private static void testNoncontiguousGetSingleRow(
-    final VSizeLongSerde.LongDeserializer deserializer,
-    final int numBits,
-    final long[] values
+      final VSizeLongSerde.LongDeserializer deserializer,
+      final int numBits,
+      final long[] values
   )
   {
     final int indexOffset = 1;
