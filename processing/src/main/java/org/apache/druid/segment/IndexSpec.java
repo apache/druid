@@ -44,6 +44,7 @@ import java.util.Objects;
 public class IndexSpec
 {
   public static IndexSpec DEFAULT = IndexSpec.builder().build();
+
   public static Builder builder()
   {
     return new Builder();

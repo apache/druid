@@ -177,7 +177,7 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
   {
     this.expression = expression;
     this.encoding = encoding;
-    if (encoding.equals("front-coded-and-auto-longs")) {
+    if ("front-coded-and-auto-longs".equals(encoding)) {
       this.queryableIndexToUse = INDEX_OTHER_ENCODINGS;
     } else {
       this.queryableIndexToUse = INDEX;
