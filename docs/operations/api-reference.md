@@ -62,7 +62,7 @@ Similar to `/status/selfDiscovered/status`, but returns 200 OK response with emp
 and 503 SERVICE UNAVAILABLE if the node hasn't discovered itself yet. This endpoint might be useful because some
 monitoring checks such as AWS load balancer health checks are not able to look at the response body.
 
-## Master Server
+## Master server
 
 This section documents the API endpoints for the processes that reside on Master servers (Coordinators and Overlords)
 in the suggested [three-server configuration](../design/processes.md#server-types).
@@ -85,7 +85,7 @@ at the load balancer.
 
 <a name="coordinator-segment-loading"></a>
 
-#### Segment Loading
+#### Segment loading
 
 `GET /druid/coordinator/v1/loadstatus`
 
@@ -120,7 +120,7 @@ Returns the number of segments to load and drop, as well as the total segment lo
 Returns the serialized JSON of segments to load and drop for each Historical process.
 
 
-#### Segment Loading by Datasource
+#### Segment loading by datasource
 
 Note that all _interval_ query parameters are ISO 8601 strings (e.g., 2016-06-27/2016-06-28).
 Also note that these APIs only guarantees that the segments are available at the time of the call. 
@@ -346,7 +346,7 @@ Marks as unused a segment of a datasource. Returns a JSON object of the form `{"
 the boolean indicating if the state of the segment has been changed (that is, the segment was marked as unused) as the
 result of this API call.
 
-#### Retention Rules
+#### Retention rules
 
 Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
 (e.g., 2016-06-27_2016-06-28).
@@ -717,7 +717,7 @@ Retrieves overlord scaling events if auto-scaling runners are in use.
 
 Update overlord dynamic worker configuration.
 
-## Data Server
+## Data server
 
 This section documents the API endpoints for the processes that reside on Data servers (MiddleManagers/Peons and Historicals)
 in the suggested [three-server configuration](../design/processes.md#server-types).
@@ -729,9 +729,9 @@ in the suggested [three-server configuration](../design/processes.md#server-type
 Check whether a MiddleManager is in an enabled or disabled state. Returns JSON object keyed by the combined `druid.host`
 and `druid.port` with the boolean state as the value.
 
-    ```json
-    {"localhost:8091":true}
-    ```
+```json
+{"localhost:8091":true}
+```
 
 `GET /druid/worker/v1/tasks`
 
@@ -752,27 +752,27 @@ Retrieve task log output stream by task id. Normal usage should prefer to use th
 Disable a MiddleManager, causing it to stop accepting new tasks but complete all existing tasks. Returns JSON  object
 keyed by the combined `druid.host` and `druid.port`:
 
-    ```json
-    {"localhost:8091":"disabled"}
-    ```
+```json
+{"localhost:8091":"disabled"}
+```
 
 `POST /druid/worker/v1/enable`
 
 Enable a MiddleManager, allowing it to accept new tasks again if it was previously disabled. Returns JSON  object
 keyed by the combined `druid.host` and `druid.port`:
 
-    ```json
-    {"localhost:8091":"enabled"}
-    ```
+```json
+{"localhost:8091":"enabled"}
+```
 
 `POST /druid/worker/v1/task/{taskid}/shutdown`
 
 Shutdown a running task by `taskid`. Normal usage should prefer to use the `/druid/indexer/v1/task/{taskId}/shutdown`
 [Overlord API](#overlord) instead. Returns JSON:
 
-    ```json
-    {"task":"index_kafka_wikiticker_f7011f8ffba384b_fpeclode"}
-    ```
+```json
+{"task":"index_kafka_wikiticker_f7011f8ffba384b_fpeclode"}
+```
 
 
 ### Peon
@@ -787,7 +787,7 @@ Retrieve an unparseable events report from a Peon. See [task reports](../ingesti
 
 ### Historical
 
-#### Segment Loading
+#### Segment loading
 
 `GET /druid/historical/v1/loadstatus`
 
@@ -801,13 +801,13 @@ Similar to `/druid/historical/v1/loadstatus`, but instead of returning JSON with
 in the local cache have been loaded, and 503 SERVICE UNAVAILABLE, if they haven't.
 
 
-## Query Server
+## Query server
 
 This section documents the API endpoints for the processes that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/processes.md#server-types).
 
 ### Broker
 
-#### Datasource Information
+#### Datasource information
 
 Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
 (e.g., 2016-06-27_2016-06-28).
