@@ -73,7 +73,7 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment().intValue());
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(0, config.getMaxPendingPersists());
-    Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
+    Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpec());
     Assert.assertFalse(config.isReportParseExceptions());
     Assert.assertEquals(0, config.getHandoffConditionTimeout());
     Assert.assertNull(config.getRecordBufferSizeConfigured());
@@ -146,8 +146,8 @@ public class KinesisIndexTaskTuningConfigTest
         new Period("PT3S"),
         new File("/tmp/xxx"),
         4,
-        new IndexSpec(),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
+        IndexSpec.DEFAULT,
         true,
         5L,
         true,
@@ -205,8 +205,8 @@ public class KinesisIndexTaskTuningConfigTest
         new Period("PT3S"),
         new File("/tmp/xxx"),
         4,
-        new IndexSpec(),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
+        IndexSpec.DEFAULT,
         true,
         5L,
         true,
@@ -289,8 +289,8 @@ public class KinesisIndexTaskTuningConfigTest
         100L,
         new Period("PT3S"),
         4,
-        new IndexSpec(),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
+        IndexSpec.DEFAULT,
         true,
         5L,
         true,
@@ -325,7 +325,7 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(new Period("PT3S"), copy.getIntermediatePersistPeriod());
     Assert.assertNull(copy.getBasePersistDirectory());
     Assert.assertEquals(4, copy.getMaxPendingPersists());
-    Assert.assertEquals(new IndexSpec(), copy.getIndexSpec());
+    Assert.assertEquals(IndexSpec.DEFAULT, copy.getIndexSpec());
     Assert.assertTrue(copy.isReportParseExceptions());
     Assert.assertEquals(5L, copy.getHandoffConditionTimeout());
     Assert.assertEquals(1000, (int) copy.getRecordBufferSizeConfigured());

@@ -204,8 +204,8 @@ public class MultiStageQueryContextTest
   {
     Assert.assertNull(decodeIndexSpec(null));
 
-    Assert.assertEquals(new IndexSpec(), decodeIndexSpec("{}"));
-    Assert.assertEquals(new IndexSpec(), decodeIndexSpec(Collections.emptyMap()));
+    Assert.assertEquals(IndexSpec.DEFAULT, decodeIndexSpec("{}"));
+    Assert.assertEquals(IndexSpec.DEFAULT, decodeIndexSpec(Collections.emptyMap()));
 
     Assert.assertEquals(
         new IndexSpec(null, null, new StringEncodingStrategy.FrontCoded(null, null), null, null, null, null),

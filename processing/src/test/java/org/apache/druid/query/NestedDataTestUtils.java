@@ -210,7 +210,7 @@ public class NestedDataTestUtils
         COUNT,
         granularity,
         rollup,
-        new IndexSpec()
+        IndexSpec.DEFAULT
     );
   }
 
@@ -236,7 +236,7 @@ public class NestedDataTestUtils
         SIMPLE_DATA_FILE,
         Granularities.NONE,
         true,
-        new IndexSpec()
+        IndexSpec.DEFAULT
     );
   }
 
@@ -322,7 +322,7 @@ public class NestedDataTestUtils
         COUNT,
         granularity,
         rollup,
-        new IndexSpec()
+        IndexSpec.DEFAULT
     );
   }
 
@@ -505,7 +505,7 @@ public class NestedDataTestUtils
                                       tempFolder,
                                       closer,
                                       jsonInputFile,
-                                      new IndexSpec()
+                                      IndexSpec.DEFAULT
                                   )
                               )
                               .add(NestedDataTestUtils.createIncrementalIndexForJsonInput(tempFolder, jsonInputFile))
@@ -556,7 +556,7 @@ public class NestedDataTestUtils
                                       tempFolder,
                                       closer,
                                       jsonInputFile,
-                                      new IndexSpec()
+                                      IndexSpec.DEFAULT
                                   )
                               )
                               .addAll(
@@ -564,7 +564,7 @@ public class NestedDataTestUtils
                                       tempFolder,
                                       closer,
                                       jsonInputFile,
-                                      new IndexSpec()
+                                      IndexSpec.DEFAULT
                                   )
                               )
                               .build();

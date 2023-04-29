@@ -247,6 +247,22 @@ public class VSizeLongSerdeTest
           values[i],
           out[outPosition]
       );
+
+      int delta = 100_000;
+      deserializer.getDelta(out, outPosition, i, 1, delta);
+      Assert.assertEquals(
+          StringUtils.format("Deserializer (testContiguousGetSingleRow, numBits = %d, position = %d)", numBits, i),
+          values[i] + delta,
+          out[outPosition]
+      );
+
+      deserializer.getDelta(out, outPosition, i, 1, -delta);
+
+      Assert.assertEquals(
+          StringUtils.format("Deserializer (testContiguousGetSingleRow, numBits = %d, position = %d)", numBits, i),
+          values[i] - delta,
+          out[outPosition]
+      );
     }
   }
 
@@ -289,6 +305,23 @@ public class VSizeLongSerdeTest
       Assert.assertEquals(
           StringUtils.format("Deserializer (testNoncontiguousGetSingleRow, numBits = %d, position = %d)", numBits, i),
           values[i],
+          out[outPosition]
+      );
+
+      int delta = 100_000;
+      deserializer.getDelta(out, outPosition, indexes, 1, indexOffset, values.length, delta);
+
+      Assert.assertEquals(
+          StringUtils.format("Deserializer (testNoncontiguousGetSingleRow, numBits = %d, position = %d)", numBits, i),
+          values[i] + delta,
+          out[outPosition]
+      );
+
+      deserializer.getDelta(out, outPosition, indexes, 1, indexOffset, values.length, -delta);
+
+      Assert.assertEquals(
+          StringUtils.format("Deserializer (testNoncontiguousGetSingleRow, numBits = %d, position = %d)", numBits, i),
+          values[i] - delta,
           out[outPosition]
       );
     }
