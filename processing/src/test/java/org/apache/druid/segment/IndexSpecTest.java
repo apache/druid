@@ -99,6 +99,15 @@ public class IndexSpecTest
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(IndexSpec.class).usingGetClass().verify();
+    EqualsVerifier.forClass(IndexSpec.class)
+                  .withPrefabValues(
+                      IndexSpec.class,
+                      IndexSpec.DEFAULT,
+                      IndexSpec.builder()
+                               .withJsonCompression(CompressionStrategy.ZSTD)
+                               .build()
+                  )
+                  .usingGetClass()
+                  .verify();
   }
 }
