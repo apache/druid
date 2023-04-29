@@ -392,7 +392,12 @@ public class ParallelIndexTuningConfigTest
   public void testEqualsAndHashCode()
   {
     EqualsVerifier.forClass(ParallelIndexTuningConfig.class)
-        .usingGetClass()
-        .verify();
+                  .usingGetClass()
+                  .withPrefabValues(
+                      IndexSpec.class,
+                      IndexSpec.DEFAULT,
+                      IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
+                  )
+                  .verify();
   }
 }

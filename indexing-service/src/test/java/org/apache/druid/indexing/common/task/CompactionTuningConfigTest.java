@@ -196,6 +196,11 @@ public class CompactionTuningConfigTest
   public void testEqualsAndHashCode()
   {
     EqualsVerifier.forClass(CompactionTask.CompactionTuningConfig.class)
+                  .withPrefabValues(
+                      IndexSpec.class,
+                      IndexSpec.DEFAULT,
+                      IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
+                  )
                   .usingGetClass()
                   .verify();
   }
