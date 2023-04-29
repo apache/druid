@@ -60,6 +60,7 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.Appenderators;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Period;
 
