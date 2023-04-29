@@ -53,15 +53,11 @@ public class MSQTuningConfigTest
         2,
         3,
         4,
-        new IndexSpec(
-            null,
-            null,
-            new StringEncodingStrategy.FrontCoded(null, FrontCodedIndexed.V1),
-            null,
-            null,
-            null,
-            null
-        )
+        IndexSpec.builder()
+                 .withStringDictionaryEncoding(
+                     new StringEncodingStrategy.FrontCoded(null, FrontCodedIndexed.V1)
+                 )
+                 .build()
     );
 
     Assert.assertEquals(config, mapper.readValue(mapper.writeValueAsString(config), MSQTuningConfig.class));

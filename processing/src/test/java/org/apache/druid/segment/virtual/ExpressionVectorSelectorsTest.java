@@ -39,6 +39,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.CompressionFactory;
+import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
@@ -138,7 +139,7 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
                                                 .build();
     IndexSpec otherEncodings = IndexSpec.builder()
                                         .withStringDictionaryEncoding(
-                                            new StringEncodingStrategy.FrontCoded(16, (byte) 1)
+                                            new StringEncodingStrategy.FrontCoded(16, FrontCodedIndexed.V1)
                                         )
                                         .withLongEncoding(CompressionFactory.LongEncodingStrategy.AUTO)
                                         .build();

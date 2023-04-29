@@ -114,25 +114,6 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     );
   }
 
-  static IndexSpec makeIndexSpec(
-      BitmapSerdeFactory bitmapSerdeFactory,
-      CompressionStrategy compressionStrategy,
-      CompressionStrategy dimCompressionStrategy,
-      CompressionFactory.LongEncodingStrategy longEncodingStrategy
-  )
-  {
-    if (bitmapSerdeFactory != null || compressionStrategy != null) {
-      return IndexSpec.builder()
-                      .withBitmapSerdeFactory(bitmapSerdeFactory)
-                      .withDimensionCompression(dimCompressionStrategy)
-                      .withMetricCompression(compressionStrategy)
-                      .withLongEncoding(longEncodingStrategy)
-                      .build();
-    } else {
-      return IndexSpec.DEFAULT;
-    }
-  }
-
   static BitmapValues getBitmapIndex(QueryableIndexIndexableAdapter adapter, String dimension, String value)
   {
     final ColumnHolder columnHolder = adapter.getQueryableIndex().getColumnHolder(dimension);
@@ -170,12 +151,12 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
       CompressionFactory.LongEncodingStrategy longEncodingStrategy
   )
   {
-    this.indexSpec = makeIndexSpec(
-        bitmapSerdeFactory != null ? bitmapSerdeFactory : new ConciseBitmapSerdeFactory(),
-        compressionStrategy,
-        dimCompressionStrategy,
-        longEncodingStrategy
-    );
+    this.indexSpec = IndexSpec.builder()
+                              .withBitmapSerdeFactory(bitmapSerdeFactory != null ? bitmapSerdeFactory : new ConciseBitmapSerdeFactory())
+                              .withDimensionCompression(dimCompressionStrategy)
+                              .withMetricCompression(compressionStrategy)
+                              .withLongEncoding(longEncodingStrategy)
+                              .build();
     this.indexIO = TestHelper.getTestIndexIO();
     this.useBitmapIndexes = bitmapSerdeFactory != null;
   }

@@ -215,15 +215,11 @@ public class TestIndex
   private static Supplier<QueryableIndex> frontCodedMmappedIndex = Suppliers.memoize(
       () -> persistRealtimeAndLoadMMapped(
           realtimeIndex.get(),
-          new IndexSpec(
-              null,
-              null,
-              new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1),
-              null,
-              null,
-              null,
-              null
-          )
+          IndexSpec.builder()
+                   .withStringDictionaryEncoding(
+                       new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1)
+                   )
+                   .build()
       )
   );
 
