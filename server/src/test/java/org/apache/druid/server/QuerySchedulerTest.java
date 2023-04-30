@@ -171,7 +171,7 @@ public class QuerySchedulerTest
   }
 
   @Test
-  public void testHiLoReleaseLaneWhenSequenceExplodes() throws Exception
+  public void testHiLoReleaseLaneWhenSequenceExplodes()
   {
     TopNQuery interactive = makeInteractiveQuery();
     ListenableFuture<?> future = executorService.submit(() -> {
