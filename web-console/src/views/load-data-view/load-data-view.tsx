@@ -56,7 +56,6 @@ import {
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
 import type {
-  DimensionMode,
   DimensionSpec,
   DruidFilter,
   FlattenField,
@@ -65,6 +64,7 @@ import type {
   InputFormat,
   IoConfig,
   MetricSpec,
+  SchemaMode,
   TimestampSpec,
   Transform,
   TuningConfig,
@@ -84,7 +84,6 @@ import {
   FILTER_FIELDS,
   FILTERS_FIELDS,
   FLATTEN_FIELD_FIELDS,
-  getDimensionMode,
   getDimensionSpecName,
   getIngestionComboType,
   getIngestionImage,
@@ -95,6 +94,7 @@ import {
   getMetricSpecName,
   getRequiredModule,
   getRollup,
+  getSchemaMode,
   getSecondaryPartitionRelatedFormFields,
   getSpecType,
   getTimestampExpressionFields,
@@ -367,7 +367,7 @@ export interface LoadDataViewState {
   continueToSpec: boolean;
   showResetConfirm: boolean;
   newRollup?: boolean;
-  newDimensionMode?: DimensionMode;
+  newSchemaMode?: SchemaMode;
 
   // welcome
   overlordModules?: string[];
@@ -1994,7 +1994,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               newSpec = updateSchemaWithSample(
                 newSpec,
                 transformQueryState.data,
-                'specific',
+                'fixed',
                 typeof currentRollup === 'boolean' ? currentRollup : DEFAULT_ROLLUP_SETTING,
               );
             }
@@ -2197,7 +2197,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               newSpec = updateSchemaWithSample(
                 newSpec,
                 filterQueryState.data,
-                'specific',
+                'fixed',
                 typeof currentRollup === 'boolean' ? currentRollup : DEFAULT_ROLLUP_SETTING,
               );
             }
@@ -2308,7 +2308,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const somethingSelected = Boolean(
       selectedAutoDimension || selectedDimensionSpec || selectedMetricSpec,
     );
-    const dimensionMode = getDimensionMode(spec);
+    const schemaMode = getSchemaMode(spec);
 
     let mainFill: JSX.Element | string;
     if (schemaQueryState.isInit()) {
@@ -2349,7 +2349,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       <>
         <div className="main">{mainFill}</div>
         <div className="control">
-          <SchemaMessage dimensionMode={dimensionMode} />
+          <SchemaMessage schemaMode={schemaMode} />
           {!somethingSelected && (
             <>
               <FormGroupWithInfo
@@ -2375,16 +2375,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 }
               >
                 <Switch
-                  checked={dimensionMode === 'specific'}
+                  checked={schemaMode === 'fixed'}
                   onChange={() =>
                     this.setState({
-                      newDimensionMode: dimensionMode === 'specific' ? 'auto-detect' : 'specific',
+                      newSchemaMode: schemaMode === 'fixed' ? 'flexible' : 'fixed',
                     })
                   }
-                  label="Explicitly specify dimension list"
+                  label="Explicitly specify schema"
                 />
               </FormGroupWithInfo>
-              {dimensionMode === 'auto-detect' && (
+              {schemaMode !== 'fixed' && (
                 <AutoForm
                   fields={[
                     {
@@ -2470,7 +2470,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               <FormGroup>
                 <Button
                   text="Add dimension"
-                  disabled={dimensionMode !== 'specific'}
+                  disabled={schemaMode !== 'fixed'}
                   onClick={() => {
                     this.setState({
                       selectedDimensionSpec: {
@@ -2606,7 +2606,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         action={async () => {
           const sampleResponse = await sampleForTransform(spec, cacheRows);
           this.updateSpec(
-            updateSchemaWithSample(spec, sampleResponse, getDimensionMode(spec), newRollup, true),
+            updateSchemaWithSample(spec, sampleResponse, getSchemaMode(spec), newRollup, true),
           );
         }}
         confirmButtonText={`Yes - ${newRollup ? 'enable' : 'disable'} rollup`}
@@ -2622,16 +2622,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   renderChangeDimensionModeAction() {
-    const { newDimensionMode, spec, cacheRows } = this.state;
-    if (typeof newDimensionMode === 'undefined' || !cacheRows) return;
-    const autoDetect = newDimensionMode === 'auto-detect';
+    const { newSchemaMode, spec, cacheRows } = this.state;
+    if (!newSchemaMode || !cacheRows) return;
+    const autoDetect = newSchemaMode !== 'fixed';
 
     return (
       <AsyncActionDialog
         action={async () => {
           const sampleResponse = await sampleForTransform(spec, cacheRows);
           this.updateSpec(
-            updateSchemaWithSample(spec, sampleResponse, newDimensionMode, getRollup(spec)),
+            updateSchemaWithSample(spec, sampleResponse, newSchemaMode, getRollup(spec)),
           );
         }}
         confirmButtonText={`Yes - ${autoDetect ? 'auto detect' : 'explicitly set'} columns`}
@@ -2640,7 +2640,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         }. Schema has been updated.`}
         failText="Could change dimension mode"
         intent={Intent.WARNING}
-        onClose={() => this.setState({ newDimensionMode: undefined })}
+        onClose={() => this.setState({ newSchemaMode: undefined })}
       >
         <p>
           {autoDetect
@@ -2648,6 +2648,17 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             : `Are you sure you want to explicitly specify a dimension list?`}
         </p>
         <p>Making this change will reset any work you have done in this section.</p>
+        {autoDetect && (
+          <Switch
+            checked={newSchemaMode === 'flexible'}
+            label="Use the new schema discovery capability. De-select this if are appending to a datasource created with a previous version of Druid and want to preserve schema compatibility."
+            onChange={() => {
+              this.setState({
+                newSchemaMode: newSchemaMode === 'stringly' ? 'fixed' : 'stringly',
+              });
+            }}
+          />
+        )}
       </AsyncActionDialog>
     );
   }
@@ -2688,7 +2699,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   renderDimensionSpecControls() {
     const { spec, selectedDimensionSpec } = this.state;
     if (!selectedDimensionSpec) return;
-    const dimensionMode = getDimensionMode(spec);
+    const schemaMode = getSchemaMode(spec);
 
     const dimensions = deepGet(spec, `spec.dataSchema.dimensionsSpec.dimensions`) || EMPTY_ARRAY;
 
@@ -2709,7 +2720,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     const convertToMetric = (type: string, prefix: string) => {
       const specWithoutDimension =
-        dimensionMode === 'specific'
+        schemaMode === 'fixed'
           ? deepDelete(
               spec,
               `spec.dataSchema.dimensionsSpec.dimensions.${selectedDimensionSpec.index}`,
@@ -2811,7 +2822,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   renderMetricSpecControls() {
     const { spec, selectedMetricSpec } = this.state;
     if (!selectedMetricSpec) return;
-    const dimensionMode = getDimensionMode(spec);
+    const schemaMode = getSchemaMode(spec);
     const selectedMetricSpecFieldName = selectedMetricSpec.value.fieldName;
 
     const convertToDimension = (type: string) => {
@@ -2862,7 +2873,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         }
       >
         {selectedMetricSpec.index !== -1 &&
-          dimensionMode === 'specific' &&
+          schemaMode === 'fixed' &&
           selectedMetricSpecFieldName && (
             <FormGroup>
               <Popover2 content={convertToDimensionMenu}>
