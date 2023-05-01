@@ -66,12 +66,12 @@ import java.util.Objects;
 public class IndexIOTest extends InitializedNullHandlingTest
 {
   private static Interval DEFAULT_INTERVAL = Intervals.of("1970-01-01/2000-01-01");
-  private static final IndexSpec INDEX_SPEC = IndexMergerTestBase.makeIndexSpec(
-      new ConciseBitmapSerdeFactory(),
-      CompressionStrategy.LZ4,
-      CompressionStrategy.LZ4,
-      CompressionFactory.LongEncodingStrategy.LONGS
-  );
+  private static final IndexSpec INDEX_SPEC = IndexSpec.builder()
+                                                       .withBitmapSerdeFactory(new ConciseBitmapSerdeFactory())
+                                                       .withDimensionCompression(CompressionStrategy.LZ4)
+                                                       .withMetricCompression(CompressionStrategy.LZ4)
+                                                       .withLongEncoding(CompressionFactory.LongEncodingStrategy.LONGS)
+                                                       .build();
 
   static {
     NullHandling.initializeForTests();

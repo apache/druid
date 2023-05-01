@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -44,6 +43,13 @@ import java.util.Objects;
  */
 public class IndexSpec
 {
+  public static IndexSpec DEFAULT = IndexSpec.builder().build();
+
+  public static Builder builder()
+  {
+    return new Builder();
+  }
+
   private final BitmapSerdeFactory bitmapSerdeFactory;
   private final CompressionStrategy dimensionCompression;
   private final StringEncodingStrategy stringDictionaryEncoding;
@@ -55,37 +61,6 @@ public class IndexSpec
 
   @Nullable
   private final SegmentizerFactory segmentLoader;
-
-  /**
-   * Creates an IndexSpec with default parameters
-   */
-  public IndexSpec()
-  {
-    this(null, null, null, null, null, null, null);
-  }
-
-  @VisibleForTesting
-  public IndexSpec(
-      @Nullable BitmapSerdeFactory bitmapSerdeFactory,
-      @Nullable CompressionStrategy dimensionCompression,
-      @Nullable CompressionStrategy metricCompression,
-      @Nullable CompressionFactory.LongEncodingStrategy longEncoding
-  )
-  {
-    this(bitmapSerdeFactory, dimensionCompression, null, metricCompression, longEncoding, null, null);
-  }
-
-  @VisibleForTesting
-  public IndexSpec(
-      @Nullable BitmapSerdeFactory bitmapSerdeFactory,
-      @Nullable CompressionStrategy dimensionCompression,
-      @Nullable CompressionStrategy metricCompression,
-      @Nullable CompressionFactory.LongEncodingStrategy longEncoding,
-      @Nullable SegmentizerFactory segmentLoader
-  )
-  {
-    this(bitmapSerdeFactory, dimensionCompression, null, metricCompression, longEncoding, null, segmentLoader);
-  }
 
   /**
    * Creates an IndexSpec with the given storage format settings.
@@ -231,5 +206,77 @@ public class IndexSpec
            ", jsonCompression=" + jsonCompression +
            ", segmentLoader=" + segmentLoader +
            '}';
+  }
+
+  public static class Builder
+  {
+    @Nullable
+    private BitmapSerdeFactory bitmapSerdeFactory;
+    @Nullable
+    private CompressionStrategy dimensionCompression;
+    @Nullable
+    private StringEncodingStrategy stringDictionaryEncoding;
+    @Nullable
+    private CompressionStrategy metricCompression;
+    @Nullable
+    private CompressionFactory.LongEncodingStrategy longEncoding;
+    @Nullable
+    private CompressionStrategy jsonCompression;
+    @Nullable
+    private SegmentizerFactory segmentLoader;
+
+    public Builder withBitmapSerdeFactory(BitmapSerdeFactory bitmapSerdeFactory)
+    {
+      this.bitmapSerdeFactory = bitmapSerdeFactory;
+      return this;
+    }
+
+    public Builder withDimensionCompression(CompressionStrategy dimensionCompression)
+    {
+      this.dimensionCompression = dimensionCompression;
+      return this;
+    }
+    public Builder withStringDictionaryEncoding(StringEncodingStrategy stringDictionaryEncoding)
+    {
+      this.stringDictionaryEncoding = stringDictionaryEncoding;
+      return this;
+    }
+
+    public Builder withMetricCompression(CompressionStrategy metricCompression)
+    {
+      this.metricCompression = metricCompression;
+      return this;
+    }
+
+    public Builder withLongEncoding(CompressionFactory.LongEncodingStrategy longEncoding)
+    {
+      this.longEncoding = longEncoding;
+      return this;
+    }
+
+    public Builder withJsonCompression(CompressionStrategy jsonCompression)
+    {
+      this.jsonCompression = jsonCompression;
+      return this;
+    }
+
+    public Builder withSegmentLoader(SegmentizerFactory segmentLoader)
+    {
+      this.segmentLoader = segmentLoader;
+      return this;
+    }
+
+    public IndexSpec build()
+    {
+      return new IndexSpec(
+          bitmapSerdeFactory,
+          dimensionCompression,
+          stringDictionaryEncoding,
+          metricCompression,
+          longEncoding,
+          jsonCompression,
+          segmentLoader
+      );
+    }
   }
 }
