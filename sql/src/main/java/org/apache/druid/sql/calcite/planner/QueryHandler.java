@@ -408,6 +408,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
    * and not indicative of the native Druid Queries which will get executed.
    * This method assumes that the Planner has converted the RelNodes to DruidRels, and thereby we can implicitly cast it
    *
+   * @param relRoot  The rel root.
    * @param rel Instance of the root {@link DruidRel} which is formed by running the planner transformations on it
    * @return A string representing an array of native queries that correspond to the given SQL query, in JSON format
    * @throws JsonProcessingException
