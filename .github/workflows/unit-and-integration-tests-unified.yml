@@ -109,6 +109,7 @@ jobs:
         jdk: [ 11, 17 ]
     name: unit tests (jdk${{ matrix.jdk }}, sql-compat=true)
     uses: ./.github/workflows/unit-tests.yml
+    needs: build
     with:
       jdk: ${{ matrix.jdk }}
       sql_compatibility: true
@@ -126,7 +127,9 @@ jobs:
       sql_compatibility: ${{ matrix.sql_compatibility }}
 
   standard-its:
+    needs: build
     uses: ./.github/workflows/standard-its.yml
 
   revised-its:
+    needs: build
     uses: ./.github/workflows/revised-its.yml
