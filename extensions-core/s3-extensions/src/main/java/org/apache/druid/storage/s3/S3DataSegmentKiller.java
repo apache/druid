@@ -99,17 +99,28 @@ public class S3DataSegmentKiller implements DataSegmentKiller
     List<List<DeleteObjectsRequest.KeyVersion>> keysChunks = Lists.partition(keysToDelete, 1000);
     DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(s3Bucket);
     deleteObjectsRequest.setQuiet(true);
-    // don't fail immediately delete as many as possible then fail in the end by throwing one exception that has all
+    // don't fail immediately delete as many as possible then we fail in the end by throwing one exception that has all
     // exceptions in it
     List<Exception> exceptions = new ArrayList<>();
+    // s3 jdk is weird where the call to delete is a 200 status code for the response in the api, but the call is unable
+    // to delete some segments is an exception. this exception has a list of all objects it couldnt' delete. If you make
+    // a call that is a 401 or 403 outright the exception is thrown, but there is no list of objects it couldnt' delete.
+    // so we store them here to log later.
+    List<String> unableToDeleteKeysButNotStoredInException = new ArrayList<>();
     for (List<DeleteObjectsRequest.KeyVersion> keysChunk : keysChunks) {
+      List<String> keysToDeleteStrings = keysChunk.stream().map(
+            DeleteObjectsRequest.KeyVersion::getKey).collect(Collectors.toList());
       try {
         deleteObjectsRequest.setKeys(keysChunk);
-        log.info("Removing from bucket: %s the following index files: %s from s3!", s3Bucket, keysChunk.stream().map(
-            DeleteObjectsRequest.KeyVersion::getKey).collect(Collectors.toList()));
+        log.info("Removing from bucket: %s the following index files: %s from s3!", s3Bucket, keysToDeleteStrings);
         s3Client.deleteObjects(deleteObjectsRequest);
       }
       catch (AmazonServiceException e) {
+        // client and server errors will not have a list of keys that couldn't be deleted in the exception, so we are
+        // adding them here
+        if (e.getStatusCode() >= 300) {
+          unableToDeleteKeysButNotStoredInException.addAll(keysToDeleteStrings);
+        }
         exceptions.add(e);
       }
     }
@@ -120,6 +131,7 @@ public class S3DataSegmentKiller implements DataSegmentKiller
           .map(MultiObjectDeleteException::getErrors)
           .flatMap(errors -> errors.stream().map(MultiObjectDeleteException.DeleteError::getKey))
           .collect(Collectors.toList());
+      segmentsNotDeleted.addAll(unableToDeleteKeysButNotStoredInException);
       SegmentLoadingException segmentLoadingException =
           new SegmentLoadingException(exceptions.get(0), "For bucket: %s unable to delete some or all segments %s", s3Bucket, segmentsNotDeleted);
       for (int ii = 1; ii < exceptions.size(); ii++) {

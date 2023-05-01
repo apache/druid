@@ -57,7 +57,16 @@ public interface DataSegmentKiller
 
   /**
    * Kills a list of segments from deep storage. The default implementation calls kill on the segments in a loop.
-   * Implementers of this interface can leverage batch / bulk deletes to be more efficient.
+   * Implementers of this interface can leverage batch / bulk deletes to be more efficient. It is preferable to attempt
+   * to delete all segments even if there is an issue with deleting a single one. This is up to implementers to
+   * implement as putting a try catch around the default kill via iteration can be problematic if the client of the deep
+   * storage is unable to authenticate itself and segment loading exception doesn't encode enough information in it to \
+   * understand why it failed.
+   * <p>
+   * If a segment or segments do not exist in deep storage method should not throw an exception.
+   * <p>
+   * This version Kill must not require additional permissions on the deep storage beyond what the single-arg
+   * form of kill @link org.apache.druid.segment.loading.DataSegmentKiller requires.
    * @param segments The list of segments to kill
    * @throws SegmentLoadingException If there is an exception during deletion such as a segment in the list could not be
    * completely removed
