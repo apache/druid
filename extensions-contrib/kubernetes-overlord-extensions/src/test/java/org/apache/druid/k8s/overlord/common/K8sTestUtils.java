@@ -51,7 +51,7 @@ import java.io.File;
 public class K8sTestUtils
 {
 
-  private static final IndexSpec INDEX_SPEC = new IndexSpec();
+  private static final IndexSpec INDEX_SPEC = IndexSpec.DEFAULT;
 
 
   /*

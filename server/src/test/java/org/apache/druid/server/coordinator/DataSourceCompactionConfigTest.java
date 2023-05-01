@@ -33,7 +33,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.data.BitmapSerde.DefaultBitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
@@ -223,18 +222,16 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         null,
         new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), null),
         new DynamicPartitionsSpec(1000, 20000L),
-        new IndexSpec(
-            new DefaultBitmapSerdeFactory(),
-            CompressionStrategy.LZ4,
-            CompressionStrategy.LZF,
-            LongEncodingStrategy.LONGS
-        ),
-        new IndexSpec(
-            new DefaultBitmapSerdeFactory(),
-            CompressionStrategy.LZ4,
-            CompressionStrategy.UNCOMPRESSED,
-            LongEncodingStrategy.AUTO
-        ),
+        IndexSpec.builder()
+                 .withDimensionCompression(CompressionStrategy.LZ4)
+                 .withMetricCompression(CompressionStrategy.LZF)
+                 .withLongEncoding(LongEncodingStrategy.LONGS)
+                 .build(),
+        IndexSpec.builder()
+                 .withDimensionCompression(CompressionStrategy.LZ4)
+                 .withMetricCompression(CompressionStrategy.UNCOMPRESSED)
+                 .withLongEncoding(LongEncodingStrategy.AUTO)
+                 .build(),
         2,
         1000L,
         TmpFileSegmentWriteOutMediumFactory.instance(),
@@ -264,18 +261,16 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         null,
         new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), null),
         new DynamicPartitionsSpec(1000, 20000L),
-        new IndexSpec(
-            new DefaultBitmapSerdeFactory(),
-            CompressionStrategy.LZ4,
-            CompressionStrategy.LZF,
-            LongEncodingStrategy.LONGS
-        ),
-        new IndexSpec(
-            new DefaultBitmapSerdeFactory(),
-            CompressionStrategy.LZ4,
-            CompressionStrategy.UNCOMPRESSED,
-            LongEncodingStrategy.AUTO
-        ),
+        IndexSpec.builder()
+                 .withDimensionCompression(CompressionStrategy.LZ4)
+                 .withMetricCompression(CompressionStrategy.LZ4)
+                 .withLongEncoding(LongEncodingStrategy.LONGS)
+                 .build(),
+        IndexSpec.builder()
+                 .withDimensionCompression(CompressionStrategy.LZ4)
+                 .withMetricCompression(CompressionStrategy.UNCOMPRESSED)
+                 .withLongEncoding(LongEncodingStrategy.AUTO)
+                 .build(),
         2,
         1000L,
         TmpFileSegmentWriteOutMediumFactory.instance(),

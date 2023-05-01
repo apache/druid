@@ -96,16 +96,11 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
   {
-    final IndexSpec indexSpec = new IndexSpec();
-    final IndexSpec frontCodedIndexSpec = new IndexSpec(
-        null,
-        null,
-        new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1),
-        null,
-        null,
-        null,
-        null
-    );
+    final IndexSpec indexSpec = IndexSpec.DEFAULT;
+    final IndexSpec frontCodedIndexSpec =
+        IndexSpec.builder()
+                 .withStringDictionaryEncoding(new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1))
+                 .build();
     final IncrementalIndex rtIndex = makeIncrementalIndex();
     final QueryableIndex mMappedTestIndex = makeQueryableIndex(indexSpec);
     final QueryableIndex mergedRealtimeIndex = makeMergedQueryableIndex(indexSpec);
