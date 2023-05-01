@@ -1236,7 +1236,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   public static class IndexTuningConfig implements AppenderatorConfig
   {
-    private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
+    private static final IndexSpec DEFAULT_INDEX_SPEC = IndexSpec.DEFAULT;
     private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
     private static final boolean DEFAULT_GUARANTEE_ROLLUP = false;
     private static final boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = false;

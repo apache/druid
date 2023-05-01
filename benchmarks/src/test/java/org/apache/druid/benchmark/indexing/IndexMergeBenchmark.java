@@ -141,7 +141,7 @@ public class IndexMergeBenchmark
       File indexFile = indexMergerV9.persist(
           incIndex,
           tmpDir,
-          new IndexSpec(),
+          IndexSpec.DEFAULT,
           null
       );
 
@@ -166,7 +166,7 @@ public class IndexMergeBenchmark
           rollup,
           schemaInfo.getAggsArray(),
           tmpFile,
-          new IndexSpec(),
+          IndexSpec.DEFAULT,
           null,
           -1
       );

@@ -19,25 +19,40 @@
 
 package org.apache.druid.msq.indexing;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.data.CompressionStrategy;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import org.apache.druid.msq.exec.ControllerContext;
+import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
-public class MSQSpecTest
+import java.util.concurrent.TimeUnit;
+
+public class MSQWorkerTaskLauncherTest
 {
 
-  @Test
-  public void testEquals()
+  MSQWorkerTaskLauncher target;
+
+  @Before
+  public void setUp()
   {
-    EqualsVerifier.forClass(MSQSpec.class)
-                  .withNonnullFields("query", "destination", "tuningConfig")
-                  .withPrefabValues(
-                      IndexSpec.class,
-                      IndexSpec.DEFAULT,
-                      IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
-                  )
-                  .usingGetClass()
-                  .verify();
+    target = new MSQWorkerTaskLauncher(
+        "controller-id",
+        "foo",
+        Mockito.mock(ControllerContext.class),
+        (task, fault) -> {},
+        ImmutableMap.of(),
+        TimeUnit.SECONDS.toMillis(5)
+    );
+  }
+
+  @Test
+  public void testRetryInactiveTasks()
+  {
+    target.reportFailedInactiveWorker(1);
+    target.retryInactiveTasksIfNeeded(5);
+
+    Assert.assertEquals(target.getWorkersToRelaunch(), ImmutableSet.of(1));
   }
 }
