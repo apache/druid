@@ -207,7 +207,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
         ImmutableList.of(expectedLongSumMetric),
         null,
-        mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),
+        IndexSpec.DEFAULT.asMap(mapper),
         mapper.readValue(
             mapper.writeValueAsString(
                 new UniformGranularitySpec(
@@ -693,7 +693,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
         ImmutableList.of(expectedLongSumMetric),
         getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
-        mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),
+        IndexSpec.DEFAULT.asMap(mapper),
         mapper.readValue(
             mapper.writeValueAsString(
                 new UniformGranularitySpec(
@@ -757,7 +757,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
         ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
         getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
-        mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),
+        IndexSpec.DEFAULT.asMap(mapper),
         mapper.readValue(
             mapper.writeValueAsString(
                 new UniformGranularitySpec(
