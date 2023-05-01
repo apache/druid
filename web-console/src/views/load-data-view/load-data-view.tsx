@@ -2378,7 +2378,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   checked={schemaMode === 'fixed'}
                   onChange={() =>
                     this.setState({
-                      newSchemaMode: schemaMode === 'fixed' ? 'flexible' : 'fixed',
+                      newSchemaMode: schemaMode === 'fixed' ? 'stringly' : 'fixed',
                     })
                   }
                   label="Explicitly specify schema"
@@ -2634,11 +2634,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             updateSchemaWithSample(spec, sampleResponse, newSchemaMode, getRollup(spec)),
           );
         }}
-        confirmButtonText={`Yes - ${autoDetect ? 'auto detect' : 'explicitly set'} columns`}
+        confirmButtonText={`Yes - ${autoDetect ? 'auto detect' : 'explicitly define'} schema`}
         successText={`Dimension mode changes to ${
           autoDetect ? 'auto detect' : 'specific list'
         }. Schema has been updated.`}
-        failText="Could change dimension mode"
+        failText="Could not change schema mode"
         intent={Intent.WARNING}
         onClose={() => this.setState({ newSchemaMode: undefined })}
       >
@@ -2654,7 +2654,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             label="Use the new schema discovery capability. De-select this if are appending to a datasource created with a previous version of Druid and want to preserve schema compatibility."
             onChange={() => {
               this.setState({
-                newSchemaMode: newSchemaMode === 'stringly' ? 'fixed' : 'stringly',
+                newSchemaMode: newSchemaMode === 'stringly' ? 'flexible' : 'stringly',
               });
             }}
           />

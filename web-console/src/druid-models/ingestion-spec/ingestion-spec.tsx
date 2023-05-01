@@ -273,6 +273,9 @@ export function getSchemaMode(spec: Partial<IngestionSpec>): SchemaMode {
   if (deepGet(spec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery') === true) {
     return 'flexible';
   }
+  if (deepGet(spec, 'spec.dataSchema.dimensionsSpec.includeAllDimensions') === true) {
+    return 'stringly';
+  }
   const dimensions = deepGet(spec, 'spec.dataSchema.dimensionsSpec.dimensions') || EMPTY_ARRAY;
   return Array.isArray(dimensions) && dimensions.length === 0 ? 'stringly' : 'fixed';
 }
@@ -2432,7 +2435,7 @@ export function updateSchemaWithSample(
   switch (schemaMode) {
     case 'flexible':
       newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery', true);
-      newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.includeAllDimensions', true);
+      newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.includeAllDimensions');
       newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions', []);
       newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions');
       break;
