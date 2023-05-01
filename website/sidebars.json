@@ -165,7 +165,6 @@
       "api-reference/sql-ingestion-api",
       "api-reference/sql-api",
       "api-reference/sql-jdbc",
-      "api-reference/tasks",
       "api-reference/api-reference"
     ],
     "Configuration": [
