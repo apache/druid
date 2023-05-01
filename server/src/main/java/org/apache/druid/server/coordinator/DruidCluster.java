@@ -55,7 +55,7 @@ public class DruidCluster
     this.realtimes = Collections.unmodifiableSet(realtimes);
     this.historicals = CollectionUtils.mapValues(
         historicals,
-        holders -> CollectionUtils.newTreeSet(Comparator.reverseOrder(), holders)
+        holders -> CollectionUtils.newTreeSet(Comparator.naturalOrder(), holders)
     );
     this.brokers = Collections.unmodifiableSet(brokers);
   }
@@ -95,11 +95,6 @@ public class DruidCluster
     allServers.addAll(brokers);
     allServers.addAll(realtimes);
     return allServers;
-  }
-
-  public Iterable<NavigableSet<ServerHolder>> getSortedHistoricalsByTier()
-  {
-    return historicals.values();
   }
 
   public boolean isEmpty()

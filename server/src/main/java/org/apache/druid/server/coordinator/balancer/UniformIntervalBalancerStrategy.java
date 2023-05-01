@@ -28,8 +28,8 @@ import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NavigableSet;
 import java.util.PriorityQueue;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -88,8 +88,7 @@ public class UniformIntervalBalancerStrategy implements BalancerStrategy
    */
   private static final Comparator<ServerSegmentCount> CHEAPEST_SERVERS_FIRST
       = Comparator.<ServerSegmentCount>comparingInt(entry -> entry.segmentCount)
-      .thenComparingDouble(entry -> entry.server.getPercentUsed())
-      .thenComparingInt(entry -> ThreadLocalRandom.current().nextInt());
+      .thenComparing(entry -> entry.server);
 
   private final AtomicInteger movedByCount = new AtomicInteger();
   private final AtomicInteger movedBySize = new AtomicInteger();
@@ -149,13 +148,45 @@ public class UniformIntervalBalancerStrategy implements BalancerStrategy
     );
   }
 
+  @Override
+  public Iterator<ServerHolder> pickServersToDrop(
+      DataSegment toDropSegment,
+      NavigableSet<ServerHolder> serverHolders
+  )
+  {
+    return findServersToDrop(toDropSegment, serverHolders);
+  }
+
+
+  /**
+   * Finds the servers from the given list that can drop this segment.
+   * The servers are returned in the order of most preferred first.
+   */
+  private Iterator<ServerHolder> findServersToDrop(
+      DataSegment segment,
+      Iterable<ServerHolder> serverHolders
+  )
+  {
+    final PriorityQueue<ServerSegmentCount> costPrioritizedServers =
+        new PriorityQueue<>(CHEAPEST_SERVERS_FIRST.reversed());
+
+    for (ServerHolder server : serverHolders) {
+      if (server.isServingSegment(segment)) {
+        final int count = server.getNumSegmentsInDatasourceInterval(segment);
+        costPrioritizedServers.add(new ServerSegmentCount(server, count));
+      }
+    }
+
+    return costPrioritizedServers.stream().map(entry -> entry.server).iterator();
+  }
+
   /**
    * Finds the servers from the given list that can load this segment.
    * The servers are returned in the order of most preferred first.
    */
   private Iterator<ServerHolder> findServersToLoad(
-      final DataSegment proposalSegment,
-      final Iterable<ServerHolder> serverHolders
+      DataSegment proposalSegment,
+      Iterable<ServerHolder> serverHolders
   )
   {
     final PriorityQueue<ServerSegmentCount> costPrioritizedServers =

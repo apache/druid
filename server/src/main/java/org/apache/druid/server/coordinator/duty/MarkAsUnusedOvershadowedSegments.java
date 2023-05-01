@@ -36,7 +36,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
 
 public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
 {
@@ -64,20 +63,17 @@ public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
       return params;
     }
 
-    CoordinatorRunStats stats = new CoordinatorRunStats();
-
     DruidCluster cluster = params.getDruidCluster();
     final Map<String, SegmentTimeline> timelines = new HashMap<>();
 
-    for (SortedSet<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
-      for (ServerHolder serverHolder : serverHolders) {
-        addSegmentsFromServer(serverHolder, timelines);
-      }
-    }
-
-    for (ServerHolder serverHolder : cluster.getBrokers()) {
-      addSegmentsFromServer(serverHolder, timelines);
-    }
+    cluster.getHistoricals().values().forEach(
+        historicals -> historicals.forEach(
+            historical -> addSegmentsFromServer(historical, timelines)
+        )
+    );
+    cluster.getBrokers().forEach(
+        broker -> addSegmentsFromServer(broker, timelines)
+    );
 
     // Note that we do not include segments from ingestion services such as tasks or indexers,
     // to prevent unpublished segments from prematurely overshadowing segments.
@@ -91,6 +87,8 @@ public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
                                   .add(dataSegment.getId());
       }
     }
+
+    final CoordinatorRunStats stats = new CoordinatorRunStats();
     datasourceToUnusedSegments.forEach(
         (datasource, unusedSegments) -> {
           stats.addToDatasourceStat(Stats.Segments.OVERSHADOWED, datasource, unusedSegments.size());
@@ -109,9 +107,9 @@ public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
     ImmutableDruidServer server = serverHolder.getServer();
 
     for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
-      SegmentTimeline timeline = timelines
-          .computeIfAbsent(dataSource.getName(), dsName -> new SegmentTimeline());
-      timeline.addSegments(dataSource.getSegments().iterator());
+      timelines
+          .computeIfAbsent(dataSource.getName(), dsName -> new SegmentTimeline())
+          .addSegments(dataSource.getSegments().iterator());
     }
   }
 }

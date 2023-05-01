@@ -306,6 +306,9 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
     for (DruidServer historical : historicals) {
       double usedPercentage = (100.0f * historical.getCurrSize() / historical.getMaxSize());
       Assert.assertTrue(usedPercentage >= 76.0 && usedPercentage <= 77.0);
+
+      int numSegments = historical.getTotalSegments();
+      Assert.assertTrue(numSegments >= 1395 && numSegments <= 1420);
     }
 
     // Verify that no movements happen in later runs

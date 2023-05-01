@@ -42,14 +42,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Encapsulates the state of a DruidServer during a single coordinator run.
+ * <p>
+ * ServerHolders are naturally ordered by available size, servers with more
+ * available size first.
  */
 public class ServerHolder implements Comparable<ServerHolder>
 {
-  private static final Comparator<ServerHolder> FULL_SERVER_FIRST =
+  private static final Comparator<ServerHolder> MORE_AVAILABLE_SIZE_SERVER_FIRST =
       Comparator.comparing(ServerHolder::getAvailableSize)
                 .thenComparing(holder -> holder.getServer().getHost())
                 .thenComparing(holder -> holder.getServer().getTier())
-                .thenComparing(holder -> holder.getServer().getType());
+                .thenComparing(holder -> holder.getServer().getType())
+                .reversed();
 
   private static final EmittingLogger log = new EmittingLogger(ServerHolder.class);
 
@@ -59,10 +63,8 @@ public class ServerHolder implements Comparable<ServerHolder>
   private final int maxAssignmentsInRun;
   private final int maxLifetimeInQueue;
 
-  // These numbers are initialized at the start of the run to limit
-  // replication and balancing. They need not be updated during the run.
-  private final AtomicInteger movingSegmentCount = new AtomicInteger(0);
-  private final AtomicInteger loadingReplicaCount = new AtomicInteger(0);
+  private final int movingSegmentCount;
+  private final int loadingReplicaCount;
 
   private int totalAssignmentsInRun;
   private long sizeOfLoadingSegments;
@@ -115,10 +117,18 @@ public class ServerHolder implements Comparable<ServerHolder>
                                : maxSegmentsInLoadQueue - peon.getSegmentsToLoad().size();
     this.maxLifetimeInQueue = maxLifetimeInQueue;
 
-    updateQueuedSegments();
+    final AtomicInteger movingSegmentCount = new AtomicInteger();
+    final AtomicInteger loadingReplicaCount = new AtomicInteger();
+    updateQueuedSegments(movingSegmentCount, loadingReplicaCount);
+
+    this.movingSegmentCount = movingSegmentCount.get();
+    this.loadingReplicaCount = loadingReplicaCount.get();
   }
 
-  private void updateQueuedSegments()
+  private void updateQueuedSegments(
+      AtomicInteger movingSegmentCount,
+      AtomicInteger loadingReplicaCount
+  )
   {
     server.iterateAllSegments()
           .forEach(segment -> updateCountInInterval(segment, true));
@@ -165,7 +175,9 @@ public class ServerHolder implements Comparable<ServerHolder>
       log.makeAlert(
           "Load queue for server [%s], tier [%s] has [%d] segments stuck.",
           server.getName(), server.getTier(), expiredSegments.size()
-      ).addData("segments", expiredSegmentsSubList).addData("maxLifetime", maxLifetimeInQueue).emit();
+      )
+         .addData("segments", expiredSegmentsSubList.toString())
+         .addData("maxLifetime", maxLifetimeInQueue).emit();
     }
   }
 
@@ -194,14 +206,6 @@ public class ServerHolder implements Comparable<ServerHolder>
     return (100.0 * getSizeUsed()) / getMaxSize();
   }
 
-  /**
-   * Historical nodes can be 'decommissioned', which instructs Coordinator to move segments from them according to
-   * the percent of move operations diverted from normal balancer moves for this purpose by
-   * {@link CoordinatorDynamicConfig#getDecommissioningMaxPercentOfMaxSegmentsToMove()}. The mechanism allows draining
-   * segments from nodes which are planned for replacement.
-   *
-   * @return true if the node is decommissioning
-   */
   public boolean isDecommissioning()
   {
     return isDecommissioning;
@@ -319,12 +323,12 @@ public class ServerHolder implements Comparable<ServerHolder>
 
   public int getNumMovingSegments()
   {
-    return movingSegmentCount.get();
+    return movingSegmentCount;
   }
 
   public int getNumLoadingReplicas()
   {
-    return loadingReplicaCount.get();
+    return loadingReplicaCount;
   }
 
   public boolean startOperation(SegmentAction action, DataSegment segment)
@@ -393,7 +397,7 @@ public class ServerHolder implements Comparable<ServerHolder>
   @Override
   public int compareTo(ServerHolder serverHolder)
   {
-    return FULL_SERVER_FIRST.compare(this, serverHolder);
+    return MORE_AVAILABLE_SIZE_SERVER_FIRST.compare(this, serverHolder);
   }
 
   @Override

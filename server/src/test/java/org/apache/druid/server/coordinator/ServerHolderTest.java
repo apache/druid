@@ -116,8 +116,8 @@ public class ServerHolderTest
     );
 
     Assert.assertEquals(0, h1.compareTo(h2));
-    Assert.assertEquals(-1, h3.compareTo(h1));
-    Assert.assertEquals(-1, h3.compareTo(h4));
+    Assert.assertEquals(1, h3.compareTo(h1));
+    Assert.assertEquals(1, h3.compareTo(h4));
   }
 
   @Test

@@ -32,6 +32,7 @@ import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -382,8 +383,8 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     }
 
     // Keep eligible servers sorted by most full first
-    final TreeSet<ServerHolder> eligibleLiveServers = new TreeSet<>();
-    final TreeSet<ServerHolder> eligibleDyingServers = new TreeSet<>();
+    final TreeSet<ServerHolder> eligibleLiveServers = new TreeSet<>(Comparator.reverseOrder());
+    final TreeSet<ServerHolder> eligibleDyingServers = new TreeSet<>(Comparator.reverseOrder());
     for (ServerHolder server : eligibleServers) {
       if (server.isDecommissioning()) {
         eligibleDyingServers.add(server);

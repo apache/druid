@@ -40,7 +40,6 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.PriorityQueue;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -61,7 +60,7 @@ public class CostBalancerStrategy implements BalancerStrategy
    */
   private static final Comparator<Pair<Double, ServerHolder>> CHEAPEST_SERVERS_FIRST
       = Comparator.<Pair<Double, ServerHolder>, Double>comparing(pair -> pair.lhs)
-      .thenComparing(pair -> ThreadLocalRandom.current().nextInt());
+      .thenComparing(pair -> pair.rhs);
 
   /**
    * This defines the unnormalized cost function between two segments.

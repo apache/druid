@@ -171,11 +171,7 @@ public interface BalancerStrategy
    * @param serverHolders set of historicals to consider dropping from
    * @return Iterator for set of historicals, ordered by drop preference
    */
-  default Iterator<ServerHolder> pickServersToDrop(DataSegment toDropSegment, NavigableSet<ServerHolder> serverHolders)
-  {
-    // By default, return holders with least available size first.
-    return serverHolders.iterator();
-  }
+  Iterator<ServerHolder> pickServersToDrop(DataSegment toDropSegment, NavigableSet<ServerHolder> serverHolders);
 
   /**
    * Add balancing strategy stats during the 'balanceTier' operation of
