@@ -65,8 +65,8 @@ You can override the port number by setting the `JUPYTER_PORT` environment varia
 
 ### Start Jupyter and Druid
 
-Running Druid in Docker requires the `environment` file as well as the `DRUID_VERSION` environment variable.
-`DRUID_VERSION` references the Docker tag for the version of Druid to pull from the
+Running Druid in Docker requires the `environment` file as well as an environment variable named `DRUID_VERSION`,
+which determines the version of Druid to use. The Druid version references the Docker tag to pull from the
 [Apache Druid Docker Hub](https://hub.docker.com/r/apache/druid/tags).
 
 In the same directory as `docker-compose.yaml` and `environment`, start the application:
@@ -95,8 +95,8 @@ docker compose pull jupyter
 
 ### Use locally built image
 
-The default Docker Compose file pulls the custom Jupyter Notebook image from Imply's Docker Hub.
-If you prefer to build the image locally, do the following:
+The default Docker Compose file pulls the custom Jupyter Notebook image from a third party Docker Hub.
+If you prefer to build the image locally from the official source, do the following:
 1. Clone the Apache Druid repository.
 2. Navigate to `examples/quickstart/jupyter-notebooks/docker-jupyter`.
 3. Start the services using `-f docker-compose-local.yaml` in the `docker compose` command. For example:
@@ -111,12 +111,13 @@ The following steps show you how to access the Jupyter notebook tutorials from t
 At startup, Docker creates and mounts a volume to persist data from the container to your local machine.
 This way you can save your work completed within the Docker container.
 
-1. Navigate to available notebooks at http://localhost:8889.
+1. Navigate to the notebooks at http://localhost:8889.
    > If you set `JUPYTER_PORT` to another port number, replace `8889` with the value of the Jupyter port.
 
 2. Select a tutorial. If you don't plan to save your changes, you can use the notebook directly as is. Otherwise, continue to the next step.
 
-3. Optional: From the navigation menu, select **File > Save as...**, then enter `work/<notebook name>.ipynb`.
+3. Optional: To save a local copy of your tutorial work,
+select **File > Save as...** from the navigation menu. Then enter `work/<notebook name>.ipynb`.
 If the notebook still displays as read only, you may need to refresh the page in your browser.
 Access the saved files in the `notebooks` folder in your local working directory.
 
@@ -157,7 +158,14 @@ as well as the [Python client for Druid](tutorial-jupyter-index.md#python-api-fo
 
    Individual notebooks may list additional packages you need to install to complete the tutorial.
 
-3. Start Jupyter, in the same directory as the tutorials, using either JupyterLab or Jupyter Notebook:
+3. In your Druid source repo, install `druidapi` with the following commands:
+
+   ```bash
+   cd examples/quickstart/jupyter-notebooks/druidapi
+   pip install .
+   ```
+
+4. Start Jupyter, in the same directory as the tutorials, using either JupyterLab or Jupyter Notebook:
    ```bash
    # Start JupyterLab on port 3001
    jupyter lab --port 3001
@@ -166,7 +174,7 @@ as well as the [Python client for Druid](tutorial-jupyter-index.md#python-api-fo
    jupyter notebook --port 3001
    ```
 
-4. Start Druid. You can use the [Quickstart (local)](./index.md) instance. The tutorials
+5. Start Druid. You can use the [Quickstart (local)](./index.md) instance. The tutorials
    assume that you are using the quickstart, so no authentication or authorization
    is expected unless explicitly mentioned.
 

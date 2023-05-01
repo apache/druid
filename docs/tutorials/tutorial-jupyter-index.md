@@ -39,14 +39,17 @@ Otherwise, you can install the prerequisites on your own. Here's what you need:
 
 - An available Druid instance.
 - Python 3.7 or later
-- The `requests` package for Python
 - JupyterLab (recommended) or Jupyter Notebook running on a non-default port.
 By default, Druid and Jupyter both try to use port `8888`, so start Jupyter on a different port.
+- The `requests` Python package
+- The `druidapi` Python package
 
+For setup instructions, see [Tutorial setup without using Docker](tutorial-jupyter-docker.md#tutorial-setup-without-using-docker).
 Individual tutorials may require additional Python packages, such as for visualization or streaming ingestion.
 
 ## Python API for Druid
 
+The `druidapi` Python package is a REST API for Druid.
 One of the notebooks shows how to use the Druid REST API. The others focus on other
 topics and use a simple set of Python wrappers around the underlying REST API. The
 wrappers reside in the `druidapi` package within the notebooks directory. While the package
