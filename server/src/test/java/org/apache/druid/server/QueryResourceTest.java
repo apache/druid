@@ -896,9 +896,7 @@ public class QueryResourceTest
     assertAsyncResponseAndCountdownOrBlockForever(
         SIMPLE_TIMESERIES_QUERY,
         waitAllFinished,
-        response -> {
-          Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-        }
+        response -> Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus())
     );
     waitTwoScheduled.await();
     assertSynchronousResponseAndCountdownOrBlockForever(
