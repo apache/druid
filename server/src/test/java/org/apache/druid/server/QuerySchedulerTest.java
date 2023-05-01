@@ -366,6 +366,7 @@ public class QuerySchedulerTest
           {
             return GroupByStrategySelector.STRATEGY_V2;
           }
+
           @Override
           public String toString()
           {
@@ -743,34 +744,34 @@ public class QuerySchedulerTest
   }
 
   private ListenableFuture<?> makeMergingQueryFuture(
-    ListeningExecutorService executorService,
-    QueryScheduler scheduler,
-    Query<?> query,
-    QueryToolChest toolChest,
-    int numRows
-)
-{
-  return executorService.submit(() -> {
-    try {
-      Query<?> scheduled = scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(query), ImmutableSet.of());
+      ListeningExecutorService executorService,
+      QueryScheduler scheduler,
+      Query<?> query,
+      QueryToolChest toolChest,
+      int numRows
+  )
+  {
+    return executorService.submit(() -> {
+      try {
+        Query<?> scheduled = scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(query), ImmutableSet.of());
 
-      Assert.assertNotNull(scheduled);
+        Assert.assertNotNull(scheduled);
 
-      FluentQueryRunnerBuilder fluentQueryRunnerBuilder = new FluentQueryRunnerBuilder(toolChest);
-      FluentQueryRunnerBuilder.FluentQueryRunner runner = fluentQueryRunnerBuilder.create((queryPlus, responseContext) -> {
-        Sequence<Integer> underlyingSequence = makeSequence(numRows);
-        Sequence<Integer> results = scheduler.run(scheduled, underlyingSequence);
-        return results;
-      });
+        FluentQueryRunnerBuilder fluentQueryRunnerBuilder = new FluentQueryRunnerBuilder(toolChest);
+        FluentQueryRunnerBuilder.FluentQueryRunner runner = fluentQueryRunnerBuilder.create((queryPlus, responseContext) -> {
+          Sequence<Integer> underlyingSequence = makeSequence(numRows);
+          Sequence<Integer> results = scheduler.run(scheduled, underlyingSequence);
+          return results;
+        });
 
-      final int actualNumRows = consumeAndCloseSequence(runner.mergeResults().run(QueryPlus.wrap(query)));
-      Assert.assertEquals(actualNumRows, numRows);
-    }
-    catch (IOException ex) {
-      throw new RuntimeException(ex);
-    }
-  });
-}
+        final int actualNumRows = consumeAndCloseSequence(runner.mergeResults().run(QueryPlus.wrap(query)));
+        Assert.assertEquals(actualNumRows, numRows);
+      }
+      catch (IOException ex) {
+        throw new RuntimeException(ex);
+      }
+    });
+  }
 
 
   private void getFuturesAndAssertAftermathIsChill(
