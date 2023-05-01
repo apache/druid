@@ -156,7 +156,7 @@ public class ExecutorLifecycle
             }
 
             // Kind of gross, but best way to kill the JVM as far as I know
-            log.info("Triggering JVM shutdown.");
+            log.info("Task JVM is being killed by the Overlord.");
             System.exit(2);
           }
       );
