@@ -40,11 +40,11 @@ import java.lang.annotation.Target;
  * Map<String, Optional<String>. The key is only added to the service dimensions that are emitted if the Optional is
  * present.
  * <p/>
- * MapBinder<String, String> extraDims =
+ * MapBinder<String, Optional<String>> extraDims =
  *     MapBinder.newMapBinder(
  *        binder,
  *        new TypeLiteral<String>() {},
- *        new TypeLiteral<Optionl<String>>() {},
+ *        new TypeLiteral<Optional<String>>() {},
  *        ExtraServiceDimensions.class
  * );
  * extraDims.addBinding("foo").toInstance(Optional.fromNullable(bar));

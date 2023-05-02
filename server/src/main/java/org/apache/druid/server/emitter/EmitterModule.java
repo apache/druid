@@ -125,7 +125,7 @@ public class EmitterModule implements Module
         config.getServiceName(),
         config.getHostAndPortToUse(),
         emitter,
-        ImmutableMap.copyOf(serviceDimensions.build())
+        serviceDimensions.build()
     );
     EmittingLogger.registerEmitter(retVal);
     return retVal;
