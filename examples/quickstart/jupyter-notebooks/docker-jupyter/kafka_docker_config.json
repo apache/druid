@@ -11,7 +11,7 @@
         {
           "type": "enum",
           "name": "username",
-          "values": ["willow_bean", "mish_middy", "shadow", "milton", "miette", "jambalion", "jojo", "rocket"],
+          "values": ["willow", "mia", "leon", "milton", "miette", "gus", "jojo", "rocket"],
           "cardinality_distribution": {
             "type": "uniform",
             "min": 0,
