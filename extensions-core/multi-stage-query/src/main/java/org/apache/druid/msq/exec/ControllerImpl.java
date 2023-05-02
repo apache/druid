@@ -355,6 +355,8 @@ public class ControllerImpl implements Controller
           throw new MSQException(CanceledFault.INSTANCE);
         }
     );
+
+    workerTaskLauncher.waitForWorkerShutdown();
   }
 
   public TaskStatus runTask(final Closer closer)

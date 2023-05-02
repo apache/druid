@@ -202,12 +202,7 @@ public class MSQWorkerTaskLauncher
     }
 
     // Block until stopped.
-    try {
-      FutureUtils.getUnchecked(stopFuture, false);
-    }
-    catch (Throwable ignored) {
-      // Suppress.
-    }
+    waitForWorkerShutdown();
   }
 
   /**
@@ -306,6 +301,14 @@ public class MSQWorkerTaskLauncher
     }
   }
 
+  public void waitForWorkerShutdown() {
+    try {
+      FutureUtils.getUnchecked(stopFuture, false);
+    }
+    catch (Throwable ignored) {
+      // Suppress.
+    }
+  }
 
   /**
    * Checks if the controller has canceled the input taskId. This method is used in {@link ControllerImpl}
