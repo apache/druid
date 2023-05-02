@@ -3347,7 +3347,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             />
           )}
           <Button
-            text="Submit"
+            text={submitting ? 'Submitting...' : 'Submit'}
             rightIcon={IconNames.CLOUD_UPLOAD}
             intent={Intent.PRIMARY}
             disabled={submitting || Boolean(issueWithSpec)}
