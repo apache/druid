@@ -2644,8 +2644,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       >
         <p>
           {autoDetect
-            ? `Are you sure you don't want to explicitly specify a dimension list?`
-            : `Are you sure you want to explicitly specify a dimension list?`}
+            ? `Are you sure you want Druid to auto detect the data schema?`
+            : `Are you sure you want to explicitly specify a schema?`}
         </p>
         <p>Making this change will reset any work you have done in this section.</p>
         {autoDetect && (
