@@ -24,21 +24,21 @@ sidebar_label: API endpoints reference
   -->
 
 
-This page documents all of the API endpoints for each Druid service type.
+This topic documents all of the API endpoints for each Druid service type.
 
 ## Common
 
-The following endpoints are supported by all processes.
+All processes support the following endpoints.
 
 ### Process information
 
 `GET /status`
 
-Returns the Druid version, loaded extensions, memory used, total memory and other useful information about the process.
+Returns the Druid version, loaded extensions, memory used, total memory, and other useful information about the process.
 
 `GET /status/health`
 
-An endpoint that always returns a boolean "true" value with a 200 OK response, useful for automated health checks.
+Always returns a boolean `true` value with a 200 OK response, useful for automated health checks.
 
 `GET /status/properties`
 
@@ -123,8 +123,8 @@ Returns the serialized JSON of segments to load and drop for each Historical pro
 
 #### Segment loading by datasource
 
-Note that all _interval_ query parameters are ISO 8601 strings (e.g., 2016-06-27/2016-06-28).
-Also note that these APIs only guarantees that the segments are available at the time of the call. 
+Note that all _interval_ query parameters are ISO 8601 strings&mdash;for example, 2016-06-27/2016-06-28.
+Also note that these APIs only guarantees that the segments are available at the time of the call.
 Segments can still become missing because of historical process failures or any other reasons afterward.
 
 `GET /druid/coordinator/v1/datasources/{dataSourceName}/loadstatus?forceMetadataRefresh={boolean}&interval={myInterval}`
@@ -295,7 +295,7 @@ Returns full segment metadata for a specific segment in the cluster.
 Return the tiers that a datasource exists in.
 
 #### Note for coordinator's POST and DELETE API's
-The segments would be enabled when these API's are called, but then can be disabled again by the coordinator if any dropRule matches. Segments enabled by these API's might not be loaded by historical processes if no loadRule matches.  If an indexing or kill task runs at the same time as these API's are invoked, the behavior is undefined. Some segments might be killed and others might be enabled. It's also possible that all segments might be disabled but at the same time, the indexing task is able to read data from those segments and succeed.
+The segments would be enabled when these API's are called, but then can be disabled again by the coordinator if any dropRule matches. Segments enabled by these API's might not be loaded by historical processes if no loadRule matches. If an indexing or kill task runs at the same time as these API's are invoked, the behavior is undefined. Some segments might be killed and others might be enabled. It's also possible that all segments might be disabled but at the same time, the indexing task is able to read data from those segments and succeed.
 
 > Caution : Avoid using indexing or kill tasks and these API's at the same time for the same datasource and time chunk. (It's fine if the time chunks or datasource don't overlap)
 
@@ -349,8 +349,7 @@ result of this API call.
 
 #### Retention rules
 
-Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
-(e.g., 2016-06-27_2016-06-28).
+Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/` as in 2016-06-27_2016-06-28.
 
 `GET /druid/coordinator/v1/rules`
 
@@ -393,8 +392,7 @@ Optional Header Parameters for auditing the config change can also be specified.
 
 #### Intervals
 
-Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
-(e.g., 2016-06-27_2016-06-28).
+Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/` as in 2016-06-27_2016-06-28.
 
 `GET /druid/coordinator/v1/intervals`
 
