@@ -56,6 +56,7 @@ import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.any.StringAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
+import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -1463,7 +1464,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                         new SubstringDimExtractionFn(0, 1)
                                     )
                                 )
-                                .setAggregatorSpecs(new StringAnyAggregatorFactory("a0", "v", 10))
+                                .setAggregatorSpecs(
+                                    StringLastAggregatorFactory.builder("a0", "v").setMaxStringBytes(10).build()
+                                )
                                 .build()
                         ),
                         "j0.",

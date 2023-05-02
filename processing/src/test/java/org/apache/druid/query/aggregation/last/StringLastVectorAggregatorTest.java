@@ -89,8 +89,11 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
 
     Mockito.doReturn(selector).when(selectorFactory).makeObjectSelector(FIELD_NAME);
     Mockito.doReturn(timeSelector).when(selectorFactory).makeValueSelector(TIME_COL);
-    stringLastAggregatorFactory = new StringLastAggregatorFactory(NAME, FIELD_NAME, TIME_COL, 10);
-
+    stringLastAggregatorFactory = StringLastAggregatorFactory.builder()
+                                                             .setNames(NAME, FIELD_NAME)
+                                                             .setTimeColumn(TIME_COL)
+                                                             .setMaxStringBytes(10)
+                                                             .build();
   }
 
   @Test

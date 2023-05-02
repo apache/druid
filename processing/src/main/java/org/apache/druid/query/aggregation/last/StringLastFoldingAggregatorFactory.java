@@ -30,7 +30,7 @@ public class StringLastFoldingAggregatorFactory extends StringLastAggregatorFact
   @JsonCreator
   public StringLastFoldingAggregatorFactory(String name, String fieldName, Integer maxStringBytes)
   {
-    super(name, fieldName, null, maxStringBytes);
+    super(name, fieldName, null, null, maxStringBytes, true);
   }
 
   @Override

@@ -43,9 +43,11 @@ import org.apache.druid.sql.calcite.aggregation.builtin.EarliestLatestBySqlAggre
 import org.apache.druid.sql.calcite.aggregation.builtin.GroupingSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.MaxSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.MinSqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.PairOperatorConversion;
 import org.apache.druid.sql.calcite.aggregation.builtin.StringSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.SumSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.SumZeroSqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.pair.EarliestLatestPairSqlAggregator;
 import org.apache.druid.sql.calcite.expression.AliasedOperatorConversion;
 import org.apache.druid.sql.calcite.expression.BinaryOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
@@ -149,11 +151,9 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new WindowSqlAggregate(SqlStdOperatorTable.ROW_NUMBER))
                    .add(new BuiltinApproxCountDistinctSqlAggregator())
                    .add(new AvgSqlAggregator())
-                   .add(EarliestLatestAnySqlAggregator.EARLIEST)
-                   .add(EarliestLatestAnySqlAggregator.LATEST)
-                   .add(EarliestLatestAnySqlAggregator.ANY_VALUE)
-                   .add(EarliestLatestBySqlAggregator.EARLIEST_BY)
-                   .add(EarliestLatestBySqlAggregator.LATEST_BY)
+                   .add(EarliestLatestAnySqlAggregator.DEFINED_AGGS)
+                   .add(EarliestLatestBySqlAggregator.DEFINED_AGGS)
+                   .add(EarliestLatestPairSqlAggregator.DEFINED_AGGS)
                    .add(new MinSqlAggregator())
                    .add(new MaxSqlAggregator())
                    .add(new SumSqlAggregator())
@@ -393,6 +393,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.LESS_THAN_OR_EQUAL, "<="))
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.AND, "&&"))
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.OR, "||"))
+                   .add(PairOperatorConversion.LEFT, PairOperatorConversion.RIGHT)
                    .add(new RoundOperatorConversion())
                    .addAll(TIME_OPERATOR_CONVERSIONS)
                    .addAll(STRING_OPERATOR_CONVERSIONS)

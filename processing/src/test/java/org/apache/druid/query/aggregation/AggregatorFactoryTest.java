@@ -146,8 +146,8 @@ public class AggregatorFactoryTest extends InitializedNullHandlingTest
                   new FloatLastAggregatorFactory("floatLast", "float-col", null),
                   new FloatAnyAggregatorFactory("floatAny", "float-col"),
                   // string aggregators
-                  new StringFirstAggregatorFactory("stringFirst", "col", null, 1024),
-                  new StringLastAggregatorFactory("stringLast", "col", null, 1024),
+                  StringFirstAggregatorFactory.builder("stringFirst", "col").build(),
+                  StringLastAggregatorFactory.builder("stringLast", "col").build(),
                   new StringAnyAggregatorFactory("stringAny", "col", 1024),
                   // sketch aggs
                   new CardinalityAggregatorFactory("cardinality", ImmutableList.of(DefaultDimensionSpec.of("some-col")), false),
@@ -305,8 +305,8 @@ public class AggregatorFactoryTest extends InitializedNullHandlingTest
         new FloatLastAggregatorFactory("col", "float-col", null),
         new FloatAnyAggregatorFactory("col", "float-col"),
         // string aggregators
-        new StringFirstAggregatorFactory("col", "col", null, 1024),
-        new StringLastAggregatorFactory("col", "col", null, 1024),
+        StringFirstAggregatorFactory.builder("col", "col").build(),
+        StringLastAggregatorFactory.builder("col", "col").build(),
         new StringAnyAggregatorFactory("col", "col", 1024),
         // sketch aggs
         new CardinalityAggregatorFactory("col", ImmutableList.of(DefaultDimensionSpec.of("some-col")), false),

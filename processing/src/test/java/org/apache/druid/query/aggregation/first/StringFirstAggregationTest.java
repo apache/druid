@@ -43,7 +43,7 @@ import java.util.Comparator;
 
 public class StringFirstAggregationTest extends InitializedNullHandlingTest
 {
-  private final Integer MAX_STRING_SIZE = 1024;
+  private StringFirstAggregatorFactory.Builder aggFactoryBuilder;
   private AggregatorFactory stringFirstAggFactory;
   private AggregatorFactory combiningAggFactory;
   private ColumnSelectorFactory colSelectorFactory;
@@ -67,7 +67,8 @@ public class StringFirstAggregationTest extends InitializedNullHandlingTest
   public void setup()
   {
     NullHandling.initializeForTests();
-    stringFirstAggFactory = new StringFirstAggregatorFactory("billy", "nilly", null, MAX_STRING_SIZE);
+    aggFactoryBuilder = StringFirstAggregatorFactory.builder("billy", "nilly");
+    stringFirstAggFactory = aggFactoryBuilder.build();
     combiningAggFactory = stringFirstAggFactory.getCombiningFactory();
     timeSelector = new TestLongColumnSelector(times);
     customTimeSelector = new TestLongColumnSelector(customTimes);
@@ -102,7 +103,7 @@ public class StringFirstAggregationTest extends InitializedNullHandlingTest
   @Test
   public void testStringFirstAggregatorWithTimeColumn()
   {
-    Aggregator agg = new StringFirstAggregatorFactory("billy", "nilly", "customTime", MAX_STRING_SIZE).factorize(colSelectorFactory);
+    Aggregator agg = aggFactoryBuilder.copy().setTimeColumn("customTime").build().factorize(colSelectorFactory);
 
     aggregate(agg);
     aggregate(agg);
@@ -117,8 +118,10 @@ public class StringFirstAggregationTest extends InitializedNullHandlingTest
   @Test
   public void testStringFirstBufferAggregator()
   {
-    BufferAggregator agg = new StringFirstAggregatorFactory("billy", "nilly", "customTime", MAX_STRING_SIZE)
-        .factorizeBuffered(colSelectorFactory);
+    BufferAggregator agg = aggFactoryBuilder.copy()
+                                            .setTimeColumn("customTime")
+                                            .build()
+                                            .factorizeBuffered(colSelectorFactory);
 
     ByteBuffer buffer = ByteBuffer.wrap(new byte[stringFirstAggFactory.getMaxIntermediateSize()]);
     agg.init(buffer, 0);
@@ -240,6 +243,14 @@ public class StringFirstAggregationTest extends InitializedNullHandlingTest
     Assert.assertEquals(0, comparator.compare(null, null));
     Assert.assertTrue(comparator.compare(pair1, null) > 0);
     Assert.assertTrue(comparator.compare(null, pair1) < 0);
+  }
+
+  @Test
+  public void testFinalize()
+  {
+    final Pair<Long, String> thePair = Pair.of(1234L, "payload");
+    Assert.assertEquals("payload", stringFirstAggFactory.finalizeComputation(thePair));
+    Assert.assertSame(thePair, aggFactoryBuilder.copy().setFinalize(false).build().finalizeComputation(thePair));
   }
 
   private void aggregate(

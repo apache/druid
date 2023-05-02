@@ -26,6 +26,7 @@ import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nonnull;
 import java.nio.ByteBuffer;
 
 public class StringFirstBufferAggregatorTest
@@ -53,9 +54,7 @@ public class StringFirstBufferAggregatorTest
     TestLongColumnSelector longColumnSelector = new TestLongColumnSelector(timestamps);
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
-    StringFirstAggregatorFactory factory = new StringFirstAggregatorFactory(
-        "billy", "billy", null, maxStringBytes
-    );
+    StringFirstAggregatorFactory factory = makeAggFactory(maxStringBytes);
 
     StringFirstBufferAggregator agg = new StringFirstBufferAggregator(
         longColumnSelector,
@@ -90,9 +89,7 @@ public class StringFirstBufferAggregatorTest
     TestLongColumnSelector longColumnSelector = new TestLongColumnSelector(timestamps);
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
-    StringFirstAggregatorFactory factory = new StringFirstAggregatorFactory(
-        "billy", "billy", null, maxStringBytes
-    );
+    StringFirstAggregatorFactory factory = makeAggFactory(maxStringBytes);
 
     StringFirstBufferAggregator agg = new StringFirstBufferAggregator(
         longColumnSelector,
@@ -128,9 +125,7 @@ public class StringFirstBufferAggregatorTest
     TestLongColumnSelector longColumnSelector = new TestLongColumnSelector(timestamps);
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
-    StringFirstAggregatorFactory factory = new StringFirstAggregatorFactory(
-        "billy", "billy", null, maxStringBytes
-    );
+    StringFirstAggregatorFactory factory = makeAggFactory(maxStringBytes);
 
     StringFirstBufferAggregator agg = new StringFirstBufferAggregator(
         longColumnSelector,
@@ -167,9 +162,7 @@ public class StringFirstBufferAggregatorTest
     TestLongColumnSelector longColumnSelector = new TestLongColumnSelector(timestamps);
     TestObjectColumnSelector<Double> objectColumnSelector = new TestObjectColumnSelector<>(doubles);
 
-    StringFirstAggregatorFactory factory = new StringFirstAggregatorFactory(
-        "billy", "billy", null, maxStringBytes
-    );
+    StringFirstAggregatorFactory factory = makeAggFactory(maxStringBytes);
 
     StringFirstBufferAggregator agg = new StringFirstBufferAggregator(
         longColumnSelector,
@@ -191,5 +184,11 @@ public class StringFirstBufferAggregatorTest
 
     Assert.assertEquals(1526724000L, (long) sp.lhs);
     Assert.assertEquals(null, sp.rhs);
+  }
+
+  @Nonnull
+  private StringFirstAggregatorFactory makeAggFactory(Integer maxStringBytes)
+  {
+    return StringFirstAggregatorFactory.builder("billy", "billy").setMaxStringBytes(maxStringBytes).build();
   }
 }

@@ -28,6 +28,7 @@ import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Window;
+import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
@@ -167,6 +168,19 @@ public class Windowing
       final List<Processor> processors = new ArrayList<>();
       final List<AggregatorFactory> aggregations = new ArrayList<>();
 
+      Project projectForAggs = partialQuery.getSelectProject();
+      if (projectForAggs == null && partialQuery.getScan() instanceof Project) {
+        projectForAggs = (Project) partialQuery.getScan();
+      }
+      if (projectForAggs == null) {
+        projectForAggs = LogicalProject.create(partialQuery.getScan(), window.constants, (List) null);
+      } else {
+        List<RexNode> newProjects = new ArrayList<>();
+        newProjects.addAll(projectForAggs.getProjects());
+        newProjects.addAll(window.constants);
+        projectForAggs = LogicalProject.create(projectForAggs, newProjects, (List) null);
+      }
+
       for (AggregateCall aggregateCall : aggregateCalls) {
         final String aggName = outputNamePrefix + outputNameCounter++;
         windowOutputColumns.add(aggName);
@@ -178,11 +192,13 @@ public class Windowing
               sourceRowSignature,
               null,
               rexBuilder,
-              partialQuery.getSelectProject(),
+              projectForAggs,
               Collections.emptyList(),
               aggName,
               aggregateCall,
-              false // Windowed aggregations don't currently finalize.  This means that sketches won't work as expected.
+              // We never finalize the aggregations, finalization should happen through explicitly including a function
+              // in the query rather than through this an implicit finalize step.
+              false
           );
 
           if (aggregation == null

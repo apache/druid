@@ -42,7 +42,7 @@ import java.util.Comparator;
 
 public class StringLastAggregationTest
 {
-  private final Integer MAX_STRING_SIZE = 1024;
+  private StringLastAggregatorFactory.Builder aggFactoryBuilder;
   private AggregatorFactory stringLastAggFactory;
   private AggregatorFactory combiningAggFactory;
   private ColumnSelectorFactory colSelectorFactory;
@@ -66,7 +66,8 @@ public class StringLastAggregationTest
   public void setup()
   {
     NullHandling.initializeForTests();
-    stringLastAggFactory = new StringLastAggregatorFactory("billy", "nilly", null, MAX_STRING_SIZE);
+    aggFactoryBuilder = new StringLastAggregatorFactory.Builder().setName("billy").setFieldName("nilly");
+    stringLastAggFactory = aggFactoryBuilder.build();
     combiningAggFactory = stringLastAggFactory.getCombiningFactory();
     timeSelector = new TestLongColumnSelector(times);
     customTimeSelector = new TestLongColumnSelector(customTimes);
@@ -101,7 +102,7 @@ public class StringLastAggregationTest
   @Test
   public void testStringLastAggregatorWithTimeColumn()
   {
-    Aggregator agg = new StringLastAggregatorFactory("billy", "nilly", "customTime", MAX_STRING_SIZE).factorize(colSelectorFactory);
+    Aggregator agg = aggFactoryBuilder.copy().setTimeColumn("customTime").build().factorize(colSelectorFactory);
 
     aggregate(agg);
     aggregate(agg);
@@ -135,7 +136,7 @@ public class StringLastAggregationTest
   @Test
   public void testStringLastBufferAggregatorWithTimeColumn()
   {
-    BufferAggregator agg = new StringLastAggregatorFactory("billy", "nilly", "customTime", MAX_STRING_SIZE).factorizeBuffered(
+    BufferAggregator agg = aggFactoryBuilder.copy().setTimeColumn("customTime").build().factorizeBuffered(
         colSelectorFactory);
 
     ByteBuffer buffer = ByteBuffer.wrap(new byte[stringLastAggFactory.getMaxIntermediateSize()]);
@@ -242,6 +243,14 @@ public class StringLastAggregationTest
     Assert.assertEquals(0, comparator.compare(null, null));
     Assert.assertTrue(comparator.compare(pair1, null) > 0);
     Assert.assertTrue(comparator.compare(null, pair1) < 0);
+  }
+
+  @Test
+  public void testFinalize()
+  {
+    final Pair<Long, String> thePair = Pair.of(1234L, "payload");
+    Assert.assertEquals("payload", stringLastAggFactory.finalizeComputation(thePair));
+    Assert.assertSame(thePair, aggFactoryBuilder.copy().setFinalize(false).build().finalizeComputation(thePair));
   }
 
   private void aggregate(

@@ -416,6 +416,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final ColumnType outputType
   )
   {
+    // building this seems to create a brand new expr macro table for every aggregator.  The expression macro
+    // table should be pretty stable for a given suite of tests, this should likely be adjusted to be able to be
+    // built once and cached.  It would be best to do that inside of the injector behind the
+    // CalciteTests.createExprMacroTable static method, but leaving a comment here because it might need cooperation
+    // from this code.  Not sure.
     return new ExpressionVirtualColumn(name, expression, outputType, CalciteTests.createExprMacroTable());
   }
 
@@ -458,6 +463,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public static ExpressionPostAggregator expressionPostAgg(final String name, final String expression)
   {
+    // building this seems to create a brand new expr macro table for every aggregator.  The expression macro
+    // table should be pretty stable for a given suite of tests, this should likely be adjusted to be able to be
+    // built once and cached.  It would be best to do that inside of the injector behind the
+    // CalciteTests.createExprMacroTable static method, but leaving a comment here because it might need cooperation
+    // from this code.  Not sure.
     return new ExpressionPostAggregator(name, expression, null, CalciteTests.createExprMacroTable());
   }
 

@@ -105,7 +105,7 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
   public void testStringFirstRollup() throws Exception
   {
     AggregatorFactory[] aggregatorFactories = new AggregatorFactory[]{
-        new StringFirstAggregatorFactory("m", "m", null, 1024)
+        StringFirstAggregatorFactory.builder("m", "m").build()
     };
     testStringFirstLastRollup(aggregatorFactories);
   }
@@ -114,7 +114,7 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
   public void testStringLastRollup() throws Exception
   {
     AggregatorFactory[] aggregatorFactories = new AggregatorFactory[]{
-        new StringLastAggregatorFactory("m", "m", null, 1024)
+        StringLastAggregatorFactory.builder().setNames("m", "m").build()
     };
     testStringFirstLastRollup(aggregatorFactories);
   }

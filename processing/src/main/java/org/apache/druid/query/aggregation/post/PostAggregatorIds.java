@@ -66,4 +66,5 @@ public class PostAggregatorIds
   public static final byte KLL_FLOATS_SKETCH_TO_QUANTILE_CACHE_TYPE_ID = 42;
   public static final byte KLL_FLOATS_SKETCH_TO_QUANTILES_CACHE_TYPE_ID = 43;
   public static final byte KLL_FLOATS_SKETCH_TO_STRING_CACHE_TYPE_ID = 44;
+  public static final byte PAIRS = 45;
 }

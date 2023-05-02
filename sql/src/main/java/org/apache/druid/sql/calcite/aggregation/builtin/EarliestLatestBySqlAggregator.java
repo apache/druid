@@ -54,8 +54,11 @@ import java.util.stream.Collectors;
 
 public class EarliestLatestBySqlAggregator implements SqlAggregator
 {
-  public static final SqlAggregator EARLIEST_BY = new EarliestLatestBySqlAggregator(EarliestLatestAnySqlAggregator.AggregatorType.EARLIEST);
-  public static final SqlAggregator LATEST_BY = new EarliestLatestBySqlAggregator(EarliestLatestAnySqlAggregator.AggregatorType.LATEST);
+
+  public static final SqlAggregator[] DEFINED_AGGS = new SqlAggregator[]{
+      new EarliestLatestBySqlAggregator(EarliestLatestAnySqlAggregator.AggregatorType.EARLIEST),
+      new EarliestLatestBySqlAggregator(EarliestLatestAnySqlAggregator.AggregatorType.LATEST),
+  };
 
   private final EarliestLatestAnySqlAggregator.AggregatorType aggregatorType;
   private final SqlAggFunction function;
@@ -63,7 +66,7 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
   private EarliestLatestBySqlAggregator(final EarliestLatestAnySqlAggregator.AggregatorType aggregatorType)
   {
     this.aggregatorType = aggregatorType;
-    this.function = new EarliestByLatestBySqlAggFunction(aggregatorType);
+    this.function = new EarliestByLatestBySqlAggFunction(StringUtils.format("%s_BY", aggregatorType.name()));
   }
 
   @Override
@@ -108,7 +111,7 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
       );
     }
 
-    final String fieldName = EarliestLatestAnySqlAggregator.getColumnName(plannerContext, virtualColumnRegistry, args.get(0), rexNodes.get(0));
+    final String fieldName = EarliestLatestAnySqlAggregator.getColumnName(virtualColumnRegistry, args.get(0), rexNodes.get(0));
 
     final AggregatorFactory theAggFactory;
     switch (args.size()) {
@@ -116,7 +119,7 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,
             fieldName,
-            EarliestLatestAnySqlAggregator.getColumnName(plannerContext, virtualColumnRegistry, args.get(1), rexNodes.get(1)),
+            EarliestLatestAnySqlAggregator.getColumnName(virtualColumnRegistry, args.get(1), rexNodes.get(1)),
             outputType,
             -1
         );
@@ -133,7 +136,7 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,
             fieldName,
-            EarliestLatestAnySqlAggregator.getColumnName(plannerContext, virtualColumnRegistry, args.get(1), rexNodes.get(1)),
+            EarliestLatestAnySqlAggregator.getColumnName(virtualColumnRegistry, args.get(1), rexNodes.get(1)),
             outputType,
             maxStringBytes
         );
@@ -158,22 +161,22 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
     private static final SqlReturnTypeInference EARLIEST_LATEST_ARG0_RETURN_TYPE_INFERENCE =
         new EarliestLatestAnySqlAggregator.EarliestLatestReturnTypeInference(0);
 
-    EarliestByLatestBySqlAggFunction(EarliestLatestAnySqlAggregator.AggregatorType aggregatorType)
+    EarliestByLatestBySqlAggFunction(String name)
     {
       super(
-          StringUtils.format("%s_BY", aggregatorType.name()),
+          name,
           null,
           SqlKind.OTHER_FUNCTION,
           EARLIEST_LATEST_ARG0_RETURN_TYPE_INFERENCE,
           InferTypes.RETURN_TYPE,
           OperandTypes.or(
               OperandTypes.sequence(
-                  "'" + aggregatorType.name() + "(expr, timeColumn)'\n",
+                  "'" + name + "(expr, timeColumn)'\n",
                   OperandTypes.ANY,
                   OperandTypes.family(SqlTypeFamily.TIMESTAMP)
               ),
               OperandTypes.sequence(
-                  "'" + aggregatorType.name() + "(expr, timeColumn, maxBytesPerString)'\n",
+                  "'" + name + "(expr, timeColumn, maxBytesPerString)'\n",
                   OperandTypes.ANY,
                   OperandTypes.family(SqlTypeFamily.TIMESTAMP),
                   OperandTypes.and(OperandTypes.NUMERIC, OperandTypes.LITERAL)

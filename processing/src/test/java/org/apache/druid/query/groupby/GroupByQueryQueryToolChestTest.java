@@ -941,7 +941,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
       case FLOAT:
         return new FloatLastAggregatorFactory("complexMetric", "test", null);
       case STRING:
-        return new StringLastAggregatorFactory("complexMetric", "test", null, null);
+        return StringLastAggregatorFactory.builder().setNames("complexMetric", "test").build();
       default:
         throw new IllegalArgumentException("bad valueType: " + valueType);
     }

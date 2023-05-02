@@ -78,7 +78,7 @@ public class StringLastTimeseriesQueryTest extends InitializedNullHandlingTest
             new IncrementalIndexSchema.Builder()
                 .withQueryGranularity(Granularities.SECOND)
                 .withMetrics(new CountAggregatorFactory("cnt"))
-                .withMetrics(new StringLastAggregatorFactory(LAST_CLIENT_TYPE, CLIENT_TYPE, null, 1024))
+                .withMetrics(StringLastAggregatorFactory.builder().setNames(LAST_CLIENT_TYPE, CLIENT_TYPE).build())
                 .build()
         )
         .setMaxRowCount(1000)
@@ -115,17 +115,18 @@ public class StringLastTimeseriesQueryTest extends InitializedNullHandlingTest
     TimeseriesQueryEngine engine = new TimeseriesQueryEngine();
 
 
+    final StringLastAggregatorFactory.Builder bob = StringLastAggregatorFactory.builder();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(QueryRunnerTestHelper.ALL_GRAN)
                                   .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
                                   .aggregators(
                                       ImmutableList.of(
-                                          new StringLastAggregatorFactory("nonfolding", CLIENT_TYPE, null, 1024),
-                                          new StringLastAggregatorFactory("folding", LAST_CLIENT_TYPE, null, 1024),
-                                          new StringLastAggregatorFactory("nonexistent", "nonexistent", null, 1024),
-                                          new StringLastAggregatorFactory("numeric", "cnt", null, 1024),
-                                          new StringLastAggregatorFactory("multiValue", MULTI_VALUE, null, 1024)
+                                          bob.setNames("nonfolding", CLIENT_TYPE).build(),
+                                          bob.setNames("folding", LAST_CLIENT_TYPE).build(),
+                                          bob.setNames("nonexistent", "nonexistent").build(),
+                                          bob.setNames("numeric", "cnt").build(),
+                                          bob.setNames("multiValue", MULTI_VALUE).build()
                                       )
                                   )
                                   .build();

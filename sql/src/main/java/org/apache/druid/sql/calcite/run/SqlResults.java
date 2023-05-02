@@ -130,7 +130,12 @@ public class SqlResults
         throw new ISE("Cannot coerce [%s] to %s", value.getClass().getName(), sqlTypeName);
       }
     } else if (sqlTypeName == SqlTypeName.OTHER) {
-      // Complex type, try to serialize if we should, else print class name
+      // If we get a complex type, we serialize the value to a String such that the results can be returned the same
+      // in JSON, CSV, or JDBC.  This made sense back when complex types were all sketches and base64-encoded anyway,
+      // we now have much richer types that have meaningful renderings as objects and it's unfortunate that we then
+      // force them to be serialized out as a String instead of allowing the wire protocol to do what it wants.
+      // At some point, we should adjust this to allow for JSON (or other structured) responses to be able to get
+      // the object unmolested while formats like CSV and JDBC are the ones that force-materialize a String.
       if (context.isSerializeComplexValues()) {
         try {
           coercedValue = jsonMapper.writeValueAsString(value);

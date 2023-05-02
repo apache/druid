@@ -124,63 +124,69 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       testBuilder()
           .skipVectorize(true)
           .sql(input.sql)
-          .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
+          .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true, "debug", true))
           .addCustomVerification(QueryVerification.ofResults(results -> {
             if (results.exception != null) {
               throw new RE(results.exception, "Failed to execute because of exception.");
             }
 
             Assert.assertEquals(1, results.recordedQueries.size());
-
-            final WindowOperatorQuery query = (WindowOperatorQuery) results.recordedQueries.get(0);
-            for (int i = 0; i < input.expectedOperators.size(); ++i) {
-              final OperatorFactory expectedOperator = input.expectedOperators.get(i);
-              final OperatorFactory actualOperator = query.getOperators().get(i);
-              if (!expectedOperator.validateEquivalent(actualOperator)) {
-                // This assertion always fails because the validate equivalent failed, but we do it anyway
-                // so that we get values in the output of the failed test to make it easier to
-                // debug what happened.  Note, we use the Jackson representation when showing the diff.  There is
-                // a chance that this representation is exactly equivalent, but the validation call is still failing
-                // this is probably indicative of a bug where something that needs to be serialized by Jackson
-                // currently is not.  Check your getters.
-
-                // prepend different values so that we are guaranteed that it is always different
-                String expected = "e " + jacksonToString.apply(expectedOperator);
-                String actual = "a " + jacksonToString.apply(actualOperator);
-
-                Assert.assertEquals("Operator Mismatch, index[" + i + "]", expected, actual);
-              }
-            }
-            final RowSignature outputSignature = query.getRowSignature();
-            ColumnType[] types = new ColumnType[outputSignature.size()];
-            for (int i = 0; i < outputSignature.size(); ++i) {
-              types[i] = outputSignature.getColumnType(i).get();
-              Assert.assertEquals(types[i], results.signature.getColumnType(i).get());
-            }
-
             maybeDumpActualResults(jacksonToString, results.results);
-            for (Object[] result : input.expectedResults) {
-              for (int i = 0; i < result.length; i++) {
-                // Jackson deserializes numbers as the minimum size required to store the value.  This means that
-                // Longs can become Integer objects and then they fail equality checks.  We read the expected
-                // results using Jackson, so, we coerce the expected results to the type expected.
-                if (result[i] != null) {
-                  if (result[i] instanceof Number) {
-                    switch (types[i].getType()) {
-                      case LONG:
-                        result[i] = ((Number) result[i]).longValue();
-                        break;
-                      case DOUBLE:
-                        result[i] = ((Number) result[i]).doubleValue();
-                        break;
-                      case FLOAT:
-                        result[i] = ((Number) result[i]).floatValue();
-                        break;
-                      default:
-                        throw new ISE("result[%s] was type[%s]!?  Expected it to be numerical", i, types[i].getType());
+
+            if (input.expectedOperators != null) {
+              final WindowOperatorQuery query = (WindowOperatorQuery) results.recordedQueries.get(0);
+              for (int i = 0; i < input.expectedOperators.size(); ++i) {
+                final OperatorFactory expectedOperator = input.expectedOperators.get(i);
+                final OperatorFactory actualOperator = query.getOperators().get(i);
+                if (!expectedOperator.validateEquivalent(actualOperator)) {
+                  // This assertion always fails because the validate equivalent failed, but we do it anyway
+                  // so that we get values in the output of the failed test to make it easier to
+                  // debug what happened.  Note, we use the Jackson representation when showing the diff.  There is
+                  // a chance that this representation is exactly equivalent, but the validation call is still failing
+                  // this is probably indicative of a bug where something that needs to be serialized by Jackson
+                  // currently is not.  Check your getters.
+
+                  // prepend different values so that we are guaranteed that it is always different
+                  String expected = "e " + jacksonToString.apply(expectedOperator);
+                  String actual = "a " + jacksonToString.apply(actualOperator);
+
+                  Assert.assertEquals("Operator Mismatch, index[" + i + "]", expected, actual);
+                }
+              }
+              final RowSignature outputSignature = query.getRowSignature();
+              ColumnType[] types = new ColumnType[outputSignature.size()];
+              for (int i = 0; i < outputSignature.size(); ++i) {
+                types[i] = outputSignature.getColumnType(i).get();
+                Assert.assertEquals(types[i], results.signature.getColumnType(i).get());
+              }
+
+              for (Object[] result : input.expectedResults) {
+                for (int i = 0; i < result.length; i++) {
+                  // Jackson deserializes numbers as the minimum size required to store the value.  This means that
+                  // Longs can become Integer objects and then they fail equality checks.  We read the expected
+                  // results using Jackson, so, we coerce the expected results to the type expected.
+                  if (result[i] != null) {
+                    if (result[i] instanceof Number) {
+                      switch (types[i].getType()) {
+                        case LONG:
+                          result[i] = ((Number) result[i]).longValue();
+                          break;
+                        case DOUBLE:
+                          result[i] = ((Number) result[i]).doubleValue();
+                          break;
+                        case FLOAT:
+                          result[i] = ((Number) result[i]).floatValue();
+                          break;
+                        default:
+                          throw new ISE(
+                              "result[%s] was type[%s]!?  Expected it to be numerical",
+                              i,
+                              types[i].getType()
+                          );
+                      }
+                    } else if (result[i] instanceof String) {
+                      result[i] = stringManipulator.apply((String) result[i]);
                     }
-                  } else if (result[i] instanceof String) {
-                    result[i] = stringManipulator.apply((String) result[i]);
                   }
                 }
               }

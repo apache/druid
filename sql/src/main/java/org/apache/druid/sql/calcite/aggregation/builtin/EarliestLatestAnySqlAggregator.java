@@ -70,9 +70,11 @@ import java.util.stream.Collectors;
 
 public class EarliestLatestAnySqlAggregator implements SqlAggregator
 {
-  public static final SqlAggregator EARLIEST = new EarliestLatestAnySqlAggregator(AggregatorType.EARLIEST);
-  public static final SqlAggregator LATEST = new EarliestLatestAnySqlAggregator(AggregatorType.LATEST);
-  public static final SqlAggregator ANY_VALUE = new EarliestLatestAnySqlAggregator(AggregatorType.ANY_VALUE);
+  public static final SqlAggregator[] DEFINED_AGGS = new SqlAggregator[]{
+      new EarliestLatestAnySqlAggregator(AggregatorType.EARLIEST),
+      new EarliestLatestAnySqlAggregator(AggregatorType.LATEST),
+      new EarliestLatestAnySqlAggregator(AggregatorType.ANY_VALUE)
+  };
 
   enum AggregatorType
   {
@@ -89,7 +91,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
             return new DoubleFirstAggregatorFactory(name, fieldName, timeColumn);
           case STRING:
           case COMPLEX:
-            return new StringFirstAggregatorFactory(name, fieldName, timeColumn, maxStringBytes);
+            return new StringFirstAggregatorFactory(name, fieldName, timeColumn, null, maxStringBytes, true);
           default:
             throw new UnsupportedSQLQueryException("EARLIEST aggregator is not supported for '%s' type", type);
         }
@@ -109,7 +111,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
             return new DoubleLastAggregatorFactory(name, fieldName, timeColumn);
           case STRING:
           case COMPLEX:
-            return new StringLastAggregatorFactory(name, fieldName, timeColumn, maxStringBytes);
+            return new StringLastAggregatorFactory(name, fieldName, timeColumn, null, maxStringBytes, true);
           default:
             throw new UnsupportedSQLQueryException("LATEST aggregator is not supported for '%s' type", type);
         }
@@ -150,7 +152,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
   private EarliestLatestAnySqlAggregator(final AggregatorType aggregatorType)
   {
     this.aggregatorType = aggregatorType;
-    this.function = new EarliestLatestSqlAggFunction(aggregatorType);
+    this.function = new EarliestLatestSqlAggFunction(aggregatorType.name());
   }
 
   @Override
@@ -195,7 +197,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
       );
     }
 
-    final String fieldName = getColumnName(plannerContext, virtualColumnRegistry, args.get(0), rexNodes.get(0));
+    final String fieldName = getColumnName(virtualColumnRegistry, args.get(0), rexNodes.get(0));
 
     if (!rowSignature.contains(ColumnHolder.TIME_COLUMN_NAME) && (aggregatorType == AggregatorType.LATEST || aggregatorType == AggregatorType.EARLIEST)) {
       plannerContext.setPlanningError("%s() aggregator depends on __time column, the underlying datasource "
@@ -245,7 +247,6 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
   }
 
   static String getColumnName(
-      PlannerContext plannerContext,
       VirtualColumnRegistry virtualColumnRegistry,
       DruidExpression arg,
       RexNode rexNode
@@ -289,10 +290,10 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     private static final EarliestLatestReturnTypeInference EARLIEST_LATEST_ARG0_RETURN_TYPE_INFERENCE =
         new EarliestLatestReturnTypeInference(0);
 
-    EarliestLatestSqlAggFunction(AggregatorType aggregatorType)
+    EarliestLatestSqlAggFunction(String name)
     {
       super(
-          aggregatorType.name(),
+          name,
           null,
           SqlKind.OTHER_FUNCTION,
           EARLIEST_LATEST_ARG0_RETURN_TYPE_INFERENCE,
@@ -301,7 +302,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
               OperandTypes.NUMERIC,
               OperandTypes.BOOLEAN,
               OperandTypes.sequence(
-                  "'" + aggregatorType.name() + "(expr, maxBytesPerString)'\n",
+                  "'" + name + "(expr, maxBytesPerString)'\n",
                   OperandTypes.ANY,
                   OperandTypes.and(OperandTypes.NUMERIC, OperandTypes.LITERAL)
               )

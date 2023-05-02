@@ -24,6 +24,8 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.aggregation.pair.PairLeftExprMacro;
+import org.apache.druid.query.aggregation.pair.PairRightExprMacro;
 import org.apache.druid.query.expression.ArrayQuantileExprMacro;
 import org.apache.druid.query.expression.CaseInsensitiveContainsExprMacro;
 import org.apache.druid.query.expression.ContainsExprMacro;
@@ -80,6 +82,8 @@ public class ExpressionModule implements Module
                    .add(NestedDataExpressions.ToJsonStringExprMacro.class)
                    .add(NestedDataExpressions.ParseJsonExprMacro.class)
                    .add(NestedDataExpressions.TryParseJsonExprMacro.class)
+                   .add(PairRightExprMacro.class)
+                   .add(PairLeftExprMacro.class)
                    .build();
 
   @Override

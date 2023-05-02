@@ -20,11 +20,13 @@
 package org.apache.druid.query.aggregation.last;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -38,6 +40,7 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -46,6 +49,7 @@ import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -58,6 +62,18 @@ import java.util.Objects;
 public class StringLastAggregatorFactory extends AggregatorFactory
 {
   public static final ColumnType TYPE = ColumnType.ofComplex("serializablePairLongString");
+
+  @Nonnull
+  public static Builder builder()
+  {
+    return new Builder();
+  }
+
+  @Nonnull
+  public static Builder builder(String name, String fieldName)
+  {
+    return new Builder().setNames(name, fieldName);
+  }
 
   private static final Aggregator NIL_AGGREGATOR = new StringLastAggregator(
       NilColumnValueSelector.instance(),
@@ -87,37 +103,71 @@ public class StringLastAggregatorFactory extends AggregatorFactory
     }
   };
 
+  private final String name;
   private final String fieldName;
   private final String timeColumn;
-  private final String name;
+  private final String foldColumn;
   protected final int maxStringBytes;
+  private final boolean finalize;
 
   @JsonCreator
   public StringLastAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") final String fieldName,
+      @JsonProperty("fieldName") @Nullable final String fieldName,
       @JsonProperty("timeColumn") @Nullable final String timeColumn,
-      @JsonProperty("maxStringBytes") Integer maxStringBytes
+      @JsonProperty("foldColumn") @Nullable final String foldColumn,
+      @JsonProperty("maxStringBytes") Integer maxStringBytes,
+      @JsonProperty("finalize") @Nullable final Boolean finalize
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
-    Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
+    if (maxStringBytes != null && maxStringBytes < 0) {
+      throw new IAE("maxStringBytes must be greater than 0");
+    }
+
+    if (foldColumn == null) {
+      Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName or a foldColumn");
+
+      this.fieldName = fieldName;
+      this.timeColumn = timeColumn == null ? ColumnHolder.TIME_COLUMN_NAME : timeColumn;
+      this.foldColumn = null;
+    } else {
+      if (fieldName != null || timeColumn != null) {
+        throw new IAE(
+            "If foldColumn [%s] is set, neither fieldName [%s] nor timeColumn [%s] can be set.",
+            foldColumn,
+            fieldName,
+            timeColumn
+        );
+      }
+      this.fieldName = null;
+      this.timeColumn = null;
+      this.foldColumn = foldColumn;
+    }
 
     if (maxStringBytes != null && maxStringBytes < 0) {
       throw new IAE("maxStringBytes must be greater than 0");
     }
 
     this.name = name;
-    this.fieldName = fieldName;
-    this.timeColumn = timeColumn == null ? ColumnHolder.TIME_COLUMN_NAME : timeColumn;
     this.maxStringBytes = maxStringBytes == null
                           ? StringFirstAggregatorFactory.DEFAULT_MAX_STRING_SIZE
                           : maxStringBytes;
+    this.finalize = finalize == null ? true : finalize;
   }
 
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
+    if (foldColumn != null) {
+      final ColumnValueSelector<SerializablePairLongString> selector = metricFactory.makeColumnValueSelector(foldColumn);
+      if (selector instanceof NilColumnValueSelector) {
+        return NIL_AGGREGATOR;
+      } else {
+        return new StringLastFoldingAggregator(selector, maxStringBytes);
+      }
+    }
+
     final BaseObjectColumnValueSelector<?> valueSelector = metricFactory.makeColumnValueSelector(fieldName);
     if (valueSelector instanceof NilColumnValueSelector) {
       return NIL_AGGREGATOR;
@@ -134,6 +184,15 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
+    if (foldColumn != null) {
+      final ColumnValueSelector<SerializablePairLongString> selector = metricFactory.makeColumnValueSelector(foldColumn);
+      if (selector instanceof NilColumnValueSelector) {
+        return NIL_BUFFER_AGGREGATOR;
+      } else {
+        return new StringLastFoldingBufferAggregator(selector, maxStringBytes);
+      }
+    }
+
     final BaseObjectColumnValueSelector<?> valueSelector = metricFactory.makeColumnValueSelector(fieldName);
     if (valueSelector instanceof NilColumnValueSelector) {
       return NIL_BUFFER_AGGREGATOR;
@@ -190,13 +249,13 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new StringLastAggregatorFactory(name, name, timeColumn, maxStringBytes);
+    return new Builder(this).setFieldName(null).setTimeColumn(null).setFoldColumn(name).build();
   }
 
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.singletonList(new StringLastAggregatorFactory(fieldName, fieldName, timeColumn, maxStringBytes));
+    return Collections.singletonList(new Builder(this).setName(fieldName).build());
   }
 
   @Override
@@ -210,7 +269,11 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   @Override
   public Object finalizeComputation(@Nullable Object object)
   {
-    return object == null ? null : ((SerializablePairLongString) object).rhs;
+    if (finalize) {
+      return object == null ? null : ((Pair) object).rhs;
+    } else {
+      return object;
+    }
   }
 
   @Override
@@ -221,21 +284,36 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getFieldName()
   {
     return fieldName;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getTimeColumn()
   {
     return timeColumn;
+  }
+
+  @JsonProperty("foldColumn")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public String getFoldColumn()
+  {
+    return foldColumn;
   }
 
   @JsonProperty
   public Integer getMaxStringBytes()
   {
     return maxStringBytes;
+  }
+
+  @JsonProperty("finalize")
+  public boolean isFinalize()
+  {
+    return finalize;
   }
 
   @Override
@@ -266,7 +344,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   @Override
   public ColumnType getResultType()
   {
-    return ColumnType.STRING;
+    return finalize ? ColumnType.STRING : TYPE;
   }
 
   @Override
@@ -278,7 +356,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory withName(String newName)
   {
-    return new StringLastAggregatorFactory(newName, getFieldName(), getTimeColumn(), getMaxStringBytes());
+    return new Builder(this).setName(newName).build();
   }
 
   @Override
@@ -310,5 +388,88 @@ public class StringLastAggregatorFactory extends AggregatorFactory
            ", name='" + name + '\'' +
            ", maxStringBytes=" + maxStringBytes +
            '}';
+  }
+
+  public static class Builder
+  {
+    private String name;
+    private String fieldName;
+    private String timeColumn;
+    private String foldColumn;
+    private Integer maxStringBytes = null;
+    private boolean finalize = true;
+
+    public Builder()
+    {
+
+    }
+
+    public Builder(StringLastAggregatorFactory factory)
+    {
+      this.name = factory.getName();
+      this.fieldName = factory.getFieldName();
+      this.timeColumn = factory.getTimeColumn();
+      this.foldColumn = factory.getFoldColumn();
+      this.maxStringBytes = factory.getMaxStringBytes();
+      this.finalize = factory.finalize;
+    }
+
+    public Builder copy()
+    {
+      final Builder retVal = new Builder();
+      retVal.name = name;
+      retVal.fieldName = fieldName;
+      retVal.timeColumn = timeColumn;
+      retVal.foldColumn = foldColumn;
+      retVal.maxStringBytes = maxStringBytes;
+      retVal.finalize = finalize;
+      return retVal;
+    }
+
+    public Builder setNames(String name, String fieldName)
+    {
+      return setName(name).setFieldName(fieldName);
+    }
+
+    public Builder setName(String name)
+    {
+      this.name = name;
+      return this;
+    }
+
+    public Builder setFieldName(String fieldName)
+    {
+      this.fieldName = fieldName;
+      return this;
+    }
+
+    public Builder setTimeColumn(String timeColumn)
+    {
+      this.timeColumn = timeColumn;
+      return this;
+    }
+
+    public Builder setFoldColumn(String foldColumn)
+    {
+      this.foldColumn = foldColumn;
+      return this;
+    }
+
+    public Builder setMaxStringBytes(Integer maxStringBytes)
+    {
+      this.maxStringBytes = maxStringBytes;
+      return this;
+    }
+
+    public Builder setFinalize(boolean finalize)
+    {
+      this.finalize = finalize;
+      return this;
+    }
+
+    public StringLastAggregatorFactory build()
+    {
+      return new StringLastAggregatorFactory(name, fieldName, timeColumn, foldColumn, maxStringBytes, finalize);
+    }
   }
 }

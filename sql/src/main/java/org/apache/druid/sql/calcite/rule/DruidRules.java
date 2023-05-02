@@ -104,14 +104,7 @@ public class DruidRules
 
     if (plannerContext.featureAvailable(EngineFeature.WINDOW_FUNCTIONS)) {
       retVal.add(new DruidQueryRule<>(Window.class, PartialDruidQuery.Stage.WINDOW, PartialDruidQuery::withWindow));
-      retVal.add(
-          new DruidQueryRule<>(
-              Project.class,
-              PartialDruidQuery.Stage.WINDOW_PROJECT,
-              Project::isMapping, // We can remap fields, but not apply expressions
-              PartialDruidQuery::withWindowProject
-          )
-      );
+      retVal.add(new DruidWindowProjectQueryRule());
       retVal.add(DruidOuterQueryRule.WINDOW);
     }
 

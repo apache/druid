@@ -23,11 +23,18 @@ import com.google.common.base.Preconditions;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeComparability;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.sql.SqlCallBinding;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlOperandCountRange;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.AbstractSqlType;
+import org.apache.calcite.sql.type.SqlOperandCountRanges;
+import org.apache.calcite.sql.type.SqlSingleOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -220,6 +227,11 @@ public class RowSignatures
       sb.append(columnType.asTypeString());
     }
 
+    public ColumnType getColumnType()
+    {
+      return columnType;
+    }
+
     public String getComplexTypeName()
     {
       return columnType.getComplexTypeName();
@@ -228,6 +240,66 @@ public class RowSignatures
     public String asTypeString()
     {
       return columnType.asTypeString();
+    }
+  }
+
+  public static ComplexSqlSingleOperandTypeChecker complexTypeChecker(ColumnType complexType)
+  {
+    return new ComplexSqlSingleOperandTypeChecker(
+        new ComplexSqlType(SqlTypeName.OTHER, complexType, true)
+    );
+  }
+
+  public static final class ComplexSqlSingleOperandTypeChecker implements SqlSingleOperandTypeChecker
+  {
+    private final ComplexSqlType type;
+
+    public ComplexSqlSingleOperandTypeChecker(
+        ComplexSqlType type
+    )
+    {
+      this.type = type;
+    }
+
+    @Override
+    public boolean checkSingleOperandType(
+        SqlCallBinding callBinding, SqlNode operand, int iFormalOperand, boolean throwOnFailure
+    )
+    {
+      return type.equals(callBinding.getValidator().deriveType(callBinding.getScope(), operand));
+    }
+
+    @Override
+    public boolean checkOperandTypes(SqlCallBinding callBinding, boolean throwOnFailure)
+    {
+      if (callBinding.getOperandCount() != 1) {
+        return false;
+      }
+      return checkSingleOperandType(callBinding, callBinding.operand(0), 0, throwOnFailure);
+    }
+
+    @Override
+    public SqlOperandCountRange getOperandCountRange()
+    {
+      return SqlOperandCountRanges.of(1);
+    }
+
+    @Override
+    public String getAllowedSignatures(SqlOperator op, String opName)
+    {
+      return StringUtils.format("'%s'(%s)", opName, type);
+    }
+
+    @Override
+    public Consistency getConsistency()
+    {
+      return Consistency.NONE;
+    }
+
+    @Override
+    public boolean isOptional(int i)
+    {
+      return false;
     }
   }
 }

@@ -287,7 +287,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
               .granularity(Granularities.HOUR)
               .aggregators(
                   new CountAggregatorFactory("count"),
-                  new StringFirstAggregatorFactory("stringo", "col", null, 1024)
+                  StringFirstAggregatorFactory.builder("stringo", "col").build()
               )
               .postAggregators(
                   new FieldAccessPostAggregator("a", "stringo"),
