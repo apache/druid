@@ -29,12 +29,25 @@ import java.lang.annotation.Target;
 
 /**
  * Annotation to inject extra dimensions, added to all events, emitted via {@link EmitterModule#getServiceEmitter}.
- *
+ * <p/>
  * For example, write this in a body of {@link com.google.inject.Module#configure} of your extension module):
- *
+ * <p/>
  * MapBinder<String, String> extraDims =
  *     MapBinder.newMapBinder(binder, String.class, String.class, ExtraServiceDimensions.class);
  * extraDims.addBinding("foo").toInstance("bar");
+ * <p/>
+ * If a module wishes to optionally bind service dimensions they may do so by using the binding to
+ * Map<String, Optional<String>. The key is only added to the service dimensions that are emitted if the Optional is
+ * present.
+ * <p/>
+ * MapBinder<String, String> extraDims =
+ *     MapBinder.newMapBinder(
+ *        binder,
+ *        new TypeLiteral<String>() {},
+ *        new TypeLiteral<Optionl<String>>() {},
+ *        ExtraServiceDimensions.class
+ * );
+ * extraDims.addBinding("foo").toInstance(Optional.fromNullable(bar));
  */
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)

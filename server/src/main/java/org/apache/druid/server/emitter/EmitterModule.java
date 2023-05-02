@@ -48,6 +48,7 @@ import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 
 /**
@@ -82,16 +83,23 @@ public class EmitterModule implements Module
 
     binder.bind(Emitter.class).toProvider(new EmitterProvider(emitterType)).in(LazySingleton.class);
 
-    MapBinder<String, String> extraServiceDimensions = MapBinder.newMapBinder(
+    MapBinder<String, String> extraServiceDimensionsLegacy = MapBinder.newMapBinder(
         binder,
         String.class,
         String.class,
         ExtraServiceDimensions.class
     );
+    MapBinder<String, Optional<String>> extraServiceDimensions = MapBinder.newMapBinder(
+        binder,
+        new TypeLiteral<String>() { },
+        new TypeLiteral<Optional<String>>() { },
+        ExtraServiceDimensions.class
+    );
     String version = getClass().getPackage().getImplementationVersion();
-    extraServiceDimensions
+    extraServiceDimensionsLegacy
         .addBinding("version")
         .toInstance(StringUtils.nullToEmptyNonDruidDataString(version)); // Version is null during `mvn test`.
+    extraServiceDimensions.addBinding("empty").toInstance(Optional.empty());
   }
 
   @Provides
@@ -99,16 +107,25 @@ public class EmitterModule implements Module
   public ServiceEmitter getServiceEmitter(
       @Self Supplier<DruidNode> configSupplier,
       Emitter emitter,
-      @ExtraServiceDimensions Map<String, String> extraServiceDimensions
+      @ExtraServiceDimensions Map<String, String> extraServiceDimensions,
+      @ExtraServiceDimensions Map<String, Optional<String>> extraServiceDimensionOptionals
   )
   {
     final DruidNode config = configSupplier.get();
     log.info("Using emitter [%s] for metrics and alerts, with dimensions [%s].", emitter, extraServiceDimensions);
+    ImmutableMap.Builder<String, String> serviceDimensions = ImmutableMap.builder();
+    serviceDimensions.putAll(extraServiceDimensions);
+    for (Map.Entry<String, Optional<String>> keyAndDimOpt : extraServiceDimensionOptionals.entrySet()) {
+      if (keyAndDimOpt.getValue().isPresent()) {
+        serviceDimensions.put(keyAndDimOpt.getKey(), keyAndDimOpt.getValue().get());
+      }
+    }
+
     final ServiceEmitter retVal = new ServiceEmitter(
         config.getServiceName(),
         config.getHostAndPortToUse(),
         emitter,
-        ImmutableMap.copyOf(extraServiceDimensions)
+        ImmutableMap.copyOf(serviceDimensions.build())
     );
     EmittingLogger.registerEmitter(retVal);
     return retVal;
