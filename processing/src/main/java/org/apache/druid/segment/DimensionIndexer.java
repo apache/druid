@@ -22,7 +22,9 @@ package org.apache.druid.segment;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.column.CapabilitiesBasedFormat;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
@@ -174,7 +176,6 @@ public interface DimensionIndexer<
    */
   CloseableIndexed<ActualType> getSortedIndexedValues();
 
-
   /**
    * Get the minimum dimension value seen by this indexer.
    *
@@ -237,9 +238,9 @@ public interface DimensionIndexer<
 
   ColumnCapabilities getColumnCapabilities();
 
-  default ColumnCapabilities getHandlerCapabilities()
+  default ColumnFormat getFormat()
   {
-    return getColumnCapabilities();
+    return CapabilitiesBasedFormat.forColumnIndexer(getColumnCapabilities());
   }
 
   /**

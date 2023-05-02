@@ -47,7 +47,6 @@ import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
@@ -72,7 +71,7 @@ public class NestedDataOperatorConversions
 
   public static final SqlReturnTypeInference NESTED_RETURN_TYPE_INFERENCE = opBinding -> RowSignatures.makeComplexType(
       opBinding.getTypeFactory(),
-      NestedDataComplexTypeSerde.TYPE,
+      ColumnType.NESTED_DATA,
       true
   );
 
@@ -213,10 +212,10 @@ public class NestedDataOperatorConversions
       if (druidExpressions.get(0).isSimpleExtraction()) {
 
         return DruidExpression.ofVirtualColumn(
-            NestedDataComplexTypeSerde.TYPE,
+            ColumnType.NESTED_DATA,
             builder,
             ImmutableList.of(
-                DruidExpression.ofColumn(NestedDataComplexTypeSerde.TYPE, druidExpressions.get(0).getDirectColumn())
+                DruidExpression.ofColumn(ColumnType.NESTED_DATA, druidExpressions.get(0).getDirectColumn())
             ),
             (name, outputType, expression, macroTable) -> new NestedFieldVirtualColumn(
                 druidExpressions.get(0).getDirectColumn(),
@@ -229,7 +228,7 @@ public class NestedDataOperatorConversions
             )
         );
       }
-      return DruidExpression.ofExpression(NestedDataComplexTypeSerde.TYPE, builder, druidExpressions);
+      return DruidExpression.ofExpression(ColumnType.NESTED_DATA, builder, druidExpressions);
     }
   }
 
@@ -408,7 +407,7 @@ public class NestedDataOperatorConversions
             druidType,
             builder,
             ImmutableList.of(
-                DruidExpression.ofColumn(NestedDataComplexTypeSerde.TYPE, druidExpressions.get(0).getDirectColumn())
+                DruidExpression.ofColumn(ColumnType.NESTED_DATA, druidExpressions.get(0).getDirectColumn())
             ),
             (name, outputType, expression, macroTable) -> new NestedFieldVirtualColumn(
                 druidExpressions.get(0).getDirectColumn(),
@@ -538,7 +537,7 @@ public class NestedDataOperatorConversions
             druidType,
             builder,
             ImmutableList.of(
-                DruidExpression.ofColumn(NestedDataComplexTypeSerde.TYPE, druidExpressions.get(0).getDirectColumn())
+                DruidExpression.ofColumn(ColumnType.NESTED_DATA, druidExpressions.get(0).getDirectColumn())
             ),
             (name, outputType, expression, macroTable) -> new NestedFieldVirtualColumn(
                 druidExpressions.get(0).getDirectColumn(),
@@ -709,7 +708,7 @@ public class NestedDataOperatorConversions
             columnType,
             builder,
             ImmutableList.of(
-                DruidExpression.ofColumn(NestedDataComplexTypeSerde.TYPE, druidExpressions.get(0).getDirectColumn())
+                DruidExpression.ofColumn(ColumnType.NESTED_DATA, druidExpressions.get(0).getDirectColumn())
             ),
             (name, outputType, expression, macroTable) -> new NestedFieldVirtualColumn(
                 druidExpressions.get(0).getDirectColumn(),
@@ -761,7 +760,7 @@ public class NestedDataOperatorConversions
     {
       final DruidExpression.DruidExpressionCreator expressionFunction = druidExpressions ->
           DruidExpression.ofExpression(
-              NestedDataComplexTypeSerde.TYPE,
+              ColumnType.NESTED_DATA,
               null,
               DruidExpression.functionCall("json_object"),
               druidExpressions
@@ -815,7 +814,7 @@ public class NestedDataOperatorConversions
           rowSignature,
           rexNode,
           druidExpressions -> DruidExpression.ofExpression(
-              NestedDataComplexTypeSerde.TYPE,
+              ColumnType.NESTED_DATA,
               DruidExpression.functionCall("to_json_string"),
               druidExpressions
           )
@@ -853,7 +852,7 @@ public class NestedDataOperatorConversions
           rowSignature,
           rexNode,
           druidExpressions -> DruidExpression.ofExpression(
-              NestedDataComplexTypeSerde.TYPE,
+              ColumnType.NESTED_DATA,
               DruidExpression.functionCall("parse_json"),
               druidExpressions
           )
@@ -891,7 +890,7 @@ public class NestedDataOperatorConversions
           rowSignature,
           rexNode,
           druidExpressions -> DruidExpression.ofExpression(
-              NestedDataComplexTypeSerde.TYPE,
+              ColumnType.NESTED_DATA,
               DruidExpression.functionCall("try_parse_json"),
               druidExpressions
           )

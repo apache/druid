@@ -20,9 +20,9 @@
 package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.k8s.overlord.common.MultiContainerTaskAdapter;
@@ -31,7 +31,7 @@ import org.apache.druid.k8s.overlord.common.SingleContainerTaskAdapter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.NoopTaskLogs;
-import org.apache.druid.tasklogs.TaskLogPusher;
+import org.apache.druid.tasklogs.TaskLogs;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -45,7 +45,7 @@ public class KubernetesTaskRunnerFactoryTest
   private KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig;
   private StartupLoggingConfig startupLoggingConfig;
   private TaskQueueConfig taskQueueConfig;
-  private TaskLogPusher taskLogPusher;
+  private TaskLogs taskLogs;
   private DruidNode druidNode;
   private TaskConfig taskConfig;
   private Properties properties;
@@ -62,7 +62,7 @@ public class KubernetesTaskRunnerFactoryTest
         null,
         null
     );
-    taskLogPusher = new NoopTaskLogs();
+    taskLogs = new NoopTaskLogs();
     druidNode = new DruidNode(
         "test",
         "",
@@ -72,23 +72,7 @@ public class KubernetesTaskRunnerFactoryTest
         true,
         false
     );
-    taskConfig = new TaskConfig(
-        "/tmp",
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        null,
-        null,
-        false,
-        ImmutableList.of("/tmp")
-    );
+    taskConfig = new TaskConfigBuilder().setBaseDir("/tmp").build();
     properties = new Properties();
   }
 
@@ -97,10 +81,11 @@ public class KubernetesTaskRunnerFactoryTest
   {
     KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
         objectMapper,
+        null,
         kubernetesTaskRunnerConfig,
         startupLoggingConfig,
         taskQueueConfig,
-        taskLogPusher,
+        taskLogs,
         druidNode,
         taskConfig,
         properties
@@ -117,10 +102,11 @@ public class KubernetesTaskRunnerFactoryTest
   {
     KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
         objectMapper,
+        null,
         kubernetesTaskRunnerConfig,
         startupLoggingConfig,
         taskQueueConfig,
-        taskLogPusher,
+        taskLogs,
         druidNode,
         taskConfig,
         properties
@@ -139,10 +125,11 @@ public class KubernetesTaskRunnerFactoryTest
 
     KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
         objectMapper,
+        null,
         kubernetesTaskRunnerConfig,
         startupLoggingConfig,
         taskQueueConfig,
-        taskLogPusher,
+        taskLogs,
         druidNode,
         taskConfig,
         properties
@@ -162,10 +149,11 @@ public class KubernetesTaskRunnerFactoryTest
 
     KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
         objectMapper,
+        null,
         kubernetesTaskRunnerConfig,
         startupLoggingConfig,
         taskQueueConfig,
-        taskLogPusher,
+        taskLogs,
         druidNode,
         taskConfig,
         props
@@ -187,10 +175,11 @@ public class KubernetesTaskRunnerFactoryTest
 
     KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
         objectMapper,
+        null,
         kubernetesTaskRunnerConfig,
         startupLoggingConfig,
         taskQueueConfig,
-        taskLogPusher,
+        taskLogs,
         druidNode,
         taskConfig,
         props
@@ -213,10 +202,11 @@ public class KubernetesTaskRunnerFactoryTest
 
     KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
         objectMapper,
+        null,
         kubernetesTaskRunnerConfig,
         startupLoggingConfig,
         taskQueueConfig,
-        taskLogPusher,
+        taskLogs,
         druidNode,
         taskConfig,
         props
@@ -236,10 +226,11 @@ public class KubernetesTaskRunnerFactoryTest
 
     KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
         objectMapper,
+        null,
         kubernetesTaskRunnerConfig,
         startupLoggingConfig,
         taskQueueConfig,
-        taskLogPusher,
+        taskLogs,
         druidNode,
         taskConfig,
         props
@@ -262,10 +253,11 @@ public class KubernetesTaskRunnerFactoryTest
 
     KubernetesTaskRunnerFactory factory = new KubernetesTaskRunnerFactory(
         objectMapper,
+        null,
         kubernetesTaskRunnerConfig,
         startupLoggingConfig,
         taskQueueConfig,
-        taskLogPusher,
+        taskLogs,
         druidNode,
         taskConfig,
         props

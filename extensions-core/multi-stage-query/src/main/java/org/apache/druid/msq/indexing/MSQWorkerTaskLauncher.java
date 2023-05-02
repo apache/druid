@@ -58,6 +58,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
@@ -124,8 +125,15 @@ public class MSQWorkerTaskLauncher
   // workers to relaunch
   private final Set<Integer> workersToRelaunch = ConcurrentHashMap.newKeySet();
 
+  // workers that failed, but without active work orders. There is no need to retry these unless a future stage
+  // requires it.
+  @GuardedBy("taskIds")
+  private final Set<Integer> failedInactiveWorkers = ConcurrentHashMap.newKeySet();
+
   private final ConcurrentHashMap<Integer, List<String>> workerToTaskIds = new ConcurrentHashMap<>();
   private final RetryTask retryTask;
+
+  private final AtomicLong recentFullyStartedWorkerTimeInMs = new AtomicLong(System.currentTimeMillis());
 
   public MSQWorkerTaskLauncher(
       final String controllerTaskId,
@@ -222,6 +230,8 @@ public class MSQWorkerTaskLauncher
   public void launchTasksIfNeeded(final int taskCount) throws InterruptedException
   {
     synchronized (taskIds) {
+      retryInactiveTasksIfNeeded(taskCount);
+
       if (taskCount > desiredTaskCount) {
         desiredTaskCount = taskCount;
         taskIds.notifyAll();
@@ -238,14 +248,46 @@ public class MSQWorkerTaskLauncher
     }
   }
 
+  public void retryInactiveTasksIfNeeded(int taskCount)
+  {
+    synchronized (taskIds) {
+      // Fetch the list of workers which failed without work orders
+      Iterator<Integer> iterator = failedInactiveWorkers.iterator();
+      while (iterator.hasNext()) {
+        Integer workerNumber = iterator.next();
+        // If the controller expects the task to be running, queue it for retry
+        if (workerNumber < taskCount) {
+          submitForRelaunch(workerNumber);
+          iterator.remove();
+        }
+      }
+    }
+  }
+
+  Set<Integer> getWorkersToRelaunch()
+  {
+    return workersToRelaunch;
+  }
+
   /**
    * Queues worker for relaunch. A noop if the worker is already in the queue.
    *
-   * @param workerNumber
+   * @param workerNumber worker number
    */
   public void submitForRelaunch(int workerNumber)
   {
     workersToRelaunch.add(workerNumber);
+  }
+
+  /**
+   * Report a worker that failed without active orders. To be retried if it is requried for future stages only.
+   * @param workerNumber worker number
+   */
+  public void reportFailedInactiveWorker(int workerNumber)
+  {
+    synchronized (taskIds) {
+      failedInactiveWorkers.add(workerNumber);
+    }
   }
 
   /**
@@ -454,7 +496,9 @@ public class MSQWorkerTaskLauncher
 
         if (tracker.status.getStatusCode() == TaskState.RUNNING && !tracker.unknownLocation()) {
           synchronized (taskIds) {
-            fullyStartedTasks.add(tracker.workerNumber);
+            if (fullyStartedTasks.add(tracker.workerNumber)) {
+              recentFullyStartedWorkerTimeInMs.set(System.currentTimeMillis());
+            }
             taskIds.notifyAll();
           }
         }
@@ -494,7 +538,11 @@ public class MSQWorkerTaskLauncher
 
       } else if (tracker.didRunTimeOut(maxTaskStartDelayMillis) && !canceledWorkerTasks.contains(taskId)) {
         removeWorkerFromFullyStartedWorkers(tracker);
-        throw new MSQException(new TaskStartTimeoutFault(numTasks + 1, maxTaskStartDelayMillis));
+        throw new MSQException(new TaskStartTimeoutFault(
+            this.getWorkerTaskCount().getPendingWorkerCount(),
+            numTasks + 1,
+            maxTaskStartDelayMillis
+        ));
       } else if (tracker.didFail() && !canceledWorkerTasks.contains(taskId)) {
         removeWorkerFromFullyStartedWorkers(tracker);
         log.info("Task[%s] failed because %s. Trying to relaunch the worker", taskId, tracker.status.getErrorMsg());
@@ -605,11 +653,10 @@ public class MSQWorkerTaskLauncher
         context.workerManager().cancel(taskId);
       }
     }
-
   }
 
   /**
-   * Cleans the task indentified in {@link MSQWorkerTaskLauncher#relaunchTasks()} for relaunch. Asks the overlord to cancel the task.
+   * Cleans the task identified in {@link MSQWorkerTaskLauncher#relaunchTasks()} for relaunch. Asks the overlord to cancel the task.
    */
   private void cleanFailedTasksWhichAreRelaunched()
   {
@@ -675,7 +722,7 @@ public class MSQWorkerTaskLauncher
   /**
    * Tracker for information about a worker. Mutable.
    */
-  private static class TaskTracker
+  private class TaskTracker
   {
     private final int workerNumber;
     private final long startTimeMs = System.currentTimeMillis();
@@ -706,11 +753,14 @@ public class MSQWorkerTaskLauncher
       return status != null && status.getStatusCode().isFailure();
     }
 
+    /**
+     * The timeout is checked from the recentFullyStartedWorkerTimeInMs. If it's more than maxTaskStartDelayMillis return true.
+     */
     public boolean didRunTimeOut(final long maxTaskStartDelayMillis)
     {
       return (status == null || status.getStatusCode() == TaskState.RUNNING)
              && unknownLocation()
-             && System.currentTimeMillis() - startTimeMs > maxTaskStartDelayMillis;
+             && System.currentTimeMillis() - recentFullyStartedWorkerTimeInMs.get() > maxTaskStartDelayMillis;
     }
 
     /**

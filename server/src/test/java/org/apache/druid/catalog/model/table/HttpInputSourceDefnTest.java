@@ -398,6 +398,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         CatalogUtils.stringListToUriList(Arrays.asList("http://foo.com/foo.csv", "http://foo.com/bar.csv")),
         sourceSpec.getUris()
     );
+    assertEquals(Collections.singleton(HttpInputSourceDefn.TYPE_KEY), externSpec.inputSourceTypesSupplier.get());
   }
 
   @Test
@@ -441,6 +442,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         CatalogUtils.stringListToUriList(Arrays.asList("http://foo.com/my.csv", "http://foo.com/bar.csv")),
         sourceSpec.getUris()
     );
+    assertEquals(Collections.singleton(HttpInputSourceDefn.TYPE_KEY), externSpec.inputSourceTypesSupplier.get());
   }
 
   @Test
@@ -464,6 +466,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         CatalogUtils.stringListToUriList(Arrays.asList("http://foo.com/foo.csv", "http://foo.com/bar.csv")),
         sourceSpec.getUris()
     );
+    assertEquals(Collections.singleton(HttpInputSourceDefn.TYPE_KEY), externSpec.inputSourceTypesSupplier.get());
   }
 
   @Test
@@ -492,7 +495,11 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
 
     HttpInputSource sourceSpec = (HttpInputSource) externSpec.inputSource;
     assertEquals("bob", sourceSpec.getHttpAuthenticationUsername());
-    assertEquals("SECRET", ((EnvironmentVariablePasswordProvider) sourceSpec.getHttpAuthenticationPasswordProvider()).getVariable());
+    assertEquals(
+        "SECRET",
+        ((EnvironmentVariablePasswordProvider) sourceSpec.getHttpAuthenticationPasswordProvider()).getVariable()
+    );
+    assertEquals(Collections.singleton(HttpInputSourceDefn.TYPE_KEY), externSpec.inputSourceTypesSupplier.get());
   }
 
   private void validateHappyPath(ExternalTableSpec externSpec, boolean withUser)
@@ -512,6 +519,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     assertEquals(Arrays.asList("x", "y"), sig.getColumnNames());
     assertEquals(ColumnType.STRING, sig.getColumnType(0).get());
     assertEquals(ColumnType.LONG, sig.getColumnType(1).get());
+    assertEquals(Collections.singleton(HttpInputSourceDefn.TYPE_KEY), externSpec.inputSourceTypesSupplier.get());
   }
 
   private Map<String, Object> httpToMap(HttpInputSource source)

@@ -156,27 +156,33 @@ public class MultiStageQueryContextTest
   @Test
   public void getRowsPerSegment_noParameterSetReturnsDefaultValue()
   {
-    Assert.assertEquals(1000, MultiStageQueryContext.getRowsPerSegment(QueryContext.empty(), 1000));
+    Assert.assertEquals(
+        MultiStageQueryContext.DEFAULT_ROWS_PER_SEGMENT,
+        MultiStageQueryContext.getRowsPerSegment(QueryContext.empty())
+    );
   }
 
   @Test
   public void getRowsPerSegment_parameterSetReturnsCorrectValue()
   {
     Map<String, Object> propertyMap = ImmutableMap.of(CTX_ROWS_PER_SEGMENT, 10);
-    Assert.assertEquals(10, MultiStageQueryContext.getRowsPerSegment(QueryContext.of(propertyMap), 1000));
+    Assert.assertEquals(10, MultiStageQueryContext.getRowsPerSegment(QueryContext.of(propertyMap)));
   }
 
   @Test
   public void getRowsInMemory_noParameterSetReturnsDefaultValue()
   {
-    Assert.assertEquals(1000, MultiStageQueryContext.getRowsInMemory(QueryContext.empty(), 1000));
+    Assert.assertEquals(
+        MultiStageQueryContext.DEFAULT_ROWS_IN_MEMORY,
+        MultiStageQueryContext.getRowsInMemory(QueryContext.empty())
+    );
   }
 
   @Test
   public void getRowsInMemory_parameterSetReturnsCorrectValue()
   {
     Map<String, Object> propertyMap = ImmutableMap.of(CTX_ROWS_IN_MEMORY, 10);
-    Assert.assertEquals(10, MultiStageQueryContext.getRowsInMemory(QueryContext.of(propertyMap), 1000));
+    Assert.assertEquals(10, MultiStageQueryContext.getRowsInMemory(QueryContext.of(propertyMap)));
   }
 
   @Test
@@ -198,16 +204,20 @@ public class MultiStageQueryContextTest
   {
     Assert.assertNull(decodeIndexSpec(null));
 
-    Assert.assertEquals(new IndexSpec(), decodeIndexSpec("{}"));
-    Assert.assertEquals(new IndexSpec(), decodeIndexSpec(Collections.emptyMap()));
+    Assert.assertEquals(IndexSpec.DEFAULT, decodeIndexSpec("{}"));
+    Assert.assertEquals(IndexSpec.DEFAULT, decodeIndexSpec(Collections.emptyMap()));
 
     Assert.assertEquals(
-        new IndexSpec(null, null, new StringEncodingStrategy.FrontCoded(null), null, null, null, null),
+        IndexSpec.builder()
+                 .withStringDictionaryEncoding(new StringEncodingStrategy.FrontCoded(null, null))
+                 .build(),
         decodeIndexSpec("{\"stringDictionaryEncoding\":{\"type\":\"frontCoded\"}}")
     );
 
     Assert.assertEquals(
-        new IndexSpec(null, null, new StringEncodingStrategy.FrontCoded(null), null, null, null, null),
+        IndexSpec.builder()
+                 .withStringDictionaryEncoding(new StringEncodingStrategy.FrontCoded(null))
+                 .build(),
         decodeIndexSpec(ImmutableMap.of("stringDictionaryEncoding", ImmutableMap.of("type", "frontCoded")))
     );
 

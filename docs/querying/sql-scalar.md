@@ -270,6 +270,6 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 |`CASE WHEN boolean_expr1 THEN result1 \[ WHEN boolean_expr2 THEN result2 ... \] \[ ELSE resultN \] END`|Searched CASE.|
 |`NULLIF(value1, value2)`|Returns NULL if value1 and value2 match, else returns value1.|
 |`COALESCE(value1, value2, ...)`|Returns the first value that is neither NULL nor empty string.|
-|`NVL(expr, expr-for-null)`|Returns `expr-for-null` if `expr` is null (or empty string for string type).|
+|`NVL(value1, value2)`|Returns `value1` if `value1` is not null, otherwise `value2`.|
 |`BLOOM_FILTER_TEST(expr, serialized-filter)`|Returns true if the value of `expr` is contained in the Base64-serialized Bloom filter. See the [Bloom filter extension](../development/extensions-core/bloom-filter.md) documentation for additional details. See the [`BLOOM_FILTER` function](sql-aggregations.md) for computing Bloom filters.|
 

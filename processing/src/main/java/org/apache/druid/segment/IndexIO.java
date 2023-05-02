@@ -60,7 +60,9 @@ import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ImmutableRTreeObjectStrategy;
+import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedIterable;
+import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.data.VSizeColumnarMultiInts;
 import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
 import org.apache.druid.segment.serde.DictionaryEncodedColumnSupplier;
@@ -639,14 +641,12 @@ public class IndexIO
           loadFailed
       );
 
-      final GenericIndexed<String> finalCols, finalDims;
+      final Indexed<String> finalCols, finalDims;
 
       if (allCols != null) {
         // To restore original column order, we merge allCols/allDims and nonNullCols/nonNullDims, respectively.
-        final List<String> mergedCols = restoreColumns(nonNullCols, allCols);
-        final List<String> mergedDims = restoreColumns(nonNullDims, allDims);
-        finalCols = GenericIndexed.fromIterable(mergedCols, GenericIndexed.STRING_STRATEGY);
-        finalDims = GenericIndexed.fromIterable(mergedDims, GenericIndexed.STRING_STRATEGY);
+        finalCols = new ListIndexed<>(restoreColumns(nonNullCols, allCols));
+        finalDims = new ListIndexed<>(restoreColumns(nonNullDims, allDims));
       } else {
         finalCols = nonNullCols;
         finalDims = nonNullDims;
@@ -701,9 +701,9 @@ public class IndexIO
               + "while allColsIterator expects one. This is likely a potential bug in creating this segment. "
               + "Try reingesting your data with storeEmptyColumns setting to false in task context."
           );
-          mergedCols.add(nonNullColsIterator.next());
+          mergedCols.add(SmooshedFileMapper.STRING_INTERNER.intern(nonNullColsIterator.next()));
         } else {
-          mergedCols.add(next);
+          mergedCols.add(SmooshedFileMapper.STRING_INTERNER.intern(next));
         }
       }
 
@@ -712,7 +712,7 @@ public class IndexIO
 
     private void registerColumnHolders(
         File inDir,
-        GenericIndexed<String> cols,
+        Indexed<String> cols,
         boolean lazy,
         Map<String, Supplier<ColumnHolder>> columns,
         ObjectMapper mapper,
@@ -726,7 +726,7 @@ public class IndexIO
           continue;
         }
 
-        ByteBuffer colBuffer = smooshedFiles.mapFile(columnName);
+        final ByteBuffer colBuffer = smooshedFiles.mapFile(columnName);
         registerColumnHolder(
             lazy,
             columns,
@@ -749,12 +749,16 @@ public class IndexIO
         SegmentLazyLoadFailCallback loadFailed
     ) throws IOException
     {
+
+      // we use the interner here too even though it might have already been added by restoreColumns(..) because that
+      // only happens if there are some null columns
+      final String internedColumnName = SmooshedFileMapper.STRING_INTERNER.intern(columnName);
       if (lazy) {
-        columns.put(columnName, Suppliers.memoize(
+        columns.put(internedColumnName, Suppliers.memoize(
             () -> {
               try {
                 return deserializeColumn(
-                    columnName,
+                    internedColumnName,
                     mapper,
                     colBuffer,
                     smooshedFiles
@@ -768,13 +772,13 @@ public class IndexIO
             }
         ));
       } else {
-        ColumnHolder columnHolder = deserializeColumn(
-            columnName,
+        final ColumnHolder columnHolder = deserializeColumn(
+            internedColumnName,
             mapper,
             colBuffer,
             smooshedFiles
         );
-        columns.put(columnName, () -> columnHolder);
+        columns.put(internedColumnName, () -> columnHolder);
       }
     }
 
@@ -790,9 +794,7 @@ public class IndexIO
         SmooshedFileMapper smooshedFiles
     ) throws IOException
     {
-      ColumnDescriptor serde = mapper.readValue(
-          SERIALIZER_UTILS.readString(byteBuffer), ColumnDescriptor.class
-      );
+      ColumnDescriptor serde = mapper.readValue(SERIALIZER_UTILS.readString(byteBuffer), ColumnDescriptor.class);
       return serde.read(byteBuffer, columnConfig, smooshedFiles);
     }
   }

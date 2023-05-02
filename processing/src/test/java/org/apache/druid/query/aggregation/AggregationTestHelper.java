@@ -543,7 +543,7 @@ public class AggregationTestHelper implements Closeable
         if (!index.canAppendRow()) {
           File tmp = tempFolder.newFolder();
           toMerge.add(tmp);
-          indexMerger.persist(index, tmp, new IndexSpec(), null);
+          indexMerger.persist(index, tmp, IndexSpec.DEFAULT, null);
           index.close();
           index = new OnheapIncrementalIndex.Builder()
               .setIndexSchema(
@@ -572,19 +572,19 @@ public class AggregationTestHelper implements Closeable
       if (toMerge.size() > 0) {
         File tmp = tempFolder.newFolder();
         toMerge.add(tmp);
-        indexMerger.persist(index, tmp, new IndexSpec(), null);
+        indexMerger.persist(index, tmp, IndexSpec.DEFAULT, null);
 
         List<QueryableIndex> indexes = new ArrayList<>(toMerge.size());
         for (File file : toMerge) {
           indexes.add(indexIO.loadIndex(file));
         }
-        indexMerger.mergeQueryableIndex(indexes, rollup, metrics, outDir, new IndexSpec(), null, -1);
+        indexMerger.mergeQueryableIndex(indexes, rollup, metrics, outDir, IndexSpec.DEFAULT, null, -1);
 
         for (QueryableIndex qi : indexes) {
           qi.close();
         }
       } else {
-        indexMerger.persist(index, outDir, new IndexSpec(), null);
+        indexMerger.persist(index, outDir, IndexSpec.DEFAULT, null);
       }
     }
     finally {
@@ -679,7 +679,7 @@ public class AggregationTestHelper implements Closeable
     if (outDir == null) {
       outDir = tempFolder.newFolder();
     }
-    indexMerger.persist(index, outDir, new IndexSpec(), null);
+    indexMerger.persist(index, outDir, IndexSpec.DEFAULT, null);
 
     return new QueryableIndexSegment(indexIO.loadIndex(outDir), SegmentId.dummy(""));
   }

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 
 import javax.annotation.Nullable;
 
@@ -70,25 +71,27 @@ public class ColumnType extends BaseTypeSignature<ValueType>
    * @see ValueType#ARRAY
    * @see ValueType#STRING
    */
-  public static final ColumnType STRING_ARRAY = new ColumnType(ValueType.ARRAY, null, STRING);
+  public static final ColumnType STRING_ARRAY = ofArray(STRING);
   /**
    * An array of Longs. Values will be represented as Object[] or long[]
    * @see ValueType#ARRAY
    * @see ValueType#LONG
    */
-  public static final ColumnType LONG_ARRAY = new ColumnType(ValueType.ARRAY, null, LONG);
+  public static final ColumnType LONG_ARRAY = ofArray(LONG);
   /**
    * An array of Doubles. Values will be represented as Object[] or double[].
    * @see ValueType#ARRAY
    * @see ValueType#DOUBLE
    */
-  public static final ColumnType DOUBLE_ARRAY = new ColumnType(ValueType.ARRAY, null, DOUBLE);
+  public static final ColumnType DOUBLE_ARRAY = ofArray(DOUBLE);
   /**
    * An array of Floats. Values will be represented as Object[] or float[].
    * @see ValueType#ARRAY
    * @see ValueType#FLOAT
    */
-  public static final ColumnType FLOAT_ARRAY = new ColumnType(ValueType.ARRAY, null, FLOAT);
+  public static final ColumnType FLOAT_ARRAY = ofArray(FLOAT);
+
+  public static final ColumnType NESTED_DATA = ofComplex(NestedDataComplexTypeSerde.TYPE_NAME);
   /**
    * Placeholder type for an "unknown" complex, which is used when the complex type name was "lost" or unavailable for
    * whatever reason, to indicate an opaque type that cannot be generically handled with normal complex type handling
@@ -97,7 +100,7 @@ public class ColumnType extends BaseTypeSignature<ValueType>
    *
    * @see ValueType#COMPLEX
    */
-  public static final ColumnType UNKNOWN_COMPLEX = new ColumnType(ValueType.COMPLEX, null, null);
+  public static final ColumnType UNKNOWN_COMPLEX = ofComplex(null);
 
   @JsonCreator
   public ColumnType(

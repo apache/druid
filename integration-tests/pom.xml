@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>26.0.0-SNAPSHOT</version>
+        <version>27.0.0-SNAPSHOT</version>
     </parent>
 
     <repositories>
@@ -39,8 +39,8 @@
     </repositories>
 
     <properties>
-        <hadoop.integ.libs>"org.apache.hadoop:hadoop-client:${hadoop.compile.version}", "org.apache.hadoop:hadoop-azure:${hadoop.compile.version}"</hadoop.integ.libs>
-        <hadoop.s3.impl>org.apache.hadoop.fs.s3native.NativeS3FileSystem</hadoop.s3.impl>
+        <hadoop.integ.libs>"org.apache.hadoop:hadoop-client-api:${hadoop.compile.version}", "org.apache.hadoop:hadoop-client-runtime:${hadoop.compile.version}", "org.apache.hadoop:hadoop-azure:${hadoop.compile.version}"</hadoop.integ.libs>
+        <hadoop.s3.impl>org.apache.hadoop.fs.s3a.S3AFileSystem</hadoop.s3.impl>
     </properties>
 
     <dependencies>
@@ -554,10 +554,10 @@
 
     <profiles>
         <profile>
-            <id>hadoop3</id>
+            <id>hadoop2</id>
             <properties>
-                <hadoop.integ.libs>"org.apache.hadoop:hadoop-client-api:${hadoop.compile.version}", "org.apache.hadoop:hadoop-client-runtime:${hadoop.compile.version}", "org.apache.hadoop:hadoop-azure:${hadoop.compile.version}"</hadoop.integ.libs>
-                <hadoop.s3.impl>org.apache.hadoop.fs.s3a.S3AFileSystem</hadoop.s3.impl>
+                <hadoop.integ.libs>"org.apache.hadoop:hadoop-client:${hadoop.compile.version}", "org.apache.hadoop:hadoop-azure:${hadoop.compile.version}"</hadoop.integ.libs>
+                <hadoop.s3.impl>org.apache.hadoop.fs.s3native.NativeS3FileSystem</hadoop.s3.impl>
             </properties>
         </profile>
         <profile>

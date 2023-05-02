@@ -155,8 +155,21 @@ public class ThreadingTaskRunner
                         @Override
                         public TaskStatus call()
                         {
+                          final File baseDirForTask;
+                          try {
+                            baseDirForTask = getTracker().pickBaseDir(task.getId());
+                          }
+                          catch (RuntimeException e) {
+                            LOG.error(e, "Failed to get directory for task [%s], cannot schedule.", task.getId());
+                            return TaskStatus.failure(
+                                task.getId(),
+                                StringUtils.format("Could not schedule due to error [%s]", e.getMessage())
+                            );
+
+                          }
+                          final File taskDir = new File(baseDirForTask, task.getId());
+
                           final String attemptUUID = UUID.randomUUID().toString();
-                          final File taskDir = dirTracker.getTaskDir(task.getId());
                           final File attemptDir = new File(taskDir, attemptUUID);
 
                           final TaskLocation taskLocation = TaskLocation.create(
@@ -199,7 +212,7 @@ public class ThreadingTaskRunner
                                   .setName(StringUtils.format("[%s]-%s", task.getId(), priorThreadName));
 
                             TaskStatus taskStatus;
-                            final TaskToolbox toolbox = toolboxFactory.build(task);
+                            final TaskToolbox toolbox = toolboxFactory.build(baseDirForTask, task);
                             TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
                             TaskRunnerUtils.notifyStatusChanged(
                                 listeners,
@@ -414,7 +427,6 @@ public class ThreadingTaskRunner
     }
 
     appenderatorsManager.shutdown();
-    super.stop();
   }
 
   @Override

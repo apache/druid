@@ -182,6 +182,66 @@ exports[`RuleEditor matches snapshot no tier in rule 1`] = `
                 <span
                   class="bp4-button-text"
                 >
+                  Tier:
+                </span>
+              </button>
+              <div
+                class="bp4-html-select bp4-fill"
+              >
+                <select>
+                  <option
+                    value="test1"
+                  >
+                    test1
+                  </option>
+                  <option
+                    value="test"
+                  >
+                    test
+                  </option>
+                  <option
+                    value="test"
+                  >
+                    test
+                  </option>
+                  <option
+                    value="test"
+                  >
+                    test
+                  </option>
+                </select>
+                <span
+                  class="bp4-icon bp4-icon-double-caret-vertical"
+                  icon="double-caret-vertical"
+                >
+                  <svg
+                    aria-labelledby="iconTitle-3"
+                    data-icon="double-caret-vertical"
+                    height="16"
+                    role="img"
+                    viewBox="0 0 16 16"
+                    width="16"
+                  >
+                    <title
+                      id="iconTitle-3"
+                    >
+                      Open dropdown
+                    </title>
+                    <path
+                      d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
+                      fill-rule="evenodd"
+                    />
+                  </svg>
+                </span>
+              </div>
+              <button
+                class="bp4-button bp4-minimal"
+                style="pointer-events: none;"
+                type="button"
+              >
+                <span
+                  class="bp4-button-text"
+                >
                   Replicants:
                 </span>
               </button>
@@ -259,66 +319,6 @@ exports[`RuleEditor matches snapshot no tier in rule 1`] = `
                     </span>
                   </button>
                 </div>
-              </div>
-              <button
-                class="bp4-button bp4-minimal"
-                style="pointer-events: none;"
-                type="button"
-              >
-                <span
-                  class="bp4-button-text"
-                >
-                  Tier:
-                </span>
-              </button>
-              <div
-                class="bp4-html-select bp4-fill"
-              >
-                <select>
-                  <option
-                    value="test1"
-                  >
-                    test1
-                  </option>
-                  <option
-                    value="test"
-                  >
-                    test
-                  </option>
-                  <option
-                    value="test"
-                  >
-                    test
-                  </option>
-                  <option
-                    value="test"
-                  >
-                    test
-                  </option>
-                </select>
-                <span
-                  class="bp4-icon bp4-icon-double-caret-vertical"
-                  icon="double-caret-vertical"
-                >
-                  <svg
-                    aria-labelledby="iconTitle-5"
-                    data-icon="double-caret-vertical"
-                    height="16"
-                    role="img"
-                    viewBox="0 0 16 16"
-                    width="16"
-                  >
-                    <title
-                      id="iconTitle-5"
-                    >
-                      Open dropdown
-                    </title>
-                    <path
-                      d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
-                      fill-rule="evenodd"
-                    />
-                  </svg>
-                </span>
               </div>
               <button
                 class="bp4-button bp4-disabled"
@@ -763,6 +763,61 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                 <span
                   class="bp4-button-text"
                 >
+                  Tier:
+                </span>
+              </button>
+              <div
+                class="bp4-html-select bp4-fill"
+              >
+                <select>
+                  <option
+                    value="nonexist"
+                  >
+                    nonexist
+                  </option>
+                  <option
+                    value="test2"
+                  >
+                    test2
+                  </option>
+                  <option
+                    value="test3"
+                  >
+                    test3
+                  </option>
+                </select>
+                <span
+                  class="bp4-icon bp4-icon-double-caret-vertical"
+                  icon="double-caret-vertical"
+                >
+                  <svg
+                    aria-labelledby="iconTitle-27"
+                    data-icon="double-caret-vertical"
+                    height="16"
+                    role="img"
+                    viewBox="0 0 16 16"
+                    width="16"
+                  >
+                    <title
+                      id="iconTitle-27"
+                    >
+                      Open dropdown
+                    </title>
+                    <path
+                      d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
+                      fill-rule="evenodd"
+                    />
+                  </svg>
+                </span>
+              </div>
+              <button
+                class="bp4-button bp4-minimal"
+                style="pointer-events: none;"
+                type="button"
+              >
+                <span
+                  class="bp4-button-text"
+                >
                   Replicants:
                 </span>
               </button>
@@ -842,61 +897,6 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                 </div>
               </div>
               <button
-                class="bp4-button bp4-minimal"
-                style="pointer-events: none;"
-                type="button"
-              >
-                <span
-                  class="bp4-button-text"
-                >
-                  Tier:
-                </span>
-              </button>
-              <div
-                class="bp4-html-select bp4-fill"
-              >
-                <select>
-                  <option
-                    value="nonexist"
-                  >
-                    nonexist
-                  </option>
-                  <option
-                    value="test2"
-                  >
-                    test2
-                  </option>
-                  <option
-                    value="test3"
-                  >
-                    test3
-                  </option>
-                </select>
-                <span
-                  class="bp4-icon bp4-icon-double-caret-vertical"
-                  icon="double-caret-vertical"
-                >
-                  <svg
-                    aria-labelledby="iconTitle-29"
-                    data-icon="double-caret-vertical"
-                    height="16"
-                    role="img"
-                    viewBox="0 0 16 16"
-                    width="16"
-                  >
-                    <title
-                      id="iconTitle-29"
-                    >
-                      Open dropdown
-                    </title>
-                    <path
-                      d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
-                      fill-rule="evenodd"
-                    />
-                  </svg>
-                </span>
-              </div>
-              <button
                 class="bp4-button"
                 type="button"
               >
@@ -923,6 +923,61 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
             <div
               class="bp4-control-group"
             >
+              <button
+                class="bp4-button bp4-minimal"
+                style="pointer-events: none;"
+                type="button"
+              >
+                <span
+                  class="bp4-button-text"
+                >
+                  Tier:
+                </span>
+              </button>
+              <div
+                class="bp4-html-select bp4-fill"
+              >
+                <select>
+                  <option
+                    value="test1"
+                  >
+                    test1
+                  </option>
+                  <option
+                    value="test2"
+                  >
+                    test2
+                  </option>
+                  <option
+                    value="test3"
+                  >
+                    test3
+                  </option>
+                </select>
+                <span
+                  class="bp4-icon bp4-icon-double-caret-vertical"
+                  icon="double-caret-vertical"
+                >
+                  <svg
+                    aria-labelledby="iconTitle-31"
+                    data-icon="double-caret-vertical"
+                    height="16"
+                    role="img"
+                    viewBox="0 0 16 16"
+                    width="16"
+                  >
+                    <title
+                      id="iconTitle-31"
+                    >
+                      Open dropdown
+                    </title>
+                    <path
+                      d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
+                      fill-rule="evenodd"
+                    />
+                  </svg>
+                </span>
+              </div>
               <button
                 class="bp4-button bp4-minimal"
                 style="pointer-events: none;"
@@ -1008,61 +1063,6 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                     </span>
                   </button>
                 </div>
-              </div>
-              <button
-                class="bp4-button bp4-minimal"
-                style="pointer-events: none;"
-                type="button"
-              >
-                <span
-                  class="bp4-button-text"
-                >
-                  Tier:
-                </span>
-              </button>
-              <div
-                class="bp4-html-select bp4-fill"
-              >
-                <select>
-                  <option
-                    value="test1"
-                  >
-                    test1
-                  </option>
-                  <option
-                    value="test2"
-                  >
-                    test2
-                  </option>
-                  <option
-                    value="test3"
-                  >
-                    test3
-                  </option>
-                </select>
-                <span
-                  class="bp4-icon bp4-icon-double-caret-vertical"
-                  icon="double-caret-vertical"
-                >
-                  <svg
-                    aria-labelledby="iconTitle-33"
-                    data-icon="double-caret-vertical"
-                    height="16"
-                    role="img"
-                    viewBox="0 0 16 16"
-                    width="16"
-                  >
-                    <title
-                      id="iconTitle-33"
-                    >
-                      Open dropdown
-                    </title>
-                    <path
-                      d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
-                      fill-rule="evenodd"
-                    />
-                  </svg>
-                </span>
               </div>
               <button
                 class="bp4-button"
@@ -1324,6 +1324,61 @@ exports[`RuleEditor matches snapshot with existing tier in rule 1`] = `
                 <span
                   class="bp4-button-text"
                 >
+                  Tier:
+                </span>
+              </button>
+              <div
+                class="bp4-html-select bp4-fill"
+              >
+                <select>
+                  <option
+                    value="test1"
+                  >
+                    test1
+                  </option>
+                  <option
+                    value="test2"
+                  >
+                    test2
+                  </option>
+                  <option
+                    value="test3"
+                  >
+                    test3
+                  </option>
+                </select>
+                <span
+                  class="bp4-icon bp4-icon-double-caret-vertical"
+                  icon="double-caret-vertical"
+                >
+                  <svg
+                    aria-labelledby="iconTitle-19"
+                    data-icon="double-caret-vertical"
+                    height="16"
+                    role="img"
+                    viewBox="0 0 16 16"
+                    width="16"
+                  >
+                    <title
+                      id="iconTitle-19"
+                    >
+                      Open dropdown
+                    </title>
+                    <path
+                      d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
+                      fill-rule="evenodd"
+                    />
+                  </svg>
+                </span>
+              </div>
+              <button
+                class="bp4-button bp4-minimal"
+                style="pointer-events: none;"
+                type="button"
+              >
+                <span
+                  class="bp4-button-text"
+                >
                   Replicants:
                 </span>
               </button>
@@ -1401,61 +1456,6 @@ exports[`RuleEditor matches snapshot with existing tier in rule 1`] = `
                     </span>
                   </button>
                 </div>
-              </div>
-              <button
-                class="bp4-button bp4-minimal"
-                style="pointer-events: none;"
-                type="button"
-              >
-                <span
-                  class="bp4-button-text"
-                >
-                  Tier:
-                </span>
-              </button>
-              <div
-                class="bp4-html-select bp4-fill"
-              >
-                <select>
-                  <option
-                    value="test1"
-                  >
-                    test1
-                  </option>
-                  <option
-                    value="test2"
-                  >
-                    test2
-                  </option>
-                  <option
-                    value="test3"
-                  >
-                    test3
-                  </option>
-                </select>
-                <span
-                  class="bp4-icon bp4-icon-double-caret-vertical"
-                  icon="double-caret-vertical"
-                >
-                  <svg
-                    aria-labelledby="iconTitle-21"
-                    data-icon="double-caret-vertical"
-                    height="16"
-                    role="img"
-                    viewBox="0 0 16 16"
-                    width="16"
-                  >
-                    <title
-                      id="iconTitle-21"
-                    >
-                      Open dropdown
-                    </title>
-                    <path
-                      d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
-                      fill-rule="evenodd"
-                    />
-                  </svg>
-                </span>
               </div>
               <button
                 class="bp4-button bp4-disabled"
@@ -1719,6 +1719,66 @@ exports[`RuleEditor matches snapshot with non existing tier in rule 1`] = `
                 <span
                   class="bp4-button-text"
                 >
+                  Tier:
+                </span>
+              </button>
+              <div
+                class="bp4-html-select bp4-fill"
+              >
+                <select>
+                  <option
+                    value="nonexist"
+                  >
+                    nonexist
+                  </option>
+                  <option
+                    value="test1"
+                  >
+                    test1
+                  </option>
+                  <option
+                    value="test2"
+                  >
+                    test2
+                  </option>
+                  <option
+                    value="test3"
+                  >
+                    test3
+                  </option>
+                </select>
+                <span
+                  class="bp4-icon bp4-icon-double-caret-vertical"
+                  icon="double-caret-vertical"
+                >
+                  <svg
+                    aria-labelledby="iconTitle-11"
+                    data-icon="double-caret-vertical"
+                    height="16"
+                    role="img"
+                    viewBox="0 0 16 16"
+                    width="16"
+                  >
+                    <title
+                      id="iconTitle-11"
+                    >
+                      Open dropdown
+                    </title>
+                    <path
+                      d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
+                      fill-rule="evenodd"
+                    />
+                  </svg>
+                </span>
+              </div>
+              <button
+                class="bp4-button bp4-minimal"
+                style="pointer-events: none;"
+                type="button"
+              >
+                <span
+                  class="bp4-button-text"
+                >
                   Replicants:
                 </span>
               </button>
@@ -1796,66 +1856,6 @@ exports[`RuleEditor matches snapshot with non existing tier in rule 1`] = `
                     </span>
                   </button>
                 </div>
-              </div>
-              <button
-                class="bp4-button bp4-minimal"
-                style="pointer-events: none;"
-                type="button"
-              >
-                <span
-                  class="bp4-button-text"
-                >
-                  Tier:
-                </span>
-              </button>
-              <div
-                class="bp4-html-select bp4-fill"
-              >
-                <select>
-                  <option
-                    value="nonexist"
-                  >
-                    nonexist
-                  </option>
-                  <option
-                    value="test1"
-                  >
-                    test1
-                  </option>
-                  <option
-                    value="test2"
-                  >
-                    test2
-                  </option>
-                  <option
-                    value="test3"
-                  >
-                    test3
-                  </option>
-                </select>
-                <span
-                  class="bp4-icon bp4-icon-double-caret-vertical"
-                  icon="double-caret-vertical"
-                >
-                  <svg
-                    aria-labelledby="iconTitle-13"
-                    data-icon="double-caret-vertical"
-                    height="16"
-                    role="img"
-                    viewBox="0 0 16 16"
-                    width="16"
-                  >
-                    <title
-                      id="iconTitle-13"
-                    >
-                      Open dropdown
-                    </title>
-                    <path
-                      d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
-                      fill-rule="evenodd"
-                    />
-                  </svg>
-                </span>
               </div>
               <button
                 class="bp4-button bp4-disabled"

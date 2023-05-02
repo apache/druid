@@ -32,7 +32,6 @@ import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.common.IndexingServiceCondition;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestIndexTask;
 import org.apache.druid.indexing.common.TestTasks;
@@ -40,6 +39,7 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
@@ -154,29 +154,17 @@ public class WorkerTaskMonitorTest
 
   private WorkerTaskMonitor createTaskMonitor()
   {
-    final TaskConfig taskConfig = new TaskConfig(
-        FileUtils.createTempDir().toString(),
-        null,
-        null,
-        0,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
-        null
-    );
+    final TaskConfig taskConfig = new TaskConfigBuilder()
+        .setBaseDir(FileUtils.createTempDir().toString())
+        .setDefaultRowFlushBoundary(0)
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
+
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
     TaskActionClient taskActionClient = EasyMock.createNiceMock(TaskActionClient.class);
     EasyMock.expect(taskActionClientFactory.create(EasyMock.anyObject())).andReturn(taskActionClient).anyTimes();
     SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
     EasyMock.replay(taskActionClientFactory, taskActionClient, notifierFactory);
-    final TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
     return new WorkerTaskMonitor(
         jsonMapper,
         new SingleTaskBackgroundRunner(
@@ -218,18 +206,17 @@ public class WorkerTaskMonitorTest
                 null,
                 null,
                 null,
-                "1",
-                dirTracker
+                "1"
             ),
             taskConfig,
             new NoopServiceEmitter(),
             DUMMY_NODE,
             new ServerConfig()
         ),
+        taskConfig,
         cf,
         workerCuratorCoordinator,
-        EasyMock.createNiceMock(DruidLeaderClient.class),
-        dirTracker
+        EasyMock.createNiceMock(DruidLeaderClient.class)
     );
   }
 

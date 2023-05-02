@@ -42,23 +42,25 @@ function breakdownExpression(expression: SqlExpression): Breakdown {
   expression = expression.getUnderlyingExpression();
 
   let nativeType: string | undefined;
-  if (expression instanceof SqlFunction && expression.getEffectiveFunctionName() === 'CAST') {
-    const asType = String(expression.getArgAsString(1)).toUpperCase();
-    switch (asType) {
-      case 'VARCHAR':
-        nativeType = 'string';
-        expression = expression.getArg(0)!;
-        break;
+  if (expression instanceof SqlFunction) {
+    const asType = expression.getCastType();
+    if (asType) {
+      switch (asType.value.toUpperCase()) {
+        case 'VARCHAR':
+          nativeType = 'string';
+          expression = expression.getArg(0)!;
+          break;
 
-      case 'BIGINT':
-        nativeType = 'long';
-        expression = expression.getArg(0)!;
-        break;
+        case 'BIGINT':
+          nativeType = 'long';
+          expression = expression.getArg(0)!;
+          break;
 
-      case 'DOUBLE':
-        nativeType = 'double';
-        expression = expression.getArg(0)!;
-        break;
+        case 'DOUBLE':
+          nativeType = 'double';
+          expression = expression.getArg(0)!;
+          break;
+      }
     }
   }
 

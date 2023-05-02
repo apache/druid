@@ -23,13 +23,16 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import io.fabric8.kubernetes.client.Config;
+import io.fabric8.kubernetes.client.ConfigBuilder;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
+import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.MultiContainerTaskAdapter;
@@ -38,7 +41,7 @@ import org.apache.druid.k8s.overlord.common.SingleContainerTaskAdapter;
 import org.apache.druid.k8s.overlord.common.TaskAdapter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
-import org.apache.druid.tasklogs.TaskLogPusher;
+import org.apache.druid.tasklogs.TaskLogs;
 
 import java.util.Locale;
 import java.util.Properties;
@@ -47,10 +50,11 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
 {
   public static final String TYPE_NAME = "k8s";
   private final ObjectMapper smileMapper;
+  private final HttpClient httpClient;
   private final KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig;
   private final StartupLoggingConfig startupLoggingConfig;
   private final TaskQueueConfig taskQueueConfig;
-  private final TaskLogPusher taskLogPusher;
+  private final TaskLogs taskLogs;
   private final DruidNode druidNode;
   private final TaskConfig taskConfig;
   private final Properties properties;
@@ -60,10 +64,11 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   @Inject
   public KubernetesTaskRunnerFactory(
       @Smile ObjectMapper smileMapper,
+      @EscalatedGlobal final HttpClient httpClient,
       KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig,
       StartupLoggingConfig startupLoggingConfig,
       @JacksonInject TaskQueueConfig taskQueueConfig,
-      TaskLogPusher taskLogPusher,
+      TaskLogs taskLogs,
       @Self DruidNode druidNode,
       TaskConfig taskConfig,
       Properties properties
@@ -71,10 +76,11 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   {
 
     this.smileMapper = smileMapper;
+    this.httpClient = httpClient;
     this.kubernetesTaskRunnerConfig = kubernetesTaskRunnerConfig;
     this.startupLoggingConfig = startupLoggingConfig;
     this.taskQueueConfig = taskQueueConfig;
-    this.taskLogPusher = taskLogPusher;
+    this.taskLogs = taskLogs;
     this.druidNode = druidNode;
     this.taskConfig = taskConfig;
     this.properties = properties;
@@ -85,7 +91,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   {
     DruidKubernetesClient client;
     if (kubernetesTaskRunnerConfig.disableClientProxy) {
-      Config config = Config.autoConfigure(null);
+      Config config = new ConfigBuilder().build();
       config.setHttpsProxy(null);
       config.setHttpProxy(null);
       client = new DruidKubernetesClient(config);
@@ -94,11 +100,13 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     }
 
     runner = new KubernetesTaskRunner(
+        smileMapper,
         buildTaskAdapter(client),
         kubernetesTaskRunnerConfig,
         taskQueueConfig,
-        taskLogPusher,
-        new DruidKubernetesPeonClient(client, kubernetesTaskRunnerConfig.namespace, kubernetesTaskRunnerConfig.debugJobs)
+        taskLogs,
+        new DruidKubernetesPeonClient(client, kubernetesTaskRunnerConfig.namespace, kubernetesTaskRunnerConfig.debugJobs),
+        httpClient
     );
     return runner;
   }
@@ -137,7 +145,6 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
       );
     } else if (PodTemplateTaskAdapter.TYPE.equals(adapter)) {
       return new PodTemplateTaskAdapter(
-          client,
           kubernetesTaskRunnerConfig,
           taskConfig,
           druidNode,

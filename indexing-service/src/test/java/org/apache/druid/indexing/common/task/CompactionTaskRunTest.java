@@ -41,10 +41,10 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.indexing.overlord.Segments;
@@ -90,12 +90,15 @@ import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
@@ -207,7 +210,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
         ImmutableList.of(expectedLongSumMetric),
         null,
-        mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),
+        IndexSpec.DEFAULT.asMap(mapper),
         mapper.readValue(
             mapper.writeValueAsString(
                 new UniformGranularitySpec(
@@ -655,6 +658,83 @@ public class CompactionTaskRunTest extends IngestionTestBase
   }
 
   @Test
+  public void testWithSegmentGranularityMisalignedInterval() throws Exception
+  {
+    runIndexTask();
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory,
+        RETRY_POLICY_FACTORY
+    );
+
+    final CompactionTask compactionTask1 = builder
+        .ioConfig(
+            new CompactionIOConfig(
+                new CompactionIntervalSpec(Intervals.of("2014-01-01/2014-01-02"), null),
+                false,
+                null
+            )
+        )
+        .segmentGranularity(Granularities.WEEK)
+        .build();
+
+    final IllegalArgumentException e = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> runTask(compactionTask1)
+    );
+
+    MatcherAssert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
+            "Interval[2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z] to compact is not aligned with segmentGranularity"))
+    );
+  }
+
+  @Test
+  public void testWithSegmentGranularityMisalignedIntervalAllowed() throws Exception
+  {
+    runIndexTask();
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory,
+        RETRY_POLICY_FACTORY
+    );
+
+    // day segmentGranularity
+    final CompactionTask compactionTask1 = builder
+        .ioConfig(
+            new CompactionIOConfig(
+                new CompactionIntervalSpec(Intervals.of("2014-01-01/2014-01-02"), null),
+                true,
+                null
+            )
+        )
+        .segmentGranularity(Granularities.WEEK)
+        .build();
+
+    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
+
+    Assert.assertTrue(resultPair.lhs.isSuccess());
+
+    List<DataSegment> segments = resultPair.rhs;
+
+    Assert.assertEquals(1, segments.size());
+
+    Assert.assertEquals(Intervals.of("2013-12-30/2014-01-06"), segments.get(0).getInterval());
+    Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
+    Assert.assertEquals(
+        getDefaultCompactionState(
+            Granularities.WEEK,
+            Granularities.MINUTE,
+            ImmutableList.of(Intervals.of("2014-01-01/2014-01-01T03"))
+        ),
+        segments.get(0).getLastCompactionState()
+    );
+  }
+
+  @Test
   public void testCompactionWithFilterInTransformSpec() throws Exception
   {
     runIndexTask();
@@ -693,7 +773,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
         ImmutableList.of(expectedLongSumMetric),
         getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
-        mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),
+        IndexSpec.DEFAULT.asMap(mapper),
         mapper.readValue(
             mapper.writeValueAsString(
                 new UniformGranularitySpec(
@@ -757,7 +837,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
         ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
         getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
-        mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),
+        IndexSpec.DEFAULT.asMap(mapper),
         mapper.readValue(
             mapper.writeValueAsString(
                 new UniformGranularitySpec(
@@ -1589,23 +1669,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
         objectMapper
     );
 
-    final TaskConfig config = new TaskConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
-        null
-    );
+    final TaskConfig config = new TaskConfigBuilder()
+            .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+            .build();
     return new TaskToolbox.Builder()
         .config(config)
         .taskActionClient(createActionClient(task))
@@ -1626,7 +1692,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .coordinatorClient(coordinatorClient)
         .taskLogPusher(null)
         .attemptId("1")
-        .dirTracker(new TaskStorageDirTracker(config))
         .build();
   }
 

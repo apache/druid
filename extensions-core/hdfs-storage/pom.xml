@@ -29,7 +29,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>26.0.0-SNAPSHOT</version>
+        <version>27.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -45,6 +45,12 @@
           <artifactId>hadoop-aws</artifactId>
           <version>${hadoop.compile.version}</version>
           <scope>runtime</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>com.amazonaws</groupId>
+              <artifactId>aws-java-sdk-bundle</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>
@@ -137,7 +143,10 @@
     <profile>
       <id>hadoop2</id>
       <activation>
-        <activeByDefault>true</activeByDefault>
+        <property>
+          <name>hadoop2.enabled</name>
+          <value>true</value>
+        </property>
       </activation>
       <dependencies>
         <dependency>
@@ -423,10 +432,7 @@
     <profile>
       <id>hadoop3</id>
       <activation>
-        <property>
-          <name>hadoop3.enabled</name>
-          <value>true</value>
-        </property>
+        <activeByDefault>true</activeByDefault>
       </activation>
       <dependencies>
         <dependency>
@@ -448,10 +454,21 @@
           <scope>test</scope>
         </dependency>
         <dependency>
+          <groupId>com.amazonaws</groupId>
+          <artifactId>aws-java-sdk-s3</artifactId>
+          <version>${aws.sdk.version}</version>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
           <groupId>log4j</groupId>
           <artifactId>log4j</artifactId>
           <version>1.2.17</version>
           <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+          <scope>provided</scope>
         </dependency>
       </dependencies>
     </profile>

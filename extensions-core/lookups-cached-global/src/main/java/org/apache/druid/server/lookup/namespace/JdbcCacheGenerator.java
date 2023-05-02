@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.lookup.namespace;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import org.apache.druid.data.input.MapPopulator;
 import org.apache.druid.java.util.common.ISE;
@@ -40,7 +39,6 @@ import org.skife.jdbi.v2.util.TimestampMapper;
 
 import javax.annotation.Nullable;
 import java.sql.Timestamp;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -162,27 +160,21 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     if (Strings.isNullOrEmpty(filter)) {
       return StringUtils.format(
           "SELECT %s, %s FROM %s WHERE %s IS NOT NULL",
-          toDoublyQuotedEscapedIdentifier(keyColumn),
-          toDoublyQuotedEscapedIdentifier(valueColumn),
-          toDoublyQuotedEscapedIdentifier(table),
-          toDoublyQuotedEscapedIdentifier(valueColumn)
+          keyColumn,
+          valueColumn,
+          table,
+          valueColumn
       );
     }
 
     return StringUtils.format(
         "SELECT %s, %s FROM %s WHERE %s AND %s IS NOT NULL",
-        toDoublyQuotedEscapedIdentifier(keyColumn),
-        toDoublyQuotedEscapedIdentifier(valueColumn),
-        toDoublyQuotedEscapedIdentifier(table),
+        keyColumn,
+        valueColumn,
+        table,
         filter,
-        toDoublyQuotedEscapedIdentifier(valueColumn)
+        valueColumn
     );
-  }
-
-  @VisibleForTesting
-  public static String toDoublyQuotedEscapedIdentifier(String identifier)
-  {
-    return "\"" + StringUtils.replace(identifier, "\"", "\"\"") + "\"";
   }
 
   private DBI ensureDBI(CacheScheduler.EntryImpl<JdbcExtractionNamespace> key, JdbcExtractionNamespace namespace)
@@ -192,21 +184,10 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
       dbi = dbiCache.get(key);
     }
     if (dbi == null) {
-      Properties props = new Properties();
-      if (namespace.getConnectorConfig().getUser() != null) {
-        props.setProperty("user", namespace.getConnectorConfig().getUser());
-      }
-      if (namespace.getConnectorConfig().getPassword() != null) {
-        props.setProperty("password", namespace.getConnectorConfig().getPassword());
-      }
-
-      // We use double quotes to quote identifiers. This enables us to write SQL
-      // that works with most databases that are SQL compliant.
-      props.setProperty("sessionVariables", "sql_mode='ANSI_QUOTES'");
-
       final DBI newDbi = new DBI(
           namespace.getConnectorConfig().getConnectURI(),
-          props
+          namespace.getConnectorConfig().getUser(),
+          namespace.getConnectorConfig().getPassword()
       );
       dbiCache.putIfAbsent(key, newDbi);
       dbi = dbiCache.get(key);
@@ -227,7 +208,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
         handle -> {
           final String query = StringUtils.format(
               "SELECT MAX(%s) FROM %s",
-              toDoublyQuotedEscapedIdentifier(tsColumn), toDoublyQuotedEscapedIdentifier(table)
+              tsColumn, table
           );
           return handle
               .createQuery(query)

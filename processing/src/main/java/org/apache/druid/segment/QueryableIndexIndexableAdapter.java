@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
@@ -33,6 +34,9 @@ import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.ImmutableBitmapValues;
 import org.apache.druid.segment.data.IndexedIterable;
+import org.apache.druid.segment.nested.NestedCommonFormatColumn;
+import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
+import org.apache.druid.segment.nested.SortedValueDictionary;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableLongColumnValueSelector;
 import org.apache.druid.utils.CloseableUtils;
@@ -108,6 +112,13 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     final BaseColumn col = columnHolder.getColumn();
 
     if (!(col instanceof DictionaryEncodedColumn)) {
+      // this shouldn't happen, but if it does, try to close to prevent a leak
+      try {
+        col.close();
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
       return null;
     }
 
@@ -153,6 +164,46 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
         dict.close();
       }
     };
+  }
+
+  @Nullable
+  @Override
+  public NestedColumnMergable getNestedColumnMergeables(String columnName)
+  {
+    final ColumnHolder columnHolder = input.getColumnHolder(columnName);
+
+    if (columnHolder == null) {
+      return null;
+    }
+    final ColumnFormat format = columnHolder.getColumnFormat();
+    if (!(format instanceof NestedCommonFormatColumn.Format
+          || format instanceof NestedDataComplexTypeSerde.NestedColumnFormatV4)) {
+      return null;
+    }
+
+    final BaseColumn col = columnHolder.getColumn();
+    if (col instanceof NestedCommonFormatColumn) {
+      NestedCommonFormatColumn column = (NestedCommonFormatColumn) col;
+      return new NestedColumnMergable(
+          new SortedValueDictionary(
+              column.getStringDictionary(),
+              column.getLongDictionary(),
+              column.getDoubleDictionary(),
+              column.getArrayDictionary(),
+              column
+          ),
+          column.getFieldTypeInfo()
+      );
+    }
+
+    // this shouldn't happen because of the format check, but if it does try to close the column just in case
+    try {
+      col.close();
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    return null;
   }
 
   @Override
@@ -340,7 +391,13 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   @Override
   public ColumnCapabilities getCapabilities(String column)
   {
-    return input.getColumnHolder(column).getHandlerCapabilities();
+    return input.getColumnHolder(column).getCapabilities();
+  }
+
+  @Override
+  public ColumnFormat getFormat(String column)
+  {
+    return input.getColumnHolder(column).getColumnFormat();
   }
 
   @Override
