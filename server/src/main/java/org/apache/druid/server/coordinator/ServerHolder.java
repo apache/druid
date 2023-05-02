@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator;
 
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.ServerType;
@@ -28,7 +27,6 @@ import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
 import org.apache.druid.server.coordinator.loadqueue.SegmentHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -75,8 +73,6 @@ public class ServerHolder implements Comparable<ServerHolder>
    * Do not remove entries on load/drop success or failure during the run.
    */
   private final Map<DataSegment, SegmentAction> queuedSegments = new HashMap<>();
-
-  private final Map<String, Object2IntOpenHashMap<Interval>> datasourceIntervalToSegmentCount = new HashMap<>();
 
   public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon)
   {
@@ -130,9 +126,6 @@ public class ServerHolder implements Comparable<ServerHolder>
       AtomicInteger loadingReplicaCount
   )
   {
-    server.iterateAllSegments()
-          .forEach(segment -> updateCountInInterval(segment, true));
-
     final List<SegmentHolder> expiredSegments = new ArrayList<>();
     peon.getSegmentsInQueue().forEach(
         (holder) -> {
@@ -146,10 +139,8 @@ public class ServerHolder implements Comparable<ServerHolder>
           queuedSegments.put(segment, simplify(action));
           if (action.isLoad()) {
             sizeOfLoadingSegments += segment.getSize();
-            updateCountInInterval(segment, true);
           } else {
             sizeOfDroppingSegments += segment.getSize();
-            updateCountInInterval(segment, false);
           }
 
           if (action == SegmentAction.MOVE_TO) {
@@ -162,10 +153,7 @@ public class ServerHolder implements Comparable<ServerHolder>
     );
 
     peon.getSegmentsMarkedToDrop().forEach(
-        segment -> {
-          updateCountInInterval(segment, false);
-          queuedSegments.put(segment, SegmentAction.MOVE_FROM);
-        }
+        segment -> queuedSegments.put(segment, SegmentAction.MOVE_FROM)
     );
 
     if (!expiredSegments.isEmpty()) {
@@ -296,13 +284,6 @@ public class ServerHolder implements Comparable<ServerHolder>
     return loadingSegments;
   }
 
-  public int getNumSegmentsInDatasourceInterval(DataSegment segment)
-  {
-    Object2IntOpenHashMap<Interval> intervalToCount =
-        datasourceIntervalToSegmentCount.get(segment.getDataSource());
-    return intervalToCount == null ? 0 : intervalToCount.getInt(segment.getInterval());
-  }
-
   /**
    * Returns true if this server has the segment loaded and is not dropping it.
    */
@@ -340,10 +321,8 @@ public class ServerHolder implements Comparable<ServerHolder>
     if (action.isLoad()) {
       ++totalAssignmentsInRun;
       sizeOfLoadingSegments += segment.getSize();
-      updateCountInInterval(segment, true);
     } else {
       sizeOfDroppingSegments += segment.getSize();
-      updateCountInInterval(segment, false);
     }
 
     queuedSegments.put(segment, simplify(action));
@@ -378,20 +357,11 @@ public class ServerHolder implements Comparable<ServerHolder>
     final SegmentAction action = queuedSegments.remove(segment);
     if (action.isLoad()) {
       sizeOfLoadingSegments -= segment.getSize();
-      updateCountInInterval(segment, false);
     } else {
       sizeOfDroppingSegments -= segment.getSize();
-      updateCountInInterval(segment, true);
     }
 
     return true;
-  }
-
-  private void updateCountInInterval(DataSegment segment, boolean add)
-  {
-    datasourceIntervalToSegmentCount
-        .computeIfAbsent(segment.getDataSource(), ds -> new Object2IntOpenHashMap<>())
-        .addTo(segment.getInterval(), add ? 1 : -1);
   }
 
   @Override
