@@ -267,17 +267,17 @@ export interface DataSchema {
   metricsSpec?: MetricSpec[];
 }
 
-export type SchemaMode = 'fixed' | 'stringly' | 'flexible';
+export type SchemaMode = 'fixed' | 'string-only-discovery' | 'type-aware-discovery';
 
 export function getSchemaMode(spec: Partial<IngestionSpec>): SchemaMode {
   if (deepGet(spec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery') === true) {
-    return 'flexible';
+    return 'type-aware-discovery';
   }
   if (deepGet(spec, 'spec.dataSchema.dimensionsSpec.includeAllDimensions') === true) {
-    return 'stringly';
+    return 'string-only-discovery';
   }
   const dimensions = deepGet(spec, 'spec.dataSchema.dimensionsSpec.dimensions') || EMPTY_ARRAY;
-  return Array.isArray(dimensions) && dimensions.length === 0 ? 'stringly' : 'fixed';
+  return Array.isArray(dimensions) && dimensions.length === 0 ? 'string-only-discovery' : 'fixed';
 }
 
 export function getRollup(spec: Partial<IngestionSpec>): boolean {
@@ -2433,14 +2433,14 @@ export function updateSchemaWithSample(
   let newSpec = spec;
 
   switch (schemaMode) {
-    case 'flexible':
+    case 'type-aware-discovery':
       newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery', true);
       newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.includeAllDimensions');
       newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions', []);
       newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions');
       break;
 
-    case 'stringly':
+    case 'string-only-discovery':
       newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery');
       newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.includeAllDimensions');
       newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions', []);

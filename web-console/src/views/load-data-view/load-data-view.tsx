@@ -2378,7 +2378,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   checked={schemaMode === 'fixed'}
                   onChange={() =>
                     this.setState({
-                      newSchemaMode: schemaMode === 'fixed' ? 'stringly' : 'fixed',
+                      newSchemaMode: schemaMode === 'fixed' ? 'string-only-discovery' : 'fixed',
                     })
                   }
                   label="Explicitly specify schema"
@@ -2650,14 +2650,28 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         <p>Making this change will reset any work you have done in this section.</p>
         {autoDetect && (
           <Switch
-            checked={newSchemaMode === 'flexible'}
-            label="Use the new schema discovery capability. De-select this if are appending to a datasource created with a previous version of Druid and want to preserve schema compatibility."
+            checked={newSchemaMode === 'type-aware-discovery'}
             onChange={() => {
               this.setState({
-                newSchemaMode: newSchemaMode === 'stringly' ? 'flexible' : 'stringly',
+                newSchemaMode:
+                  newSchemaMode === 'string-only-discovery'
+                    ? 'type-aware-discovery'
+                    : 'string-only-discovery',
               });
             }}
-          />
+          >
+            Use the new type-aware schema discovery capability. Avoid this if are appending to a
+            datasource created with string-only schema discovery of Druid and want to preserve
+            schema compatibility. For more information see the{' '}
+            <ExternalLink
+              href={`${getLink(
+                'DOCS',
+              )}/ingestion/schema-design.html#schema-auto-discovery-for-dimensions`}
+            >
+              documentation
+            </ExternalLink>
+            .
+          </Switch>
         )}
       </AsyncActionDialog>
     );
