@@ -301,7 +301,8 @@ public class MSQWorkerTaskLauncher
     }
   }
 
-  public void waitForWorkerShutdown() {
+  public void waitForWorkerShutdown()
+  {
     try {
       FutureUtils.getUnchecked(stopFuture, false);
     }
