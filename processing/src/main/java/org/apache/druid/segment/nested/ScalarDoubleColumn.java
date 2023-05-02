@@ -40,6 +40,8 @@ import javax.annotation.Nullable;
 
 public class ScalarDoubleColumn implements NestedCommonFormatColumn
 {
+  private static final boolean REPLACE_WITH_DEFAULT = NullHandling.replaceWithDefault();
+
   private final FixedIndexed<Double> doubleDictionary;
   private final ColumnarDoubles valueColumn;
   private final ImmutableBitmap nullValueIndex;
@@ -92,7 +94,7 @@ public class ScalarDoubleColumn implements NestedCommonFormatColumn
       @Override
       public boolean isNull()
       {
-        if (NullHandling.replaceWithDefault()) {
+        if (REPLACE_WITH_DEFAULT) {
           return false;
         }
         final int i = offset.getOffset();
@@ -138,7 +140,7 @@ public class ScalarDoubleColumn implements NestedCommonFormatColumn
       @Override
       public boolean[] getNullVector()
       {
-        if (NullHandling.replaceWithDefault()) {
+        if (REPLACE_WITH_DEFAULT) {
           return null;
         }
         computeVectorsIfNeeded();

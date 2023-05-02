@@ -70,6 +70,8 @@ import java.util.SortedSet;
 
 public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommonFormatColumn>, ColumnIndexSupplier
 {
+  private static final boolean REPLACE_WITH_DEFAULT = NullHandling.replaceWithDefault();
+
   public static ScalarDoubleColumnAndIndexSupplier read(
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
@@ -140,8 +142,6 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     }
   }
 
-
-
   private final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
 
   private final Supplier<ColumnarDoubles> valueColumnSupplier;
@@ -187,7 +187,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
   {
     if (clazz.equals(NullValueIndex.class)) {
       final BitmapColumnIndex nullIndex;
-      if (NullHandling.replaceWithDefault()) {
+      if (REPLACE_WITH_DEFAULT) {
         nullIndex = new SimpleImmutableBitmapIndex(bitmapFactory.makeEmptyImmutableBitmap());
       } else {
         nullIndex = new SimpleImmutableBitmapIndex(nullValueBitmap);
@@ -239,7 +239,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
               return 0.0;
             }
           }
-          if (NullHandling.replaceWithDefault() && doubleValue.equals(NullHandling.defaultDoubleValue())) {
+          if (REPLACE_WITH_DEFAULT && doubleValue.equals(NullHandling.defaultDoubleValue())) {
             if (defaultValueIndex >= 0) {
               return ((double) getBitmap(0).size() + (double) getBitmap(defaultValueIndex).size()) / totalRows;
             }
@@ -263,7 +263,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
               return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
             }
           }
-          if (NullHandling.replaceWithDefault() && doubleValue.equals(NullHandling.defaultDoubleValue())) {
+          if (REPLACE_WITH_DEFAULT && doubleValue.equals(NullHandling.defaultDoubleValue())) {
             if (defaultValueIndex >= 0) {
               return bitmapResultFactory.unionDimensionValueBitmaps(
                   ImmutableList.of(
@@ -301,7 +301,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
               if (theValue != null) {
                 doubles.add(theValue.doubleValue());
                 // add null value index in default value mode
-                if (NullHandling.replaceWithDefault() && theValue.equals(NullHandling.defaultDoubleValue())) {
+                if (REPLACE_WITH_DEFAULT && theValue.equals(NullHandling.defaultDoubleValue())) {
                   needNullCheck = true;
                 }
               }

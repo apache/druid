@@ -4606,6 +4606,46 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testSelectPathSelectorFilterVariantNull()
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(nest, '$.x'), "
+        + "JSON_VALUE(nester, '$.n.x' RETURNING BIGINT) "
+        + "FROM druid.nested WHERE JSON_VALUE(nester, '$.n.x' RETURNING BIGINT) IS NULL",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      new NestedFieldVirtualColumn("nester", "$.n.x", "v0", ColumnType.LONG),
+                      new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
+                  )
+                  .columns(
+                      "v0", "v1"
+                  )
+                  .filters(selector("v0", null, null))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"100", null},
+            new Object[]{NullHandling.defaultStringValue(), null},
+            new Object[]{"200", null},
+            new Object[]{NullHandling.defaultStringValue(), null},
+            new Object[]{NullHandling.defaultStringValue(), null},
+            new Object[]{NullHandling.defaultStringValue(), null}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
   public void testGroupByPathSelectorFilterVariantNotNull()
   {
     testQuery(

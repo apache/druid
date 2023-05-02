@@ -490,7 +490,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
 
     private StructuredDataProcessor.ProcessedValue<?> processValue(ExprEval<?> eval)
     {
-      final ColumnType columnType = ExpressionType.toColumnType(eval.type());
+      final ExpressionType columnType = eval.type();
       int sizeEstimate;
       switch (columnType.getType()) {
         case LONG:
