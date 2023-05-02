@@ -23,10 +23,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.balancer.TierSegmentBalancer;
-import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 
 /**
  *
@@ -34,12 +31,6 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 public class BalanceSegments implements CoordinatorDuty
 {
   private static final EmittingLogger log = new EmittingLogger(BalanceSegments.class);
-  private final SegmentLoadQueueManager loadQueueManager;
-
-  public BalanceSegments(SegmentLoadQueueManager loadQueueManager)
-  {
-    this.loadQueueManager = loadQueueManager;
-  }
 
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
@@ -62,25 +53,11 @@ public class BalanceSegments implements CoordinatorDuty
       );
     }
 
-    final StrategicSegmentAssigner segmentAssigner = new StrategicSegmentAssigner(
-        loadQueueManager,
-        params.getDruidCluster(),
-        params.getSegmentReplicantLookup(),
-        params.getReplicationManager(),
-        params.getBalancerStrategy(),
-        dynamicConfig
-    );
-
     cluster.getHistoricals().forEach(
-        (tier, servers) ->
-            new TierSegmentBalancer(tier, servers, segmentAssigner, params).run()
+        (tier, servers) -> new TierSegmentBalancer(tier, servers, params).run()
     );
 
-    segmentAssigner.makeAlerts();
-    final CoordinatorRunStats stats = segmentAssigner.getStats();
-    stats.logStatsAndErrors(log);
-
-    return params.buildFromExisting().withCoordinatorStats(stats).build();
+    return params;
   }
 
 }

@@ -25,6 +25,7 @@ import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
@@ -52,16 +53,17 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     logServerAndLoadQueueStates(params.getDruidCluster());
+    collectSegmentStats(params);
 
-    final CoordinatorRunStats stats = collectSegmentStats(params);
-    stats.logStatsAndErrors(log);
+    StrategicSegmentAssigner segmentAssigner = params.getSegmentAssigner();
+    segmentAssigner.makeAlerts();
 
-    return params.buildFromExisting().withCoordinatorStats(stats).build();
+    return params;
   }
 
-  private CoordinatorRunStats collectSegmentStats(DruidCoordinatorRuntimeParams params)
+  private void collectSegmentStats(DruidCoordinatorRuntimeParams params)
   {
-    final CoordinatorRunStats stats = new CoordinatorRunStats();
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
 
     final DruidCluster cluster = params.getDruidCluster();
     cluster.getHistoricals().forEach((tier, historicals) -> {
@@ -104,8 +106,6 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
           stats.addToDatasourceStat(Stats.Segments.USED, dataSource, timeline.getNumObjects());
         }
     );
-
-    return stats;
   }
 
   private RowKey createRowKeyForServer(String serverName, Map<Dimension, String> dimensionValues)

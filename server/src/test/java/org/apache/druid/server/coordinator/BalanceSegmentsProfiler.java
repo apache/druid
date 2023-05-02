@@ -128,7 +128,6 @@ public class BalanceSegmentsProfiler
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(druidCluster)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, false))
         .withUsedSegmentsInTest(segments)
         .withDynamicConfigs(
             CoordinatorDynamicConfig
@@ -138,12 +137,13 @@ public class BalanceSegmentsProfiler
                 .withReplicationThrottleLimit(5)
                 .build()
         )
+        .withSegmentAssignerUsing(loadQueueManager)
         .withEmitter(emitter)
         .withDatabaseRuleManager(manager)
         .build();
 
-    BalanceSegments tester = new BalanceSegments(loadQueueManager);
-    RunRules runner = new RunRules(loadQueueManager);
+    BalanceSegments tester = new BalanceSegments();
+    RunRules runner = new RunRules();
     watch.start();
     DruidCoordinatorRuntimeParams balanceParams = tester.run(params);
     DruidCoordinatorRuntimeParams assignParams = runner.run(params);
@@ -186,8 +186,9 @@ public class BalanceSegmentsProfiler
         )
         .withUsedSegmentsInTest(segments)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build())
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
-    BalanceSegments tester = new BalanceSegments(loadQueueManager);
+    BalanceSegments tester = new BalanceSegments();
     watch.start();
     DruidCoordinatorRuntimeParams balanceParams = tester.run(params);
     System.out.println(watch.stop());

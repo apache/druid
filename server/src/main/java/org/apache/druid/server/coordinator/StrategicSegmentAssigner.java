@@ -67,25 +67,29 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   public StrategicSegmentAssigner(
       SegmentLoadQueueManager loadQueueManager,
       DruidCluster cluster,
-      SegmentReplicantLookup replicantLookup,
-      ReplicationThrottler replicationThrottler,
       BalancerStrategy strategy,
-      CoordinatorDynamicConfig dynamicConfig
+      CoordinatorDynamicConfig dynamicConfig,
+      CoordinatorRunStats stats
   )
   {
+    this.stats = stats;
     this.cluster = cluster;
     this.strategy = strategy;
     this.loadQueueManager = loadQueueManager;
-    this.replicantLookup = replicantLookup;
-    this.replicationThrottler = replicationThrottler;
+    this.replicantLookup = SegmentReplicantLookup.make(cluster);
+    this.replicationThrottler = createReplicationThrottler(dynamicConfig);
     this.useRoundRobinAssignment = dynamicConfig.isUseRoundRobinSegmentAssignment();
-    this.stats = new CoordinatorRunStats(dynamicConfig.getValidatedDebugDimensions());
     this.serverSelector = useRoundRobinAssignment ? new RoundRobinServerSelector(cluster) : null;
   }
 
   public CoordinatorRunStats getStats()
   {
     return stats;
+  }
+
+  public SegmentReplicantLookup getReplicantLookup()
+  {
+    return replicantLookup;
   }
 
   public void makeAlerts()
@@ -496,6 +500,29 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     }
 
     return assigned;
+  }
+
+  private ReplicationThrottler createReplicationThrottler(CoordinatorDynamicConfig dynamicConfig)
+  {
+    final Set<String> tiersLoadingReplicas = new HashSet<>();
+
+    cluster.getHistoricals().forEach(
+        (tier, historicals) -> {
+          int numLoadingReplicas = historicals.stream().mapToInt(ServerHolder::getNumLoadingReplicas).sum();
+          if (numLoadingReplicas > 0) {
+            log.info(
+                "Tier [%s] will not be assigned replicas as it is already loading [%d] replicas.",
+                tier, numLoadingReplicas
+            );
+            tiersLoadingReplicas.add(tier);
+          }
+        }
+    );
+    return new ReplicationThrottler(
+        tiersLoadingReplicas,
+        dynamicConfig.getReplicationThrottleLimit(),
+        dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
+    );
   }
 
   private int cancelOperations(

@@ -30,10 +30,8 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.StrategicSegmentAssigner;
-import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.Rule;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
@@ -49,7 +47,6 @@ import java.util.stream.Collectors;
  * The params returned from {@code run()} must have these fields initialized:
  * <ul>
  *   <li>{@link DruidCoordinatorRuntimeParams#getBroadcastDatasources()}</li>
- *   <li>{@link DruidCoordinatorRuntimeParams#getReplicationManager()}</li>
  * </ul>
  * These fields are used by the downstream coordinator duty, {@link BalanceSegments}.
  */
@@ -57,13 +54,6 @@ public class RunRules implements CoordinatorDuty
 {
   private static final EmittingLogger log = new EmittingLogger(RunRules.class);
   private static final int MAX_MISSING_RULES = 10;
-
-  private final SegmentLoadQueueManager loadQueueManager;
-
-  public RunRules(SegmentLoadQueueManager loadQueueManager)
-  {
-    this.loadQueueManager = loadQueueManager;
-  }
 
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
@@ -85,16 +75,7 @@ public class RunRules implements CoordinatorDuty
         usedSegments.size(), overshadowed.size()
     );
 
-    final ReplicationThrottler replicationThrottler = createReplicationThrottler(params);
-    final StrategicSegmentAssigner segmentAssigner = new StrategicSegmentAssigner(
-        loadQueueManager,
-        cluster,
-        params.getSegmentReplicantLookup(),
-        replicationThrottler,
-        params.getBalancerStrategy(),
-        params.getCoordinatorDynamicConfig()
-    );
-
+    final StrategicSegmentAssigner segmentAssigner = params.getSegmentAssigner();
     final MetadataRuleManager databaseRuleManager = params.getDatabaseRuleManager();
 
     int missingRules = 0;
@@ -132,15 +113,8 @@ public class RunRules implements CoordinatorDuty
          .emit();
     }
 
-    segmentAssigner.makeAlerts();
-
-    final CoordinatorRunStats stats = segmentAssigner.getStats();
-    stats.logStatsAndErrors(log);
-
     return params.buildFromExisting()
-                 .withCoordinatorStats(stats)
                  .withBroadcastDatasources(getBroadcastDatasources(params))
-                 .withReplicationManager(replicationThrottler)
                  .build();
   }
 

@@ -35,7 +35,7 @@ import java.util.Map;
  */
 public class SegmentReplicantLookup
 {
-  public static SegmentReplicantLookup make(DruidCluster cluster, boolean replicateAfterLoadTimeout)
+  public static SegmentReplicantLookup make(DruidCluster cluster)
   {
     final Table<SegmentId, String, ReplicaCount> replicaCounts = HashBasedTable.create();
     cluster.getHistoricals().forEach(

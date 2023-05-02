@@ -35,7 +35,6 @@ import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.StrategicSegmentAssigner;
@@ -81,7 +80,7 @@ public class LoadRuleTest
 
   private CachingCostBalancerStrategy cachingCostBalancerStrategy;
 
-  private SegmentLoadQueueManager stateManager;
+  private SegmentLoadQueueManager loadQueueManager;
   private final boolean useRoundRobinAssignment;
   private BalancerStrategy mockBalancerStrategy;
 
@@ -106,7 +105,7 @@ public class LoadRuleTest
     cachingCostBalancerStrategy = new CachingCostBalancerStrategy(ClusterCostCache.builder().build(), exec);
 
     mockBalancerStrategy = EasyMock.createMock(BalancerStrategy.class);
-    stateManager = new SegmentLoadQueueManager(null, null, null);
+    loadQueueManager = new SegmentLoadQueueManager(null, null, null);
   }
 
   @After
@@ -160,20 +159,7 @@ public class LoadRuleTest
       DruidCoordinatorRuntimeParams params
   )
   {
-    final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
-    ReplicationThrottler throttler = new ReplicationThrottler(
-        null,
-        dynamicConfig.getReplicationThrottleLimit(),
-        dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
-    );
-    StrategicSegmentAssigner segmentAssigner = new StrategicSegmentAssigner(
-        stateManager,
-        params.getDruidCluster(),
-        params.getSegmentReplicantLookup(),
-        throttler,
-        params.getBalancerStrategy(),
-        dynamicConfig
-    );
+    final StrategicSegmentAssigner segmentAssigner = params.getSegmentAssigner();
     rule.run(segment, segmentAssigner);
     return segmentAssigner.getStats();
   }
@@ -195,7 +181,6 @@ public class LoadRuleTest
     return CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(druidCluster)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, replicateAfterLoadTimeout))
         .withBalancerStrategy(mockBalancerStrategy)
         .withUsedSegmentsInTest(usedSegments)
         .withDynamicConfigs(
@@ -203,6 +188,7 @@ public class LoadRuleTest
                                     .withUseRoundRobinSegmentAssignment(useRoundRobinAssignment)
                                     .build()
         )
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
   }
 
@@ -520,7 +506,6 @@ public class LoadRuleTest
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(druidCluster)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, false))
         .withBalancerStrategy(mockBalancerStrategy)
         .withUsedSegmentsInTest(dataSegment1, dataSegment2, dataSegment3)
         .withDynamicConfigs(
@@ -528,7 +513,9 @@ public class LoadRuleTest
                                     .withMaxSegmentsInNodeLoadingQueue(maxSegmentsInQueue)
                                     .withUseRoundRobinSegmentAssignment(useRoundRobinAssignment)
                                     .build()
-        ).build();
+        )
+        .withSegmentAssignerUsing(loadQueueManager)
+        .build();
 
     final LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1));
     CoordinatorRunStats stats1 = runRuleAndGetStats(rule, dataSegment1, params);

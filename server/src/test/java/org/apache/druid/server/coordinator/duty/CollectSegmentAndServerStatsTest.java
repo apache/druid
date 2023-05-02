@@ -45,10 +45,11 @@ public class CollectSegmentAndServerStatsTest
   @Test
   public void testCollectedSegmentStats()
   {
-    final DruidCoordinatorRuntimeParams runtimeParams =
+    DruidCoordinatorRuntimeParams runtimeParams =
         CoordinatorRuntimeParamsTestHelpers.newBuilder()
                                            .withDruidCluster(DruidCluster.EMPTY)
                                            .withUsedSegmentsInTest()
+                                           .withSegmentAssignerUsing(null)
                                            .build();
 
     Mockito.when(mockDruidCoordinator.computeNumsUnavailableUsedSegmentsPerDataSource())

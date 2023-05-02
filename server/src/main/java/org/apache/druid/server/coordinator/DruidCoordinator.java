@@ -592,10 +592,10 @@ public class DruidCoordinator
     return ImmutableList.of(
         new LogUsedSegments(),
         new UpdateCoordinatorStateAndPrepareCluster(),
-        new RunRules(loadQueueManager),
+        new RunRules(),
         new UnloadUnusedSegments(loadQueueManager),
         new MarkAsUnusedOvershadowedSegments(DruidCoordinator.this),
-        new BalanceSegments(loadQueueManager),
+        new BalanceSegments(),
         new CollectSegmentAndServerStats(DruidCoordinator.this)
     );
   }
@@ -754,7 +754,7 @@ public class DruidCoordinator
         }
 
         // Emit stats collected from all duties
-        CoordinatorRunStats allStats = params.getCoordinatorStats();
+        final CoordinatorRunStats allStats = params.getCoordinatorStats();
         if (allStats.rowCount() > 0) {
           final AtomicInteger emittedCount = new AtomicInteger();
           allStats.forEachStat(
@@ -769,6 +769,7 @@ public class DruidCoordinator
               "Collected [%d] rows of stats for group [%s]. Emitted [%d] stats.",
               allStats.rowCount(), dutyGroupName, emittedCount.get()
           );
+          allStats.logStatsAndErrors(log);
         }
 
         // Emit the runtime of the full DutiesRunnable
@@ -828,9 +829,6 @@ public class DruidCoordinator
       cancelLoadsOnDecommissioningServers(cluster);
 
       final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
-      segmentReplicantLookup =
-          SegmentReplicantLookup.make(cluster, dynamicConfig.getReplicateAfterLoadTimeout());
-
       final Map<String, String> debugDimensions = dynamicConfig.getDebugDimensions();
 
       initBalancerExecutor();
@@ -847,11 +845,15 @@ public class DruidCoordinator
           dynamicConfig.getDebugDimensions()
       );
 
-      return params.buildFromExisting()
-                   .withDruidCluster(cluster)
-                   .withBalancerStrategy(balancerStrategy)
-                   .withSegmentReplicantLookup(segmentReplicantLookup)
-                   .build();
+      params = params.buildFromExisting()
+                     .withDruidCluster(cluster)
+                     .withBalancerStrategy(balancerStrategy)
+                     .withSegmentAssignerUsing(loadQueueManager)
+                     .build();
+
+      segmentReplicantLookup = params.getSegmentReplicantLookup();
+
+      return params;
     }
 
     /**

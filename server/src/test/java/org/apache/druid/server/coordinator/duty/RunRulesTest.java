@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -43,7 +42,6 @@ import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategy;
@@ -87,6 +85,7 @@ public class RunRulesTest
   private StubServiceEmitter emitter;
   private MetadataRuleManager databaseRuleManager;
   private SegmentsMetadataManager segmentsMetadataManager;
+  private SegmentLoadQueueManager loadQueueManager;
   private final List<DataSegment> usedSegments =
       CreateDataSegments.ofDatasource(DATASOURCE)
                         .forIntervals(24, Granularities.HOUR)
@@ -102,7 +101,8 @@ public class RunRulesTest
     EmittingLogger.registerEmitter(emitter);
     databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
     segmentsMetadataManager = EasyMock.createNiceMock(SegmentsMetadataManager.class);
-    ruleRunner = new RunRules(new SegmentLoadQueueManager(null, segmentsMetadataManager, null));
+    ruleRunner = new RunRules();
+    loadQueueManager = new SegmentLoadQueueManager(null, segmentsMetadataManager, null);
   }
 
   @After
@@ -158,16 +158,10 @@ public class RunRulesTest
         )
         .build();
 
-    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
-    CoordinatorRunStats stats = afterParams.getCoordinatorStats();
+    CoordinatorRunStats stats = runDutyAndGetStats(params);
 
     // There are 24 under-replicated segments, but only 10 replicas are assigned
     Assert.assertEquals(10L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
-
-    SegmentReplicantLookup replicantLookup = afterParams.getSegmentReplicantLookup();
-    Map<String, Object2LongMap<String>> tierToUnderReplicated
-        = replicantLookup.getTierToDatasourceToUnderReplicated(usedSegments, false);
-    Assert.assertEquals(24L, tierToUnderReplicated.get("normal").getLong(DATASOURCE));
 
     exec.shutdown();
     EasyMock.verify(mockPeon);
@@ -227,8 +221,7 @@ public class RunRulesTest
                                     .build()
         ).build();
 
-    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
-    CoordinatorRunStats stats = afterParams.getCoordinatorStats();
+    CoordinatorRunStats stats = runDutyAndGetStats(params);
 
     // maxNonPrimaryReplicantsToLoad takes effect on hot tier, but not normal tier
     Assert.assertEquals(10L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
@@ -300,8 +293,7 @@ public class RunRulesTest
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
         .build();
 
-    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
-    CoordinatorRunStats stats = afterParams.getCoordinatorStats();
+    CoordinatorRunStats stats = runDutyAndGetStats(params);
 
     Assert.assertEquals(6L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
     Assert.assertEquals(6L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
@@ -337,7 +329,6 @@ public class RunRulesTest
   )
   {
     return createCoordinatorRuntimeParams(druidCluster, dataSegments)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, false))
         .withBalancerStrategy(balancerStrategy);
   }
 
@@ -355,7 +346,8 @@ public class RunRulesTest
         .newBuilder()
         .withDruidCluster(druidCluster)
         .withUsedSegmentsInTest(dataSegments)
-        .withDatabaseRuleManager(databaseRuleManager);
+        .withDatabaseRuleManager(databaseRuleManager)
+        .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, segmentsMetadataManager, null));
   }
 
   /**
@@ -395,9 +387,7 @@ public class RunRulesTest
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy).build();
-
-    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
-    CoordinatorRunStats stats = afterParams.getCoordinatorStats();
+    CoordinatorRunStats stats = runDutyAndGetStats(params);
 
     Assert.assertEquals(12L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
     Assert.assertEquals(18L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "cold", DATASOURCE));
@@ -444,18 +434,14 @@ public class RunRulesTest
         .add(new ServerHolder(normServer.toImmutableDruidServer(), mockPeon))
         .build();
 
-    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster, false);
-
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
         .build();
 
-    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
-    CoordinatorRunStats stats = afterParams.getCoordinatorStats();
+    CoordinatorRunStats stats = runDutyAndGetStats(params);
 
     Assert.assertEquals(12L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
     Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
@@ -497,7 +483,7 @@ public class RunRulesTest
     DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy)
         .build();
 
-    ruleRunner.run(params);
+    runDutyAndGetStats(params);
 
     exec.shutdown();
     EasyMock.verify(mockPeon);
@@ -528,11 +514,9 @@ public class RunRulesTest
         .add(createServerHolder("serverNorm", "normal", mockPeon))
         .build();
 
-    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(DruidCluster.EMPTY, false))
-        .build();
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster).build();
 
-    ruleRunner.run(params);
+    runDutyAndGetStats(params);
 
     final List<Event> events = emitter.getEvents();
     Assert.assertEquals(1, events.size());
@@ -579,19 +563,14 @@ public class RunRulesTest
         .addTier("normal", new ServerHolder(server.toImmutableDruidServer(), mockPeon))
         .build();
 
-    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster, false);
-
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
         .build();
 
-    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
-    CoordinatorRunStats stats = afterParams.getCoordinatorStats();
-
+    CoordinatorRunStats stats = runDutyAndGetStats(params);
     Assert.assertEquals(12L, stats.getDataSourceStat(Stats.Segments.DELETED, DATASOURCE));
 
     exec.shutdown();
@@ -632,8 +611,6 @@ public class RunRulesTest
         )
         .build();
 
-    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster, false);
-
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
@@ -644,12 +621,11 @@ public class RunRulesTest
                 .withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(0L)
                 .build()
         )
-        .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
-    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
-    CoordinatorRunStats stats = afterParams.getCoordinatorStats();
+    CoordinatorRunStats stats = runDutyAndGetStats(params);
 
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
     Assert.assertEquals(12L, stats.getDataSourceStat(Stats.Segments.DELETED, DATASOURCE));
@@ -691,19 +667,15 @@ public class RunRulesTest
         .addTier("normal", new ServerHolder(server2.toImmutableDruidServer(), mockPeon))
         .build();
 
-    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster, false);
-
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
-    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
-    CoordinatorRunStats stats = afterParams.getCoordinatorStats();
-
+    CoordinatorRunStats stats = runDutyAndGetStats(params);
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
     Assert.assertEquals(12L, stats.getDataSourceStat(Stats.Segments.DELETED, DATASOURCE));
 
@@ -741,19 +713,15 @@ public class RunRulesTest
         .add(new ServerHolder(server2.toImmutableDruidServer(), mockPeon))
         .build();
 
-    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster, false);
-
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
-    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
-    CoordinatorRunStats stats = afterParams.getCoordinatorStats();
-
+    CoordinatorRunStats stats = runDutyAndGetStats(params);
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
     Assert.assertEquals(12L, stats.getDataSourceStat(Stats.Segments.DELETED, DATASOURCE));
 
@@ -806,8 +774,6 @@ public class RunRulesTest
         )
         .build();
 
-    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster, false);
-
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
@@ -816,13 +782,11 @@ public class RunRulesTest
         .withDruidCluster(druidCluster)
         .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
-        .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
-    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
-    CoordinatorRunStats stats = afterParams.getCoordinatorStats();
-
+    CoordinatorRunStats stats = runDutyAndGetStats(params);
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
 
     exec.shutdown();
@@ -873,11 +837,11 @@ public class RunRulesTest
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params =
-        makeCoordinatorRuntimeParams(druidCluster, balancerStrategy).build();
+        makeCoordinatorRuntimeParams(druidCluster, balancerStrategy)
+            .withSegmentAssignerUsing(loadQueueManager)
+            .build();
 
-    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
-    CoordinatorRunStats stats = afterParams.getCoordinatorStats();
-
+    CoordinatorRunStats stats = runDutyAndGetStats(params);
     Assert.assertEquals(48L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
@@ -893,17 +857,16 @@ public class RunRulesTest
         0
     );
 
-    afterParams = ruleRunner.run(
+    stats = runDutyAndGetStats(
         CoordinatorRuntimeParamsTestHelpers
             .newBuilder()
             .withDruidCluster(druidCluster)
             .withUsedSegmentsInTest(overFlowSegment)
             .withDatabaseRuleManager(databaseRuleManager)
             .withBalancerStrategy(balancerStrategy)
-            .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, false))
+            .withSegmentAssignerUsing(loadQueueManager)
             .build()
     );
-    stats = afterParams.getCoordinatorStats();
 
     Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
 
@@ -964,9 +927,7 @@ public class RunRulesTest
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withReplicationThrottleLimit(7).build())
         .build();
 
-    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
-    CoordinatorRunStats stats = afterParams.getCoordinatorStats();
-
+    CoordinatorRunStats stats = runDutyAndGetStats(params);
     Assert.assertEquals(24L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
     Assert.assertEquals(24L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
@@ -1024,8 +985,6 @@ public class RunRulesTest
                     .add(new ServerHolder(server2.toImmutableDruidServer(), mockPeon))
                     .build();
 
-    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster, false);
-
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
@@ -1034,12 +993,11 @@ public class RunRulesTest
         .withDruidCluster(druidCluster)
         .withUsedSegmentsInTest(longerUsedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
-        .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
-    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
-    CoordinatorRunStats stats = afterParams.getCoordinatorStats();
+    CoordinatorRunStats stats = runDutyAndGetStats(params);
 
     // There is no throttling on drop
     Assert.assertEquals(25L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
@@ -1096,20 +1054,17 @@ public class RunRulesTest
         .withDruidCluster(druidCluster)
         .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(DruidCluster.EMPTY, false))
         .withBalancerStrategy(balancerStrategy)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
-    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
-    CoordinatorRunStats stats = afterParams.getCoordinatorStats();
-
+    CoordinatorRunStats stats = runDutyAndGetStats(params);
     Assert.assertEquals(1, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
     Assert.assertEquals(2, usedSegments.size());
     Assert.assertEquals(usedSegments, params.getUsedSegments());
-    Assert.assertEquals(usedSegments, afterParams.getUsedSegments());
 
     EasyMock.verify(mockPeon);
     exec.shutdown();
@@ -1167,9 +1122,7 @@ public class RunRulesTest
             .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
             .build();
 
-    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
-    CoordinatorRunStats stats = afterParams.getCoordinatorStats();
-
+    CoordinatorRunStats stats = runDutyAndGetStats(params);
     Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
@@ -1223,8 +1176,7 @@ public class RunRulesTest
             .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
             .build();
 
-    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
-    CoordinatorRunStats stats = afterParams.getCoordinatorStats();
+    CoordinatorRunStats stats = runDutyAndGetStats(params);
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
@@ -1278,8 +1230,7 @@ public class RunRulesTest
             .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
             .build();
 
-    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
-    CoordinatorRunStats stats = afterParams.getCoordinatorStats();
+    CoordinatorRunStats stats = runDutyAndGetStats(params);
     final RowKey tierRowKey = RowKey.builder().add(Dimension.TIER, DruidServer.DEFAULT_TIER).build();
     Assert.assertEquals(
         dataSegment.getSize() * numReplicants,
@@ -1341,8 +1292,7 @@ public class RunRulesTest
             .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
             .build();
 
-    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
-    CoordinatorRunStats stats = afterParams.getCoordinatorStats();
+    CoordinatorRunStats stats = runDutyAndGetStats(params);
     final RowKey tierRowKey = RowKey.builder().add(Dimension.TIER, DruidServer.DEFAULT_TIER).build();
     Assert.assertEquals(
         dataSegment.getSize() * numReplicants,
@@ -1353,6 +1303,12 @@ public class RunRulesTest
 
     exec.shutdown();
     EasyMock.verify(mockPeon);
+  }
+
+  private CoordinatorRunStats runDutyAndGetStats(DruidCoordinatorRuntimeParams params)
+  {
+    params = ruleRunner.run(params);
+    return params.getCoordinatorStats();
   }
 
   private void mockEmptyPeon()

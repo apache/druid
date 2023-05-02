@@ -26,6 +26,7 @@ import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
+import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -60,10 +61,9 @@ public class DruidCoordinatorRuntimeParams
   private final long startTimeNanos;
   private final DruidCluster druidCluster;
   private final MetadataRuleManager databaseRuleManager;
-  private final SegmentReplicantLookup segmentReplicantLookup;
+  private final StrategicSegmentAssigner segmentAssigner;
   private final @Nullable TreeSet<DataSegment> usedSegments;
   private final @Nullable DataSourcesSnapshot dataSourcesSnapshot;
-  private final ReplicationThrottler replicationManager;
   private final ServiceEmitter emitter;
   private final CoordinatorDynamicConfig coordinatorDynamicConfig;
   private final CoordinatorCompactionConfig coordinatorCompactionConfig;
@@ -75,10 +75,9 @@ public class DruidCoordinatorRuntimeParams
       long startTimeNanos,
       DruidCluster druidCluster,
       MetadataRuleManager databaseRuleManager,
-      SegmentReplicantLookup segmentReplicantLookup,
+      StrategicSegmentAssigner segmentAssigner,
       @Nullable TreeSet<DataSegment> usedSegments,
       @Nullable DataSourcesSnapshot dataSourcesSnapshot,
-      ReplicationThrottler replicationManager,
       ServiceEmitter emitter,
       CoordinatorDynamicConfig coordinatorDynamicConfig,
       CoordinatorCompactionConfig coordinatorCompactionConfig,
@@ -90,10 +89,9 @@ public class DruidCoordinatorRuntimeParams
     this.startTimeNanos = startTimeNanos;
     this.druidCluster = druidCluster;
     this.databaseRuleManager = databaseRuleManager;
-    this.segmentReplicantLookup = segmentReplicantLookup;
+    this.segmentAssigner = segmentAssigner;
     this.usedSegments = usedSegments;
     this.dataSourcesSnapshot = dataSourcesSnapshot;
-    this.replicationManager = replicationManager;
     this.emitter = emitter;
     this.coordinatorDynamicConfig = coordinatorDynamicConfig;
     this.coordinatorCompactionConfig = coordinatorCompactionConfig;
@@ -119,7 +117,12 @@ public class DruidCoordinatorRuntimeParams
 
   public SegmentReplicantLookup getSegmentReplicantLookup()
   {
-    return segmentReplicantLookup;
+    return segmentAssigner == null ? null : segmentAssigner.getReplicantLookup();
+  }
+
+  public StrategicSegmentAssigner getSegmentAssigner()
+  {
+    return segmentAssigner;
   }
 
   /**
@@ -136,11 +139,6 @@ public class DruidCoordinatorRuntimeParams
   {
     Preconditions.checkState(usedSegments != null, "usedSegments or dataSourcesSnapshot must be set");
     return usedSegments;
-  }
-
-  public ReplicationThrottler getReplicationManager()
-  {
-    return replicationManager;
   }
 
   public ServiceEmitter getEmitter()
@@ -199,10 +197,9 @@ public class DruidCoordinatorRuntimeParams
         startTimeNanos,
         druidCluster,
         databaseRuleManager,
-        segmentReplicantLookup,
+        segmentAssigner,
         usedSegments,
         dataSourcesSnapshot,
-        replicationManager,
         emitter,
         coordinatorDynamicConfig,
         coordinatorCompactionConfig,
@@ -217,10 +214,9 @@ public class DruidCoordinatorRuntimeParams
     private @Nullable Long startTimeNanos;
     private DruidCluster druidCluster;
     private MetadataRuleManager databaseRuleManager;
-    private SegmentReplicantLookup segmentReplicantLookup;
+    private StrategicSegmentAssigner segmentAssigner;
     private @Nullable TreeSet<DataSegment> usedSegments;
     private @Nullable DataSourcesSnapshot dataSourcesSnapshot;
-    private ReplicationThrottler replicationManager;
     private ServiceEmitter emitter;
     private CoordinatorDynamicConfig coordinatorDynamicConfig;
     private CoordinatorCompactionConfig coordinatorCompactionConfig;
@@ -236,14 +232,13 @@ public class DruidCoordinatorRuntimeParams
       this.broadcastDatasources = new HashSet<>();
     }
 
-    Builder(
+    private Builder(
         long startTimeNanos,
         DruidCluster cluster,
         MetadataRuleManager databaseRuleManager,
-        SegmentReplicantLookup segmentReplicantLookup,
+        StrategicSegmentAssigner segmentAssigner,
         @Nullable TreeSet<DataSegment> usedSegments,
         @Nullable DataSourcesSnapshot dataSourcesSnapshot,
-        ReplicationThrottler replicationManager,
         ServiceEmitter emitter,
         CoordinatorDynamicConfig coordinatorDynamicConfig,
         CoordinatorCompactionConfig coordinatorCompactionConfig,
@@ -255,10 +250,9 @@ public class DruidCoordinatorRuntimeParams
       this.startTimeNanos = startTimeNanos;
       this.druidCluster = cluster;
       this.databaseRuleManager = databaseRuleManager;
-      this.segmentReplicantLookup = segmentReplicantLookup;
+      this.segmentAssigner = segmentAssigner;
       this.usedSegments = usedSegments;
       this.dataSourcesSnapshot = dataSourcesSnapshot;
-      this.replicationManager = replicationManager;
       this.emitter = emitter;
       this.coordinatorDynamicConfig = coordinatorDynamicConfig;
       this.coordinatorCompactionConfig = coordinatorCompactionConfig;
@@ -274,10 +268,9 @@ public class DruidCoordinatorRuntimeParams
           startTimeNanos,
           druidCluster,
           databaseRuleManager,
-          segmentReplicantLookup,
+          segmentAssigner,
           usedSegments,
           dataSourcesSnapshot,
-          replicationManager,
           emitter,
           coordinatorDynamicConfig,
           coordinatorCompactionConfig,
@@ -305,9 +298,18 @@ public class DruidCoordinatorRuntimeParams
       return this;
     }
 
-    public Builder withSegmentReplicantLookup(SegmentReplicantLookup lookup)
+    /**
+     * Creates and sets a {@link StrategicSegmentAssigner} in this builder.
+     */
+    public Builder withSegmentAssignerUsing(SegmentLoadQueueManager loadQueueManager)
     {
-      this.segmentReplicantLookup = lookup;
+      this.segmentAssigner = new StrategicSegmentAssigner(
+          loadQueueManager,
+          druidCluster,
+          balancerStrategy,
+          coordinatorDynamicConfig,
+          stats
+      );
       return this;
     }
 
@@ -331,12 +333,6 @@ public class DruidCoordinatorRuntimeParams
     {
       this.usedSegments = createUsedSegmentsSet(usedSegments);
       this.dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(usedSegments, ImmutableMap.of());
-      return this;
-    }
-
-    public Builder withReplicationManager(ReplicationThrottler replicationManager)
-    {
-      this.replicationManager = replicationManager;
       return this;
     }
 

@@ -23,11 +23,9 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.StrategicSegmentAssigner;
@@ -58,7 +56,7 @@ public class BroadcastDistributionRuleTest
   private ServerHolder activeServer;
   private ServerHolder decommissioningServer1;
   private ServerHolder decommissioningServer2;
-  private SegmentLoadQueueManager stateManager;
+  private SegmentLoadQueueManager loadQueueManager;
 
   private static final String DS_SMALL = "small_source";
   private static final String TIER_1 = "tier1";
@@ -67,7 +65,7 @@ public class BroadcastDistributionRuleTest
   @Before
   public void setUp()
   {
-    stateManager = new SegmentLoadQueueManager(null, null, null);
+    loadQueueManager = new SegmentLoadQueueManager(null, null, null);
     smallSegment = new DataSegment(
         DS_SMALL,
         Intervals.of("0/1000"),
@@ -310,7 +308,7 @@ public class BroadcastDistributionRuleTest
     Assert.assertTrue(holderOfSmallSegment.isServingSegment(smallSegment));
   }
 
-  private static DruidCoordinatorRuntimeParams makeCoordinartorRuntimeParams(
+  private DruidCoordinatorRuntimeParams makeCoordinartorRuntimeParams(
       DruidCluster druidCluster,
       DataSegment... usedSegments
   )
@@ -318,8 +316,8 @@ public class BroadcastDistributionRuleTest
     return CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(druidCluster)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, false))
         .withUsedSegmentsInTest(usedSegments)
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
   }
 
@@ -429,20 +427,7 @@ public class BroadcastDistributionRuleTest
       DruidCoordinatorRuntimeParams params
   )
   {
-    final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
-    ReplicationThrottler throttler = new ReplicationThrottler(
-        null,
-        dynamicConfig.getReplicationThrottleLimit(),
-        dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
-    );
-    StrategicSegmentAssigner segmentAssigner = new StrategicSegmentAssigner(
-        stateManager,
-        params.getDruidCluster(),
-        params.getSegmentReplicantLookup(),
-        throttler,
-        params.getBalancerStrategy(),
-        dynamicConfig
-    );
+    StrategicSegmentAssigner segmentAssigner = params.getSegmentAssigner();
     rule.run(segment, segmentAssigner);
     return segmentAssigner.getStats();
   }

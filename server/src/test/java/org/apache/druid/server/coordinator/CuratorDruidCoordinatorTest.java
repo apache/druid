@@ -48,6 +48,7 @@ import org.apache.druid.server.coordinator.loadqueue.CuratorLoadQueuePeon;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.DeadlockDetectingTimeout;
@@ -301,6 +302,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
 
     final ServerHolder sourceServer = new ServerHolder(source.toImmutableDruidServer(), sourceLoadQueuePeon);
     final ServerHolder destinationServer = new ServerHolder(dest.toImmutableDruidServer(), destinationLoadQueuePeon);
+    final DruidCluster cluster = DruidCluster.builder().add(sourceServer).add(destinationServer).build();
 
     final BalancerStrategy balancerStrategy = EasyMock.mock(BalancerStrategy.class);
     EasyMock.expect(
@@ -312,6 +314,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     ).andReturn(destinationServer).atLeastOnce();
     EasyMock.expect(coordinatorRuntimeParams.getBalancerStrategy())
             .andReturn(balancerStrategy).anyTimes();
+    EasyMock.expect(coordinatorRuntimeParams.getDruidCluster()).andReturn(cluster).anyTimes();
     EasyMock.replay(segmentsMetadataManager, coordinatorRuntimeParams, balancerStrategy);
 
     EasyMock.expect(dataSourcesSnapshot.getDataSource(EasyMock.anyString()))
@@ -424,18 +427,12 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   )
   {
     final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
-    ReplicationThrottler throttler = new ReplicationThrottler(
-        null,
-        dynamicConfig.getReplicationThrottleLimit(),
-        dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
-    );
     return new StrategicSegmentAssigner(
         loadQueueManager,
         params.getDruidCluster(),
-        params.getSegmentReplicantLookup(),
-        throttler,
         params.getBalancerStrategy(),
-        dynamicConfig
+        dynamicConfig,
+        new CoordinatorRunStats()
     );
   }
 }

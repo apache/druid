@@ -69,13 +69,12 @@ public class TierSegmentBalancer
   public TierSegmentBalancer(
       String tier,
       Set<ServerHolder> servers,
-      StrategicSegmentAssigner segmentAssigner,
       DruidCoordinatorRuntimeParams params
   )
   {
     this.tier = tier;
     this.params = params;
-    this.segmentAssigner = segmentAssigner;
+    this.segmentAssigner = params.getSegmentAssigner();
 
     this.strategy = params.getBalancerStrategy();
     this.dynamicConfig = params.getCoordinatorDynamicConfig();
@@ -130,7 +129,7 @@ public class TierSegmentBalancer
     );
 
     if (dynamicConfig.emitBalancingStats()) {
-      strategy.emitStats(tier, segmentAssigner.getStats(), Lists.newArrayList(allServers));
+      strategy.emitStats(tier, runStats, Lists.newArrayList(allServers));
     }
   }
 
@@ -174,16 +173,15 @@ public class TierSegmentBalancer
           maxSegmentsToPick,
           pickLoadingSegments
       );
+    } else if (pickLoadingSegments) {
+      // non-batched sampler cannot pick loading segments
+      return Collections.emptyIterator();
     } else {
-      if (pickLoadingSegments) {
-        return Collections.emptyIterator();
-      } else {
-        return strategy.pickSegmentsToMove(
-            sourceServers,
-            params.getBroadcastDatasources(),
-            dynamicConfig.getPercentOfSegmentsToConsiderPerMove()
-        );
-      }
+      return strategy.pickSegmentsToMove(
+          sourceServers,
+          params.getBroadcastDatasources(),
+          dynamicConfig.getPercentOfSegmentsToConsiderPerMove()
+      );
     }
   }
 

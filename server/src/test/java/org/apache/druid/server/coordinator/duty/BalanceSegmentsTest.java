@@ -31,7 +31,9 @@ import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
+import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.balancer.BalancerSegmentHolder;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
@@ -169,6 +171,7 @@ public class BalanceSegmentsTest
             .withDynamicConfigs(dynamicConfig)
             .withBalancerStrategy(strategy)
             .withBroadcastDatasources(broadcastDatasources)
+            .withSegmentAssignerUsing(loadQueueManager)
             .build();
 
     CoordinatorRunStats stats = runBalancer(params);
@@ -254,6 +257,7 @@ public class BalanceSegmentsTest
         defaultRuntimeParamsBuilder(serverHolder1, serverHolder2, serverHolder3)
             .withDynamicConfigs(dynamicConfig)
             .withBalancerStrategy(strategy)
+            .withSegmentAssignerUsing(loadQueueManager)
             .build();
 
     CoordinatorRunStats stats = runBalancer(params);
@@ -435,7 +439,7 @@ public class BalanceSegmentsTest
 
   private CoordinatorRunStats runBalancer(DruidCoordinatorRuntimeParams params)
   {
-    params = new BalanceSegments(loadQueueManager).run(params);
+    params = new BalanceSegments().run(params);
     if (params == null) {
       Assert.fail("BalanceSegments duty returned null params");
       return new CoordinatorRunStats();
@@ -454,7 +458,7 @@ public class BalanceSegmentsTest
         .withUsedSegmentsInTest(allSegments)
         .withBroadcastDatasources(broadcastDatasources)
         .withBalancerStrategy(balancerStrategy)
-        .withReplicationManager(createReplicationThrottler());
+        .withSegmentAssignerUsing(loadQueueManager);
   }
 
   private ServerHolder createHolder(DruidServer server, DataSegment... loadedSegments)
