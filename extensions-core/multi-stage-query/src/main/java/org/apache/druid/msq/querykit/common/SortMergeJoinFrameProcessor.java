@@ -233,11 +233,11 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
       // Advance one or both trackers.
       if (match) {
         // Matching keys. First advance the tracker with the complete set.
-        final Tracker tracker = trackers.get(trackerWithCompleteSetForCurrentKey);
+        final Tracker completeSetTracker = trackers.get(trackerWithCompleteSetForCurrentKey);
         final Tracker otherTracker = trackers.get(trackerWithCompleteSetForCurrentKey == LEFT ? RIGHT : LEFT);
 
-        tracker.advance();
-        if (!tracker.isCurrentSameKeyAsMark()) {
+        completeSetTracker.advance();
+        if (!completeSetTracker.isCurrentSameKeyAsMark()) {
           // Reached end of complete set. Advance the other tracker.
           otherTracker.advance();
 
@@ -245,14 +245,16 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
           // of both, as appropriate.
           onNextIteration(() -> {
             if (otherTracker.isCurrentSameKeyAsMark()) {
-              otherTracker.markCurrent(); // Set mark to enable cleanup of old frames.
-              tracker.rewindToMark();
+              completeSetTracker.rewindToMark();
             } else {
               // Reached end of the other side too. Advance marks on both trackers.
-              tracker.markCurrent();
-              otherTracker.markCurrent();
+              completeSetTracker.markCurrent();
               trackerWithCompleteSetForCurrentKey = -1;
             }
+
+            // Always update mark of the other tracker, to enable cleanup of old frames. It doesn't ever need to
+            // be rewound.
+            otherTracker.markCurrent();
           });
         }
       } else {
@@ -273,12 +275,14 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
 
         tracker.advance();
 
-        // On next iteration (when we're sure to have data), update mark if the key changed.
+        // On next iteration (when we're sure to have data), check if we've moved on to a new key.
         onNextIteration(() -> {
           if (!tracker.isCurrentSameKeyAsMark()) {
-            tracker.markCurrent();
             trackerWithCompleteSetForCurrentKey = -1;
           }
+
+          // Always update mark, to enable cleanup of old frames. It doesn't ever need to be rewound.
+          tracker.markCurrent();
         });
       }
     }
@@ -320,10 +324,10 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
       }
     }
 
-    if (awaitSet.isEmpty() && trackerAtLimit > 0) {
+    if (awaitSet.isEmpty() && trackerAtLimit >= 0) {
       // All trackers that need more data are at their max buffered bytes limit. Generate a nice exception.
       final Tracker tracker = trackers.get(trackerAtLimit);
-      if (tracker.totalBytesBuffered() > Limits.MAX_BUFFERED_BYTES_FOR_SORT_MERGE_JOIN) {
+      if (tracker.totalBytesBuffered() >= Limits.MAX_BUFFERED_BYTES_FOR_SORT_MERGE_JOIN) {
         // Generate a nice exception.
         throw new MSQException(
             new TooManyRowsWithSameKeyFault(
