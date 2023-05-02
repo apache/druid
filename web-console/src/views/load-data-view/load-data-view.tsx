@@ -414,6 +414,7 @@ export interface LoadDataViewState {
   selectedMetricSpec?: SelectedIndex<MetricSpec>;
 
   // for final step
+  existingDatasources?: string[];
   submitting: boolean;
 }
 
@@ -666,8 +667,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'partition':
       case 'publish':
       case 'tuning':
-      case 'spec':
         return;
+
+      case 'spec':
+        return this.queryForSpec();
     }
   }
 
@@ -3267,9 +3270,24 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
   };
 
+  async queryForSpec() {
+    let existingDatasources: string[];
+    try {
+      existingDatasources = (await Api.instance.get<string[]>('/druid/coordinator/v1/datasources'))
+        .data;
+    } catch {
+      return;
+    }
+
+    this.setState({
+      existingDatasources,
+    });
+  }
+
   renderSpecStep() {
-    const { spec, submitting } = this.state;
+    const { spec, existingDatasources, submitting } = this.state;
     const issueWithSpec = getIssueWithSpec(spec);
+    const datasource = deepGet(spec, 'spec.dataSchema.dataSource');
 
     return (
       <>
@@ -3292,6 +3310,31 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               >{`There is an issue with the spec: ${issueWithSpec}`}</Callout>
             </FormGroup>
           )}
+          {getSchemaMode(spec) === 'type-aware-discovery' &&
+            existingDatasources?.includes(datasource) && (
+              <FormGroup>
+                <Callout intent={Intent.WARNING}>
+                  <p>
+                    It appears that you are using type-aware schema discovery (
+                    <Code>useSchemaDiscovery: true</Code>) while ingesting data into a datasource (
+                    <Code>{datasource}</Code>) that already exists.
+                  </p>
+                  <p>
+                    If the original datasource was ingested string-based schema discovery this can
+                    potentially cause problems with how multi-value string values will be recorded.
+                    For more information see the{' '}
+                    <ExternalLink
+                      href={`${getLink(
+                        'DOCS',
+                      )}/ingestion/schema-design.html#schema-auto-discovery-for-dimensions`}
+                    >
+                      documentation
+                    </ExternalLink>
+                    .
+                  </p>
+                </Callout>
+              </FormGroup>
+            )}
           <AppendToExistingIssue spec={spec} onChangeSpec={this.updateSpec} />
         </div>
         <div className="next-bar">
