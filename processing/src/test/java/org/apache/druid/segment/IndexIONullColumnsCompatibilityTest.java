@@ -100,7 +100,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
     segmentDir = indexMerger.persist(
         incrementalIndex,
         temporaryFolder.newFolder(),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         OffHeapMemorySegmentWriteOutMediumFactory.instance()
     );
   }
