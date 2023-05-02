@@ -26,9 +26,9 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.StrategicSegmentAssigner;
+import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategy;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -317,6 +317,7 @@ public class BroadcastDistributionRuleTest
         .newBuilder()
         .withDruidCluster(druidCluster)
         .withUsedSegmentsInTest(usedSegments)
+        .withBalancerStrategy(new RandomBalancerStrategy())
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
   }

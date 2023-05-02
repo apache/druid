@@ -59,7 +59,6 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
-import org.apache.druid.server.coordinator.balancer.UniformIntervalBalancerStrategy;
 import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.server.coordinator.duty.CollectSegmentAndServerStats;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
@@ -829,15 +828,9 @@ public class DruidCoordinator
       cancelLoadsOnDecommissioningServers(cluster);
 
       final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
-      final Map<String, String> debugDimensions = dynamicConfig.getDebugDimensions();
 
       initBalancerExecutor();
-      final BalancerStrategy balancerStrategy;
-      if (debugDimensions != null && debugDimensions.containsKey("strategy")) {
-        balancerStrategy = new UniformIntervalBalancerStrategy();
-      } else {
-        balancerStrategy = factory.createBalancerStrategy(balancerExec);
-      }
+      final BalancerStrategy balancerStrategy = factory.createBalancerStrategy(balancerExec);
       log.info(
           "Created balancer strategy [%s], round-robin assignment is [%s], debug dimensions are [%s].",
           balancerStrategy.getClass().getSimpleName(),

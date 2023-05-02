@@ -40,14 +40,12 @@ import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
-import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyConfig;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.DiskNormalizedCostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategyFactory;
-import org.apache.druid.server.coordinator.balancer.UniformIntervalBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.duty.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.NewestSegmentFirstPolicy;
@@ -226,20 +224,18 @@ public class CoordinatorSimulationBuilder
   private BalancerStrategyFactory createBalancerStrategy(Environment env)
   {
     if (balancerStrategy == null) {
-      return new UniformIntervalBalancerStrategyFactory();
+      return new CostBalancerStrategyFactory();
     }
 
     switch (balancerStrategy) {
-      case BalancerStrategy.COST:
+      case "cost":
         return new CostBalancerStrategyFactory();
-      case BalancerStrategy.CACHING_COST:
+      case "cachingCost":
         return buildCachingCostBalancerStrategy(env);
-      case BalancerStrategy.DISK_NORMALIZED:
+      case "diskNormalized":
         return new DiskNormalizedCostBalancerStrategyFactory();
-      case BalancerStrategy.RANDOM:
+      case "random":
         return new RandomBalancerStrategyFactory();
-      case BalancerStrategy.UNIFORM_INTERVAL:
-        return new UniformIntervalBalancerStrategyFactory();
       default:
         throw new IAE("Unknown balancer stratgy: " + balancerStrategy);
     }

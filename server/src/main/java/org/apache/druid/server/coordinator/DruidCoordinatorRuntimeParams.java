@@ -300,9 +300,14 @@ public class DruidCoordinatorRuntimeParams
 
     /**
      * Creates and sets a {@link StrategicSegmentAssigner} in this builder.
+     * The {@code DruidCluster}, {@code CoordinatoryDynamicConfig} and
+     * {@code BalancerStrategy} must already be set before calling this method.
      */
     public Builder withSegmentAssignerUsing(SegmentLoadQueueManager loadQueueManager)
     {
+      Preconditions.checkNotNull(druidCluster);
+      Preconditions.checkNotNull(balancerStrategy);
+      Preconditions.checkNotNull(coordinatorDynamicConfig);
       this.segmentAssigner = new StrategicSegmentAssigner(
           loadQueueManager,
           druidCluster,

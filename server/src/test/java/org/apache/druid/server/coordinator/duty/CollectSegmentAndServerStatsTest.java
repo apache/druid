@@ -25,6 +25,7 @@ import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategy;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.junit.Assert;
@@ -49,6 +50,7 @@ public class CollectSegmentAndServerStatsTest
         CoordinatorRuntimeParamsTestHelpers.newBuilder()
                                            .withDruidCluster(DruidCluster.EMPTY)
                                            .withUsedSegmentsInTest()
+                                           .withBalancerStrategy(new RandomBalancerStrategy())
                                            .withSegmentAssignerUsing(null)
                                            .build();
 

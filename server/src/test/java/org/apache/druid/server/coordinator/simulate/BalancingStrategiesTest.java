@@ -20,22 +20,14 @@
 package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
-import org.apache.druid.server.coordinator.CreateDataSegments;
-import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
 
 @RunWith(Parameterized.class)
 public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
@@ -48,11 +40,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
   @Parameterized.Parameters(name = "{0}")
   public static String[] getTestParameters()
   {
-    return new String[]{
-        BalancerStrategy.COST,
-        BalancerStrategy.CACHING_COST,
-        BalancerStrategy.UNIFORM_INTERVAL
-    };
+    return new String[]{"cost", "cachingCost"};
   }
 
   public BalancingStrategiesTest(String strategy)
@@ -189,133 +177,6 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
 
     for (DruidServer historical : historicals) {
       Assert.assertEquals(250, historical.getTotalSegments());
-    }
-  }
-
-  @Test
-  public void testClusterGetsBalancedWithOneSegmentPerInterval()
-  {
-    Assume.assumeTrue("uniformInterval".equals(strategy));
-
-    final List<DruidServer> historicals = new ArrayList<>();
-    for (int i = 0; i < 5; i++) {
-      historicals.add(createHistorical(i, Tier.T1, SIZE_1TB));
-    }
-
-    final List<DataSegment> segments =
-        CreateDataSegments.ofDatasource(DS.WIKI)
-                          .forIntervals(100, Granularities.DAY)
-                          .startingAt("2022-01-01")
-                          .withNumPartitions(1)
-                          .eachOfSizeInMb(500);
-
-    CoordinatorSimulation sim =
-        CoordinatorSimulation.builder()
-                             .withDynamicConfig(createDynamicConfig(1000, 0, 100))
-                             .withBalancer(strategy)
-                             .withRules(DS.WIKI, Load.on(Tier.T1, 1).forever())
-                             .withServers(historicals)
-                             .withSegments(segments)
-                             .build();
-    startSimulation(sim);
-
-    // All segments are loaded on histT11
-    final DruidServer historicalT11 = historicals.get(0);
-    segments.forEach(historicalT11::addDataSegment);
-
-    // Run 1: Some segments are moved to historicalT12
-    runCoordinatorCycle();
-    verifyNotEmitted(Metric.ASSIGNED_COUNT);
-    verifyValue(Metric.MOVED_COUNT, 80L);
-
-    loadQueuedSegments();
-    for (DruidServer historical : historicals) {
-      Assert.assertEquals(20, historical.getTotalSegments());
-    }
-
-    // Run 2: nothing is assigned, nothing is moved as servers are already balanced
-    runCoordinatorCycle();
-    verifyNotEmitted(Metric.ASSIGNED_COUNT);
-    verifyNotEmitted(Metric.MOVED_COUNT);
-  }
-
-  @Test
-  public void testClusterWithMultipleDatasourcesGetsBalanced()
-  {
-    Assume.assumeTrue("uniformInterval".equals(strategy));
-
-    final List<DruidServer> historicals = new ArrayList<>();
-    for (int i = 0; i < 20; i++) {
-      historicals.add(createHistorical(i, Tier.T1, SIZE_1TB));
-    }
-
-    final Random random = new Random(1414);
-
-    final List<DataSegment> segments = new ArrayList<>();
-    final List<Granularity> granularities = Arrays.asList(
-        Granularities.HOUR,
-        Granularities.EIGHT_HOUR,
-        Granularities.DAY,
-        Granularities.MONTH,
-        Granularities.YEAR,
-        Granularities.ALL
-    );
-
-    // Create multiple datasources with diferent intervals, granularities and sizes
-    for (int i = 0; i < 10; ++i) {
-      final String datasource = "ds_" + i;
-
-      Granularity granularity = granularities.get(random.nextInt(granularities.size()));
-      int year = 2010 + random.nextInt(14);
-      List<DataSegment> datasourceSegments =
-          CreateDataSegments.ofDatasource(datasource)
-                            .forIntervals(10, granularity)
-                            .startingAt(year + "-01-01")
-                            .withNumPartitions(random.nextInt(500))
-                            .eachOfSizeInMb(random.nextInt(1000));
-
-      segments.addAll(datasourceSegments);
-    }
-
-    int totalSegments = segments.size();
-
-    // Use the strategy itself to do assignments, not round robin
-    CoordinatorDynamicConfig dynamicConfig =
-        CoordinatorDynamicConfig.builder()
-                                .withMaxSegmentsToMove(totalSegments)
-                                .withMaxSegmentsInNodeLoadingQueue(0)
-                                .withReplicationThrottleLimit(totalSegments)
-                                .withUseRoundRobinSegmentAssignment(false)
-                                .withEmitBalancingStats(true)
-                                .build();
-
-    CoordinatorSimulation sim =
-        CoordinatorSimulation.builder()
-                             .withDynamicConfig(dynamicConfig)
-                             .withBalancer(strategy)
-                             .withServers(historicals)
-                             .withSegments(segments)
-                             .withRules("_default", Load.on(Tier.T1, 2).forever())
-                             .build();
-    startSimulation(sim);
-
-    // Run 1: All segments are assigned, some are moved
-    runCoordinatorCycle();
-    loadQueuedSegments();
-
-    for (DruidServer historical : historicals) {
-      double usedPercentage = (100.0f * historical.getCurrSize() / historical.getMaxSize());
-      Assert.assertTrue(usedPercentage >= 76.0 && usedPercentage <= 77.0);
-
-      int numSegments = historical.getTotalSegments();
-      Assert.assertTrue(numSegments >= 1395 && numSegments <= 1420);
-    }
-
-    // Verify that no movements happen in later runs
-    for (int i = 0; i < 3; ++i) {
-      runCoordinatorCycle();
-      verifyNotEmitted(Metric.ASSIGNED_COUNT);
-      verifyNotEmitted(Metric.MOVED_COUNT);
     }
   }
 

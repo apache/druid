@@ -43,9 +43,7 @@ import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
-import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategy;
-import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategy;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
@@ -93,6 +91,8 @@ public class RunRulesTest
                         .withNumPartitions(1)
                         .eachOfSizeInMb(1);
 
+  private ListeningExecutorService balancerExecutor;
+
   @Before
   public void setUp()
   {
@@ -103,11 +103,13 @@ public class RunRulesTest
     segmentsMetadataManager = EasyMock.createNiceMock(SegmentsMetadataManager.class);
     ruleRunner = new RunRules();
     loadQueueManager = new SegmentLoadQueueManager(null, segmentsMetadataManager, null);
+    balancerExecutor = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
   }
 
   @After
   public void tearDown()
   {
+    balancerExecutor.shutdown();
     EasyMock.verify(databaseRuleManager);
   }
 
@@ -146,16 +148,15 @@ public class RunRulesTest
             new ServerHolder(server2.toImmutableDruidServer(), mockPeon)
         ).build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
-    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
-
-    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy)
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
+        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withDynamicConfigs(
             CoordinatorDynamicConfig
                 .builder()
                 .withMaxNonPrimaryReplicantsToLoad(10)
                 .build()
         )
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -163,7 +164,6 @@ public class RunRulesTest
     // There are 24 under-replicated segments, but only 10 replicas are assigned
     Assert.assertEquals(10L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
 
-    exec.shutdown();
     EasyMock.verify(mockPeon);
   }
 
@@ -211,15 +211,15 @@ public class RunRulesTest
         )
         .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
-    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
-
-    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy)
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
+        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
                                     .withMaxNonPrimaryReplicantsToLoad(10)
                                     .build()
-        ).build();
+        )
+        .withSegmentAssignerUsing(loadQueueManager)
+        .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
 
@@ -227,7 +227,6 @@ public class RunRulesTest
     Assert.assertEquals(10L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
     Assert.assertEquals(48L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
 
-    exec.shutdown();
     EasyMock.verify(mockPeon);
   }
 
@@ -286,11 +285,10 @@ public class RunRulesTest
         )
         .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
-    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
-
-    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy)
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
+        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -300,7 +298,6 @@ public class RunRulesTest
     Assert.assertEquals(12L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "cold", DATASOURCE));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
-    exec.shutdown();
     EasyMock.verify(mockPeon);
   }
 
@@ -314,22 +311,12 @@ public class RunRulesTest
     return new ServerHolder(createHistorical(name, tier).toImmutableDruidServer(), peon);
   }
 
-  private DruidCoordinatorRuntimeParams.Builder makeCoordinatorRuntimeParams(
+  private DruidCoordinatorRuntimeParams.Builder createCoordinatorRuntimeParams(
       DruidCluster druidCluster,
-      BalancerStrategy balancerStrategy
+      DataSegment segment
   )
   {
-    return makeCoordinatorRuntimeParams(druidCluster, balancerStrategy, usedSegments);
-  }
-
-  private DruidCoordinatorRuntimeParams.Builder makeCoordinatorRuntimeParams(
-      DruidCluster druidCluster,
-      BalancerStrategy balancerStrategy,
-      List<DataSegment> dataSegments
-  )
-  {
-    return createCoordinatorRuntimeParams(druidCluster, dataSegments)
-        .withBalancerStrategy(balancerStrategy);
+    return createCoordinatorRuntimeParams(druidCluster, Collections.singletonList(segment));
   }
 
   private DruidCoordinatorRuntimeParams.Builder createCoordinatorRuntimeParams(DruidCluster druidCluster)
@@ -346,8 +333,7 @@ public class RunRulesTest
         .newBuilder()
         .withDruidCluster(druidCluster)
         .withUsedSegmentsInTest(dataSegments)
-        .withDatabaseRuleManager(databaseRuleManager)
-        .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, segmentsMetadataManager, null));
+        .withDatabaseRuleManager(databaseRuleManager);
   }
 
   /**
@@ -383,17 +369,16 @@ public class RunRulesTest
         .add(createServerHolder("serverCold", "cold", mockPeon))
         .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
-    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
-
-    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy).build();
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
+        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
+        .withSegmentAssignerUsing(loadQueueManager)
+        .build();
     CoordinatorRunStats stats = runDutyAndGetStats(params);
 
     Assert.assertEquals(12L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
     Assert.assertEquals(18L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "cold", DATASOURCE));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
-    exec.shutdown();
     EasyMock.verify(mockPeon);
   }
 
@@ -434,11 +419,9 @@ public class RunRulesTest
         .add(new ServerHolder(normServer.toImmutableDruidServer(), mockPeon))
         .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
-    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
-
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withBalancerStrategy(balancerStrategy)
+        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -447,7 +430,6 @@ public class RunRulesTest
     Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
-    exec.shutdown();
     EasyMock.verify(mockPeon);
   }
 
@@ -477,15 +459,13 @@ public class RunRulesTest
         .add(createServerHolder("serverNorm", "normal", mockPeon))
         .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
-    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
-
-    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy)
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
+        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     runDutyAndGetStats(params);
 
-    exec.shutdown();
     EasyMock.verify(mockPeon);
   }
 
@@ -563,17 +543,13 @@ public class RunRulesTest
         .addTier("normal", new ServerHolder(server.toImmutableDruidServer(), mockPeon))
         .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
-    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
-
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withBalancerStrategy(balancerStrategy)
+        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
     Assert.assertEquals(12L, stats.getDataSourceStat(Stats.Segments.DELETED, DATASOURCE));
-
-    exec.shutdown();
   }
 
   @Test
@@ -611,9 +587,6 @@ public class RunRulesTest
         )
         .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
-    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
-
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
         .withDynamicConfigs(
             CoordinatorDynamicConfig
@@ -621,7 +594,7 @@ public class RunRulesTest
                 .withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(0L)
                 .build()
         )
-        .withBalancerStrategy(balancerStrategy)
+        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
@@ -630,7 +603,6 @@ public class RunRulesTest
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
     Assert.assertEquals(12L, stats.getDataSourceStat(Stats.Segments.DELETED, DATASOURCE));
 
-    exec.shutdown();
     EasyMock.verify(mockPeon);
   }
 
@@ -667,11 +639,8 @@ public class RunRulesTest
         .addTier("normal", new ServerHolder(server2.toImmutableDruidServer(), mockPeon))
         .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
-    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
-
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withBalancerStrategy(balancerStrategy)
+        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
@@ -679,7 +648,6 @@ public class RunRulesTest
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
     Assert.assertEquals(12L, stats.getDataSourceStat(Stats.Segments.DELETED, DATASOURCE));
 
-    exec.shutdown();
     EasyMock.verify(mockPeon);
   }
 
@@ -713,11 +681,8 @@ public class RunRulesTest
         .add(new ServerHolder(server2.toImmutableDruidServer(), mockPeon))
         .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
-    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
-
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withBalancerStrategy(balancerStrategy)
+        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
@@ -725,7 +690,6 @@ public class RunRulesTest
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
     Assert.assertEquals(12L, stats.getDataSourceStat(Stats.Segments.DELETED, DATASOURCE));
 
-    exec.shutdown();
     EasyMock.verify(mockPeon);
   }
 
@@ -774,22 +738,18 @@ public class RunRulesTest
         )
         .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
-    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
-
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(druidCluster)
         .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
-        .withBalancerStrategy(balancerStrategy)
+        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
 
-    exec.shutdown();
     EasyMock.verify(mockPeon);
     EasyMock.verify(anotherMockPeon);
   }
@@ -833,11 +793,10 @@ public class RunRulesTest
         )
         .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
-    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
-
+    final CostBalancerStrategy balancerStrategy = new CostBalancerStrategy(balancerExecutor);
     DruidCoordinatorRuntimeParams params =
-        makeCoordinatorRuntimeParams(druidCluster, balancerStrategy)
+        createCoordinatorRuntimeParams(druidCluster)
+            .withBalancerStrategy(balancerStrategy)
             .withSegmentAssignerUsing(loadQueueManager)
             .build();
 
@@ -871,7 +830,6 @@ public class RunRulesTest
     Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
 
     EasyMock.verify(mockPeon);
-    exec.shutdown();
   }
 
   /**
@@ -920,11 +878,10 @@ public class RunRulesTest
         )
         .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
-    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
-
-    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy)
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
+        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withReplicationThrottleLimit(7).build())
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -933,7 +890,6 @@ public class RunRulesTest
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
     EasyMock.verify(mockPeon);
-    exec.shutdown();
   }
 
   @Test
@@ -985,15 +941,12 @@ public class RunRulesTest
                     .add(new ServerHolder(server2.toImmutableDruidServer(), mockPeon))
                     .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
-    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
-
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(druidCluster)
         .withUsedSegmentsInTest(longerUsedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
-        .withBalancerStrategy(balancerStrategy)
+        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
@@ -1002,7 +955,6 @@ public class RunRulesTest
     // There is no throttling on drop
     Assert.assertEquals(25L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
     EasyMock.verify(mockPeon);
-    exec.shutdown();
   }
 
   @Test
@@ -1046,15 +998,12 @@ public class RunRulesTest
         createServerHolder("serverHot", DruidServer.DEFAULT_TIER, mockPeon)
     ).build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
-    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
-
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(druidCluster)
         .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
-        .withBalancerStrategy(balancerStrategy)
+        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
@@ -1067,7 +1016,6 @@ public class RunRulesTest
     Assert.assertEquals(usedSegments, params.getUsedSegments());
 
     EasyMock.verify(mockPeon);
-    exec.shutdown();
   }
 
   /**
@@ -1115,11 +1063,11 @@ public class RunRulesTest
         )
     ).build();
 
-    RandomBalancerStrategy balancerStrategy = new RandomBalancerStrategy();
-
     DruidCoordinatorRuntimeParams params =
-        makeCoordinatorRuntimeParams(druidCluster, balancerStrategy, Collections.singletonList(dataSegment))
+        createCoordinatorRuntimeParams(druidCluster, dataSegment)
+            .withBalancerStrategy(new RandomBalancerStrategy())
             .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
+            .withSegmentAssignerUsing(loadQueueManager)
             .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -1169,11 +1117,11 @@ public class RunRulesTest
         )
     ).build();
 
-    RandomBalancerStrategy balancerStrategy = new RandomBalancerStrategy();
-
     DruidCoordinatorRuntimeParams params =
-        makeCoordinatorRuntimeParams(druidCluster, balancerStrategy, Collections.singletonList(dataSegment))
+        createCoordinatorRuntimeParams(druidCluster, dataSegment)
+            .withBalancerStrategy(new RandomBalancerStrategy())
             .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
+            .withSegmentAssignerUsing(loadQueueManager)
             .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -1223,11 +1171,11 @@ public class RunRulesTest
         )
     ).build();
 
-    RandomBalancerStrategy balancerStrategy = new RandomBalancerStrategy();
-
     DruidCoordinatorRuntimeParams params =
-        makeCoordinatorRuntimeParams(druidCluster, balancerStrategy, Collections.singletonList(dataSegment))
+        createCoordinatorRuntimeParams(druidCluster, dataSegment)
+            .withBalancerStrategy(new RandomBalancerStrategy())
             .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
+            .withSegmentAssignerUsing(loadQueueManager)
             .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -1284,12 +1232,11 @@ public class RunRulesTest
         )
     ).build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
-    CostBalancerStrategy balancerStrategy = new CostBalancerStrategy(exec);
-
     DruidCoordinatorRuntimeParams params =
-        makeCoordinatorRuntimeParams(druidCluster, balancerStrategy, Collections.singletonList(dataSegment))
+        createCoordinatorRuntimeParams(druidCluster, dataSegment)
+            .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
             .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
+            .withSegmentAssignerUsing(loadQueueManager)
             .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -1301,7 +1248,6 @@ public class RunRulesTest
     Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
-    exec.shutdown();
     EasyMock.verify(mockPeon);
   }
 
