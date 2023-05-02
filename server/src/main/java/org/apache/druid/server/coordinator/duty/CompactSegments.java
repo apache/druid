@@ -109,7 +109,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     LOG.info("Compact segments");
 
     final CoordinatorCompactionConfig dynamicConfig = params.getCoordinatorCompactionConfig();
-    final CoordinatorRunStats stats = new CoordinatorRunStats();
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
     List<DataSourceCompactionConfig> compactionConfigList = dynamicConfig.getCompactionConfigs();
     if (dynamicConfig.getMaxCompactionTaskSlots() > 0) {
       Map<String, SegmentTimeline> dataSources =
@@ -232,9 +232,7 @@ public class CompactSegments implements CoordinatorCustomDuty
       autoCompactionSnapshotPerDataSource.set(new HashMap<>());
     }
 
-    return params.buildFromExisting()
-                 .withCoordinatorStats(stats)
-                 .build();
+    return params;
   }
 
   /**

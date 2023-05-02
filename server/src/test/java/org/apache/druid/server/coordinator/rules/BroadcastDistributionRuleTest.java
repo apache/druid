@@ -23,7 +23,6 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
@@ -313,8 +312,8 @@ public class BroadcastDistributionRuleTest
       DataSegment... usedSegments
   )
   {
-    return CoordinatorRuntimeParamsTestHelpers
-        .newBuilder()
+    return DruidCoordinatorRuntimeParams
+        .newBuilder(System.nanoTime())
         .withDruidCluster(druidCluster)
         .withUsedSegmentsInTest(usedSegments)
         .withBalancerStrategy(new RandomBalancerStrategy())

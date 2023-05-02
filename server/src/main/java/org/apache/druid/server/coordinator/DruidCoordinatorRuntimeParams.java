@@ -28,13 +28,14 @@ import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -115,6 +116,7 @@ public class DruidCoordinatorRuntimeParams
     return databaseRuleManager;
   }
 
+  @Nullable
   public SegmentReplicantLookup getSegmentReplicantLookup()
   {
     return segmentAssigner == null ? null : segmentAssigner.getReplicantLookup();
@@ -186,9 +188,9 @@ public class DruidCoordinatorRuntimeParams
     return dataSourcesSnapshot;
   }
 
-  public static Builder newBuilder()
+  public static Builder newBuilder(long startTimeNanos)
   {
-    return new Builder();
+    return new Builder(startTimeNanos);
   }
 
   public Builder buildFromExisting()
@@ -211,25 +213,26 @@ public class DruidCoordinatorRuntimeParams
 
   public static class Builder
   {
-    private @Nullable Long startTimeNanos;
+    private final long startTimeNanos;
     private DruidCluster druidCluster;
     private MetadataRuleManager databaseRuleManager;
+    private SegmentLoadQueueManager loadQueueManager;
     private StrategicSegmentAssigner segmentAssigner;
     private @Nullable TreeSet<DataSegment> usedSegments;
     private @Nullable DataSourcesSnapshot dataSourcesSnapshot;
     private ServiceEmitter emitter;
     private CoordinatorDynamicConfig coordinatorDynamicConfig;
     private CoordinatorCompactionConfig coordinatorCompactionConfig;
-    private final CoordinatorRunStats stats;
+    private CoordinatorRunStats stats;
     private BalancerStrategy balancerStrategy;
     private Set<String> broadcastDatasources;
 
-    private Builder()
+    private Builder(long startTimeNanos)
     {
-      this.stats = new CoordinatorRunStats();
+      this.startTimeNanos = startTimeNanos;
       this.coordinatorDynamicConfig = CoordinatorDynamicConfig.builder().build();
       this.coordinatorCompactionConfig = CoordinatorCompactionConfig.empty();
-      this.broadcastDatasources = new HashSet<>();
+      this.broadcastDatasources = Collections.emptySet();
     }
 
     private Builder(
@@ -263,7 +266,9 @@ public class DruidCoordinatorRuntimeParams
 
     public DruidCoordinatorRuntimeParams build()
     {
-      Preconditions.checkNotNull(startTimeNanos, "startTime must be set");
+      initStatsIfRequired();
+      initSegmentAssignerIfRequired();
+
       return new DruidCoordinatorRuntimeParams(
           startTimeNanos,
           druidCluster,
@@ -280,10 +285,30 @@ public class DruidCoordinatorRuntimeParams
       );
     }
 
-    public Builder withStartTimeNanos(long startTimeNanos)
+    private void initStatsIfRequired()
     {
-      this.startTimeNanos = startTimeNanos;
-      return this;
+      Map<Dimension, String> debugDimensions =
+          coordinatorDynamicConfig == null ? null : coordinatorDynamicConfig.getValidatedDebugDimensions();
+      stats = stats == null ? new CoordinatorRunStats(debugDimensions) : stats;
+    }
+
+    private void initSegmentAssignerIfRequired()
+    {
+      if (segmentAssigner != null || loadQueueManager == null) {
+        return;
+      }
+
+      Preconditions.checkNotNull(druidCluster);
+      Preconditions.checkNotNull(balancerStrategy);
+      Preconditions.checkNotNull(coordinatorDynamicConfig);
+      Preconditions.checkNotNull(stats);
+      segmentAssigner = new StrategicSegmentAssigner(
+          loadQueueManager,
+          druidCluster,
+          balancerStrategy,
+          coordinatorDynamicConfig,
+          stats
+      );
     }
 
     public Builder withDruidCluster(DruidCluster cluster)
@@ -299,22 +324,12 @@ public class DruidCoordinatorRuntimeParams
     }
 
     /**
-     * Creates and sets a {@link StrategicSegmentAssigner} in this builder.
-     * The {@code DruidCluster}, {@code CoordinatoryDynamicConfig} and
-     * {@code BalancerStrategy} must already be set before calling this method.
+     * Sets the {@link SegmentLoadQueueManager} which is used while constructing
+     * the {@link StrategicSegmentAssigner} used in the params.
      */
     public Builder withSegmentAssignerUsing(SegmentLoadQueueManager loadQueueManager)
     {
-      Preconditions.checkNotNull(druidCluster);
-      Preconditions.checkNotNull(balancerStrategy);
-      Preconditions.checkNotNull(coordinatorDynamicConfig);
-      this.segmentAssigner = new StrategicSegmentAssigner(
-          loadQueueManager,
-          druidCluster,
-          balancerStrategy,
-          coordinatorDynamicConfig,
-          stats
-      );
+      this.loadQueueManager = loadQueueManager;
       return this;
     }
 
@@ -344,12 +359,6 @@ public class DruidCoordinatorRuntimeParams
     public Builder withEmitter(ServiceEmitter emitter)
     {
       this.emitter = emitter;
-      return this;
-    }
-
-    public Builder withCoordinatorStats(CoordinatorRunStats stats)
-    {
-      this.stats.accumulate(stats);
       return this;
     }
 

@@ -38,7 +38,6 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
-import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -329,8 +328,8 @@ public class RunRulesTest
       List<DataSegment> dataSegments
   )
   {
-    return CoordinatorRuntimeParamsTestHelpers
-        .newBuilder()
+    return DruidCoordinatorRuntimeParams
+        .newBuilder(0)
         .withDruidCluster(druidCluster)
         .withUsedSegmentsInTest(dataSegments)
         .withDatabaseRuleManager(databaseRuleManager);
@@ -738,11 +737,7 @@ public class RunRulesTest
         )
         .build();
 
-    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
-        .newBuilder()
-        .withDruidCluster(druidCluster)
-        .withUsedSegmentsInTest(usedSegments)
-        .withDatabaseRuleManager(databaseRuleManager)
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
@@ -817,11 +812,8 @@ public class RunRulesTest
     );
 
     stats = runDutyAndGetStats(
-        CoordinatorRuntimeParamsTestHelpers
-            .newBuilder()
-            .withDruidCluster(druidCluster)
+        createCoordinatorRuntimeParams(druidCluster)
             .withUsedSegmentsInTest(overFlowSegment)
-            .withDatabaseRuleManager(databaseRuleManager)
             .withBalancerStrategy(balancerStrategy)
             .withSegmentAssignerUsing(loadQueueManager)
             .build()
@@ -941,11 +933,8 @@ public class RunRulesTest
                     .add(new ServerHolder(server2.toImmutableDruidServer(), mockPeon))
                     .build();
 
-    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
-        .newBuilder()
-        .withDruidCluster(druidCluster)
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
         .withUsedSegmentsInTest(longerUsedSegments)
-        .withDatabaseRuleManager(databaseRuleManager)
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
@@ -998,11 +987,8 @@ public class RunRulesTest
         createServerHolder("serverHot", DruidServer.DEFAULT_TIER, mockPeon)
     ).build();
 
-    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
-        .newBuilder()
-        .withDruidCluster(druidCluster)
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
         .withUsedSegmentsInTest(usedSegments)
-        .withDatabaseRuleManager(databaseRuleManager)
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
         .withSegmentAssignerUsing(loadQueueManager)

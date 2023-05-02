@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
-import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
@@ -450,8 +449,8 @@ public class BalanceSegmentsTest
       ServerHolder... servers
   )
   {
-    return CoordinatorRuntimeParamsTestHelpers
-        .newBuilder()
+    return DruidCoordinatorRuntimeParams
+        .newBuilder(System.nanoTime())
         .withDruidCluster(DruidCluster.builder().addTier("normal", servers).build())
         .withUsedSegmentsInTest(allSegments)
         .withBroadcastDatasources(broadcastDatasources)

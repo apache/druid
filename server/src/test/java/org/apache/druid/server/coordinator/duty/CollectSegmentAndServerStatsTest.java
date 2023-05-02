@@ -21,11 +21,11 @@ package org.apache.druid.server.coordinator.duty;
 
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.Object2LongMaps;
-import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategy;
+import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.junit.Assert;
@@ -47,12 +47,12 @@ public class CollectSegmentAndServerStatsTest
   public void testCollectedSegmentStats()
   {
     DruidCoordinatorRuntimeParams runtimeParams =
-        CoordinatorRuntimeParamsTestHelpers.newBuilder()
-                                           .withDruidCluster(DruidCluster.EMPTY)
-                                           .withUsedSegmentsInTest()
-                                           .withBalancerStrategy(new RandomBalancerStrategy())
-                                           .withSegmentAssignerUsing(null)
-                                           .build();
+        DruidCoordinatorRuntimeParams.newBuilder(System.nanoTime())
+                                     .withDruidCluster(DruidCluster.EMPTY)
+                                     .withUsedSegmentsInTest()
+                                     .withBalancerStrategy(new RandomBalancerStrategy())
+                                     .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null, null))
+                                     .build();
 
     Mockito.when(mockDruidCoordinator.computeNumsUnavailableUsedSegmentsPerDataSource())
            .thenReturn(Object2IntMaps.singleton("ds", 10));

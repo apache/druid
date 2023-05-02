@@ -714,9 +714,8 @@ public class DruidCoordinator
 
         DruidCoordinatorRuntimeParams params =
             DruidCoordinatorRuntimeParams
-                .newBuilder()
+                .newBuilder(startTimeNanos)
                 .withDatabaseRuleManager(metadataRuleManager)
-                .withStartTimeNanos(startTimeNanos)
                 .withSnapshotOfDataSourcesWithAllUsedSegments(dataSourcesSnapshot)
                 .withDynamicConfigs(getDynamicConfigs())
                 .withCompactionConfig(getCompactionConfig())
@@ -916,7 +915,8 @@ public class DruidCoordinator
             new ServerHolder(
                 server,
                 loadManagementPeons.get(server.getName()),
-                decommissioningServers.contains(server.getHost()),
+                decommissioningServers.contains(server.getHost())
+                || decommissioningServers.contains("tier:" + server.getTier()),
                 dynamicConfig.getMaxSegmentsInNodeLoadingQueue(),
                 dynamicConfig.getReplicantLifetime()
             )

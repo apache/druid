@@ -56,7 +56,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
       broadcastStatusByDatasource.put(broadcastDatasource, true);
     }
 
-    final CoordinatorRunStats stats = new CoordinatorRunStats();
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
     params.getDruidCluster().getAllServers().forEach(
         server -> handleUnusedSegmentsForServer(
             server,
@@ -66,7 +66,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
         )
     );
 
-    return params.buildFromExisting().withCoordinatorStats(stats).build();
+    return params;
   }
 
   private void handleUnusedSegmentsForServer(

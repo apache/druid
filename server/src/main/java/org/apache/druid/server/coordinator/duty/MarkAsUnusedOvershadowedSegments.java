@@ -88,7 +88,7 @@ public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
       }
     }
 
-    final CoordinatorRunStats stats = new CoordinatorRunStats();
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
     datasourceToUnusedSegments.forEach(
         (datasource, unusedSegments) -> {
           stats.addToDatasourceStat(Stats.Segments.OVERSHADOWED, datasource, unusedSegments.size());
@@ -96,7 +96,7 @@ public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
         }
     );
 
-    return params.buildFromExisting().withCoordinatorStats(stats).build();
+    return params;
   }
 
   private void addSegmentsFromServer(

@@ -125,8 +125,8 @@ public class BalanceSegmentsProfiler
         .builder()
         .addTier("normal", serverHolderList.toArray(new ServerHolder[0]))
         .build();
-    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
-        .newBuilder()
+    DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
+        .newBuilder(System.nanoTime())
         .withDruidCluster(druidCluster)
         .withUsedSegmentsInTest(segments)
         .withDynamicConfigs(
@@ -172,8 +172,8 @@ public class BalanceSegmentsProfiler
     EasyMock.expect(druidServer2.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer2);
 
-    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
-        .newBuilder()
+    DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
+        .newBuilder(System.nanoTime())
         .withDruidCluster(
             DruidCluster
                 .builder()
