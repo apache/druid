@@ -210,7 +210,7 @@ public class NestedDataTestUtils
         COUNT,
         granularity,
         rollup,
-        new IndexSpec()
+        IndexSpec.DEFAULT
     );
   }
 
@@ -236,7 +236,7 @@ public class NestedDataTestUtils
         SIMPLE_DATA_FILE,
         Granularities.NONE,
         true,
-        new IndexSpec()
+        IndexSpec.DEFAULT
     );
   }
 
@@ -322,7 +322,7 @@ public class NestedDataTestUtils
         COUNT,
         granularity,
         rollup,
-        new IndexSpec()
+        IndexSpec.DEFAULT
     );
   }
 
@@ -505,7 +505,7 @@ public class NestedDataTestUtils
                                       tempFolder,
                                       closer,
                                       jsonInputFile,
-                                      new IndexSpec()
+                                      IndexSpec.DEFAULT
                                   )
                               )
                               .add(NestedDataTestUtils.createIncrementalIndexForJsonInput(tempFolder, jsonInputFile))
@@ -556,7 +556,7 @@ public class NestedDataTestUtils
                                       tempFolder,
                                       closer,
                                       jsonInputFile,
-                                      new IndexSpec()
+                                      IndexSpec.DEFAULT
                                   )
                               )
                               .addAll(
@@ -564,7 +564,7 @@ public class NestedDataTestUtils
                                       tempFolder,
                                       closer,
                                       jsonInputFile,
-                                      new IndexSpec()
+                                      IndexSpec.DEFAULT
                                   )
                               )
                               .build();
@@ -592,15 +592,11 @@ public class NestedDataTestUtils
                                       tempFolder,
                                       closer,
                                       jsonInputFile,
-                                      new IndexSpec(
-                                          null,
-                                          null,
-                                          new StringEncodingStrategy.FrontCoded(4, (byte) 0x01),
-                                          null,
-                                          null,
-                                          null,
-                                          null
-                                      )
+                                      IndexSpec.builder()
+                                               .withStringDictionaryEncoding(
+                                                   new StringEncodingStrategy.FrontCoded(4, (byte) 0x01)
+                                               )
+                                               .build()
                                   )
                               )
                               .addAll(
@@ -608,15 +604,11 @@ public class NestedDataTestUtils
                                       tempFolder,
                                       closer,
                                       jsonInputFile,
-                                      new IndexSpec(
-                                          null,
-                                          null,
-                                          new StringEncodingStrategy.FrontCoded(4, (byte) 0x00),
-                                          null,
-                                          null,
-                                          null,
-                                          null
-                                      )
+                                      IndexSpec.builder()
+                                               .withStringDictionaryEncoding(
+                                                   new StringEncodingStrategy.FrontCoded(4, (byte) 0x00)
+                                               )
+                                               .build()
                                   )
                               )
                               .build();
