@@ -138,6 +138,43 @@ public class MSQInsertTest extends MSQTestBase
   }
 
   @Test
+  public void testInsertWithExistingTimeColumn() throws IOException
+  {
+    List<Object[]> expectedRows = ImmutableList.of(
+        new Object[] {1678897351000L, "A"},
+        new Object[] {1679588551000L, "B"},
+        new Object[] {1682266951000L, "C"}
+    );
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("flags", ColumnType.STRING)
+                                            .build();
+
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this,
+                                                                    "/dataset-with-time-column.json"
+    );
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
+
+    testIngestQuery().setSql(" INSERT INTO foo1 SELECT\n"
+                             + "  __time,\n"
+                             + "  flags\n"
+                             + "FROM TABLE(\n"
+                             + "  EXTERN(\n"
+                             + "    '{ \"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
+                             + "    '{\"type\": \"json\"}',\n"
+                             + "    '[{\"name\": \"__time\", \"type\": \"long\"}, {\"name\": \"flags\", \"type\": \"string\"}]'\n"
+                             + "  )\n"
+                             + ") PARTITIONED BY day")
+                     .setQueryContext(context)
+                     .setExpectedResultRows(expectedRows)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .verifyResults();
+
+  }
+
+  @Test
   public void testInsertOnExternalDataSource() throws IOException
   {
     final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/wikipedia-sampled.json");

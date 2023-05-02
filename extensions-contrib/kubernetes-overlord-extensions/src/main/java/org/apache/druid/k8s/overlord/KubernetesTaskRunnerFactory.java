@@ -41,7 +41,7 @@ import org.apache.druid.k8s.overlord.common.SingleContainerTaskAdapter;
 import org.apache.druid.k8s.overlord.common.TaskAdapter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
-import org.apache.druid.tasklogs.TaskLogPusher;
+import org.apache.druid.tasklogs.TaskLogs;
 
 import java.util.Locale;
 import java.util.Properties;
@@ -54,7 +54,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   private final KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig;
   private final StartupLoggingConfig startupLoggingConfig;
   private final TaskQueueConfig taskQueueConfig;
-  private final TaskLogPusher taskLogPusher;
+  private final TaskLogs taskLogs;
   private final DruidNode druidNode;
   private final TaskConfig taskConfig;
   private final Properties properties;
@@ -68,7 +68,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
       KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig,
       StartupLoggingConfig startupLoggingConfig,
       @JacksonInject TaskQueueConfig taskQueueConfig,
-      TaskLogPusher taskLogPusher,
+      TaskLogs taskLogs,
       @Self DruidNode druidNode,
       TaskConfig taskConfig,
       Properties properties
@@ -80,7 +80,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     this.kubernetesTaskRunnerConfig = kubernetesTaskRunnerConfig;
     this.startupLoggingConfig = startupLoggingConfig;
     this.taskQueueConfig = taskQueueConfig;
-    this.taskLogPusher = taskLogPusher;
+    this.taskLogs = taskLogs;
     this.druidNode = druidNode;
     this.taskConfig = taskConfig;
     this.properties = properties;
@@ -100,10 +100,11 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     }
 
     runner = new KubernetesTaskRunner(
+        smileMapper,
         buildTaskAdapter(client),
         kubernetesTaskRunnerConfig,
         taskQueueConfig,
-        taskLogPusher,
+        taskLogs,
         new DruidKubernetesPeonClient(client, kubernetesTaskRunnerConfig.namespace, kubernetesTaskRunnerConfig.debugJobs),
         httpClient
     );

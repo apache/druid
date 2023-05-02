@@ -122,7 +122,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
     try (final FileSmoosher smoosher = new FileSmoosher(tmpFile)) {
       ScalarLongColumnSerializer serializer = new ScalarLongColumnSerializer(
           fileNameBase,
-          new IndexSpec(),
+          IndexSpec.DEFAULT,
           writeOutMediumFactory.makeSegmentWriteOutMedium(tempFolder.newFolder()),
           closer
       );

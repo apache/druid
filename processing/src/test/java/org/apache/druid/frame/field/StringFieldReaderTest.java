@@ -21,6 +21,7 @@ package org.apache.druid.frame.field;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.datasketches.memory.WritableMemory;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
@@ -80,6 +81,20 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(Collections.singletonList(null));
     Assert.assertTrue(new StringFieldReader(false).isNull(memory, MEMORY_POSITION));
     Assert.assertTrue(new StringFieldReader(true).isNull(memory, MEMORY_POSITION));
+  }
+
+  @Test
+  public void test_isNull_emptyString()
+  {
+    writeToMemory(Collections.singletonList(""));
+    Assert.assertEquals(
+        NullHandling.replaceWithDefault(),
+        new StringFieldReader(false).isNull(memory, MEMORY_POSITION)
+    );
+    Assert.assertEquals(
+        NullHandling.replaceWithDefault(),
+        new StringFieldReader(true).isNull(memory, MEMORY_POSITION)
+    );
   }
 
   @Test

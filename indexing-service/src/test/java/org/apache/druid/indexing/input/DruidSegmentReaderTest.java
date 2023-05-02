@@ -793,7 +793,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
       ).persist(
           incrementalIndex,
           segmentDirectory,
-          new IndexSpec(),
+          IndexSpec.DEFAULT,
           null
       );
       segmentSize = FileUtils.getFileSize(segmentDirectory);

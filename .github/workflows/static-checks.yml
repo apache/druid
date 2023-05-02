@@ -85,21 +85,15 @@ jobs:
         if: ${{ matrix.java == 'jdk8' }}
         run: ./.github/scripts/license_checks_script.sh
 
-      - name: license checks for hadoop3
-        if: ${{ matrix.java == 'jdk8' }}
-        env:
-          HADOOP_PROFILE: -Phadoop3
-        run: ./.github/scripts/license_checks_script.sh
-
       - name: analyze dependencies
         if: ${{ matrix.java == 'jdk8' }}
         run: |
           ./.github/scripts/analyze_dependencies_script.sh
 
-      - name: analyze dependencies for hadoop3
+      - name: analyze dependencies for hadoop2
         if: ${{ matrix.java == 'jdk8' }}
         env:
-          HADOOP_PROFILE: -Phadoop3
+          HADOOP_PROFILE: -Phadoop2
         run: |
           ./.github/scripts/analyze_dependencies_script.sh
 
