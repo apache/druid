@@ -96,48 +96,36 @@ public class S3DataSegmentKiller implements DataSegmentKiller
                                      new DeleteObjectsRequest.KeyVersion(DataSegmentKiller.descriptorPath(path))))
             .collect(Collectors.toList());
 
+    // max delete object request size is 1000 for S3
     List<List<DeleteObjectsRequest.KeyVersion>> keysChunks = Lists.partition(keysToDelete, 1000);
     DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(s3Bucket);
+    // only return objects failed to delete.
     deleteObjectsRequest.setQuiet(true);
-    // don't fail immediately delete as many as possible then we fail in the end by throwing one exception that has all
-    // exceptions in it
-    List<Exception> exceptions = new ArrayList<>();
-    // s3 jdk is weird where the call to delete is a 200 status code for the response in the api, but the call is unable
-    // to delete some segments is an exception. this exception has a list of all objects it couldnt' delete. If you make
-    // a call that is a 401 or 403 outright the exception is thrown, but there is no list of objects it couldnt' delete.
-    // so we store them here to log later.
-    List<String> unableToDeleteKeysButNotStoredInException = new ArrayList<>();
+
+    List<String> keysNotDeleted = new ArrayList<>();
     for (List<DeleteObjectsRequest.KeyVersion> keysChunk : keysChunks) {
       List<String> keysToDeleteStrings = keysChunk.stream().map(
             DeleteObjectsRequest.KeyVersion::getKey).collect(Collectors.toList());
       try {
         deleteObjectsRequest.setKeys(keysChunk);
-        log.info("Removing from bucket: %s the following index files: %s from s3!", s3Bucket, keysToDeleteStrings);
+        log.info("Removing from bucket: [%s] the following index files: [%s] from s3!", s3Bucket, keysToDeleteStrings);
         s3Client.deleteObjects(deleteObjectsRequest);
       }
-      catch (AmazonServiceException e) {
-        // client and server errors will not have a list of keys that couldn't be deleted in the exception, so we are
-        // adding them here
-        if (e.getStatusCode() >= 300) {
-          unableToDeleteKeysButNotStoredInException.addAll(keysToDeleteStrings);
-        }
-        exceptions.add(e);
+      catch (MultiObjectDeleteException e)
+      {
+        keysNotDeleted.addAll(e.getErrors().stream()
+         .map(MultiObjectDeleteException.DeleteError::getKey)
+         .collect(Collectors.toList()));
+      }
+      catch (AmazonServiceException e)
+      {
+        throw new SegmentLoadingException(e,
+                                          "Unable to delete from bucket [%s]",
+                                          s3Bucket);
       }
     }
-    if (exceptions.size() > 0) {
-      List<String> segmentsNotDeleted = exceptions.stream()
-          .filter(exc -> exc instanceof MultiObjectDeleteException)
-          .map(exc -> (MultiObjectDeleteException) exc)
-          .map(MultiObjectDeleteException::getErrors)
-          .flatMap(errors -> errors.stream().map(MultiObjectDeleteException.DeleteError::getKey))
-          .collect(Collectors.toList());
-      segmentsNotDeleted.addAll(unableToDeleteKeysButNotStoredInException);
-      SegmentLoadingException segmentLoadingException =
-          new SegmentLoadingException(exceptions.get(0), "For bucket: %s unable to delete some or all segments %s", s3Bucket, segmentsNotDeleted);
-      for (int ii = 1; ii < exceptions.size(); ii++) {
-        segmentLoadingException.addSuppressed(exceptions.get(ii));
-      }
-      throw segmentLoadingException;
+    if (!keysNotDeleted.isEmpty()) {
+      throw new SegmentLoadingException("Couldn't delete from bucket: [%s] these files [%s]", s3Bucket, keysNotDeleted);
     }
   }
 
