@@ -2638,9 +2638,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           );
         }}
         confirmButtonText={`Yes - ${autoDetect ? 'auto detect' : 'explicitly define'} schema`}
-        successText={`Dimension mode changes to ${
-          autoDetect ? 'auto detect' : 'specific list'
-        }. Schema has been updated.`}
+        successText={`Schema mode changed to ${autoDetect ? 'auto detect' : 'explicitly defined'}.`}
         failText="Could not change schema mode"
         intent={Intent.WARNING}
         onClose={() => this.setState({ newSchemaMode: undefined })}
@@ -2650,7 +2648,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             ? `Are you sure you want Druid to auto detect the data schema?`
             : `Are you sure you want to explicitly specify a schema?`}
         </p>
-        <p>Making this change will reset any work you have done in this section.</p>
+        <p>Making this change will reset all schema configuration done so far.</p>
         {autoDetect && (
           <Switch
             checked={newSchemaMode === 'type-aware-discovery'}
