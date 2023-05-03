@@ -55,6 +55,10 @@ jobs:
       - name: setup ${{ matrix.java }}
         run: export JAVA_HOME=$JAVA_HOME_${{ env.java_version }}_X64
 
+      - name: checkstyle
+        if: ${{ matrix.java == 'jdk8' }}
+        run: ${MVN} checkstyle:checkstyle --fail-at-end
+
       - name: packaging check
         run: |
           ./.github/scripts/setup_generate_license.sh
@@ -106,10 +110,6 @@ jobs:
       - name: animal sniffer checks
         if: ${{ matrix.java == 'jdk8' }}
         run: ${MVN} animal-sniffer:check --fail-at-end
-
-      - name: checkstyle
-        if: ${{ matrix.java == 'jdk8' }}
-        run: ${MVN} checkstyle:checkstyle --fail-at-end
 
       - name: enforcer checks
         if: ${{ matrix.java == 'jdk8' }}

@@ -284,8 +284,7 @@ public class SupervisorManagerTest extends EasyMockSupport
       manager.createOrUpdateAndStartSupervisor(testSpecOld);
       manager.createOrUpdateAndStartSupervisor(testSpecNew);
     }
-    catch (Exception e)
-    {
+    catch (Exception e) {
       Assert.assertEquals(testSpecOld, capturedInsert.getValue());
       throw e;
     }
