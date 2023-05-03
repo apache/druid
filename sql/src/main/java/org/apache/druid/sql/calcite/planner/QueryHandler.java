@@ -352,7 +352,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
   }
 
   /**
-   * Construct a {@link PlannerResult} for an 'explain' query from a {@link RelNode}
+   * Construct a {@link PlannerResult} for an 'explain' query from a {@link RelNode} and root {@link RelRoot}
    */
   protected PlannerResult planExplanation(
       final RelRoot relRoot,
