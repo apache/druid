@@ -55,10 +55,6 @@ jobs:
       - name: setup ${{ matrix.java }}
         run: export JAVA_HOME=$JAVA_HOME_${{ env.java_version }}_X64
 
-      - name: checkstyle
-        if: ${{ matrix.java == 'jdk8' }}
-        run: ${MVN} checkstyle:checkstyle --fail-at-end
-
       - name: packaging check
         run: |
           ./.github/scripts/setup_generate_license.sh
@@ -84,6 +80,10 @@ jobs:
           echo 'Running Maven install...' &&
           ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
           ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+
+      - name: checkstyle
+        if: ${{ matrix.java == 'jdk8' }}
+        run: ${MVN} checkstyle:checkstyle --fail-at-end
 
       - name: license checks
         if: ${{ matrix.java == 'jdk8' }}
