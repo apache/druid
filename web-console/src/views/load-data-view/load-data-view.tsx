@@ -3313,13 +3313,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               <FormGroup>
                 <Callout intent={Intent.WARNING}>
                   <p>
-                    It appears that you are using type-aware schema discovery (
-                    <Code>useSchemaDiscovery: true</Code>) while ingesting data into a datasource (
-                    <Code>{datasource}</Code>) that already exists.
+                    You have enabled type-aware schema discovery (
+                    <Code>useSchemaDiscovery: true</Code>) to ingest data into the existing
+                    datasource <Code>{datasource}</Code>.
                   </p>
                   <p>
-                    If the original datasource was ingested string-based schema discovery this can
-                    potentially cause problems with how multi-value string values will be recorded.
+                    If you used string-based schema discovery when first ingesting data to{' '}
+                    <Code>{datasource}</Code>, using type-aware schema discovery now can cause
+                    problems with the values multi-value string dimensions.
+                  </p>
+                  <p>
                     For more information see the{' '}
                     <ExternalLink
                       href={`${getLink(
