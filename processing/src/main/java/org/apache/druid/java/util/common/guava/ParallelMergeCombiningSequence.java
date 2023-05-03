@@ -142,12 +142,14 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         metricsAccumulator,
         cancellationGizmo
     );
+    metricsAccumulator.setState(MergeCombineMetricsAccumulator.State.SCHEDULED);
     workerPool.execute(mergeCombineAction);
     Sequence<T> finalOutSequence = makeOutputSequenceForQueue(
         outputQueue,
         hasTimeout,
         timeoutAtNanos,
-        cancellationGizmo
+        cancellationGizmo,
+        metricsAccumulator
     ).withBaggage(() -> {
       if (metricsReporter != null) {
         metricsAccumulator.setTotalWallTime(System.nanoTime() - startTimeNanos);
@@ -171,7 +173,8 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       BlockingQueue<ResultBatch<T>> queue,
       boolean hasTimeout,
       long timeoutAtNanos,
-      CancellationGizmo cancellationGizmo
+      CancellationGizmo cancellationGizmo,
+      MergeCombineMetricsAccumulator mergeCombineMetricsAccumulator
   )
   {
     return new BaseSequence<>(
@@ -191,6 +194,11 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               {
                 final long thisTimeoutNanos = timeoutAtNanos - System.nanoTime();
                 if (hasTimeout && thisTimeoutNanos < 0) {
+                  LOG.info("Query timed out while merging results from data nodes. "
+                           + "Current merge state is [%s] and time spent in current state is [%,d]ms.",
+                           mergeCombineMetricsAccumulator.getState(),
+                           mergeCombineMetricsAccumulator.timeSpentInCurrentStateNanos()
+                  );
                   throw new QueryTimeoutException();
                 }
 
@@ -205,12 +213,18 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
                       currentBatch = queue.take();
                     }
                   }
-                  if (currentBatch == null) {
-                    throw new QueryTimeoutException();
+
+                  if (cancellationGizmo.isCancelled()) { // preffering to throw any cancellation exception, if any
+                    throw cancellationGizmo.getRuntimeException();
                   }
 
-                  if (cancellationGizmo.isCancelled()) {
-                    throw cancellationGizmo.getRuntimeException();
+                  if (currentBatch == null) {
+                    LOG.info("Query timed out while merging results from data nodes. "
+                             + "Current merge state is [%s] and time spent in current state is [%,d]ms.",
+                             mergeCombineMetricsAccumulator.getState(),
+                             mergeCombineMetricsAccumulator.timeSpentInCurrentStateNanos()
+                    );
+                    throw new QueryTimeoutException();
                   }
 
                   if (currentBatch.isTerminalResult()) {
@@ -320,6 +334,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     @Override
     protected void compute()
     {
+      metricsAccumulator.setState(MergeCombineMetricsAccumulator.State.STARTED);
       List<BatchedResultsCursor<T>> sequenceCursors = new ArrayList<>(sequences.size());
       try {
         final int parallelTaskCount = computeNumTasks();
@@ -353,6 +368,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               soloAccumulator,
               cancellationGizmo
           );
+          metricsAccumulator.setState(MergeCombineMetricsAccumulator.State.FINAL_MERGE_SCHEDULED);
           getPool().execute(blockForInputsAction);
         } else {
           // 2 layer parallel merge done in fjp
@@ -407,6 +423,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 
       metricsAccumulator.setPartitions(taskMetrics);
 
+      metricsAccumulator.setState(MergeCombineMetricsAccumulator.State.PARTITON_MERGE_SCHEDULED);
       for (RecursiveAction task : tasks) {
         getPool().execute(task);
       }
@@ -432,7 +449,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           finalMergeMetrics,
           cancellationGizmo
       );
-
+      metricsAccumulator.setState(MergeCombineMetricsAccumulator.State.FINAL_MERGE_SCHEDULED);
       getPool().execute(finalMergeAction);
     }
 
@@ -1310,9 +1327,22 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 
     private final int inputSequences;
 
+    public enum State
+    {
+      SCHEDULED,
+      STARTED,
+      PARTITON_MERGE_SCHEDULED,
+      FINAL_MERGE_SCHEDULED
+    }
+
+    private State state;
+    private long stateStartTime;
+
     MergeCombineMetricsAccumulator(int inputSequences)
     {
       this.inputSequences = inputSequences;
+      this.partitionMetrics = Collections.emptyList();
+      this.mergeMetrics = new MergeCombineActionMetricsAccumulator();
     }
 
     void setMergeMetrics(MergeCombineActionMetricsAccumulator mergeMetrics)
@@ -1328,6 +1358,22 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     void setTotalWallTime(long time)
     {
       this.totalWallTime = time;
+    }
+
+    public void setState(State state)
+    {
+      this.state = state;
+      this.stateStartTime = System.nanoTime();
+    }
+
+    public State getState()
+    {
+      return state;
+    }
+
+    public long timeSpentInCurrentStateNanos()
+    {
+      return System.nanoTime() - stateStartTime;
     }
 
     MergeCombineMetrics build()

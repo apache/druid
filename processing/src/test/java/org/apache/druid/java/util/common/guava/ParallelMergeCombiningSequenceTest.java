@@ -158,7 +158,8 @@ public class ParallelMergeCombiningSequenceTest
         outputQueue,
         true,
         System.nanoTime() + TimeUnit.NANOSECONDS.convert(10_000, TimeUnit.MILLISECONDS),
-        new ParallelMergeCombiningSequence.CancellationGizmo()
+        new ParallelMergeCombiningSequence.CancellationGizmo(),
+        new ParallelMergeCombiningSequence.MergeCombineMetricsAccumulator(1)
     );
 
     Yielder<IntPair> queueYielder = Yielders.each(queueAsSequence);
