@@ -2663,7 +2663,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               });
             }}
           >
-            Use the new type-aware schema discovery capability. Avoid this if are appending to a
+            Use the new type-aware schema discovery capability. Avoid this if you are appending to a
             datasource created with string-only schema discovery of Druid and want to preserve
             schema compatibility. For more information see the{' '}
             <ExternalLink
