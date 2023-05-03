@@ -195,7 +195,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     try (final FileSmoosher smoosher = new FileSmoosher(tmpFile)) {
       NestedDataColumnSerializer serializer = new NestedDataColumnSerializer(
           fileNameBase,
-          new IndexSpec(),
+          IndexSpec.DEFAULT,
           writeOutMediumFactory.makeSegmentWriteOutMedium(tempFolder.newFolder()),
           closer
       );

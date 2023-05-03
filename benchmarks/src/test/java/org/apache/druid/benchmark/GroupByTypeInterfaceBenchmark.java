@@ -324,7 +324,7 @@ public class GroupByTypeInterfaceBenchmark
       final File file = INDEX_MERGER_V9.persist(
           index,
           new File(tmpDir, String.valueOf(i)),
-          new IndexSpec(),
+          IndexSpec.DEFAULT,
           null
       );
 
