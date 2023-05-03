@@ -246,10 +246,10 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     return ImmutableMap.<String, String>builder()
         .putAll(config.labels)
         .put(DruidK8sConstants.LABEL_KEY, "true")
-        .put(DruidK8sConstants.TASK_ID, task.getId())
-        .put(DruidK8sConstants.TASK_TYPE, task.getType())
-        .put(DruidK8sConstants.TASK_GROUP_ID, task.getGroupId())
-        .put(DruidK8sConstants.TASK_DATASOURCE, task.getDataSource())
+        .put(getDruidLabel(DruidK8sConstants.TASK_ID), task.getId())
+        .put(getDruidLabel(DruidK8sConstants.TASK_TYPE), task.getType())
+        .put(getDruidLabel(DruidK8sConstants.TASK_GROUP_ID), task.getGroupId())
+        .put(getDruidLabel(DruidK8sConstants.TASK_DATASOURCE), task.getDataSource())
         .build();
   }
 
@@ -262,5 +262,10 @@ public class PodTemplateTaskAdapter implements TaskAdapter
         .put(DruidK8sConstants.TASK_GROUP_ID, task.getGroupId())
         .put(DruidK8sConstants.TASK_DATASOURCE, task.getDataSource())
         .build();
+  }
+
+  private String getDruidLabel(String baseLabel)
+  {
+    return DruidK8sConstants.DRUID_LABEL_PREFIX + "/" + baseLabel;
   }
 }
