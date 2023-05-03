@@ -121,7 +121,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     return new JobBuilder()
         .withNewMetadata()
         .withName(new K8sTaskId(task).getK8sTaskId())
-        .addToLabels(getJobLabels(taskRunnerConfig))
+        .addToLabels(getJobLabels(taskRunnerConfig, task))
         .addToAnnotations(getJobAnnotations(taskRunnerConfig, task))
         .endMetadata()
         .withNewSpec()
@@ -129,7 +129,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
         .editTemplate()
         .editOrNewMetadata()
         .addToAnnotations(getPodTemplateAnnotations(task))
-        .addToLabels(getPodLabels(taskRunnerConfig))
+        .addToLabels(getPodLabels(taskRunnerConfig, task))
         .endMetadata()
         .editSpec()
         .editFirstContainer()
@@ -224,9 +224,9 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     );
   }
 
-  private Map<String, String> getPodLabels(KubernetesTaskRunnerConfig config)
+  private Map<String, String> getPodLabels(KubernetesTaskRunnerConfig config, Task task)
   {
-    return getJobLabels(config);
+    return getJobLabels(config, task);
   }
 
   private Map<String, String> getPodTemplateAnnotations(Task task) throws IOException
@@ -241,11 +241,15 @@ public class PodTemplateTaskAdapter implements TaskAdapter
         .build();
   }
 
-  private Map<String, String> getJobLabels(KubernetesTaskRunnerConfig config)
+  private Map<String, String> getJobLabels(KubernetesTaskRunnerConfig config, Task task)
   {
     return ImmutableMap.<String, String>builder()
         .putAll(config.labels)
         .put(DruidK8sConstants.LABEL_KEY, "true")
+        .put(DruidK8sConstants.TASK_ID, task.getId())
+        .put(DruidK8sConstants.TASK_TYPE, task.getType())
+        .put(DruidK8sConstants.TASK_GROUP_ID, task.getGroupId())
+        .put(DruidK8sConstants.TASK_DATASOURCE, task.getDataSource())
         .build();
   }
 
