@@ -93,8 +93,7 @@ Metadata is available over HTTP POST by querying [metadata tables](../querying/s
 
 #### Result formats
 
-Druid SQL's HTTP POST API supports a variety of result formats. You can specify these by adding a "resultFormat"
-parameter, like:
+Druid SQL's HTTP POST API supports a variety of result formats. You can specify these by adding a `resultFormat` parameter, like:
 
 ```json
 {
@@ -179,7 +178,7 @@ You can cancel the query using the query id `myQuery01` as follows:
 curl --request DELETE 'https://ROUTER:8888/druid/v2/sql/myQuery01' \
 ```
 
-Cancellation requests require READ permission on all resources used in the sql query. 
+Cancellation requests require READ permission on all resources used in the SQL query. 
 
 Druid returns an HTTP 202 response for successful deletion requests.
 

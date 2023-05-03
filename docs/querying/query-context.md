@@ -108,11 +108,11 @@ batches of rows at a time. Not all queries can be vectorized. In particular, vec
 requirements:
 
 - All query-level filters must either be able to run on bitmap indexes or must offer vectorized row-matchers. These
-include "selector", "bound", "in", "like", "regex", "search", "and", "or", and "not".
+include `selector`, `bound`, `in`, `like`, `regex`, `search`, `and`, `or`, and `not`.
 - All filters in filtered aggregators must offer vectorized row-matchers.
-- All aggregators must offer vectorized implementations. These include "count", "doubleSum", "floatSum", "longSum", "longMin",
- "longMax", "doubleMin", "doubleMax", "floatMin", "floatMax", "longAny", "doubleAny", "floatAny", "stringAny",
- "hyperUnique", "filtered", "approxHistogram", "approxHistogramFold", and "fixedBucketsHistogram" (with numerical input). 
+- All aggregators must offer vectorized implementations. These include `count`, `doubleSum`, `floatSum`, `longSum`. `longMin`,
+ `longMax`, `doubleMin`, `doubleMax`, `floatMin`, `floatMax`, `longAny`, `doubleAny`, `floatAny`, `stringAny`,
+ `hyperUnique`, `filtered`, `approxHistogram`, `approxHistogramFold`, and `fixedBucketsHistogram` (with numerical input). 
 - All virtual columns must offer vectorized implementations. Currently for expression virtual columns, support for vectorization is decided on a per expression basis, depending on the type of input and the functions used by the expression. See the currently supported list in the [expression documentation](math-expr.md#vectorization-support).
 - For GroupBy: All dimension specs must be "default" (no extraction functions or filtered dimension specs).
 - For GroupBy: No multi-value dimensions.

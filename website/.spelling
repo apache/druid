@@ -184,7 +184,7 @@ OutputStream
 ParAccel
 ParseSpec
 ParseSpecs
-Protobuf
+[Pp]rotobuf
 pull-deps
 RDBMS
 RDDs
@@ -251,7 +251,7 @@ base64
 big-endian
 bigint
 blobstore
-boolean
+[Bb]oolean
 breakpoint
 broadcasted
 bucketSize
@@ -493,7 +493,7 @@ supervisorTaskId
 symlink
 syntaxes
 tiering
-timeseries
+[Tt]imeseries
 timestamp
 timestamps
 to_json_string
@@ -547,6 +547,7 @@ whitespace
 wildcard
 wildcards
 xml
+XOR
 znode
 znodes
 APPROX_COUNT_DISTINCT
@@ -853,7 +854,7 @@ historical001
  - ../docs/development/extensions-contrib/materialized-view.md
 HadoopTuningConfig
 TuningConfig
-base-dataSource's
+base-dataSource
 baseDataSource
 baseDataSource-hashCode
 classpathPrefix
@@ -1149,7 +1150,7 @@ flattenSpec
  - ../docs/development/extensions-core/parquet.md
 binaryAsString
  - ../docs/development/extensions-core/postgresql.md
-sslFactory's
+sslFactory
 sslMode
  - ../docs/development/extensions-core/protobuf.md
 Proto
@@ -1259,6 +1260,7 @@ ObjectMapper
 PasswordProvider
 PostAggregators
 QueryRunnerFactory
+segmentmetadataquery
 SegmentMetadataQuery
 SegmentMetadataQueryQueryToolChest
 StaticS3FirehoseFactory
@@ -1383,7 +1385,7 @@ chatHandlerTimeout
 cityName
 connectorConfig
 countryName
-dataSchema's
+dataSchema
 dropExisting
 foldCase
 forceGuaranteedRollup
@@ -1434,7 +1436,6 @@ accessKeyId
 httpAuthenticationPassword
 countryName
  - ../docs/ingestion/native-batch-simple-task.md
-dataSchema's
 appendToExisting
 dropExisting
 timeChunk
@@ -1454,6 +1455,8 @@ forceTimeChunkLock
 taskLockTimeout
 index.md
  - ../docs/misc/math-expr.md
+ - ../docs/querying/math-expr.md
+ - ../docs/querying/sql-scalar.md
 DOUBLE_ARRAY
 DOY
 DateTimeFormat
@@ -1469,6 +1472,7 @@ arr1
 arr2
 array_append
 array_concat
+ARRAY_CONCAT
 array_set_add
 array_set_add_all
 array_contains
@@ -1541,7 +1545,7 @@ str1
 str2
 string_to_array
 stringAny
-strlen
+[Ss]trlen
 strpos
 timestamp_ceil
 timestamp_extract
@@ -1895,7 +1899,7 @@ fromNext
 pagingSpec
  - ../docs/querying/sorting-orders.md
 BoundFilter
-GroupByQuery's
+GroupByQuery
 SearchQuery
 TopNMetricSpec
 compareTo
@@ -2331,3 +2335,55 @@ pathlib
 - ../docs/tutorials/tutorial-sql-query-view.md
 kttm_simple
 dist_country
+# Extensions
+druid-avro-extensions
+druid-azure-extensions
+druid-basic-security
+druid-bloom-filter
+druid-datasketches
+druid-google-extensions
+druid-hdfs-storage
+druid-histogram
+druid-kafka-extraction-name
+druid-kafka-indexing-service
+druid-kinesis-indexing-service
+druid-kerberos
+druid-lookups-cached-global
+druid-lookups-cached-single
+druid-multi-stage-query
+druid-orc-extensions
+druid-parquet-extensions
+druid-protobuf-extensions
+druid-ranger-security
+druid-s3-extensions
+druid-ec2-extensions
+druid-aws-rds-extensions
+druid-stats
+mysql-metadata-storage
+postgresql-metadata-storage
+simple-client-sslcontext
+druid-pac4j
+druid-kubernetes-extensions
+aliyun-oss-extensions
+ambari-metrics-emitter
+druid-cassandra-storage
+druid-cloudfiles-extensions
+druid-compressed-bigdecimal
+druid-distinctcount
+druid-redis-cache
+druid-time-min-max
+sqlserver-metadata-storage
+graphite-emitter|Graphite metrics emitter
+statsd-emitter|StatsD metrics emitter
+kafka-emitter|Kafka metrics emitter
+druid-thrift-extensions
+druid-opentsdb-emitter
+materialized-view-selection
+materialized-view-maintenance
+druid-moving-average-query
+druid-influxdb-emitter
+druid-momentsketch
+druid-tdigestsketch
+gce-extensions
+prometheus-emitter
+kubernetes-overlord-extensions

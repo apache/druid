@@ -114,8 +114,8 @@ For information how to create your own extension, please see [here](../developme
 Apache Druid bundles all [core extensions](../configuration/extensions.md#core-extensions) out of the box.
 See the [list of extensions](../configuration/extensions.md#core-extensions) for your options. You
 can load bundled extensions by adding their names to your common.runtime.properties
-`druid.extensions.loadList` property. For example, to load the *postgresql-metadata-storage* and
-*druid-hdfs-storage* extensions, use the configuration:
+`druid.extensions.loadList` property. For example, to load the postgresql-metadata-storage and
+druid-hdfs-storage extensions, use the configuration:
 
 ```
 druid.extensions.loadList=["postgresql-metadata-storage", "druid-hdfs-storage"]
@@ -125,7 +125,7 @@ These extensions are located in the `extensions` directory of the distribution.
 
 > Druid bundles two sets of configurations: one for the [quickstart](../tutorials/index.md) and
 > one for a [clustered configuration](../tutorials/cluster.md). Make sure you are updating the correct
-> common.runtime.properties for your setup.
+> `common.runtime.properties` for your setup.
 
 > Because of licensing, the mysql-metadata-storage extension does not include the required MySQL JDBC driver. For instructions
 > on how to install this library, see the [MySQL extension page](../development/extensions-core/mysql.md).
@@ -153,11 +153,11 @@ You only have to install the extension once. Then, add `"druid-example-extension
 
 > Please make sure all the Extensions related configuration properties listed [here](../configuration/index.md#extensions) are set correctly.
 
-> The Maven groupId for almost every [community extension](../configuration/extensions.md#community-extensions) is org.apache.druid.extensions.contrib. The artifactId is the name
+> The Maven `groupId` for almost every [community extension](../configuration/extensions.md#community-extensions) is `org.apache.druid.extensions.contrib`. The `artifactId` is the name
 > of the extension, and the version is the latest Druid stable version.
 
 ### Loading extensions from the classpath
 
-If you add your extension jar to the classpath at runtime, Druid will also load it into the system.  This mechanism is relatively easy to reason about,
-but it also means that you have to ensure that all dependency jars on the classpath are compatible.  That is, Druid makes no provisions while using
+If you add your extension jar to the classpath at runtime, Druid will also load it into the system. This mechanism is relatively easy to reason about,
+but it also means that you have to ensure that all dependency jars on the classpath are compatible. That is, Druid makes no provisions while using
 this method to maintain class loader isolation so you must make sure that the jars on your classpath are mutually compatible.
