@@ -171,7 +171,10 @@
     <profile>
       <id>hadoop2</id>
       <activation>
-        <activeByDefault>true</activeByDefault>
+        <property>
+          <name>hadoop2.enabled</name>
+          <value>true</value>
+        </property>
       </activation>
       <dependencies>
         <!-- needed if using native batch with hdfs input source -->
@@ -419,23 +422,20 @@
     <profile>
       <id>hadoop3</id>
       <activation>
-        <property>
-          <name>hadoop3.enabled</name>
-          <value>true</value>
-        </property>
+        <activeByDefault>true</activeByDefault>
       </activation>
       <dependencies>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-client-api</artifactId>
           <version>${hadoop.compile.version}</version>
-          <scope>provided</scope>
+          <scope>compile</scope>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-client-runtime</artifactId>
           <version>${hadoop.compile.version}</version>
-          <scope>test</scope>
+          <scope>runtime</scope>
         </dependency>
       </dependencies>
     </profile>

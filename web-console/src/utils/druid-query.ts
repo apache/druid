@@ -54,7 +54,10 @@ export function parseHtmlError(htmlStr: string): string | undefined {
 function getDruidErrorObject(e: any): DruidErrorResponse | string {
   if (e.response) {
     // This is a direct axios response error
-    return e.response.data || {};
+    let data = e.response.data || {};
+    // MSQ errors nest their error objects inside the error key. Yo dawg, I heard you like errors...
+    if (typeof data.error?.error === 'string') data = data.error;
+    return data;
   } else {
     return e; // Assume the error was passed in directly
   }

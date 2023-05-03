@@ -45,14 +45,14 @@ The following example log4j2.xml is based upon the micro quickstart:
 
   <Appenders>
     <Console name="Console" target="SYSTEM_OUT">
-      <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+      <PatternLayout pattern="%d{ISO8601} %p [%t] %c -%notEmpty{ [%markerSimpleName]} %m%n"/>
     </Console>
 
     <!-- Rolling Files-->
     <RollingRandomAccessFile name="FileAppender"
                              fileName="${sys:druid.log.path}/${sys:druid.node.type}.log"
                              filePattern="${sys:druid.log.path}/${sys:druid.node.type}.%d{yyyyMMdd}.log">
-      <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+      <PatternLayout pattern="%d{ISO8601} %p [%t] %c -%notEmpty{ [%markerSimpleName]} %m%n"/>
       <Policies>
         <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
       </Policies>
@@ -105,13 +105,15 @@ The following example log4j2.xml is based upon the micro quickstart:
 </Configuration>
 ```
 
+Peons always output logs to standard output. Middle Managers redirect task logs from standard output to
+[long-term storage](index.md#log-long-term-storage).
+
 > NOTE:
-> Although Druid shares the log4j configuration file task peon processes,
-> the appenders in this file DO NOT take effect for peon processes. Peons always output logs to standard output.
-> Middle Managers redirect task logs from standard output to [long-term storage](index.md#log-long-term-storage).
->
-> However, log level settings do take effect for these task peon processes.
-> This means you can configure loggers at different logging level for task logs using `log4j2.xml`.
+> Druid shares the log4j configuration file among all services, including task peon processes.
+> However, you must define a console appender in the logger for your peon processes.
+> If you don't define a console appender, Druid creates and configures a new console appender
+> that retains the log level, such as `info` or `warn`, but does not retain any other appender
+> configuration, including non-console ones.
 
 ## Log directory
 The included log4j2.xml configuration for Druid and ZooKeeper writes logs to the `log` directory at the root of the distribution.
@@ -155,7 +157,7 @@ The following example shows a `log4j2.xml` that configures some of the more chat
 <Configuration status="WARN">
   <Appenders>
     <Console name="Console" target="SYSTEM_OUT">
-      <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+      <PatternLayout pattern="%d{ISO8601} %p [%t] %c -%notEmpty{ [%markerSimpleName]} %m%n"/>
     </Console>
   </Appenders>
   

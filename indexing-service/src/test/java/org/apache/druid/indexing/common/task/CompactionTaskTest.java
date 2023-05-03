@@ -325,12 +325,12 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        new IndexSpec(
-            RoaringBitmapSerdeFactory.getInstance(),
-            CompressionStrategy.LZ4,
-            CompressionStrategy.LZF,
-            LongEncodingStrategy.LONGS
-        ),
+        IndexSpec.builder()
+                 .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                 .withDimensionCompression(CompressionStrategy.LZ4)
+                 .withMetricCompression(CompressionStrategy.LZF)
+                 .withLongEncoding(LongEncodingStrategy.LONGS)
+                 .build(),
         null,
         null,
         true,
@@ -625,12 +625,12 @@ public class CompactionTaskTest
             null,
             null,
             null,
-            new IndexSpec(
-                RoaringBitmapSerdeFactory.getInstance(),
-                CompressionStrategy.LZ4,
-                CompressionStrategy.LZF,
-                LongEncodingStrategy.LONGS
-            ),
+            IndexSpec.builder()
+                     .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                     .withDimensionCompression(CompressionStrategy.LZ4)
+                     .withMetricCompression(CompressionStrategy.LZF)
+                     .withLongEncoding(LongEncodingStrategy.LONGS)
+                     .build(),
             null,
             null,
             true,
@@ -707,12 +707,12 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        new IndexSpec(
-            RoaringBitmapSerdeFactory.getInstance(),
-            CompressionStrategy.LZ4,
-            CompressionStrategy.LZF,
-            LongEncodingStrategy.LONGS
-        ),
+        IndexSpec.builder()
+                 .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                 .withDimensionCompression(CompressionStrategy.LZ4)
+                 .withMetricCompression(CompressionStrategy.LZF)
+                 .withLongEncoding(LongEncodingStrategy.LONGS)
+                 .build(),
         null,
         null,
         true,
@@ -738,12 +738,12 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        new IndexSpec(
-            RoaringBitmapSerdeFactory.getInstance(),
-            CompressionStrategy.LZ4,
-            CompressionStrategy.LZF,
-            LongEncodingStrategy.LONGS
-        ),
+        IndexSpec.builder()
+                 .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                 .withDimensionCompression(CompressionStrategy.LZ4)
+                 .withMetricCompression(CompressionStrategy.LZF)
+                 .withLongEncoding(LongEncodingStrategy.LONGS)
+                 .build(),
         null,
         null,
         true,
@@ -783,12 +783,12 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        new IndexSpec(
-            RoaringBitmapSerdeFactory.getInstance(),
-            CompressionStrategy.LZ4,
-            CompressionStrategy.LZF,
-            LongEncodingStrategy.LONGS
-        ),
+        IndexSpec.builder()
+                 .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                 .withDimensionCompression(CompressionStrategy.LZ4)
+                 .withMetricCompression(CompressionStrategy.LZF)
+                 .withLongEncoding(LongEncodingStrategy.LONGS)
+                 .build(),
         null,
         null,
         true,
@@ -822,12 +822,12 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        new IndexSpec(
-            RoaringBitmapSerdeFactory.getInstance(),
-            CompressionStrategy.LZ4,
-            CompressionStrategy.LZF,
-            LongEncodingStrategy.LONGS
-        ),
+        IndexSpec.builder()
+                 .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                 .withDimensionCompression(CompressionStrategy.LZ4)
+                 .withMetricCompression(CompressionStrategy.LZF)
+                 .withLongEncoding(LongEncodingStrategy.LONGS)
+                 .build(),
         null,
         null,
         true,
@@ -919,13 +919,14 @@ public class CompactionTaskTest
     );
     provider.checkSegments(LockGranularity.TIME_CHUNK, ImmutableList.of());
   }
-
+  
   @Test
   public void testCreateIngestionSchema() throws IOException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         LockGranularity.TIME_CHUNK,
+        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
@@ -971,12 +972,12 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        new IndexSpec(
-            RoaringBitmapSerdeFactory.getInstance(),
-            CompressionStrategy.LZ4,
-            CompressionStrategy.LZF,
-            LongEncodingStrategy.LONGS
-        ),
+        IndexSpec.builder()
+                 .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                 .withDimensionCompression(CompressionStrategy.LZ4)
+                 .withMetricCompression(CompressionStrategy.LZF)
+                 .withLongEncoding(LongEncodingStrategy.LONGS)
+                 .build(),
         null,
         null,
         true,
@@ -1000,6 +1001,7 @@ public class CompactionTaskTest
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         LockGranularity.TIME_CHUNK,
+        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(tuningConfig),
         null,
@@ -1046,12 +1048,12 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        new IndexSpec(
-            RoaringBitmapSerdeFactory.getInstance(),
-            CompressionStrategy.LZ4,
-            CompressionStrategy.LZF,
-            LongEncodingStrategy.LONGS
-        ),
+        IndexSpec.builder()
+                 .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                 .withDimensionCompression(CompressionStrategy.LZ4)
+                 .withMetricCompression(CompressionStrategy.LZF)
+                 .withLongEncoding(LongEncodingStrategy.LONGS)
+                 .build(),
         null,
         null,
         false,
@@ -1075,6 +1077,7 @@ public class CompactionTaskTest
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         LockGranularity.TIME_CHUNK,
+        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(tuningConfig),
         null,
@@ -1121,12 +1124,12 @@ public class CompactionTaskTest
         null,
         null,
         new HashedPartitionsSpec(null, 3, null),
-        new IndexSpec(
-            RoaringBitmapSerdeFactory.getInstance(),
-            CompressionStrategy.LZ4,
-            CompressionStrategy.LZF,
-            LongEncodingStrategy.LONGS
-        ),
+        IndexSpec.builder()
+                 .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                 .withDimensionCompression(CompressionStrategy.LZ4)
+                 .withMetricCompression(CompressionStrategy.LZF)
+                 .withLongEncoding(LongEncodingStrategy.LONGS)
+                 .build(),
         null,
         null,
         true,
@@ -1150,6 +1153,7 @@ public class CompactionTaskTest
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         LockGranularity.TIME_CHUNK,
+        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(tuningConfig),
         null,
@@ -1215,6 +1219,7 @@ public class CompactionTaskTest
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         LockGranularity.TIME_CHUNK,
+        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         customSpec,
@@ -1260,6 +1265,7 @@ public class CompactionTaskTest
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         LockGranularity.TIME_CHUNK,
+        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
@@ -1298,6 +1304,7 @@ public class CompactionTaskTest
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         LockGranularity.TIME_CHUNK,
+        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(SEGMENTS)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
@@ -1342,6 +1349,7 @@ public class CompactionTaskTest
     CompactionTask.createIngestionSchema(
         toolbox,
         LockGranularity.TIME_CHUNK,
+        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(segments)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
@@ -1367,6 +1375,7 @@ public class CompactionTaskTest
     CompactionTask.createIngestionSchema(
         toolbox,
         LockGranularity.TIME_CHUNK,
+        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(segments)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
@@ -1404,6 +1413,7 @@ public class CompactionTaskTest
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         LockGranularity.TIME_CHUNK,
+        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
@@ -1443,6 +1453,7 @@ public class CompactionTaskTest
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         LockGranularity.TIME_CHUNK,
+        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
@@ -1480,6 +1491,7 @@ public class CompactionTaskTest
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         LockGranularity.TIME_CHUNK,
+        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
@@ -1523,6 +1535,7 @@ public class CompactionTaskTest
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         LockGranularity.TIME_CHUNK,
+        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
@@ -1561,6 +1574,7 @@ public class CompactionTaskTest
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         LockGranularity.TIME_CHUNK,
+        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
@@ -1599,6 +1613,7 @@ public class CompactionTaskTest
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         LockGranularity.TIME_CHUNK,
+        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
@@ -1624,6 +1639,7 @@ public class CompactionTaskTest
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         LockGranularity.TIME_CHUNK,
+        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
@@ -1768,12 +1784,12 @@ public class CompactionTaskTest
             null,
             null,
             new HashedPartitionsSpec(5000000, null, null), // automatically computed targetPartitionSize
-            new IndexSpec(
-                RoaringBitmapSerdeFactory.getInstance(),
-                CompressionStrategy.LZ4,
-                CompressionStrategy.LZF,
-                LongEncodingStrategy.LONGS
-            ),
+            IndexSpec.builder()
+                     .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                     .withDimensionCompression(CompressionStrategy.LZ4)
+                     .withMetricCompression(CompressionStrategy.LZF)
+                     .withLongEncoding(LongEncodingStrategy.LONGS)
+                     .build(),
             null,
             null,
             true,
