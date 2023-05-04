@@ -67,9 +67,9 @@ export class ConsoleApplication extends React.PureComponent<
       timeout: 120000,
       message: (
         <>
-          It appears that some backend druid services are not responding. The console will not
-          function at the moment. Please make sure that all the druid services are up and running.
-          You can look at the logs of individual services for troubleshooting.
+         Some backend druid services are not responding. The console will not
+          function at the moment. Make sure that all your Druid services are up and running.
+          Check the logs of individual services for troubleshooting.
         </>
       ),
     });

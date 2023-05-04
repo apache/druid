@@ -102,8 +102,8 @@ public class QueryHostFinder
     assertServerFound(
         server,
         "There are no brokers to connect to for query[%s]."
-        + "Please check that the brokers are "
-        + "running and are healthy.",
+        + "Please check that your brokers are "
+        + "running and healthy.",
         query
     );
     return server;
@@ -114,7 +114,7 @@ public class QueryHostFinder
     Server server = findDefaultServer();
     assertServerFound(
         server,
-        "There are no brokers to connect to. Please check that the brokers are running and " + " are healthy."
+        "There are no available brokers. Please check that the brokers are running and " + " healthy."
     );
     return server;
   }
