@@ -79,11 +79,11 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
       Indexed<ByteBuffer> singleThreadedUtf8 = dictionaryUtf8.singleThreaded();
       Indexed<ImmutableBitmap> singleThreadedBitmaps = bitmaps.singleThreaded();
 
-      if (NullHandling.mustCombineNullAndEmpty(singleThreadedUtf8)) {
+      if (NullHandling.mustCombineNullAndEmptyInDictionary(singleThreadedUtf8)) {
         singleThreadedStrings = CombineFirstTwoEntriesIndexed.returnNull(singleThreadedStrings);
         singleThreadedUtf8 = CombineFirstTwoEntriesIndexed.returnNull(singleThreadedUtf8);
         singleThreadedBitmaps = CombineFirstTwoEntriesIndexed.unionBitmaps(bitmapFactory, singleThreadedBitmaps);
-      } else if (NullHandling.mustReplaceFirstValueWithNull(singleThreadedUtf8)) {
+      } else if (NullHandling.mustReplaceFirstValueWithNullInDictionary(singleThreadedUtf8)) {
         singleThreadedStrings = new ReplaceFirstValueWithNullIndexed<>(singleThreadedStrings);
         singleThreadedUtf8 = new ReplaceFirstValueWithNullIndexed<>(singleThreadedUtf8);
       }

@@ -33,7 +33,7 @@ import java.io.IOException;
  * Provided to enable compatibility for segments written under {@link NullHandling#sqlCompatible()} mode but
  * read under {@link NullHandling#replaceWithDefault()} mode.
  *
- * @see NullHandling#mustCombineNullAndEmpty(Indexed)
+ * @see NullHandling#mustCombineNullAndEmptyInDictionary(Indexed)
  */
 public class CombineFirstTwoValuesColumnarInts extends CombineFirstTwoValuesIndexedInts implements ColumnarInts
 {

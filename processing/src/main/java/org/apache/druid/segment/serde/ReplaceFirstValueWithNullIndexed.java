@@ -32,7 +32,7 @@ import java.util.Iterator;
  * Provided to enable compatibility for segments written under {@link NullHandling#sqlCompatible()} mode but
  * read under {@link NullHandling#replaceWithDefault()} mode.
  *
- * @see NullHandling#mustReplaceFirstValueWithNull(Indexed)
+ * @see NullHandling#mustReplaceFirstValueWithNullInDictionary(Indexed)
  */
 public class ReplaceFirstValueWithNullIndexed<T> implements Indexed<T>
 {

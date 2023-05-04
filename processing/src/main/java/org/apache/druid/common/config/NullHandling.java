@@ -185,12 +185,12 @@ public class NullHandling
    * Given a UTF-8 dictionary, returns whether the first two entries must be coalesced into a single null entry.
    * This happens if we are in default-value mode and the first two entries are null and empty string.
    *
-   * This and {@link #mustReplaceFirstValueWithNull(Indexed)} are never both true.
+   * This and {@link #mustReplaceFirstValueWithNullInDictionary(Indexed)} are never both true.
    *
    * Provided to enable compatibility for segments written under {@link #sqlCompatible()} mode but
    * read under {@link #replaceWithDefault()} mode.
    */
-  public static boolean mustCombineNullAndEmpty(final Indexed<ByteBuffer> dictionaryUtf8)
+  public static boolean mustCombineNullAndEmptyInDictionary(final Indexed<ByteBuffer> dictionaryUtf8)
   {
     return NullHandling.replaceWithDefault()
            && dictionaryUtf8.size() >= 2
@@ -202,12 +202,12 @@ public class NullHandling
    * Given a UTF-8 dictionary, returns whether the first entry must be replaced with null. This happens if we
    * are in default-value mode and the first entry is an empty string. (Default-value mode expects it to be null.)
    *
-   * This and {@link #mustCombineNullAndEmpty(Indexed)} are never both true.
+   * This and {@link #mustCombineNullAndEmptyInDictionary(Indexed)} are never both true.
    *
    * Provided to enable compatibility for segments written under {@link #sqlCompatible()} mode but
    * read under {@link #replaceWithDefault()} mode.
    */
-  public static boolean mustReplaceFirstValueWithNull(final Indexed<ByteBuffer> dictionaryUtf8)
+  public static boolean mustReplaceFirstValueWithNullInDictionary(final Indexed<ByteBuffer> dictionaryUtf8)
   {
     if (NullHandling.replaceWithDefault() && dictionaryUtf8.size() >= 1) {
       final ByteBuffer firstValue = dictionaryUtf8.get(0);

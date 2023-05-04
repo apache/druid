@@ -74,14 +74,14 @@ public class DictionaryEncodedColumnSupplier implements Supplier<DictionaryEncod
       cacheWrappedDictionary = dictionary.singleThreaded();
     }
 
-    if (NullHandling.mustCombineNullAndEmpty(singleThreadedDictionaryUtf8)) {
+    if (NullHandling.mustCombineNullAndEmptyInDictionary(singleThreadedDictionaryUtf8)) {
       return new StringDictionaryEncodedColumn(
           singleValuedColumn != null ? new CombineFirstTwoValuesColumnarInts(singleValuedColumn.get()) : null,
           multiValuedColumn != null ? new CombineFirstTwoValuesColumnarMultiInts(multiValuedColumn.get()) : null,
           CombineFirstTwoEntriesIndexed.returnNull(cacheWrappedDictionary),
           CombineFirstTwoEntriesIndexed.returnNull(singleThreadedDictionaryUtf8)
       );
-    } else if (NullHandling.mustReplaceFirstValueWithNull(singleThreadedDictionaryUtf8)) {
+    } else if (NullHandling.mustReplaceFirstValueWithNullInDictionary(singleThreadedDictionaryUtf8)) {
       return new StringDictionaryEncodedColumn(
           singleValuedColumn != null ? singleValuedColumn.get() : null,
           multiValuedColumn != null ? multiValuedColumn.get() : null,

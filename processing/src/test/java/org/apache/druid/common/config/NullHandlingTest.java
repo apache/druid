@@ -105,4 +105,16 @@ public class NullHandlingTest
       NullHandling.initializeForTests();
     }
   }
+
+  @Test
+  public void test_mustCombineNullAndEmptyInDictionary()
+  {
+    // TODO(gianm)
+  }
+
+  @Test
+  public void test_mustReplaceFirstValueWithNullInDictionary()
+  {
+    // TODO(gianm)
+  }
 }

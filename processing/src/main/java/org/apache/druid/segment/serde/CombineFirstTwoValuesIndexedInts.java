@@ -30,9 +30,9 @@ import org.apache.druid.segment.data.IndexedInts;
  * This class combines *values*, not *indexes*. So [0, 1, 2] becomes [0, 0, 2]. (The 1 was replaced with a 0.)
  *
  * Provided to enable compatibility for segments written under {@link NullHandling#sqlCompatible()} mode but
- * read under {@link NullHandling#replaceWithDefault()} ()} mode.
+ * read under {@link NullHandling#replaceWithDefault()} mode.
  *
- * @see NullHandling#mustCombineNullAndEmpty(Indexed)
+ * @see NullHandling#mustCombineNullAndEmptyInDictionary(Indexed)
  */
 public class CombineFirstTwoValuesIndexedInts implements IndexedInts
 {

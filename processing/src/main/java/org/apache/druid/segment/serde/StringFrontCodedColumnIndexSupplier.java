@@ -79,10 +79,10 @@ public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
       Indexed<ByteBuffer> dict = utf8Dictionary.get();
       Indexed<ImmutableBitmap> singleThreadedBitmaps = bitmaps.singleThreaded();
 
-      if (NullHandling.mustCombineNullAndEmpty(dict)) {
+      if (NullHandling.mustCombineNullAndEmptyInDictionary(dict)) {
         dict = CombineFirstTwoEntriesIndexed.returnNull(dict);
         singleThreadedBitmaps = CombineFirstTwoEntriesIndexed.unionBitmaps(bitmapFactory, singleThreadedBitmaps);
-      } else if (NullHandling.mustReplaceFirstValueWithNull(dict)) {
+      } else if (NullHandling.mustReplaceFirstValueWithNullInDictionary(dict)) {
         dict = new ReplaceFirstValueWithNullIndexed<>(dict);
       }
 

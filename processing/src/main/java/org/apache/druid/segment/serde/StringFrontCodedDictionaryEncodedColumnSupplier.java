@@ -56,13 +56,13 @@ public class StringFrontCodedDictionaryEncodedColumnSupplier implements Supplier
   {
     final FrontCodedIndexed suppliedUtf8Dictionary = utf8Dictionary.get();
 
-    if (NullHandling.mustCombineNullAndEmpty(suppliedUtf8Dictionary)) {
+    if (NullHandling.mustCombineNullAndEmptyInDictionary(suppliedUtf8Dictionary)) {
       return new StringFrontCodedDictionaryEncodedColumn(
           singleValuedColumn != null ? new CombineFirstTwoValuesColumnarInts(singleValuedColumn.get()) : null,
           multiValuedColumn != null ? new CombineFirstTwoValuesColumnarMultiInts(multiValuedColumn.get()) : null,
           CombineFirstTwoEntriesIndexed.returnNull(suppliedUtf8Dictionary)
       );
-    } else if (NullHandling.mustReplaceFirstValueWithNull(suppliedUtf8Dictionary)) {
+    } else if (NullHandling.mustReplaceFirstValueWithNullInDictionary(suppliedUtf8Dictionary)) {
       return new StringFrontCodedDictionaryEncodedColumn(
           singleValuedColumn != null ? singleValuedColumn.get() : null,
           multiValuedColumn != null ? multiValuedColumn.get() : null,
