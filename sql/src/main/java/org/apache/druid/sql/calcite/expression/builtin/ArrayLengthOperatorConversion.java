@@ -31,7 +31,12 @@ public class ArrayLengthOperatorConversion extends DirectOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("ARRAY_LENGTH")
-      .operandTypeChecker(OperandTypes.family(SqlTypeFamily.ANY))
+      .operandTypeChecker(
+          OperandTypes.or(
+              OperandTypes.family(SqlTypeFamily.ARRAY),
+              OperandTypes.family(SqlTypeFamily.STRING)
+          )
+      )
       .functionCategory(SqlFunctionCategory.STRING)
       .returnTypeCascadeNullable(SqlTypeName.INTEGER)
       .build();

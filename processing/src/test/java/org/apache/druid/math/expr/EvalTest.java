@@ -449,6 +449,11 @@ public class EvalTest extends InitializedNullHandlingTest
             )
         ).asArray()
     );
+
+    Assert.assertThrows(IAE.class, () -> ExprEval.ofLong(1234L).castTo(nestedArray));
+    Assert.assertThrows(IAE.class, () -> ExprEval.of("hello").castTo(nestedArray));
+    Assert.assertThrows(IAE.class, () -> ExprEval.ofDouble(1.234).castTo(nestedArray));
+    Assert.assertThrows(IAE.class, () -> ExprEval.ofComplex(ExpressionType.NESTED_DATA, 1234L).castTo(nestedArray));
   }
 
   @Test
@@ -1091,22 +1096,6 @@ public class EvalTest extends InitializedNullHandlingTest
     eval = ExprEval.ofType(ExpressionType.NESTED_DATA, ImmutableMap.of("x", 1L, "y", 2L));
     Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
     Assert.assertEquals(ImmutableMap.of("x", 1L, "y", 2L), eval.value());
-
-    eval = ExprEval.ofType(ExpressionType.NESTED_DATA, ImmutableList.of("a", "b", "c"));
-    Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[]{"a", "b", "c"}, (Object[]) eval.value());
-
-    eval = ExprEval.ofType(ExpressionType.NESTED_DATA, ImmutableList.of(1L, 2L, 3L));
-    Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[]{1L, 2L, 3L}, (Object[]) eval.value());
-
-    eval = ExprEval.ofType(ExpressionType.NESTED_DATA, "hello");
-    Assert.assertEquals(ExpressionType.STRING, eval.type());
-    Assert.assertEquals("hello", eval.value());
-
-    eval = ExprEval.ofType(ExpressionType.NESTED_DATA, 1.23);
-    Assert.assertEquals(ExpressionType.DOUBLE, eval.type());
-    Assert.assertEquals(1.23, eval.value());
 
     ExpressionType stringyComplexThing = ExpressionType.fromString("COMPLEX<somestringything>");
     eval = ExprEval.ofType(stringyComplexThing, "notbase64");

@@ -40,8 +40,6 @@ import javax.annotation.Nullable;
 
 public class ScalarLongColumn implements NestedCommonFormatColumn
 {
-  private final boolean replaceWithDefault = NullHandling.replaceWithDefault();
-
   private final FixedIndexed<Long> longDictionary;
   private final ColumnarLongs valueColumn;
   private final ImmutableBitmap nullValueIndex;
@@ -95,7 +93,7 @@ public class ScalarLongColumn implements NestedCommonFormatColumn
       @Override
       public boolean isNull()
       {
-        if (replaceWithDefault) {
+        if (NullHandling.replaceWithDefault()) {
           return false;
         }
         final int i = offset.getOffset();
@@ -141,7 +139,7 @@ public class ScalarLongColumn implements NestedCommonFormatColumn
       @Override
       public boolean[] getNullVector()
       {
-        if (replaceWithDefault) {
+        if (NullHandling.replaceWithDefault()) {
           return null;
         }
         computeVectorsIfNeeded();

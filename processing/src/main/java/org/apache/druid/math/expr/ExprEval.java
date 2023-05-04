@@ -36,7 +36,6 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Generic result holder for evaluated {@link Expr} containing the value and {@link ExprType} of the value to allow
@@ -369,6 +368,9 @@ public abstract class ExprEval<T>
 
   public static ExprEval ofComplex(ExpressionType outputType, @Nullable Object value)
   {
+    if (ExpressionType.NESTED_DATA.equals(outputType)) {
+      return new NestedDataExprEval(value);
+    }
     return new ComplexExprEval(outputType, value);
   }
 
@@ -496,7 +498,7 @@ public abstract class ExprEval<T>
     }
 
     // is this cool?
-    return new ComplexExprEval(ExpressionType.UNKNOWN_COMPLEX, val);
+    return ofComplex(ExpressionType.UNKNOWN_COMPLEX, val);
   }
 
   public static ExprEval ofType(@Nullable ExpressionType type, @Nullable Object value)
@@ -552,12 +554,7 @@ public abstract class ExprEval<T>
         return ofDouble(null);
       case COMPLEX:
         if (ExpressionType.NESTED_DATA.equals(type)) {
-          // is the thing actually nested?
-          final Object unwrapped = StructuredData.unwrap(value);
-          if (unwrapped instanceof Map) {
-            return ofComplex(type, unwrapped);
-          }
-          return bestEffortOf(unwrapped);
+          return ofComplex(type, StructuredData.unwrap(value));
         }
         byte[] bytes = null;
         if (value instanceof String) {
@@ -849,6 +846,7 @@ public abstract class ExprEval<T>
             case STRING:
               return ExprEval.ofStringArray(value == null ? null : new Object[] {value.toString()});
           }
+          break;
         case COMPLEX:
           if (ExpressionType.NESTED_DATA.equals(castTo)) {
             return ExprEval.ofComplex(castTo, value);
@@ -927,6 +925,7 @@ public abstract class ExprEval<T>
             case STRING:
               return ExprEval.ofStringArray(value == null ? null : new Object[] {value.toString()});
           }
+          break;
         case COMPLEX:
           if (ExpressionType.NESTED_DATA.equals(castTo)) {
             return ExprEval.ofComplex(castTo, value);
@@ -1319,8 +1318,6 @@ public abstract class ExprEval<T>
   private static class ComplexExprEval extends ExprEval<Object>
   {
     private final ExpressionType expressionType;
-    @Nullable
-    private Number number;
 
     private ComplexExprEval(ExpressionType expressionType, @Nullable Object value)
     {
@@ -1337,21 +1334,89 @@ public abstract class ExprEval<T>
     @Override
     public boolean isNumericNull()
     {
-      if (ExpressionType.NESTED_DATA.equals(expressionType)) {
-        computeNumber();
-        return number == null;
-      }
       return true;
     }
 
     @Override
     public int asInt()
     {
-      if (ExpressionType.NESTED_DATA.equals(expressionType)) {
-        computeNumber();
-        if (number != null) {
-          return number.intValue();
-        }
+      return 0;
+    }
+
+    @Override
+    public long asLong()
+    {
+      return 0;
+    }
+
+    @Override
+    public double asDouble()
+    {
+      return 0;
+    }
+
+    @Override
+    public boolean asBoolean()
+    {
+      return false;
+    }
+    @Nullable
+    @Override
+    public Object[] asArray()
+    {
+      return null;
+    }
+
+    @Override
+    public ExprEval castTo(ExpressionType castTo)
+    {
+      if (expressionType.equals(castTo)) {
+        return this;
+      }
+      // allow cast of unknown complex to some other complex type
+      if (expressionType.getComplexTypeName() == null && castTo.getType().equals(ExprType.COMPLEX)) {
+        return ofComplex(castTo, value);
+      }
+      throw invalidCast(expressionType, castTo);
+    }
+
+    @Override
+    public Expr toExpr()
+    {
+      return new ComplexExpr(expressionType, value);
+    }
+  }
+
+  private static class NestedDataExprEval extends ExprEval<Object>
+  {
+    @Nullable
+    private Number number;
+    private boolean computedNumber = false;
+
+    private NestedDataExprEval(@Nullable Object value)
+    {
+      super(value);
+    }
+
+    @Override
+    public ExpressionType type()
+    {
+      return ExpressionType.NESTED_DATA;
+    }
+
+    @Override
+    public boolean isNumericNull()
+    {
+      computeNumber();
+      return number == null;
+    }
+
+    @Override
+    public int asInt()
+    {
+      computeNumber();
+      if (number != null) {
+        return number.intValue();
       }
       return 0;
     }
@@ -1359,42 +1424,37 @@ public abstract class ExprEval<T>
     @Override
     public long asLong()
     {
-      if (ExpressionType.NESTED_DATA.equals(expressionType)) {
-        computeNumber();
-        if (number != null) {
-          return number.longValue();
-        }
+      computeNumber();
+      if (number != null) {
+        return number.longValue();
       }
-      return 0;
+      return 0L;
     }
 
     @Override
     public double asDouble()
     {
-      if (ExpressionType.NESTED_DATA.equals(expressionType)) {
-        computeNumber();
-        if (number != null) {
-          return number.doubleValue();
-        }
+      computeNumber();
+      if (number != null) {
+        return number.doubleValue();
       }
-      return 0;
+      return 0.0;
     }
 
     @Override
     public boolean asBoolean()
     {
-      if (ExpressionType.NESTED_DATA.equals(expressionType)) {
-        Object val = StructuredData.unwrap(value);
-        if (val != null) {
-          return Evals.objectAsBoolean(val);
-        }
+      Object val = StructuredData.unwrap(value);
+      if (val != null) {
+        return Evals.objectAsBoolean(val);
       }
       return false;
     }
 
     private void computeNumber()
     {
-      if (number == null && value != null) {
+      if (!computedNumber && value != null) {
+        computedNumber = true;
         Object val = StructuredData.unwrap(value);
         if (val instanceof Number) {
           number = (Number) val;
@@ -1410,12 +1470,10 @@ public abstract class ExprEval<T>
     @Override
     public Object[] asArray()
     {
-      if (ExpressionType.NESTED_DATA.equals(expressionType)) {
-        Object val = StructuredData.unwrap(value);
-        ExprEval maybeArray = ExprEval.bestEffortOf(val);
-        if (maybeArray.type().isPrimitive() || maybeArray.isArray()) {
-          return maybeArray.asArray();
-        }
+      Object val = StructuredData.unwrap(value);
+      ExprEval maybeArray = ExprEval.bestEffortOf(val);
+      if (maybeArray.type().isPrimitive() || maybeArray.isArray()) {
+        return maybeArray.asArray();
       }
       return null;
     }
@@ -1423,28 +1481,23 @@ public abstract class ExprEval<T>
     @Override
     public ExprEval castTo(ExpressionType castTo)
     {
-      if (expressionType.equals(castTo)) {
+      if (ExpressionType.NESTED_DATA.equals(castTo)) {
         return this;
       }
-      // allow cast of unknown complex to some other complex type
-      if (expressionType.getComplexTypeName() == null && castTo.getType().equals(ExprType.COMPLEX)) {
-        return new ComplexExprEval(castTo, value);
-      }
-      if (ExpressionType.NESTED_DATA.equals(expressionType)) {
-        Object val = StructuredData.unwrap(value);
-        ExprEval bestEffortOf = ExprEval.bestEffortOf(val);
 
-        if (bestEffortOf.type().isPrimitive() || bestEffortOf.type().isArray()) {
-          return bestEffortOf.castTo(castTo);
-        }
+      Object val = StructuredData.unwrap(value);
+      ExprEval bestEffortOf = ExprEval.bestEffortOf(val);
+
+      if (bestEffortOf.type().isPrimitive() || bestEffortOf.type().isArray()) {
+        return bestEffortOf.castTo(castTo);
       }
-      throw invalidCast(expressionType, castTo);
+      throw invalidCast(ExpressionType.NESTED_DATA, castTo);
     }
 
     @Override
     public Expr toExpr()
     {
-      return new ComplexExpr(expressionType, value);
+      return new ComplexExpr(ExpressionType.NESTED_DATA, value);
     }
   }
 

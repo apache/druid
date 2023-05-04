@@ -69,8 +69,6 @@ import java.util.SortedSet;
 
 public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFormatColumn>, ColumnIndexSupplier
 {
-  private final boolean replaceWithDefault = NullHandling.replaceWithDefault();
-
   public static ScalarLongColumnAndIndexSupplier read(
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
@@ -187,7 +185,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
   {
     if (clazz.equals(NullValueIndex.class)) {
       final BitmapColumnIndex nullIndex;
-      if (replaceWithDefault) {
+      if (NullHandling.replaceWithDefault()) {
         nullIndex = new SimpleImmutableBitmapIndex(bitmapFactory.makeEmptyImmutableBitmap());
       } else {
         nullIndex = new SimpleImmutableBitmapIndex(nullValueBitmap);
@@ -239,7 +237,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
               return 0.0;
             }
           }
-          if (replaceWithDefault && longValue.equals(NullHandling.defaultLongValue())) {
+          if (NullHandling.replaceWithDefault() && longValue.equals(NullHandling.defaultLongValue())) {
             if (defaultValueIndex >= 0) {
               return ((double) getBitmap(0).size() + (double) getBitmap(defaultValueIndex).size()) / totalRows;
             }
@@ -262,7 +260,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
               return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
             }
           }
-          if (replaceWithDefault && longValue.equals(NullHandling.defaultLongValue())) {
+          if (NullHandling.replaceWithDefault() && longValue.equals(NullHandling.defaultLongValue())) {
             if (defaultValueIndex >= 0) {
               return bitmapResultFactory.unionDimensionValueBitmaps(
                   ImmutableList.of(
@@ -299,7 +297,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
               Long theValue = GuavaUtils.tryParseLong(value);
               if (theValue != null) {
                 longs.add(theValue.longValue());
-                if (replaceWithDefault && theValue.equals(NullHandling.defaultLongValue())) {
+                if (NullHandling.replaceWithDefault() && theValue.equals(NullHandling.defaultLongValue())) {
                   needNullCheck = true;
                 }
               }

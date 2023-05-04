@@ -62,15 +62,17 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
   public static NestedCommonFormatColumnPartSerde createDeserializer(
       @JsonProperty("logicalType") ColumnType logicalType,
       @JsonProperty("hasNulls") boolean hasNulls,
+      @JsonProperty("isVariantType") boolean isVariantType,
       @JsonProperty("byteOrder") ByteOrder byteOrder,
       @JsonProperty("bitmapSerdeFactory") BitmapSerdeFactory bitmapSerdeFactory
   )
   {
-    return new NestedCommonFormatColumnPartSerde(logicalType, hasNulls, byteOrder, bitmapSerdeFactory, null);
+    return new NestedCommonFormatColumnPartSerde(logicalType, hasNulls, isVariantType, byteOrder, bitmapSerdeFactory, null);
   }
 
   private final ColumnType logicalType;
   private final boolean hasNulls;
+  private final boolean isVariantType;
   private final ByteOrder byteOrder;
   private final BitmapSerdeFactory bitmapSerdeFactory;
 
@@ -81,6 +83,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
   private NestedCommonFormatColumnPartSerde(
       ColumnType logicalType,
       boolean hasNulls,
+      boolean isVariant,
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
       @Nullable Serializer serializer
@@ -88,6 +91,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
   {
     this.logicalType = logicalType;
     this.hasNulls = hasNulls;
+    this.isVariantType = isVariant;
     this.byteOrder = byteOrder;
     this.bitmapSerdeFactory = bitmapSerdeFactory;
     this.serializer = serializer;
@@ -104,6 +108,26 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
   @Override
   public Deserializer getDeserializer()
   {
+    if (isVariantType || logicalType.isArray()) {
+      return ((buffer, builder, columnConfig) -> {
+        VariantArrayColumnAndIndexSupplier supplier = VariantArrayColumnAndIndexSupplier.read(
+            logicalType,
+            byteOrder,
+            bitmapSerdeFactory,
+            buffer,
+            builder,
+            columnConfig
+        );
+        ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
+        capabilitiesBuilder.setDictionaryEncoded(true);
+        capabilitiesBuilder.setDictionaryValuesSorted(true);
+        capabilitiesBuilder.setDictionaryValuesUnique(true);
+        builder.setType(logicalType);
+        builder.setNestedCommonFormatColumnSupplier(supplier);
+        builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
+        builder.setFilterable(true);
+      });
+    }
     if (logicalType.is(ValueType.STRING)) {
       return ((buffer, builder, columnConfig) -> {
         ScalarStringColumnAndIndexSupplier supplier = ScalarStringColumnAndIndexSupplier.read(
@@ -164,26 +188,6 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
         builder.setFilterable(true);
       });
     }
-    if (logicalType.isArray()) {
-      return ((buffer, builder, columnConfig) -> {
-        VariantArrayColumnAndIndexSupplier supplier = VariantArrayColumnAndIndexSupplier.read(
-            logicalType,
-            byteOrder,
-            bitmapSerdeFactory,
-            buffer,
-            builder,
-            columnConfig
-        );
-        ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
-        capabilitiesBuilder.setDictionaryEncoded(true);
-        capabilitiesBuilder.setDictionaryValuesSorted(true);
-        capabilitiesBuilder.setDictionaryValuesUnique(true);
-        builder.setType(logicalType);
-        builder.setNestedCommonFormatColumnSupplier(supplier);
-        builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
-        builder.setFilterable(true);
-      });
-    }
     return (buffer, builder, columnConfig) -> {
       NestedDataColumnSupplier supplier = NestedDataColumnSupplier.read(
           hasNulls,
@@ -218,6 +222,12 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
     return hasNulls;
   }
 
+  @JsonProperty("isVariantType")
+  public boolean isVariantType()
+  {
+    return isVariantType;
+  }
+
   @JsonProperty
   public ByteOrder getByteOrder()
   {
@@ -234,6 +244,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
   {
     private ColumnType logicalType;
     private boolean hasNulls;
+    private boolean isVariantType;
     private ByteOrder byteOrder = ByteOrder.nativeOrder();
     BitmapSerdeFactory bitmapSerdeFactory;
     @Nullable
@@ -242,6 +253,12 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
     public SerializerBuilder withLogicalType(ColumnType logicalType)
     {
       this.logicalType = logicalType;
+      return this;
+    }
+
+    public SerializerBuilder isVariantType(boolean isVariant)
+    {
+      this.isVariantType = isVariant;
       return this;
     }
 
@@ -271,7 +288,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
 
     public NestedCommonFormatColumnPartSerde build()
     {
-      return new NestedCommonFormatColumnPartSerde(logicalType, hasNulls, byteOrder, bitmapSerdeFactory, serializer);
+      return new NestedCommonFormatColumnPartSerde(logicalType, hasNulls, isVariantType, byteOrder, bitmapSerdeFactory, serializer);
     }
   }
 }

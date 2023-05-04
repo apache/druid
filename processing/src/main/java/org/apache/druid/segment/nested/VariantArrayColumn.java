@@ -19,33 +19,54 @@
 
 package org.apache.druid.segment.nested;
 
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.AbstractDimensionSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.DictionaryEncodedColumn;
+import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.data.SingleIndexedInt;
+import org.apache.druid.segment.filter.BooleanValueMatcher;
+import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelector;
+import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.BitSet;
 import java.util.Iterator;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
-public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>> implements NestedCommonFormatColumn
+public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>>
+    implements DictionaryEncodedColumn<String>, NestedCommonFormatColumn
 {
   private final TStringDictionary stringDictionary;
   private final FixedIndexed<Long> longDictionary;
@@ -54,9 +75,13 @@ public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>> i
   private final ColumnarInts encodedValueColumn;
   private final ImmutableBitmap nullValueBitmap;
   private final ColumnType logicalType;
+  private final ExpressionType logicalExpressionType;
+  @Nullable
+  private final FieldTypeInfo.TypeSet variantTypes;
   private final int adjustLongId;
   private final int adjustDoubleId;
   private final int adjustArrayId;
+
 
   public VariantArrayColumn(
       TStringDictionary stringDictionary,
@@ -65,7 +90,8 @@ public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>> i
       FrontCodedIntArrayIndexed arrayDictionary,
       ColumnarInts encodedValueColumn,
       ImmutableBitmap nullValueBitmap,
-      ColumnType logicalType
+      ColumnType logicalType,
+      @Nullable Byte variantTypeSetByte
   )
   {
     this.stringDictionary = stringDictionary;
@@ -75,6 +101,8 @@ public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>> i
     this.encodedValueColumn = encodedValueColumn;
     this.nullValueBitmap = nullValueBitmap;
     this.logicalType = logicalType;
+    this.logicalExpressionType = ExpressionType.fromColumnTypeStrict(logicalType);
+    this.variantTypes = variantTypeSetByte == null ? null : new FieldTypeInfo.TypeSet(variantTypeSetByte);
     this.adjustLongId = stringDictionary.size();
     this.adjustDoubleId = adjustLongId + longDictionary.size();
     this.adjustArrayId = adjustDoubleId + doubleDictionary.size();
@@ -131,21 +159,21 @@ public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>> i
         }
 
         @Nullable
-        private Object lookupId(int globalId)
+        private Object lookupId(int id)
         {
-          if (globalId == 0) {
+          if (id == 0) {
             return null;
           }
           final int adjustLongId = stringDictionary.size();
           final int adjustDoubleId = stringDictionary.size() + longDictionary.size();
-          if (globalId < adjustLongId) {
-            return StringUtils.fromUtf8Nullable(stringDictionary.get(globalId));
-          } else if (globalId < adjustDoubleId) {
-            return longDictionary.get(globalId - adjustLongId);
-          } else if (globalId < adjustDoubleId + doubleDictionary.size()) {
-            return doubleDictionary.get(globalId - adjustDoubleId);
+          if (id < adjustLongId) {
+            return StringUtils.fromUtf8Nullable(stringDictionary.get(id));
+          } else if (id < adjustDoubleId) {
+            return longDictionary.get(id - adjustLongId);
+          } else if (id < adjustDoubleId + doubleDictionary.size()) {
+            return doubleDictionary.get(id - adjustDoubleId);
           }
-          throw new IAE("Unknown globalId [%s]", globalId);
+          throw new IAE("Unknown id [%s]", id);
         }
       };
     };
@@ -185,11 +213,324 @@ public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>> i
   }
 
   @Override
+  public SortedMap<String, FieldTypeInfo.MutableTypeSet> getFieldTypeInfo()
+  {
+    if (variantTypes != null) {
+      FieldTypeInfo.MutableTypeSet rootOnlyType = new FieldTypeInfo.MutableTypeSet(variantTypes.getByteValue());
+      SortedMap<String, FieldTypeInfo.MutableTypeSet> fields = new TreeMap<>();
+      fields.put(NestedPathFinder.JSON_PATH_ROOT, rootOnlyType);
+      return fields;
+    }
+    FieldTypeInfo.MutableTypeSet rootOnlyType = new FieldTypeInfo.MutableTypeSet().add(getLogicalType());
+    SortedMap<String, FieldTypeInfo.MutableTypeSet> fields = new TreeMap<>();
+    fields.put(NestedPathFinder.JSON_PATH_ROOT, rootOnlyType);
+    return fields;
+  }
+
+  @Override
+  public int length()
+  {
+    return encodedValueColumn.size();
+  }
+
+  @Override
+  public boolean hasMultipleValues()
+  {
+    return false;
+  }
+
+  @Override
+  public int getSingleValueRow(int rowNum)
+  {
+    return encodedValueColumn.get(rowNum);
+  }
+
+  @Override
+  public IndexedInts getMultiValueRow(int rowNum)
+  {
+    throw new IllegalStateException("Multi-value row not supported");
+  }
+
+  @Nullable
+  @Override
+  public String lookupName(int id)
+  {
+    if (id < stringDictionary.size()) {
+      return StringUtils.fromUtf8Nullable(stringDictionary.get(id));
+    } else if (id < stringDictionary.size() + longDictionary.size()) {
+      return String.valueOf(longDictionary.get(id - adjustLongId));
+    } else if (id < stringDictionary.size() + longDictionary.size() + doubleDictionary.size()) {
+      return String.valueOf(doubleDictionary.get(id - adjustDoubleId));
+    }
+    return null;
+  }
+
+  @Override
+  public int lookupId(String val)
+  {
+    if (val == null) {
+      return 0;
+    }
+    int candidate = stringDictionary.indexOf(StringUtils.toUtf8ByteBuffer(val));
+    if (candidate >= 0) {
+      return candidate;
+    }
+    candidate = longDictionary.indexOf(GuavaUtils.tryParseLong(val));
+    if (candidate >= 0) {
+      candidate += adjustLongId;
+      return candidate;
+    }
+    candidate = doubleDictionary.indexOf(Doubles.tryParse(val));
+    if (candidate >= 0) {
+      candidate += adjustDoubleId;
+      return candidate;
+    }
+
+    // not in here, we can't really do anything cool here
+    return -1;
+  }
+
+  @Override
+  public int getCardinality()
+  {
+    if (logicalType.isArray() && variantTypes == null) {
+      return arrayDictionary.size();
+    }
+    // this probably isn't correct if we expose this as a multi-value dimension instead of an array, which would leave
+    // the array dictionary out of this computation
+    return stringDictionary.size() + longDictionary.size() + doubleDictionary.size() + arrayDictionary.size();
+  }
+
+  @Override
+  public DimensionSelector makeDimensionSelector(
+      ReadableOffset offset,
+      @Nullable ExtractionFn extractionFn
+  )
+  {
+    if (logicalType.isArray()) {
+      throw new IAE("Dimension selector is currently unsupported for [%s]", logicalType);
+    }
+    // copy everywhere all the time
+    class StringDimensionSelector extends AbstractDimensionSelector
+        implements SingleValueHistoricalDimensionSelector, IdLookup
+    {
+      private final SingleIndexedInt row = new SingleIndexedInt();
+
+      @Override
+      public IndexedInts getRow()
+      {
+        row.setValue(getRowValue());
+        return row;
+      }
+
+      public int getRowValue()
+      {
+        return encodedValueColumn.get(offset.getOffset());
+      }
+
+      @Override
+      public float getFloat()
+      {
+        final int id = getRowValue();
+        if (id == 0) {
+          // zero
+          return 0f;
+        } else if (id < adjustLongId) {
+          // try to convert string to float
+          Float f = Floats.tryParse(StringUtils.fromUtf8(stringDictionary.get(id)));
+          return f == null ? 0f : f;
+        } else if (id < adjustDoubleId) {
+          return longDictionary.get(id - adjustLongId).floatValue();
+        } else {
+          return doubleDictionary.get(id - adjustDoubleId).floatValue();
+        }
+      }
+
+      @Override
+      public double getDouble()
+      {
+        final int id = getRowValue();
+        if (id == 0) {
+          // zero
+          return 0.0;
+        } else if (id < adjustLongId) {
+          // try to convert string to double
+          Double d = Doubles.tryParse(StringUtils.fromUtf8(stringDictionary.get(id)));
+          return d == null ? 0.0 : d;
+        } else if (id < adjustDoubleId) {
+          return longDictionary.get(id - adjustLongId).doubleValue();
+        } else {
+          return doubleDictionary.get(id - adjustDoubleId);
+        }
+      }
+
+      @Override
+      public long getLong()
+      {
+        final int id = getRowValue();
+        if (id == 0) {
+          // zero
+          return 0L;
+        } else if (id < adjustLongId) {
+          // try to convert string to long
+          Long l = GuavaUtils.tryParseLong(StringUtils.fromUtf8(stringDictionary.get(id)));
+          return l == null ? 0L : l;
+        } else if (id < adjustDoubleId) {
+          return longDictionary.get(id - adjustLongId);
+        } else {
+          return doubleDictionary.get(id - adjustDoubleId).longValue();
+        }
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        if (getRowValue() == 0) {
+          return true;
+        }
+        return DimensionHandlerUtils.isNumericNull(getObject());
+      }
+
+      @Override
+      public IndexedInts getRow(int offset)
+      {
+        row.setValue(getRowValue(offset));
+        return row;
+      }
+
+      @Override
+      public int getRowValue(int offset)
+      {
+        return encodedValueColumn.get(offset);
+      }
+
+      @Override
+      public ValueMatcher makeValueMatcher(final @Nullable String value)
+      {
+        if (extractionFn == null) {
+          final int valueId = lookupId(value);
+          if (valueId >= 0) {
+            return new ValueMatcher()
+            {
+              @Override
+              public boolean matches()
+              {
+                return getRowValue() == valueId;
+              }
+
+              @Override
+              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+              {
+                inspector.visit("column", VariantArrayColumn.this);
+              }
+            };
+          } else {
+            return BooleanValueMatcher.of(false);
+          }
+        } else {
+          // Employ caching BitSet optimization
+          return makeValueMatcher(Predicates.equalTo(value));
+        }
+      }
+
+      @Override
+      public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
+      {
+        final BitSet checkedIds = new BitSet(getCardinality());
+        final BitSet matchingIds = new BitSet(getCardinality());
+
+        // Lazy matcher; only check an id if matches() is called.
+        return new ValueMatcher()
+        {
+          @Override
+          public boolean matches()
+          {
+            final int id = getRowValue();
+
+            if (checkedIds.get(id)) {
+              return matchingIds.get(id);
+            } else {
+              final boolean matches = predicate.apply(lookupName(id));
+              checkedIds.set(id);
+              if (matches) {
+                matchingIds.set(id);
+              }
+              return matches;
+            }
+          }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+            inspector.visit("column", VariantArrayColumn.this);
+          }
+        };
+      }
+
+      @Override
+      public Object getObject()
+      {
+        return VariantArrayColumn.this.lookupName(getRowValue());
+      }
+
+      @Override
+      public Class classOfObject()
+      {
+        return String.class;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("column", encodedValueColumn);
+        inspector.visit("offset", offset);
+        inspector.visit("extractionFn", extractionFn);
+      }
+
+      @Override
+      public int getValueCardinality()
+      {
+        return getCardinality();
+      }
+
+      @Override
+      public String lookupName(int id)
+      {
+        final String value = VariantArrayColumn.this.lookupName(id);
+        return extractionFn == null ? value : extractionFn.apply(value);
+      }
+
+      @Override
+      public boolean nameLookupPossibleInAdvance()
+      {
+        return true;
+      }
+
+      @Nullable
+      @Override
+      public IdLookup idLookup()
+      {
+        return extractionFn == null ? this : null;
+      }
+
+      @Override
+      public int lookupId(String name)
+      {
+        if (extractionFn == null) {
+          return VariantArrayColumn.this.lookupId(name);
+        }
+        throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
+      }
+    }
+
+    return new StringDimensionSelector();
+  }
+
+  @Override
   public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
   {
     return new ColumnValueSelector<Object>()
     {
-
       private PeekableIntIterator nullIterator = nullValueBitmap.peekableIterator();
       private int nullMark = -1;
       private int offsetMark = -1;
@@ -305,6 +646,45 @@ public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>> i
   }
 
   @Override
+  public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(ReadableVectorOffset offset)
+  {
+    final class StringVectorSelector extends StringDictionaryEncodedColumn.StringSingleValueDimensionVectorSelector
+    {
+      public StringVectorSelector()
+      {
+        super(encodedValueColumn, offset);
+      }
+
+      @Override
+      public int getValueCardinality()
+      {
+        return getCardinality();
+      }
+
+      @Nullable
+      @Override
+      public String lookupName(final int id)
+      {
+        return VariantArrayColumn.this.lookupName(id);
+      }
+
+      @Override
+      public int lookupId(@Nullable String name)
+      {
+        return VariantArrayColumn.this.lookupId(name);
+      }
+    }
+
+    return new StringVectorSelector();
+  }
+
+  @Override
+  public MultiValueDimensionVectorSelector makeMultiValueDimensionVectorSelector(ReadableVectorOffset vectorOffset)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public VectorObjectSelector makeVectorObjectSelector(ReadableVectorOffset offset)
   {
     return new VectorObjectSelector()
@@ -327,17 +707,17 @@ public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>> i
           encodedValueColumn.get(vector, offset.getOffsets(), offset.getCurrentVectorSize());
         }
         for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
-          final int globalId = vector[i];
-          if (globalId < adjustArrayId) {
-            objects[i] = lookupScalarValue(globalId);
+          final int id = vector[i];
+          if (id < adjustArrayId) {
+            objects[i] = lookupScalarValueStrict(id);
           } else {
-            int[] arr = arrayDictionary.get(globalId - adjustArrayId);
+            int[] arr = arrayDictionary.get(id - adjustArrayId);
             if (arr == null) {
               objects[i] = null;
             } else {
               final Object[] array = new Object[arr.length];
               for (int j = 0; j < arr.length; j++) {
-                array[j] = lookupScalarValue(arr[j]);
+                array[j] = lookupScalarValueStrict(arr[j]);
               }
               objects[i] = array;
             }
@@ -368,14 +748,34 @@ public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>> i
     encodedValueColumn.close();
   }
 
-  private Object lookupScalarValue(int globalId)
+  /**
+   * Lookup value from appropriate scalar value dictionary, coercing the value to {@link #logicalType}, particularly
+   * useful for the vector query engine which prefers all the types are consistent
+   * <p>
+   * This method should NEVER be used when values must round trip to be able to be looked up from the array value
+   * dictionary since it might coerce element values to a different type
+   */
+  private Object lookupScalarValueStrict(int id)
   {
-    if (globalId < adjustLongId) {
-      return StringUtils.fromUtf8Nullable(stringDictionary.get(globalId));
-    } else if (globalId < adjustDoubleId) {
-      return longDictionary.get(globalId - adjustLongId);
-    } else if (globalId < adjustArrayId) {
-      return doubleDictionary.get(globalId - adjustDoubleId);
+    if (id == 0) {
+      return null;
+    }
+    if (variantTypes == null) {
+      return lookupScalarValue(id);
+    } else {
+      ExprEval eval = ExprEval.ofType(logicalExpressionType, lookupScalarValue(id));
+      return eval.value();
+    }
+  }
+
+  private Object lookupScalarValue(int id)
+  {
+    if (id < adjustLongId) {
+      return StringUtils.fromUtf8Nullable(stringDictionary.get(id));
+    } else if (id < adjustDoubleId) {
+      return longDictionary.get(id - adjustLongId);
+    } else if (id < adjustArrayId) {
+      return doubleDictionary.get(id - adjustDoubleId);
     }
     throw new IllegalArgumentException("not a scalar in the dictionary");
   }

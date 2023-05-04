@@ -35,12 +35,18 @@ public class ArraySliceOperatorConversion extends DirectOperatorConversion
           OperandTypes.or(
             OperandTypes.sequence(
                 "(expr,start)",
-                OperandTypes.family(SqlTypeFamily.ANY),
+                OperandTypes.or(
+                    OperandTypes.family(SqlTypeFamily.ARRAY),
+                    OperandTypes.family(SqlTypeFamily.STRING)
+                ),
                 OperandTypes.family(SqlTypeFamily.NUMERIC)
             ),
             OperandTypes.sequence(
                 "(expr,start,end)",
-                OperandTypes.family(SqlTypeFamily.ANY),
+                OperandTypes.or(
+                    OperandTypes.family(SqlTypeFamily.ARRAY),
+                    OperandTypes.family(SqlTypeFamily.STRING)
+                ),
                 OperandTypes.family(SqlTypeFamily.NUMERIC),
                 OperandTypes.family(SqlTypeFamily.NUMERIC)
             )

@@ -69,6 +69,7 @@ import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.nested.VariantArrayColumn;
 import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 import org.apache.druid.segment.vector.BaseDoubleVectorValueSelector;
+import org.apache.druid.segment.vector.BaseFloatVectorValueSelector;
 import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.NilVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorInspector;
@@ -370,7 +371,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     if (parts.isEmpty()) {
       // dictionary encoded columns do not typically implement the value selector methods (getLong, getDouble, getFloat)
       // so we want to wrap their selector in a "best effort" casting selector to implement them
-      if (theColumn instanceof DictionaryEncodedColumn) {
+      if (theColumn instanceof DictionaryEncodedColumn && !(theColumn instanceof VariantArrayColumn)) {
         final DictionaryEncodedColumn<?> column = (DictionaryEncodedColumn<?>) theColumn;
         return new BestEffortCastingValueSelector(column.makeDimensionSelector(offset, null));
       }
@@ -608,74 +609,136 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       if (parts.isEmpty()) {
         if (theColumn instanceof DictionaryEncodedColumn) {
           final VectorObjectSelector delegate = theColumn.makeVectorObjectSelector(offset);
-          return new VectorValueSelector()
-          {
-            private int currentOffsetId = ReadableVectorInspector.NULL_ID;
-            private long[] longs = new long[delegate.getMaxVectorSize()];
-            private double[] doubles = new double[delegate.getMaxVectorSize()];
-            private float[] floats = new float[delegate.getMaxVectorSize()];
-            private boolean[] nulls = new boolean[delegate.getMaxVectorSize()];
-
-            @Override
-            public long[] getLongVector()
+          if (expectedType.is(ValueType.LONG)) {
+            return new BaseLongVectorValueSelector(offset)
             {
-              computeNumbers();
-              return longs;
-            }
+              private int currentOffsetId = ReadableVectorInspector.NULL_ID;
+              private final long[] longs = new long[delegate.getMaxVectorSize()];
+              private boolean[] nulls = null;
+              @Override
+              public long[] getLongVector()
+              {
+                computeLongs();
+                return longs;
+              }
 
-            @Override
-            public float[] getFloatVector()
-            {
-              computeNumbers();
-              return floats;
-            }
+              @Nullable
+              @Override
+              public boolean[] getNullVector()
+              {
+                computeLongs();
+                return nulls;
+              }
 
-            @Override
-            public double[] getDoubleVector()
-            {
-              computeNumbers();
-              return doubles;
-            }
-
-            @Nullable
-            @Override
-            public boolean[] getNullVector()
-            {
-              computeNumbers();
-              return nulls;
-            }
-
-            @Override
-            public int getMaxVectorSize()
-            {
-              return delegate.getMaxVectorSize();
-            }
-
-            @Override
-            public int getCurrentVectorSize()
-            {
-              return delegate.getCurrentVectorSize();
-            }
-
-            private void computeNumbers()
-            {
-              if (currentOffsetId != offset.getId()) {
-                currentOffsetId = offset.getId();
-                final Object[] values = delegate.getObjectVector();
-                for (int i = 0; i < values.length; i++) {
-                  Number n = ExprEval.computeNumber(Evals.asString(values[i]));
-                  if (n != null) {
-                    longs[i] = n.longValue();
-                    doubles[i] = n.doubleValue();
-                    floats[i] = n.floatValue();
-                    nulls[i] = false;
-                  } else {
-                    nulls[i] = true;
+              private void computeLongs()
+              {
+                if (currentOffsetId != offset.getId()) {
+                  currentOffsetId = offset.getId();
+                  final Object[] values = delegate.getObjectVector();
+                  for (int i = 0; i < values.length; i++) {
+                    Number n = ExprEval.computeNumber(Evals.asString(values[i]));
+                    if (n != null) {
+                      longs[i] = n.longValue();
+                      if (nulls != null) {
+                        nulls[i] = false;
+                      }
+                    } else {
+                      if (nulls == null) {
+                        nulls = new boolean[offset.getMaxVectorSize()];
+                      }
+                      nulls[i] = true;
+                    }
                   }
                 }
               }
-            }
-          };
+            };
+          } else if (expectedType.is(ValueType.FLOAT)) {
+            return new BaseFloatVectorValueSelector(offset)
+            {
+              private int currentOffsetId = ReadableVectorInspector.NULL_ID;
+              private final float[] floats = new float[delegate.getMaxVectorSize()];
+              private boolean[] nulls = null;
+              @Override
+              public float[] getFloatVector()
+              {
+                computeFloats();
+                return floats;
+              }
+
+              @Nullable
+              @Override
+              public boolean[] getNullVector()
+              {
+                computeFloats();
+                return nulls;
+              }
+
+              private void computeFloats()
+              {
+                if (currentOffsetId != offset.getId()) {
+                  currentOffsetId = offset.getId();
+                  final Object[] values = delegate.getObjectVector();
+                  for (int i = 0; i < values.length; i++) {
+                    Number n = ExprEval.computeNumber(Evals.asString(values[i]));
+                    if (n != null) {
+                      floats[i] = n.floatValue();
+                      if (nulls != null) {
+                        nulls[i] = false;
+                      }
+                    } else {
+                      if (nulls == null) {
+                        nulls = new boolean[offset.getMaxVectorSize()];
+                      }
+                      nulls[i] = true;
+                    }
+                  }
+                }
+              }
+            };
+          } else {
+            return new BaseDoubleVectorValueSelector(offset)
+            {
+              private int currentOffsetId = ReadableVectorInspector.NULL_ID;
+              private final double[] doubles = new double[delegate.getMaxVectorSize()];
+              private boolean[] nulls = null;
+              @Override
+              public double[] getDoubleVector()
+              {
+                computeDoubles();
+                return doubles;
+              }
+
+              @Nullable
+              @Override
+              public boolean[] getNullVector()
+              {
+                computeDoubles();
+                return nulls;
+              }
+
+              private void computeDoubles()
+              {
+                if (currentOffsetId != offset.getId()) {
+                  currentOffsetId = offset.getId();
+                  final Object[] values = delegate.getObjectVector();
+                  for (int i = 0; i < values.length; i++) {
+                    Number n = ExprEval.computeNumber(Evals.asString(values[i]));
+                    if (n != null) {
+                      doubles[i] = n.doubleValue();
+                      if (nulls != null) {
+                        nulls[i] = false;
+                      }
+                    } else {
+                      if (nulls == null) {
+                        nulls = new boolean[offset.getMaxVectorSize()];
+                      }
+                      nulls[i] = true;
+                    }
+                  }
+                }
+              }
+            };
+          }
         }
         return theColumn.makeVectorValueSelector(offset);
       }

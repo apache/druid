@@ -45,6 +45,7 @@ import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.SingleValueColumnarIntsSerializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -78,14 +79,19 @@ public class VariantArrayColumnSerializer extends NestedCommonFormatColumnSerial
   private ByteBuffer columnNameBytes = null;
   private final Int2ObjectRBTreeMap<MutableBitmap> arrayElements = new Int2ObjectRBTreeMap<>();
 
+  @Nullable
+  private final Byte variantTypeSetByte;
+
   public VariantArrayColumnSerializer(
       String name,
+      @Nullable Byte variantTypeSetByte,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       Closer closer
   )
   {
     this.name = name;
+    this.variantTypeSetByte = variantTypeSetByte;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.indexSpec = indexSpec;
     this.closer = closer;
@@ -254,8 +260,8 @@ public class VariantArrayColumnSerializer extends NestedCommonFormatColumnSerial
     }
 
     ExprEval eval = ExprEval.bestEffortOf(StructuredData.unwrap(selector.getObject()));
-    int[] globalIds = null;
     if (eval.isArray()) {
+      int[] globalIds = null;
       Object[] array = eval.asArray();
       globalIds = new int[array.length];
       for (int i = 0; i < array.length; i++) {
@@ -276,10 +282,35 @@ public class VariantArrayColumnSerializer extends NestedCommonFormatColumnSerial
             (id) -> indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap()
         ).add(rowCount);
       }
+      final int dictId = globalIds == null ? 0 : dictionaryIdLookup.lookupArray(globalIds);
+      encodedValueSerializer.addValue(dictId);
+      bitmaps[dictId].add(rowCount);
+    } else {
+      final Object o = eval.value();
+      final int dictId;
+      if (o == null) {
+        dictId = 0;
+      } else if (o instanceof String) {
+        dictId = dictionaryIdLookup.lookupString((String) o);
+      } else if (o instanceof Long) {
+        dictId = dictionaryIdLookup.lookupLong((Long) o);
+      } else if (o instanceof Double) {
+        dictId = dictionaryIdLookup.lookupDouble((Double) o);
+      } else {
+        dictId = -1;
+      }
+      Preconditions.checkArgument(dictId >= 0, "unknown global id [%s] for value [%s]", dictId, o);
+      if (dictId != 0) {
+        // treat as single element array
+        arrayElements.computeIfAbsent(
+            dictId,
+            (id) -> indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap()
+        ).add(rowCount);
+      }
+      encodedValueSerializer.addValue(dictId);
+      bitmaps[dictId].add(rowCount);
     }
-    final int dictId = globalIds == null ? 0 : dictionaryIdLookup.lookupArray(globalIds);
-    encodedValueSerializer.addValue(dictId);
-    bitmaps[dictId].add(rowCount);
+
     rowCount++;
   }
 
@@ -311,6 +342,9 @@ public class VariantArrayColumnSerializer extends NestedCommonFormatColumnSerial
 
     long size = 1 + columnNameBytes.capacity();
     // the value dictionaries, raw column, and null index are all stored in separate files
+    if (variantTypeSetByte != null) {
+      size += 1;
+    }
     return size;
   }
 
@@ -324,6 +358,9 @@ public class VariantArrayColumnSerializer extends NestedCommonFormatColumnSerial
     Preconditions.checkArgument(dictionaryWriter.isSorted(), "Dictionary not sorted?!?");
 
     writeV0Header(channel, columnNameBytes);
+    if (variantTypeSetByte != null) {
+      channel.write(ByteBuffer.wrap(new byte[]{variantTypeSetByte}));
+    }
 
     writeInternal(smoosher, dictionaryWriter, STRING_DICTIONARY_FILE_NAME);
     writeInternal(smoosher, longDictionaryWriter, LONG_DICTIONARY_FILE_NAME);

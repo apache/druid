@@ -34,8 +34,14 @@ public class ArrayPrependOperatorConversion extends DirectOperatorConversion
       .operandTypeChecker(
           OperandTypes.sequence(
               "(expr,array)",
-              OperandTypes.family(SqlTypeFamily.ANY),
-              OperandTypes.family(SqlTypeFamily.ANY)
+              OperandTypes.or(
+                  OperandTypes.family(SqlTypeFamily.STRING),
+                  OperandTypes.family(SqlTypeFamily.NUMERIC)
+              ),
+              OperandTypes.or(
+                  OperandTypes.family(SqlTypeFamily.ARRAY),
+                  OperandTypes.family(SqlTypeFamily.STRING)
+              )
           )
       )
       .functionCategory(SqlFunctionCategory.STRING)

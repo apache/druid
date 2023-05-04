@@ -65,6 +65,17 @@ public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommon
     final int columnNameLength = VByte.readInt(bb);
     final String columnName = StringUtils.fromUtf8(bb, columnNameLength);
 
+    // variant types store an extra byte containing a FieldTypeInfo.TypeSet which has bits set for all types
+    // present in the varaint column. this is a smaller scale, single path version of what a full nested column stores
+    // for each nested path. If this value is present then the column is a mixed type and the logical type represents
+    // the 'least restrictive' native Druid type, if not then all values consistently match the logical type
+    final Byte variantTypeByte;
+    if (bb.hasRemaining()) {
+      variantTypeByte = bb.get();
+    } else {
+      variantTypeByte = null;
+    }
+
     if (version == NestedCommonFormatColumnSerializer.V0) {
       try {
         final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
@@ -165,6 +176,7 @@ public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommon
         }
         return new VariantArrayColumnAndIndexSupplier(
             logicalType,
+            variantTypeByte,
             stringDictionary,
             frontCodedStringDictionarySupplier,
             longDictionarySupplier,
@@ -187,6 +199,8 @@ public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommon
 
 
   private final ColumnType logicalType;
+  @Nullable
+  private final Byte variantTypeSetByte;
 
   private final GenericIndexed<ByteBuffer> stringDictionary;
   private final Supplier<FrontCodedIndexed> frontCodedStringDictionarySupplier;
@@ -200,6 +214,7 @@ public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommon
 
   public VariantArrayColumnAndIndexSupplier(
       ColumnType logicalType,
+      @Nullable Byte variantTypeSetByte,
       GenericIndexed<ByteBuffer> stringDictionary,
       Supplier<FrontCodedIndexed> frontCodedStringDictionarySupplier,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
@@ -213,6 +228,7 @@ public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommon
   )
   {
     this.logicalType = logicalType;
+    this.variantTypeSetByte = variantTypeSetByte;
     this.stringDictionary = stringDictionary;
     this.frontCodedStringDictionarySupplier = frontCodedStringDictionarySupplier;
     this.longDictionarySupplier = longDictionarySupplier;
@@ -234,7 +250,8 @@ public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommon
           arrayDictionarySupplier.get(),
           encodedValueColumnSupplier.get(),
           nullValueBitmap,
-          logicalType
+          logicalType,
+          variantTypeSetByte
       );
     }
     return new VariantArrayColumn<>(
@@ -244,7 +261,8 @@ public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommon
         arrayDictionarySupplier.get(),
         encodedValueColumnSupplier.get(),
         nullValueBitmap,
-        logicalType
+        logicalType,
+        variantTypeSetByte
     );
   }
 

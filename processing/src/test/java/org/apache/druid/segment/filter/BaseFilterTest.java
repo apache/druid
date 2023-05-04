@@ -312,71 +312,101 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
     final Map<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>> finishers =
         ImmutableMap.<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>>builder()
-            .put(
-                "incremental",
-                input -> {
-                  final IncrementalIndex index = input.buildIncrementalIndex();
-                  return Pair.of(new IncrementalIndexStorageAdapter(index), index);
-                }
-            )
-            .put(
-                "mmappedAutoTypes",
-                input -> {
-                  input.mapSchema(
-                      schema ->
-                          new IncrementalIndexSchema(
-                              schema.getMinTimestamp(),
-                              schema.getTimestampSpec(),
-                              schema.getGran(),
-                              schema.getVirtualColumns(),
-                              schema.getDimensionsSpec().withDimensions(
-                                  schema.getDimensionsSpec()
-                                        .getDimensions()
-                                        .stream()
-                                        .map(
-                                            dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName())
-                                        )
-                                        .collect(Collectors.toList())
-                              ),
-                              schema.getMetrics(),
-                              schema.isRollup()
-                          )
-                  );
-                  final QueryableIndex index = input.buildMMappedIndex();
-                  return Pair.of(new QueryableIndexStorageAdapter(index), index);
-                }
-            )
-            .put(
-                "mmapped",
-                input -> {
-                  final QueryableIndex index = input.buildMMappedIndex();
-                  return Pair.of(new QueryableIndexStorageAdapter(index), index);
-                }
-            )
-            .put(
-                "mmappedMerged",
-                input -> {
-                  final QueryableIndex index = input.buildMMappedMergedIndex();
-                  return Pair.of(new QueryableIndexStorageAdapter(index), index);
-                }
-            )
-            .put(
-                "rowBasedWithoutTypeSignature",
-                input -> Pair.of(input.buildRowBasedSegmentWithoutTypeSignature().asStorageAdapter(), () -> {})
-            )
-            .put(
-                "rowBasedWithTypeSignature",
-                input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().asStorageAdapter(), () -> {})
-            )
-            .put("frame (row-based)", input -> {
-              final FrameSegment segment = input.buildFrameSegment(FrameType.ROW_BASED);
-              return Pair.of(segment.asStorageAdapter(), segment);
-            })
-            .put("frame (columnar)", input -> {
-              final FrameSegment segment = input.buildFrameSegment(FrameType.COLUMNAR);
-              return Pair.of(segment.asStorageAdapter(), segment);
-            })
-            .build();
+                    .put(
+                        "incremental",
+                        input -> {
+                          final IncrementalIndex index = input.buildIncrementalIndex();
+                          return Pair.of(new IncrementalIndexStorageAdapter(index), index);
+                        }
+                    )
+                    .put(
+                        "mmappedAutoTypes",
+                        input -> {
+                          input.mapSchema(
+                              schema ->
+                                  new IncrementalIndexSchema(
+                                      schema.getMinTimestamp(),
+                                      schema.getTimestampSpec(),
+                                      schema.getGran(),
+                                      schema.getVirtualColumns(),
+                                      schema.getDimensionsSpec().withDimensions(
+                                          schema.getDimensionsSpec()
+                                                .getDimensions()
+                                                .stream()
+                                                .map(
+                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName())
+                                                )
+                                                .collect(Collectors.toList())
+                                      ),
+                                      schema.getMetrics(),
+                                      schema.isRollup()
+                                  )
+                          );
+                          final QueryableIndex index = input.buildMMappedIndex();
+                          return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                        }
+                    )
+                    .put(
+                        "mmappedAutoTypesMerged",
+                        input -> {
+                          input.mapSchema(
+                              schema ->
+                                  new IncrementalIndexSchema(
+                                      schema.getMinTimestamp(),
+                                      schema.getTimestampSpec(),
+                                      schema.getGran(),
+                                      schema.getVirtualColumns(),
+                                      schema.getDimensionsSpec().withDimensions(
+                                          schema.getDimensionsSpec()
+                                                .getDimensions()
+                                                .stream()
+                                                .map(
+                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName())
+                                                )
+                                                .collect(Collectors.toList())
+                                      ),
+                                      schema.getMetrics(),
+                                      schema.isRollup()
+                                  )
+                          );
+                          input.intermediaryPersistSize(3);
+                          final QueryableIndex index = input.buildMMappedMergedIndex();
+                          return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                        }
+                    )
+                    .put(
+                        "mmapped",
+                        input -> {
+                          final QueryableIndex index = input.buildMMappedIndex();
+                          return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                        }
+                    )
+                    .put(
+                        "mmappedMerged",
+                        input -> {
+                          final QueryableIndex index = input.buildMMappedMergedIndex();
+                          return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                        }
+                    )
+                    .put(
+                        "rowBasedWithoutTypeSignature",
+                        input -> Pair.of(input.buildRowBasedSegmentWithoutTypeSignature().asStorageAdapter(), () -> {
+                        })
+                    )
+                    .put(
+                        "rowBasedWithTypeSignature",
+                        input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().asStorageAdapter(), () -> {
+                        })
+                    )
+                    .put("frame (row-based)", input -> {
+                      final FrameSegment segment = input.buildFrameSegment(FrameType.ROW_BASED);
+                      return Pair.of(segment.asStorageAdapter(), segment);
+                    })
+                    .put("frame (columnar)", input -> {
+                      final FrameSegment segment = input.buildFrameSegment(FrameType.COLUMNAR);
+                      return Pair.of(segment.asStorageAdapter(), segment);
+                    })
+                    .build();
 
     StringEncodingStrategy[] stringEncoding = new StringEncodingStrategy[]{
         new StringEncodingStrategy.Utf8(),
@@ -902,7 +932,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     }
     catch (ISE ise) {
       // ignore failures resulting from 'auto'
-      if (!ise.getMessage().equals("Unsupported type[ARRAY<STRING>]")) {
+      if (!(testName.contains("AutoTypes") && "Unsupported type[ARRAY<STRING>]".equals(ise.getMessage()))) {
         throw ise;
       }
     }

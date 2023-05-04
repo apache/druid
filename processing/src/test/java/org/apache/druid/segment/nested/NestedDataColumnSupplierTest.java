@@ -252,6 +252,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     NestedCommonFormatColumnPartSerde partSerde = NestedCommonFormatColumnPartSerde.createDeserializer(
         ColumnType.NESTED_DATA,
         false,
+        false,
         ByteOrder.nativeOrder(),
         RoaringBitmapSerdeFactory.getInstance()
     );
@@ -274,6 +275,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     ColumnBuilder bob = new ColumnBuilder();
     NestedCommonFormatColumnPartSerde partSerde = NestedCommonFormatColumnPartSerde.createDeserializer(
         ColumnType.NESTED_DATA,
+        false,
         false,
         ByteOrder.nativeOrder(),
         RoaringBitmapSerdeFactory.getInstance()

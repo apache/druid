@@ -69,7 +69,15 @@ public class Evals
     return !NullHandling.isNullOrEquivalent(x) && Boolean.parseBoolean(x);
   }
 
-  public static boolean objectAsBoolean(Object val)
+  /**
+   * Best effort try to turn a value into a boolean:
+   *  {@link Boolean} will be passed directly through
+   *  {@link String} will use {@link #asBoolean(String)}
+   *  {@link Long} will use {@link #asBoolean(long)}
+   *  {@link Number} will use {@link #asBoolean(double)}
+   *  everything else, including null will be false
+   */
+  public static boolean objectAsBoolean(@Nullable Object val)
   {
     if (val instanceof Boolean) {
       return (Boolean) val;

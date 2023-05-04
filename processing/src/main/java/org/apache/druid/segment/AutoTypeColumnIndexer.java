@@ -618,9 +618,9 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
   {
     if (NullHandling.replaceWithDefault()) {
       if (columnType != null) {
-        if (ColumnType.LONG.equals(columnType) || ColumnType.LONG.equals(columnType.getElementType())) {
+        if (ColumnType.LONG.equals(columnType)) {
           return NullHandling.defaultLongValue();
-        } else if (ColumnType.DOUBLE.equals(columnType) || ColumnType.DOUBLE.equals(columnType.getElementType())) {
+        } else if (ColumnType.DOUBLE.equals(columnType)) {
           return NullHandling.defaultDoubleValue();
         }
       }

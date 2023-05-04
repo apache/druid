@@ -33,7 +33,10 @@ public class ArrayOffsetOperatorConversion extends DirectOperatorConversion
       .operandTypeChecker(
           OperandTypes.sequence(
               "(array,expr)",
-              OperandTypes.family(SqlTypeFamily.ANY),
+              OperandTypes.or(
+                  OperandTypes.family(SqlTypeFamily.ARRAY),
+                  OperandTypes.family(SqlTypeFamily.STRING)
+              ),
               OperandTypes.family(SqlTypeFamily.NUMERIC)
           )
       )
