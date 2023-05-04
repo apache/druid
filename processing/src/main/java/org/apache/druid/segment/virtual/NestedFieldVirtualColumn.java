@@ -614,7 +614,9 @@ public class NestedFieldVirtualColumn implements VirtualColumn
             {
               private int currentOffsetId = ReadableVectorInspector.NULL_ID;
               private final long[] longs = new long[delegate.getMaxVectorSize()];
+              @Nullable
               private boolean[] nulls = null;
+
               @Override
               public long[] getLongVector()
               {
@@ -657,7 +659,9 @@ public class NestedFieldVirtualColumn implements VirtualColumn
             {
               private int currentOffsetId = ReadableVectorInspector.NULL_ID;
               private final float[] floats = new float[delegate.getMaxVectorSize()];
+              @Nullable
               private boolean[] nulls = null;
+
               @Override
               public float[] getFloatVector()
               {
@@ -700,6 +704,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
             {
               private int currentOffsetId = ReadableVectorInspector.NULL_ID;
               private final double[] doubles = new double[delegate.getMaxVectorSize()];
+              @Nullable
               private boolean[] nulls = null;
               @Override
               public double[] getDoubleVector()
