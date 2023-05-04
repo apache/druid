@@ -266,6 +266,6 @@ public class PodTemplateTaskAdapter implements TaskAdapter
 
   private String getDruidLabel(String baseLabel)
   {
-    return DruidK8sConstants.DRUID_LABEL_PREFIX + "/" + baseLabel;
+    return DruidK8sConstants.DRUID_LABEL_PREFIX + baseLabel;
   }
 }
